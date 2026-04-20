@@ -425,11 +425,14 @@ function PrizeRow({ prize, probability, onSave, onDelete }: {
     }
     if (!dirty) return;
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    if (!weight || weight < 1) return;
+
     debounceRef.current = window.setTimeout(() => {
-      onSave({ label, cash_value: cashValue, weight, color });
+      onSave({ label, cash_value: cashValue, weight: Math.max(1, weight), color });
       setSavedFlash(true);
       window.setTimeout(() => setSavedFlash(false), 1500);
     }, 800);
+
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
@@ -438,7 +441,7 @@ function PrizeRow({ prize, probability, onSave, onDelete }: {
 
   const handleManualSave = () => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    onSave({ label, cash_value: cashValue, weight, color });
+    onSave({ label, cash_value: cashValue, weight: Math.max(1, weight || 1), color });
     toast.success("Prêmio salvo");
   };
 
