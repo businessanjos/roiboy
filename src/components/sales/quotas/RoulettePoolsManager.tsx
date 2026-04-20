@@ -406,6 +406,16 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
           >
             <Play className="h-4 w-4" /> Testar Roleta
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleTestZeroPrize}
+            disabled={!prizes.some((p) => Number(p.cash_value || 0) <= 0)}
+            className="gap-1.5"
+            title="Forçar teste do prêmio R$ 0 (sem confetes, com som triste)"
+          >
+            😢 Testar R$ 0
+          </Button>
           <Button size="sm" variant="ghost" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
