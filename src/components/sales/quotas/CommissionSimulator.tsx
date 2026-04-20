@@ -290,26 +290,13 @@ export function CommissionSimulator() {
             </div>
 
             {/* Componentes do ganho */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Wallet className="h-3.5 w-3.5" />
                   Salário Base
                 </div>
                 <p className="font-bold text-sm">{simulation.monthlyBase > 0 ? fmt(simulation.monthlyBase) : "—"}</p>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <DollarSign className="h-3.5 w-3.5" />
-                  Comissão Produtos
-                </div>
-                <p className="font-bold text-sm">{fmt(simulation.totalCommission)}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {simulation.appliedRateName}: {(simulation.commissionPercent * 100).toLocaleString("pt-BR")}%
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  {Math.floor(simulation.simulatedQty)} venda(s) × {fmt(simulation.avgTicket)} × {(simulation.commissionPercent * 100).toLocaleString("pt-BR")}%
-                </p>
               </div>
               <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
