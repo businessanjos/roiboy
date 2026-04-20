@@ -11922,6 +11922,57 @@ export type Database = {
           },
         ]
       }
+      spiff_spins: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          prize_amount: number
+          spiff_id: string
+          spun_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          prize_amount?: number
+          spiff_id: string
+          spun_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          prize_amount?: number
+          spiff_id?: string
+          spun_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spiff_spins_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spiff_spins_spiff_id_fkey"
+            columns: ["spiff_id"]
+            isOneToOne: false
+            referencedRelation: "sales_spiffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_checklist_items: {
         Row: {
           account_id: string
