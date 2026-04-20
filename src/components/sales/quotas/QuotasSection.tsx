@@ -322,7 +322,7 @@ export function QuotasSection() {
       {!selectedUserId && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Quotas por Vendedor — {MONTHS[month - 1]} {year}</CardTitle>
+            <CardTitle className="text-base">Metas por Vendedor & Produto</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
