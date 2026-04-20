@@ -8769,6 +8769,101 @@ export type Database = {
           },
         ]
       }
+      marketing_copilot_conversations: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          is_pinned: boolean | null
+          last_message_at: string | null
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean | null
+          last_message_at?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean | null
+          last_message_at?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_copilot_conversations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_copilot_messages: {
+        Row: {
+          account_id: string
+          content: string | null
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+          tool_call_id: string | null
+          tool_calls: Json | null
+          tool_name: string | null
+          tool_result: Json | null
+        }
+        Insert: {
+          account_id: string
+          content?: string | null
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+          tool_call_id?: string | null
+          tool_calls?: Json | null
+          tool_name?: string | null
+          tool_result?: Json | null
+        }
+        Update: {
+          account_id?: string
+          content?: string | null
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          tool_call_id?: string | null
+          tool_calls?: Json | null
+          tool_name?: string | null
+          tool_result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_copilot_messages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_copilot_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_copilot_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_copy_history: {
         Row: {
           account_id: string
@@ -8822,6 +8917,80 @@ export type Database = {
             columns: ["idea_id"]
             isOneToOne: false
             referencedRelation: "marketing_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_hooks: {
+        Row: {
+          account_id: string
+          category: string | null
+          created_at: string
+          created_by: string | null
+          created_by_ai: boolean | null
+          engagement_rate: number | null
+          id: string
+          is_favorite: boolean | null
+          notes: string | null
+          performance_score: number | null
+          source: string
+          source_platform: string | null
+          source_post_id: string | null
+          source_url: string | null
+          tags: string[] | null
+          text: string
+          times_used: number | null
+          updated_at: string
+          views: number | null
+        }
+        Insert: {
+          account_id: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_ai?: boolean | null
+          engagement_rate?: number | null
+          id?: string
+          is_favorite?: boolean | null
+          notes?: string | null
+          performance_score?: number | null
+          source?: string
+          source_platform?: string | null
+          source_post_id?: string | null
+          source_url?: string | null
+          tags?: string[] | null
+          text: string
+          times_used?: number | null
+          updated_at?: string
+          views?: number | null
+        }
+        Update: {
+          account_id?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_ai?: boolean | null
+          engagement_rate?: number | null
+          id?: string
+          is_favorite?: boolean | null
+          notes?: string | null
+          performance_score?: number | null
+          source?: string
+          source_platform?: string | null
+          source_post_id?: string | null
+          source_url?: string | null
+          tags?: string[] | null
+          text?: string
+          times_used?: number | null
+          updated_at?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_hooks_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -8994,6 +9163,56 @@ export type Database = {
             columns: ["trend_id"]
             isOneToOne: false
             referencedRelation: "marketing_trends"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_performance_insights: {
+        Row: {
+          account_id: string
+          created_at: string
+          data: Json | null
+          description: string
+          id: string
+          insight_type: string
+          period_end: string | null
+          period_start: string | null
+          platform: string
+          score: number | null
+          title: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          data?: Json | null
+          description: string
+          id?: string
+          insight_type: string
+          period_end?: string | null
+          period_start?: string | null
+          platform: string
+          score?: number | null
+          title: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          data?: Json | null
+          description?: string
+          id?: string
+          insight_type?: string
+          period_end?: string | null
+          period_start?: string | null
+          platform?: string
+          score?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_performance_insights_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]
