@@ -327,7 +327,7 @@ export function CommissionSimulator() {
               <div className="p-3 rounded-lg border bg-primary/10 border-primary/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-medium">
                   <Trophy className="h-3.5 w-3.5 text-primary" />
-                  Ganho Mensal
+                  Ganho Mensal Bruto
                 </div>
                 <p className="font-bold text-lg text-primary">{fmt(simulation.totalEarnings)}</p>
               </div>
