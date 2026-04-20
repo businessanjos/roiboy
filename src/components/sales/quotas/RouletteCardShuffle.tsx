@@ -164,23 +164,30 @@ export function RouletteCardShuffle({
       setPhase("revealed");
       if (!confettiFiredRef.current) {
         confettiFiredRef.current = true;
-        fanfare();
-        // Confete em explosão dupla
-        const fire = (origin: { x: number; y: number }) =>
-          confetti({
-            particleCount: 120,
-            spread: 90,
-            startVelocity: 45,
-            origin,
-            colors: ["#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444"],
-            zIndex: 9999,
-          });
-        fire({ x: 0.3, y: 0.6 });
-        fire({ x: 0.7, y: 0.6 });
-        window.setTimeout(
-          () => confetti({ particleCount: 80, spread: 120, origin: { x: 0.5, y: 0.4 }, zIndex: 9999 }),
-          250,
-        );
+        const isZero = !winner.cash_value || winner.cash_value <= 0;
+
+        if (isZero) {
+          // 😞 Prêmio zero → trombone triste, sem confetes
+          sadTrombone();
+        } else {
+          // 🎉 Prêmio com valor → fanfarra + confete
+          fanfare();
+          const fire = (origin: { x: number; y: number }) =>
+            confetti({
+              particleCount: 120,
+              spread: 90,
+              startVelocity: 45,
+              origin,
+              colors: ["#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444"],
+              zIndex: 9999,
+            });
+          fire({ x: 0.3, y: 0.6 });
+          fire({ x: 0.7, y: 0.6 });
+          window.setTimeout(
+            () => confetti({ particleCount: 80, spread: 120, origin: { x: 0.5, y: 0.4 }, zIndex: 9999 }),
+            250,
+          );
+        }
       }
       onRevealComplete?.();
     }, 1400 + 900 + 500);
