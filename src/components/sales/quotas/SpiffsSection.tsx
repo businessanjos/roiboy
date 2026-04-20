@@ -748,7 +748,7 @@ export function SpiffsSection() {
 const ITEM_DA_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
 // ── Painel de giros pendentes por vendedor ──
-function RouletteSpinsPanel({ spiff }: { spiff: any }) {
+export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const triggerPerValue = Number(spiff.trigger_per_value || 0);
@@ -892,7 +892,7 @@ function RouletteSpinsPanel({ spiff }: { spiff: any }) {
 }
 
 // ── Painel de giros pendentes — Roleta Custom (vendas em janela) ──
-function CustomSpinsPanel({ spiff }: { spiff: any }) {
+export function CustomSpinsPanel({ spiff }: { spiff: any }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const triggerSalesCount = Number(spiff.trigger_sales_count || 0);
