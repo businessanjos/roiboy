@@ -10587,6 +10587,104 @@ export type Database = {
           },
         ]
       }
+      roulette_prize_pools: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roulette_prize_pools_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roulette_prizes: {
+        Row: {
+          account_id: string
+          cash_value: number
+          color: string | null
+          created_at: string
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          label: string
+          pool_id: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          account_id: string
+          cash_value?: number
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          pool_id: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          account_id?: string
+          cash_value?: number
+          color?: string | null
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          pool_id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roulette_prizes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roulette_prizes_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "roulette_prize_pools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_call_analyses: {
         Row: {
           account_id: string
@@ -11587,6 +11685,7 @@ export type Database = {
           product_id: string | null
           roulette_max_prize: number | null
           roulette_min_prize: number | null
+          roulette_pool_id: string | null
           start_date: string
           target_quantity: number
           trigger_per_value: number | null
@@ -11614,6 +11713,7 @@ export type Database = {
           product_id?: string | null
           roulette_max_prize?: number | null
           roulette_min_prize?: number | null
+          roulette_pool_id?: string | null
           start_date?: string
           target_quantity?: number
           trigger_per_value?: number | null
@@ -11641,6 +11741,7 @@ export type Database = {
           product_id?: string | null
           roulette_max_prize?: number | null
           roulette_min_prize?: number | null
+          roulette_pool_id?: string | null
           start_date?: string
           target_quantity?: number
           trigger_per_value?: number | null
@@ -11670,6 +11771,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_spiffs_roulette_pool_id_fkey"
+            columns: ["roulette_pool_id"]
+            isOneToOne: false
+            referencedRelation: "roulette_prize_pools"
             referencedColumns: ["id"]
           },
         ]
@@ -11930,6 +12038,8 @@ export type Database = {
           id: string
           notes: string | null
           prize_amount: number
+          prize_id: string | null
+          prize_label: string | null
           spiff_id: string
           spun_at: string
           user_id: string
@@ -11941,6 +12051,8 @@ export type Database = {
           id?: string
           notes?: string | null
           prize_amount?: number
+          prize_id?: string | null
+          prize_label?: string | null
           spiff_id: string
           spun_at?: string
           user_id: string
@@ -11952,6 +12064,8 @@ export type Database = {
           id?: string
           notes?: string | null
           prize_amount?: number
+          prize_id?: string | null
+          prize_label?: string | null
           spiff_id?: string
           spun_at?: string
           user_id?: string
@@ -11962,6 +12076,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spiff_spins_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "roulette_prizes"
             referencedColumns: ["id"]
           },
           {
