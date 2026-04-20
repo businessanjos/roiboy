@@ -92,26 +92,16 @@ export function OTESection({
 
   const users = usersQuery.data ?? [];
 
-  // Calcula a Base Anual automaticamente a partir do RH:
-  // CLT: salário × 13,33 (12 meses + 13º + 1/3 férias) + ~70% encargos patronais (FGTS, INSS, provisões)
-  // PJ/Sócio/Outros: salário × 12 (sem encargos sobre folha)
+  // Base Anual = salário fixo × 12 (sem 13º, férias ou encargos patronais).
+  // Encargos e provisões são custo da empresa, não compõem o OTE do colaborador.
   const calculateAnnualBase = (userId: string): { value: number; breakdown: string } | null => {
     const collab = collaborators.find((c) => c.user_id === userId);
     if (!collab || !collab.salary) return null;
     const monthly = Number(collab.salary);
-    const type = (collab.employment_type || "").toLowerCase();
-    if (type === "clt") {
-      const grossAnnual = monthly * 13.33;
-      const employerCharges = grossAnnual * 0.7;
-      const total = grossAnnual + employerCharges;
-      return {
-        value: Math.round(total),
-        breakdown: `R$ ${monthly.toLocaleString("pt-BR")}/mês CLT × 13,33 + 70% encargos patronais (FGTS, INSS, provisões)`,
-      };
-    }
+    const type = (collab.employment_type || "").toUpperCase() || "—";
     return {
       value: Math.round(monthly * 12),
-      breakdown: `R$ ${monthly.toLocaleString("pt-BR")}/mês ${(collab.employment_type || "").toUpperCase()} × 12`,
+      breakdown: `R$ ${monthly.toLocaleString("pt-BR")}/mês ${type} × 12 meses (salário fixo, sem 13º, férias ou encargos)`,
     };
   };
 
@@ -167,7 +157,7 @@ export function OTESection({
                 {positionTitle && <Badge variant="secondary" className="text-[10px]">{positionTitle}</Badge>}
               </CardTitle>
               <CardDescription>
-                Cargo "{positionTitle}". Base puxada do RH (CLT × 13,33 + 70% encargos · PJ/Sócio × 12). Variável calculado do plano acima (mensal × 12 + trimestral × 4 + anual).
+                Cargo "{positionTitle}". Base = salário fixo × 12 (sem encargos). Variável calculado do plano acima (mensal × 12 + trimestral × 4 + anual).
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
