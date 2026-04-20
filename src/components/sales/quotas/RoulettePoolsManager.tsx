@@ -502,8 +502,20 @@ function PrizeRow({ prize, probability, onSave, onDelete }: {
           <Input
             type="number"
             min={1}
-            value={weight}
-            onChange={(e) => setWeight(Math.max(1, parseInt(e.target.value) || 1))}
+            value={weight === 0 ? "" : weight}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "") {
+                setWeight(0); // permite limpar; será normalizado para 1 ao salvar
+                return;
+              }
+              const n = parseInt(v);
+              setWeight(isNaN(n) ? 0 : Math.max(1, n));
+            }}
+            onBlur={() => {
+              if (!weight || weight < 1) setWeight(1);
+            }}
+            placeholder="1"
             className="h-7 text-xs"
           />
         </div>
