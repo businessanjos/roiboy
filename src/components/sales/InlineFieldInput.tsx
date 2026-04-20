@@ -43,6 +43,7 @@ const colorSelected: Record<string, string> = {
 
 export function InlineFieldInput({ field, value, onChange }: InlineFieldInputProps) {
   const [teamUsers, setTeamUsers] = useState<Array<{ id: string; name: string }>>([]);
+  const [draft, setDraft] = useState("");
 
   useEffect(() => {
     if (field.field_type === "user") {
