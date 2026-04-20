@@ -160,7 +160,14 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     if (isSalesRepRole) {
       sectorItems = sectorItems.filter(item => item.to !== "/sales-team");
     }
-    
+
+    // SPIFFs: restrito apenas a Jonathan, Everton e Maikol
+    const userName = (currentUser?.name || "").toLowerCase();
+    const canSeeSpiffs = userName.includes("jonathan") || userName.includes("everton") || userName.includes("maikol");
+    if (!canSeeSpiffs) {
+      sectorItems = sectorItems.filter(item => item.to !== "/sales-team/spiffs");
+    }
+
     // Admins, role-based access, or during loading - show all sector items
     if (showAllItems) return sectorItems;
     
@@ -168,7 +175,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       if (!item.permission) return true;
       return hasPermission(item.permission);
     });
-  }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.team_role_name]);
+  }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.team_role_name, currentUser?.name]);
 
   const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "configuracoes"];
 
