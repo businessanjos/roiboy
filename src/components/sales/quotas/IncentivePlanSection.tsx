@@ -865,6 +865,92 @@ export function IncentivePlanSection() {
               </Table>
             </CardContent>
           </Card>
+
+          {/* ── Bônus Adicional por Venda (sem teto) ── */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-amber-600" />
+                    Bônus Adicional por Venda (sem teto)
+                  </CardTitle>
+                  <CardDescription>
+                    Acima de um % de atingimento, paga um valor extra por cada venda adicional. Resolve o problema de "fazer 200% pagar igual a 143%".
+                  </CardDescription>
+                </div>
+                <Switch checked={uncappedEnabled} onCheckedChange={setUncappedEnabled} />
+              </div>
+            </CardHeader>
+            {uncappedEnabled && (
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">A partir de (% de atingimento)</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step={0.01}
+                        value={uncappedThreshold || ""}
+                        onChange={(e) => setUncappedThreshold(parseFloat(e.target.value) || 0)}
+                        className="pr-8"
+                        placeholder="142.85"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Tipo de bônus</Label>
+                    <Select value={uncappedType} onValueChange={setUncappedType}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fixed">Valor fixo por venda (R$)</SelectItem>
+                        <SelectItem value="percent">% sobre o valor da venda</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">
+                      {uncappedType === "fixed" ? "Valor por venda extra (R$)" : "Percentual por venda extra (%)"}
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                        {uncappedType === "fixed" ? "R$" : ""}
+                      </span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        className={uncappedType === "fixed" ? "pl-8 text-right" : "pr-8 text-right"}
+                        value={uncappedPerSale ? uncappedPerSale.toLocaleString("pt-BR") : ""}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setUncappedPerSale(digits ? parseInt(digits, 10) : 0);
+                        }}
+                        placeholder="0"
+                      />
+                      {uncappedType === "percent" && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-1">Como funciona:</p>
+                  <p>
+                    Quando o vendedor ultrapassa <strong>{uncappedThreshold || 0}%</strong> da meta, cada venda adicional paga{" "}
+                    {uncappedType === "fixed" ? (
+                      <strong>R$ {uncappedPerSale.toLocaleString("pt-BR")}</strong>
+                    ) : (
+                      <strong>{uncappedPerSale}% do valor da venda</strong>
+                    )}{" "}
+                    além do bônus base/multiplicador da faixa atingida. Não há limite — quanto mais vender, mais ganha.
+                  </p>
+                </div>
+              </CardContent>
+            )}
+          </Card>
         </>
       )}
 
