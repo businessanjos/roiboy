@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -33,7 +33,7 @@ type SpinRow = {
   payment_notes: string | null;
 };
 
-export const SpiffSpinsHistory = forwardRef<HTMLDivElement>((_props, ref) => {
+export function SpiffSpinsHistory() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const qc = useQueryClient();
@@ -184,7 +184,7 @@ export const SpiffSpinsHistory = forwardRef<HTMLDivElement>((_props, ref) => {
   const isLoading = spinsQ.isLoading || spiffsQ.isLoading || usersQ.isLoading;
 
   return (
-    <div ref={ref} className="space-y-4">
+    <div className="space-y-4">
       {/* KPIs */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -443,5 +443,4 @@ export const SpiffSpinsHistory = forwardRef<HTMLDivElement>((_props, ref) => {
       </Dialog>
     </div>
   );
-});
-SpiffSpinsHistory.displayName = "SpiffSpinsHistory";
+}
