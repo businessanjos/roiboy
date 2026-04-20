@@ -43,6 +43,10 @@ export interface IncentivePlan {
   quota_value: number;
   goal_value: number;
   minimum_achievement_percent: number;
+  uncapped_bonus_enabled: boolean;
+  uncapped_threshold_percent: number;
+  uncapped_bonus_per_sale: number;
+  uncapped_bonus_type: string;
   created_at: string;
   updated_at: string;
 }
