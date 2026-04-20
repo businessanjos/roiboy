@@ -382,6 +382,16 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
           <Button size="sm" onClick={() => savePrize.mutate({ label: "Novo prêmio", cash_value: 0, weight: 1 })} className="gap-1.5">
             <Plus className="h-4 w-4" /> Adicionar Prêmio
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleTestSpin}
+            disabled={prizes.length === 0}
+            className="gap-1.5"
+            title="Sortear um prêmio para visualizar a animação (não conta como giro real)"
+          >
+            <Play className="h-4 w-4" /> Testar Roleta
+          </Button>
           <Button size="sm" variant="ghost" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -409,6 +419,47 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
           </div>
         )}
       </CardContent>
+
+      {/* Modal de teste da roleta */}
+      <Dialog open={!!testWinner} onOpenChange={(o) => !o && setTestWinner(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Play className="h-5 w-5 text-amber-500" />
+              Teste — {pool.name}
+            </DialogTitle>
+            <DialogDescription>
+              Pré-visualização da animação. Este giro <strong>não é registrado</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          {testWinner && (
+            <div className="py-4">
+              <RouletteCardShuffle
+                key={`test-${testWinner.id}-${Date.now()}`}
+                options={prizes.map((p) => ({
+                  id: p.id,
+                  label: p.label,
+                  cash_value: Number(p.cash_value || 0),
+                  color: p.color,
+                }))}
+                winner={testWinner}
+                soundEnabled={testSoundEnabled}
+                cardCount={Math.min(7, Math.max(3, prizes.length))}
+                size="normal"
+              />
+              <div className="flex gap-2 mt-4">
+                <Button variant="outline" className="flex-1 gap-2" onClick={handleTestSpin}>
+                  <Dice5 className="h-4 w-4" /> Testar de novo
+                </Button>
+                <Button variant="ghost" onClick={() => setTestSoundEnabled((s) => !s)}>
+                  {testSoundEnabled ? "🔊 Som on" : "🔇 Som off"}
+                </Button>
+                <Button onClick={() => setTestWinner(null)}>Fechar</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
