@@ -203,6 +203,10 @@ export function CommissionSimulator() {
       simulatedQty,
       avgTicket,
       totalCommission,
+      commissionPercent,
+      fixedCommissionPerSale,
+      wholeSalesCount,
+      appliedRateName: mentoringProduct?.name ?? "Rykas Mentoring",
       activeTier,
       bonusValue,
       multiplier,
@@ -304,6 +308,8 @@ export function CommissionSimulator() {
                   Comissão Produtos
                 </div>
                 <p className="font-bold text-sm">{fmt(simulation.totalCommission)}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {simulation.appliedRateName}: {(simulation.commissionPercent * 100).toLocaleString("pt-BR")}%
               </div>
               <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
