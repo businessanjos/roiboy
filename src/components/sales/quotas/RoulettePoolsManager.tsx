@@ -326,6 +326,20 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
     });
   };
 
+  const handleTestZeroPrize = () => {
+    const zeroPrize = prizes.find((p) => Number(p.cash_value || 0) <= 0);
+    if (!zeroPrize) {
+      toast.error("Nenhum prêmio R$ 0 cadastrado neste pool.");
+      return;
+    }
+    setTestWinner({
+      id: zeroPrize.id,
+      label: zeroPrize.label,
+      cash_value: 0,
+      color: zeroPrize.color,
+    });
+  };
+
   const savePrize = useMutation({
     mutationFn: async (prize: Partial<RoulettePrize>) => {
       if (prize.id) {
