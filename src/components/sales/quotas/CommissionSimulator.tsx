@@ -83,13 +83,13 @@ export function CommissionSimulator() {
 
   const users = usersQuery.data ?? [];
   const products = productsQuery.data ?? [];
+  const salesPositionIds = (salesPositionsQuery.data ?? []).map((p) => p.id);
 
   const simulation = useMemo(() => {
     if (!selectedUserId) return null;
 
-    const user = users.find((u) => u.id === selectedUserId);
-    // Resolve plano pelo cargo do vendedor (não pelo activePlan global)
-    const plan = plans.find((p) => p.is_active && p.position_id === (user as any)?.position_id) ?? null;
+    // Resolve plano: o plano ativo cujo cargo pertença a um departamento comercial
+    const plan = plans.find((p) => p.is_active && p.position_id && salesPositionIds.includes(p.position_id)) ?? null;
     if (!plan) return { noPlan: true } as any;
 
     const userQuotas = quotas.filter((q) => q.user_id === selectedUserId);
