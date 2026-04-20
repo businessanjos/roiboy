@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock } from "../_shared/marketing-context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,14 +95,15 @@ function calcHype(item: any): number {
   return Math.min(100, Math.max(15, Math.round(raw)));
 }
 
-async function aiAdapt(items: any[], niche: string, audience: string, brandSummary: string) {
+async function aiAdapt(items: any[], niche: string, contextBlock: string) {
   if (!items.length) return items;
-  const prompt = `Você é estrategista de conteúdo. Para cada item viral abaixo, gere UMA adaptação curta (3-4 frases acionáveis) para o nicho "${niche}" e público "${audience}". Tom da marca: ${brandSummary || "(não definido)"}.
+  const prompt = `Você é estrategista de conteúdo. Para cada item viral abaixo, gere UMA adaptação curta (3-4 frases acionáveis) para o nicho "${niche}".${contextBlock}
 
 Itens:
 ${items.map((it, i) => `${i + 1}. [${it.platform}] ${it.title} | views=${it.views_count} likes=${it.likes_count} | criador=${it.creator_handle || "?"} | áudio=${it.audio_title || "—"}`).join("\n")}
 
-Retorne JSON: { "adaptations": [{ "index": 1, "ai_adaptation": "..." }, ...] }`;
+Retorne JSON: { "adaptations": [{ "index": 1, "ai_adaptation": "..." }, ...] }
+Cada adaptação DEVE falar com as DORES e DESEJOS da persona usando o VOCABULÁRIO dela.`;
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -109,7 +111,7 @@ Retorne JSON: { "adaptations": [{ "index": 1, "ai_adaptation": "..." }, ...] }`;
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
-        { role: "system", content: "Você é um estrategista de conteúdo brasileiro. Responda sempre em JSON válido." },
+        { role: "system", content: "Você é um estrategista de conteúdo brasileiro especializado em mercado de estética. Responda sempre em JSON válido." },
         { role: "user", content: prompt },
       ],
       response_format: { type: "json_object" },
@@ -152,8 +154,8 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const { data: voice } = await supabase
-      .from("marketing_brand_voice").select("*").eq("account_id", accountId).maybeSingle();
+    const { voice, persona } = await fetchVoiceAndPersona(supabase, accountId);
+    const contextBlock = buildBrandVoiceBlock(voice) + buildPersonaBlock(persona);
 
     let rawItems: any[] = [];
     let normalized: any[] = [];
@@ -177,12 +179,11 @@ Deno.serve(async (req) => {
       .sort((a, b) => b.hype_score - a.hype_score)
       .slice(0, maxItems);
 
-    // AI-adapt each top item to brand
+    // AI-adapt each top item to brand + persona
     normalized = await aiAdapt(
       normalized,
-      voice?.niche || "marketing digital",
-      voice?.target_audience || "",
-      voice?.ai_summary || "",
+      voice?.niche || persona?.business_type || "marketing digital",
+      contextBlock,
     );
 
     const authHeader = req.headers.get("Authorization");

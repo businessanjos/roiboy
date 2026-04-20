@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock } from "../_shared/marketing-context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,14 +51,11 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const { data: voice } = await supabase
-      .from("marketing_brand_voice")
-      .select("*")
-      .eq("account_id", accountId)
-      .maybeSingle();
+    const { voice, persona } = await fetchVoiceAndPersona(supabase, accountId);
+    const voiceBlock = buildBrandVoiceBlock(voice);
+    const personaBlock = buildPersonaBlock(persona);
 
-    const effectiveNiche = niche || voice?.niche || "marketing digital";
-    const audience = voice?.target_audience || "";
+    const effectiveNiche = niche || voice?.niche || persona?.business_type || "marketing digital";
 
     const searchQuery = customQuery || `Quais são as principais tendências, formatos virais e trends de ${platform} desta semana relevantes para o nicho de ${effectiveNiche}? Inclua nomes de áudios, formatos, hashtags e exemplos de criadores.`;
 
@@ -66,15 +64,13 @@ Deno.serve(async (req) => {
       researchContext = await searchWithPerplexity(searchQuery);
     }
 
-    const systemPrompt = `Você é um analista de tendências de redes sociais. Identifique tendências reais e atuais. Sempre retorne JSON estrito.`;
+    const systemPrompt = `Você é um analista de tendências de redes sociais especializado no mercado de estética brasileiro. Identifique tendências reais e atuais. Sempre retorne JSON estrito.${voiceBlock}${personaBlock}`;
     const userPrompt = `Plataforma alvo: ${platform}
 Nicho: ${effectiveNiche}
-Público: ${audience}
-Tom da marca: ${voice?.ai_summary || "(não definido)"}
 
 ${researchContext ? `Pesquisa atual de fontes externas:\n${researchContext}\n` : "(Sem dados externos. Use seu conhecimento mais recente.)"}
 
-Retorne 6 tendências em JSON:
+Retorne 6 tendências em JSON. No campo "ai_adaptation", adapte ESPECIFICAMENTE para a Persona e Tom de Voz definidos no system prompt — fale com as DORES e DESEJOS dela usando o VOCABULÁRIO dela:
 {
   "trends": [
     {

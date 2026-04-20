@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock } from "../_shared/marketing-context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,31 +33,16 @@ Deno.serve(async (req) => {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     let voiceContext = "";
+    let personaContext = "";
     if (useBrandVoice) {
-      const { data: voice } = await supabase
-        .from("marketing_brand_voice")
-        .select("*")
-        .eq("account_id", accountId)
-        .maybeSingle();
-      if (voice) {
-        voiceContext = `
-TOM DE VOZ DA MARCA (use sempre):
-- Personalidade: ${voice.personality || ""}
-- Palavras-chave do tom: ${(voice.tone_keywords || []).join(", ")}
-- NÃO usar: ${(voice.forbidden_words || []).join(", ")}
-- Frases assinatura: ${(voice.signature_phrases || []).join(" | ")}
-- Estilo de emoji: ${voice.emoji_style || ""}
-- Hashtags: ${voice.hashtag_strategy || ""}
-- Público: ${voice.target_audience || ""}
-- Nicho: ${voice.niche || ""}
-- Resumo: ${voice.ai_summary || ""}
-`;
-      }
+      const { voice, persona } = await fetchVoiceAndPersona(supabase, accountId);
+      voiceContext = buildBrandVoiceBlock(voice);
+      personaContext = buildPersonaBlock(persona);
     }
 
     const typeCfg = COPY_TYPES[copyType] || COPY_TYPES.caption;
 
-    const systemPrompt = `Você é uma copywriter sênior especializada em conteúdo para Instagram, TikTok e YouTube. Escreva sempre em português do Brasil. ${voiceContext}`;
+    const systemPrompt = `Você é uma copywriter sênior especializada em conteúdo para Instagram, TikTok e YouTube, com profundo conhecimento do mercado de estética brasileiro. Escreva sempre em português do Brasil.${voiceContext}${personaContext}`;
 
     const userPrompt = `Tarefa: ${typeCfg.instruction}
 
