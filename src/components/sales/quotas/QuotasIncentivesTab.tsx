@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, Gift, Crosshair } from "lucide-react";
+import { Gift, Crosshair } from "lucide-react";
 import { QuotasSection } from "./QuotasSection";
 import { IncentivePlanSection } from "./IncentivePlanSection";
 import { TeamGoalsTab } from "@/components/sales/team/TeamGoalsTab";
@@ -12,21 +12,14 @@ export function QuotasIncentivesTab() {
           <Crosshair className="h-4 w-4" />
           Meta
         </TabsTrigger>
-        <TabsTrigger value="quotas" className="gap-1.5">
-          <Target className="h-4 w-4" />
-          Quotas por Vendedor
-        </TabsTrigger>
         <TabsTrigger value="incentives" className="gap-1.5">
           <Gift className="h-4 w-4" />
           Plano de Incentivo
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="goals">
+      <TabsContent value="goals" className="space-y-6">
         <TeamGoalsTab />
-      </TabsContent>
-
-      <TabsContent value="quotas">
         <QuotasSection />
       </TabsContent>
 
