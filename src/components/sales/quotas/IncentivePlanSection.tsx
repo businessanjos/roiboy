@@ -74,6 +74,10 @@ export function IncentivePlanSection() {
   const [annualBonusChannel, setAnnualBonusChannel] = useState<string>("ferias_co");
   const [draftRates, setDraftRates] = useState<Record<string, { percent: number; fixed: number }>>({});
   const [draftTiers, setDraftTiers] = useState<{ min: number; max: string; multiplier: number; label: string }[]>([]);
+  const [uncappedEnabled, setUncappedEnabled] = useState(false);
+  const [uncappedThreshold, setUncappedThreshold] = useState(0);
+  const [uncappedPerSale, setUncappedPerSale] = useState(0);
+  const [uncappedType, setUncappedType] = useState<string>("fixed");
 
   const productsQuery = useQuery({
     queryKey: ["active-products", accountId],
@@ -126,6 +130,10 @@ export function IncentivePlanSection() {
       setMonthlyBonusChannel((activePlan as any).monthly_bonus_payment_channel || "folha");
       setQuarterlyBonusChannel((activePlan as any).quarterly_bonus_payment_channel || "ferias_co");
       setAnnualBonusChannel((activePlan as any).annual_bonus_payment_channel || "ferias_co");
+      setUncappedEnabled((activePlan as any).uncapped_bonus_enabled || false);
+      setUncappedThreshold(Number((activePlan as any).uncapped_threshold_percent || 0));
+      setUncappedPerSale(Number((activePlan as any).uncapped_bonus_per_sale || 0));
+      setUncappedType((activePlan as any).uncapped_bonus_type || "fixed");
     } else {
       // Defaults for new plan
       const pos = positions.find((p) => p.id === selectedPositionId);
@@ -147,6 +155,10 @@ export function IncentivePlanSection() {
       setMonthlyBonusChannel("folha");
       setQuarterlyBonusChannel("ferias_co");
       setAnnualBonusChannel("ferias_co");
+      setUncappedEnabled(false);
+      setUncappedThreshold(0);
+      setUncappedPerSale(0);
+      setUncappedType("fixed");
     }
     setTimeout(() => { initializedRef.current = true; }, 150);
   }, [activePlan, selectedPositionId]);
@@ -194,9 +206,13 @@ export function IncentivePlanSection() {
       annualBonusRules !== ((activePlan as any).annual_bonus_rules || "") ||
       monthlyBonusChannel !== ((activePlan as any).monthly_bonus_payment_channel || "folha") ||
       quarterlyBonusChannel !== ((activePlan as any).quarterly_bonus_payment_channel || "ferias_co") ||
-      annualBonusChannel !== ((activePlan as any).annual_bonus_payment_channel || "ferias_co")
+      annualBonusChannel !== ((activePlan as any).annual_bonus_payment_channel || "ferias_co") ||
+      uncappedEnabled !== ((activePlan as any).uncapped_bonus_enabled || false) ||
+      uncappedThreshold !== Number((activePlan as any).uncapped_threshold_percent || 0) ||
+      uncappedPerSale !== Number((activePlan as any).uncapped_bonus_per_sale || 0) ||
+      uncappedType !== ((activePlan as any).uncapped_bonus_type || "fixed")
     );
-  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, monthlyBonusChannel, quarterlyBonusChannel, annualBonusChannel]);
+  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, monthlyBonusChannel, quarterlyBonusChannel, annualBonusChannel, uncappedEnabled, uncappedThreshold, uncappedPerSale, uncappedType]);
 
   const hasTierChanges = useCallback(() => {
     if (draftTiers.length !== planTiers.length) return true;
@@ -240,7 +256,7 @@ export function IncentivePlanSection() {
     }, 1500);
 
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, monthlyBonusChannel, quarterlyBonusChannel, annualBonusChannel, draftRates, draftTiers]);
+  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, monthlyBonusChannel, quarterlyBonusChannel, annualBonusChannel, uncappedEnabled, uncappedThreshold, uncappedPerSale, uncappedType, draftRates, draftTiers]);
 
   const getRate = (productId: string) => {
     if (draftRates[productId]) return draftRates[productId];
@@ -270,6 +286,10 @@ export function IncentivePlanSection() {
       monthly_bonus_payment_channel: monthlyBonusChannel,
       quarterly_bonus_payment_channel: quarterlyBonusChannel,
       annual_bonus_payment_channel: annualBonusChannel,
+      uncapped_bonus_enabled: uncappedEnabled,
+      uncapped_threshold_percent: uncappedThreshold,
+      uncapped_bonus_per_sale: uncappedPerSale,
+      uncapped_bonus_type: uncappedType,
       position_id: selectedPositionId,
     } as any);
   };
@@ -844,6 +864,92 @@ export function IncentivePlanSection() {
                 </TableBody>
               </Table>
             </CardContent>
+          </Card>
+
+          {/* ── Bônus Adicional por Venda (sem teto) ── */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-amber-600" />
+                    Bônus Adicional por Venda (sem teto)
+                  </CardTitle>
+                  <CardDescription>
+                    Acima de um % de atingimento, paga um valor extra por cada venda adicional. Resolve o problema de "fazer 200% pagar igual a 143%".
+                  </CardDescription>
+                </div>
+                <Switch checked={uncappedEnabled} onCheckedChange={setUncappedEnabled} />
+              </div>
+            </CardHeader>
+            {uncappedEnabled && (
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">A partir de (% de atingimento)</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step={0.01}
+                        value={uncappedThreshold || ""}
+                        onChange={(e) => setUncappedThreshold(parseFloat(e.target.value) || 0)}
+                        className="pr-8"
+                        placeholder="142.85"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Tipo de bônus</Label>
+                    <Select value={uncappedType} onValueChange={setUncappedType}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fixed">Valor fixo por venda (R$)</SelectItem>
+                        <SelectItem value="percent">% sobre o valor da venda</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">
+                      {uncappedType === "fixed" ? "Valor por venda extra (R$)" : "Percentual por venda extra (%)"}
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                        {uncappedType === "fixed" ? "R$" : ""}
+                      </span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        className={uncappedType === "fixed" ? "pl-8 text-right" : "pr-8 text-right"}
+                        value={uncappedPerSale ? uncappedPerSale.toLocaleString("pt-BR") : ""}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setUncappedPerSale(digits ? parseInt(digits, 10) : 0);
+                        }}
+                        placeholder="0"
+                      />
+                      {uncappedType === "percent" && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-1">Como funciona:</p>
+                  <p>
+                    Quando o vendedor ultrapassa <strong>{uncappedThreshold || 0}%</strong> da meta, cada venda adicional paga{" "}
+                    {uncappedType === "fixed" ? (
+                      <strong>R$ {uncappedPerSale.toLocaleString("pt-BR")}</strong>
+                    ) : (
+                      <strong>{uncappedPerSale}% do valor da venda</strong>
+                    )}{" "}
+                    além do bônus base/multiplicador da faixa atingida. Não há limite — quanto mais vender, mais ganha.
+                  </p>
+                </div>
+              </CardContent>
+            )}
           </Card>
         </>
       )}

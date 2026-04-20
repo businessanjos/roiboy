@@ -10892,6 +10892,10 @@ export type Database = {
           quarterly_bonus_rules: string | null
           quarterly_bonus_value: number
           quota_value: number
+          uncapped_bonus_enabled: boolean
+          uncapped_bonus_per_sale: number
+          uncapped_bonus_type: string
+          uncapped_threshold_percent: number
           updated_at: string
         }
         Insert: {
@@ -10919,6 +10923,10 @@ export type Database = {
           quarterly_bonus_rules?: string | null
           quarterly_bonus_value?: number
           quota_value?: number
+          uncapped_bonus_enabled?: boolean
+          uncapped_bonus_per_sale?: number
+          uncapped_bonus_type?: string
+          uncapped_threshold_percent?: number
           updated_at?: string
         }
         Update: {
@@ -10946,6 +10954,10 @@ export type Database = {
           quarterly_bonus_rules?: string | null
           quarterly_bonus_value?: number
           quota_value?: number
+          uncapped_bonus_enabled?: boolean
+          uncapped_bonus_per_sale?: number
+          uncapped_bonus_type?: string
+          uncapped_threshold_percent?: number
           updated_at?: string
         }
         Relationships: [
