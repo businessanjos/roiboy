@@ -184,7 +184,7 @@ export function CommissionSimulator() {
       monthlyBase,
       totalEarnings,
     };
-  }, [selectedUserId, achievementPct, quotas, productRates, tiers, plans, userOTEs, products, users]);
+  }, [selectedUserId, achievementPct, quotas, productRates, tiers, plans, userOTEs, products, salesPositionIds]);
 
   return (
     <Card>
