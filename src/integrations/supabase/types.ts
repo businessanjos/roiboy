@@ -8998,6 +8998,113 @@ export type Database = {
           },
         ]
       }
+      marketing_personas: {
+        Row: {
+          account_id: string
+          age_range: string | null
+          ai_summary: string | null
+          avatar_emoji: string | null
+          biggest_dream: string | null
+          biggest_fear: string | null
+          business_size: string | null
+          business_type: string | null
+          channels: string[]
+          clients_analyzed_count: number | null
+          created_at: string
+          daily_routine: string | null
+          desires: string[]
+          education: string | null
+          emotional_triggers: string[]
+          gender: string | null
+          id: string
+          is_default: boolean
+          learned_from_clients_at: string | null
+          location: string | null
+          name: string
+          notes: string | null
+          objections: string[]
+          pains: string[]
+          profession: string | null
+          references_consumed: string[]
+          revenue_range: string | null
+          updated_at: string
+          vocabulary: string[]
+          years_in_business: string | null
+        }
+        Insert: {
+          account_id: string
+          age_range?: string | null
+          ai_summary?: string | null
+          avatar_emoji?: string | null
+          biggest_dream?: string | null
+          biggest_fear?: string | null
+          business_size?: string | null
+          business_type?: string | null
+          channels?: string[]
+          clients_analyzed_count?: number | null
+          created_at?: string
+          daily_routine?: string | null
+          desires?: string[]
+          education?: string | null
+          emotional_triggers?: string[]
+          gender?: string | null
+          id?: string
+          is_default?: boolean
+          learned_from_clients_at?: string | null
+          location?: string | null
+          name?: string
+          notes?: string | null
+          objections?: string[]
+          pains?: string[]
+          profession?: string | null
+          references_consumed?: string[]
+          revenue_range?: string | null
+          updated_at?: string
+          vocabulary?: string[]
+          years_in_business?: string | null
+        }
+        Update: {
+          account_id?: string
+          age_range?: string | null
+          ai_summary?: string | null
+          avatar_emoji?: string | null
+          biggest_dream?: string | null
+          biggest_fear?: string | null
+          business_size?: string | null
+          business_type?: string | null
+          channels?: string[]
+          clients_analyzed_count?: number | null
+          created_at?: string
+          daily_routine?: string | null
+          desires?: string[]
+          education?: string | null
+          emotional_triggers?: string[]
+          gender?: string | null
+          id?: string
+          is_default?: boolean
+          learned_from_clients_at?: string | null
+          location?: string | null
+          name?: string
+          notes?: string | null
+          objections?: string[]
+          pains?: string[]
+          profession?: string | null
+          references_consumed?: string[]
+          revenue_range?: string | null
+          updated_at?: string
+          vocabulary?: string[]
+          years_in_business?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_personas_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_reference_boards: {
         Row: {
           account_id: string
