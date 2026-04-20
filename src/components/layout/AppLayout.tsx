@@ -102,8 +102,8 @@ export function AppLayout() {
           {/* Keyboard Shortcuts Help */}
           <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
 
-          {/* 3C Plus Embedded Panel */}
-          {isInVendas && <ThreeCPlusPanel />}
+          {/* 3C Plus Embedded Panel — oculto temporariamente a pedido do usuário */}
+          {/* {isInVendas && <ThreeCPlusPanel />} */}
         </div>
       </NotificationsProvider>
     </PlanLimitsProvider>
