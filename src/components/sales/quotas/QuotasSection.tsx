@@ -30,6 +30,28 @@ const TRACKED_PRODUCTS = [
   { id: "abf8cd6f-3399-4af4-92c6-50fc1a966243", short: "Conselho" },
 ];
 
+// Some legacy deals store the "Item da Venda" field as a slug instead of UUID.
+// Map slugs to UUIDs so quotas reflect every won deal correctly.
+const PRODUCT_SLUG_TO_ID: Record<string, string> = {
+  rykas_mentoring: "8d3e9bb6-054b-44b3-952f-5920e0ed8775",
+  rykas: "8d3e9bb6-054b-44b3-952f-5920e0ed8775",
+  eternum_club: "b8c50eca-6fd9-41ac-a1d3-f78086daaea7",
+  eternum_mvp: "8e8b0cc7-6965-4241-9aab-b959e7fc7893",
+  conselho: "abf8cd6f-3399-4af4-92c6-50fc1a966243",
+  conselho_de_anjo: "abf8cd6f-3399-4af4-92c6-50fc1a966243",
+};
+
+const resolveProductId = (raw: string | null | undefined): string => {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  // UUID v4-ish format → use as-is
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+    return trimmed;
+  }
+  return PRODUCT_SLUG_TO_ID[trimmed.toLowerCase()] ?? "";
+};
+
 const ITEM_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
 export function QuotasSection() {
@@ -119,10 +141,10 @@ export function QuotasSection() {
         .in("deal_id", dealIds);
       if (fvError) throw fvError;
 
-      // Build map: deal_id -> product_id
+      // Build map: deal_id -> product_id (resolving slugs to UUIDs)
       const dealProductMap: Record<string, string> = {};
       for (const fv of fieldValues || []) {
-        dealProductMap[fv.deal_id] = fv.value_text || "";
+        dealProductMap[fv.deal_id] = resolveProductId(fv.value_text);
       }
 
       // Aggregate counts and actual values
