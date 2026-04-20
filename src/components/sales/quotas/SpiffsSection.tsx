@@ -827,17 +827,53 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
     enabled: userIds.length > 0,
   });
 
+  // Giros já consumidos (registrados via roleta)
+  const spinsLogQuery = useQuery({
+    queryKey: ["spiff-spins", accountId, spiff.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("spiff_spins")
+        .select("user_id, prize_amount, spun_at")
+        .eq("spiff_id", spiff.id)
+        .order("spun_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!accountId,
+  });
+
+  const consumedByUser = new Map<string, { count: number; total: number }>();
+  for (const log of spinsLogQuery.data ?? []) {
+    const cur = consumedByUser.get(log.user_id) ?? { count: 0, total: 0 };
+    cur.count += 1;
+    cur.total += Number(log.prize_amount || 0);
+    consumedByUser.set(log.user_id, cur);
+  }
+
   const summary = userIds.map((uid) => {
     const total = (dealsQuery.data ?? [])
       .filter((d) => d.responsible_user_id === uid)
       .reduce((acc, d) => acc + Number(d.entry_value || 0), 0);
-    const spins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
-    const remainder = triggerPerValue > 0 ? total - spins * triggerPerValue : 0;
+    const earnedSpins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
+    const remainder = triggerPerValue > 0 ? total - earnedSpins * triggerPerValue : 0;
     const toNextSpin = triggerPerValue > 0 ? triggerPerValue - remainder : 0;
+    const consumed = consumedByUser.get(uid) ?? { count: 0, total: 0 };
+    const pendingSpins = Math.max(0, earnedSpins - consumed.count);
     const user = usersQuery.data?.find((u) => u.id === uid);
     const collab = (salesTeamQuery.data ?? []).find((c) => c.user_id === uid);
-    return { uid, name: user?.name || collab?.full_name || "—", total, spins, toNextSpin };
-  }).sort((a, b) => b.spins - a.spins || a.name.localeCompare(b.name));
+    return {
+      uid,
+      name: user?.name || collab?.full_name || "—",
+      total,
+      earnedSpins,
+      pendingSpins,
+      consumedCount: consumed.count,
+      consumedTotal: consumed.total,
+      toNextSpin,
+    };
+  }).sort((a, b) => b.pendingSpins - a.pendingSpins || b.earnedSpins - a.earnedSpins || a.name.localeCompare(b.name));
+
+  const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
 
   if (triggerPerValue <= 0) return null;
 
@@ -852,7 +888,7 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
             <p className="text-xs">
-              Soma o campo "Entrada" dos negócios ganhos por cada vendedor no período da campanha e divide por R$ {formatBRL(triggerPerValue)} para calcular os giros. Os prêmios são sorteados separadamente (roleta física ou digital) entre R$ {formatBRL(Number(spiff.roulette_min_prize || 0))} e R$ {formatBRL(Number(spiff.roulette_max_prize || 0))}.
+              Soma o campo "Entrada" dos negócios ganhos por cada vendedor no período e divide por R$ {formatBRL(triggerPerValue)} para calcular os giros. Clique em "Girar" para sortear o prêmio entre R$ {formatBRL(Number(spiff.roulette_min_prize || 0))} e R$ {formatBRL(Number(spiff.roulette_max_prize || 0))} e registrar o resultado.
             </p>
           </TooltipContent>
         </Tooltip>
@@ -865,8 +901,10 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
             <TableRow>
               <TableHead className="text-xs">Vendedor</TableHead>
               <TableHead className="text-center text-xs">Captado</TableHead>
-              <TableHead className="text-center text-xs">Giros</TableHead>
+              <TableHead className="text-center text-xs">Giros pendentes</TableHead>
+              <TableHead className="text-center text-xs">Histórico</TableHead>
               <TableHead className="text-center text-xs">Falta p/ próximo</TableHead>
+              <TableHead className="text-right text-xs">Ação</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -875,17 +913,48 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
                 <TableCell className="text-sm font-medium">{s.name}</TableCell>
                 <TableCell className="text-center text-sm tabular-nums">R$ {formatBRL(Math.round(s.total))}</TableCell>
                 <TableCell className="text-center">
-                  <Badge variant={s.spins > 0 ? "default" : "secondary"} className="text-xs">
-                    {s.spins} {s.spins === 1 ? "giro" : "giros"}
+                  <Badge variant={s.pendingSpins > 0 ? "default" : "secondary"} className="text-xs">
+                    {s.pendingSpins} {s.pendingSpins === 1 ? "giro" : "giros"}
                   </Badge>
+                </TableCell>
+                <TableCell className="text-center text-xs tabular-nums">
+                  {s.consumedCount > 0 ? (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                      {s.consumedCount}× • R$ {formatBRL(Math.round(s.consumedTotal))}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-center text-xs text-muted-foreground tabular-nums">
                   R$ {formatBRL(Math.round(s.toNextSpin))}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    size="sm"
+                    variant={s.pendingSpins > 0 ? "default" : "outline"}
+                    disabled={s.pendingSpins <= 0}
+                    onClick={() => setSpinUser({ uid: s.uid, name: s.name, pending: s.pendingSpins })}
+                    className="h-7 gap-1.5 text-xs"
+                  >
+                    <Dice5 className="h-3.5 w-3.5" />
+                    Girar
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+      )}
+
+      {spinUser && (
+        <RouletteSpinDialog
+          open={!!spinUser}
+          onOpenChange={(o) => { if (!o) setSpinUser(null); }}
+          spiff={spiff}
+          user={{ uid: spinUser.uid, name: spinUser.name }}
+          pendingSpins={spinUser.pending}
+        />
       )}
     </div>
   );
