@@ -208,7 +208,6 @@ export function InlineFieldInput({ field, value, onChange }: InlineFieldInputPro
   // Multi-instagram
   if (field.field_type === "multi_instagram") {
     const list: string[] = Array.isArray(value) ? value : [];
-    const [draft, setDraft] = useState("");
     const add = () => {
       const handle = draft.replace(/^@/, "").trim();
       if (handle && !list.includes(handle)) {
