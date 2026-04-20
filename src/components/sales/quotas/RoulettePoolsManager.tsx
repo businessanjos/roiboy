@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -321,8 +321,12 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
         if (error) throw error;
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["roulette-prizes"] }),
-    onError: (e: any) => toast.error("Erro: " + e.message),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["roulette-prizes"] });
+      // Toast apenas em criação ou save manual (não em auto-save)
+      if (!variables.id) toast.success("Prêmio adicionado");
+    },
+    onError: (e: any) => toast.error("Erro ao salvar prêmio: " + e.message),
   });
 
   const deletePrize = useMutation({
@@ -395,11 +399,55 @@ function PrizeRow({ prize, probability, onSave, onDelete }: {
   const [cashValue, setCashValue] = useState(prize.cash_value);
   const [weight, setWeight] = useState(prize.weight);
   const [color, setColor] = useState(prize.color || PRESET_COLORS[0]);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const isFirstRender = useRef(true);
+  const debounceRef = useRef<number | null>(null);
 
-  const dirty = label !== prize.label || cashValue !== prize.cash_value || weight !== prize.weight || color !== (prize.color || PRESET_COLORS[0]);
+  const dirty =
+    label !== prize.label ||
+    cashValue !== prize.cash_value ||
+    weight !== prize.weight ||
+    color !== (prize.color || PRESET_COLORS[0]);
+
+  // Sincroniza state local quando o prêmio é atualizado externamente (após save)
+  useEffect(() => {
+    setLabel(prize.label);
+    setCashValue(prize.cash_value);
+    setWeight(prize.weight);
+    setColor(prize.color || PRESET_COLORS[0]);
+  }, [prize.label, prize.cash_value, prize.weight, prize.color]);
+
+  // Auto-save com debounce de 800ms
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!dirty) return;
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      onSave({ label, cash_value: cashValue, weight, color });
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 1500);
+    }, 800);
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [label, cashValue, weight, color]);
+
+  const handleManualSave = () => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    onSave({ label, cash_value: cashValue, weight, color });
+    toast.success("Prêmio salvo");
+  };
 
   return (
-    <div className="rounded-md border bg-card p-2 space-y-2">
+    <div className={cn(
+      "rounded-md border bg-card p-2 space-y-2 transition-colors",
+      dirty && "border-amber-500/50 bg-amber-500/5",
+      savedFlash && "border-emerald-500/50 bg-emerald-500/5",
+    )}>
       <div className="flex items-center gap-2">
         <div
           className="h-8 w-8 rounded-md flex-shrink-0 border-2 border-background shadow"
@@ -414,14 +462,23 @@ function PrizeRow({ prize, probability, onSave, onDelete }: {
         <Badge variant="outline" className="text-[10px] tabular-nums">
           {probability.toFixed(1)}%
         </Badge>
+        {dirty ? (
+          <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600">
+            salvando…
+          </Badge>
+        ) : savedFlash ? (
+          <Badge variant="outline" className="text-[10px] border-emerald-500 text-emerald-600">
+            ✓ salvo
+          </Badge>
+        ) : null}
         <Button
-          variant="ghost"
+          variant={dirty ? "default" : "ghost"}
           size="icon"
           className="h-7 w-7"
-          disabled={!dirty}
-          onClick={() => onSave({ label, cash_value: cashValue, weight, color })}
+          onClick={handleManualSave}
+          title="Salvar agora"
         >
-          <Save className={cn("h-3.5 w-3.5", dirty && "text-primary")} />
+          <Save className="h-3.5 w-3.5" />
         </Button>
         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete}>
           <Trash2 className="h-3.5 w-3.5" />
