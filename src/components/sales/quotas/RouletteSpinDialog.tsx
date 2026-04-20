@@ -101,14 +101,16 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
 
   const startSpin = () => {
     if (phase !== "idle" || pendingSpins <= 0) return;
-    const baseData = spiff.roulette_pool_id ? prizesQuery.data ?? [] : [];
+    const baseData: { weight?: number }[] = spiff.roulette_pool_id
+      ? (prizesQuery.data ?? []).map((p: any) => ({ weight: Number(p.weight ?? 1) }))
+      : [];
     const options = buildOptions();
     if (options.length === 0) {
       toast.error("Nenhum prêmio configurado nesta roleta.");
       return;
     }
     optionsRef.current = options;
-    const winnerIdx = pickWeighted(spiff.roulette_pool_id ? baseData : options);
+    const winnerIdx = pickWeighted(spiff.roulette_pool_id ? baseData : options.map(() => ({ weight: 1 })));
     setFinalOption(options[winnerIdx]);
     setPhase("spinning");
   };
