@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Plus, Instagram, Youtube, Music2, Linkedin, Globe } from "lucide-react";
 import { useMarketingIdeas, MarketingIdea } from "@/hooks/useMarketingIdeas";
-import { IdeaDialog } from "./ideas/IdeaDialog";
+import { IdeaDialog } from "../ideas/IdeaDialog";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, addMonths, subMonths, format, isSameMonth, isSameDay, parseISO,
