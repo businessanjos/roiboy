@@ -326,6 +326,20 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
     });
   };
 
+  const handleTestZeroPrize = () => {
+    const zeroPrize = prizes.find((p) => Number(p.cash_value || 0) <= 0);
+    if (!zeroPrize) {
+      toast.error("Nenhum prêmio R$ 0 cadastrado neste pool.");
+      return;
+    }
+    setTestWinner({
+      id: zeroPrize.id,
+      label: zeroPrize.label,
+      cash_value: 0,
+      color: zeroPrize.color,
+    });
+  };
+
   const savePrize = useMutation({
     mutationFn: async (prize: Partial<RoulettePrize>) => {
       if (prize.id) {
@@ -391,6 +405,16 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
             title="Sortear um prêmio para visualizar a animação (não conta como giro real)"
           >
             <Play className="h-4 w-4" /> Testar Roleta
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleTestZeroPrize}
+            disabled={!prizes.some((p) => Number(p.cash_value || 0) <= 0)}
+            className="gap-1.5"
+            title="Forçar teste do prêmio R$ 0 (sem confetes, com som triste)"
+          >
+            😢 Testar R$ 0
           </Button>
           <Button size="sm" variant="ghost" onClick={onClose}>
             <X className="h-4 w-4" />
