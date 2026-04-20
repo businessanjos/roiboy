@@ -130,6 +130,10 @@ export function IncentivePlanSection() {
       setMonthlyBonusChannel((activePlan as any).monthly_bonus_payment_channel || "folha");
       setQuarterlyBonusChannel((activePlan as any).quarterly_bonus_payment_channel || "ferias_co");
       setAnnualBonusChannel((activePlan as any).annual_bonus_payment_channel || "ferias_co");
+      setUncappedEnabled((activePlan as any).uncapped_bonus_enabled || false);
+      setUncappedThreshold(Number((activePlan as any).uncapped_threshold_percent || 0));
+      setUncappedPerSale(Number((activePlan as any).uncapped_bonus_per_sale || 0));
+      setUncappedType((activePlan as any).uncapped_bonus_type || "fixed");
     } else {
       // Defaults for new plan
       const pos = positions.find((p) => p.id === selectedPositionId);
