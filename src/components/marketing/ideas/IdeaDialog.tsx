@@ -73,6 +73,8 @@ export function IdeaDialog({ open, onOpenChange, idea, defaultStatus }: Props) {
     status: idea?.status || defaultStatus || "draft",
     priority: idea?.priority || "medium",
     planned_date: idea?.planned_date || null,
+    scheduled_for: idea?.scheduled_for || null,
+    publish_platform: idea?.publish_platform || null,
     caption: idea?.caption || "",
     tags: idea?.tags || [],
   }));
@@ -213,13 +215,39 @@ export function IdeaDialog({ open, onOpenChange, idea, defaultStatus }: Props) {
             </div>
           </div>
 
-          <div>
-            <Label>Data planejada</Label>
-            <Input
-              type="date"
-              value={form.planned_date || ""}
-              onChange={e => setForm(f => ({ ...f, planned_date: e.target.value || null }))}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <Label>Data planejada</Label>
+              <Input
+                type="date"
+                value={form.planned_date || ""}
+                onChange={e => setForm(f => ({ ...f, planned_date: e.target.value || null }))}
+              />
+            </div>
+            <div>
+              <Label>📅 Agendar publicação</Label>
+              <Input
+                type="datetime-local"
+                value={form.scheduled_for ? new Date(form.scheduled_for).toISOString().slice(0, 16) : ""}
+                onChange={e => setForm(f => ({
+                  ...f,
+                  scheduled_for: e.target.value ? new Date(e.target.value).toISOString() : null,
+                  status: e.target.value ? "scheduled" : f.status,
+                }))}
+              />
+            </div>
+            <div>
+              <Label>Plataforma de publicação</Label>
+              <Select
+                value={form.publish_platform || form.platform || ""}
+                onValueChange={(v) => setForm(f => ({ ...f, publish_platform: v }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Onde publicar" /></SelectTrigger>
+                <SelectContent>
+                  {PLATFORM_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div>

@@ -8914,8 +8914,12 @@ export type Database = {
           position: number | null
           posted_at: string | null
           priority: string
+          publish_platform: string | null
+          published_at: string | null
+          published_url: string | null
           reference_ids: string[] | null
           scheduled_at: string | null
+          scheduled_for: string | null
           status: string
           tags: string[] | null
           thumbnail_url: string | null
@@ -8937,8 +8941,12 @@ export type Database = {
           position?: number | null
           posted_at?: string | null
           priority?: string
+          publish_platform?: string | null
+          published_at?: string | null
+          published_url?: string | null
           reference_ids?: string[] | null
           scheduled_at?: string | null
+          scheduled_for?: string | null
           status?: string
           tags?: string[] | null
           thumbnail_url?: string | null
@@ -8960,8 +8968,12 @@ export type Database = {
           position?: number | null
           posted_at?: string | null
           priority?: string
+          publish_platform?: string | null
+          published_at?: string | null
+          published_url?: string | null
           reference_ids?: string[] | null
           scheduled_at?: string | null
+          scheduled_for?: string | null
           status?: string
           tags?: string[] | null
           thumbnail_url?: string | null
@@ -9308,15 +9320,21 @@ export type Database = {
           ai_adaptation: string | null
           ai_analysis: Json | null
           audio_name: string | null
+          audio_title: string | null
           captured_at: string
           captured_by: string | null
+          comments_count: number | null
           created_at: string
+          creator_followers: number | null
+          creator_handle: string | null
           description: string | null
           expires_at: string | null
           hype_score: number | null
           id: string
           is_archived: boolean
           likes_count: number | null
+          media_url: string | null
+          platform: string | null
           shares_count: number | null
           source: string
           source_url: string | null
@@ -9331,15 +9349,21 @@ export type Database = {
           ai_adaptation?: string | null
           ai_analysis?: Json | null
           audio_name?: string | null
+          audio_title?: string | null
           captured_at?: string
           captured_by?: string | null
+          comments_count?: number | null
           created_at?: string
+          creator_followers?: number | null
+          creator_handle?: string | null
           description?: string | null
           expires_at?: string | null
           hype_score?: number | null
           id?: string
           is_archived?: boolean
           likes_count?: number | null
+          media_url?: string | null
+          platform?: string | null
           shares_count?: number | null
           source?: string
           source_url?: string | null
@@ -9354,15 +9378,21 @@ export type Database = {
           ai_adaptation?: string | null
           ai_analysis?: Json | null
           audio_name?: string | null
+          audio_title?: string | null
           captured_at?: string
           captured_by?: string | null
+          comments_count?: number | null
           created_at?: string
+          creator_followers?: number | null
+          creator_handle?: string | null
           description?: string | null
           expires_at?: string | null
           hype_score?: number | null
           id?: string
           is_archived?: boolean
           likes_count?: number | null
+          media_url?: string | null
+          platform?: string | null
           shares_count?: number | null
           source?: string
           source_url?: string | null
