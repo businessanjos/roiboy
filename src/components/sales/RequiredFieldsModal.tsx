@@ -13,7 +13,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
-import { DealFieldValueEditor } from "@/components/custom-fields/DealFieldValueEditor";
+import { InlineFieldInput } from "@/components/sales/InlineFieldInput";
 
 interface RequiredFieldsModalProps {
   open: boolean;
@@ -158,12 +158,10 @@ export function RequiredFieldsModal({
               <Label className="text-sm font-medium">
                 {field.name} <span className="text-destructive">*</span>
               </Label>
-              <DealFieldValueEditor
+              <InlineFieldInput
                 field={field}
-                dealId={dealId}
-                accountId={accountId}
-                currentValue={values[field.id]}
-                onValueChange={handleValueChange}
+                value={values[field.id]}
+                onChange={(newValue) => handleValueChange(field.id, newValue)}
               />
             </div>
           ))}
