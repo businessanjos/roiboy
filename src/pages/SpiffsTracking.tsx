@@ -13,7 +13,8 @@ const isExpired = (endDate: string) => new Date(endDate) < new Date();
 
 export default function SpiffsTracking() {
   const now = new Date();
-  const { spiffs, isLoading } = useQuotasIncentives(now.getFullYear(), now.getMonth() + 1);
+  const { spiffs } = useQuotasIncentives(now.getFullYear(), now.getMonth() + 1);
+  const isLoading = false;
   const [tab, setTab] = useState<"active" | "all">("active");
 
   const visibleSpiffs = (spiffs ?? []).filter((s) =>
