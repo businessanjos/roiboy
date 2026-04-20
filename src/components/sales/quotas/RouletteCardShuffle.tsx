@@ -73,7 +73,48 @@ function useGameSounds(enabled: boolean) {
     });
   };
 
-  return { tick, fanfare };
+  /** Som de decepção: "aaaaah" descendente — trombone triste / sad trombone. */
+  const sadTrombone = () => {
+    const ctx = ensureCtx();
+    if (!ctx) return;
+    // 4 notas descendentes em escala cromática (clássico wah-wah-wah-waaah)
+    const notes = [
+      { freq: 392.0, dur: 0.25 }, // G4
+      { freq: 369.99, dur: 0.25 }, // F#4
+      { freq: 349.23, dur: 0.25 }, // F4
+      { freq: 311.13, dur: 1.1 },  // Eb4 (a longa final, "waaaah")
+    ];
+    let t = ctx.currentTime;
+    notes.forEach(({ freq, dur }, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      // sawtooth + filtro = timbre nasal de trombone
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, t);
+
+      // Pequeno "bend" descendente na nota final pra dar o ar triste
+      if (i === notes.length - 1) {
+        osc.frequency.linearRampToValueAtTime(freq * 0.92, t + dur);
+      }
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 1100;
+      filter.Q.value = 6;
+
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.22, t + 0.04);
+      gain.gain.setValueAtTime(0.22, t + dur - 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+      osc.connect(filter).connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + dur + 0.05);
+      t += dur - 0.02; // leve sobreposição entre notas
+    });
+  };
+
+  return { tick, fanfare, sadTrombone };
 }
 
 type Phase = "shuffling" | "fanned" | "picked" | "revealed";
