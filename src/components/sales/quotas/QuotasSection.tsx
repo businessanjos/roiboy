@@ -162,6 +162,31 @@ export function QuotasSection() {
     enabled: !!accountId,
   });
 
+  const queryClient = useQueryClient();
+
+  // Realtime: refetch when deals or product goals change
+  useEffect(() => {
+    if (!accountId) return;
+    const channel = supabase
+      .channel(`quotas-section-${accountId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "deals" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["won-deals-by-product", accountId, year, month] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "deal_field_values" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["won-deals-by-product", accountId, year, month] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales_product_goals" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["sales-product-goals-overview", accountId, yearMonth] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales_quotas" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["sales-quotas"] });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [accountId, year, month, yearMonth, queryClient]);
+
   const users = usersQuery.data ?? [];
   const products = productsQuery.data ?? [];
   const productGoals = productGoalsQuery.data ?? [];
