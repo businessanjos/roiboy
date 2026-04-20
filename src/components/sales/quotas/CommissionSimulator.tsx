@@ -114,18 +114,19 @@ export function CommissionSimulator() {
     // ── Meta vem do plano (quota_value), não da soma das quotas mensais ──
     const totalTargetValue = Number(plan.quota_value) || 0;
 
-    // Ticket médio: prioriza preço dos produtos com taxa cadastrada no plano
+    // Ticket fixo Rykas Mentoring: R$ 70.800 até abril/2026, R$ 80.000 a partir de maio/2026
+    const isAfterMay2026 = year > 2026 || (year === 2026 && month >= 5);
+    const avgTicket = isAfterMay2026 ? 80000 : 70800;
+
+    // Produtos do plano (mantém para exibição/comissão)
     const planProducts = productRates
       .filter((r) => r.plan_id === plan.id && r.product_id)
       .map((r) => products.find((p) => p.id === r.product_id))
       .filter(Boolean) as { id: string; name: string; price: number }[];
-    const avgTicket = planProducts.length > 0
-      ? planProducts.reduce((s, p) => s + Number(p.price), 0) / planProducts.length
-      : 0;
 
-    const totalTargetQty = avgTicket > 0 ? totalTargetValue / avgTicket : 0;
+    const totalTargetQty = totalTargetValue / avgTicket;
     const simulatedValue = (totalTargetValue * achievementPct) / 100;
-    const simulatedQty = avgTicket > 0 ? simulatedValue / avgTicket : 0;
+    const simulatedQty = simulatedValue / avgTicket;
 
     // Comissão por produto: preço médio × qtd simulada × taxa do plano
     let totalCommission = 0;
