@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dice5, Sparkles, Trophy } from "lucide-react";
+import { Dice5, Trophy, Volume2, VolumeX, Tv, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { RouletteCardShuffle, ShuffleCard } from "./RouletteCardShuffle";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -26,22 +27,12 @@ interface Props {
   pendingSpins: number;
 }
 
-interface PrizeOption {
-  id: string | null; // null = sorteio por faixa numérica
-  label: string;
-  cash_value: number;
-  weight: number;
-  color: string | null;
-}
-
 type Phase = "idle" | "spinning" | "result";
 
 export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpins }: Props) {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
-  const accountId = currentUser?.account_id;
 
-  // Carrega prêmios do pool (se houver)
   const prizesQuery = useQuery({
     queryKey: ["roulette-prizes-pool", spiff.roulette_pool_id],
     queryFn: async () => {
@@ -58,18 +49,15 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     enabled: !!spiff.roulette_pool_id && open,
   });
 
-  // Constrói lista de opções de prêmios
-  const buildOptions = (): PrizeOption[] => {
+  const buildOptions = (): ShuffleCard[] => {
     if (spiff.roulette_pool_id && prizesQuery.data && prizesQuery.data.length > 0) {
       return prizesQuery.data.map((p: any) => ({
         id: p.id,
         label: p.label,
         cash_value: Number(p.cash_value || 0),
-        weight: Number(p.weight || 1),
         color: p.color,
       }));
     }
-    // Fallback: faixa numérica
     const min = Number(spiff.roulette_min_prize ?? 0);
     const max = Number(spiff.roulette_max_prize ?? 100);
     const step = 50;
@@ -77,71 +65,52 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     const steps = Math.floor(range / step) + 1;
     return Array.from({ length: steps }, (_, i) => {
       const v = min + i * step;
-      return { id: null, label: `R$ ${formatBRL(v)}`, cash_value: v, weight: 1, color: null };
+      return { id: null, label: `R$ ${formatBRL(v)}`, cash_value: v, color: null };
     });
   };
 
   const [phase, setPhase] = useState<Phase>("idle");
-  const [displayOption, setDisplayOption] = useState<PrizeOption | null>(null);
-  const [finalOption, setFinalOption] = useState<PrizeOption | null>(null);
+  const [finalOption, setFinalOption] = useState<ShuffleCard | null>(null);
   const [saving, setSaving] = useState(false);
-  const intervalRef = useRef<number | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [tvMode, setTvMode] = useState(false);
+  const optionsRef = useRef<ShuffleCard[]>([]);
 
   const min = Number(spiff.roulette_min_prize ?? 0);
   const max = Number(spiff.roulette_max_prize ?? 100);
   const usingPool = !!spiff.roulette_pool_id;
 
-  // Reset on open
   useEffect(() => {
     if (open) {
       setPhase("idle");
-      setDisplayOption(null);
       setFinalOption(null);
-    } else if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
+      setTvMode(false);
     }
   }, [open]);
 
-  const pickWeighted = (options: PrizeOption[]): PrizeOption => {
-    const total = options.reduce((s, o) => s + o.weight, 0);
+  const pickWeighted = (options: { weight?: number }[]) => {
+    const weights = options.map((o: any) => Number(o.weight ?? 1));
+    const total = weights.reduce((s, w) => s + w, 0);
     let r = Math.random() * total;
-    for (const o of options) {
-      r -= o.weight;
-      if (r <= 0) return o;
+    for (let i = 0; i < options.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return i;
     }
-    return options[options.length - 1];
+    return options.length - 1;
   };
 
   const startSpin = () => {
     if (phase !== "idle" || pendingSpins <= 0) return;
+    const baseData = spiff.roulette_pool_id ? prizesQuery.data ?? [] : [];
     const options = buildOptions();
     if (options.length === 0) {
       toast.error("Nenhum prêmio configurado nesta roleta.");
       return;
     }
+    optionsRef.current = options;
+    const winnerIdx = pickWeighted(spiff.roulette_pool_id ? baseData : options);
+    setFinalOption(options[winnerIdx]);
     setPhase("spinning");
-
-    const winner = pickWeighted(options);
-    const startTime = Date.now();
-    const duration = 2500;
-
-    intervalRef.current = window.setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // Mostra opção aleatória durante a animação
-      setDisplayOption(options[Math.floor(Math.random() * options.length)]);
-
-      if (progress >= 1) {
-        if (intervalRef.current) {
-          window.clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-        setDisplayOption(winner);
-        setFinalOption(winner);
-        setPhase("result");
-      }
-    }, 80);
   };
 
   const handleSave = async () => {
@@ -171,65 +140,139 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     onOpenChange(false);
   };
 
-  const currentColor = displayOption?.color || (phase === "result" ? "#10b981" : "#f59e0b");
+  // ───────────── TV Mode (fullscreen) ─────────────
+  if (tvMode && open) {
+    return (
+      <div className="fixed inset-0 z-[200] bg-gradient-to-br from-background via-background to-primary/10 flex flex-col items-center justify-center p-8">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-4 right-4 h-10 w-10"
+          onClick={() => setTvMode(false)}
+        >
+          <X className="h-6 w-6" />
+        </Button>
 
+        <div className="text-center mb-8">
+          <Badge variant="outline" className="mb-3 text-sm">
+            🎰 Roleta da Sorte
+          </Badge>
+          <h1 className="text-5xl md:text-7xl font-bold mb-2">{spiff.name}</h1>
+          <p className="text-2xl md:text-3xl text-muted-foreground">{user.name}</p>
+        </div>
+
+        <div className="flex-1 w-full max-w-5xl flex items-center justify-center">
+          {phase === "spinning" && finalOption ? (
+            <RouletteCardShuffle
+              key={`tv-${finalOption.id}-${Date.now()}`}
+              options={optionsRef.current}
+              winner={finalOption}
+              soundEnabled={soundEnabled}
+              cardCount={9}
+              size="xl"
+              onRevealComplete={() => setPhase("result")}
+            />
+          ) : phase === "idle" ? (
+            <Button
+              onClick={startSpin}
+              size="lg"
+              className="h-24 px-12 text-3xl gap-3 bg-amber-500 hover:bg-amber-600 text-white"
+              disabled={pendingSpins <= 0 || (usingPool && prizesQuery.isLoading)}
+            >
+              <Dice5 className="h-10 w-10" />
+              GIRAR ROLETA
+            </Button>
+          ) : null}
+        </div>
+
+        {phase === "result" && finalOption && (
+          <div className="flex gap-3 mt-6">
+            <Button onClick={handleSave} size="lg" className="h-14 px-8 text-lg gap-2" disabled={saving}>
+              <Trophy className="h-6 w-6" />
+              {saving ? "Salvando..." : "Confirmar Prêmio"}
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-14 px-6 text-lg"
+              onClick={() => {
+                setPhase("idle");
+                setFinalOption(null);
+              }}
+              disabled={saving}
+            >
+              Girar novamente
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ───────────── Modal padrão ─────────────
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleCancel()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Dice5 className="h-5 w-5 text-amber-500" />
-            Roleta da Sorte — {spiff.name}
-          </DialogTitle>
+          <div className="flex items-center justify-between gap-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Dice5 className="h-5 w-5 text-amber-500" />
+              Roleta da Sorte — {spiff.name}
+            </DialogTitle>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setSoundEnabled((s) => !s)}
+                title={soundEnabled ? "Silenciar" : "Ativar som"}
+              >
+                {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </Button>
+              {phase === "idle" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setTvMode(true)}
+                  title="Exibir em tela cheia (TV)"
+                >
+                  <Tv className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
           <DialogDescription>
             {user.name} • {pendingSpins} {pendingSpins === 1 ? "giro pendente" : "giros pendentes"}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-6 space-y-6">
-          <div
-            className={cn(
-              "relative mx-auto w-full max-w-xs rounded-2xl border-4 p-8 text-center transition-colors",
-              phase === "spinning" && "animate-pulse",
-              phase === "idle" && "border-border bg-muted/30",
-            )}
-            style={
-              phase !== "idle" && displayOption
-                ? {
-                    borderColor: currentColor,
-                    backgroundColor: `${currentColor}15`,
-                  }
-                : undefined
-            }
-          >
-            {phase === "result" && (
-              <Sparkles className="absolute -top-3 -right-3 h-6 w-6 text-amber-500 animate-bounce" />
-            )}
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-              {phase === "result" ? "🎉 Você ganhou" : phase === "spinning" ? "Sorteando..." : "Prêmio"}
-            </p>
-            <p
-              className={cn(
-                "font-bold tabular-nums transition-all break-words",
-                phase === "spinning" && "blur-[1px]",
-                phase === "result" && "scale-110",
-                (displayOption?.label?.length || 0) > 20 ? "text-2xl" : "text-4xl",
-              )}
-              style={phase !== "idle" ? { color: currentColor } : undefined}
-            >
-              {displayOption ? displayOption.label : "—"}
-            </p>
-            {displayOption && displayOption.cash_value > 0 && displayOption.label !== `R$ ${formatBRL(displayOption.cash_value)}` && (
-              <p className="text-sm text-muted-foreground mt-1 tabular-nums">
-                Valor: R$ {formatBRL(displayOption.cash_value)}
+        <div className="py-4 space-y-4">
+          {phase === "idle" && (
+            <div className="rounded-2xl border-2 border-dashed bg-muted/30 p-8 text-center min-h-[240px] flex flex-col items-center justify-center">
+              <Dice5 className="h-16 w-16 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">
+                Pronto para sortear
               </p>
-            )}
-            <Badge variant="outline" className="mt-3 text-[10px]">
-              {usingPool
-                ? `${(prizesQuery.data?.length ?? 0)} prêmios disponíveis`
-                : `Faixa: R$ ${formatBRL(min)} a R$ ${formatBRL(max)}`}
-            </Badge>
-          </div>
+              <Badge variant="outline" className="mt-3 text-[10px]">
+                {usingPool
+                  ? `${(prizesQuery.data?.length ?? 0)} prêmios disponíveis`
+                  : `Faixa: R$ ${formatBRL(min)} a R$ ${formatBRL(max)}`}
+              </Badge>
+            </div>
+          )}
+
+          {phase !== "idle" && finalOption && (
+            <RouletteCardShuffle
+              key={`modal-${finalOption.id}-${finalOption.label}`}
+              options={optionsRef.current}
+              winner={finalOption}
+              soundEnabled={soundEnabled}
+              cardCount={7}
+              size="normal"
+              onRevealComplete={() => setPhase("result")}
+            />
+          )}
 
           <div className="flex flex-col gap-2">
             {phase === "idle" && (
@@ -245,7 +288,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
             )}
             {phase === "spinning" && (
               <Button size="lg" className="w-full" disabled>
-                Girando...
+                Embaralhando cartas...
               </Button>
             )}
             {phase === "result" && finalOption && (
@@ -258,7 +301,6 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
                   variant="ghost"
                   onClick={() => {
                     setPhase("idle");
-                    setDisplayOption(null);
                     setFinalOption(null);
                   }}
                   disabled={saving}
