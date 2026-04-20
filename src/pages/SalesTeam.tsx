@@ -60,8 +60,8 @@ export default function SalesTeam() {
             </TabsTrigger>
             <TabsTrigger value="quotas-incentives" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
               <Gift className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Quotas & Incentivos</span>
-              <span className="sm:hidden">Quotas</span>
+              <span className="hidden sm:inline">Metas & Incentivos</span>
+              <span className="sm:hidden">Metas</span>
             </TabsTrigger>
             <TabsTrigger value="career" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
               <GraduationCap className="h-3.5 w-3.5" />
