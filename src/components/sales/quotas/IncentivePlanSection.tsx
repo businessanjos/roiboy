@@ -206,9 +206,13 @@ export function IncentivePlanSection() {
       annualBonusRules !== ((activePlan as any).annual_bonus_rules || "") ||
       monthlyBonusChannel !== ((activePlan as any).monthly_bonus_payment_channel || "folha") ||
       quarterlyBonusChannel !== ((activePlan as any).quarterly_bonus_payment_channel || "ferias_co") ||
-      annualBonusChannel !== ((activePlan as any).annual_bonus_payment_channel || "ferias_co")
+      annualBonusChannel !== ((activePlan as any).annual_bonus_payment_channel || "ferias_co") ||
+      uncappedEnabled !== ((activePlan as any).uncapped_bonus_enabled || false) ||
+      uncappedThreshold !== Number((activePlan as any).uncapped_threshold_percent || 0) ||
+      uncappedPerSale !== Number((activePlan as any).uncapped_bonus_per_sale || 0) ||
+      uncappedType !== ((activePlan as any).uncapped_bonus_type || "fixed")
     );
-  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, monthlyBonusChannel, quarterlyBonusChannel, annualBonusChannel]);
+  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, monthlyBonusChannel, quarterlyBonusChannel, annualBonusChannel, uncappedEnabled, uncappedThreshold, uncappedPerSale, uncappedType]);
 
   const hasTierChanges = useCallback(() => {
     if (draftTiers.length !== planTiers.length) return true;
