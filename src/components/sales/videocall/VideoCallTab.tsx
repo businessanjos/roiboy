@@ -24,6 +24,7 @@ import { useVideoCallSessions, VideoCallSession } from "@/hooks/useVideoCallSess
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { VideoCallDialog } from "./VideoCallDialog";
+import { VideoCallActions } from "./VideoCallActions";
 import MarkdownRenderer from "@/components/sales/MarkdownRenderer";
 
 function formatDuration(seconds: number): string {
@@ -155,6 +156,7 @@ export function VideoCallTab() {
                         Ver Análise
                       </Button>
                     )}
+                    <VideoCallActions session={session} onChanged={refetch} />
                   </div>
                 </div>
               </CardContent>
