@@ -313,6 +313,9 @@ export function CommissionSimulator() {
                 <p className="text-[10px] text-muted-foreground">
                   {simulation.appliedRateName}: {(simulation.commissionPercent * 100).toLocaleString("pt-BR")}%
                 </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {Math.floor(simulation.simulatedQty)} venda(s) × {fmt(simulation.avgTicket)} × {(simulation.commissionPercent * 100).toLocaleString("pt-BR")}%
+                </p>
               </div>
               <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
