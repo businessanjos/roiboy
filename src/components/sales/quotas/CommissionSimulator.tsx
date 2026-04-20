@@ -34,12 +34,34 @@ export function CommissionSimulator() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("users")
-        .select("id, name, position_id")
+        .select("id, name")
         .eq("account_id", accountId!)
         .in("id", SALES_USER_IDS)
         .order("name");
       if (error) throw error;
       return data;
+    },
+    enabled: !!accountId,
+  });
+
+  // Busca cargos comerciais para resolver o plano correto
+  const salesPositionsQuery = useQuery({
+    queryKey: ["sales-positions", accountId],
+    queryFn: async () => {
+      const { data: depts } = await supabase
+        .from("hr_departments")
+        .select("id, name")
+        .eq("account_id", accountId!);
+      const salesDeptIds = (depts ?? [])
+        .filter((d) => /comercial|vendas|sales/i.test(d.name))
+        .map((d) => d.id);
+      if (salesDeptIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("hr_positions")
+        .select("id, title, department_id")
+        .in("department_id", salesDeptIds);
+      if (error) throw error;
+      return data ?? [];
     },
     enabled: !!accountId,
   });
