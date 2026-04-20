@@ -302,6 +302,29 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
 }) {
   const queryClient = useQueryClient();
   const totalWeight = prizes.reduce((s, p) => s + p.weight, 0);
+  const [testWinner, setTestWinner] = useState<ShuffleCard | null>(null);
+  const [testSoundEnabled, setTestSoundEnabled] = useState(true);
+
+  const handleTestSpin = () => {
+    if (prizes.length === 0) {
+      toast.error("Adicione pelo menos um prêmio para testar.");
+      return;
+    }
+    // Sorteio ponderado
+    const total = prizes.reduce((s, p) => s + (p.weight || 1), 0);
+    let r = Math.random() * total;
+    let chosen = prizes[prizes.length - 1];
+    for (const p of prizes) {
+      r -= (p.weight || 1);
+      if (r <= 0) { chosen = p; break; }
+    }
+    setTestWinner({
+      id: chosen.id,
+      label: chosen.label,
+      cash_value: Number(chosen.cash_value || 0),
+      color: chosen.color,
+    });
+  };
 
   const savePrize = useMutation({
     mutationFn: async (prize: Partial<RoulettePrize>) => {
