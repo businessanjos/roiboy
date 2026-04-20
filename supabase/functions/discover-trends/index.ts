@@ -1,0 +1,152 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
+
+interface DiscoveredTrend {
+  title: string;
+  description: string;
+  source_url?: string;
+  hype_score: number;
+  tags: string[];
+  ai_adaptation: string;
+}
+
+async function searchWithPerplexity(query: string): Promise<string> {
+  if (!PERPLEXITY_API_KEY) return "";
+  const res = await fetch("https://api.perplexity.ai/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${PERPLEXITY_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "sonar",
+      messages: [
+        { role: "system", content: "Você é um pesquisador de tendências de redes sociais. Liste tendências reais e atuais com fontes." },
+        { role: "user", content: query },
+      ],
+      search_recency_filter: "week",
+    }),
+  });
+  if (!res.ok) return "";
+  const data = await res.json();
+  return data?.choices?.[0]?.message?.content || "";
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const { accountId, niche, platform = "instagram", customQuery } = await req.json();
+
+    if (!accountId) {
+      return new Response(JSON.stringify({ error: "accountId required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    const { data: voice } = await supabase
+      .from("marketing_brand_voice")
+      .select("*")
+      .eq("account_id", accountId)
+      .maybeSingle();
+
+    const effectiveNiche = niche || voice?.niche || "marketing digital";
+    const audience = voice?.target_audience || "";
+
+    const searchQuery = customQuery || `Quais são as principais tendências, formatos virais e trends de ${platform} desta semana relevantes para o nicho de ${effectiveNiche}? Inclua nomes de áudios, formatos, hashtags e exemplos de criadores.`;
+
+    let researchContext = "";
+    if (PERPLEXITY_API_KEY) {
+      researchContext = await searchWithPerplexity(searchQuery);
+    }
+
+    const systemPrompt = `Você é um analista de tendências de redes sociais. Identifique tendências reais e atuais. Sempre retorne JSON estrito.`;
+    const userPrompt = `Plataforma alvo: ${platform}
+Nicho: ${effectiveNiche}
+Público: ${audience}
+Tom da marca: ${voice?.ai_summary || "(não definido)"}
+
+${researchContext ? `Pesquisa atual de fontes externas:\n${researchContext}\n` : "(Sem dados externos. Use seu conhecimento mais recente.)"}
+
+Retorne 6 tendências em JSON:
+{
+  "trends": [
+    {
+      "title": "nome curto da trend",
+      "description": "o que é e por que está em alta (2-3 frases)",
+      "source_url": "URL real se houver, ou string vazia",
+      "hype_score": 0-100,
+      "tags": ["3-5 tags"],
+      "ai_adaptation": "como adaptar essa trend ESPECIFICAMENTE para o nicho e tom da marca acima (3-5 frases acionáveis)"
+    }
+  ]
+}`;
+
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-pro",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!aiRes.ok) {
+      const txt = await aiRes.text();
+      if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Limite atingido. Tente em 1 minuto." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (aiRes.status === 402) return new Response(JSON.stringify({ error: "Créditos esgotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      throw new Error(txt);
+    }
+
+    const aiData = await aiRes.json();
+    const parsed = JSON.parse(aiData.choices?.[0]?.message?.content);
+    const trends: DiscoveredTrend[] = parsed.trends || [];
+
+    const authHeader = req.headers.get("Authorization");
+    let capturedBy: string | null = null;
+    if (authHeader) {
+      const { data: { user } } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+      capturedBy = user?.id || null;
+    }
+
+    const records = trends.map((t) => ({
+      account_id: accountId,
+      title: t.title,
+      description: t.description,
+      source: PERPLEXITY_API_KEY ? "perplexity" : "manual",
+      source_url: t.source_url || null,
+      hype_score: Math.min(100, Math.max(0, t.hype_score || 50)),
+      tags: t.tags || [],
+      ai_adaptation: t.ai_adaptation,
+      ai_analysis: { platform, niche: effectiveNiche, generated_at: new Date().toISOString() },
+      captured_by: capturedBy,
+      expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    }));
+
+    const { data: inserted, error } = await supabase
+      .from("marketing_trends")
+      .insert(records)
+      .select();
+
+    if (error) throw error;
+
+    return new Response(JSON.stringify({ success: true, count: inserted?.length || 0, trends: inserted }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err: any) {
+    console.error("discover-trends error", err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

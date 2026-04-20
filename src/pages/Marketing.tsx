@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Calendar, CalendarDays, Bell, Users, Grid3X3, Lightbulb, TrendingUp, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Calendar, CalendarDays, Bell, Users, Grid3X3, Lightbulb, TrendingUp, Image as ImageIcon, Sparkles, Wand2, Flame } from 'lucide-react';
 import { MarketingIdeasTab } from '@/components/marketing/ideas/MarketingIdeasTab';
 import { MarketingReferencesTab } from '@/components/marketing/references/MarketingReferencesTab';
-import { ComingSoonTab } from '@/components/marketing/ComingSoonTab';
+import { CopyStudioTab } from '@/components/marketing/copy/CopyStudioTab';
+import { TrendsRadarTab } from '@/components/marketing/trends/TrendsRadarTab';
+import { BrandVoiceTab } from '@/components/marketing/brand/BrandVoiceTab';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
 import { MonthlyCalendarView } from '@/components/marketing/MonthlyCalendarView';
 import { YearlyCalendarView } from '@/components/marketing/YearlyCalendarView';
@@ -134,23 +136,16 @@ export default function Marketing() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="calendar" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Calendário
-          </TabsTrigger>
-          <TabsTrigger value="events" className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" />
-            Eventos
-          </TabsTrigger>
-          <TabsTrigger value="attendance" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Presenças
-          </TabsTrigger>
-          <TabsTrigger value="reminders" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Lembretes
-          </TabsTrigger>
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="calendar" className="flex items-center gap-2"><Calendar className="h-4 w-4" />Calendário</TabsTrigger>
+          <TabsTrigger value="ideas" className="flex items-center gap-2"><Lightbulb className="h-4 w-4" />Ideias</TabsTrigger>
+          <TabsTrigger value="trends" className="flex items-center gap-2"><Flame className="h-4 w-4" />Trends</TabsTrigger>
+          <TabsTrigger value="copy" className="flex items-center gap-2"><Sparkles className="h-4 w-4" />Copy IA</TabsTrigger>
+          <TabsTrigger value="references" className="flex items-center gap-2"><ImageIcon className="h-4 w-4" />Referências</TabsTrigger>
+          <TabsTrigger value="brand" className="flex items-center gap-2"><Wand2 className="h-4 w-4" />Tom de Voz</TabsTrigger>
+          <TabsTrigger value="events" className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />Eventos</TabsTrigger>
+          <TabsTrigger value="attendance" className="flex items-center gap-2"><Users className="h-4 w-4" />Presenças</TabsTrigger>
+          <TabsTrigger value="reminders" className="flex items-center gap-2"><Bell className="h-4 w-4" />Lembretes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendar" className="space-y-4">
@@ -180,18 +175,14 @@ export default function Marketing() {
           )}
         </TabsContent>
 
-        <TabsContent value="events">
-          <MarketingEventsTab />
-        </TabsContent>
-
-        <TabsContent value="attendance">
-          <AttendanceReport accountId={currentUser?.account_id ?? null} />
-        </TabsContent>
-
-
-        <TabsContent value="reminders">
-          <MarketingRemindersTab />
-        </TabsContent>
+        <TabsContent value="ideas"><MarketingIdeasTab /></TabsContent>
+        <TabsContent value="trends"><TrendsRadarTab /></TabsContent>
+        <TabsContent value="copy"><CopyStudioTab /></TabsContent>
+        <TabsContent value="references"><MarketingReferencesTab /></TabsContent>
+        <TabsContent value="brand"><BrandVoiceTab /></TabsContent>
+        <TabsContent value="events"><MarketingEventsTab /></TabsContent>
+        <TabsContent value="attendance"><AttendanceReport accountId={currentUser?.account_id ?? null} /></TabsContent>
+        <TabsContent value="reminders"><MarketingRemindersTab /></TabsContent>
       </Tabs>
 
       <MarketingEventDialog
