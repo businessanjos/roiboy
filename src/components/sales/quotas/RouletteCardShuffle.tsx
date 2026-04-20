@@ -114,7 +114,93 @@ function useGameSounds(enabled: boolean) {
     });
   };
 
-  return { tick, fanfare, sadTrombone };
+  /** Aplausos sintéticos: rajada de "ruído branco" filtrado simulando palmas. */
+  const applause = (durationSec = 2.4) => {
+    const ctx = ensureCtx();
+    if (!ctx) return;
+
+    // Buffer de ruído branco
+    const bufferSize = Math.floor(ctx.sampleRate * durationSec);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Gera "palmas" = bursts curtos de ruído com decay rápido em densidades aleatórias
+    for (let i = 0; i < bufferSize; i++) {
+      // Probabilidade de iniciar uma "palma" individual
+      const burstProb = 0.012;
+      if (Math.random() < burstProb) {
+        const burstLen = Math.floor(ctx.sampleRate * (0.015 + Math.random() * 0.04));
+        const amp = 0.4 + Math.random() * 0.5;
+        for (let j = 0; j < burstLen && i + j < bufferSize; j++) {
+          const decay = Math.exp(-j / (burstLen * 0.4));
+          data[i + j] += (Math.random() * 2 - 1) * amp * decay;
+        }
+        i += Math.floor(burstLen * 0.5); // pula um pouco para densidade natural
+      }
+    }
+    // Normaliza
+    let max = 0;
+    for (let i = 0; i < bufferSize; i++) max = Math.max(max, Math.abs(data[i]));
+    if (max > 0) for (let i = 0; i < bufferSize; i++) data[i] = (data[i] / max) * 0.85;
+
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+
+    // Filtro pra dar timbre de palma (corte de graves, realce de médios-agudos)
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 800;
+    const peak = ctx.createBiquadFilter();
+    peak.type = "peaking";
+    peak.frequency.value = 2500;
+    peak.Q.value = 1.2;
+    peak.gain.value = 6;
+
+    // Envelope: fade-in rápido, sustain, fade-out
+    const gain = ctx.createGain();
+    const t0 = ctx.currentTime;
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(0.35, t0 + 0.08);
+    gain.gain.setValueAtTime(0.35, t0 + durationSec - 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + durationSec);
+
+    src.connect(hp).connect(peak).connect(gain).connect(ctx.destination);
+    src.start(t0);
+    src.stop(t0 + durationSec + 0.05);
+  };
+
+  /** "Uhuuul" — assobio/grito curto ascendente pra dar vibe de torcida. */
+  const cheer = () => {
+    const ctx = ensureCtx();
+    if (!ctx) return;
+    const t0 = ctx.currentTime + 0.35;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(520, t0);
+    osc.frequency.exponentialRampToValueAtTime(1100, t0 + 0.35);
+    osc.frequency.exponentialRampToValueAtTime(900, t0 + 0.7);
+
+    // Vibrato leve pro grito ficar mais "humano"
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    lfo.frequency.value = 6;
+    lfoGain.gain.value = 25;
+    lfo.connect(lfoGain).connect(osc.frequency);
+
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(0.12, t0 + 0.06);
+    gain.gain.setValueAtTime(0.12, t0 + 0.55);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.75);
+
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    lfo.start(t0);
+    osc.stop(t0 + 0.8);
+    lfo.stop(t0 + 0.8);
+  };
+
+  return { tick, fanfare, sadTrombone, applause, cheer };
 }
 
 type Phase = "shuffling" | "fanned" | "picked" | "revealed";
@@ -128,7 +214,7 @@ export function RouletteCardShuffle({
   size = "normal",
 }: Props) {
   const [phase, setPhase] = useState<Phase>("shuffling");
-  const { tick, fanfare, sadTrombone } = useGameSounds(soundEnabled);
+  const { tick, fanfare, sadTrombone, applause, cheer } = useGameSounds(soundEnabled);
   const confettiFiredRef = useRef(false);
 
   // Indices das cartas no leque — embaralhamos para exibir aleatoriamente
@@ -170,8 +256,10 @@ export function RouletteCardShuffle({
           // 😞 Prêmio zero → trombone triste, sem confetes
           sadTrombone();
         } else {
-          // 🎉 Prêmio com valor → fanfarra + confete
+          // 🎉 Prêmio com valor → fanfarra + palmas + grito + confete
           fanfare();
+          applause(2.6);
+          cheer();
           const fire = (origin: { x: number; y: number }) =>
             confetti({
               particleCount: 120,
