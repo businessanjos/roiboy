@@ -350,13 +350,13 @@ export function CommissionSimulator() {
                   <Target className="h-3.5 w-3.5" />
                   Bônus sem teto: ativo a partir de {simulation.uncappedThreshold}% de atingimento
                 </p>
-                {achievementPct > simulation.uncappedThreshold ? (
+                {simulation.extraSales > 0 ? (
                   <p className="text-muted-foreground">
-                    Limite ≈ {simulation.salesAtThreshold.toFixed(1)} vendas. Acima disso, cada venda extra paga{" "}
+                    Limite = {simulation.salesAtThreshold} vendas. Cada venda inteira acima paga{" "}
                     {simulation.uncappedType === "fixed"
                       ? <strong>{fmt(simulation.uncappedPerSale)}</strong>
                       : <strong>{simulation.uncappedPerSale}% do valor</strong>}
-                    . {simulation.extraSales.toFixed(1)} vendas extras × {simulation.uncappedType === "fixed" ? fmt(simulation.uncappedPerSale) : `${simulation.uncappedPerSale}%`} = <strong>{fmt(simulation.uncappedBonus)}</strong>
+                    . {simulation.extraSales} × {simulation.uncappedType === "fixed" ? fmt(simulation.uncappedPerSale) : `${simulation.uncappedPerSale}%`} = <strong>{fmt(simulation.uncappedBonus)}</strong>
                   </p>
                 ) : (
                   <p className="text-muted-foreground">
