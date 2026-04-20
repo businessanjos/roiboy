@@ -111,8 +111,8 @@ export function CommissionSimulator() {
     const plan = plans.find((p) => p.is_active && p.position_id && salesPositionIds.includes(p.position_id)) ?? null;
     if (!plan) return { noPlan: true } as any;
 
-    // ── Meta vem do plano (quota_value), não da soma das quotas mensais ──
-    const totalTargetValue = Number(plan.quota_value) || 0;
+    // ── Meta da simulação: prioriza goal_value (meta operacional configurada); fallback em quota_value ──
+    const totalTargetValue = Number(plan.goal_value) || Number(plan.quota_value) || 0;
 
     // Produto vendido no simulador: Rykas Mentoring
     const planProductRates = productRates.filter((r) => r.plan_id === plan.id);
@@ -126,6 +126,8 @@ export function CommissionSimulator() {
     const totalTargetQty = totalTargetValue / avgTicket;
     const simulatedValue = (totalTargetValue * achievementPct) / 100;
     const simulatedQty = simulatedValue / avgTicket;
+    const wholeSalesCount = Math.floor(simulatedQty);
+    const commissionableValue = wholeSalesCount * avgTicket;
 
     // Comissão por produto: usar apenas a taxa do Rykas Mentoring.
     // Se o plano não tiver taxa específica para ele, usa fallback somente quando todas as taxas do plano forem iguais.
@@ -138,8 +140,7 @@ export function CommissionSimulator() {
 
     const commissionPercent = Number(appliedRate?.commission_percent || 0) / 100;
     const fixedCommissionPerSale = Number(appliedRate?.fixed_amount || 0);
-    const wholeSalesCount = Math.floor(simulatedQty);
-    const totalCommission = simulatedValue * commissionPercent + wholeSalesCount * fixedCommissionPerSale;
+    const totalCommission = commissionableValue * commissionPercent + wholeSalesCount * fixedCommissionPerSale;
 
     // ── Bônus de faixa: acima do tier máximo, mantém o multiplicador do último ──
     const planTiers = [...tiers.filter((t) => t.plan_id === plan.id)]
@@ -203,6 +204,7 @@ export function CommissionSimulator() {
       simulatedQty,
       avgTicket,
       totalCommission,
+      commissionableValue,
       commissionPercent,
       fixedCommissionPerSale,
       wholeSalesCount,
