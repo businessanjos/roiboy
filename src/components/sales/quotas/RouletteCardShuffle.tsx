@@ -214,7 +214,7 @@ export function RouletteCardShuffle({
   size = "normal",
 }: Props) {
   const [phase, setPhase] = useState<Phase>("shuffling");
-  const { tick, fanfare, sadTrombone } = useGameSounds(soundEnabled);
+  const { tick, fanfare, sadTrombone, applause, cheer } = useGameSounds(soundEnabled);
   const confettiFiredRef = useRef(false);
 
   // Indices das cartas no leque — embaralhamos para exibir aleatoriamente
