@@ -155,6 +155,10 @@ export function IncentivePlanSection() {
       setMonthlyBonusChannel("folha");
       setQuarterlyBonusChannel("ferias_co");
       setAnnualBonusChannel("ferias_co");
+      setUncappedEnabled(false);
+      setUncappedThreshold(0);
+      setUncappedPerSale(0);
+      setUncappedType("fixed");
     }
     setTimeout(() => { initializedRef.current = true; }, 150);
   }, [activePlan, selectedPositionId]);
