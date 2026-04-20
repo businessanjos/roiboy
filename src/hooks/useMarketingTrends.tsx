@@ -11,6 +11,14 @@ export interface MarketingTrend {
   source: string;
   source_url: string | null;
   thumbnail_url: string | null;
+  media_url: string | null;
+  creator_handle: string | null;
+  creator_followers: number | null;
+  views_count: number | null;
+  likes_count: number | null;
+  comments_count: number | null;
+  audio_title: string | null;
+  platform: string | null;
   hype_score: number | null;
   tags: string[];
   ai_adaptation: string | null;
@@ -36,7 +44,7 @@ export function useMarketingTrends() {
         .eq("is_archived", false)
         .order("hype_score", { ascending: false, nullsFirst: false })
         .order("captured_at", { ascending: false })
-        .limit(60);
+        .limit(80);
       if (error) throw error;
       return data as MarketingTrend[];
     },
@@ -60,6 +68,23 @@ export function useMarketingTrends() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const discoverApify = useMutation({
+    mutationFn: async (input: { platform: string; hashtags: string[]; maxItems?: number }) => {
+      if (!accountId) throw new Error("Sem conta");
+      const { data, error } = await supabase.functions.invoke("discover-trends-apify", {
+        body: { accountId, ...input },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["marketing-trends", accountId] });
+      toast.success(`${data.count} virais capturados via Apify`);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const archiveTrend = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("marketing_trends").update({ is_archived: true }).eq("id", id);
@@ -79,5 +104,5 @@ export function useMarketingTrends() {
     },
   });
 
-  return { trends, isLoading, discover, archiveTrend, deleteTrend };
+  return { trends, isLoading, discover, discoverApify, archiveTrend, deleteTrend };
 }

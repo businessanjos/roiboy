@@ -21,6 +21,10 @@ export interface MarketingIdea {
   priority: IdeaPriority;
   planned_date: string | null;
   scheduled_at: string | null;
+  scheduled_for: string | null;
+  publish_platform: string | null;
+  published_at: string | null;
+  published_url: string | null;
   posted_at: string | null;
   thumbnail_url: string | null;
   caption: string | null;
