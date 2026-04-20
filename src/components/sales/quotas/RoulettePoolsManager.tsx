@@ -321,8 +321,12 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
         if (error) throw error;
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["roulette-prizes"] }),
-    onError: (e: any) => toast.error("Erro: " + e.message),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["roulette-prizes"] });
+      // Toast apenas em criação ou save manual (não em auto-save)
+      if (!variables.id) toast.success("Prêmio adicionado");
+    },
+    onError: (e: any) => toast.error("Erro ao salvar prêmio: " + e.message),
   });
 
   const deletePrize = useMutation({
