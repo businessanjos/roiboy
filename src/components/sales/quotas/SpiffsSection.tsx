@@ -41,6 +41,7 @@ export function SpiffsSection() {
   const [triggerPerValue, setTriggerPerValue] = useState(10000);
   const [rouletteMin, setRouletteMin] = useState(0);
   const [rouletteMax, setRouletteMax] = useState(100);
+  const [roulettePoolId, setRoulettePoolId] = useState<string>("range");
   const [triggerSalesCount, setTriggerSalesCount] = useState(3);
   const [triggerWindowDays, setTriggerWindowDays] = useState(7);
   const [triggerWeekStartDay, setTriggerWeekStartDay] = useState<string>("rolling"); // "rolling" | "0".."6"
@@ -100,6 +101,7 @@ export function SpiffsSection() {
       trigger_per_value: prizeType === "roulette" ? triggerPerValue : 0,
       roulette_min_prize: prizeType === "roulette" ? rouletteMin : 0,
       roulette_max_prize: prizeType === "roulette" ? rouletteMax : 0,
+      roulette_pool_id: prizeType === "roulette" && roulettePoolId !== "range" ? roulettePoolId : null,
       trigger_sales_count: prizeType === "custom" ? triggerSalesCount : 0,
       trigger_window_days: prizeType === "custom" ? triggerWindowDays : 7,
       trigger_week_start_day:
@@ -132,6 +134,7 @@ export function SpiffsSection() {
     setTriggerPerValue(10000);
     setRouletteMin(0);
     setRouletteMax(100);
+    setRoulettePoolId("range");
     setTriggerSalesCount(3);
     setTriggerWindowDays(7);
     setTriggerWeekStartDay("rolling");
@@ -159,6 +162,7 @@ export function SpiffsSection() {
     setTriggerPerValue(Number(spiff.trigger_per_value) || 10000);
     setRouletteMin(Number(spiff.roulette_min_prize) || 0);
     setRouletteMax(Number(spiff.roulette_max_prize) || 100);
+    setRoulettePoolId(spiff.roulette_pool_id || "range");
     setTriggerSalesCount(Number(spiff.trigger_sales_count) || 3);
     setTriggerWindowDays(Number(spiff.trigger_window_days) || 7);
     setTriggerWeekStartDay(
