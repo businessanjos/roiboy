@@ -157,7 +157,7 @@ export function OTESection({
                 {positionTitle && <Badge variant="secondary" className="text-[10px]">{positionTitle}</Badge>}
               </CardTitle>
               <CardDescription>
-                Cargo "{positionTitle}". Base puxada do RH (CLT × 13,33 + 70% encargos · PJ/Sócio × 12). Variável calculado do plano acima (mensal × 12 + trimestral × 4 + anual).
+                Cargo "{positionTitle}". Base = salário fixo × 12 (sem encargos). Variável calculado do plano acima (mensal × 12 + trimestral × 4 + anual).
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
