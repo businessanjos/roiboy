@@ -573,16 +573,7 @@ export function TeamGoalsTab() {
                   </div>
                 </div>
 
-                {activeMetrics.length === 0 ? (
-                  <Card className="border-dashed">
-                    <CardContent className="py-10 text-center">
-                      <BarChart3 className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                      <p className="text-xs text-muted-foreground">
-                        Nenhuma métrica configurada. Clique em "+ Métrica" para adicionar.
-                      </p>
-                    </CardContent>
-                  </Card>
-                ) : (
+                {activeMetrics.length === 0 ? null : (
                   <div className="grid gap-3">
                     {activeMetrics.map((metric, idx) => {
                       const value = getGoalValue(activeMember.id, currentYearMonth, metric.metric_key, metric.default_value);
