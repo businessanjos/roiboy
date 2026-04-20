@@ -226,13 +226,18 @@ export function RoulettePoolsManager() {
                           </AlertDialog>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[10px]">
-                          {prizes.length} {prizes.length === 1 ? "prêmio" : "prêmios"}
-                        </Badge>
-                        {totalWeight > 0 && (
-                          <span className="text-[10px] text-muted-foreground">peso total: {totalWeight}</span>
-                        )}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={prizes.length === 0 ? "destructive" : "secondary"} className="text-[10px]">
+                            {prizes.length} {prizes.length === 1 ? "prêmio" : "prêmios"}
+                          </Badge>
+                          {totalWeight > 0 && (
+                            <span className="text-[10px] text-muted-foreground">peso total: {totalWeight}</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-primary font-medium">
+                          {isSelected ? "✓ aberto" : "Clique para configurar →"}
+                        </span>
                       </div>
                     </CardContent>
                   </Card>
