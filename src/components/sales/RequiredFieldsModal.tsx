@@ -14,6 +14,12 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { InlineFieldInput } from "@/components/sales/InlineFieldInput";
+import {
+  PaymentBreakdownComposer,
+  PaymentBreakdownItem,
+  getMethodsForPaymentOption,
+  isBreakdownComplete,
+} from "@/components/sales/PaymentBreakdownComposer";
 
 interface RequiredFieldsModalProps {
   open: boolean;
@@ -28,6 +34,9 @@ interface RequiredFieldsModalProps {
   outcomeType?: "won" | "lost";
 }
 
+const PAYMENT_METHOD_FIELD_NAME = "Forma da Pagamento";
+const PAYMENT_BREAKDOWN_FIELD_NAME = "Detalhamento de Pagamento";
+
 export function RequiredFieldsModal({
   open,
   onOpenChange,
@@ -40,27 +49,50 @@ export function RequiredFieldsModal({
   outcomeType,
 }: RequiredFieldsModalProps) {
   const [values, setValues] = useState<Record<string, any>>({});
+  const [breakdown, setBreakdown] = useState<PaymentBreakdownItem[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Reset values when modal opens
   useEffect(() => {
     if (open) {
       setValues({});
+      setBreakdown([]);
     }
   }, [open]);
 
-  const allFieldsFilled = missingFields.every(field => {
+  const paymentMethodField = missingFields.find((f) => f.name === PAYMENT_METHOD_FIELD_NAME);
+  const paymentMethodValue = paymentMethodField ? values[paymentMethodField.id] : undefined;
+  const requiredMethods = paymentMethodValue
+    ? getMethodsForPaymentOption(paymentMethodValue as string)
+    : [];
+  const needsBreakdown = requiredMethods.length > 0;
+
+  const paymentMethodLabel = (() => {
+    if (!paymentMethodField || !paymentMethodValue) return "";
+    const opt = paymentMethodField.options.find((o) => o.value === paymentMethodValue);
+    return opt?.label ?? "";
+  })();
+
+  const allFieldsFilled = missingFields.every((field) => {
+    // Skip the auto-filled breakdown field — it's handled separately below.
+    if (field.name === PAYMENT_BREAKDOWN_FIELD_NAME) return true;
     const value = values[field.id];
     if (field.field_type === "boolean") return value !== undefined;
     if (Array.isArray(value)) return value.length > 0;
     return value !== null && value !== undefined && value !== "";
   });
 
+  const breakdownOk = !needsBreakdown || isBreakdownComplete(breakdown);
+  const canSave = allFieldsFilled && breakdownOk;
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Save all values
+      // Save standard required fields
       for (const field of missingFields) {
+        // Skip the breakdown field — handled separately so we always write the latest composer state.
+        if (field.name === PAYMENT_BREAKDOWN_FIELD_NAME) continue;
+
         const value = values[field.id];
         if (value === undefined || value === null || value === "") continue;
 
@@ -106,6 +138,46 @@ export function RequiredFieldsModal({
         if (error) throw error;
       }
 
+      // Save the payment breakdown into "Detalhamento de Pagamento" if applicable
+      if (needsBreakdown) {
+        const breakdownField = missingFields.find((f) => f.name === PAYMENT_BREAKDOWN_FIELD_NAME);
+        // Fall back to fetching it if it's not part of missingFields (e.g. already filled but still required)
+        let breakdownFieldId = breakdownField?.id;
+        if (!breakdownFieldId) {
+          const { data: bf } = await supabase
+            .from("custom_fields")
+            .select("id")
+            .eq("account_id", accountId)
+            .eq("name", PAYMENT_BREAKDOWN_FIELD_NAME)
+            .maybeSingle();
+          breakdownFieldId = bf?.id;
+        }
+
+        if (breakdownFieldId) {
+          const summary = breakdown
+            .map(
+              (b) =>
+                `${b.method_label}: R$ ${(b.amount ?? 0).toFixed(2)} em ${b.installments}x (1ª: ${b.first_due_date})`
+            )
+            .join(" | ");
+
+          const { error: bErr } = await supabase.from("deal_field_values").upsert(
+            {
+              account_id: accountId,
+              deal_id: dealId,
+              field_id: breakdownFieldId,
+              value_text: summary,
+              value_json: breakdown as any,
+              value_number: null,
+              value_boolean: null,
+              value_date: null,
+            },
+            { onConflict: "deal_id,field_id" }
+          );
+          if (bErr) throw bErr;
+        }
+      }
+
       toast.success("Campos preenchidos!");
       onComplete();
       onOpenChange(false);
@@ -118,7 +190,11 @@ export function RequiredFieldsModal({
   };
 
   const handleValueChange = (fieldId: string, newValue: any) => {
-    setValues(prev => ({ ...prev, [fieldId]: newValue }));
+    setValues((prev) => ({ ...prev, [fieldId]: newValue }));
+    // If the user changes the payment method, reset the breakdown
+    if (paymentMethodField && fieldId === paymentMethodField.id) {
+      setBreakdown([]);
+    }
   };
 
   // Generate contextual messaging based on outcome type
@@ -133,27 +209,24 @@ export function RequiredFieldsModal({
   };
 
   const getButtonLabel = () => {
-    if (outcomeType === "won") {
-      return "Preencher e Ganhar";
-    }
-    if (outcomeType === "lost") {
-      return "Preencher e Perder";
-    }
+    if (outcomeType === "won") return "Preencher e Ganhar";
+    if (outcomeType === "lost") return "Preencher e Perder";
     return "Preencher e Mover";
   };
+
+  // Filter out the auto-managed breakdown field from the displayed list
+  const displayedFields = missingFields.filter((f) => f.name !== PAYMENT_BREAKDOWN_FIELD_NAME);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Campos Obrigatórios</DialogTitle>
-          <DialogDescription>
-            {getDescription()}
-          </DialogDescription>
+          <DialogDescription>{getDescription()}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {missingFields.map(field => (
+          {displayedFields.map((field) => (
             <div key={field.id} className="space-y-2">
               <Label className="text-sm font-medium">
                 {field.name} <span className="text-destructive">*</span>
@@ -163,6 +236,14 @@ export function RequiredFieldsModal({
                 value={values[field.id]}
                 onChange={(newValue) => handleValueChange(field.id, newValue)}
               />
+              {field.id === paymentMethodField?.id && needsBreakdown && (
+                <PaymentBreakdownComposer
+                  paymentMethodValue={paymentMethodValue as string}
+                  paymentMethodLabel={paymentMethodLabel}
+                  value={breakdown}
+                  onChange={setBreakdown}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -171,7 +252,7 @@ export function RequiredFieldsModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={!allFieldsFilled || saving}>
+          <Button onClick={handleSave} disabled={!canSave || saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             {getButtonLabel()}
           </Button>
