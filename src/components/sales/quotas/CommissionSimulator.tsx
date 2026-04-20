@@ -16,6 +16,9 @@ const SALES_USER_IDS = [
   "1ac1c97c-bff6-4174-b48c-9b524b404ce6", // Vanessa Minelli
 ];
 
+const ANNUAL_BONUS_THRESHOLD = 90;     // % de atingimento para o bônus anual
+const QUARTERLY_BONUS_THRESHOLD = 100; // % de atingimento para o bônus trimestral
+
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function CommissionSimulator() {
@@ -25,7 +28,7 @@ export function CommissionSimulator() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const { plans, productRates, tiers, quotas, userOTEs } = useQuotasIncentives(year, month);
+  const { plans, productRates, tiers, quotas } = useQuotasIncentives(year, month);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [achievementPct, setAchievementPct] = useState(100);
 
@@ -44,7 +47,22 @@ export function CommissionSimulator() {
     enabled: !!accountId,
   });
 
-  // Busca cargos comerciais para resolver o plano correto
+  // Busca salário CLT real dos vendedores (RH)
+  const collaboratorsQuery = useQuery({
+    queryKey: ["sales-collaborators-salary", accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hr_collaborators")
+        .select("user_id, salary")
+        .eq("account_id", accountId!)
+        .in("user_id", SALES_USER_IDS);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!accountId,
+  });
+
+  // Cargos comerciais para resolver o plano correto
   const salesPositionsQuery = useQuery({
     queryKey: ["sales-positions", accountId],
     queryFn: async () => {
@@ -83,51 +101,69 @@ export function CommissionSimulator() {
 
   const users = usersQuery.data ?? [];
   const products = productsQuery.data ?? [];
+  const collaborators = collaboratorsQuery.data ?? [];
   const salesPositionIds = (salesPositionsQuery.data ?? []).map((p) => p.id);
 
   const simulation = useMemo(() => {
     if (!selectedUserId) return null;
 
-    // Resolve plano: o plano ativo cujo cargo pertença a um departamento comercial
+    // Plano ativo cujo cargo pertence ao departamento comercial
     const plan = plans.find((p) => p.is_active && p.position_id && salesPositionIds.includes(p.position_id)) ?? null;
     if (!plan) return { noPlan: true } as any;
 
-    const userQuotas = quotas.filter((q) => q.user_id === selectedUserId);
-    const totalTargetValue = userQuotas.reduce((s, q) => s + Number(q.target_value), 0);
-    const totalTargetQty = userQuotas.reduce((s, q) => s + Number(q.target_quantity), 0);
+    // ── Meta vem do plano (quota_value), não da soma das quotas mensais ──
+    const totalTargetValue = Number(plan.quota_value) || 0;
+
+    // Ticket médio: prioriza preço dos produtos com taxa cadastrada no plano
+    const planProducts = productRates
+      .filter((r) => r.plan_id === plan.id && r.product_id)
+      .map((r) => products.find((p) => p.id === r.product_id))
+      .filter(Boolean) as { id: string; name: string; price: number }[];
+    const avgTicket = planProducts.length > 0
+      ? planProducts.reduce((s, p) => s + Number(p.price), 0) / planProducts.length
+      : 0;
+
+    const totalTargetQty = avgTicket > 0 ? totalTargetValue / avgTicket : 0;
     const simulatedValue = (totalTargetValue * achievementPct) / 100;
-    const simulatedQty = (totalTargetQty * achievementPct) / 100;
+    const simulatedQty = avgTicket > 0 ? simulatedValue / avgTicket : 0;
 
-    // Ticket médio ponderado pelas quotas
-    const avgTicket = totalTargetQty > 0 ? totalTargetValue / totalTargetQty : 0;
-
-    // Comissão por produto: usa preço × quantidade simulada (consistente com vendas reais)
+    // Comissão por produto: preço médio × qtd simulada × taxa do plano
     let totalCommission = 0;
-    userQuotas.forEach((q) => {
-      if (!q.product_id) return;
-      const rate = productRates.find((r) => r.product_id === q.product_id && r.plan_id === plan.id);
-      if (!rate) return;
-      const product = products.find((p) => p.id === q.product_id);
-      const unitPrice = product ? Number(product.price) : (Number(q.target_value) / Math.max(Number(q.target_quantity), 1));
-      const qSimulatedQty = (Number(q.target_quantity) * achievementPct) / 100;
-      const qSimulatedValue = unitPrice * qSimulatedQty;
-      const commPct = Number(rate.commission_percent) / 100;
-      const commFixed = Number(rate.fixed_amount);
-      totalCommission += qSimulatedValue * commPct + commFixed * qSimulatedQty;
-    });
+    productRates
+      .filter((r) => r.plan_id === plan.id && r.product_id)
+      .forEach((r) => {
+        const product = products.find((p) => p.id === r.product_id);
+        if (!product) return;
+        const unitPrice = Number(product.price);
+        // Distribui a quantidade simulada proporcionalmente entre os produtos do plano
+        const qSimulatedQty = simulatedQty / planProducts.length;
+        const qSimulatedValue = unitPrice * qSimulatedQty;
+        const commPct = Number(r.commission_percent) / 100;
+        const commFixed = Number(r.fixed_amount);
+        totalCommission += qSimulatedValue * commPct + commFixed * qSimulatedQty;
+      });
 
-    // Bônus de faixa
-    const planTiers = tiers.filter((t) => t.plan_id === plan.id);
-    const activeTier = [...planTiers]
-      .sort((a, b) => Number(b.min_achievement_percent) - Number(a.min_achievement_percent))
+    // ── Bônus de faixa: acima do tier máximo, mantém o multiplicador do último ──
+    const planTiers = [...tiers.filter((t) => t.plan_id === plan.id)]
+      .sort((a, b) => Number(a.min_achievement_percent) - Number(b.min_achievement_percent));
+
+    let activeTier = planTiers
+      .slice()
+      .reverse()
       .find((t) => achievementPct >= Number(t.min_achievement_percent) &&
-        (t.max_achievement_percent == null || achievementPct < Number(t.max_achievement_percent)));
+        (t.max_achievement_percent == null || achievementPct <= Number(t.max_achievement_percent)));
+
+    // Fallback: acima do maior tier conhecido → mantém o último
+    const topTier = planTiers[planTiers.length - 1];
+    if (!activeTier && topTier && achievementPct > Number(topTier.max_achievement_percent ?? topTier.min_achievement_percent)) {
+      activeTier = topTier;
+    }
 
     const bonusBase = Number(plan.bonus_base_value);
     const multiplier = activeTier ? Number(activeTier.bonus_multiplier) : 0;
     const bonusValue = bonusBase * multiplier;
 
-    // Bônus Adicional sem teto (acima do threshold)
+    // ── Bônus Adicional sem teto (acima do threshold) ──
     const uncappedEnabled = (plan as any).uncapped_bonus_enabled;
     const uncappedThreshold = Number((plan as any).uncapped_threshold_percent || 0);
     const uncappedPerSale = Number((plan as any).uncapped_bonus_per_sale || 0);
@@ -142,21 +178,20 @@ export function CommissionSimulator() {
       if (uncappedType === "fixed") {
         uncappedBonus = extraSales * uncappedPerSale;
       } else {
-        // percent: aplica % sobre o valor das vendas extras
         const extraValue = extraSales * avgTicket;
         uncappedBonus = (extraValue * uncappedPerSale) / 100;
       }
     }
 
-    // Bônus trimestral/anual: mostrados como info (não somam no mensal por padrão)
-    const quarterlyBonus = plan.quarterly_bonus_enabled && achievementPct >= 100
+    // ── Bônus complementares ──
+    const quarterlyBonus = plan.quarterly_bonus_enabled && achievementPct >= QUARTERLY_BONUS_THRESHOLD
       ? Number(plan.quarterly_bonus_value) : 0;
-    const annualBonus = (plan as any).annual_bonus_enabled && achievementPct >= 100
+    const annualBonus = (plan as any).annual_bonus_enabled && achievementPct >= ANNUAL_BONUS_THRESHOLD
       ? Number((plan as any).annual_bonus_value) : 0;
 
-    // OTE
-    const userOTE = userOTEs.find((o) => o.user_id === selectedUserId);
-    const monthlyBase = userOTE ? Number(userOTE.base_salary_annual) / 12 : 0;
+    // ── Salário Base: vem do RH (hr_collaborators.salary) ──
+    const collab = collaborators.find((c) => c.user_id === selectedUserId);
+    const monthlyBase = collab ? Number(collab.salary) : 0;
 
     const totalEarnings = monthlyBase + totalCommission + bonusValue + uncappedBonus;
 
@@ -184,7 +219,7 @@ export function CommissionSimulator() {
       monthlyBase,
       totalEarnings,
     };
-  }, [selectedUserId, achievementPct, quotas, productRates, tiers, plans, userOTEs, products, salesPositionIds]);
+  }, [selectedUserId, achievementPct, quotas, productRates, tiers, plans, collaborators, products, salesPositionIds]);
 
   return (
     <Card>
@@ -238,7 +273,7 @@ export function CommissionSimulator() {
               <div className="p-2 rounded border bg-muted/20">
                 <p className="text-muted-foreground">Meta total</p>
                 <p className="font-semibold">{fmt(simulation.totalTargetValue)}</p>
-                <p className="text-[10px] text-muted-foreground">{simulation.totalTargetQty} vendas</p>
+                <p className="text-[10px] text-muted-foreground">≈ {simulation.totalTargetQty.toFixed(1)} vendas</p>
               </div>
               <div className="p-2 rounded border bg-muted/20">
                 <p className="text-muted-foreground">Simulado ({achievementPct}%)</p>
@@ -330,14 +365,20 @@ export function CommissionSimulator() {
             )}
 
             {/* Bônus trimestral/anual (informativo) */}
-            {(simulation.quarterlyBonus > 0 || simulation.annualBonus > 0) && (
+            {(simulation.plan.quarterly_bonus_enabled || (simulation.plan as any).annual_bonus_enabled) && (
               <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded border space-y-1">
                 <p className="font-medium text-foreground">Bônus complementares (não somados ao mensal):</p>
-                {simulation.quarterlyBonus > 0 && (
-                  <p>⚡ Trimestral: {fmt(simulation.quarterlyBonus)} (pago no fechamento do trimestre se atingir 100%)</p>
+                {simulation.plan.quarterly_bonus_enabled && (
+                  <p>
+                    ⚡ Trimestral: {fmt(Number(simulation.plan.quarterly_bonus_value))} — pago no fechamento do trimestre se atingir {QUARTERLY_BONUS_THRESHOLD}%
+                    {achievementPct >= QUARTERLY_BONUS_THRESHOLD ? " ✅" : ""}
+                  </p>
                 )}
-                {simulation.annualBonus > 0 && (
-                  <p>🏆 Anual: {fmt(simulation.annualBonus)} (pago no fechamento do ano se atingir 100%)</p>
+                {(simulation.plan as any).annual_bonus_enabled && (
+                  <p>
+                    🏆 Anual: {fmt(Number((simulation.plan as any).annual_bonus_value))} — pago no fechamento do ano se atingir {ANNUAL_BONUS_THRESHOLD}%
+                    {achievementPct >= ANNUAL_BONUS_THRESHOLD ? " ✅" : ""}
+                  </p>
                 )}
               </div>
             )}
