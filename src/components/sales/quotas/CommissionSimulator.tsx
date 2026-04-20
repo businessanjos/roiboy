@@ -114,35 +114,32 @@ export function CommissionSimulator() {
     // ── Meta vem do plano (quota_value), não da soma das quotas mensais ──
     const totalTargetValue = Number(plan.quota_value) || 0;
 
+    // Produto vendido no simulador: Rykas Mentoring
+    const planProductRates = productRates.filter((r) => r.plan_id === plan.id);
+    const mentoringProduct = products.find((p) => p.name.trim().toLowerCase() === "rykas mentoring")
+      ?? products.find((p) => p.name.toLowerCase().includes("rykas mentoring"));
+
     // Ticket fixo Rykas Mentoring: R$ 70.800 até abril/2026, R$ 80.000 a partir de maio/2026
     const isAfterMay2026 = year > 2026 || (year === 2026 && month >= 5);
     const avgTicket = isAfterMay2026 ? 80000 : 70800;
-
-    // Produtos do plano (mantém para exibição/comissão)
-    const planProducts = productRates
-      .filter((r) => r.plan_id === plan.id && r.product_id)
-      .map((r) => products.find((p) => p.id === r.product_id))
-      .filter(Boolean) as { id: string; name: string; price: number }[];
 
     const totalTargetQty = totalTargetValue / avgTicket;
     const simulatedValue = (totalTargetValue * achievementPct) / 100;
     const simulatedQty = simulatedValue / avgTicket;
 
-    // Comissão por produto: preço médio × qtd simulada × taxa do plano
-    let totalCommission = 0;
-    productRates
-      .filter((r) => r.plan_id === plan.id && r.product_id)
-      .forEach((r) => {
-        const product = products.find((p) => p.id === r.product_id);
-        if (!product) return;
-        const unitPrice = Number(product.price);
-        // Distribui a quantidade simulada proporcionalmente entre os produtos do plano
-        const qSimulatedQty = simulatedQty / planProducts.length;
-        const qSimulatedValue = unitPrice * qSimulatedQty;
-        const commPct = Number(r.commission_percent) / 100;
-        const commFixed = Number(r.fixed_amount);
-        totalCommission += qSimulatedValue * commPct + commFixed * qSimulatedQty;
-      });
+    // Comissão por produto: usar apenas a taxa do Rykas Mentoring.
+    // Se o plano não tiver taxa específica para ele, usa fallback somente quando todas as taxas do plano forem iguais.
+    const mentoringRate = mentoringProduct
+      ? planProductRates.find((r) => r.product_id === mentoringProduct.id)
+      : undefined;
+    const uniqueRateKeys = [...new Set(planProductRates.map((r) => `${Number(r.commission_percent) || 0}|${Number(r.fixed_amount) || 0}`))];
+    const fallbackRate = uniqueRateKeys.length === 1 ? planProductRates[0] : null;
+    const appliedRate = mentoringRate ?? fallbackRate;
+
+    const commissionPercent = Number(appliedRate?.commission_percent || 0) / 100;
+    const fixedCommissionPerSale = Number(appliedRate?.fixed_amount || 0);
+    const wholeSalesCount = Math.floor(simulatedQty);
+    const totalCommission = simulatedValue * commissionPercent + wholeSalesCount * fixedCommissionPerSale;
 
     // ── Bônus de faixa: acima do tier máximo, mantém o multiplicador do último ──
     const planTiers = [...tiers.filter((t) => t.plan_id === plan.id)]
@@ -206,6 +203,10 @@ export function CommissionSimulator() {
       simulatedQty,
       avgTicket,
       totalCommission,
+      commissionPercent,
+      fixedCommissionPerSale,
+      wholeSalesCount,
+      appliedRateName: mentoringProduct?.name ?? "Rykas Mentoring",
       activeTier,
       bonusValue,
       multiplier,
@@ -307,6 +308,9 @@ export function CommissionSimulator() {
                   Comissão Produtos
                 </div>
                 <p className="font-bold text-sm">{fmt(simulation.totalCommission)}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {simulation.appliedRateName}: {(simulation.commissionPercent * 100).toLocaleString("pt-BR")}%
+                </p>
               </div>
               <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
