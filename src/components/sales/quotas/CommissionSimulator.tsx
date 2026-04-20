@@ -114,18 +114,19 @@ export function CommissionSimulator() {
     // ── Meta vem do plano (quota_value), não da soma das quotas mensais ──
     const totalTargetValue = Number(plan.quota_value) || 0;
 
-    // Ticket médio: prioriza preço dos produtos com taxa cadastrada no plano
+    // Ticket fixo Rykas Mentoring: R$ 70.800 até abril/2026, R$ 80.000 a partir de maio/2026
+    const isAfterMay2026 = year > 2026 || (year === 2026 && month >= 5);
+    const avgTicket = isAfterMay2026 ? 80000 : 70800;
+
+    // Produtos do plano (mantém para exibição/comissão)
     const planProducts = productRates
       .filter((r) => r.plan_id === plan.id && r.product_id)
       .map((r) => products.find((p) => p.id === r.product_id))
       .filter(Boolean) as { id: string; name: string; price: number }[];
-    const avgTicket = planProducts.length > 0
-      ? planProducts.reduce((s, p) => s + Number(p.price), 0) / planProducts.length
-      : 0;
 
-    const totalTargetQty = avgTicket > 0 ? totalTargetValue / avgTicket : 0;
+    const totalTargetQty = totalTargetValue / avgTicket;
     const simulatedValue = (totalTargetValue * achievementPct) / 100;
-    const simulatedQty = avgTicket > 0 ? simulatedValue / avgTicket : 0;
+    const simulatedQty = simulatedValue / avgTicket;
 
     // Comissão por produto: preço médio × qtd simulada × taxa do plano
     let totalCommission = 0;
@@ -163,7 +164,7 @@ export function CommissionSimulator() {
     const multiplier = activeTier ? Number(activeTier.bonus_multiplier) : 0;
     const bonusValue = bonusBase * multiplier;
 
-    // ── Bônus Adicional sem teto (acima do threshold) ──
+    // ── Bônus Adicional sem teto: R$ X por VENDA INTEIRA acima do limite ──
     const uncappedEnabled = (plan as any).uncapped_bonus_enabled;
     const uncappedThreshold = Number((plan as any).uncapped_threshold_percent || 0);
     const uncappedPerSale = Number((plan as any).uncapped_bonus_per_sale || 0);
@@ -171,10 +172,11 @@ export function CommissionSimulator() {
 
     let uncappedBonus = 0;
     let extraSales = 0;
-    let salesAtThreshold = 0;
-    if (uncappedEnabled && achievementPct > uncappedThreshold && avgTicket > 0) {
-      salesAtThreshold = (totalTargetQty * uncappedThreshold) / 100;
-      extraSales = Math.max(0, simulatedQty - salesAtThreshold);
+    // Limite em vendas inteiras: arredonda p/ baixo (ex: 142,86% × 7 = 9,999 → 10 vendas)
+    let salesAtThreshold = Math.round((totalTargetQty * uncappedThreshold) / 100);
+    if (uncappedEnabled && avgTicket > 0) {
+      // Apenas vendas INTEIRAS acima do limite contam
+      extraSales = Math.max(0, Math.floor(simulatedQty) - salesAtThreshold);
       if (uncappedType === "fixed") {
         uncappedBonus = extraSales * uncappedPerSale;
       } else {
@@ -273,12 +275,12 @@ export function CommissionSimulator() {
               <div className="p-2 rounded border bg-muted/20">
                 <p className="text-muted-foreground">Meta total</p>
                 <p className="font-semibold">{fmt(simulation.totalTargetValue)}</p>
-                <p className="text-[10px] text-muted-foreground">≈ {simulation.totalTargetQty.toFixed(1)} vendas</p>
+                <p className="text-[10px] text-muted-foreground">= {Math.round(simulation.totalTargetQty)} vendas (ticket {fmt(simulation.avgTicket)})</p>
               </div>
               <div className="p-2 rounded border bg-muted/20">
                 <p className="text-muted-foreground">Simulado ({achievementPct}%)</p>
                 <p className="font-semibold">{fmt(simulation.simulatedValue)}</p>
-                <p className="text-[10px] text-muted-foreground">≈ {simulation.simulatedQty.toFixed(1)} vendas</p>
+                <p className="text-[10px] text-muted-foreground">= {Math.floor(simulation.simulatedQty)} vendas</p>
               </div>
               <div className="p-2 rounded border bg-muted/20">
                 <p className="text-muted-foreground">Ticket médio</p>
@@ -328,7 +330,7 @@ export function CommissionSimulator() {
                 <p className="font-bold text-sm">{fmt(simulation.uncappedBonus)}</p>
                 {simulation.uncappedEnabled && simulation.extraSales > 0 && (
                   <p className="text-[10px] text-muted-foreground">
-                    {simulation.extraSales.toFixed(1)} venda(s) extra
+                    +{simulation.extraSales} venda(s) acima de {simulation.salesAtThreshold}
                   </p>
                 )}
               </div>
@@ -348,13 +350,13 @@ export function CommissionSimulator() {
                   <Target className="h-3.5 w-3.5" />
                   Bônus sem teto: ativo a partir de {simulation.uncappedThreshold}% de atingimento
                 </p>
-                {achievementPct > simulation.uncappedThreshold ? (
+                {simulation.extraSales > 0 ? (
                   <p className="text-muted-foreground">
-                    Limite ≈ {simulation.salesAtThreshold.toFixed(1)} vendas. Acima disso, cada venda extra paga{" "}
+                    Limite = {simulation.salesAtThreshold} vendas. Cada venda inteira acima paga{" "}
                     {simulation.uncappedType === "fixed"
                       ? <strong>{fmt(simulation.uncappedPerSale)}</strong>
                       : <strong>{simulation.uncappedPerSale}% do valor</strong>}
-                    . {simulation.extraSales.toFixed(1)} vendas extras × {simulation.uncappedType === "fixed" ? fmt(simulation.uncappedPerSale) : `${simulation.uncappedPerSale}%`} = <strong>{fmt(simulation.uncappedBonus)}</strong>
+                    . {simulation.extraSales} × {simulation.uncappedType === "fixed" ? fmt(simulation.uncappedPerSale) : `${simulation.uncappedPerSale}%`} = <strong>{fmt(simulation.uncappedBonus)}</strong>
                   </p>
                 ) : (
                   <p className="text-muted-foreground">
