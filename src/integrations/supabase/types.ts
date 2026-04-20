@@ -8698,6 +8698,416 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_brand_voice: {
+        Row: {
+          account_id: string
+          ai_summary: string | null
+          created_at: string
+          emoji_style: string | null
+          example_posts: string[] | null
+          forbidden_words: string[] | null
+          hashtag_strategy: string | null
+          id: string
+          learned_from_instagram_at: string | null
+          niche: string | null
+          personality: string | null
+          posts_analyzed_count: number | null
+          signature_phrases: string[] | null
+          target_audience: string | null
+          tone_keywords: string[] | null
+          updated_at: string
+          updated_by: string | null
+          values_and_mission: string | null
+        }
+        Insert: {
+          account_id: string
+          ai_summary?: string | null
+          created_at?: string
+          emoji_style?: string | null
+          example_posts?: string[] | null
+          forbidden_words?: string[] | null
+          hashtag_strategy?: string | null
+          id?: string
+          learned_from_instagram_at?: string | null
+          niche?: string | null
+          personality?: string | null
+          posts_analyzed_count?: number | null
+          signature_phrases?: string[] | null
+          target_audience?: string | null
+          tone_keywords?: string[] | null
+          updated_at?: string
+          updated_by?: string | null
+          values_and_mission?: string | null
+        }
+        Update: {
+          account_id?: string
+          ai_summary?: string | null
+          created_at?: string
+          emoji_style?: string | null
+          example_posts?: string[] | null
+          forbidden_words?: string[] | null
+          hashtag_strategy?: string | null
+          id?: string
+          learned_from_instagram_at?: string | null
+          niche?: string | null
+          personality?: string | null
+          posts_analyzed_count?: number | null
+          signature_phrases?: string[] | null
+          target_audience?: string | null
+          tone_keywords?: string[] | null
+          updated_at?: string
+          updated_by?: string | null
+          values_and_mission?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_brand_voice_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_copy_history: {
+        Row: {
+          account_id: string
+          context: Json | null
+          copy_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          idea_id: string | null
+          is_favorite: boolean
+          model: string | null
+          output: string
+          prompt: string
+        }
+        Insert: {
+          account_id: string
+          context?: Json | null
+          copy_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idea_id?: string | null
+          is_favorite?: boolean
+          model?: string | null
+          output: string
+          prompt: string
+        }
+        Update: {
+          account_id?: string
+          context?: Json | null
+          copy_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idea_id?: string | null
+          is_favorite?: boolean
+          model?: string | null
+          output?: string
+          prompt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_copy_history_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_copy_history_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_idea_assignees: {
+        Row: {
+          created_at: string
+          id: string
+          idea_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idea_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idea_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_idea_assignees_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_idea_checklist: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          idea_id: string
+          is_completed: boolean
+          position: number
+          title: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          idea_id: string
+          is_completed?: boolean
+          position?: number
+          title: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          idea_id?: string
+          is_completed?: boolean
+          position?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_idea_checklist_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_ideas: {
+        Row: {
+          account_id: string
+          caption: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          format: string
+          hook: string | null
+          id: string
+          planned_date: string | null
+          platform: string
+          position: number | null
+          posted_at: string | null
+          priority: string
+          reference_ids: string[] | null
+          scheduled_at: string | null
+          status: string
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          trend_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          format?: string
+          hook?: string | null
+          id?: string
+          planned_date?: string | null
+          platform?: string
+          position?: number | null
+          posted_at?: string | null
+          priority?: string
+          reference_ids?: string[] | null
+          scheduled_at?: string | null
+          status?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          trend_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          format?: string
+          hook?: string | null
+          id?: string
+          planned_date?: string | null
+          platform?: string
+          position?: number | null
+          posted_at?: string | null
+          priority?: string
+          reference_ids?: string[] | null
+          scheduled_at?: string | null
+          status?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          trend_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_ideas_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_ideas_trend_fk"
+            columns: ["trend_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_trends"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_reference_boards: {
+        Row: {
+          account_id: string
+          color: string | null
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string | null
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string | null
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_reference_boards_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_references: {
+        Row: {
+          account_id: string
+          board_id: string | null
+          color_palette: string[] | null
+          created_at: string
+          created_by: string | null
+          height: number | null
+          id: string
+          notes: string | null
+          source_url: string | null
+          storage_path: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string | null
+          type: string
+          updated_at: string
+          url: string
+          width: number | null
+        }
+        Insert: {
+          account_id: string
+          board_id?: string | null
+          color_palette?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          height?: number | null
+          id?: string
+          notes?: string | null
+          source_url?: string | null
+          storage_path?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string | null
+          type?: string
+          updated_at?: string
+          url: string
+          width?: number | null
+        }
+        Update: {
+          account_id?: string
+          board_id?: string | null
+          color_palette?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          height?: number | null
+          id?: string
+          notes?: string | null
+          source_url?: string | null
+          storage_path?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string | null
+          type?: string
+          updated_at?: string
+          url?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_references_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_references_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_reference_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_task_sections: {
         Row: {
           account_id: string
@@ -8888,6 +9298,86 @@ export type Database = {
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "marketing_task_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_trends: {
+        Row: {
+          account_id: string
+          ai_adaptation: string | null
+          ai_analysis: Json | null
+          audio_name: string | null
+          captured_at: string
+          captured_by: string | null
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          hype_score: number | null
+          id: string
+          is_archived: boolean
+          likes_count: number | null
+          shares_count: number | null
+          source: string
+          source_url: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          views_count: number | null
+        }
+        Insert: {
+          account_id: string
+          ai_adaptation?: string | null
+          ai_analysis?: Json | null
+          audio_name?: string | null
+          captured_at?: string
+          captured_by?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          hype_score?: number | null
+          id?: string
+          is_archived?: boolean
+          likes_count?: number | null
+          shares_count?: number | null
+          source?: string
+          source_url?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Update: {
+          account_id?: string
+          ai_adaptation?: string | null
+          ai_analysis?: Json | null
+          audio_name?: string | null
+          captured_at?: string
+          captured_by?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          hype_score?: number | null
+          id?: string
+          is_archived?: boolean
+          likes_count?: number | null
+          shares_count?: number | null
+          source?: string
+          source_url?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_trends_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]
