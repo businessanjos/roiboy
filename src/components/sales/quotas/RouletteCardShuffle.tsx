@@ -256,8 +256,10 @@ export function RouletteCardShuffle({
           // 😞 Prêmio zero → trombone triste, sem confetes
           sadTrombone();
         } else {
-          // 🎉 Prêmio com valor → fanfarra + confete
+          // 🎉 Prêmio com valor → fanfarra + palmas + grito + confete
           fanfare();
+          applause(2.6);
+          cheer();
           const fire = (origin: { x: number; y: number }) =>
             confetti({
               particleCount: 120,
