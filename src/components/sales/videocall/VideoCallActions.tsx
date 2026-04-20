@@ -70,14 +70,21 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
 
   const handleDelete = async () => {
     setDeleting(true);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("video_call_sessions")
       .delete()
-      .eq("id", session.id);
+      .eq("id", session.id)
+      .select("id");
     setDeleting(false);
 
     if (error) {
       toast.error("Erro ao excluir", { description: error.message });
+      return;
+    }
+    if (!data || data.length === 0) {
+      toast.error("Não foi possível excluir", {
+        description: "Você não tem permissão para excluir esta videochamada.",
+      });
       return;
     }
     toast.success("Videochamada excluída");
