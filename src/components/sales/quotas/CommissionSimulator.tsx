@@ -330,7 +330,7 @@ export function CommissionSimulator() {
                 <p className="font-bold text-sm">{fmt(simulation.uncappedBonus)}</p>
                 {simulation.uncappedEnabled && simulation.extraSales > 0 && (
                   <p className="text-[10px] text-muted-foreground">
-                    {simulation.extraSales.toFixed(1)} venda(s) extra
+                    +{simulation.extraSales} venda(s) acima de {simulation.salesAtThreshold}
                   </p>
                 )}
               </div>
