@@ -129,18 +129,12 @@ export function CommissionSimulator() {
     const wholeSalesCount = Math.floor(simulatedQty);
     const commissionableValue = wholeSalesCount * avgTicket;
 
-    // Comissão por produto: usar apenas a taxa do Rykas Mentoring.
-    // Se o plano não tiver taxa específica para ele, usa fallback somente quando todas as taxas do plano forem iguais.
-    const mentoringRate = mentoringProduct
-      ? planProductRates.find((r) => r.product_id === mentoringProduct.id)
-      : undefined;
-    const uniqueRateKeys = [...new Set(planProductRates.map((r) => `${Number(r.commission_percent) || 0}|${Number(r.fixed_amount) || 0}`))];
-    const fallbackRate = uniqueRateKeys.length === 1 ? planProductRates[0] : null;
-    const appliedRate = mentoringRate ?? fallbackRate;
-
-    const commissionPercent = Number(appliedRate?.commission_percent || 0) / 100;
-    const fixedCommissionPerSale = Number(appliedRate?.fixed_amount || 0);
-    const totalCommission = commissionableValue * commissionPercent + wholeSalesCount * fixedCommissionPerSale;
+    // Comissão percentual por produto NÃO faz mais parte do plano.
+    // O plano vigente remunera via Bônus de Faixa + Bônus sem teto (por venda acima do limite).
+    const appliedRate = null as any;
+    const commissionPercent = 0;
+    const fixedCommissionPerSale = 0;
+    const totalCommission = 0;
 
     // ── Bônus de faixa: acima do tier máximo, mantém o multiplicador do último ──
     const planTiers = [...tiers.filter((t) => t.plan_id === plan.id)]
@@ -296,26 +290,13 @@ export function CommissionSimulator() {
             </div>
 
             {/* Componentes do ganho */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Wallet className="h-3.5 w-3.5" />
                   Salário Base
                 </div>
                 <p className="font-bold text-sm">{simulation.monthlyBase > 0 ? fmt(simulation.monthlyBase) : "—"}</p>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <DollarSign className="h-3.5 w-3.5" />
-                  Comissão Produtos
-                </div>
-                <p className="font-bold text-sm">{fmt(simulation.totalCommission)}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {simulation.appliedRateName}: {(simulation.commissionPercent * 100).toLocaleString("pt-BR")}%
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  {Math.floor(simulation.simulatedQty)} venda(s) × {fmt(simulation.avgTicket)} × {(simulation.commissionPercent * 100).toLocaleString("pt-BR")}%
-                </p>
               </div>
               <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
