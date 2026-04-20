@@ -43,7 +43,7 @@ export function QuotasSection() {
   const { quotas, loading, upsertQuota } = useQuotasIncentives(year, month);
 
   const usersQuery = useQuery({
-    queryKey: ["sales-team-users", accountId],
+    queryKey: ["sales-team-users", accountId, "v2-5users"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("users")
