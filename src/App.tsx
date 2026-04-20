@@ -80,6 +80,7 @@ const Sectors = lazyRetry(() => import("./pages/Sectors"));
 const Contracts = lazyRetry(() => import("./pages/Contracts"));
 const SalesPipeline = lazyRetry(() => import("./pages/SalesPipeline"));
 const SalesTeam = lazyRetry(() => import("./pages/SalesTeam"));
+const SpiffsTracking = lazyRetry(() => import("./pages/SpiffsTracking"));
 const Leads = lazyRetry(() => import("./pages/Leads"));
 
 const Marketing = lazyRetry(() => import("./pages/Marketing"));
@@ -182,6 +183,7 @@ const App = () => (
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/pipeline" element={<SalesPipeline />} />
                             <Route path="/sales-team" element={<SalesTeam />} />
+                            <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
                             <Route path="/leads" element={<Leads />} />
                             <Route path="/financial" element={<FinancialLayout />}>
                               <Route index element={<Navigate to="/financial/entries" replace />} />
