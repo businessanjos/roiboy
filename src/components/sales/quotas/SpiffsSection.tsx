@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PaymentMethodSpiffPanel } from "./PaymentMethodSpiffPanel";
+import { RouletteSpinDialog } from "./RouletteSpinDialog";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR");
 const parseBRL = (s: string) => {
