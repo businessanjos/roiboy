@@ -12037,6 +12037,10 @@ export type Database = {
           created_by: string | null
           id: string
           notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payment_notes: string | null
+          payment_status: string
           prize_amount: number
           prize_id: string | null
           prize_label: string | null
@@ -12050,6 +12054,10 @@ export type Database = {
           created_by?: string | null
           id?: string
           notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_notes?: string | null
+          payment_status?: string
           prize_amount?: number
           prize_id?: string | null
           prize_label?: string | null
@@ -12063,6 +12071,10 @@ export type Database = {
           created_by?: string | null
           id?: string
           notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_notes?: string | null
+          payment_status?: string
           prize_amount?: number
           prize_id?: string | null
           prize_label?: string | null
@@ -12076,6 +12088,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spiff_spins_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -15080,6 +15099,10 @@ export type Database = {
     }
     Functions: {
       activate_scheduled_contracts: { Args: never; Returns: number }
+      can_manage_spiff_payments: {
+        Args: { _auth_user_id: string }
+        Returns: boolean
+      }
       check_rate_limit: {
         Args: {
           p_action: string
