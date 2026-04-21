@@ -40,14 +40,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, currentSession) => {
         if (!mounted) return;
         
-        // Only update if there's a meaningful change
+        // Only update if there's a meaningful change.
+        // IMPORTANT: For TOKEN_REFRESHED keep the previous user reference if the
+        // user id hasn't changed, so downstream effects keyed on user don't re-run
+        // and create a fetch loop.
         if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
           setLoading(false);
         } else if (currentSession) {
           setSession(currentSession);
-          setUser(currentSession.user);
+          setUser((prev) =>
+            prev && prev.id === currentSession.user.id ? prev : currentSession.user
+          );
           setLoading(false);
         }
       }

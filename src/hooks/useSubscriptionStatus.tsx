@@ -24,12 +24,16 @@ export function useSubscriptionStatus(): SubscriptionStatus {
     paymentMethodConfigured: false,
   });
 
+  // Stabilize: only re-run when the user ID actually changes, not on every
+  // session/token refresh (which creates a new user object reference).
+  const userId = user?.id ?? null;
+
   useEffect(() => {
     // Wait for auth to finish loading
     if (authLoading) return;
     
     // If no user, don't make queries - let AppLayout handle redirect
-    if (!user) {
+    if (!userId) {
       setStatus(prev => ({ ...prev, isLoading: false }));
       return;
     }
@@ -38,10 +42,10 @@ export function useSubscriptionStatus(): SubscriptionStatus {
       try {
         // Use account_id query only — super admin check is centralized in useSuperAdmin hook
         const userResult = await supabase
-          .from("users").select("account_id").eq("auth_user_id", user!.id).maybeSingle();
+          .from("users").select("account_id").eq("auth_user_id", userId!).maybeSingle();
         
         // Check super admin from cache (react-query) — no extra RPC call
-        const superAdminResult = await supabase.rpc("is_super_admin", { _user_id: user!.id });
+        const superAdminResult = await supabase.rpc("is_super_admin", { _user_id: userId! });
         
         if (superAdminResult.data === true) {
           setStatus({
@@ -129,7 +133,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
     }, 5000);
 
     return () => clearTimeout(safetyTimeout);
-  }, [user, authLoading]);
+  }, [userId, authLoading]);
 
   return status;
 }
