@@ -5,9 +5,21 @@ import { cn } from '@/lib/utils';
 type PostFormat = 'reels' | 'carousel' | 'static';
 
 interface PostFormatBadgeProps {
-  format: PostFormat;
+  format: string | null | undefined;
   className?: string;
 }
+
+const formatAliases: Record<string, PostFormat> = {
+  reels: 'reels',
+  reel: 'reels',
+  video: 'reels',
+  carousel: 'carousel',
+  carousel_album: 'carousel',
+  album: 'carousel',
+  static: 'static',
+  image: 'static',
+  photo: 'static',
+};
 
 const formatConfig: Record<PostFormat, {
   label: string;
