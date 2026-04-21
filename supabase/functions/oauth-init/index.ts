@@ -1,5 +1,7 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "npm:@supabase/supabase-js@2.49.4";
+
+const serve = (handler: (req: Request) => Response | Promise<Response>) =>
+  Deno.serve(handler);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
