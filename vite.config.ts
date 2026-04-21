@@ -16,28 +16,69 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Enable code splitting
+    // Consolidate chunks aggressively to minimize the number of files in
+    // dist/assets. Fewer files => fewer parallel PUTs to S3 during preview
+    // upload => fewer "ServiceUnavailable / reduce concurrent request rate"
+    // errors from the previews bucket.
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks - split large dependencies
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip'],
-          'vendor-charts': ['recharts'],
-          'vendor-query': ['@tanstack/react-query'],
-          'vendor-dates': ['date-fns'],
-          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+
+          // React core (cached aggressively across builds)
+          if (
+            id.includes("/react/") ||
+            id.includes("/react-dom/") ||
+            id.includes("/scheduler/") ||
+            id.includes("/react-router") ||
+            id.includes("/react-router-dom/")
+          ) {
+            return "vendor-react";
+          }
+
+          // All Radix primitives in a single bundle
+          if (id.includes("@radix-ui/")) return "vendor-radix";
+
+          // Supabase client + auth helpers
+          if (id.includes("@supabase/")) return "vendor-supabase";
+
+          // Charts (recharts pulls in d3 — heavy, but used in many pages)
+          if (id.includes("recharts") || id.includes("/d3-")) {
+            return "vendor-charts";
+          }
+
+          // Form/validation stack
+          if (
+            id.includes("react-hook-form") ||
+            id.includes("@hookform/") ||
+            id.includes("/zod/")
+          ) {
+            return "vendor-forms";
+          }
+
+          // Drag & drop
+          if (id.includes("@dnd-kit/")) return "vendor-dnd";
+
+          // Date utilities
+          if (id.includes("date-fns")) return "vendor-dates";
+
+          // Icons
+          if (id.includes("lucide-react")) return "vendor-icons";
+
+          // TanStack ecosystem (query, table, etc.)
+          if (id.includes("@tanstack/")) return "vendor-tanstack";
+
+          // Everything else from node_modules → one shared vendor bundle
+          return "vendor";
         },
       },
     },
-    // Increase chunk size warning limit
-    chunkSizeWarningLimit: 1000,
-    // Enable minification
-    minify: 'esbuild',
-    // Target modern browsers
-    target: 'es2020',
-    // Enable source maps for production debugging
-    sourcemap: mode === 'development',
+    // Allow larger chunks without warnings since we're intentionally
+    // consolidating to reduce file count.
+    chunkSizeWarningLimit: 2000,
+    minify: "esbuild",
+    target: "es2020",
+    sourcemap: mode === "development",
   },
   // Optimize dependencies
   optimizeDeps: {
