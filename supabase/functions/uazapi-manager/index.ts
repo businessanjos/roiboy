@@ -577,8 +577,14 @@ serve(async (req) => {
       result = { ...r, token: newToken };
     
     } else if (action === "connect" || action === "qrcode") {
-      const instName = payload.instance_name || instanceName;
-      result = await uazapiAdmin(`/instance/connect/${instName}`, "GET", undefined, sectorServer);
+      // UAZAPI: POST /instance/connect with instance token in header returns QR code
+      if (!token) {
+        return new Response(
+          JSON.stringify({ error: "Instance token not found. Create the instance first." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      result = await uazapiInstance("/instance/connect", "POST", token, {}, sectorServer);
     
     } else if (action === "disconnect") {
       try { await uazapiInstance("/logout", "POST", token!, undefined, sectorServer); } catch {}
