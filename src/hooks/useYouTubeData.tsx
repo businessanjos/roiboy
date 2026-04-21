@@ -304,6 +304,24 @@ export function useYouTubeData() {
     onError: (error) => { toast.error('Erro ao atualizar foto: ' + error.message); },
   });
 
+  // Delete channel mutation (cascades to videos)
+  const deleteChannel = useMutation({
+    mutationFn: async (channelId: string) => {
+      const { error } = await supabase.from('youtube_channels').delete().eq('id', channelId);
+      if (error) throw error;
+      return channelId;
+    },
+    onSuccess: (deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ['youtube-channels'] });
+      queryClient.invalidateQueries({ queryKey: ['youtube-videos'] });
+      if (selectedChannelId === deletedId) {
+        setSelectedChannelId(null);
+      }
+      toast.success('Canal excluído com sucesso');
+    },
+    onError: (error) => { toast.error('Erro ao excluir canal: ' + error.message); },
+  });
+
   const refetchData = () => {
     queryClient.invalidateQueries({ queryKey: ['youtube-channels'] });
     queryClient.invalidateQueries({ queryKey: ['youtube-videos'] });
@@ -313,7 +331,7 @@ export function useYouTubeData() {
     channels, currentChannel, videos, kpis,
     isLoading: isLoadingChannels || isLoadingVideos,
     useMockData, selectedChannelId, setSelectedChannelId,
-    createChannel, createVideo, updateVideo, deleteVideo,
+    createChannel, deleteChannel, createVideo, updateVideo, deleteVideo,
     refetchData, updateChannelPicture,
   };
 }
