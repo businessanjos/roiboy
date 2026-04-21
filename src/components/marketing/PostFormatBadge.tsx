@@ -44,7 +44,8 @@ const formatConfig: Record<PostFormat, {
 };
 
 export function PostFormatBadge({ format, className }: PostFormatBadgeProps) {
-  const config = formatConfig[format];
+  const normalized = format ? formatAliases[format.toLowerCase()] ?? 'static' : 'static';
+  const config = formatConfig[normalized];
   const Icon = config.icon;
 
   return (
