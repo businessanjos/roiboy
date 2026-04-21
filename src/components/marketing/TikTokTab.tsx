@@ -58,6 +58,7 @@ import { TikTokConnectDialog } from './TikTokConnectDialog';
 import { AddTikTokPostDialog } from './AddTikTokPostDialog';
 import { EditTikTokPostDialog } from './EditTikTokPostDialog';
 import { DeleteTikTokPostDialog } from './DeleteTikTokPostDialog';
+import { DeleteSocialProfileDialog } from './DeleteSocialProfileDialog';
 import { cn } from '@/lib/utils';
 
 interface TikTokTabProps {
