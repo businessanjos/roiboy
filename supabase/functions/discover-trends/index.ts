@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock } from "../_shared/marketing-context.ts";
+import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock, fetchInstagramContext, buildInstagramContextBlock } from "../_shared/marketing-context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,9 +51,13 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const { voice, persona } = await fetchVoiceAndPersona(supabase, accountId);
+    const [{ voice, persona }, instagramCtx] = await Promise.all([
+      fetchVoiceAndPersona(supabase, accountId),
+      fetchInstagramContext(supabase, accountId),
+    ]);
     const voiceBlock = buildBrandVoiceBlock(voice);
     const personaBlock = buildPersonaBlock(persona);
+    const instagramBlock = buildInstagramContextBlock(instagramCtx);
 
     const effectiveNiche = niche || voice?.niche || persona?.business_type || "marketing digital";
 
@@ -64,13 +68,13 @@ Deno.serve(async (req) => {
       researchContext = await searchWithPerplexity(searchQuery);
     }
 
-    const systemPrompt = `Você é um analista de tendências de redes sociais especializado no mercado de estética brasileiro. Identifique tendências reais e atuais. Sempre retorne JSON estrito.${voiceBlock}${personaBlock}`;
+    const systemPrompt = `Você é um analista de tendências de redes sociais especializado no mercado de estética brasileiro. Identifique tendências reais e atuais. Sempre retorne JSON estrito.${voiceBlock}${personaBlock}${instagramBlock}`;
     const userPrompt = `Plataforma alvo: ${platform}
 Nicho: ${effectiveNiche}
 
 ${researchContext ? `Pesquisa atual de fontes externas:\n${researchContext}\n` : "(Sem dados externos. Use seu conhecimento mais recente.)"}
 
-Retorne 6 tendências em JSON. No campo "ai_adaptation", adapte ESPECIFICAMENTE para a Persona e Tom de Voz definidos no system prompt — fale com as DORES e DESEJOS dela usando o VOCABULÁRIO dela:
+Retorne 6 tendências em JSON. No campo "ai_adaptation", adapte ESPECIFICAMENTE para a Persona, Tom de Voz e — quando houver — para os FORMATOS, TEMAS E HASHTAGS que MELHOR PERFORMAM no Instagram conectado (vide bloco "PERFORMANCE REAL DO INSTAGRAM" no system prompt). Priorize formatos e ângulos comprovadamente vencedores para esta conta. Fale com as DORES e DESEJOS da persona usando o VOCABULÁRIO dela:
 {
   "trends": [
     {

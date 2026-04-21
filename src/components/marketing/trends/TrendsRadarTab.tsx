@@ -1,15 +1,18 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { TrendingUp, Sparkles, ExternalLink, Archive, Trash2, Loader2, Flame, Eye, Heart, MessageCircle, Music2, Globe, Target, Wand2, CheckCircle2, AlertCircle } from "lucide-react";
+import { TrendingUp, Sparkles, ExternalLink, Archive, Trash2, Loader2, Flame, Eye, Heart, MessageCircle, Music2, Globe, Target, Wand2, CheckCircle2, AlertCircle, Instagram } from "lucide-react";
 import { useMarketingTrends } from "@/hooks/useMarketingTrends";
 import { useMarketingIdeas } from "@/hooks/useMarketingIdeas";
 import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
 import { useMarketingPersona } from "@/hooks/useMarketingPersona";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -51,6 +54,34 @@ export function TrendsRadarTab() {
       (voice.tone_keywords?.length || 0) > 0 ||
       (voice.signature_phrases?.length || 0) > 0)
   );
+
+  // Instagram conectado: checa se há perfil ativo + posts analisados
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
+  const { data: instagramStatus } = useQuery({
+    queryKey: ["trends-instagram-status", accountId],
+    queryFn: async () => {
+      if (!accountId) return { connected: false, postsCount: 0, username: null as string | null };
+      const { data: profile } = await supabase
+        .from("instagram_profiles")
+        .select("id, username")
+        .eq("account_id", accountId)
+        .eq("is_active", true)
+        .order("followers_count", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      if (!profile) return { connected: false, postsCount: 0, username: null };
+      const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from("instagram_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("profile_id", profile.id)
+        .gte("posted_at", since);
+      return { connected: true, postsCount: count || 0, username: profile.username };
+    },
+    enabled: !!accountId,
+  });
+  const instagramConnected = !!instagramStatus?.connected && (instagramStatus?.postsCount || 0) > 0;
 
   const runAI = () => {
     discover.mutate({
@@ -102,8 +133,8 @@ export function TrendsRadarTab() {
               <Sparkles className="h-4 w-4 text-primary" />
               <h4 className="font-semibold text-sm">Contexto ativo nas buscas</h4>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Toda descoberta de trends usa automaticamente sua <strong>Persona</strong> e <strong>Tom de Voz</strong> para personalizar adaptações.
+          <p className="text-xs text-muted-foreground">
+              Toda descoberta de trends usa automaticamente sua <strong>Persona</strong>, <strong>Tom de Voz</strong> e os <strong>top posts/formatos/hashtags</strong> do seu Instagram conectado.
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -127,12 +158,23 @@ export function TrendsRadarTab() {
               <Wand2 className="h-3 w-3 mr-1" />
               Tom de Voz {voiceFilled ? "ativo" : "vazio"}
             </Badge>
+            <Badge
+              variant="outline"
+              className={instagramConnected
+                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400"
+                : "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400"}
+              title={instagramConnected ? `@${instagramStatus?.username} · ${instagramStatus?.postsCount} posts (90d)` : "Conecte o Instagram para usar dados reais de performance"}
+            >
+              {instagramConnected ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
+              <Instagram className="h-3 w-3 mr-1" />
+              {instagramConnected ? `Instagram (${instagramStatus?.postsCount} posts)` : "Instagram desconectado"}
+            </Badge>
           </div>
         </div>
-        {(!personaFilled || !voiceFilled) && (
+        {(!personaFilled || !voiceFilled || !instagramConnected) && (
           <div className="mt-3 pt-3 border-t border-primary/10 flex items-center justify-between gap-3 flex-wrap">
             <p className="text-xs text-muted-foreground">
-              💡 Preencha as abas <strong>Persona</strong> e <strong>Tom de Voz</strong> para resultados muito mais personalizados.
+              💡 Preencha <strong>Persona</strong>, <strong>Tom de Voz</strong> e conecte/sincronize seu <strong>Instagram</strong> para sugestões muito mais personalizadas.
             </p>
           </div>
         )}
