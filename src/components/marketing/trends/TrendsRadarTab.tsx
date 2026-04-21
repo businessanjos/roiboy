@@ -133,8 +133,8 @@ export function TrendsRadarTab() {
               <Sparkles className="h-4 w-4 text-primary" />
               <h4 className="font-semibold text-sm">Contexto ativo nas buscas</h4>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Toda descoberta de trends usa automaticamente sua <strong>Persona</strong> e <strong>Tom de Voz</strong> para personalizar adaptações.
+          <p className="text-xs text-muted-foreground">
+              Toda descoberta de trends usa automaticamente sua <strong>Persona</strong>, <strong>Tom de Voz</strong> e os <strong>top posts/formatos/hashtags</strong> do seu Instagram conectado.
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -158,12 +158,23 @@ export function TrendsRadarTab() {
               <Wand2 className="h-3 w-3 mr-1" />
               Tom de Voz {voiceFilled ? "ativo" : "vazio"}
             </Badge>
+            <Badge
+              variant="outline"
+              className={instagramConnected
+                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400"
+                : "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400"}
+              title={instagramConnected ? `@${instagramStatus?.username} · ${instagramStatus?.postsCount} posts (90d)` : "Conecte o Instagram para usar dados reais de performance"}
+            >
+              {instagramConnected ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
+              <Instagram className="h-3 w-3 mr-1" />
+              {instagramConnected ? `Instagram (${instagramStatus?.postsCount} posts)` : "Instagram desconectado"}
+            </Badge>
           </div>
         </div>
-        {(!personaFilled || !voiceFilled) && (
+        {(!personaFilled || !voiceFilled || !instagramConnected) && (
           <div className="mt-3 pt-3 border-t border-primary/10 flex items-center justify-between gap-3 flex-wrap">
             <p className="text-xs text-muted-foreground">
-              💡 Preencha as abas <strong>Persona</strong> e <strong>Tom de Voz</strong> para resultados muito mais personalizados.
+              💡 Preencha <strong>Persona</strong>, <strong>Tom de Voz</strong> e conecte/sincronize seu <strong>Instagram</strong> para sugestões muito mais personalizadas.
             </p>
           </div>
         )}
