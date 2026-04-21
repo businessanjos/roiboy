@@ -250,6 +250,26 @@ export function TrendsRadarTab() {
               value={customQuery}
               onChange={(e) => setCustomQuery(e.target.value)}
             />
+            <div className="space-y-1.5">
+              <Label htmlFor="extra-context" className="text-xs flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3 text-primary" />
+                Contexto extra (opcional)
+                <span className="text-muted-foreground font-normal">— ajuste o foco desta busca</span>
+              </Label>
+              <Textarea
+                id="extra-context"
+                placeholder={`Ex: foco em médicos do interior do RS, faturamento até 30k/mês, objetivo é vender mentoria de R$ 15k. Evite trends de dança. Priorize formato carrossel educativo.`}
+                value={extraContext}
+                onChange={(e) => setExtraContext(e.target.value.slice(0, 1000))}
+                rows={3}
+                className="resize-none text-sm"
+                maxLength={1000}
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>Use para ajustar nicho, localização, persona específica ou objetivo da campanha.</span>
+                <span>{extraContext.length}/1000</span>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </Card>
