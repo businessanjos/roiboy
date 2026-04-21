@@ -440,10 +440,12 @@ export function useSocialMediaData() {
       
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['instagram-profiles'] });
-      queryClient.invalidateQueries({ queryKey: ['instagram-posts'] });
-      queryClient.invalidateQueries({ queryKey: ['instagram-dashboard'] });
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['instagram-profiles'] }),
+        queryClient.refetchQueries({ queryKey: ['instagram-posts'] }),
+        queryClient.refetchQueries({ queryKey: ['instagram-dashboard'] }),
+      ]);
       toast.success(data.message || 'Perfis sincronizados!');
     },
     onError: (error) => {
