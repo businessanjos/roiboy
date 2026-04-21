@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     const userPrompt = `Plataforma alvo: ${platform}
 Nicho: ${effectiveNiche}
 
-${researchContext ? `Pesquisa atual de fontes externas:\n${researchContext}\n` : "(Sem dados externos. Use seu conhecimento mais recente.)"}
+${safeExtraContext ? `=== CONTEXTO EXTRA DESTA BUSCA (PRIORIDADE MÁXIMA — sobrepõe defaults) ===\n${safeExtraContext}\n\n` : ""}${researchContext ? `Pesquisa atual de fontes externas:\n${researchContext}\n` : "(Sem dados externos. Use seu conhecimento mais recente.)"}
 
 Retorne 6 tendências em JSON. No campo "ai_adaptation", adapte ESPECIFICAMENTE para a Persona, Tom de Voz e — quando houver — para os FORMATOS, TEMAS E HASHTAGS que MELHOR PERFORMAM no Instagram conectado (vide bloco "PERFORMANCE REAL DO INSTAGRAM" no system prompt). Priorize formatos e ângulos comprovadamente vencedores para esta conta. Fale com as DORES e DESEJOS da persona usando o VOCABULÁRIO dela:
 {
