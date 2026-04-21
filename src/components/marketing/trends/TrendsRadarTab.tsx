@@ -25,6 +25,7 @@ export function TrendsRadarTab() {
   const { trends, isLoading, discover, discoverApify, archiveTrend, deleteTrend } = useMarketingTrends();
   const { createIdea } = useMarketingIdeas();
   const { voice } = useMarketingBrandVoice();
+  const { persona } = useMarketingPersona();
 
   // AI tab state
   const [niche, setNiche] = useState("");
@@ -35,6 +36,21 @@ export function TrendsRadarTab() {
   const [apifyPlatform, setApifyPlatform] = useState("tiktok");
   const [hashtags, setHashtags] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+
+  // Context status: medir se Persona e Tom de Voz têm conteúdo
+  const personaFilled = !!(
+    persona &&
+    (persona.profession || persona.business_type ||
+      (persona.pains?.length || 0) > 0 ||
+      (persona.desires?.length || 0) > 0 ||
+      (persona.vocabulary?.length || 0) > 0)
+  );
+  const voiceFilled = !!(
+    voice &&
+    (voice.personality || voice.niche || voice.target_audience ||
+      (voice.tone_keywords?.length || 0) > 0 ||
+      (voice.signature_phrases?.length || 0) > 0)
+  );
 
   const runAI = () => {
     discover.mutate({
