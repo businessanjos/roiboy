@@ -90,6 +90,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
   const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<InstagramPost | null>(null);
   const [selectedPostsForComparison, setSelectedPostsForComparison] = useState<string[]>([]);
+  const [profileToDelete, setProfileToDelete] = useState<{ id: string; username: string } | null>(null);
   const [formatFilter, setFormatFilter] = useState<string>('all');
   const [objectiveFilter, setObjectiveFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
