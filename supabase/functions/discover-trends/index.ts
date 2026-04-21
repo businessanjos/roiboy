@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { accountId, niche, platform = "instagram", customQuery } = await req.json();
+    const { accountId, niche, platform = "instagram", customQuery, extraContext } = await req.json();
+    const safeExtraContext = typeof extraContext === "string" ? extraContext.trim().slice(0, 1000) : "";
 
     if (!accountId) {
       return new Response(JSON.stringify({ error: "accountId required" }), {
