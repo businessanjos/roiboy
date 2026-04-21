@@ -25,19 +25,23 @@ export default defineConfig(({ mode }) => ({
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
 
-          // React core (cached aggressively across builds)
+          // React core + Radix primitives in a single bundle.
+          // Radix references React.forwardRef at module-eval time, so it
+          // MUST live in the same chunk as React to avoid a race where
+          // vendor-radix loads before vendor-react and crashes the app
+          // with "Cannot read properties of undefined (reading 'forwardRef')".
           if (
             id.includes("/react/") ||
             id.includes("/react-dom/") ||
             id.includes("/scheduler/") ||
             id.includes("/react-router") ||
-            id.includes("/react-router-dom/")
+            id.includes("/react-router-dom/") ||
+            id.includes("@radix-ui/") ||
+            id.includes("react-is") ||
+            id.includes("use-sync-external-store")
           ) {
             return "vendor-react";
           }
-
-          // All Radix primitives in a single bundle
-          if (id.includes("@radix-ui/")) return "vendor-radix";
 
           // Supabase client + auth helpers
           if (id.includes("@supabase/")) return "vendor-supabase";
