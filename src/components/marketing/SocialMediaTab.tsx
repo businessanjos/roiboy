@@ -70,6 +70,7 @@ import { InstagramProfileHeader } from './InstagramProfileHeader';
 import { AddPostDialog, PostFormData } from './AddPostDialog';
 import { EditPostDialog, EditPostFormData } from './EditPostDialog';
 import { DeletePostDialog } from './DeletePostDialog';
+import { DeleteSocialProfileDialog } from './DeleteSocialProfileDialog';
 import { ContentDistributionCharts } from './ContentDistributionCharts';
 import { ProfileInsightsDashboard } from './ProfileInsightsDashboard';
 import { PostComparisonDialog } from './PostComparisonDialog';
