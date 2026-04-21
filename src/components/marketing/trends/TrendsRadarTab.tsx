@@ -34,6 +34,7 @@ export function TrendsRadarTab() {
   const [niche, setNiche] = useState("");
   const [aiPlatform, setAiPlatform] = useState("instagram");
   const [customQuery, setCustomQuery] = useState("");
+  const [extraContext, setExtraContext] = useState("");
 
   // Apify tab state
   const [apifyPlatform, setApifyPlatform] = useState("tiktok");
