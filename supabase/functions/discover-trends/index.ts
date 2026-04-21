@@ -129,7 +129,7 @@ Retorne 6 tendências em JSON. No campo "ai_adaptation", adapte ESPECIFICAMENTE 
       hype_score: Math.min(100, Math.max(0, t.hype_score || 50)),
       tags: t.tags || [],
       ai_adaptation: t.ai_adaptation,
-      ai_analysis: { platform, niche: effectiveNiche, generated_at: new Date().toISOString() },
+      ai_analysis: { platform, niche: effectiveNiche, extra_context: safeExtraContext || null, generated_at: new Date().toISOString() },
       captured_by: capturedBy,
       expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     }));
