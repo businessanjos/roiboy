@@ -37,6 +37,7 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
   const [editVideoDialogOpen, setEditVideoDialogOpen] = useState(false);
   const [deleteVideoDialogOpen, setDeleteVideoDialogOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null);
+  const [channelToDelete, setChannelToDelete] = useState<{ id: string; username: string } | null>(null);
   const [objectiveFilter, setObjectiveFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
@@ -46,7 +47,7 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
   const {
     channels, currentChannel, videos, kpis, isLoading, useMockData,
     selectedChannelId, setSelectedChannelId,
-    createChannel, createVideo, updateVideo, deleteVideo,
+    createChannel, deleteChannel, createVideo, updateVideo, deleteVideo,
   } = useYouTubeData();
 
   useEffect(() => {
