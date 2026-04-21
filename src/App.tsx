@@ -34,8 +34,9 @@ function lazyRetry<T extends ComponentType<any>>(
   return lazy(() => retryFactory(retries));
 }
 
-// Eager loaded pages (critical for UX - only auth and 404)
+// Eager loaded pages (critical for UX - auth, initial route and 404)
 import Auth from "./pages/Auth";
+import Sectors from "./pages/Sectors";
 import NotFound from "./pages/NotFound";
 
 // ZappErrorBoundary - lazy loaded (was eagerly imported, 1.2s load time)
@@ -76,7 +77,6 @@ const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
 const EverIA = lazyRetry(() => import("./pages/EverIA"));
 
 const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
-const Sectors = lazyRetry(() => import("./pages/Sectors"));
 const Contracts = lazyRetry(() => import("./pages/Contracts"));
 const SalesPipeline = lazyRetry(() => import("./pages/SalesPipeline"));
 const SalesTeam = lazyRetry(() => import("./pages/SalesTeam"));
