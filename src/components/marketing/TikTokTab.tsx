@@ -72,6 +72,7 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
   const [editPostDialogOpen, setEditPostDialogOpen] = useState(false);
   const [deletePostDialogOpen, setDeletePostDialogOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<TikTokPost | null>(null);
+  const [profileToDelete, setProfileToDelete] = useState<{ id: string; username: string } | null>(null);
   const [objectiveFilter, setObjectiveFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
@@ -88,6 +89,7 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
     selectedProfileId,
     setSelectedProfileId,
     createProfile,
+    deleteProfile,
     syncProfile,
     createPost,
     updatePost,
