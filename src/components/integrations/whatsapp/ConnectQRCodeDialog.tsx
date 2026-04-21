@@ -51,11 +51,19 @@ export function ConnectQRCodeDialog({
       if (error) throw error;
 
       const result = data?.data || data;
-      
-      // UAZAPI returns base64 QR or qrcode field
-      const qr = result?.qrcode || result?.base64 || result?.pairingCode || null;
-      
-      if (result?.status === "connected" || result?.connected) {
+      const instance = result?.instance || {};
+
+      // UAZAPI returns: { connected, instance: { qrcode, paircode, status } }
+      const qr =
+        instance?.qrcode ||
+        result?.qrcode ||
+        result?.base64 ||
+        instance?.paircode ||
+        result?.pairingCode ||
+        null;
+
+      const status = instance?.status || result?.status;
+      if (status === "connected" || result?.connected === true) {
         setConnected(true);
         toast.success("WhatsApp conectado com sucesso!");
         onConnected();
