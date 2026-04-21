@@ -251,7 +251,7 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
             </SelectTrigger>
             <SelectContent>
               {profiles.map((profile) => (
-                <SelectItem key={profile.id} value={profile.id}>
+                <SelectItem key={profile.id} value={profile.id} className="pr-10">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-5 w-5">
                       <AvatarImage src={profile.profile_picture_url || undefined} />
@@ -260,6 +260,18 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
                       </AvatarFallback>
                     </Avatar>
                     @{profile.username}
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setProfileToDelete({ id: profile.id, username: profile.username });
+                      }}
+                      className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      aria-label={`Excluir perfil @${profile.username}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </SelectItem>
               ))}
@@ -275,6 +287,21 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
             >
               <ExternalLink className="h-4 w-4" />
             </a>
+          )}
+
+          {currentProfile && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={() =>
+                setProfileToDelete({ id: currentProfile.id, username: currentProfile.username })
+              }
+              aria-label="Excluir perfil atual"
+              title="Excluir perfil atual"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           )}
 
           {useMockData && (
@@ -295,6 +322,22 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
           </Button>
         </div>
       </div>
+
+      <DeleteSocialProfileDialog
+        open={!!profileToDelete}
+        onOpenChange={(open) => !open && setProfileToDelete(null)}
+        username={profileToDelete?.username}
+        entityLabel="perfil"
+        isDeleting={deleteProfile.isPending}
+        onConfirm={() => {
+          if (profileToDelete) {
+            deleteProfile.mutate(profileToDelete.id, {
+              onSuccess: () => setProfileToDelete(null),
+            });
+          }
+        }}
+      />
+
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
