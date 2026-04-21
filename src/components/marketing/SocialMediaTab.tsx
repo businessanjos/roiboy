@@ -29,6 +29,7 @@ import {
   GitCompare,
   CheckSquare,
   ChevronDown,
+  KeyRound,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,6 +72,7 @@ import { AddPostDialog, PostFormData } from './AddPostDialog';
 import { EditPostDialog, EditPostFormData } from './EditPostDialog';
 import { DeletePostDialog } from './DeletePostDialog';
 import { DeleteSocialProfileDialog } from './DeleteSocialProfileDialog';
+import { MetaCredentialsDialog } from './MetaCredentialsDialog';
 import { ContentDistributionCharts } from './ContentDistributionCharts';
 import { ProfileInsightsDashboard } from './ProfileInsightsDashboard';
 import { PostComparisonDialog } from './PostComparisonDialog';
@@ -91,6 +93,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
   const [selectedPost, setSelectedPost] = useState<InstagramPost | null>(null);
   const [selectedPostsForComparison, setSelectedPostsForComparison] = useState<string[]>([]);
   const [profileToDelete, setProfileToDelete] = useState<{ id: string; username: string } | null>(null);
+  const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [formatFilter, setFormatFilter] = useState<string>('all');
   const [objectiveFilter, setObjectiveFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
@@ -365,6 +368,17 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
         </div>
 
         <div className="flex items-center gap-2">
+          {currentProfile && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setCredentialsDialogOpen(true)}
+            >
+              <KeyRound className="h-4 w-4" />
+              Configurar Meta API
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -384,6 +398,13 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
             Conectar Novo Perfil
           </Button>
         </div>
+
+        <MetaCredentialsDialog
+          open={credentialsDialogOpen}
+          onOpenChange={setCredentialsDialogOpen}
+          profileId={currentProfile?.id || null}
+          profileUsername={currentProfile?.username}
+        />
       </div>
 
       <DeleteSocialProfileDialog
