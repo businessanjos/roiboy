@@ -55,6 +55,34 @@ export function TrendsRadarTab() {
       (voice.signature_phrases?.length || 0) > 0)
   );
 
+  // Instagram conectado: checa se há perfil ativo + posts analisados
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
+  const { data: instagramStatus } = useQuery({
+    queryKey: ["trends-instagram-status", accountId],
+    queryFn: async () => {
+      if (!accountId) return { connected: false, postsCount: 0, username: null as string | null };
+      const { data: profile } = await supabase
+        .from("instagram_profiles")
+        .select("id, username")
+        .eq("account_id", accountId)
+        .eq("is_active", true)
+        .order("followers_count", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      if (!profile) return { connected: false, postsCount: 0, username: null };
+      const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from("instagram_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("profile_id", profile.id)
+        .gte("posted_at", since);
+      return { connected: true, postsCount: count || 0, username: profile.username };
+    },
+    enabled: !!accountId,
+  });
+  const instagramConnected = !!instagramStatus?.connected && (instagramStatus?.postsCount || 0) > 0;
+
   const runAI = () => {
     discover.mutate({
       niche: niche || voice?.niche || undefined,
