@@ -32,14 +32,25 @@ window.addEventListener("vite:preloadError", (event) => {
   }
 });
 
-window.addEventListener("error", (event) => {
-  const msg = event.message || "";
-  if (msg.includes("Failed to fetch dynamically imported module") || msg.includes("Importing a module script failed")) {
-    if (!sessionStorage.getItem("chunk-reload")) {
-      sessionStorage.setItem("chunk-reload", "1");
-      window.location.reload();
-    }
+const isChunkLoadError = (msg: string) =>
+  msg.includes("Failed to fetch dynamically imported module") ||
+  msg.includes("Importing a module script failed") ||
+  msg.includes("error loading dynamically imported module");
+
+const reloadOnce = () => {
+  if (!sessionStorage.getItem("chunk-reload")) {
+    sessionStorage.setItem("chunk-reload", "1");
+    window.location.reload();
   }
+};
+
+window.addEventListener("error", (event) => {
+  if (isChunkLoadError(event.message || "")) reloadOnce();
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const msg = event.reason?.message || String(event.reason || "");
+  if (isChunkLoadError(msg)) reloadOnce();
 });
 
 // Clear reload flag on successful load
