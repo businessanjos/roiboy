@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { TrendingUp, Sparkles, ExternalLink, Archive, Trash2, Loader2, Flame, Eye, Heart, MessageCircle, Music2, Globe } from "lucide-react";
+import { TrendingUp, Sparkles, ExternalLink, Archive, Trash2, Loader2, Flame, Eye, Heart, MessageCircle, Music2, Globe, Target, Wand2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useMarketingTrends } from "@/hooks/useMarketingTrends";
 import { useMarketingIdeas } from "@/hooks/useMarketingIdeas";
 import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
+import { useMarketingPersona } from "@/hooks/useMarketingPersona";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ export function TrendsRadarTab() {
   const { trends, isLoading, discover, discoverApify, archiveTrend, deleteTrend } = useMarketingTrends();
   const { createIdea } = useMarketingIdeas();
   const { voice } = useMarketingBrandVoice();
+  const { persona } = useMarketingPersona();
 
   // AI tab state
   const [niche, setNiche] = useState("");
@@ -34,6 +36,21 @@ export function TrendsRadarTab() {
   const [apifyPlatform, setApifyPlatform] = useState("tiktok");
   const [hashtags, setHashtags] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+
+  // Context status: medir se Persona e Tom de Voz têm conteúdo
+  const personaFilled = !!(
+    persona &&
+    (persona.profession || persona.business_type ||
+      (persona.pains?.length || 0) > 0 ||
+      (persona.desires?.length || 0) > 0 ||
+      (persona.vocabulary?.length || 0) > 0)
+  );
+  const voiceFilled = !!(
+    voice &&
+    (voice.personality || voice.niche || voice.target_audience ||
+      (voice.tone_keywords?.length || 0) > 0 ||
+      (voice.signature_phrases?.length || 0) > 0)
+  );
 
   const runAI = () => {
     discover.mutate({
@@ -77,6 +94,50 @@ export function TrendsRadarTab() {
 
   return (
     <div className="space-y-6">
+      {/* Painel de Contexto: Persona + Tom de Voz */}
+      <Card className="p-4 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h4 className="font-semibold text-sm">Contexto ativo nas buscas</h4>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Toda descoberta de trends usa automaticamente sua <strong>Persona</strong> e <strong>Tom de Voz</strong> para personalizar adaptações.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge
+              variant="outline"
+              className={personaFilled
+                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400"
+                : "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400"}
+            >
+              {personaFilled ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
+              <Target className="h-3 w-3 mr-1" />
+              Persona {personaFilled ? "ativa" : "vazia"}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={voiceFilled
+                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400"
+                : "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400"}
+            >
+              {voiceFilled ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
+              <Wand2 className="h-3 w-3 mr-1" />
+              Tom de Voz {voiceFilled ? "ativo" : "vazio"}
+            </Badge>
+          </div>
+        </div>
+        {(!personaFilled || !voiceFilled) && (
+          <div className="mt-3 pt-3 border-t border-primary/10 flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-xs text-muted-foreground">
+              💡 Preencha as abas <strong>Persona</strong> e <strong>Tom de Voz</strong> para resultados muito mais personalizados.
+            </p>
+          </div>
+        )}
+      </Card>
+
       <Card className="p-6 space-y-4">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-md bg-orange-500/10 text-orange-600"><Flame className="h-5 w-5" /></div>
