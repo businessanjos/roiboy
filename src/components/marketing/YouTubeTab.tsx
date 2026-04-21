@@ -114,10 +114,22 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
             </SelectTrigger>
             <SelectContent>
               {channels.map((ch) => (
-                <SelectItem key={ch.id} value={ch.id}>
+                <SelectItem key={ch.id} value={ch.id} className="pr-10">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-5 w-5"><AvatarImage src={ch.profile_picture_url || undefined} /><AvatarFallback className="text-[10px]">{ch.username.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
                     @{ch.username}
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setChannelToDelete({ id: ch.id, username: ch.username });
+                      }}
+                      className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      aria-label={`Excluir canal @${ch.username}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </SelectItem>
               ))}
@@ -128,12 +140,40 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
               <ExternalLink className="h-4 w-4" />
             </a>
           )}
+          {currentChannel && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setChannelToDelete({ id: currentChannel.id, username: currentChannel.username })}
+              aria-label="Excluir canal atual"
+              title="Excluir canal atual"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
           {useMockData && <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">Dados de exemplo</Badge>}
         </div>
         <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90" onClick={() => setConnectDialogOpen(true)}>
           <Plus className="h-4 w-4" />Conectar Novo Canal
         </Button>
       </div>
+
+      <DeleteSocialProfileDialog
+        open={!!channelToDelete}
+        onOpenChange={(open) => !open && setChannelToDelete(null)}
+        username={channelToDelete?.username}
+        entityLabel="canal"
+        isDeleting={deleteChannel.isPending}
+        onConfirm={() => {
+          if (channelToDelete) {
+            deleteChannel.mutate(channelToDelete.id, {
+              onSuccess: () => setChannelToDelete(null),
+            });
+          }
+        }}
+      />
+
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SocialMediaKPICard title="Inscritos Totais" value={formatNumber(kpis.totalSubscribers)} icon={Users} trend={kpis.subscribersGrowth} trendLabel="vs. mês anterior" variant="default" />
