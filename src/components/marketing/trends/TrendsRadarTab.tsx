@@ -94,6 +94,50 @@ export function TrendsRadarTab() {
 
   return (
     <div className="space-y-6">
+      {/* Painel de Contexto: Persona + Tom de Voz */}
+      <Card className="p-4 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h4 className="font-semibold text-sm">Contexto ativo nas buscas</h4>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Toda descoberta de trends usa automaticamente sua <strong>Persona</strong> e <strong>Tom de Voz</strong> para personalizar adaptações.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge
+              variant="outline"
+              className={personaFilled
+                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400"
+                : "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400"}
+            >
+              {personaFilled ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
+              <Target className="h-3 w-3 mr-1" />
+              Persona {personaFilled ? "ativa" : "vazia"}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={voiceFilled
+                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400"
+                : "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400"}
+            >
+              {voiceFilled ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
+              <Wand2 className="h-3 w-3 mr-1" />
+              Tom de Voz {voiceFilled ? "ativo" : "vazio"}
+            </Badge>
+          </div>
+        </div>
+        {(!personaFilled || !voiceFilled) && (
+          <div className="mt-3 pt-3 border-t border-primary/10 flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-xs text-muted-foreground">
+              💡 Preencha as abas <strong>Persona</strong> e <strong>Tom de Voz</strong> para resultados muito mais personalizados.
+            </p>
+          </div>
+        )}
+      </Card>
+
       <Card className="p-6 space-y-4">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-md bg-orange-500/10 text-orange-600"><Flame className="h-5 w-5" /></div>
