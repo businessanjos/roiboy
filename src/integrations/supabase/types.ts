@@ -7854,10 +7854,14 @@ export type Database = {
           followers_previous_count: number | null
           following_count: number | null
           id: string
+          ig_business_account_id: string | null
           is_active: boolean | null
           last_synced_at: string | null
+          meta_access_token: string | null
           posts_count: number | null
           profile_picture_url: string | null
+          sync_error: string | null
+          token_expires_at: string | null
           updated_at: string
           username: string
         }
@@ -7870,10 +7874,14 @@ export type Database = {
           followers_previous_count?: number | null
           following_count?: number | null
           id?: string
+          ig_business_account_id?: string | null
           is_active?: boolean | null
           last_synced_at?: string | null
+          meta_access_token?: string | null
           posts_count?: number | null
           profile_picture_url?: string | null
+          sync_error?: string | null
+          token_expires_at?: string | null
           updated_at?: string
           username: string
         }
@@ -7886,10 +7894,14 @@ export type Database = {
           followers_previous_count?: number | null
           following_count?: number | null
           id?: string
+          ig_business_account_id?: string | null
           is_active?: boolean | null
           last_synced_at?: string | null
+          meta_access_token?: string | null
           posts_count?: number | null
           profile_picture_url?: string | null
+          sync_error?: string | null
+          token_expires_at?: string | null
           updated_at?: string
           username?: string
         }
