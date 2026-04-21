@@ -108,6 +108,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
     selectedProfileId,
     setSelectedProfileId,
     createProfile,
+    deleteProfile,
     createPost,
     updatePost,
     deletePost,
