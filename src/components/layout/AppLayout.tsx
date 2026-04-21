@@ -23,6 +23,7 @@ export function AppLayout() {
   const { open: searchOpen, setOpen: setSearchOpen } = useGlobalSearch();
   const { helpOpen, setHelpOpen } = useKeyboardShortcuts();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [forceRender, setForceRender] = useState(false);
   const { currentSector } = useSector();
   const isInVendas = currentSector?.id === "vendas";
   const { currentUser } = useCurrentUser();
@@ -57,7 +58,7 @@ export function AppLayout() {
     retry: false,
   });
 
-  const isLoading = authLoading || subLoading;
+  const isLoading = (authLoading || subLoading) && !forceRender;
 
   // Show retry button after 6s of loading
   useEffect(() => {
@@ -68,6 +69,14 @@ export function AppLayout() {
     const timer = setTimeout(() => setLoadingTimeout(true), 6000);
     return () => clearTimeout(timer);
   }, [isLoading]);
+
+  // Hard fail-safe: never block the platform behind the loading screen for
+  // more than 3.5s. If anything is still pending, force render the app —
+  // sub-components will fall back to their own loading states locally.
+  useEffect(() => {
+    const t = setTimeout(() => setForceRender(true), 3500);
+    return () => clearTimeout(t);
+  }, []);
 
   if (isLoading) {
     return (
