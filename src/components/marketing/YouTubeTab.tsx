@@ -23,6 +23,7 @@ import { YouTubeConnectDialog } from './YouTubeConnectDialog';
 import { AddYouTubeVideoDialog } from './AddYouTubeVideoDialog';
 import { EditYouTubeVideoDialog } from './EditYouTubeVideoDialog';
 import { DeleteYouTubeVideoDialog } from './DeleteYouTubeVideoDialog';
+import { DeleteSocialProfileDialog } from './DeleteSocialProfileDialog';
 import { cn } from '@/lib/utils';
 
 interface YouTubeTabProps {
