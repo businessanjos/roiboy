@@ -577,8 +577,60 @@ serve(async (req) => {
       result = { ...r, token: newToken };
     
     } else if (action === "connect" || action === "qrcode") {
+      // UAZAPI: POST /instance/connect with instance token in header returns QR code
       const instName = payload.instance_name || instanceName;
-      result = await uazapiAdmin(`/instance/connect/${instName}`, "GET", undefined, sectorServer);
+      let activeToken = token;
+
+      // Helper: init the instance on the (possibly isolated) sector server and persist new token
+      const initOnSectorServer = async () => {
+        console.log(`[uazapi-manager] Initializing instance "${instName}" on sector server: ${sectorServer?.host || 'global'}`);
+        const initRes = await uazapiAdmin("/instance/init", "POST", { name: instName }, sectorServer);
+        const newToken = initRes?.token || initRes?.instance?.token;
+        if (!newToken) {
+          throw new Error("Failed to initialize instance: no token returned");
+        }
+        // Persist new token (and ensure provider/instance_name are set)
+        if (intData?.id) {
+          const mergedConfig = {
+            ...(intData.config || {}),
+            provider: "uazapi",
+            instance_name: instName,
+            instance_token: newToken,
+          };
+          await supabase.from("integrations").update({ config: mergedConfig, status: "pending" }).eq("id", intData.id);
+        }
+        return newToken;
+      };
+
+      // If we don't have a token yet, init now
+      if (!activeToken) {
+        try {
+          activeToken = await initOnSectorServer();
+        } catch (e) {
+          console.error("[uazapi-manager] init failed:", e);
+          return new Response(
+            JSON.stringify({ error: `Failed to initialize instance on sector server: ${(e as Error).message}` }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Try connect with current token; if 401 (token belongs to a different server), re-init and retry
+      try {
+        result = await uazapiInstance("/instance/connect", "POST", activeToken, {}, sectorServer);
+        const isAuthError = result?.code === 401 || /invalid token/i.test(result?.message || "");
+        if (isAuthError) {
+          console.warn("[uazapi-manager] Connect returned auth error, re-initializing instance on sector server");
+          activeToken = await initOnSectorServer();
+          result = await uazapiInstance("/instance/connect", "POST", activeToken, {}, sectorServer);
+        }
+      } catch (e) {
+        console.error("[uazapi-manager] connect failed:", e);
+        return new Response(
+          JSON.stringify({ error: `Failed to fetch QR code: ${(e as Error).message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     
     } else if (action === "disconnect") {
       try { await uazapiInstance("/logout", "POST", token!, undefined, sectorServer); } catch {}
