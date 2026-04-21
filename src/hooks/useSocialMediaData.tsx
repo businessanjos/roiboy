@@ -469,6 +469,30 @@ export function useSocialMediaData() {
     },
   });
 
+  // Delete profile mutation (cascades to posts)
+  const deleteProfile = useMutation({
+    mutationFn: async (profileId: string) => {
+      const { error } = await supabase
+        .from('instagram_profiles')
+        .delete()
+        .eq('id', profileId);
+      if (error) throw error;
+      return profileId;
+    },
+    onSuccess: (deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ['instagram-profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['instagram-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['instagram-dashboard'] });
+      if (selectedProfileId === deletedId) {
+        setSelectedProfileId(null);
+      }
+      toast.success('Perfil excluído com sucesso');
+    },
+    onError: (error) => {
+      toast.error('Erro ao excluir perfil: ' + error.message);
+    },
+  });
+
   const refetchData = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['instagram-profiles'] }),
@@ -488,6 +512,7 @@ export function useSocialMediaData() {
     selectedProfileId,
     setSelectedProfileId,
     createProfile,
+    deleteProfile,
     createPost,
     updatePost,
     deletePost,

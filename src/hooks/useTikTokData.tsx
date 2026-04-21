@@ -458,6 +458,29 @@ export function useTikTokData() {
     },
   });
 
+  // Delete profile mutation (cascades to posts)
+  const deleteProfile = useMutation({
+    mutationFn: async (profileId: string) => {
+      const { error } = await supabase
+        .from('tiktok_profiles')
+        .delete()
+        .eq('id', profileId);
+      if (error) throw error;
+      return profileId;
+    },
+    onSuccess: (deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ['tiktok-profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['tiktok-posts'] });
+      if (selectedProfileId === deletedId) {
+        setSelectedProfileId(null);
+      }
+      toast.success('Perfil excluído com sucesso');
+    },
+    onError: (error) => {
+      toast.error('Erro ao excluir perfil: ' + error.message);
+    },
+  });
+
   const refetchData = () => {
     queryClient.invalidateQueries({ queryKey: ['tiktok-profiles'] });
     queryClient.invalidateQueries({ queryKey: ['tiktok-posts'] });
@@ -473,7 +496,8 @@ export function useTikTokData() {
     selectedProfileId,
     setSelectedProfileId,
     createProfile,
-    syncProfile, // NEW: Sync profile with fresh data
+    deleteProfile,
+    syncProfile,
     createPost,
     updatePost,
     deletePost,
