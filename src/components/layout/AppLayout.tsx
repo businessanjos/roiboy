@@ -28,22 +28,36 @@ export function AppLayout() {
   const { currentUser } = useCurrentUser();
 
   // Check if user is external (viewer role with external dashboard access)
-  const { data: externalAccess, isLoading: extLoading } = useQuery({
+  const { data: externalAccess } = useQuery({
     queryKey: ["external-access-check", user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const timeoutFallback = new Promise<never[]>((resolve) => {
+        setTimeout(() => resolve([]), 2500);
+      });
+
+      const fetchExternalAccess = supabase
         .from("external_dashboard_access")
         .select("id")
         .eq("user_id", user!.id)
         .eq("is_active", true)
-        .limit(1);
-      return data || [];
+        .limit(1)
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Error checking external dashboard access:", error);
+            return [];
+          }
+
+          return data || [];
+        });
+
+      return Promise.race([fetchExternalAccess, timeoutFallback]);
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && currentUser?.role === "viewer",
     staleTime: Infinity,
+    retry: false,
   });
 
-  const isLoading = authLoading || subLoading || extLoading;
+  const isLoading = authLoading || subLoading;
 
   // Show retry button after 6s of loading
   useEffect(() => {
@@ -73,7 +87,7 @@ export function AppLayout() {
   }
 
   // If user has external dashboard access and role is viewer, redirect
-  if (externalAccess && externalAccess.length > 0 && currentUser?.role === "viewer") {
+  if (currentUser?.role === "viewer" && externalAccess && externalAccess.length > 0) {
     return <Navigate to="/external/insights" replace />;
   }
 
