@@ -89,6 +89,7 @@ export function TrendsRadarTab() {
       niche: niche || voice?.niche || undefined,
       platform: aiPlatform,
       customQuery: customQuery || undefined,
+      extraContext: extraContext.trim() || undefined,
     });
   };
 

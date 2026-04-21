@@ -52,7 +52,7 @@ export function useMarketingTrends() {
   });
 
   const discover = useMutation({
-    mutationFn: async (input: { niche?: string; platform?: string; customQuery?: string }) => {
+    mutationFn: async (input: { niche?: string; platform?: string; customQuery?: string; extraContext?: string }) => {
       if (!accountId) throw new Error("Sem conta");
       const { data, error } = await supabase.functions.invoke("discover-trends", {
         body: { accountId, ...input },
