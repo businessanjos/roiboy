@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,13 +32,18 @@ interface PautaResponse {
 export function DailyContentPanel() {
   const { currentUser } = useCurrentUser();
   const { selectedProfile } = useContentProfile();
-  const { suggestWeeklyCalendar } = useMarketingWeeklyCalendar();
+  const { suggestWeeklyCalendar, weeklyCalendar } = useMarketingWeeklyCalendar(selectedProfile?.id);
   const { reviews, recordReview } = useMarketingAiSuggestionReviews();
   const [pauta, setPauta] = useState<PautaResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [reviewPautaIdx, setReviewPautaIdx] = useState<number | null>(null);
   const [reviewWeekIdx, setReviewWeekIdx] = useState<number | null>(null);
+
+  const todayIso = format(new Date(), 'yyyy-MM-dd');
+  const todayWeeklySuggestion = useMemo(() => {
+    return weeklyCalendar.data?.schedule.find((item) => item.date === todayIso) ?? null;
+  }, [todayIso, weeklyCalendar.data]);
 
   // Trends in alta (top 3)
   const { data: trends = [], isLoading: loadingTrends } = useQuery({
@@ -125,6 +130,26 @@ export function DailyContentPanel() {
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
+  const handleUseWeeklySuggestionToday = () => {
+    if (!todayWeeklySuggestion) return;
+
+    setPauta({
+      data: format(new Date(), 'PPPP', { locale: ptBR }),
+      resumo: `Pauta do dia reaproveitada do calendário semanal: ${todayWeeklySuggestion.title}`,
+      pautas: [
+        {
+          titulo: todayWeeklySuggestion.title,
+          formato: todayWeeklySuggestion.channel === 'email' ? 'E-mail' : todayWeeklySuggestion.format,
+          hook: todayWeeklySuggestion.hook,
+          cta: todayWeeklySuggestion.cta,
+          motivo: todayWeeklySuggestion.rationale,
+        },
+      ],
+    });
+
+    toast.success('Pauta do dia preenchida com a sugestão semanal');
+  };
+
   const reviewSummary = {
     accepted: reviews.filter((item) => item.decision === 'accepted').length,
     edited: reviews.filter((item) => item.decision === 'edited').length,
@@ -153,10 +178,16 @@ export function DailyContentPanel() {
               {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
             </p>
           </div>
-          <Button onClick={handleGeneratePauta} disabled={loading || !selectedProfile} size="lg">
-            {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-            {loading ? 'Gerando...' : 'Gerar pauta de hoje com IA'}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={handleUseWeeklySuggestionToday} disabled={!todayWeeklySuggestion || loading} size="lg">
+              <CalendarIcon className="h-4 w-4 mr-2" />
+              Usar sugestão da semana
+            </Button>
+            <Button onClick={handleGeneratePauta} disabled={loading || !selectedProfile} size="lg">
+              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              {loading ? 'Gerando...' : 'Gerar pauta de hoje com IA'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -197,15 +228,15 @@ export function DailyContentPanel() {
         </div>
       </Card>
 
-      {suggestWeeklyCalendar.data && (
+      {weeklyCalendar.data && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{suggestWeeklyCalendar.data.weeklyFocus}</CardTitle>
+            <CardTitle className="text-base">{weeklyCalendar.data.weeklyFocus}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">{suggestWeeklyCalendar.data.summary}</p>
+            <p className="text-sm text-muted-foreground">{weeklyCalendar.data.summary}</p>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {suggestWeeklyCalendar.data.schedule.map((item, idx) => (
+              {weeklyCalendar.data.schedule.map((item, idx) => (
                 <Card key={`${item.date}-${idx}`} className="border-primary/10">
                   <CardContent className="p-4 space-y-3 text-sm">
                     <div className="flex items-center justify-between gap-2">
