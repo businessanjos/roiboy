@@ -1,23 +1,49 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Instagram, Wand2, CheckCircle2, Pencil } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Sparkles, Instagram, Wand2, CheckCircle2, Pencil, AlertTriangle } from "lucide-react";
 import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
+import { useMarketingPersona } from "@/hooks/useMarketingPersona";
+import { useMarketingReferences } from "@/hooks/useMarketingReferences";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { buildMarketingConsistencyReport } from "@/lib/marketingConsistency";
+import { MarketingConsistencyAlertDialog } from "@/components/marketing/ai/MarketingConsistencyAlertDialog";
 
 export function BrandVoiceTab() {
   const { voice, isLoading, learnFromInstagram, updateVoice } = useMarketingBrandVoice();
+  const { persona } = useMarketingPersona();
+  const { references } = useMarketingReferences();
   const [igUsername, setIgUsername] = useState("brunapieri");
   const [niche, setNiche] = useState("");
   const [audience, setAudience] = useState("");
   const [manualPosts, setManualPosts] = useState("");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<any>(null);
+  const [pendingSave, setPendingSave] = useState<any | null>(null);
+
+  const currentVoiceState = editing && draft ? {
+    personality: draft.personality,
+    tone_keywords: draft.tone_keywords.split(",").map((s: string) => s.trim()).filter(Boolean),
+    forbidden_words: draft.forbidden_words.split(",").map((s: string) => s.trim()).filter(Boolean),
+    signature_phrases: draft.signature_phrases.split("\n").map((s: string) => s.trim()).filter(Boolean),
+    emoji_style: draft.emoji_style,
+    hashtag_strategy: draft.hashtag_strategy,
+    target_audience: draft.target_audience,
+    niche: draft.niche,
+    ai_summary: draft.ai_summary,
+  } : voice;
+
+  const consistencyReport = useMemo(() => buildMarketingConsistencyReport({
+    persona,
+    voice: currentVoiceState,
+    references,
+  }), [persona, currentVoiceState, references]);
 
   const startEdit = () => {
     setDraft({
@@ -34,8 +60,12 @@ export function BrandVoiceTab() {
     setEditing(true);
   };
 
+  const persistVoice = (payload: any) => {
+    updateVoice.mutate(payload, { onSuccess: () => setEditing(false) });
+  };
+
   const saveEdit = () => {
-    updateVoice.mutate({
+    const payload = {
       personality: draft.personality,
       tone_keywords: draft.tone_keywords.split(",").map((s: string) => s.trim()).filter(Boolean),
       forbidden_words: draft.forbidden_words.split(",").map((s: string) => s.trim()).filter(Boolean),
@@ -45,7 +75,15 @@ export function BrandVoiceTab() {
       target_audience: draft.target_audience,
       niche: draft.niche,
       ai_summary: draft.ai_summary,
-    }, { onSuccess: () => setEditing(false) });
+    };
+
+    const report = buildMarketingConsistencyReport({ persona, voice: payload, references });
+    if (report.blockingIssues.length > 0) {
+      setPendingSave(payload);
+      return;
+    }
+
+    persistVoice(payload);
   };
 
   const runLearn = () => {
@@ -118,6 +156,18 @@ export function BrandVoiceTab() {
           )}
         </div>
 
+        {consistencyReport.issues.length > 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Validação automática ativa</AlertTitle>
+            <AlertDescription>
+              {consistencyReport.blockingIssues.length > 0
+                ? `Há ${consistencyReport.blockingIssues.length} inconsistência(s) entre Persona, Tom de Voz e Referências para revisar antes de aplicar.`
+                : "Os sinais principais estão alinhados, mas ainda há melhorias sugeridas para aumentar a confiança das próximas recomendações."}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {!voice && !editing && (
           <p className="text-sm text-muted-foreground">Ainda não há tom de voz definido. Use o painel ao lado para treinar com Instagram, ou clique abaixo para criar manualmente.</p>
         )}
@@ -167,6 +217,20 @@ export function BrandVoiceTab() {
           </div>
         )}
       </Card>
+
+      <MarketingConsistencyAlertDialog
+        open={!!pendingSave}
+        onOpenChange={(open) => { if (!open) setPendingSave(null); }}
+        title="Reveja antes de aplicar o tom de voz"
+        description="Detectamos conflitos que podem reduzir a confiança das sugestões de IA."
+        report={buildMarketingConsistencyReport({ persona, voice: pendingSave, references })}
+        confirmLabel="Aplicar mesmo assim"
+        onConfirm={() => {
+          if (!pendingSave) return;
+          persistVoice(pendingSave);
+          setPendingSave(null);
+        }}
+      />
     </div>
   );
 }
