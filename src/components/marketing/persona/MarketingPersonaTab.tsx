@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Save, Loader2, Plus, X, Target, Brain, Heart, MessageSquare, Database } from "lucide-react";
+import { Sparkles, Save, Loader2, Plus, X, Target, Brain, Heart, MessageSquare, Database, Instagram, TrendingUp, Hash, Film } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
@@ -90,6 +90,13 @@ export function MarketingPersonaTab() {
   const [arrayInputs, setArrayInputs] = useState<Record<string, string>>({});
   const [suggestingField, setSuggestingField] = useState<PersonaField | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [highlights, setHighlights] = useState<{
+    formats: string[];
+    themes: string[];
+    hashtags: string[];
+    instagramUsername?: string | null;
+    updatedAt?: number;
+  } | null>(null);
 
   useEffect(() => {
     if (persona) setDraft(persona);
@@ -117,16 +124,32 @@ export function MarketingPersonaTab() {
     setSuggestingField(key);
     try {
       const res = await suggestField.mutateAsync(key);
+
+      // Atualiza painel de destaques se a IA retornou
+      if (res.instagramHighlights && (res.instagramHighlights.formats?.length || res.instagramHighlights.themes?.length || res.instagramHighlights.hashtags?.length)) {
+        setHighlights({
+          formats: res.instagramHighlights.formats || [],
+          themes: res.instagramHighlights.themes || [],
+          hashtags: res.instagramHighlights.hashtags || [],
+          instagramUsername: res.instagramUsername,
+          updatedAt: Date.now(),
+        });
+      }
+
+      const basedOnParts: string[] = [];
+      if (res.basedOnRealData) basedOnParts.push(`${res.clientsAnalyzed} clientes`);
+      if (res.basedOnInstagram && res.instagramUsername) basedOnParts.push(`@${res.instagramUsername}`);
+      const basedOnLabel = basedOnParts.length ? ` (baseado em ${basedOnParts.join(" + ")})` : "";
+
       if (isArrayField(key)) {
         const items = (res.suggestion as string[]) || [];
-        // Mescla sem duplicar
         const current = (draft[key] as string[]) || [];
         const merged = Array.from(new Set([...current, ...items]));
         setField(key, merged);
-        toast.success(`${items.length} sugestões adicionadas${res.basedOnRealData ? ` (baseado em ${res.clientsAnalyzed} clientes reais)` : ""}`);
+        toast.success(`${items.length} sugestões adicionadas${basedOnLabel}`);
       } else {
         setField(key, res.suggestion as string);
-        toast.success(`Sugestão aplicada${res.basedOnRealData ? ` (baseado em ${res.clientsAnalyzed} clientes reais)` : ""}`);
+        toast.success(`Sugestão aplicada${basedOnLabel}`);
       }
     } catch (e: any) {
       // toast já tratado no hook
