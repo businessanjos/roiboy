@@ -135,12 +135,20 @@ export function MarketingPersonaTab() {
     setField(key, current.filter((_, i) => i !== idx));
   };
 
+  const findFieldLabel = (key: PersonaField) => {
+    for (const sec of SECTIONS) {
+      const f = sec.fields.find((x) => x.key === key);
+      if (f) return f.label;
+    }
+    return key;
+  };
+
   const handleSuggest = async (key: PersonaField) => {
     setSuggestingField(key);
     try {
       const res = await suggestField.mutateAsync(key);
 
-      // Atualiza painel de destaques se a IA retornou
+      // Atualiza painel de destaques
       if (res.instagramHighlights && (res.instagramHighlights.formats?.length || res.instagramHighlights.themes?.length || res.instagramHighlights.hashtags?.length)) {
         setHighlights({
           formats: res.instagramHighlights.formats || [],
@@ -151,20 +159,20 @@ export function MarketingPersonaTab() {
         });
       }
 
-      const basedOnParts: string[] = [];
-      if (res.basedOnRealData) basedOnParts.push(`${res.clientsAnalyzed} clientes`);
-      if (res.basedOnInstagram && res.instagramUsername) basedOnParts.push(`@${res.instagramUsername}`);
-      const basedOnLabel = basedOnParts.length ? ` (baseado em ${basedOnParts.join(" + ")})` : "";
-
-      if (isArrayField(key)) {
-        const items = (res.suggestion as string[]) || [];
-        const current = (draft[key] as string[]) || [];
-        const merged = Array.from(new Set([...current, ...items]));
-        setField(key, merged);
-        toast.success(`${items.length} sugestões adicionadas${basedOnLabel}`);
+      // Se temos A/B test válido, abre o diálogo de comparação
+      if (res.abTestId && res.variantA !== undefined && res.variantB !== undefined) {
+        setAbDialog({
+          open: true,
+          field: key,
+          fieldLabel: findFieldLabel(key),
+          variantA: res.variantA as any,
+          variantB: res.variantB as any,
+          abTestId: res.abTestId,
+          hasHighlights: !!res.hasHighlights,
+        });
       } else {
-        setField(key, res.suggestion as string);
-        toast.success(`Sugestão aplicada${basedOnLabel}`);
+        // Fallback: aplica direto
+        applySuggestionToField(key, res.suggestion);
       }
     } catch (e: any) {
       // toast já tratado no hook
@@ -173,10 +181,57 @@ export function MarketingPersonaTab() {
     }
   };
 
+  const applySuggestionToField = (key: PersonaField, suggestion: string | string[]) => {
+    if (isArrayField(key)) {
+      const items = (suggestion as string[]) || [];
+      const current = (draft[key] as string[]) || [];
+      const merged = Array.from(new Set([...current, ...items]));
+      setField(key, merged);
+      toast.success(`${items.length} sugestões adicionadas`);
+    } else {
+      setField(key, suggestion as string);
+      toast.success("Sugestão aplicada");
+    }
+  };
+
+  const handleAbChoose = async (variant: "a" | "b") => {
+    const { field, abTestId, variantA, variantB } = abDialog;
+    if (!field || !abTestId) return;
+    const value = variant === "a" ? variantA : variantB;
+    applySuggestionToField(field, value);
+    // marca para detecção de save sem edição
+    setPendingAbApplied((m) => ({ ...m, [field]: { abTestId, value } }));
+    try {
+      await submitAbFeedback.mutateAsync({ abTestId, action: "choose", variant });
+    } catch (_) {}
+    setAbDialog((d) => ({ ...d, open: false }));
+  };
+
+  const handleAbFeedback = async (variant: "a" | "b", feedback: "up" | "down") => {
+    if (!abDialog.abTestId) return;
+    try {
+      await submitAbFeedback.mutateAsync({ abTestId: abDialog.abTestId, action: "feedback", variant, feedback });
+    } catch (_) {}
+  };
+
   const handleSave = async () => {
     await upsertPersona.mutateAsync(draft);
     setIsDirty(false);
     toast.success("Persona salva");
+
+    // Captura aceite implícito: para cada campo com A/B aplicado pendente, registra save
+    const entries = Object.entries(pendingAbApplied);
+    for (const [field, info] of entries) {
+      const finalValue = (draft as any)[field];
+      try {
+        await submitAbFeedback.mutateAsync({
+          abTestId: info.abTestId,
+          action: "save",
+          value: finalValue,
+        });
+      } catch (_) {}
+    }
+    setPendingAbApplied({});
   };
 
   // Cálculo de completude
