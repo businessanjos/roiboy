@@ -3,10 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, Plus, Instagram, Youtube, Music2, Linkedin, Globe, BrainCircuit } from "lucide-react";
 import { useMarketingIdeas, MarketingIdea } from "@/hooks/useMarketingIdeas";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { useMarketingWeeklyCalendar } from "@/hooks/useMarketingWeeklyCalendar";
+import { useMarketingCopy } from "@/hooks/useMarketingCopy";
 import { AiSuggestionReviewDialog } from "@/components/marketing/ai/AiSuggestionReviewDialog";
 import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestionReviews";
 import { IdeaDialog } from "../ideas/IdeaDialog";
@@ -38,6 +40,7 @@ const PLATFORM_COLORS: Record<string, string> = {
 
 export function EditorialCalendarTab() {
   const { ideas, updateIdea, createIdea } = useMarketingIdeas();
+  const { generateCopy } = useMarketingCopy();
   const { selectedProfile } = useContentProfile();
   const { suggestWeeklyCalendar } = useMarketingWeeklyCalendar();
   const { reviews, recordReview } = useMarketingAiSuggestionReviews("suggest-weekly-marketing-calendar");
@@ -47,6 +50,13 @@ export function EditorialCalendarTab() {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [reviewingIndex, setReviewingIndex] = useState<number | null>(null);
   const [publishingKey, setPublishingKey] = useState<string | null>(null);
+  const [copyingKey, setCopyingKey] = useState<string | null>(null);
+  const [generatedCopy, setGeneratedCopy] = useState<{
+    item: WeeklySuggestionItem;
+    hook: string;
+    cta: string;
+    draft: string;
+  } | null>(null);
 
   type WeeklySuggestionItem = NonNullable<typeof suggestWeeklyCalendar.data>["schedule"][number];
 
@@ -175,6 +185,81 @@ export function EditorialCalendarTab() {
     }
   };
 
+  const buildCopyBrief = (item: WeeklySuggestionItem) => {
+    return [
+      `Título da pauta: ${item.title}`,
+      `Dia planejado: ${item.dayLabel} (${item.date})`,
+      `Canal: ${item.channel}`,
+      `Plataforma: ${item.platform}`,
+      `Formato: ${item.format}`,
+      `Objetivo: ${item.objective}`,
+      `Hook sugerido no calendário: ${item.hook}`,
+      `CTA sugerido no calendário: ${item.cta}`,
+      `Justificativa estratégica: ${item.rationale}`,
+      "Crie o texto considerando o histórico do perfil selecionado e os padrões que já performaram melhor.",
+    ].join("\n");
+  };
+
+  const handleGenerateCopyForSuggestion = async (item: WeeklySuggestionItem) => {
+    const suggestionKey = getSuggestionKey(item);
+    setCopyingKey(suggestionKey);
+
+    try {
+      const brief = buildCopyBrief(item);
+      const [hookResult, ctaResult] = await Promise.all([
+        generateCopy.mutateAsync({
+          copyType: "hook",
+          brief,
+          objective: item.objective,
+          format: item.format,
+          platform: item.platform,
+          useBrandVoice: true,
+          profileId: selectedProfile?.id,
+          profilePlatform: selectedProfile?.platform,
+          profileUsername: selectedProfile?.username,
+          profileDisplayName: selectedProfile?.display_name,
+        }),
+        generateCopy.mutateAsync({
+          copyType: "cta",
+          brief,
+          objective: item.objective,
+          format: item.format,
+          platform: item.platform,
+          useBrandVoice: true,
+          profileId: selectedProfile?.id,
+          profilePlatform: selectedProfile?.platform,
+          profileUsername: selectedProfile?.username,
+          profileDisplayName: selectedProfile?.display_name,
+        }),
+      ]);
+
+      const draftType = item.channel === "email" ? "email" : "caption";
+      const draftResult = await generateCopy.mutateAsync({
+        copyType: draftType,
+        brief,
+        objective: item.objective,
+        format: item.format,
+        platform: item.platform,
+        hook: hookResult.output,
+        useBrandVoice: true,
+        profileId: selectedProfile?.id,
+        profilePlatform: selectedProfile?.platform,
+        profileUsername: selectedProfile?.username,
+        profileDisplayName: selectedProfile?.display_name,
+      });
+
+      setGeneratedCopy({
+        item,
+        hook: hookResult.output,
+        cta: ctaResult.output,
+        draft: draftResult.output,
+      });
+      toast.success("Copy gerada para a pauta selecionada");
+    } finally {
+      setCopyingKey(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -237,7 +322,17 @@ export function EditorialCalendarTab() {
                   <p className="text-xs text-muted-foreground mt-1">{item.platform} · {item.objective}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">{item.hook}</p>
-                <div className="flex gap-2">
+                <div className="space-y-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => handleGenerateCopyForSuggestion(item)}
+                    disabled={!!copyingKey || suggestWeeklyCalendar.isPending}
+                  >
+                    {copyingKey === getSuggestionKey(item) ? "Gerando copy..." : "Gerar copy"}
+                  </Button>
+                  <div className="flex gap-2">
                   <Button
                     size="sm"
                     variant="default"
@@ -255,6 +350,7 @@ export function EditorialCalendarTab() {
                   >
                     Editar antes
                   </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -413,6 +509,34 @@ export function EditorialCalendarTab() {
         }}
         isSubmitting={recordReview.isPending}
       />
+
+      <Dialog open={!!generatedCopy} onOpenChange={(open) => !open && setGeneratedCopy(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Copy da pauta selecionada</DialogTitle>
+            <DialogDescription>
+              {generatedCopy ? `${generatedCopy.item.title} · ${generatedCopy.item.objective}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          {generatedCopy && (
+            <div className="space-y-4">
+              <Card className="p-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Hook</p>
+                <p className="text-sm whitespace-pre-wrap">{generatedCopy.hook}</p>
+              </Card>
+              <Card className="p-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase">CTA</p>
+                <p className="text-sm whitespace-pre-wrap">{generatedCopy.cta}</p>
+              </Card>
+              <Card className="p-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Rascunho</p>
+                <p className="text-sm whitespace-pre-wrap">{generatedCopy.draft}</p>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
