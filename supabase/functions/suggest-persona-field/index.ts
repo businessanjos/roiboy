@@ -130,6 +130,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 4.5) Buscar contexto do Instagram (perfil ativo da conta)
+    let instagramContext = "";
+    let instagramUsername: string | null = null;
+    try {
+      const igCtx = await fetchInstagramContext(supabase, accountId);
+      if (igCtx?.profile) {
+        instagramUsername = igCtx.profile.username;
+        instagramContext = buildInstagramContextBlock(igCtx);
+      }
+    } catch (e) {
+      console.error("fetchInstagramContext error:", e);
+    }
+
     // 5) Contexto da persona atual
     let personaContext = "";
     if (currentPersona) {
