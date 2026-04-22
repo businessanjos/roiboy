@@ -8,6 +8,7 @@ import { Sparkles, Flame, Lightbulb, Calendar as CalendarIcon, Loader2, Copy, Ch
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useContentProfile } from '@/contexts/ContentProfileContext';
+import { useMarketingWeeklyCalendar } from '@/hooks/useMarketingWeeklyCalendar';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -29,6 +30,7 @@ interface PautaResponse {
 export function DailyContentPanel() {
   const { currentUser } = useCurrentUser();
   const { selectedProfile } = useContentProfile();
+  const { suggestWeeklyCalendar } = useMarketingWeeklyCalendar();
   const [pauta, setPauta] = useState<PautaResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -89,6 +91,7 @@ export function DailyContentPanel() {
       const { data, error } = await supabase.functions.invoke('generate-daily-pauta', {
         body: {
           profile: selectedProfile ? {
+            id: selectedProfile.id,
             platform: selectedProfile.platform,
             username: selectedProfile.username,
             display_name: selectedProfile.display_name,
@@ -142,6 +145,72 @@ export function DailyContentPanel() {
           </Button>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardContent className="py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h3 className="text-base font-semibold flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4 text-primary" />
+              Calendário semanal com IA
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Monte uma semana de posts e e-mails usando o perfil ativo e o histórico já produzido.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => selectedProfile && suggestWeeklyCalendar.mutate({
+              profileId: selectedProfile.id,
+              platform: selectedProfile.platform,
+              username: selectedProfile.username,
+              displayName: selectedProfile.display_name,
+            })}
+            disabled={!selectedProfile || suggestWeeklyCalendar.isPending}
+          >
+            {suggestWeeklyCalendar.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            {suggestWeeklyCalendar.isPending ? 'Montando semana...' : 'Gerar calendário semanal'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {suggestWeeklyCalendar.data && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{suggestWeeklyCalendar.data.weeklyFocus}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">{suggestWeeklyCalendar.data.summary}</p>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {suggestWeeklyCalendar.data.schedule.map((item, idx) => (
+                <Card key={`${item.date}-${idx}`} className="border-primary/10">
+                  <CardContent className="p-4 space-y-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge variant="outline">{item.dayLabel}</Badge>
+                      <Badge variant="secondary">{item.channel === 'email' ? 'E-mail' : item.format}</Badge>
+                    </div>
+                    <div>
+                      <p className="font-medium leading-snug">{item.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{item.platform} · {item.objective}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase">Hook</p>
+                      <p>{item.hook}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase">CTA</p>
+                      <p>{item.cta}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase">Por quê</p>
+                      <p className="text-muted-foreground">{item.rationale}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pautas geradas */}
       {pauta && (

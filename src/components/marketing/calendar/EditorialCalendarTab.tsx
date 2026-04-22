@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Plus, Instagram, Youtube, Music2, Linkedin, Globe } from "lucide-react";
 import { useMarketingIdeas, MarketingIdea } from "@/hooks/useMarketingIdeas";
+import { useContentProfile } from "@/contexts/ContentProfileContext";
+import { useMarketingWeeklyCalendar } from "@/hooks/useMarketingWeeklyCalendar";
 import { IdeaDialog } from "../ideas/IdeaDialog";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -32,7 +34,9 @@ const PLATFORM_COLORS: Record<string, string> = {
 };
 
 export function EditorialCalendarTab() {
-  const { ideas, updateIdea } = useMarketingIdeas();
+  const { ideas, updateIdea, createIdea } = useMarketingIdeas();
+  const { selectedProfile } = useContentProfile();
+  const { suggestWeeklyCalendar } = useMarketingWeeklyCalendar();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [openIdea, setOpenIdea] = useState<MarketingIdea | null>(null);
@@ -76,6 +80,31 @@ export function EditorialCalendarTab() {
     setDraggedId(null);
   };
 
+  const handleGenerateWeek = async () => {
+    if (!selectedProfile) return;
+
+    await suggestWeeklyCalendar.mutateAsync({
+      profileId: selectedProfile.id,
+      platform: selectedProfile.platform,
+      username: selectedProfile.username,
+      displayName: selectedProfile.display_name,
+    });
+  };
+
+  const handleCreateFromSuggestion = async (item: NonNullable<typeof suggestWeeklyCalendar.data>["schedule"][number]) => {
+    await createIdea.mutateAsync({
+      title: item.title,
+      hook: item.hook,
+      description: `${item.rationale}\n\nCanal: ${item.channel}\nCTA: ${item.cta}`,
+      format: (item.channel === "email" ? "other" : item.format) as MarketingIdea["format"],
+      platform: (item.channel === "email" ? "other" : item.platform) as MarketingIdea["platform"],
+      planned_date: item.date,
+      status: "scheduled",
+      priority: item.objective === "converter" ? "high" : item.objective === "reter" ? "medium" : "medium",
+      tags: [item.objective, item.channel],
+    });
+  };
+
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -103,8 +132,38 @@ export function EditorialCalendarTab() {
               <SelectItem value="multi">Multi-plataforma</SelectItem>
             </SelectContent>
           </Select>
+          <Button onClick={handleGenerateWeek} disabled={!selectedProfile || suggestWeeklyCalendar.isPending}>
+            {suggestWeeklyCalendar.isPending ? "Gerando semana..." : "IA da semana"}
+          </Button>
         </div>
       </Card>
+
+      {suggestWeeklyCalendar.data && (
+        <Card className="p-4 space-y-4">
+          <div className="flex flex-col gap-1">
+            <h4 className="text-sm font-semibold">{suggestWeeklyCalendar.data.weeklyFocus}</h4>
+            <p className="text-sm text-muted-foreground">{suggestWeeklyCalendar.data.summary}</p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {suggestWeeklyCalendar.data.schedule.map((item, index) => (
+              <div key={`${item.date}-${index}`} className="rounded-md border bg-background p-3 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="outline">{item.dayLabel}</Badge>
+                  <Badge variant="secondary">{item.channel === "email" ? "E-mail" : item.format}</Badge>
+                </div>
+                <div>
+                  <p className="text-sm font-medium leading-snug">{item.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{item.platform} · {item.objective}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">{item.hook}</p>
+                <Button size="sm" variant="outline" className="w-full" onClick={() => handleCreateFromSuggestion(item)} disabled={createIdea.isPending}>
+                  Criar no calendário
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="grid lg:grid-cols-[1fr_280px] gap-4">
         <Card className="p-2">
