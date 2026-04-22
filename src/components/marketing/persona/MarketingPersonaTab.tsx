@@ -501,10 +501,12 @@ interface InstagramHighlightsPanelProps {
     instagramUsername?: string | null;
     updatedAt?: number;
   } | null;
+  profileId?: string | null;
+  fallbackUsername?: string | null;
 }
 
-function InstagramHighlightsPanel({ sessionHighlights }: InstagramHighlightsPanelProps) {
-  const { highlights: cached, isLoading, refreshNow } = useInstagramHighlightsCache();
+function InstagramHighlightsPanel({ sessionHighlights, profileId, fallbackUsername }: InstagramHighlightsPanelProps) {
+  const { highlights: cached, isLoading, refreshNow } = useInstagramHighlightsCache(profileId);
 
   // Prioriza dados em-sessão (acabou de rodar IA) sobre cache
   const display = useMemo(() => {
