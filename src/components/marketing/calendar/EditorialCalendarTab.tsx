@@ -238,11 +238,22 @@ export function EditorialCalendarTab() {
                 </div>
                 <p className="text-xs text-muted-foreground">{item.hook}</p>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => handleCreateFromSuggestion(item)} disabled={createIdea.isPending}>
-                    Criar no calendário
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="flex-1"
+                    onClick={() => handleApproveAndCreate(item)}
+                    disabled={createIdea.isPending || recordReview.isPending || publishingKey === getSuggestionKey(item)}
+                  >
+                    {publishingKey === getSuggestionKey(item) ? "Aprovando..." : "Aceitar e criar"}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setReviewingIndex(index)}>
-                    Revisar
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setReviewingIndex(index)}
+                    disabled={createIdea.isPending || recordReview.isPending}
+                  >
+                    Editar antes
                   </Button>
                 </div>
               </div>
@@ -377,15 +388,27 @@ export function EditorialCalendarTab() {
         editLabel="Salvar ajustes"
         rejectLabel="Descartar"
         onAcceptOriginal={async (notes) => {
-          await registerSuggestionReview("accepted", {}, notes);
+          if (!activeSuggestion) return;
+          await registerSuggestionReview("accepted", activeSuggestion, {}, notes);
+          await handleCreateFromSuggestion(activeSuggestion);
           setReviewingIndex(null);
+          toast.success("Sugestão aprovada e enviada para o calendário");
         }}
         onSaveEdits={async (value, notes) => {
-          await registerSuggestionReview("edited", value, notes);
+          if (!activeSuggestion) return;
+          await registerSuggestionReview("edited", activeSuggestion, value, notes);
+          await handleCreateFromSuggestion(activeSuggestion, {
+            title: value.title,
+            hook: value.hook,
+            cta: value.cta,
+            rationale: value.rationale,
+          });
           setReviewingIndex(null);
+          toast.success("Sugestão editada e enviada para o calendário");
         }}
         onReject={async (value, notes) => {
-          await registerSuggestionReview("rejected", value, notes);
+          if (!activeSuggestion) return;
+          await registerSuggestionReview("rejected", activeSuggestion, value, notes);
           setReviewingIndex(null);
         }}
         isSubmitting={recordReview.isPending}
