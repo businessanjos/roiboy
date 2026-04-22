@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ChevronLeft, ChevronRight, Plus, Instagram, Youtube, Music2, Linkedin, Globe, BrainCircuit } from "lucide-react";
 import { useMarketingIdeas, MarketingIdea } from "@/hooks/useMarketingIdeas";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
@@ -53,8 +54,10 @@ export function EditorialCalendarTab() {
   const [copyingKey, setCopyingKey] = useState<string | null>(null);
   const [generatedCopy, setGeneratedCopy] = useState<{
     item: WeeklySuggestionItem;
-    hook: string;
-    cta: string;
+    hookOptions: string[];
+    ctaOptions: string[];
+    selectedHook: string;
+    selectedCta: string;
     draft: string;
   } | null>(null);
 
@@ -200,6 +203,41 @@ export function EditorialCalendarTab() {
     ].join("\n");
   };
 
+  const parseGeneratedOptions = (value: string, fallback: string) => {
+    const options = value
+      .split(/\n+/)
+      .map((line) => line.replace(/^\s*\d+[.)-]?\s*/, "").trim())
+      .filter(Boolean);
+
+    return options.length > 0 ? options.slice(0, 2) : [fallback];
+  };
+
+  const generateDraftForSuggestion = async (item: WeeklySuggestionItem, selectedHook: string, selectedCta: string) => {
+    const brief = [
+      buildCopyBrief(item),
+      `Hook escolhido: ${selectedHook}`,
+      `CTA escolhido: ${selectedCta}`,
+      "Use exatamente o hook e o CTA escolhidos na versão final.",
+    ].join("\n");
+
+    const draftType = item.channel === "email" ? "email" : "caption";
+    const draftResult = await generateCopy.mutateAsync({
+      copyType: draftType,
+      brief,
+      objective: item.objective,
+      format: item.format,
+      platform: item.platform,
+      hook: selectedHook,
+      useBrandVoice: true,
+      profileId: selectedProfile?.id,
+      profilePlatform: selectedProfile?.platform,
+      profileUsername: selectedProfile?.username,
+      profileDisplayName: selectedProfile?.display_name,
+    });
+
+    return draftResult.output;
+  };
+
   const handleGenerateCopyForSuggestion = async (item: WeeklySuggestionItem) => {
     const suggestionKey = getSuggestionKey(item);
     setCopyingKey(suggestionKey);
@@ -233,30 +271,42 @@ export function EditorialCalendarTab() {
         }),
       ]);
 
-      const draftType = item.channel === "email" ? "email" : "caption";
-      const draftResult = await generateCopy.mutateAsync({
-        copyType: draftType,
-        brief,
-        objective: item.objective,
-        format: item.format,
-        platform: item.platform,
-        hook: hookResult.output,
-        useBrandVoice: true,
-        profileId: selectedProfile?.id,
-        profilePlatform: selectedProfile?.platform,
-        profileUsername: selectedProfile?.username,
-        profileDisplayName: selectedProfile?.display_name,
-      });
+      const hookOptions = parseGeneratedOptions(hookResult.output, item.hook);
+      const ctaOptions = parseGeneratedOptions(ctaResult.output, item.cta);
+      const selectedHook = hookOptions[0];
+      const selectedCta = ctaOptions[0];
+      const draft = await generateDraftForSuggestion(item, selectedHook, selectedCta);
 
       setGeneratedCopy({
         item,
-        hook: hookResult.output,
-        cta: ctaResult.output,
-        draft: draftResult.output,
+        hookOptions,
+        ctaOptions,
+        selectedHook,
+        selectedCta,
+        draft,
       });
       toast.success("Copy gerada para a pauta selecionada");
     } finally {
       setCopyingKey(null);
+    }
+  };
+
+  const handleSelectGeneratedOption = async (field: "selectedHook" | "selectedCta", value: string) => {
+    if (!generatedCopy) return;
+
+    const nextState = {
+      ...generatedCopy,
+      [field]: value,
+    };
+
+    setGeneratedCopy(nextState);
+
+    try {
+      const draft = await generateDraftForSuggestion(nextState.item, nextState.selectedHook, nextState.selectedCta);
+      setGeneratedCopy({ ...nextState, draft });
+    } catch (error) {
+      setGeneratedCopy(generatedCopy);
+      throw error;
     }
   };
 
