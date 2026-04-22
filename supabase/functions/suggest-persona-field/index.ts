@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { fetchInstagramContext, buildInstagramContextBlock } from "../_shared/marketing-context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -129,6 +130,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 4.5) Buscar contexto do Instagram (perfil ativo da conta)
+    let instagramContext = "";
+    let instagramUsername: string | null = null;
+    try {
+      const igCtx = await fetchInstagramContext(supabase, accountId);
+      if (igCtx?.profile) {
+        instagramUsername = igCtx.profile.username;
+        instagramContext = buildInstagramContextBlock(igCtx);
+      }
+    } catch (e) {
+      console.error("fetchInstagramContext error:", e);
+    }
+
     // 5) Contexto da persona atual
     let personaContext = "";
     if (currentPersona) {
@@ -149,13 +163,15 @@ REGRAS CRÍTICAS:
 - Seja ESPECÍFICO ao mercado de estética avançada (médicas, biomédicas, dentistas com foco em HOF, esteticistas).
 - NUNCA invente dados que contradigam os dados reais fornecidos.
 - Se receber dados reais de clientes, BASEIE sua resposta neles.
+- Se receber dados de PERFORMANCE REAL DO INSTAGRAM, use os formatos, hashtags e temas que JÁ funcionam para inferir o que ressoa com o público.
+- Para campos como "vocabulary", "channels", "emotional_triggers" e "pains", priorize sinais vindos das captions e temas dos posts de melhor engajamento.
 - Para arrays, retorne itens curtos e diretos (1 linha cada).
 - Para texto, seja conciso (máx 3 frases).
 
 Descrição do campo: ${fieldConfig.description}
 Formato de retorno: ${fieldConfig.format === "array" ? "Array de strings (use a tool)" : "Texto único (use a tool)"}`;
 
-    const userPrompt = `Sugira o melhor conteúdo possível para o campo "${fieldConfig.label}" da Persona.${clientsContext}${personaContext}
+    const userPrompt = `Sugira o melhor conteúdo possível para o campo "${fieldConfig.label}" da Persona.${clientsContext}${instagramContext}${personaContext}
 
 Retorne APENAS o conteúdo do campo, no formato correto.`;
 
@@ -229,6 +245,8 @@ Retorne APENAS o conteúdo do campo, no formato correto.`;
       format: fieldConfig.format,
       clientsAnalyzed,
       basedOnRealData: clientsAnalyzed > 0,
+      instagramUsername,
+      basedOnInstagram: !!instagramUsername,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
