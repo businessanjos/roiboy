@@ -9,11 +9,17 @@ import { Plus, Upload, Link as LinkIcon, Trash2, FolderPlus, ExternalLink, Image
 import { useMarketingReferences, type MarketingReference } from "@/hooks/useMarketingReferences";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { useMarketingPersona } from "@/hooks/useMarketingPersona";
+import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
+import { buildMarketingConsistencyReport } from "@/lib/marketingConsistency";
 
 export function MarketingReferencesTab() {
   const [boardId, setBoardId] = useState<string | null>(null);
   const { boards, references, isLoading, createBoard, deleteBoard, uploadFile, createReference, deleteReference } = useMarketingReferences(boardId);
+  const { persona } = useMarketingPersona();
+  const { voice } = useMarketingBrandVoice();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [boardDialog, setBoardDialog] = useState(false);
   const [linkDialog, setLinkDialog] = useState(false);
@@ -73,11 +79,23 @@ export function MarketingReferencesTab() {
   const filtered = references.filter(r =>
     !search || r.title?.toLowerCase().includes(search.toLowerCase()) || r.notes?.toLowerCase().includes(search.toLowerCase())
   );
+  const consistencyReport = buildMarketingConsistencyReport({ persona, voice, references });
 
   if (isLoading) return <Skeleton className="h-[600px]" />;
 
   return (
     <div className="space-y-4">
+      {consistencyReport.issues.length > 0 && (
+        <Alert>
+          <AlertTitle>Validação automática de referências</AlertTitle>
+          <AlertDescription>
+            {consistencyReport.blockingIssues.length > 0
+              ? `Há ${consistencyReport.blockingIssues.length} alerta(s) de coerência com Persona e Tom de Voz. Revise tags, notas e inspirações antes de usar nas sugestões.`
+              : "As referências estão majoritariamente coerentes, mas ainda há ajustes recomendados para melhorar a precisão das próximas sugestões."}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="gap-2">
@@ -114,6 +132,36 @@ export function MarketingReferencesTab() {
           </div>
         ))}
       </div>
+
+      {consistencyReport.issues.length > 0 && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {consistencyReport.issues.map((issue) => (
+            <Card key={issue.id} className="p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">{issue.title}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{issue.description}</p>
+                </div>
+                <Badge variant="outline">{issue.severity === "high" ? "Alta" : issue.severity === "medium" ? "Média" : "Baixa"}</Badge>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <p className="font-medium">Evidências</p>
+                  <ul className="list-disc pl-5 text-muted-foreground space-y-1">
+                    {issue.evidence.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium">Sugestões</p>
+                  <ul className="list-disc pl-5 text-muted-foreground space-y-1">
+                    {issue.suggestions.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Masonry grid */}
       {filtered.length === 0 ? (
