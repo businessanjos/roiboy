@@ -10,6 +10,7 @@ import { useMarketingWeeklyCalendar } from "@/hooks/useMarketingWeeklyCalendar";
 import { AiSuggestionReviewDialog } from "@/components/marketing/ai/AiSuggestionReviewDialog";
 import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestionReviews";
 import { IdeaDialog } from "../ideas/IdeaDialog";
+import { toast } from "sonner";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, addMonths, subMonths, format, isSameMonth, isSameDay, parseISO,
@@ -45,6 +46,9 @@ export function EditorialCalendarTab() {
   const [openIdea, setOpenIdea] = useState<MarketingIdea | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [reviewingIndex, setReviewingIndex] = useState<number | null>(null);
+  const [publishingKey, setPublishingKey] = useState<string | null>(null);
+
+  type WeeklySuggestionItem = NonNullable<typeof suggestWeeklyCalendar.data>["schedule"][number];
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
@@ -101,17 +105,24 @@ export function EditorialCalendarTab() {
     });
   };
 
-  const handleCreateFromSuggestion = async (item: NonNullable<typeof suggestWeeklyCalendar.data>["schedule"][number]) => {
+  const getSuggestionKey = (item: WeeklySuggestionItem) => `${item.date}:${item.channel}:${item.title}`;
+
+  const handleCreateFromSuggestion = async (
+    item: WeeklySuggestionItem,
+    overrides?: Partial<Pick<WeeklySuggestionItem, "title" | "hook" | "cta" | "rationale">>,
+  ) => {
+    const nextItem = { ...item, ...overrides };
+
     await createIdea.mutateAsync({
-      title: item.title,
-      hook: item.hook,
-      description: `${item.rationale}\n\nCanal: ${item.channel}\nCTA: ${item.cta}`,
-      format: (item.channel === "email" ? "other" : item.format) as MarketingIdea["format"],
-      platform: (item.channel === "email" ? "other" : item.platform) as MarketingIdea["platform"],
-      planned_date: item.date,
+      title: nextItem.title,
+      hook: nextItem.hook,
+      description: `${nextItem.rationale}\n\nCanal: ${nextItem.channel}\nCTA: ${nextItem.cta}`,
+      format: (nextItem.channel === "email" ? "other" : nextItem.format) as MarketingIdea["format"],
+      platform: (nextItem.channel === "email" ? "other" : nextItem.platform) as MarketingIdea["platform"],
+      planned_date: nextItem.date,
       status: "scheduled",
-      priority: item.objective === "converter" ? "high" : item.objective === "reter" ? "medium" : "medium",
-      tags: [item.objective, item.channel],
+      priority: nextItem.objective === "converter" ? "high" : nextItem.objective === "reter" ? "medium" : "medium",
+      tags: [nextItem.objective, nextItem.channel],
     });
   };
 
@@ -119,10 +130,10 @@ export function EditorialCalendarTab() {
 
   const registerSuggestionReview = async (
     decision: "accepted" | "edited" | "rejected",
+    suggestion: WeeklySuggestionItem,
     value: Record<string, string>,
     notes: string,
   ) => {
-    if (!activeSuggestion) return;
     const editedPayload = decision === "edited"
       ? {
           title: value.title,
@@ -133,15 +144,15 @@ export function EditorialCalendarTab() {
       : null;
 
     await recordReview.mutateAsync({
-      suggestionType: activeSuggestion.channel === "email" ? "weekly-email" : "weekly-post",
+      suggestionType: suggestion.channel === "email" ? "weekly-email" : "weekly-post",
       sourceFunction: "suggest-weekly-marketing-calendar",
-      sourceItemKey: `${activeSuggestion.date}:${activeSuggestion.channel}:${activeSuggestion.title}`,
+      sourceItemKey: getSuggestionKey(suggestion),
       decision,
-      objective: activeSuggestion.objective,
+      objective: suggestion.objective,
       profilePlatform: selectedProfile?.platform,
       profileId: selectedProfile?.id,
       profileUsername: selectedProfile?.username,
-      suggestionPayload: activeSuggestion,
+      suggestionPayload: suggestion,
       editedPayload,
       inputContext: {
         weeklyFocus: suggestWeeklyCalendar.data?.weeklyFocus,
@@ -149,6 +160,19 @@ export function EditorialCalendarTab() {
       },
       decisionNotes: notes,
     });
+  };
+
+  const handleApproveAndCreate = async (item: WeeklySuggestionItem) => {
+    const suggestionKey = getSuggestionKey(item);
+    setPublishingKey(suggestionKey);
+
+    try {
+      await registerSuggestionReview("accepted", item, {}, "");
+      await handleCreateFromSuggestion(item);
+      toast.success("Sugestão aprovada e enviada para o calendário");
+    } finally {
+      setPublishingKey(null);
+    }
   };
 
   return (
@@ -214,11 +238,22 @@ export function EditorialCalendarTab() {
                 </div>
                 <p className="text-xs text-muted-foreground">{item.hook}</p>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => handleCreateFromSuggestion(item)} disabled={createIdea.isPending}>
-                    Criar no calendário
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="flex-1"
+                    onClick={() => handleApproveAndCreate(item)}
+                    disabled={createIdea.isPending || recordReview.isPending || publishingKey === getSuggestionKey(item)}
+                  >
+                    {publishingKey === getSuggestionKey(item) ? "Aprovando..." : "Aceitar e criar"}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setReviewingIndex(index)}>
-                    Revisar
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setReviewingIndex(index)}
+                    disabled={createIdea.isPending || recordReview.isPending}
+                  >
+                    Editar antes
                   </Button>
                 </div>
               </div>
@@ -353,15 +388,27 @@ export function EditorialCalendarTab() {
         editLabel="Salvar ajustes"
         rejectLabel="Descartar"
         onAcceptOriginal={async (notes) => {
-          await registerSuggestionReview("accepted", {}, notes);
+          if (!activeSuggestion) return;
+          await registerSuggestionReview("accepted", activeSuggestion, {}, notes);
+          await handleCreateFromSuggestion(activeSuggestion);
           setReviewingIndex(null);
+          toast.success("Sugestão aprovada e enviada para o calendário");
         }}
         onSaveEdits={async (value, notes) => {
-          await registerSuggestionReview("edited", value, notes);
+          if (!activeSuggestion) return;
+          await registerSuggestionReview("edited", activeSuggestion, value, notes);
+          await handleCreateFromSuggestion(activeSuggestion, {
+            title: value.title,
+            hook: value.hook,
+            cta: value.cta,
+            rationale: value.rationale,
+          });
           setReviewingIndex(null);
+          toast.success("Sugestão editada e enviada para o calendário");
         }}
         onReject={async (value, notes) => {
-          await registerSuggestionReview("rejected", value, notes);
+          if (!activeSuggestion) return;
+          await registerSuggestionReview("rejected", activeSuggestion, value, notes);
           setReviewingIndex(null);
         }}
         isSubmitting={recordReview.isPending}
