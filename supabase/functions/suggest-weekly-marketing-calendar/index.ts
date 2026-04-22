@@ -140,19 +140,19 @@ serve(async (req) => {
     }
 
     const ideasContext = (ideasRes.data || []).length
-      ? (ideasRes.data || []).map((idea: any, index: number) => `${index + 1}. ${idea.title} · ${idea.platform}/${idea.format} · ${idea.status} · prioridade ${idea.priority}${idea.hook ? ` · hook: ${idea.hook}` : ""}${idea.description ? ` · ${String(idea.description).slice(0, 140)}` : ""}`).join("\n")
+      ? (ideasRes.data || []).map((idea: any, index: number) => `IDEIA ${index + 1}: ${idea.title} · ${idea.platform}/${idea.format} · ${idea.status} · prioridade ${idea.priority}${idea.hook ? ` · hook: ${idea.hook}` : ""}${idea.description ? ` · ${String(idea.description).slice(0, 140)}` : ""}`).join("\n")
       : "Nenhuma ideia no histórico.";
 
     const copyContext = (copyRes.data || []).length
-      ? (copyRes.data || []).map((item: any, index: number) => `${index + 1}. ${item.copy_type} · prompt: ${String(item.prompt || "").slice(0, 120)} · saída: ${String(item.output || "").slice(0, 160)}`).join("\n")
+      ? (copyRes.data || []).map((item: any, index: number) => `COPY ${index + 1}: ${item.copy_type} · prompt: ${String(item.prompt || "").slice(0, 120)} · saída: ${String(item.output || "").slice(0, 160)}`).join("\n")
       : "Nenhuma copy anterior salva.";
 
     const trendsContext = (trendsRes.data || []).length
-      ? (trendsRes.data || []).map((trend: any, index: number) => `${index + 1}. ${trend.title} · score ${trend.score || 0} · ${trend.platform || "multi"}${trend.ai_adaptation ? ` · adaptação: ${trend.ai_adaptation}` : ""}`).join("\n")
+      ? (trendsRes.data || []).map((trend: any, index: number) => `TREND ${index + 1}: ${trend.title} · score ${trend.score || 0} · ${trend.platform || "multi"}${trend.ai_adaptation ? ` · adaptação: ${trend.ai_adaptation}` : ""}`).join("\n")
       : "Nenhuma trend relevante nesta semana.";
 
     const eventsContext = (eventsRes.data || []).length
-      ? (eventsRes.data || []).map((event: any, index: number) => `${index + 1}. ${event.title} · ${event.event_date}${event.description ? ` · ${event.description}` : ""}`).join("\n")
+      ? (eventsRes.data || []).map((event: any, index: number) => `EVENTO ${index + 1}: ${event.title} · ${event.event_date}${event.description ? ` · ${event.description}` : ""}`).join("\n")
       : "Nenhum marco importante cadastrado para a semana.";
 
     const weekContext = weekDates.map((item, index) => `${index + 1}. ${item.iso} (${item.label})`).join("\n");
@@ -167,7 +167,9 @@ Regras obrigatórias:
 - Dê preferência ao que já performou melhor, adaptando ao momento atual.
 - Retorne entre 5 e 7 itens, cobrindo a semana atual.
 - channel deve ser apenas post ou email.
-- objective deve ser apenas educar, converter ou reter.`;
+- objective deve ser apenas educar, converter ou reter.
+- Para cada item, inclua evidências explícitas mostrando o que influenciou a recomendação.
+- Cada evidência deve citar somente elementos reais das listas IDEIA, COPY, TREND, EVENTO ou da performance do perfil.`;
 
     const userPrompt = `PERFIL SELECIONADO:
 - Plataforma: ${selectedPlatform}
@@ -235,8 +237,23 @@ Quero um calendário semanal de posts e e-mails para a área Hoje/Calendário, c
                       hook: { type: "string" },
                       cta: { type: "string" },
                       rationale: { type: "string" },
+                      evidence: {
+                        type: "array",
+                        minItems: 2,
+                        maxItems: 5,
+                        items: {
+                          type: "object",
+                          properties: {
+                            sourceType: { type: "string", enum: ["idea", "copy", "hook", "trend", "event", "profile-content"] },
+                            sourceLabel: { type: "string" },
+                            reason: { type: "string" },
+                          },
+                          required: ["sourceType", "sourceLabel", "reason"],
+                          additionalProperties: false,
+                        },
+                      },
                     },
-                    required: ["date", "dayLabel", "channel", "title", "format", "platform", "objective", "hook", "cta", "rationale"],
+                    required: ["date", "dayLabel", "channel", "title", "format", "platform", "objective", "hook", "cta", "rationale", "evidence"],
                     additionalProperties: false,
                   },
                 },

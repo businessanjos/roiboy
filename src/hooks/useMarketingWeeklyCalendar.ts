@@ -4,6 +4,12 @@ import { useCurrentUser } from "./useCurrentUser";
 import { toast } from "sonner";
 import type { CopyObjective } from "./useMarketingCopy";
 
+export interface MarketingSuggestionEvidence {
+  sourceType: "idea" | "copy" | "hook" | "trend" | "event" | "profile-content";
+  sourceLabel: string;
+  reason: string;
+}
+
 export interface WeeklyCalendarSuggestionItem {
   date: string;
   dayLabel: string;
@@ -15,6 +21,7 @@ export interface WeeklyCalendarSuggestionItem {
   hook: string;
   cta: string;
   rationale: string;
+  evidence: MarketingSuggestionEvidence[];
 }
 
 export interface WeeklyCalendarSuggestionResponse {
