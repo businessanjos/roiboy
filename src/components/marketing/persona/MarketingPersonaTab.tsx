@@ -365,6 +365,18 @@ export function MarketingPersonaTab() {
           </Button>
         </div>
       )}
+
+      <PersonaAbCompareDialog
+        open={abDialog.open}
+        onOpenChange={(o) => setAbDialog((d) => ({ ...d, open: o }))}
+        fieldLabel={abDialog.fieldLabel}
+        variantA={abDialog.variantA}
+        variantB={abDialog.variantB}
+        isArray={abDialog.field ? isArrayField(abDialog.field) : false}
+        hasHighlights={abDialog.hasHighlights}
+        onChoose={handleAbChoose}
+        onFeedback={handleAbFeedback}
+      />
     </div>
   );
 }
