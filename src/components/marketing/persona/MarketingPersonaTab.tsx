@@ -383,3 +383,25 @@ function PersonaFieldEditor({ field, value, inputValue, onInputChange, onChange,
     </div>
   );
 }
+
+function HighlightGroup({ icon: Icon, label, items, accent }: { icon: any; label: string; items: string[]; accent: string }) {
+  return (
+    <div className="rounded-lg border bg-card/50 p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className={`h-4 w-4 ${accent}`} />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+      </div>
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((it, i) => (
+            <Badge key={i} variant="secondary" className="text-xs font-normal">
+              {it}
+            </Badge>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground italic">Sem dados suficientes</p>
+      )}
+    </div>
+  );
+}
