@@ -22,19 +22,21 @@ export interface InstagramHighlightsCacheRow {
   source: string;
 }
 
-export function useInstagramHighlightsCache() {
+export function useInstagramHighlightsCache(profileId?: string | null) {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
   const accountId = currentUser?.account_id;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["instagram-highlights-cache", accountId],
+    queryKey: ["instagram-highlights-cache", accountId, profileId ?? "default"],
     queryFn: async () => {
       if (!accountId) return null;
-      const { data, error } = await supabase
+      let q = supabase
         .from("instagram_highlights_cache" as any)
         .select("*")
-        .eq("account_id", accountId)
+        .eq("account_id", accountId);
+      if (profileId) q = q.eq("profile_id", profileId);
+      const { data, error } = await q
         .order("computed_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -49,7 +51,7 @@ export function useInstagramHighlightsCache() {
     mutationFn: async () => {
       if (!accountId) throw new Error("Sem conta");
       const { data, error } = await supabase.functions.invoke("refresh-instagram-highlights", {
-        body: { accountId, source: "manual" },
+        body: { accountId, profileId: profileId || undefined, source: "manual" },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
