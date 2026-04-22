@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    let parsedState: { u: string; a: string; r: string; n: string; t: number };
+    let parsedState: { u: string; a: string; r: string; o?: string | null; n: string; t: number };
     try {
       parsedState = JSON.parse(atob(state));
     } catch {
@@ -105,9 +105,10 @@ Deno.serve(async (req) => {
 
     const { error: upsertErr } = await admin
       .from("google_drive_connections")
-      .upsert(
+        .upsert(
         {
           account_id: parsedState.a,
+          user_id: parsedState.u,
           google_email: googleEmail,
           google_user_id: googleUserId,
           refresh_token: refreshToken,
@@ -120,7 +121,7 @@ Deno.serve(async (req) => {
           last_sync_status: null,
           last_sync_error: null,
         },
-        { onConflict: "account_id" }
+        { onConflict: "account_id,user_id" }
       );
 
     if (upsertErr) {
@@ -132,9 +133,10 @@ Deno.serve(async (req) => {
     }
 
     const returnTo = parsedState.r || "/settings?tab=integrations";
+    const targetBase = parsedState.o || appBase;
     const sep = returnTo.includes("?") ? "&" : "?";
     return htmlRedirect(
-      `${appBase}${returnTo}${sep}gdrive=connected`,
+      `${targetBase}${returnTo}${sep}gdrive=connected`,
       "Conexão concluída! Redirecionando..."
     );
   } catch (e) {
