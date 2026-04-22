@@ -33,7 +33,9 @@ serve(async (req) => {
       ? ideias.map((i: any, idx: number) => `${idx + 1}. ${i.title}${i.description ? ` — ${i.description}` : ""}`).join("\n")
       : "Nenhuma ideia em backlog.";
 
-    const systemPrompt = `Você é um estrategista de conteúdo digital sênior. Gere pautas práticas, criativas e prontas para execução, em português brasileiro. Use tom direto, jamais genérico.`;
+    const systemPrompt = `Você é um estrategista de conteúdo digital sênior. Gere pautas práticas, criativas e prontas para execução, em português brasileiro. Use tom direto, jamais genérico.
+
+Inclua evidências explícitas do que influenciou cada pauta, citando apenas dados reais recebidos em trends, marcos, ideias ou perfil.`;
 
     const userPrompt = `Hoje é ${today}.
 ${profileLine}
@@ -47,7 +49,7 @@ ${marcosLine}
 IDEIAS NO BACKLOG:
 ${ideiasLine}
 
-Gere 3 pautas de conteúdo para postar HOJE, conectando trends, marcos ou ideias acima quando fizer sentido. Cada pauta deve incluir título, formato (Reel, Carrossel, Story, Live, Vídeo curto, etc.), hook de abertura forte, CTA e o motivo estratégico. Comece pelas mais urgentes/oportunas.`;
+ Gere 3 pautas de conteúdo para postar HOJE, conectando trends, marcos ou ideias acima quando fizer sentido. Cada pauta deve incluir título, formato (Reel, Carrossel, Story, Live, Vídeo curto, etc.), hook de abertura forte, CTA, o motivo estratégico e as evidências usadas. Comece pelas mais urgentes/oportunas.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -77,8 +79,23 @@ Gere 3 pautas de conteúdo para postar HOJE, conectando trends, marcos ou ideias
                       hook: { type: "string" },
                       cta: { type: "string" },
                       motivo: { type: "string" },
+                      evidence: {
+                        type: "array",
+                        minItems: 1,
+                        maxItems: 4,
+                        items: {
+                          type: "object",
+                          properties: {
+                            sourceType: { type: "string", enum: ["idea", "trend", "event", "profile-content"] },
+                            sourceLabel: { type: "string" },
+                            reason: { type: "string" },
+                          },
+                          required: ["sourceType", "sourceLabel", "reason"],
+                          additionalProperties: false,
+                        },
+                      },
                     },
-                    required: ["titulo", "formato", "hook", "cta", "motivo"],
+                    required: ["titulo", "formato", "hook", "cta", "motivo", "evidence"],
                     additionalProperties: false,
                   },
                 },
