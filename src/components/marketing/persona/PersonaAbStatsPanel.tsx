@@ -40,6 +40,7 @@ export function PersonaAbStatsPanel() {
       </CardHeader>
       {open && (
         <CardContent className="space-y-4 pt-0">
+          <StatTestBlock test={test} />
           <div className="grid md:grid-cols-2 gap-4">
             <VariantCard
               label="Variante A — Com DESTAQUES"
