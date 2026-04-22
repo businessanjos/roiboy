@@ -18,6 +18,7 @@ import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { canUseMarketingPersonaAiSuggest } from "@/lib/featureFlags";
 import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestionReviews";
+import { AiSuggestionReviewDialog } from "@/components/marketing/ai/AiSuggestionReviewDialog";
 
 function formatHighlight(it: HighlightItem | string, prefix = ""): string {
   if (typeof it === "string") return it;
@@ -415,6 +416,23 @@ export function MarketingPersonaTab() {
               </Alert>
             )}
 
+            <div className="rounded-md border bg-background p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Aprendizado das revisões
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">Aceitas: {evolutionReviewStats.accepted}</Badge>
+                <Badge variant="outline">Editadas: {evolutionReviewStats.edited}</Badge>
+                <Badge variant="outline">Descartadas: {evolutionReviewStats.rejected}</Badge>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => registerEvolutionDecision("accepted", "Sugestão aceita sem alterações")}>Aceitar análise</Button>
+                <Button type="button" variant="outline" onClick={() => registerEvolutionDecision("edited", "Sugestões aplicadas/ajustadas manualmente")}>Registrar edição</Button>
+                <Button type="button" variant="ghost" onClick={() => registerEvolutionDecision("rejected", "Sugestão descartada")}>Descartar análise</Button>
+              </div>
+            </div>
+
             <div className="grid gap-3 lg:grid-cols-3">
               {evolvePersona.data.recommendations.map((recommendation) => (
                 <div key={recommendation.title} className="rounded-md border bg-background p-4 space-y-2">
@@ -490,6 +508,17 @@ export function MarketingPersonaTab() {
         hasHighlights={abDialog.hasHighlights}
         onChoose={handleAbChoose}
         onFeedback={handleAbFeedback}
+      />
+
+      <AiSuggestionReviewDialog
+        open={false}
+        onOpenChange={() => undefined}
+        title=""
+        fields={[]}
+        initialValue={{}}
+        onAcceptOriginal={() => undefined}
+        onSaveEdits={() => undefined}
+        onReject={() => undefined}
       />
     </div>
   );
