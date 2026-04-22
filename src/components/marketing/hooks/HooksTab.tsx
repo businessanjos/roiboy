@@ -7,11 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Star, Trash2, Sparkles, Plus, Copy as CopyIcon, ExternalLink, Flame, TrendingUp, Filter, Loader2 } from "lucide-react";
+import { Star, Trash2, Sparkles, Plus, Copy as CopyIcon, ExternalLink, Flame, TrendingUp, Filter, Loader2, BrainCircuit } from "lucide-react";
 import { useMarketingHooks, type HookCategory } from "@/hooks/useMarketingHooks";
 import { useMarketingIdeas } from "@/hooks/useMarketingIdeas";
 import { useMarketingCopy, type CopyObjective } from "@/hooks/useMarketingCopy";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
+import { AiSuggestionReviewDialog } from "@/components/marketing/ai/AiSuggestionReviewDialog";
+import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestionReviews";
 import { toast } from "sonner";
 
 const CATEGORIES: { value: HookCategory; label: string; emoji: string }[] = [
@@ -33,6 +35,7 @@ export function HooksTab() {
   const { createIdea } = useMarketingIdeas();
   const { generateCopy } = useMarketingCopy();
   const { selectedProfile } = useContentProfile();
+  const { reviews, recordReview } = useMarketingAiSuggestionReviews("generate-marketing-copy");
 
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterPlatform, setFilterPlatform] = useState<string>("all");
@@ -41,6 +44,7 @@ export function HooksTab() {
   const [hookBrief, setHookBrief] = useState("");
   const [hookObjective, setHookObjective] = useState<CopyObjective>("educar");
   const [generatedHooks, setGeneratedHooks] = useState<string[]>([]);
+  const [reviewingHookIndex, setReviewingHookIndex] = useState<number | null>(null);
 
   const [addOpen, setAddOpen] = useState(false);
   const [newHook, setNewHook] = useState({ text: "", category: "curiosidade" as HookCategory, notes: "" });
@@ -61,6 +65,12 @@ export function HooksTab() {
     favorites: hooks.filter(h => h.is_favorite).length,
     fromAI: hooks.filter(h => h.created_by_ai).length,
   }), [hooks]);
+
+  const reviewStats = useMemo(() => ({
+    accepted: reviews.filter((item) => item.suggestion_type === "hook" && item.decision === "accepted").length,
+    edited: reviews.filter((item) => item.suggestion_type === "hook" && item.decision === "edited").length,
+    rejected: reviews.filter((item) => item.suggestion_type === "hook" && item.decision === "rejected").length,
+  }), [reviews]);
 
   const handleUseHook = async (hook: typeof hooks[number]) => {
     incrementUsage.mutate(hook.id);
@@ -100,8 +110,32 @@ export function HooksTab() {
           .map((line) => line.replace(/^\s*\d+[.)-]?\s*/, "").trim())
           .filter(Boolean);
         setGeneratedHooks(parsedHooks);
+        setReviewingHookIndex(parsedHooks.length ? 0 : null);
       },
     });
+  };
+
+  const activeGeneratedHook = reviewingHookIndex !== null ? generatedHooks[reviewingHookIndex] : null;
+
+  const registerHookReview = async (decision: "accepted" | "edited" | "rejected", finalHook: string, notes: string) => {
+    if (reviewingHookIndex === null || !activeGeneratedHook) return;
+    await recordReview.mutateAsync({
+      suggestionType: "hook",
+      sourceFunction: "generate-marketing-copy",
+      sourceItemKey: `${selectedProfile?.id || "no-profile"}:${hookObjective}:${reviewingHookIndex}`,
+      decision,
+      objective: hookObjective,
+      profilePlatform: selectedProfile?.platform || "instagram",
+      profileId: selectedProfile?.id,
+      profileUsername: selectedProfile?.username,
+      suggestionPayload: { text: activeGeneratedHook },
+      editedPayload: decision === "edited" ? { text: finalHook } : null,
+      inputContext: { brief: hookBrief, objective: hookObjective },
+      decisionNotes: notes,
+    });
+    if (decision === "edited") {
+      setGeneratedHooks((current) => current.map((item, index) => (index === reviewingHookIndex ? finalHook : item)));
+    }
   };
 
   return (
@@ -143,6 +177,18 @@ export function HooksTab() {
             </div>
           </div>
 
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground space-y-2">
+            <div className="flex items-center gap-2 text-foreground">
+              <BrainCircuit className="h-4 w-4 text-primary" />
+              <span className="font-medium">Feedback das sugestões</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">Aceitos: {reviewStats.accepted}</Badge>
+              <Badge variant="outline">Editados: {reviewStats.edited}</Badge>
+              <Badge variant="outline">Descartados: {reviewStats.rejected}</Badge>
+            </div>
+          </div>
+
           {generatedHooks.length > 0 && (
             <div className="grid gap-2 md:grid-cols-2">
               {generatedHooks.map((generatedHook, index) => (
@@ -157,6 +203,9 @@ export function HooksTab() {
                       onClick={() => createHook.mutate({ text: generatedHook, category: "promessa", notes: `Gerado com IA para objetivo ${hookObjective}` })}
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" />Salvar
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setReviewingHookIndex(index)}>
+                      Revisar
                     </Button>
                   </div>
                 </div>
@@ -326,6 +375,31 @@ export function HooksTab() {
           })}
         </div>
       )}
+
+      <AiSuggestionReviewDialog
+        open={reviewingHookIndex !== null}
+        onOpenChange={(open) => !open && setReviewingHookIndex(null)}
+        title="Revisar hook sugerido"
+        description="Aceite, ajuste ou descarte cada hook para calibrar os próximos ganchos gerados pela IA."
+        fields={[{ key: "text", label: "Hook", multiline: true, rows: 4 }]}
+        initialValue={{ text: activeGeneratedHook || "" }}
+        acceptLabel="Aceitar hook"
+        editLabel="Salvar ajuste"
+        rejectLabel="Descartar hook"
+        onAcceptOriginal={async (notes) => {
+          await registerHookReview("accepted", activeGeneratedHook || "", notes);
+          setReviewingHookIndex(null);
+        }}
+        onSaveEdits={async (value, notes) => {
+          await registerHookReview("edited", value.text || "", notes);
+          setReviewingHookIndex(null);
+        }}
+        onReject={async (value, notes) => {
+          await registerHookReview("rejected", value.text || activeGeneratedHook || "", notes);
+          setReviewingHookIndex(null);
+        }}
+        isSubmitting={recordReview.isPending}
+      />
     </div>
   );
 }

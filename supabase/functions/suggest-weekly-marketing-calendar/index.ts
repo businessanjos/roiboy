@@ -4,6 +4,7 @@ import {
   buildBrandVoiceBlock,
   buildPersonaBlock,
   buildInstagramContextBlock,
+  fetchAiReviewSignals,
   fetchVoiceAndPersona,
   fetchInstagramContext,
 } from "../_shared/marketing-context.ts";
@@ -128,6 +129,7 @@ serve(async (req) => {
     ]);
 
     let profilePerformanceContext = "";
+    const reviewSignals = await fetchAiReviewSignals(supabase, accountId, "suggest-weekly-marketing-calendar");
     if (selectedPlatform === "instagram") {
       const instagramContext = await fetchInstagramContext(supabase, accountId, profileId);
       profilePerformanceContext = buildInstagramContextBlock(instagramContext);
@@ -175,6 +177,7 @@ Regras obrigatórias:
 ${buildBrandVoiceBlock(voice)}
 ${buildPersonaBlock(persona)}
 ${profilePerformanceContext}
+${reviewSignals}
 
 === SEMANA ATUAL ===
 ${weekContext}

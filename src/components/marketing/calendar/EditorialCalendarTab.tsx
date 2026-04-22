@@ -3,10 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Plus, Instagram, Youtube, Music2, Linkedin, Globe } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Instagram, Youtube, Music2, Linkedin, Globe, BrainCircuit } from "lucide-react";
 import { useMarketingIdeas, MarketingIdea } from "@/hooks/useMarketingIdeas";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { useMarketingWeeklyCalendar } from "@/hooks/useMarketingWeeklyCalendar";
+import { AiSuggestionReviewDialog } from "@/components/marketing/ai/AiSuggestionReviewDialog";
+import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestionReviews";
 import { IdeaDialog } from "../ideas/IdeaDialog";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -37,10 +39,12 @@ export function EditorialCalendarTab() {
   const { ideas, updateIdea, createIdea } = useMarketingIdeas();
   const { selectedProfile } = useContentProfile();
   const { suggestWeeklyCalendar } = useMarketingWeeklyCalendar();
+  const { reviews, recordReview } = useMarketingAiSuggestionReviews("suggest-weekly-marketing-calendar");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [openIdea, setOpenIdea] = useState<MarketingIdea | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [reviewingIndex, setReviewingIndex] = useState<number | null>(null);
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
@@ -61,6 +65,12 @@ export function EditorialCalendarTab() {
     () => ideas.filter((i) => !i.scheduled_for && !i.scheduled_at && !i.planned_date && i.status !== "posted" && i.status !== "archived"),
     [ideas],
   );
+
+  const feedbackSummary = useMemo(() => ({
+    accepted: reviews.filter((item) => item.decision === "accepted").length,
+    edited: reviews.filter((item) => item.decision === "edited").length,
+    rejected: reviews.filter((item) => item.decision === "rejected").length,
+  }), [reviews]);
 
   const ideasOnDay = (day: Date) =>
     scheduled.filter((i) => {
@@ -105,6 +115,42 @@ export function EditorialCalendarTab() {
     });
   };
 
+  const activeSuggestion = reviewingIndex !== null ? suggestWeeklyCalendar.data?.schedule[reviewingIndex] : null;
+
+  const registerSuggestionReview = async (
+    decision: "accepted" | "edited" | "rejected",
+    value: Record<string, string>,
+    notes: string,
+  ) => {
+    if (!activeSuggestion) return;
+    const editedPayload = decision === "edited"
+      ? {
+          title: value.title,
+          hook: value.hook,
+          cta: value.cta,
+          rationale: value.rationale,
+        }
+      : null;
+
+    await recordReview.mutateAsync({
+      suggestionType: activeSuggestion.channel === "email" ? "weekly-email" : "weekly-post",
+      sourceFunction: "suggest-weekly-marketing-calendar",
+      sourceItemKey: `${activeSuggestion.date}:${activeSuggestion.channel}:${activeSuggestion.title}`,
+      decision,
+      objective: activeSuggestion.objective,
+      profilePlatform: selectedProfile?.platform,
+      profileId: selectedProfile?.id,
+      profileUsername: selectedProfile?.username,
+      suggestionPayload: activeSuggestion,
+      editedPayload,
+      inputContext: {
+        weeklyFocus: suggestWeeklyCalendar.data?.weeklyFocus,
+        summary: suggestWeeklyCalendar.data?.summary,
+      },
+      decisionNotes: notes,
+    });
+  };
+
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -136,6 +182,17 @@ export function EditorialCalendarTab() {
             {suggestWeeklyCalendar.isPending ? "Gerando semana..." : "IA da semana"}
           </Button>
         </div>
+        <div className="mt-3 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground space-y-2">
+          <div className="flex items-center gap-2 text-foreground">
+            <BrainCircuit className="h-4 w-4 text-primary" />
+            <span className="font-medium">Aprendizado do calendário</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">Aceitos: {feedbackSummary.accepted}</Badge>
+            <Badge variant="outline">Editados: {feedbackSummary.edited}</Badge>
+            <Badge variant="outline">Descartados: {feedbackSummary.rejected}</Badge>
+          </div>
+        </div>
       </Card>
 
       {suggestWeeklyCalendar.data && (
@@ -156,9 +213,14 @@ export function EditorialCalendarTab() {
                   <p className="text-xs text-muted-foreground mt-1">{item.platform} · {item.objective}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">{item.hook}</p>
-                <Button size="sm" variant="outline" className="w-full" onClick={() => handleCreateFromSuggestion(item)} disabled={createIdea.isPending}>
-                  Criar no calendário
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => handleCreateFromSuggestion(item)} disabled={createIdea.isPending}>
+                    Criar no calendário
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setReviewingIndex(index)}>
+                    Revisar
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -269,6 +331,41 @@ export function EditorialCalendarTab() {
           idea={openIdea.id ? openIdea : null}
         />
       )}
+
+      <AiSuggestionReviewDialog
+        open={reviewingIndex !== null}
+        onOpenChange={(open) => !open && setReviewingIndex(null)}
+        title="Revisar sugestão semanal"
+        description="Registre o que foi aceito, ajustado ou descartado para a IA melhorar a priorização da próxima semana."
+        fields={[
+          { key: "title", label: "Título" },
+          { key: "hook", label: "Hook", multiline: true, rows: 3 },
+          { key: "cta", label: "CTA" },
+          { key: "rationale", label: "Justificativa", multiline: true, rows: 4 },
+        ]}
+        initialValue={{
+          title: activeSuggestion?.title || "",
+          hook: activeSuggestion?.hook || "",
+          cta: activeSuggestion?.cta || "",
+          rationale: activeSuggestion?.rationale || "",
+        }}
+        acceptLabel="Aceitar sugestão"
+        editLabel="Salvar ajustes"
+        rejectLabel="Descartar"
+        onAcceptOriginal={async (notes) => {
+          await registerSuggestionReview("accepted", {}, notes);
+          setReviewingIndex(null);
+        }}
+        onSaveEdits={async (value, notes) => {
+          await registerSuggestionReview("edited", value, notes);
+          setReviewingIndex(null);
+        }}
+        onReject={async (value, notes) => {
+          await registerSuggestionReview("rejected", value, notes);
+          setReviewingIndex(null);
+        }}
+        isSubmitting={recordReview.isPending}
+      />
     </div>
   );
 }

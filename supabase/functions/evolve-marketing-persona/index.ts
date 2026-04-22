@@ -4,6 +4,7 @@ import {
   buildBrandVoiceBlock,
   buildPersonaBlock,
   buildInstagramContextBlock,
+  fetchAiReviewSignals,
   fetchInstagramContext,
   fetchVoiceAndPersona,
 } from "../_shared/marketing-context.ts";
@@ -86,6 +87,7 @@ serve(async (req) => {
     ]);
 
     let profileContext = "";
+    const reviewSignals = await fetchAiReviewSignals(supabase, accountId, "evolve-marketing-persona");
     if (profileId && profilePlatform === "instagram") {
       const instagramContext = await fetchInstagramContext(supabase, accountId, profileId);
       profileContext = buildInstagramContextBlock(instagramContext);
@@ -140,6 +142,7 @@ Regras obrigatórias:
 ${buildBrandVoiceBlock(voice)}
 ${buildPersonaBlock(persona)}
 ${profileContext}
+${reviewSignals}
 ${currentPersonaBlock}
 
 === IDEIAS JÁ SALVAS ===

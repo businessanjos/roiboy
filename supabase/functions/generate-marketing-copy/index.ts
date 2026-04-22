@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock, fetchInstagramContext, buildInstagramContextBlock } from "../_shared/marketing-context.ts";
+import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock, fetchInstagramContext, buildInstagramContextBlock, fetchAiReviewSignals } from "../_shared/marketing-context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
     let voiceContext = "";
     let personaContext = "";
     let profileContext = "";
+    const reviewSignals = await fetchAiReviewSignals(supabase, accountId, "generate-marketing-copy");
     if (useBrandVoice) {
       const { voice, persona } = await fetchVoiceAndPersona(supabase, accountId);
       voiceContext = buildBrandVoiceBlock(voice);
@@ -121,7 +122,7 @@ Deno.serve(async (req) => {
     const typeCfg = COPY_TYPES[copyType] || COPY_TYPES.caption;
     const objectiveInstruction = OBJECTIVE_INSTRUCTIONS[objective] || OBJECTIVE_INSTRUCTIONS.educar;
 
-    const systemPrompt = `Você é uma copywriter sênior especializada em conteúdo para Instagram, TikTok e YouTube, com profundo conhecimento do mercado de estética brasileiro. Escreva sempre em português do Brasil.${voiceContext}${personaContext}${profileContext}`;
+    const systemPrompt = `Você é uma copywriter sênior especializada em conteúdo para Instagram, TikTok e YouTube, com profundo conhecimento do mercado de estética brasileiro. Escreva sempre em português do Brasil.${voiceContext}${personaContext}${profileContext}${reviewSignals}`;
 
     const userPrompt = `Tarefa: ${typeCfg.instruction}
 

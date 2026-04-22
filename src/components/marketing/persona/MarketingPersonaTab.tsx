@@ -17,6 +17,7 @@ import { PersonaAbStatsPanel } from "./PersonaAbStatsPanel";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { canUseMarketingPersonaAiSuggest } from "@/lib/featureFlags";
+import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestionReviews";
 
 function formatHighlight(it: HighlightItem | string, prefix = ""): string {
   if (typeof it === "string") return it;
@@ -112,6 +113,7 @@ export function MarketingPersonaTab() {
   const { persona, isLoading, upsertPersona, suggestField, submitAbFeedback, evolvePersona } = useMarketingPersona();
   const { selectedProfile } = useContentProfile();
   const { currentUser } = useCurrentUser();
+  const { reviews, recordReview } = useMarketingAiSuggestionReviews("evolve-marketing-persona");
   const canUseAiSuggest = canUseMarketingPersonaAiSuggest(currentUser?.email);
   // Só faz sentido usar perfil ativo quando ele é Instagram (única plataforma analisada hoje pela Persona)
   const activeInstagramProfileId = selectedProfile?.platform === "instagram" ? selectedProfile.id : null;
@@ -141,6 +143,7 @@ export function MarketingPersonaTab() {
   }>({ open: false, field: null, fieldLabel: "", variantA: "", variantB: "", abTestId: null, hasHighlights: false });
   // Mapa field -> { abTestId, chosenValue } para detectar save implícito
   const [pendingAbApplied, setPendingAbApplied] = useState<Record<string, { abTestId: string; value: any }>>({});
+  const evolutionReviewStats = useMemo(() => ({ accepted: reviews.filter((item) => item.decision === 'accepted').length, edited: reviews.filter((item) => item.decision === 'edited').length, rejected: reviews.filter((item) => item.decision === 'rejected').length }), [reviews]);
 
   const applyEvolutionSuggestions = () => {
     const updates = evolvePersona.data?.suggestedUpdates;
@@ -171,6 +174,11 @@ export function MarketingPersonaTab() {
       profileUsername: selectedProfile?.username,
       profileDisplayName: selectedProfile?.display_name,
     });
+  };
+
+  const registerEvolutionDecision = async (decision: 'accepted' | 'edited' | 'rejected', notes: string) => {
+    if (!evolvePersona.data) return;
+    await recordReview.mutateAsync({ suggestionType: 'persona-evolution', sourceFunction: 'evolve-marketing-persona', sourceItemKey: selectedProfile?.id || 'default-persona', decision, profilePlatform: selectedProfile?.platform, profileId: selectedProfile?.id, profileUsername: selectedProfile?.username, suggestionPayload: evolvePersona.data as any, editedPayload: decision === 'edited' ? { suggestedUpdates: draft } as any : null, inputContext: { completeness }, decisionNotes: notes });
   };
 
   useEffect(() => {
@@ -406,6 +414,23 @@ export function MarketingPersonaTab() {
                 </AlertDescription>
               </Alert>
             )}
+
+            <div className="rounded-md border bg-background p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Aprendizado das revisões
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">Aceitas: {evolutionReviewStats.accepted}</Badge>
+                <Badge variant="outline">Editadas: {evolutionReviewStats.edited}</Badge>
+                <Badge variant="outline">Descartadas: {evolutionReviewStats.rejected}</Badge>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => registerEvolutionDecision("accepted", "Sugestão aceita sem alterações")}>Aceitar análise</Button>
+                <Button type="button" variant="outline" onClick={() => registerEvolutionDecision("edited", "Sugestões aplicadas/ajustadas manualmente")}>Registrar edição</Button>
+                <Button type="button" variant="ghost" onClick={() => registerEvolutionDecision("rejected", "Sugestão descartada")}>Descartar análise</Button>
+              </div>
+            </div>
 
             <div className="grid gap-3 lg:grid-cols-3">
               {evolvePersona.data.recommendations.map((recommendation) => (

@@ -266,3 +266,29 @@ export function buildInstagramContextBlock(ctx: InstagramContext | null | undefi
 
   return `\n\n=== PERFORMANCE REAL DO INSTAGRAM CONECTADO (use SEMPRE como base) ===\nAdapte cada tendência aos formatos, temas e hashtags que JÁ funcionam para esta conta.\n${lines.join("\n")}`;
 }
+
+export async function fetchAiReviewSignals(supabase: any, accountId: string, sourceFunction?: string): Promise<string> {
+  let query = supabase
+    .from("marketing_ai_suggestion_reviews")
+    .select("suggestion_type, source_function, decision, objective, suggestion_payload, edited_payload, decision_notes, reviewed_at")
+    .eq("account_id", accountId)
+    .order("reviewed_at", { ascending: false })
+    .limit(25);
+
+  if (sourceFunction) {
+    query = query.eq("source_function", sourceFunction);
+  }
+
+  const { data } = await query;
+  const reviews = (data || []) as Array<Record<string, any>>;
+  if (!reviews.length) return "";
+
+  const lines = reviews.map((review, index) => {
+    const suggestion = JSON.stringify(review.suggestion_payload || {}).slice(0, 220);
+    const edited = review.edited_payload ? ` | versão final: ${JSON.stringify(review.edited_payload).slice(0, 220)}` : "";
+    const notes = review.decision_notes ? ` | notas: ${String(review.decision_notes).slice(0, 140)}` : "";
+    return `${index + 1}. ${review.suggestion_type} · ${review.decision} · objetivo ${review.objective || "n/a"} · sugestão: ${suggestion}${edited}${notes}`;
+  });
+
+  return `\n\n=== FEEDBACK HUMANO SOBRE SUGESTÕES DE IA ===\nAprenda com estas decisões recentes para ajustar o estilo, profundidade e priorização das próximas sugestões.\n${lines.join("\n")}`;
+}

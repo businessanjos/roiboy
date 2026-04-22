@@ -17,6 +17,11 @@ export interface CopyHistoryItem {
   idea_id: string | null;
 }
 
+export interface GenerateCopyResponse {
+  output: string;
+  record: CopyHistoryItem;
+}
+
 export function useMarketingCopy() {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
@@ -59,7 +64,7 @@ export function useMarketingCopy() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return data as { output: string; record: CopyHistoryItem };
+      return data as GenerateCopyResponse;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["marketing-copy-history", accountId] });

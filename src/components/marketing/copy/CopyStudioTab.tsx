@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Copy as CopyIcon, Star, Trash2, Loader2 } from "lucide-react";
-import { useMarketingCopy, CopyObjective, CopyType } from "@/hooks/useMarketingCopy";
+import { Sparkles, Copy as CopyIcon, Star, Trash2, Loader2, BrainCircuit, ThumbsUp } from "lucide-react";
+import { useMarketingCopy, CopyObjective, CopyType, GenerateCopyResponse } from "@/hooks/useMarketingCopy";
 import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
+import { AiSuggestionReviewDialog } from "@/components/marketing/ai/AiSuggestionReviewDialog";
+import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestionReviews";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -30,6 +32,7 @@ export function CopyStudioTab() {
   const { history, generateCopy, toggleFavorite, deleteCopy } = useMarketingCopy();
   const { voice } = useMarketingBrandVoice();
   const { selectedProfile } = useContentProfile();
+  const { reviews, recordReview } = useMarketingAiSuggestionReviews("generate-marketing-copy");
   const [copyType, setCopyType] = useState<CopyType>("caption");
   const [objective, setObjective] = useState<CopyObjective>("educar");
   const [brief, setBrief] = useState("");
@@ -38,6 +41,15 @@ export function CopyStudioTab() {
   const [hook, setHook] = useState("");
   const [useBrandVoice, setUseBrandVoice] = useState(true);
   const [output, setOutput] = useState("");
+  const [lastGeneration, setLastGeneration] = useState<GenerateCopyResponse | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  const feedbackSummary = useMemo(() => {
+    const accepted = reviews.filter((item) => item.decision === "accepted").length;
+    const edited = reviews.filter((item) => item.decision === "edited").length;
+    const rejected = reviews.filter((item) => item.decision === "rejected").length;
+    return { accepted, edited, rejected };
+  }, [reviews]);
 
   const submit = () => {
     if (!brief.trim()) { toast.error("Descreva o briefing"); return; }
@@ -55,13 +67,59 @@ export function CopyStudioTab() {
         profileUsername: selectedProfile?.username,
         profileDisplayName: selectedProfile?.display_name,
       },
-      { onSuccess: (d) => setOutput(d.output) }
+      {
+        onSuccess: (d) => {
+          setOutput(d.output);
+          setLastGeneration(d);
+          setReviewOpen(true);
+        },
+      }
     );
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copiado");
+  };
+
+  const reviewFields = useMemo(() => {
+    const isLongForm = copyType === "caption" || copyType === "script" || copyType === "email" || copyType === "other";
+    return [
+      {
+        key: "output",
+        label: copyType === "hook" ? "Copy sugerida" : "Texto sugerido",
+        multiline: isLongForm,
+        rows: isLongForm ? 8 : 4,
+      },
+    ];
+  }, [copyType]);
+
+  const buildReviewContext = () => ({
+    brief,
+    copyType,
+    objective,
+    format: format_,
+    platform,
+    hook,
+    useBrandVoice,
+  });
+
+  const registerCopyReview = async (decision: "accepted" | "edited" | "rejected", reviewedOutput: string, notes: string) => {
+    if (!lastGeneration) return;
+    await recordReview.mutateAsync({
+      suggestionType: `copy:${copyType}`,
+      sourceFunction: "generate-marketing-copy",
+      sourceItemKey: lastGeneration.record.id,
+      decision,
+      objective,
+      profilePlatform: selectedProfile?.platform || platform,
+      profileId: selectedProfile?.id,
+      profileUsername: selectedProfile?.username,
+      suggestionPayload: { output: lastGeneration.output },
+      editedPayload: decision === "edited" ? { output: reviewedOutput } : null,
+      inputContext: buildReviewContext(),
+      decisionNotes: notes,
+    });
   };
 
   return (
@@ -143,14 +201,33 @@ export function CopyStudioTab() {
           {generateCopy.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
           Gerar copy
         </Button>
+
+        <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-foreground">
+            <BrainCircuit className="h-4 w-4 text-primary" />
+            <span className="font-medium">Aprendizado das revisões</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">Aceitas: {feedbackSummary.accepted}</Badge>
+            <Badge variant="outline">Editadas: {feedbackSummary.edited}</Badge>
+            <Badge variant="outline">Descartadas: {feedbackSummary.rejected}</Badge>
+          </div>
+          <p>A cada geração você pode aceitar, ajustar ou descartar a sugestão para refinar as próximas copies.</p>
+        </div>
       </Card>
 
       <div className="lg:col-span-2 space-y-4">
         {output && (
           <Card className="p-6 space-y-3 border-primary/30 bg-primary/5">
             <div className="flex items-center justify-between">
-              <Badge variant="secondary">Resultado</Badge>
-              <Button size="sm" variant="ghost" onClick={() => copyToClipboard(output)}><CopyIcon className="h-3 w-3 mr-1" />Copiar</Button>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">Resultado</Badge>
+                {lastGeneration && <Badge variant="outline"><ThumbsUp className="h-3 w-3 mr-1" />Revisão disponível</Badge>}
+              </div>
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)} disabled={!lastGeneration}>Revisar</Button>
+                <Button size="sm" variant="ghost" onClick={() => copyToClipboard(output)}><CopyIcon className="h-3 w-3 mr-1" />Copiar</Button>
+              </div>
             </div>
             <pre className="whitespace-pre-wrap text-sm font-sans">{output}</pre>
           </Card>
@@ -182,6 +259,33 @@ export function CopyStudioTab() {
           </div>
         </div>
       </div>
+
+      <AiSuggestionReviewDialog
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        title="Revisar sugestão de copy"
+        description="Ajuste o texto antes de aprovar e registre sua decisão para a IA aprender com o seu padrão editorial."
+        fields={reviewFields}
+        initialValue={{ output: lastGeneration?.output || "" }}
+        acceptLabel="Aceitar texto"
+        editLabel="Salvar edição"
+        rejectLabel="Descartar"
+        onAcceptOriginal={async (notes) => {
+          await registerCopyReview("accepted", lastGeneration?.output || "", notes);
+          setReviewOpen(false);
+        }}
+        onSaveEdits={async (value, notes) => {
+          const nextOutput = value.output || "";
+          setOutput(nextOutput);
+          await registerCopyReview("edited", nextOutput, notes);
+          setReviewOpen(false);
+        }}
+        onReject={async (value, notes) => {
+          await registerCopyReview("rejected", value.output || lastGeneration?.output || "", notes);
+          setReviewOpen(false);
+        }}
+        isSubmitting={recordReview.isPending}
+      />
     </div>
   );
 }
