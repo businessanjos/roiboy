@@ -603,6 +603,20 @@ export default function SalesScripts() {
             })}</div></div>}
               </TabsContent>
 
+              <TabsContent value="bulk" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Upload className="w-5 h-5 text-primary" />
+                      Upload em massa de transcrições (.docx)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <BulkCallUpload />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               <TabsContent value="icp" className="mt-4">
                 <ICPDashboard />
               </TabsContent>
