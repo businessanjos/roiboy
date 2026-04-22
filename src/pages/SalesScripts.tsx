@@ -491,6 +491,74 @@ export default function SalesScripts() {
 
               <TabsContent value="analyze" className="space-y-6 mt-4">
             <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4">
+              <div className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+                <div className="space-y-2 rounded-lg border bg-card p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium flex items-center gap-2"><Cloud className="w-4 h-4 text-primary" />Google Drive</p>
+                      <p className="text-xs text-muted-foreground">Conecte sua conta, escolha um arquivo e traga a transcrição para análise.</p>
+                    </div>
+                    {driveConnection?.is_active ? (
+                      <Badge variant="secondary" className="gap-1"><Link2 className="w-3 h-3" />{driveConnection.google_email}</Badge>
+                    ) : null}
+                  </div>
+
+                  {!driveConnection?.is_active ? (
+                    <Button onClick={handleConnectDrive} disabled={isConnectingDrive} className="w-full gap-2">
+                      {isConnectingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                      Conectar Google Drive
+                    </Button>
+                  ) : (
+                    <>
+                      <Input placeholder="Buscar arquivo no Drive..." value={driveSearch} onChange={e => setDriveSearch(e.target.value)} />
+                      <div className="max-h-56 overflow-y-auto rounded-md border">
+                        {loadingDriveFiles ? (
+                          <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando arquivos...</div>
+                        ) : driveFiles.length === 0 ? (
+                          <div className="p-4 text-sm text-muted-foreground">Nenhum arquivo de transcrição encontrado.</div>
+                        ) : (
+                          <div className="divide-y">
+                            {driveFiles.map(file => (
+                              <button key={file.id} type="button" className={cn("flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-muted/50", selectedDriveFile?.id === file.id && "bg-muted/60")} onClick={() => handleImportDriveFile(file)} disabled={isImportingDriveFile}>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium">{file.name}</p>
+                                  <p className="text-xs text-muted-foreground">{new Date(file.modifiedTime).toLocaleDateString('pt-BR')}</p>
+                                </div>
+                                {isImportingDriveFile && driveImportedFileId === file.id ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <FolderOpen className="w-4 h-4 shrink-0 text-muted-foreground" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-2 rounded-lg border bg-card p-4">
+                  <Label className="flex items-center gap-2"><Package className="w-4 h-4 text-primary" />Produto da análise</Label>
+                  <Select value={selectedProductId || ''} onValueChange={(value) => setSelectedProductId(value || null)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((product: any) => (
+                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">A inteligência será gerada já vinculada ao produto escolhido.</p>
+
+                  {selectedDriveFile ? (
+                    <div className="rounded-md border bg-muted/40 p-3">
+                      <p className="text-sm font-medium">Arquivo importado</p>
+                      <p className="text-xs text-muted-foreground truncate">{selectedDriveFile.name}</p>
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Você também pode continuar colando ou enviando a transcrição manualmente abaixo.</div>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label>Vincular a um card do pipeline (opcional)</Label>
                 <Popover open={dealComboOpen} onOpenChange={setDealComboOpen}>
@@ -669,7 +737,7 @@ export default function SalesScripts() {
               <Button variant="outline" size="sm" className="w-full" onClick={() => setTranscriptEntries(prev => [...prev, { id: Date.now(), text: '', file: null }])}>
                 <Plus className="w-4 h-4 mr-2" />Adicionar outra call
               </Button>
-              <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || transcriptEntries.every(e => !e.text.trim() && !e.file)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call{transcriptEntries.length > 1 ? 's' : ''}</>}</Button>
+              <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || !selectedProductId || transcriptEntries.every(e => !e.text.trim() && !e.file)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call{transcriptEntries.length > 1 ? 's' : ''}</>}</Button>
             </CardContent></Card>
             {transcriptAnalysis && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-primary" />Resultado da Análise</CardTitle></CardHeader><CardContent><MarkdownRenderer content={transcriptAnalysis} /><div className="flex gap-2 mt-4"><Button variant="outline" size="sm" onClick={() => handleCopy(transcriptAnalysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-4 h-4 mr-2" />PDF</Button></div></CardContent></Card>}
             
