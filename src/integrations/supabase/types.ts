@@ -6215,6 +6215,7 @@ export type Database = {
           scope: string | null
           token_expires_at: string | null
           updated_at: string
+          user_id: string
         }
         Insert: {
           access_token?: string | null
@@ -6233,6 +6234,7 @@ export type Database = {
           scope?: string | null
           token_expires_at?: string | null
           updated_at?: string
+          user_id: string
         }
         Update: {
           access_token?: string | null
@@ -6251,12 +6253,13 @@ export type Database = {
           scope?: string | null
           token_expires_at?: string | null
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "google_drive_connections_account_id_fkey"
             columns: ["account_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
