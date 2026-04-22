@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Copy as CopyIcon, Star, Trash2, Loader2, BrainCircuit, ThumbsUp } from "lucide-react";
-import { useMarketingCopy, CopyObjective, CopyType, GenerateCopyResponse } from "@/hooks/useMarketingCopy";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Sparkles, Copy as CopyIcon, Star, Trash2, Loader2, BrainCircuit, ThumbsUp, ShieldCheck } from "lucide-react";
+import { useMarketingCopy, CopyObjective, CopyType, GenerateCopyResponse, MarketingCopyReviewResponse } from "@/hooks/useMarketingCopy";
 import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { AiSuggestionReviewDialog } from "@/components/marketing/ai/AiSuggestionReviewDialog";
@@ -29,7 +30,7 @@ const COPY_LABELS: Record<CopyType, string> = {
 };
 
 export function CopyStudioTab() {
-  const { history, generateCopy, toggleFavorite, deleteCopy } = useMarketingCopy();
+  const { history, generateCopy, reviewCopy, toggleFavorite, deleteCopy } = useMarketingCopy();
   const { voice } = useMarketingBrandVoice();
   const { selectedProfile } = useContentProfile();
   const { reviews, recordReview } = useMarketingAiSuggestionReviews("generate-marketing-copy");
@@ -42,6 +43,7 @@ export function CopyStudioTab() {
   const [useBrandVoice, setUseBrandVoice] = useState(true);
   const [output, setOutput] = useState("");
   const [lastGeneration, setLastGeneration] = useState<GenerateCopyResponse | null>(null);
+  const [reviewResult, setReviewResult] = useState<MarketingCopyReviewResponse | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const feedbackSummary = useMemo(() => {
@@ -71,10 +73,34 @@ export function CopyStudioTab() {
         onSuccess: (d) => {
           setOutput(d.output);
           setLastGeneration(d);
+          setReviewResult(null);
           setReviewOpen(true);
         },
       }
     );
+  };
+
+  const runReview = async () => {
+    if (!output.trim()) {
+      toast.error("Gere ou edite um texto antes de revisar");
+      return;
+    }
+
+    const result = await reviewCopy.mutateAsync({
+      text: output,
+      copyType,
+      objective,
+      brief,
+      format: format_,
+      platform,
+      hook,
+      profileId: selectedProfile?.id,
+      profilePlatform: selectedProfile?.platform,
+      profileUsername: selectedProfile?.username,
+      profileDisplayName: selectedProfile?.display_name,
+    });
+
+    setReviewResult(result);
   };
 
   const copyToClipboard = (text: string) => {
@@ -225,11 +251,73 @@ export function CopyStudioTab() {
                 {lastGeneration && <Badge variant="outline"><ThumbsUp className="h-3 w-3 mr-1" />Revisão disponível</Badge>}
               </div>
               <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" onClick={runReview} disabled={reviewCopy.isPending}>
+                  {reviewCopy.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
+                  Revisar
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)} disabled={!lastGeneration}>Revisar</Button>
                 <Button size="sm" variant="ghost" onClick={() => copyToClipboard(output)}><CopyIcon className="h-3 w-3 mr-1" />Copiar</Button>
               </div>
             </div>
             <pre className="whitespace-pre-wrap text-sm font-sans">{output}</pre>
+
+            {reviewResult && (
+              <div className="space-y-3 rounded-md border border-border bg-background p-4">
+                <Alert>
+                  <ShieldCheck className="h-4 w-4" />
+                  <AlertTitle>
+                    Revisão editorial · Score {reviewResult.overallScore}% · {reviewResult.readyToPublish ? "Pronto para publicar" : "Revisão recomendada"}
+                  </AlertTitle>
+                  <AlertDescription>{reviewResult.summary}</AlertDescription>
+                </Alert>
+
+                {reviewResult.strengths.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium">Pontos fortes</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {reviewResult.strengths.map((item) => <Badge key={item} variant="secondary">{item}</Badge>)}
+                    </div>
+                  </div>
+                )}
+
+                {reviewResult.issues.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Ajustes sugeridos</p>
+                    {reviewResult.issues.map((issue, index) => (
+                      <div key={`${issue.title}-${index}`} className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium">{issue.title}</span>
+                          <Badge variant="outline">{issue.severity === "high" ? "Alta" : issue.severity === "medium" ? "Média" : "Baixa"}</Badge>
+                        </div>
+                        <p className="mt-1 text-muted-foreground">{issue.detail}</p>
+                        <p className="mt-2 font-medium">Sugestão: <span className="font-normal text-muted-foreground">{issue.suggestion}</span></p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {reviewResult.publishChecklist.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium">Checklist final</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                      {reviewResult.publishChecklist.map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                {reviewResult.improvedVersion && reviewResult.improvedVersion !== output && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium">Versão melhorada</p>
+                      <Button size="sm" variant="outline" onClick={() => setOutput(reviewResult.improvedVersion)}>
+                        Aplicar melhorias
+                      </Button>
+                    </div>
+                    <pre className="whitespace-pre-wrap rounded-md border border-border bg-muted/20 p-3 text-sm font-sans">{reviewResult.improvedVersion}</pre>
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
         )}
 
