@@ -4,6 +4,7 @@ import { useCurrentUser } from "./useCurrentUser";
 import { toast } from "sonner";
 
 export type CopyType = "hook" | "caption" | "script" | "cta" | "title" | "bio" | "email" | "other";
+export type CopyObjective = "educar" | "converter" | "reter";
 
 export interface CopyHistoryItem {
   id: string;
@@ -41,11 +42,16 @@ export function useMarketingCopy() {
     mutationFn: async (input: {
       copyType: CopyType;
       brief: string;
+      objective?: CopyObjective;
       ideaId?: string;
       format?: string;
       platform?: string;
       hook?: string;
       useBrandVoice?: boolean;
+      profileId?: string;
+      profilePlatform?: string;
+      profileUsername?: string;
+      profileDisplayName?: string;
     }) => {
       if (!accountId) throw new Error("Sem conta");
       const { data, error } = await supabase.functions.invoke("generate-marketing-copy", {
