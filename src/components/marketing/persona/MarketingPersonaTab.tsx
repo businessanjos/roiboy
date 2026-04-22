@@ -14,6 +14,9 @@ import { Progress } from "@/components/ui/progress";
 import { PersonaAbCompareDialog } from "./PersonaAbCompareDialog";
 import { PersonaAbStatsPanel } from "./PersonaAbStatsPanel";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+const AI_PERSONA_ALLOWED_EMAIL = "m.quintana@me.com";
 
 function formatHighlight(it: HighlightItem | string, prefix = ""): string {
   if (typeof it === "string") return it;
@@ -108,6 +111,8 @@ const ALL_FIELDS = SECTIONS.flatMap((s) => s.fields.map((f) => f.key));
 export function MarketingPersonaTab() {
   const { persona, isLoading, upsertPersona, suggestField, submitAbFeedback } = useMarketingPersona();
   const { selectedProfile } = useContentProfile();
+  const { currentUser } = useCurrentUser();
+  const canUseAiSuggest = currentUser?.email?.toLowerCase() === AI_PERSONA_ALLOWED_EMAIL;
   // Só faz sentido usar perfil ativo quando ele é Instagram (única plataforma analisada hoje pela Persona)
   const activeInstagramProfileId = selectedProfile?.platform === "instagram" ? selectedProfile.id : null;
   const activeInstagramUsername = selectedProfile?.platform === "instagram" ? selectedProfile.username : null;
@@ -306,7 +311,7 @@ export function MarketingPersonaTab() {
               <span className="font-semibold">{completeness}% ({filledCount}/{ALL_FIELDS.length} campos)</span>
             </div>
             <Progress value={completeness} className="h-2" />
-            {completeness < 60 && (
+            {completeness < 60 && canUseAiSuggest && (
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3 text-primary" />
                 Dica: clique em <strong>Sugerir com IA</strong> em cada campo. A IA analisa seus clientes reais de Rykas Mentoring e Eternum Club pra sugerir o conteúdo certo.
@@ -352,6 +357,7 @@ export function MarketingPersonaTab() {
                   onRemoveItem={(i) => removeArrayItem(f.key, i)}
                   onSuggest={() => handleSuggest(f.key)}
                   isSuggesting={suggestingField === f.key}
+                  canUseAiSuggest={canUseAiSuggest}
                 />
               ))}
             </CardContent>
@@ -393,29 +399,32 @@ interface PersonaFieldEditorProps {
   onRemoveItem: (i: number) => void;
   onSuggest: () => void;
   isSuggesting: boolean;
+  canUseAiSuggest: boolean;
 }
 
-function PersonaFieldEditor({ field, value, inputValue, onInputChange, onChange, onAddItem, onRemoveItem, onSuggest, isSuggesting }: PersonaFieldEditorProps) {
+function PersonaFieldEditor({ field, value, inputValue, onInputChange, onChange, onAddItem, onRemoveItem, onSuggest, isSuggesting, canUseAiSuggest }: PersonaFieldEditorProps) {
   const isArray = isArrayField(field.key);
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <Label className="text-sm font-medium">{field.label}</Label>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onSuggest}
-          disabled={isSuggesting}
-          className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10"
-        >
-          {isSuggesting ? (
-            <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Analisando...</>
-          ) : (
-            <><Sparkles className="h-3 w-3 mr-1" /> Sugerir com IA</>
-          )}
-        </Button>
+        {canUseAiSuggest && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onSuggest}
+            disabled={isSuggesting}
+            className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10"
+          >
+            {isSuggesting ? (
+              <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Analisando...</>
+            ) : (
+              <><Sparkles className="h-3 w-3 mr-1" /> Sugerir com IA</>
+            )}
+          </Button>
+        )}
       </div>
 
       {isArray ? (
