@@ -88,6 +88,7 @@ const ContentCalendar = lazyRetry(() => import("./pages/ContentCalendar"));
 const SocialMedia = lazyRetry(() => import("./pages/SocialMedia"));
 const MarketingTasks = lazyRetry(() => import("./pages/MarketingTasks"));
 const MarketingInsights = lazyRetry(() => import("./pages/MarketingInsights"));
+const ContentCreation = lazyRetry(() => import("./pages/ContentCreation"));
 const Insights = lazyRetry(() => import("./pages/Insights"));
 const RHDashboard = lazyRetry(() => import("./pages/RHDashboard"));
 const HRCollaborators = lazyRetry(() => import("./pages/rh/HRCollaborators"));
@@ -230,6 +231,7 @@ const App = () => (
                             <Route path="/marketing" element={<Marketing />} />
                             <Route path="/content-calendar" element={<ContentCalendar />} />
                             <Route path="/social-media" element={<SocialMedia />} />
+                            <Route path="/criacao" element={<ContentCreation />} />
                             <Route path="/marketing-tasks" element={<MarketingTasks />} />
                             <Route path="/marketing-insights" element={<MarketingInsights />} />
                             <Route path="/insights" element={<Insights />} />
