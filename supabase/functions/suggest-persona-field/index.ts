@@ -131,41 +131,97 @@ Deno.serve(async (req) => {
     }
 
     // 4.5) Buscar contexto do Instagram (perfil ativo da conta)
+    // Estratégia: ler primeiro do cache (atualizado por cron diário). Se vazio/ausente, calcular ao vivo e popular o cache.
     let instagramContext = "";
     let instagramUsername: string | null = null;
     let topHighlights: { formats: string[]; themes: string[]; hashtags: string[] } = { formats: [], themes: [], hashtags: [] };
     try {
-      const igCtx = await fetchInstagramContext(supabase, accountId);
-      if (igCtx?.profile) {
-        instagramUsername = igCtx.profile.username;
-        instagramContext = buildInstagramContextBlock(igCtx);
+      // 1) Tenta cache
+      const { data: cached } = await supabase
+        .from("instagram_highlights_cache")
+        .select("username, formats, themes, hashtags, computed_at")
+        .eq("account_id", accountId)
+        .order("computed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-        // Extrai top 3 formatos / temas / hashtags dos posts de MAIOR engajamento
-        const top = (igCtx.topPosts || []).slice(0, 20); // já vem ordenado por engagement_rate desc
-        const tally = (arr: (string | null | undefined)[]) => {
-          const map: Record<string, number> = {};
-          arr.forEach((v) => {
-            const k = (v || "").toString().trim();
-            if (!k) return;
-            map[k] = (map[k] || 0) + 1;
-          });
-          return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `${k} (${n}x)`);
-        };
-        topHighlights.formats = tally(top.map((p) => p.post_type));
-        topHighlights.themes = tally(top.map((p) => p.theme));
-        // Hashtags: usa o topHashtags já agregado (filtrado por uses>=2 e ordenado)
-        topHighlights.hashtags = (igCtx.topHashtags || []).slice(0, 3).map((h) => `#${h.tag} (${h.avg_engagement}% eng)`);
+      const fmtCached = (arr: any[], prefix = "") =>
+        (arr || [])
+          .map((it: any) =>
+            typeof it === "string"
+              ? it
+              : it?.avg_engagement
+                ? `${prefix}${it.label} (${it.avg_engagement}% eng)`
+                : `${prefix}${it.label}${it.count ? ` (${it.count}x)` : ""}`,
+          )
+          .filter(Boolean);
 
-        const hl: string[] = [];
-        if (topHighlights.formats.length) hl.push(`- TOP 3 FORMATOS que mais engajam: ${topHighlights.formats.join(", ")}`);
-        if (topHighlights.themes.length) hl.push(`- TOP 3 TEMAS que mais engajam: ${topHighlights.themes.join(", ")}`);
-        if (topHighlights.hashtags.length) hl.push(`- TOP 3 HASHTAGS de melhor performance: ${topHighlights.hashtags.join(", ")}`);
-        if (hl.length) {
-          instagramContext += `\n\n=== DESTAQUES (use estes sinais como PRIORIDADE ao sugerir o campo) ===\n${hl.join("\n")}`;
+      if (cached && (cached.formats?.length || cached.themes?.length || cached.hashtags?.length)) {
+        instagramUsername = cached.username || null;
+        topHighlights.formats = fmtCached(cached.formats as any[]);
+        topHighlights.themes = fmtCached(cached.themes as any[]);
+        topHighlights.hashtags = fmtCached(cached.hashtags as any[], "#");
+
+        // Para o bloco completo de performance, ainda buscamos o contexto ao vivo (formato/hashtag stats são leves).
+        try {
+          const igCtx = await fetchInstagramContext(supabase, accountId);
+          if (igCtx?.profile) instagramContext = buildInstagramContextBlock(igCtx);
+        } catch (_) { /* opcional */ }
+      } else {
+        // 2) Fallback ao vivo + popula cache
+        const igCtx = await fetchInstagramContext(supabase, accountId);
+        if (igCtx?.profile) {
+          instagramUsername = igCtx.profile.username;
+          instagramContext = buildInstagramContextBlock(igCtx);
+
+          const top = (igCtx.topPosts || []).slice(0, 20);
+          const tally = (arr: (string | null | undefined)[]) => {
+            const map: Record<string, number> = {};
+            arr.forEach((v) => {
+              const k = (v || "").toString().trim();
+              if (!k) return;
+              map[k] = (map[k] || 0) + 1;
+            });
+            return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `${k} (${n}x)`);
+          };
+          topHighlights.formats = tally(top.map((p) => p.post_type));
+          topHighlights.themes = tally(top.map((p) => p.theme));
+          topHighlights.hashtags = (igCtx.topHashtags || []).slice(0, 3).map((h) => `#${h.tag} (${h.avg_engagement}% eng)`);
+
+          // Popula cache em background (best-effort)
+          try {
+            const { data: profile } = await supabase
+              .from("instagram_profiles")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("username", igCtx.profile.username)
+              .maybeSingle();
+            if (profile?.id) {
+              await supabase.from("instagram_highlights_cache").upsert({
+                account_id: accountId,
+                profile_id: profile.id,
+                username: igCtx.profile.username,
+                formats: tally(top.map((p) => p.post_type)).map((s) => ({ label: s.split(" (")[0], count: Number(s.match(/\((\d+)x\)/)?.[1] || 0) })),
+                themes: tally(top.map((p) => p.theme)).map((s) => ({ label: s.split(" (")[0], count: Number(s.match(/\((\d+)x\)/)?.[1] || 0) })),
+                hashtags: (igCtx.topHashtags || []).slice(0, 3).map((h) => ({ label: h.tag, count: h.uses, avg_engagement: h.avg_engagement })),
+                posts_analyzed: top.length,
+                computed_at: new Date().toISOString(),
+                source: "fallback",
+              }, { onConflict: "profile_id" });
+            }
+          } catch (_) { /* ignore */ }
         }
       }
+
+      const hl: string[] = [];
+      if (topHighlights.formats.length) hl.push(`- TOP 3 FORMATOS que mais engajam: ${topHighlights.formats.join(", ")}`);
+      if (topHighlights.themes.length) hl.push(`- TOP 3 TEMAS que mais engajam: ${topHighlights.themes.join(", ")}`);
+      if (topHighlights.hashtags.length) hl.push(`- TOP 3 HASHTAGS de melhor performance: ${topHighlights.hashtags.join(", ")}`);
+      if (hl.length) {
+        instagramContext += `\n\n=== DESTAQUES (use estes sinais como PRIORIDADE ao sugerir o campo) ===\n${hl.join("\n")}`;
+      }
     } catch (e) {
-      console.error("fetchInstagramContext error:", e);
+      console.error("instagram highlights error:", e);
     }
 
     // 5) Contexto da persona atual
