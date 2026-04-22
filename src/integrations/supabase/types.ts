@@ -8844,6 +8844,80 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_ai_suggestion_reviews: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          decision: Database["public"]["Enums"]["marketing_ai_decision"]
+          decision_notes: string | null
+          edited_payload: Json | null
+          id: string
+          input_context: Json
+          objective: string | null
+          profile_id: string | null
+          profile_platform: string | null
+          profile_username: string | null
+          reviewed_at: string
+          reviewed_by: string | null
+          source_function: string
+          source_item_key: string | null
+          suggestion_payload: Json
+          suggestion_type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          decision: Database["public"]["Enums"]["marketing_ai_decision"]
+          decision_notes?: string | null
+          edited_payload?: Json | null
+          id?: string
+          input_context?: Json
+          objective?: string | null
+          profile_id?: string | null
+          profile_platform?: string | null
+          profile_username?: string | null
+          reviewed_at?: string
+          reviewed_by?: string | null
+          source_function: string
+          source_item_key?: string | null
+          suggestion_payload?: Json
+          suggestion_type: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          decision?: Database["public"]["Enums"]["marketing_ai_decision"]
+          decision_notes?: string | null
+          edited_payload?: Json | null
+          id?: string
+          input_context?: Json
+          objective?: string | null
+          profile_id?: string | null
+          profile_platform?: string | null
+          profile_username?: string | null
+          reviewed_at?: string
+          reviewed_by?: string | null
+          source_function?: string
+          source_item_key?: string | null
+          suggestion_payload?: Json
+          suggestion_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_ai_suggestion_reviews_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_brand_voice: {
         Row: {
           account_id: string
@@ -16545,6 +16619,7 @@ export type Database = {
         | "reaction"
         | "speaking_estimate"
       live_platform: "zoom" | "google_meet"
+      marketing_ai_decision: "accepted" | "edited" | "rejected"
       marketing_task_priority: "low" | "medium" | "high"
       marketing_task_status: "pending" | "in_progress" | "done"
       message_direction: "client_to_team" | "team_to_client"
@@ -16868,6 +16943,7 @@ export const Constants = {
         "speaking_estimate",
       ],
       live_platform: ["zoom", "google_meet"],
+      marketing_ai_decision: ["accepted", "edited", "rejected"],
       marketing_task_priority: ["low", "medium", "high"],
       marketing_task_status: ["pending", "in_progress", "done"],
       message_direction: ["client_to_team", "team_to_client"],
