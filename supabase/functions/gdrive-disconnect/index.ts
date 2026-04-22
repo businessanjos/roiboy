@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
       .from("google_drive_connections")
       .select("id, refresh_token")
       .eq("account_id", profile.account_id)
+      .eq("user_id", userId)
       .maybeSingle();
 
     if (conn?.refresh_token) {
@@ -72,7 +73,8 @@ Deno.serve(async (req) => {
     await admin
       .from("google_drive_connections")
       .delete()
-      .eq("account_id", profile.account_id);
+      .eq("account_id", profile.account_id)
+      .eq("user_id", userId);
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,

@@ -6215,6 +6215,7 @@ export type Database = {
           scope: string | null
           token_expires_at: string | null
           updated_at: string
+          user_id: string
         }
         Insert: {
           access_token?: string | null
@@ -6233,6 +6234,7 @@ export type Database = {
           scope?: string | null
           token_expires_at?: string | null
           updated_at?: string
+          user_id: string
         }
         Update: {
           access_token?: string | null
@@ -6251,12 +6253,13 @@ export type Database = {
           scope?: string | null
           token_expires_at?: string | null
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "google_drive_connections_account_id_fkey"
             columns: ["account_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
@@ -11839,6 +11842,7 @@ export type Database = {
           extracted_seller_name: string | null
           id: string
           outcome_notes: string | null
+          product_id: string | null
           seller_user_id: string | null
           source_filename: string | null
           source_hash: string | null
@@ -11858,6 +11862,7 @@ export type Database = {
           extracted_seller_name?: string | null
           id?: string
           outcome_notes?: string | null
+          product_id?: string | null
           seller_user_id?: string | null
           source_filename?: string | null
           source_hash?: string | null
@@ -11877,6 +11882,7 @@ export type Database = {
           extracted_seller_name?: string | null
           id?: string
           outcome_notes?: string | null
+          product_id?: string | null
           seller_user_id?: string | null
           source_filename?: string | null
           source_hash?: string | null
@@ -11910,6 +11916,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_call_analyses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {

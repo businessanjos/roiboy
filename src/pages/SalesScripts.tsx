@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { toast } from 'sonner';
-import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3, Crown, ThumbsDown, PhoneOff, CalendarClock, UserCheck, TrendingUp, ChevronsUpDown, Check } from 'lucide-react';
+import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3, Crown, ThumbsDown, PhoneOff, CalendarClock, UserCheck, TrendingUp, ChevronsUpDown, Check, Cloud, Link2, FolderOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MarkdownRenderer from '@/components/sales/MarkdownRenderer';
 import CommissionCalculator from '@/components/sales/CommissionCalculator';
@@ -74,6 +74,8 @@ const SCRIPT_TYPES = [
 interface SalesScript { id: string; title: string; content: string; objection_type: string | null; funnel_stage: string | null; tags: string[] | null; is_active: boolean; created_by: string; created_at: string; }
 interface SalesMaterial { id: string; account_id: string; material_type: string; title: string; content: string; is_active: boolean; created_at: string; file_url: string | null; file_name: string | null; file_size: number | null; }
 interface SalesPlaybook { id: string; account_id: string; title: string; content: string; script_type: string; is_favorite: boolean; generated_from: any; created_at: string; }
+interface GoogleDriveConnection { id: string; google_email: string; is_active: boolean; }
+interface DriveCallFile { id: string; name: string; mimeType: string; modifiedTime: string; webViewLink?: string | null; }
 
 export default function SalesScripts() {
   const { currentUser } = useCurrentUser();
@@ -123,6 +125,12 @@ export default function SalesScripts() {
   const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null; seller_user_id?: string | null; seller_name?: string | null } | null>(null);
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
   const [analysisSubTab, setAnalysisSubTab] = useState('analyze');
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [driveSearch, setDriveSearch] = useState('');
+  const [selectedDriveFile, setSelectedDriveFile] = useState<DriveCallFile | null>(null);
+  const [driveImportedFileId, setDriveImportedFileId] = useState<string | null>(null);
+  const [isConnectingDrive, setIsConnectingDrive] = useState(false);
+  const [isImportingDriveFile, setIsImportingDriveFile] = useState(false);
 
   // Queries
   const { data: materials = [], isLoading: loadingMaterials } = useQuery({
@@ -204,6 +212,45 @@ export default function SalesScripts() {
       return all;
     },
     enabled: !!accountId,
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['products-for-call-analysis', accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('products').select('id, name').eq('account_id', accountId!).eq('is_active', true).order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!accountId,
+  });
+
+  const { data: driveConnection, refetch: refetchDriveConnection } = useQuery({
+    queryKey: ['google-drive-call-connection', currentUser?.auth_user_id, accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('google_drive_connections')
+        .select('id, google_email, is_active')
+        .eq('user_id', currentUser!.auth_user_id!)
+        .eq('account_id', accountId!)
+        .order('connected_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as GoogleDriveConnection | null) ?? null;
+    },
+    enabled: !!currentUser?.auth_user_id && !!accountId,
+  });
+
+  const { data: driveFiles = [], isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
+    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveSearch, driveConnection?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('gdrive-list-call-files', {
+        body: { search: driveSearch || undefined },
+      });
+      if (error) throw error;
+      return (data?.files || []) as DriveCallFile[];
+    },
+    enabled: !!driveConnection?.is_active,
   });
 
   const { data: scripts = [], isLoading: loadingScripts } = useQuery({
@@ -290,7 +337,7 @@ export default function SalesScripts() {
     onSuccess: async (data) => {
       setTranscriptAnalysis(data.analysis);
       const preview = (data.fullTranscript || '').substring(0, 200);
-      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null, deal_id: selectedDealId || null, call_outcome: callOutcome || null, client_id: selectedClientId || null, outcome_notes: outcomeNotes || null, seller_user_id: selectedSellerId || null } as any);
+      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null, deal_id: selectedDealId || null, call_outcome: callOutcome || null, client_id: selectedClientId || null, outcome_notes: outcomeNotes || null, seller_user_id: selectedSellerId || null, product_id: selectedProductId || null } as any);
       queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] });
       toast.success('Análise concluída e salva!');
     },
@@ -315,6 +362,62 @@ export default function SalesScripts() {
   });
 
   const getOutcomeConfig = (outcome: string | null) => CALL_OUTCOMES.find(o => o.value === outcome);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('gdrive');
+    if (!status) return;
+
+    if (status === 'connected') {
+      toast.success('Google Drive conectado com sucesso.');
+      refetchDriveConnection();
+      refetchDriveFiles();
+    } else if (status === 'error') {
+      toast.error(`Falha ao conectar Google Drive: ${params.get('reason') || 'desconhecido'}`);
+    }
+
+    params.delete('gdrive');
+    params.delete('reason');
+    const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    window.history.replaceState({}, '', next);
+  }, [refetchDriveConnection, refetchDriveFiles]);
+
+  const handleConnectDrive = async () => {
+    setIsConnectingDrive(true);
+    try {
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      const { data, error } = await supabase.functions.invoke('gdrive-oauth-init', {
+        body: { return_to: returnTo, origin: window.location.origin },
+      });
+      if (error) throw error;
+      if (!data?.authorize_url) throw new Error('URL de autorização não recebida');
+      window.location.href = data.authorize_url as string;
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao conectar Google Drive');
+      setIsConnectingDrive(false);
+    }
+  };
+
+  const handleImportDriveFile = async (file: DriveCallFile) => {
+    setIsImportingDriveFile(true);
+    setDriveImportedFileId(file.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('gdrive-read-call-file', {
+        body: { fileId: file.id, fileName: file.name, mimeType: file.mimeType },
+      });
+      if (error) throw error;
+      const transcript = (data?.transcript as string | undefined)?.trim();
+      if (!transcript) throw new Error('Não foi possível extrair a transcrição do arquivo selecionado');
+      setSelectedDriveFile(file);
+      setTranscriptEntries([{ id: Date.now(), text: transcript, file: null }]);
+      toast.success(`Arquivo "${file.name}" importado do Google Drive.`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao importar arquivo do Google Drive');
+    } finally {
+      setIsImportingDriveFile(false);
+      setDriveImportedFileId(null);
+    }
+  };
 
   const handleCopy = async (content: string) => { await navigator.clipboard.writeText(content); toast.success('Copiado!'); };
   const filteredScripts = scripts.filter(s => { const ms = searchQuery === '' || s.title.toLowerCase().includes(searchQuery.toLowerCase()) || s.content.toLowerCase().includes(searchQuery.toLowerCase()); const mo = filterObjection === 'all' || s.objection_type === filterObjection; const mf = filterFunnel === 'all' || s.funnel_stage === filterFunnel; return ms && mo && mf; });
@@ -388,6 +491,74 @@ export default function SalesScripts() {
 
               <TabsContent value="analyze" className="space-y-6 mt-4">
             <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4">
+              <div className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+                <div className="space-y-2 rounded-lg border bg-card p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium flex items-center gap-2"><Cloud className="w-4 h-4 text-primary" />Google Drive</p>
+                      <p className="text-xs text-muted-foreground">Conecte sua conta, escolha um arquivo e traga a transcrição para análise.</p>
+                    </div>
+                    {driveConnection?.is_active ? (
+                      <Badge variant="secondary" className="gap-1"><Link2 className="w-3 h-3" />{driveConnection.google_email}</Badge>
+                    ) : null}
+                  </div>
+
+                  {!driveConnection?.is_active ? (
+                    <Button onClick={handleConnectDrive} disabled={isConnectingDrive} className="w-full gap-2">
+                      {isConnectingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                      Conectar Google Drive
+                    </Button>
+                  ) : (
+                    <>
+                      <Input placeholder="Buscar arquivo no Drive..." value={driveSearch} onChange={e => setDriveSearch(e.target.value)} />
+                      <div className="max-h-56 overflow-y-auto rounded-md border">
+                        {loadingDriveFiles ? (
+                          <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando arquivos...</div>
+                        ) : driveFiles.length === 0 ? (
+                          <div className="p-4 text-sm text-muted-foreground">Nenhum arquivo de transcrição encontrado.</div>
+                        ) : (
+                          <div className="divide-y">
+                            {driveFiles.map(file => (
+                              <button key={file.id} type="button" className={cn("flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-muted/50", selectedDriveFile?.id === file.id && "bg-muted/60")} onClick={() => handleImportDriveFile(file)} disabled={isImportingDriveFile}>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium">{file.name}</p>
+                                  <p className="text-xs text-muted-foreground">{new Date(file.modifiedTime).toLocaleDateString('pt-BR')}</p>
+                                </div>
+                                {isImportingDriveFile && driveImportedFileId === file.id ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <FolderOpen className="w-4 h-4 shrink-0 text-muted-foreground" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-2 rounded-lg border bg-card p-4">
+                  <Label className="flex items-center gap-2"><Package className="w-4 h-4 text-primary" />Produto da análise</Label>
+                  <Select value={selectedProductId || ''} onValueChange={(value) => setSelectedProductId(value || null)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((product: any) => (
+                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">A inteligência será gerada já vinculada ao produto escolhido.</p>
+
+                  {selectedDriveFile ? (
+                    <div className="rounded-md border bg-muted/40 p-3">
+                      <p className="text-sm font-medium">Arquivo importado</p>
+                      <p className="text-xs text-muted-foreground truncate">{selectedDriveFile.name}</p>
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Você também pode continuar colando ou enviando a transcrição manualmente abaixo.</div>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label>Vincular a um card do pipeline (opcional)</Label>
                 <Popover open={dealComboOpen} onOpenChange={setDealComboOpen}>
@@ -566,7 +737,7 @@ export default function SalesScripts() {
               <Button variant="outline" size="sm" className="w-full" onClick={() => setTranscriptEntries(prev => [...prev, { id: Date.now(), text: '', file: null }])}>
                 <Plus className="w-4 h-4 mr-2" />Adicionar outra call
               </Button>
-              <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || transcriptEntries.every(e => !e.text.trim() && !e.file)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call{transcriptEntries.length > 1 ? 's' : ''}</>}</Button>
+              <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || !selectedProductId || transcriptEntries.every(e => !e.text.trim() && !e.file)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call{transcriptEntries.length > 1 ? 's' : ''}</>}</Button>
             </CardContent></Card>
             {transcriptAnalysis && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-primary" />Resultado da Análise</CardTitle></CardHeader><CardContent><MarkdownRenderer content={transcriptAnalysis} /><div className="flex gap-2 mt-4"><Button variant="outline" size="sm" onClick={() => handleCopy(transcriptAnalysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-4 h-4 mr-2" />PDF</Button></div></CardContent></Card>}
             
