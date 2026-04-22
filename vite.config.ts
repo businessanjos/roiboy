@@ -11,9 +11,16 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      {
+        find: "@supabase/supabase-js",
+        replacement: path.resolve(__dirname, "./node_modules/@supabase/supabase-js/dist/module/index.js"),
+      },
+      {
+        find: "@",
+        replacement: path.resolve(__dirname, "./src"),
+      },
+    ],
   },
   build: {
     rollupOptions: {
