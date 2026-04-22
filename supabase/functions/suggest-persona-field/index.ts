@@ -163,13 +163,15 @@ REGRAS CRÍTICAS:
 - Seja ESPECÍFICO ao mercado de estética avançada (médicas, biomédicas, dentistas com foco em HOF, esteticistas).
 - NUNCA invente dados que contradigam os dados reais fornecidos.
 - Se receber dados reais de clientes, BASEIE sua resposta neles.
+- Se receber dados de PERFORMANCE REAL DO INSTAGRAM, use os formatos, hashtags e temas que JÁ funcionam para inferir o que ressoa com o público.
+- Para campos como "vocabulary", "channels", "emotional_triggers" e "pains", priorize sinais vindos das captions e temas dos posts de melhor engajamento.
 - Para arrays, retorne itens curtos e diretos (1 linha cada).
 - Para texto, seja conciso (máx 3 frases).
 
 Descrição do campo: ${fieldConfig.description}
 Formato de retorno: ${fieldConfig.format === "array" ? "Array de strings (use a tool)" : "Texto único (use a tool)"}`;
 
-    const userPrompt = `Sugira o melhor conteúdo possível para o campo "${fieldConfig.label}" da Persona.${clientsContext}${personaContext}
+    const userPrompt = `Sugira o melhor conteúdo possível para o campo "${fieldConfig.label}" da Persona.${clientsContext}${instagramContext}${personaContext}
 
 Retorne APENAS o conteúdo do campo, no formato correto.`;
 
