@@ -10,6 +10,8 @@ import { Sparkles, Save, Loader2, Plus, X, Target, Brain, Heart, MessageSquare, 
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { PersonaAbCompareDialog } from "./PersonaAbCompareDialog";
+import { PersonaAbStatsPanel } from "./PersonaAbStatsPanel";
 
 interface FieldDef {
   key: PersonaField;
