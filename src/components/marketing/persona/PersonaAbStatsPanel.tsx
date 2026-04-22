@@ -3,8 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ChevronDown, ChevronUp, FlaskConical, ThumbsUp, ThumbsDown, Trophy } from "lucide-react";
+import { ChevronDown, ChevronUp, FlaskConical, ThumbsUp, ThumbsDown, Trophy, Sigma, CheckCircle2, AlertCircle, MinusCircle } from "lucide-react";
 import { usePersonaAbStats } from "@/hooks/usePersonaAbStats";
+import { twoProportionZTest, formatP, formatPct } from "@/lib/stats/proportionTest";
 
 export function PersonaAbStatsPanel() {
   const [open, setOpen] = useState(false);
@@ -12,7 +13,9 @@ export function PersonaAbStatsPanel() {
 
   if (isLoading || !stats || stats.total === 0) return null;
 
-  const winner = stats.acceptRateA > stats.acceptRateB ? "A" : stats.acceptRateB > stats.acceptRateA ? "B" : null;
+  // Teste estatístico (z-test de duas proporções) sobre taxa de escolha A vs B
+  const test = twoProportionZTest(stats.chosenA, stats.decided, stats.chosenB, stats.decided);
+  const winner = test.winner ?? (stats.acceptRateA > stats.acceptRateB ? "A" : stats.acceptRateB > stats.acceptRateA ? "B" : null);
 
   return (
     <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 via-background to-background">
