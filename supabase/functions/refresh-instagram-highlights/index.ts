@@ -25,19 +25,9 @@ function tally(values: (string | null | undefined)[]) {
     .map(([label, v]) => ({ label, count: v.count }));
 }
 
-async function refreshForAccount(supabase: any, accountId: string, source: "cron" | "manual") {
-  const ctx = await fetchInstagramContext(supabase, accountId);
-  if (!ctx?.profile) return { accountId, skipped: true, reason: "no_active_profile" };
-
-  // Buscar profile_id real (fetchInstagramContext não devolve)
-  const { data: profile } = await supabase
-    .from("instagram_profiles")
-    .select("id")
-    .eq("account_id", accountId)
-    .eq("username", ctx.profile.username)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!profile?.id) return { accountId, skipped: true, reason: "profile_not_found" };
+async function refreshForProfile(supabase: any, accountId: string, profileId: string, source: "cron" | "manual") {
+  const ctx = await fetchInstagramContext(supabase, accountId, profileId);
+  if (!ctx?.profile) return { accountId, profileId, skipped: true, reason: "no_active_profile" };
 
   const top = (ctx.topPosts || []).slice(0, 20);
   const formats = tally(top.map((p) => p.post_type)).map((f) => ({
@@ -55,7 +45,7 @@ async function refreshForAccount(supabase: any, accountId: string, source: "cron
 
   const payload = {
     account_id: accountId,
-    profile_id: profile.id,
+    profile_id: profileId,
     username: ctx.profile.username,
     formats,
     themes,
@@ -69,8 +59,8 @@ async function refreshForAccount(supabase: any, accountId: string, source: "cron
     .from("instagram_highlights_cache")
     .upsert(payload, { onConflict: "profile_id" });
 
-  if (error) return { accountId, error: error.message };
-  return { accountId, ok: true, posts: top.length };
+  if (error) return { accountId, profileId, error: error.message };
+  return { accountId, profileId, username: ctx.profile.username, ok: true, posts: top.length };
 }
 
 Deno.serve(async (req) => {
@@ -89,28 +79,45 @@ Deno.serve(async (req) => {
   const source: "cron" | "manual" = body?.source === "manual" ? "manual" : "cron";
 
   try {
-    let accountIds: string[] = [];
+    // Resolve a lista de (accountId, profileId) a processar.
+    // Estratégia:
+    // 1) Se profileId vier no body → processa só esse perfil.
+    // 2) Se accountId vier no body → processa TODOS os perfis ativos dessa conta.
+    // 3) Caso contrário (cron) → processa TODOS os perfis ativos de TODAS as contas.
+    let targets: Array<{ accountId: string; profileId: string }> = [];
 
-    if (body?.accountId) {
-      accountIds = [body.accountId];
-    } else if (body?.profileId) {
+    if (body?.profileId) {
       const { data } = await supabase
         .from("instagram_profiles")
-        .select("account_id")
+        .select("id, account_id")
         .eq("id", body.profileId)
         .maybeSingle();
-      if (data?.account_id) accountIds = [data.account_id];
-    } else {
-      // Todos os accounts com pelo menos um perfil ativo
+      if (data?.id && data.account_id) {
+        targets = [{ accountId: data.account_id, profileId: data.id }];
+      }
+    } else if (body?.accountId) {
       const { data } = await supabase
         .from("instagram_profiles")
-        .select("account_id")
+        .select("id, account_id")
+        .eq("account_id", body.accountId)
         .eq("is_active", true);
-      accountIds = Array.from(new Set((data || []).map((r: any) => r.account_id))).filter(Boolean);
+      targets = (data || []).map((r: any) => ({ accountId: r.account_id, profileId: r.id }));
+    } else {
+      const { data } = await supabase
+        .from("instagram_profiles")
+        .select("id, account_id")
+        .eq("is_active", true);
+      targets = (data || []).map((r: any) => ({ accountId: r.account_id, profileId: r.id }));
     }
 
     const results = await Promise.all(
-      accountIds.map((id) => refreshForAccount(supabase, id, source).catch((e) => ({ accountId: id, error: String(e) }))),
+      targets.map((t) =>
+        refreshForProfile(supabase, t.accountId, t.profileId, source).catch((e) => ({
+          accountId: t.accountId,
+          profileId: t.profileId,
+          error: String(e),
+        })),
+      ),
     );
 
     return new Response(
