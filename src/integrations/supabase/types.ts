@@ -11620,40 +11620,58 @@ export type Database = {
       sales_call_analyses: {
         Row: {
           account_id: string
+          ai_score: number | null
           analysis: string
+          call_date: string | null
           call_outcome: string | null
           client_id: string | null
           created_at: string
           deal_id: string | null
+          extracted_lead_name: string | null
+          extracted_seller_name: string | null
           id: string
           outcome_notes: string | null
           seller_user_id: string | null
+          source_filename: string | null
+          source_hash: string | null
           transcript_preview: string | null
           user_id: string
         }
         Insert: {
           account_id: string
+          ai_score?: number | null
           analysis: string
+          call_date?: string | null
           call_outcome?: string | null
           client_id?: string | null
           created_at?: string
           deal_id?: string | null
+          extracted_lead_name?: string | null
+          extracted_seller_name?: string | null
           id?: string
           outcome_notes?: string | null
           seller_user_id?: string | null
+          source_filename?: string | null
+          source_hash?: string | null
           transcript_preview?: string | null
           user_id: string
         }
         Update: {
           account_id?: string
+          ai_score?: number | null
           analysis?: string
+          call_date?: string | null
           call_outcome?: string | null
           client_id?: string | null
           created_at?: string
           deal_id?: string | null
+          extracted_lead_name?: string | null
+          extracted_seller_name?: string | null
           id?: string
           outcome_notes?: string | null
           seller_user_id?: string | null
+          source_filename?: string | null
+          source_hash?: string | null
           transcript_preview?: string | null
           user_id?: string
         }
