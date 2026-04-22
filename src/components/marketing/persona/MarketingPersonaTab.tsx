@@ -18,6 +18,10 @@ import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { canUseMarketingPersonaAiSuggest } from "@/lib/featureFlags";
 import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestionReviews";
+import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
+import { useMarketingReferences } from "@/hooks/useMarketingReferences";
+import { buildMarketingConsistencyReport } from "@/lib/marketingConsistency";
+import { MarketingConsistencyAlertDialog } from "@/components/marketing/ai/MarketingConsistencyAlertDialog";
 
 function formatHighlight(it: HighlightItem | string, prefix = ""): string {
   if (typeof it === "string") return it;
@@ -111,6 +115,8 @@ const ALL_FIELDS = SECTIONS.flatMap((s) => s.fields.map((f) => f.key));
 
 export function MarketingPersonaTab() {
   const { persona, isLoading, upsertPersona, suggestField, submitAbFeedback, evolvePersona } = useMarketingPersona();
+  const { voice } = useMarketingBrandVoice();
+  const { references } = useMarketingReferences();
   const { selectedProfile } = useContentProfile();
   const { currentUser } = useCurrentUser();
   const { reviews, recordReview } = useMarketingAiSuggestionReviews("evolve-marketing-persona");
@@ -143,7 +149,9 @@ export function MarketingPersonaTab() {
   }>({ open: false, field: null, fieldLabel: "", variantA: "", variantB: "", abTestId: null, hasHighlights: false });
   // Mapa field -> { abTestId, chosenValue } para detectar save implícito
   const [pendingAbApplied, setPendingAbApplied] = useState<Record<string, { abTestId: string; value: any }>>({});
+  const [pendingSave, setPendingSave] = useState<Partial<MarketingPersona> | null>(null);
   const evolutionReviewStats = useMemo(() => ({ accepted: reviews.filter((item) => item.decision === 'accepted').length, edited: reviews.filter((item) => item.decision === 'edited').length, rejected: reviews.filter((item) => item.decision === 'rejected').length }), [reviews]);
+  const consistencyReport = useMemo(() => buildMarketingConsistencyReport({ persona: draft, voice, references }), [draft, voice, references]);
 
   const applyEvolutionSuggestions = () => {
     const updates = evolvePersona.data?.suggestedUpdates;
@@ -282,8 +290,8 @@ export function MarketingPersonaTab() {
     } catch (_) {}
   };
 
-  const handleSave = async () => {
-    await upsertPersona.mutateAsync(draft);
+  const persistPersona = async (payload: Partial<MarketingPersona>) => {
+    await upsertPersona.mutateAsync(payload);
     setIsDirty(false);
     toast.success("Persona salva");
 
@@ -300,6 +308,16 @@ export function MarketingPersonaTab() {
       } catch (_) {}
     }
     setPendingAbApplied({});
+  };
+
+  const handleSave = async () => {
+    const report = buildMarketingConsistencyReport({ persona: draft, voice, references });
+    if (report.blockingIssues.length > 0) {
+      setPendingSave(draft);
+      return;
+    }
+
+    await persistPersona(draft);
   };
 
   // Cálculo de completude
@@ -358,6 +376,18 @@ export function MarketingPersonaTab() {
           </div>
 
           <div className="mt-4 space-y-2">
+            {consistencyReport.issues.length > 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Validação automática ativa</AlertTitle>
+                <AlertDescription>
+                  {consistencyReport.blockingIssues.length > 0
+                    ? `Encontramos ${consistencyReport.blockingIssues.length} inconsistência(s) entre Persona, Tom de Voz e Referências antes de salvar.`
+                    : "Persona coerente com os outros ativos, com apenas ajustes leves sugeridos."}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Completude da Persona</span>
               <span className="font-semibold">{completeness}% ({filledCount}/{ALL_FIELDS.length} campos)</span>
@@ -507,6 +537,20 @@ export function MarketingPersonaTab() {
         hasHighlights={abDialog.hasHighlights}
         onChoose={handleAbChoose}
         onFeedback={handleAbFeedback}
+      />
+
+      <MarketingConsistencyAlertDialog
+        open={!!pendingSave}
+        onOpenChange={(open) => { if (!open) setPendingSave(null); }}
+        title="Reveja a persona antes de aplicar"
+        description="Detectamos conflitos com o tom de voz ou com as referências já salvas."
+        report={buildMarketingConsistencyReport({ persona: pendingSave, voice, references })}
+        confirmLabel="Salvar mesmo assim"
+        onConfirm={() => {
+          if (!pendingSave) return;
+          void persistPersona(pendingSave);
+          setPendingSave(null);
+        }}
       />
     </div>
   );
