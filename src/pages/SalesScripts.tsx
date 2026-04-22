@@ -214,6 +214,45 @@ export default function SalesScripts() {
     enabled: !!accountId,
   });
 
+  const { data: products = [] } = useQuery({
+    queryKey: ['products-for-call-analysis', accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('products').select('id, name').eq('account_id', accountId!).eq('is_active', true).order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!accountId,
+  });
+
+  const { data: driveConnection, refetch: refetchDriveConnection } = useQuery({
+    queryKey: ['google-drive-call-connection', currentUser?.id, accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('google_drive_connections')
+        .select('id, google_email, is_active')
+        .eq('user_id', currentUser!.id)
+        .eq('account_id', accountId!)
+        .order('connected_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as GoogleDriveConnection | null) ?? null;
+    },
+    enabled: !!currentUser?.id && !!accountId,
+  });
+
+  const { data: driveFiles = [], isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
+    queryKey: ['google-drive-call-files', currentUser?.id, driveSearch, driveConnection?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('gdrive-list-call-files', {
+        body: { search: driveSearch || undefined },
+      });
+      if (error) throw error;
+      return (data?.files || []) as DriveCallFile[];
+    },
+    enabled: !!driveConnection?.is_active,
+  });
+
   const { data: scripts = [], isLoading: loadingScripts } = useQuery({
     queryKey: ['sales-scripts', accountId],
     queryFn: async () => {
