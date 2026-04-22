@@ -225,12 +225,12 @@ export default function SalesScripts() {
   });
 
   const { data: driveConnection, refetch: refetchDriveConnection } = useQuery({
-    queryKey: ['google-drive-call-connection', currentUser?.id, accountId],
+    queryKey: ['google-drive-call-connection', currentUser?.auth_user_id, accountId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('google_drive_connections')
         .select('id, google_email, is_active')
-        .eq('user_id', currentUser!.id)
+        .eq('user_id', currentUser!.auth_user_id!)
         .eq('account_id', accountId!)
         .order('connected_at', { ascending: false })
         .limit(1)
@@ -238,11 +238,11 @@ export default function SalesScripts() {
       if (error) throw error;
       return (data as GoogleDriveConnection | null) ?? null;
     },
-    enabled: !!currentUser?.id && !!accountId,
+    enabled: !!currentUser?.auth_user_id && !!accountId,
   });
 
   const { data: driveFiles = [], isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
-    queryKey: ['google-drive-call-files', currentUser?.id, driveSearch, driveConnection?.id],
+    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveSearch, driveConnection?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('gdrive-list-call-files', {
         body: { search: driveSearch || undefined },
