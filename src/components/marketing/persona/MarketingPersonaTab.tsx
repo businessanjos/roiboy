@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Save, Loader2, Plus, X, Target, Brain, Heart, MessageSquare, Database } from "lucide-react";
+import { Sparkles, Save, Loader2, Plus, X, Target, Brain, Heart, MessageSquare, Database, Instagram, TrendingUp, Hash, Film } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
@@ -90,6 +90,13 @@ export function MarketingPersonaTab() {
   const [arrayInputs, setArrayInputs] = useState<Record<string, string>>({});
   const [suggestingField, setSuggestingField] = useState<PersonaField | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [highlights, setHighlights] = useState<{
+    formats: string[];
+    themes: string[];
+    hashtags: string[];
+    instagramUsername?: string | null;
+    updatedAt?: number;
+  } | null>(null);
 
   useEffect(() => {
     if (persona) setDraft(persona);
@@ -117,16 +124,32 @@ export function MarketingPersonaTab() {
     setSuggestingField(key);
     try {
       const res = await suggestField.mutateAsync(key);
+
+      // Atualiza painel de destaques se a IA retornou
+      if (res.instagramHighlights && (res.instagramHighlights.formats?.length || res.instagramHighlights.themes?.length || res.instagramHighlights.hashtags?.length)) {
+        setHighlights({
+          formats: res.instagramHighlights.formats || [],
+          themes: res.instagramHighlights.themes || [],
+          hashtags: res.instagramHighlights.hashtags || [],
+          instagramUsername: res.instagramUsername,
+          updatedAt: Date.now(),
+        });
+      }
+
+      const basedOnParts: string[] = [];
+      if (res.basedOnRealData) basedOnParts.push(`${res.clientsAnalyzed} clientes`);
+      if (res.basedOnInstagram && res.instagramUsername) basedOnParts.push(`@${res.instagramUsername}`);
+      const basedOnLabel = basedOnParts.length ? ` (baseado em ${basedOnParts.join(" + ")})` : "";
+
       if (isArrayField(key)) {
         const items = (res.suggestion as string[]) || [];
-        // Mescla sem duplicar
         const current = (draft[key] as string[]) || [];
         const merged = Array.from(new Set([...current, ...items]));
         setField(key, merged);
-        toast.success(`${items.length} sugestões adicionadas${res.basedOnRealData ? ` (baseado em ${res.clientsAnalyzed} clientes reais)` : ""}`);
+        toast.success(`${items.length} sugestões adicionadas${basedOnLabel}`);
       } else {
         setField(key, res.suggestion as string);
-        toast.success(`Sugestão aplicada${res.basedOnRealData ? ` (baseado em ${res.clientsAnalyzed} clientes reais)` : ""}`);
+        toast.success(`Sugestão aplicada${basedOnLabel}`);
       }
     } catch (e: any) {
       // toast já tratado no hook
@@ -198,6 +221,36 @@ export function MarketingPersonaTab() {
           </div>
         </CardHeader>
       </Card>
+
+      {/* Destaques do Instagram (atualizados a cada Sugestão da IA) */}
+      {highlights && (highlights.formats.length > 0 || highlights.themes.length > 0 || highlights.hashtags.length > 0) && (
+        <Card className="border-pink-500/30 bg-gradient-to-br from-pink-500/5 via-background to-background">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Instagram className="h-5 w-5 text-pink-500" />
+                  Destaques que a IA usou como base
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Top 3 formatos, temas e hashtags com maior engajamento — extraídos automaticamente dos posts recentes.
+                </CardDescription>
+              </div>
+              {highlights.instagramUsername && (
+                <Badge variant="outline" className="border-pink-500/40 text-pink-600 dark:text-pink-400 gap-1.5">
+                  <Instagram className="h-3 w-3" />
+                  baseado em @{highlights.instagramUsername}
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-3">
+            <HighlightGroup icon={Film} label="Top 3 Formatos" items={highlights.formats} accent="text-blue-500" />
+            <HighlightGroup icon={TrendingUp} label="Top 3 Temas" items={highlights.themes} accent="text-amber-500" />
+            <HighlightGroup icon={Hash} label="Top 3 Hashtags" items={highlights.hashtags} accent="text-pink-500" />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sections */}
       {SECTIONS.map((section) => {
@@ -326,6 +379,28 @@ function PersonaFieldEditor({ field, value, inputValue, onInputChange, onChange,
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
         />
+      )}
+    </div>
+  );
+}
+
+function HighlightGroup({ icon: Icon, label, items, accent }: { icon: any; label: string; items: string[]; accent: string }) {
+  return (
+    <div className="rounded-lg border bg-card/50 p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className={`h-4 w-4 ${accent}`} />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+      </div>
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((it, i) => (
+            <Badge key={i} variant="secondary" className="text-xs font-normal">
+              {it}
+            </Badge>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground italic">Sem dados suficientes</p>
       )}
     </div>
   );

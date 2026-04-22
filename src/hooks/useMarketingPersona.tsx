@@ -107,7 +107,15 @@ export function useMarketingPersona() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return data as { suggestion: string | string[]; format: "text" | "array"; clientsAnalyzed: number; basedOnRealData: boolean };
+      return data as {
+        suggestion: string | string[];
+        format: "text" | "array";
+        clientsAnalyzed: number;
+        basedOnRealData: boolean;
+        instagramUsername?: string | null;
+        basedOnInstagram?: boolean;
+        instagramHighlights?: { formats: string[]; themes: string[]; hashtags: string[] };
+      };
     },
     onError: (e: any) => toast.error(e.message),
   });
