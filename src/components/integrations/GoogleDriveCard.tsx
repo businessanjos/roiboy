@@ -122,7 +122,7 @@ export function GoogleDriveCard() {
                     <Loader2 className="h-3 w-3 animate-spin" /> Carregando
                   </Badge>
                 ) : isConnected ? (
-                  <Badge className="gap-1 bg-emerald-500/15 text-emerald-600 border-emerald-500/20">
+                  <Badge className="gap-1" variant="secondary">
                     <CheckCircle2 className="h-3 w-3" /> Conectado
                   </Badge>
                 ) : (
