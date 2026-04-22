@@ -50,6 +50,21 @@ export function isArrayField(field: PersonaField): boolean {
   return ARRAY_FIELDS.includes(field);
 }
 
+export interface PersonaImprovementRecommendation {
+  title: string;
+  detail: string;
+  priority: "alta" | "média" | "baixa";
+}
+
+export interface PersonaEvolutionResponse {
+  summary: string;
+  completionScore: number;
+  strengths: string[];
+  gaps: string[];
+  recommendations: PersonaImprovementRecommendation[];
+  suggestedUpdates: Partial<Record<PersonaField, string | string[]>>;
+}
+
 export function useMarketingPersona() {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
@@ -143,6 +158,23 @@ export function useMarketingPersona() {
     },
   });
 
-  return { persona, isLoading, upsertPersona, suggestField, submitAbFeedback };
+  const evolvePersona = useMutation({
+    mutationFn: async (input: { profileId?: string | null; profilePlatform?: string | null; profileUsername?: string | null; profileDisplayName?: string | null }) => {
+      if (!accountId) throw new Error("Sem conta");
+      const { data, error } = await supabase.functions.invoke("evolve-marketing-persona", {
+        body: {
+          accountId,
+          currentPersona: persona,
+          ...input,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as PersonaEvolutionResponse;
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return { persona, isLoading, upsertPersona, suggestField, submitAbFeedback, evolvePersona };
 }
 
