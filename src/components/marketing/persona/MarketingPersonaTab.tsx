@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { PersonaAbCompareDialog } from "./PersonaAbCompareDialog";
 import { PersonaAbStatsPanel } from "./PersonaAbStatsPanel";
+import { useContentProfile } from "@/contexts/ContentProfileContext";
 
 function formatHighlight(it: HighlightItem | string, prefix = ""): string {
   if (typeof it === "string") return it;
@@ -106,6 +107,10 @@ const ALL_FIELDS = SECTIONS.flatMap((s) => s.fields.map((f) => f.key));
 
 export function MarketingPersonaTab() {
   const { persona, isLoading, upsertPersona, suggestField, submitAbFeedback } = useMarketingPersona();
+  const { selectedProfile } = useContentProfile();
+  // Só faz sentido usar perfil ativo quando ele é Instagram (única plataforma analisada hoje pela Persona)
+  const activeInstagramProfileId = selectedProfile?.platform === "instagram" ? selectedProfile.id : null;
+  const activeInstagramUsername = selectedProfile?.platform === "instagram" ? selectedProfile.username : null;
 
   const [draft, setDraft] = useState<Partial<MarketingPersona>>({});
   const [arrayInputs, setArrayInputs] = useState<Record<string, string>>({});
@@ -165,7 +170,7 @@ export function MarketingPersonaTab() {
   const handleSuggest = async (key: PersonaField) => {
     setSuggestingField(key);
     try {
-      const res = await suggestField.mutateAsync(key);
+      const res = await suggestField.mutateAsync({ field: key, instagramProfileId: activeInstagramProfileId });
 
       // Atualiza painel de destaques
       if (res.instagramHighlights && (res.instagramHighlights.formats?.length || res.instagramHighlights.themes?.length || res.instagramHighlights.hashtags?.length)) {
@@ -317,6 +322,8 @@ export function MarketingPersonaTab() {
       {/* Destaques do Instagram (cache atualizado por cron diário + fallback ao vivo) */}
       <InstagramHighlightsPanel
         sessionHighlights={highlights}
+        profileId={activeInstagramProfileId}
+        fallbackUsername={activeInstagramUsername}
       />
 
 
