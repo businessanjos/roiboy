@@ -18,7 +18,6 @@ import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { canUseMarketingPersonaAiSuggest } from "@/lib/featureFlags";
 import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestionReviews";
-import { AiSuggestionReviewDialog } from "@/components/marketing/ai/AiSuggestionReviewDialog";
 
 function formatHighlight(it: HighlightItem | string, prefix = ""): string {
   if (typeof it === "string") return it;
@@ -508,17 +507,6 @@ export function MarketingPersonaTab() {
         hasHighlights={abDialog.hasHighlights}
         onChoose={handleAbChoose}
         onFeedback={handleAbFeedback}
-      />
-
-      <AiSuggestionReviewDialog
-        open={false}
-        onOpenChange={() => undefined}
-        title=""
-        fields={[]}
-        initialValue={{}}
-        onAcceptOriginal={() => undefined}
-        onSaveEdits={() => undefined}
-        onReject={() => undefined}
       />
     </div>
   );
