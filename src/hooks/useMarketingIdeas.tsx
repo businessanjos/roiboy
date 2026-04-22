@@ -62,16 +62,47 @@ export function useMarketingIdeas() {
         .from("marketing_ideas")
         .select(`
           *,
-          assignees:marketing_idea_assignees(id, user_id, role, user:users!marketing_idea_assignees_user_id_fkey(name, avatar_url)),
+          assignees:marketing_idea_assignees(id, user_id, role),
           checklist:marketing_idea_checklist(id, title, is_completed, position)
         `)
         .eq("account_id", accountId)
         .order("position", { ascending: true })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data as any[]) as MarketingIdea[];
+
+      const rawIdeas = ((data as any[]) || []) as MarketingIdea[];
+      const assigneeIds = Array.from(
+        new Set(
+          rawIdeas.flatMap((idea) => idea.assignees?.map((assignee) => assignee.user_id) || [])
+        )
+      );
+
+      if (assigneeIds.length === 0) {
+        return rawIdeas;
+      }
+
+      const { data: usersData, error: usersError } = await supabase
+        .from("users")
+        .select("id, auth_user_id, name, avatar_url")
+        .eq("account_id", accountId)
+        .in("auth_user_id", assigneeIds);
+
+      if (usersError) throw usersError;
+
+      const usersByAuthId = new Map(
+        ((usersData as any[]) || []).map((user) => [user.auth_user_id, { name: user.name, avatar_url: user.avatar_url }])
+      );
+
+      return rawIdeas.map((idea) => ({
+        ...idea,
+        assignees: idea.assignees?.map((assignee) => ({
+          ...assignee,
+          user: usersByAuthId.get(assignee.user_id),
+        })),
+      }));
     },
     enabled: !!accountId,
+    retry: 1,
   });
 
   const createIdea = useMutation({
