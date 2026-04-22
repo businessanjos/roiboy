@@ -290,8 +290,8 @@ export function MarketingPersonaTab() {
     } catch (_) {}
   };
 
-  const handleSave = async () => {
-    await upsertPersona.mutateAsync(draft);
+  const persistPersona = async (payload: Partial<MarketingPersona>) => {
+    await upsertPersona.mutateAsync(payload);
     setIsDirty(false);
     toast.success("Persona salva");
 
@@ -308,6 +308,16 @@ export function MarketingPersonaTab() {
       } catch (_) {}
     }
     setPendingAbApplied({});
+  };
+
+  const handleSave = async () => {
+    const report = buildMarketingConsistencyReport({ persona: draft, voice, references });
+    if (report.blockingIssues.length > 0) {
+      setPendingSave(draft);
+      return;
+    }
+
+    await persistPersona(draft);
   };
 
   // Cálculo de completude
@@ -366,6 +376,18 @@ export function MarketingPersonaTab() {
           </div>
 
           <div className="mt-4 space-y-2">
+            {consistencyReport.issues.length > 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Validação automática ativa</AlertTitle>
+                <AlertDescription>
+                  {consistencyReport.blockingIssues.length > 0
+                    ? `Encontramos ${consistencyReport.blockingIssues.length} inconsistência(s) entre Persona, Tom de Voz e Referências antes de salvar.`
+                    : "Persona coerente com os outros ativos, com apenas ajustes leves sugeridos."}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Completude da Persona</span>
               <span className="font-semibold">{completeness}% ({filledCount}/{ALL_FIELDS.length} campos)</span>
@@ -515,6 +537,20 @@ export function MarketingPersonaTab() {
         hasHighlights={abDialog.hasHighlights}
         onChoose={handleAbChoose}
         onFeedback={handleAbFeedback}
+      />
+
+      <MarketingConsistencyAlertDialog
+        open={!!pendingSave}
+        onOpenChange={(open) => { if (!open) setPendingSave(null); }}
+        title="Reveja a persona antes de aplicar"
+        description="Detectamos conflitos com o tom de voz ou com as referências já salvas."
+        report={buildMarketingConsistencyReport({ persona: pendingSave, voice, references })}
+        confirmLabel="Salvar mesmo assim"
+        onConfirm={() => {
+          if (!pendingSave) return;
+          void persistPersona(pendingSave);
+          setPendingSave(null);
+        }}
       />
     </div>
   );
