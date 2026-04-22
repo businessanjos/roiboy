@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Flame, Lightbulb, Calendar as CalendarIcon, Loader2, Copy, Check } from 'lucide-react';
+import { Sparkles, Flame, Lightbulb, Calendar as CalendarIcon, Loader2, Copy, Check, BrainCircuit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useContentProfile } from '@/contexts/ContentProfileContext';
 import { useMarketingWeeklyCalendar } from '@/hooks/useMarketingWeeklyCalendar';
+import { useMarketingAiSuggestionReviews } from '@/hooks/useMarketingAiSuggestionReviews';
+import { AiSuggestionReviewDialog } from '@/components/marketing/ai/AiSuggestionReviewDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -31,9 +33,12 @@ export function DailyContentPanel() {
   const { currentUser } = useCurrentUser();
   const { selectedProfile } = useContentProfile();
   const { suggestWeeklyCalendar } = useMarketingWeeklyCalendar();
+  const { reviews, recordReview } = useMarketingAiSuggestionReviews();
   const [pauta, setPauta] = useState<PautaResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [reviewPautaIdx, setReviewPautaIdx] = useState<number | null>(null);
+  const [reviewWeekIdx, setReviewWeekIdx] = useState<number | null>(null);
 
   // Trends in alta (top 3)
   const { data: trends = [], isLoading: loadingTrends } = useQuery({
@@ -120,6 +125,15 @@ export function DailyContentPanel() {
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
+  const reviewSummary = {
+    accepted: reviews.filter((item) => item.decision === 'accepted').length,
+    edited: reviews.filter((item) => item.decision === 'edited').length,
+    rejected: reviews.filter((item) => item.decision === 'rejected').length,
+  };
+
+  const activePauta = reviewPautaIdx !== null ? pauta?.pautas[reviewPautaIdx] : null;
+  const activeWeek = reviewWeekIdx !== null ? suggestWeeklyCalendar.data?.schedule[reviewWeekIdx] : null;
+
   return (
     <div className="space-y-6">
       {/* CTA principal */}
@@ -171,6 +185,16 @@ export function DailyContentPanel() {
             {suggestWeeklyCalendar.isPending ? 'Montando semana...' : 'Gerar calendário semanal'}
           </Button>
         </CardContent>
+        <div className="px-6 pb-5">
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground space-y-2">
+            <div className="flex items-center gap-2 text-foreground"><BrainCircuit className="h-4 w-4 text-primary" /><span className="font-medium">Revisões da IA</span></div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">Aceitas: {reviewSummary.accepted}</Badge>
+              <Badge variant="outline">Editadas: {reviewSummary.edited}</Badge>
+              <Badge variant="outline">Descartadas: {reviewSummary.rejected}</Badge>
+            </div>
+          </div>
+        </div>
       </Card>
 
       {suggestWeeklyCalendar.data && (
@@ -204,6 +228,7 @@ export function DailyContentPanel() {
                       <p className="text-xs font-semibold text-muted-foreground uppercase">Por quê</p>
                       <p className="text-muted-foreground">{item.rationale}</p>
                     </div>
+                    <Button size="sm" variant="ghost" className="w-full" onClick={() => setReviewWeekIdx(idx)}>Revisar sugestão</Button>
                   </CardContent>
                 </Card>
               ))}
@@ -242,6 +267,7 @@ export function DailyContentPanel() {
                     {copiedIdx === idx ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
                     {copiedIdx === idx ? 'Copiado' : 'Copiar pauta'}
                   </Button>
+                  <Button size="sm" variant="ghost" className="w-full" onClick={() => setReviewPautaIdx(idx)}>Revisar pauta</Button>
                 </CardContent>
               </Card>
             ))}
@@ -277,6 +303,29 @@ export function DailyContentPanel() {
           items={ideias.map(i => ({ id: i.id, title: i.title, sub: i.status ?? '' }))}
         />
       </div>
+
+      <AiSuggestionReviewDialog
+        open={reviewPautaIdx !== null}
+        onOpenChange={(open) => !open && setReviewPautaIdx(null)}
+        title="Revisar pauta do dia"
+        fields={[{ key: 'titulo', label: 'Título' }, { key: 'hook', label: 'Hook', multiline: true, rows: 3 }, { key: 'cta', label: 'CTA' }, { key: 'motivo', label: 'Motivo', multiline: true, rows: 4 }]}
+        initialValue={{ titulo: activePauta?.titulo || '', hook: activePauta?.hook || '', cta: activePauta?.cta || '', motivo: activePauta?.motivo || '' }}
+        onAcceptOriginal={async (notes) => { if (!activePauta) return; await recordReview.mutateAsync({ suggestionType: 'daily-pauta', sourceFunction: 'generate-daily-pauta', sourceItemKey: activePauta.titulo, decision: 'accepted', profilePlatform: selectedProfile?.platform, profileId: selectedProfile?.id, profileUsername: selectedProfile?.username, suggestionPayload: activePauta as any, inputContext: { resumo: pauta?.resumo }, decisionNotes: notes }); setReviewPautaIdx(null); }}
+        onSaveEdits={async (value, notes) => { if (!activePauta) return; await recordReview.mutateAsync({ suggestionType: 'daily-pauta', sourceFunction: 'generate-daily-pauta', sourceItemKey: activePauta.titulo, decision: 'edited', profilePlatform: selectedProfile?.platform, profileId: selectedProfile?.id, profileUsername: selectedProfile?.username, suggestionPayload: activePauta as any, editedPayload: value as any, inputContext: { resumo: pauta?.resumo }, decisionNotes: notes }); setPauta((current) => current ? { ...current, pautas: current.pautas.map((item, index) => index === reviewPautaIdx ? { ...item, ...(value as any) } : item) } : current); setReviewPautaIdx(null); }}
+        onReject={async (_value, notes) => { if (!activePauta) return; await recordReview.mutateAsync({ suggestionType: 'daily-pauta', sourceFunction: 'generate-daily-pauta', sourceItemKey: activePauta.titulo, decision: 'rejected', profilePlatform: selectedProfile?.platform, profileId: selectedProfile?.id, profileUsername: selectedProfile?.username, suggestionPayload: activePauta as any, inputContext: { resumo: pauta?.resumo }, decisionNotes: notes }); setReviewPautaIdx(null); }}
+        isSubmitting={recordReview.isPending}
+      />
+      <AiSuggestionReviewDialog
+        open={reviewWeekIdx !== null}
+        onOpenChange={(open) => !open && setReviewWeekIdx(null)}
+        title="Revisar sugestão semanal"
+        fields={[{ key: 'title', label: 'Título' }, { key: 'hook', label: 'Hook', multiline: true, rows: 3 }, { key: 'cta', label: 'CTA' }, { key: 'rationale', label: 'Justificativa', multiline: true, rows: 4 }]}
+        initialValue={{ title: activeWeek?.title || '', hook: activeWeek?.hook || '', cta: activeWeek?.cta || '', rationale: activeWeek?.rationale || '' }}
+        onAcceptOriginal={async (notes) => { if (!activeWeek) return; await recordReview.mutateAsync({ suggestionType: 'weekly-calendar', sourceFunction: 'suggest-weekly-marketing-calendar', sourceItemKey: `${activeWeek.date}:${activeWeek.title}`, decision: 'accepted', objective: activeWeek.objective, profilePlatform: selectedProfile?.platform, profileId: selectedProfile?.id, profileUsername: selectedProfile?.username, suggestionPayload: activeWeek as any, inputContext: { summary: suggestWeeklyCalendar.data?.summary }, decisionNotes: notes }); setReviewWeekIdx(null); }}
+        onSaveEdits={async (value, notes) => { if (!activeWeek) return; await recordReview.mutateAsync({ suggestionType: 'weekly-calendar', sourceFunction: 'suggest-weekly-marketing-calendar', sourceItemKey: `${activeWeek.date}:${activeWeek.title}`, decision: 'edited', objective: activeWeek.objective, profilePlatform: selectedProfile?.platform, profileId: selectedProfile?.id, profileUsername: selectedProfile?.username, suggestionPayload: activeWeek as any, editedPayload: value as any, inputContext: { summary: suggestWeeklyCalendar.data?.summary }, decisionNotes: notes }); setReviewWeekIdx(null); }}
+        onReject={async (_value, notes) => { if (!activeWeek) return; await recordReview.mutateAsync({ suggestionType: 'weekly-calendar', sourceFunction: 'suggest-weekly-marketing-calendar', sourceItemKey: `${activeWeek.date}:${activeWeek.title}`, decision: 'rejected', objective: activeWeek.objective, profilePlatform: selectedProfile?.platform, profileId: selectedProfile?.id, profileUsername: selectedProfile?.username, suggestionPayload: activeWeek as any, inputContext: { summary: suggestWeeklyCalendar.data?.summary }, decisionNotes: notes }); setReviewWeekIdx(null); }}
+        isSubmitting={recordReview.isPending}
+      />
     </div>
   );
 }
