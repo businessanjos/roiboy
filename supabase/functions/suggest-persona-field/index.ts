@@ -272,6 +272,7 @@ Retorne APENAS o conteúdo do campo, no formato correto.`;
       basedOnRealData: clientsAnalyzed > 0,
       instagramUsername,
       basedOnInstagram: !!instagramUsername,
+      instagramHighlights: topHighlights,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
