@@ -34,6 +34,8 @@ export function GoogleDriveCard() {
     const { data, error } = await supabase
       .from("google_drive_connections")
       .select("id, google_email, connected_at, last_sync_at, last_sync_status, last_sync_error, is_active, scope")
+      .order("connected_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) {
@@ -76,7 +78,7 @@ export function GoogleDriveCard() {
     try {
       const returnTo = `${window.location.pathname}${window.location.search}`;
       const { data, error } = await supabase.functions.invoke("gdrive-oauth-init", {
-        body: { return_to: returnTo },
+        body: { return_to: returnTo, origin: window.location.origin },
       });
       if (error) throw error;
       if (!data?.authorize_url) throw new Error("URL de autorização não recebida.");
