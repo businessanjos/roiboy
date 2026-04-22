@@ -22,6 +22,23 @@ export interface GenerateCopyResponse {
   record: CopyHistoryItem;
 }
 
+export interface MarketingCopyReviewIssue {
+  severity: "high" | "medium" | "low";
+  title: string;
+  detail: string;
+  suggestion: string;
+}
+
+export interface MarketingCopyReviewResponse {
+  summary: string;
+  overallScore: number;
+  readyToPublish: boolean;
+  strengths: string[];
+  issues: MarketingCopyReviewIssue[];
+  improvedVersion: string;
+  publishChecklist: string[];
+}
+
 export function useMarketingCopy() {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
@@ -72,6 +89,31 @@ export function useMarketingCopy() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const reviewCopy = useMutation({
+    mutationFn: async (input: {
+      text: string;
+      copyType: CopyType;
+      objective?: CopyObjective;
+      brief?: string;
+      format?: string;
+      platform?: string;
+      hook?: string;
+      profileId?: string;
+      profilePlatform?: string;
+      profileUsername?: string;
+      profileDisplayName?: string;
+    }) => {
+      if (!accountId) throw new Error("Sem conta");
+      const { data, error } = await supabase.functions.invoke("review-marketing-copy", {
+        body: { accountId, ...input },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as MarketingCopyReviewResponse;
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const toggleFavorite = useMutation({
     mutationFn: async ({ id, is_favorite }: { id: string; is_favorite: boolean }) => {
       const { error } = await supabase.from("marketing_copy_history").update({ is_favorite }).eq("id", id);
@@ -91,5 +133,5 @@ export function useMarketingCopy() {
     },
   });
 
-  return { history, isLoading, generateCopy, toggleFavorite, deleteCopy };
+  return { history, isLoading, generateCopy, reviewCopy, toggleFavorite, deleteCopy };
 }
