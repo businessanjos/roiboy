@@ -115,10 +115,32 @@ export function useMarketingPersona() {
         instagramUsername?: string | null;
         basedOnInstagram?: boolean;
         instagramHighlights?: { formats: string[]; themes: string[]; hashtags: string[] };
+        abTestId?: string | null;
+        variantA?: string | string[];
+        variantB?: string | string[];
+        hasHighlights?: boolean;
       };
     },
     onError: (e: any) => toast.error(e.message),
   });
 
-  return { persona, isLoading, upsertPersona, suggestField };
+  const submitAbFeedback = useMutation({
+    mutationFn: async (input: {
+      abTestId: string;
+      action: "choose" | "feedback" | "save";
+      variant?: "a" | "b" | "none";
+      feedback?: "up" | "down";
+      value?: any;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("persona-ab-feedback", {
+        body: input,
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+  });
+
+  return { persona, isLoading, upsertPersona, suggestField, submitAbFeedback };
 }
+

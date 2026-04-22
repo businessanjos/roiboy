@@ -9229,6 +9229,80 @@ export type Database = {
           },
         ]
       }
+      marketing_persona_ab_tests: {
+        Row: {
+          account_id: string
+          chosen_variant: string | null
+          clients_analyzed: number | null
+          created_at: string
+          decided_at: string | null
+          explicit_feedback_a: string | null
+          explicit_feedback_b: string | null
+          field: string
+          field_format: string
+          final_value: Json | null
+          highlights_snapshot: Json | null
+          id: string
+          instagram_username: string | null
+          saved_at: string | null
+          saved_without_edit: boolean | null
+          user_id: string | null
+          variant_a_has_highlights: boolean
+          variant_a_suggestion: Json | null
+          variant_b_suggestion: Json | null
+        }
+        Insert: {
+          account_id: string
+          chosen_variant?: string | null
+          clients_analyzed?: number | null
+          created_at?: string
+          decided_at?: string | null
+          explicit_feedback_a?: string | null
+          explicit_feedback_b?: string | null
+          field: string
+          field_format: string
+          final_value?: Json | null
+          highlights_snapshot?: Json | null
+          id?: string
+          instagram_username?: string | null
+          saved_at?: string | null
+          saved_without_edit?: boolean | null
+          user_id?: string | null
+          variant_a_has_highlights?: boolean
+          variant_a_suggestion?: Json | null
+          variant_b_suggestion?: Json | null
+        }
+        Update: {
+          account_id?: string
+          chosen_variant?: string | null
+          clients_analyzed?: number | null
+          created_at?: string
+          decided_at?: string | null
+          explicit_feedback_a?: string | null
+          explicit_feedback_b?: string | null
+          field?: string
+          field_format?: string
+          final_value?: Json | null
+          highlights_snapshot?: Json | null
+          id?: string
+          instagram_username?: string | null
+          saved_at?: string | null
+          saved_without_edit?: boolean | null
+          user_id?: string | null
+          variant_a_has_highlights?: boolean
+          variant_a_suggestion?: Json | null
+          variant_b_suggestion?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_persona_ab_tests_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_personas: {
         Row: {
           account_id: string

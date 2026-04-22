@@ -181,11 +181,12 @@ Deno.serve(async (req) => {
 
     const hasHighlights = topHighlights.formats.length + topHighlights.themes.length + topHighlights.hashtags.length > 0;
 
-    const systemPrompt = `Você é um estrategista de marketing sênior especializado no MERCADO DE ESTÉTICA brasileiro.
+    // ============== Builders de prompt ==============
+    const buildSystemPrompt = (withHighlights: boolean) => `Você é um estrategista de marketing sênior especializado no MERCADO DE ESTÉTICA brasileiro.
 
 Sua missão é sugerir conteúdo PROFUNDO, ESPECÍFICO e ACIONÁVEL para o campo "${fieldConfig.label}" da Persona do cliente.
 
-=== HIERARQUIA DE PRIORIDADE DAS FONTES (OBRIGATÓRIA) ===
+${withHighlights ? `=== HIERARQUIA DE PRIORIDADE DAS FONTES (OBRIGATÓRIA) ===
 Quando houver conflito ou escolha entre sinais, siga esta ordem RÍGIDA — nunca inverta:
 
 1. 🥇 DESTAQUES DO INSTAGRAM (Top 3 formatos, temas e hashtags) — PESO MÁXIMO.
@@ -198,32 +199,31 @@ Quando houver conflito ou escolha entre sinais, siga esta ordem RÍGIDA — nunc
 
 2. 🥈 DADOS REAIS DE CLIENTES (CRM Rykas + Eternum) — peso médio.
    Use para grounding demográfico/firmográfico (profissão, faturamento, localização, segmento).
-   NÃO devem sobrescrever destaques quando o campo é psicográfico ou de linguagem.
 
 3. 🥉 DIAGNÓSTICOS (dores/expectativas declaradas) — peso de apoio.
-   Complementam dores e desejos, mas só quando NÃO houver destaque relevante para o tema.
 
 4. 📚 Conhecimento geral do nicho — fallback apenas se nenhum dado real existir.
 
-REGRAS CRÍTICAS:
+` : `Use os dados reais de clientes (CRM) e diagnósticos como base principal.
+`}REGRAS CRÍTICAS:
 - Use linguagem REAL do nicho, não clichês de marketing.
 - Seja ESPECÍFICO ao mercado de estética avançada (médicas, biomédicas, dentistas com foco em HOF, esteticistas).
 - NUNCA invente dados que contradigam os dados reais fornecidos.
-- ${hasHighlights ? "HÁ destaques do Instagram disponíveis — eles DEVEM ser a espinha dorsal da sugestão." : "Sem destaques do Instagram — apoie-se em CRM + diagnósticos."}
 - Para arrays, retorne itens curtos e diretos (1 linha cada).
 - Para texto, seja conciso (máx 3 frases).
 
 Descrição do campo: ${fieldConfig.description}
 Formato de retorno: ${fieldConfig.format === "array" ? "Array de strings (use a tool)" : "Texto único (use a tool)"}`;
 
-    const userPrompt = `Sugira o melhor conteúdo possível para o campo "${fieldConfig.label}" da Persona.
-
-⚠️ LEMBRETE DE PRIORIDADE: Se houver bloco "DESTAQUES" abaixo, ele tem PESO MÁXIMO sobre CRM e diagnósticos. Ancore a sugestão neles primeiro, depois enriqueça com os demais.
-${clientsContext}${instagramContext}${personaContext}
+    const buildUserPrompt = (withHighlights: boolean) => {
+      const igBlock = withHighlights ? instagramContext : "";
+      return `Sugira o melhor conteúdo possível para o campo "${fieldConfig.label}" da Persona.${withHighlights && hasHighlights ? "\n\n⚠️ LEMBRETE: o bloco DESTAQUES tem PESO MÁXIMO. Ancore a sugestão neles primeiro." : ""}
+${clientsContext}${igBlock}${personaContext}
 
 Retorne APENAS o conteúdo do campo, no formato correto.`;
+    };
 
-    // 6) Chamar Lovable AI com tool calling para garantir formato
+    // 6) Tool schema
     const tools = [{
       type: "function",
       function: {
@@ -231,71 +231,129 @@ Retorne APENAS o conteúdo do campo, no formato correto.`;
         description: `Retorna sugestão para o campo ${fieldConfig.label}`,
         parameters: fieldConfig.format === "array" ? {
           type: "object",
-          properties: {
-            items: { type: "array", items: { type: "string" }, description: "Lista de itens sugeridos" }
-          },
+          properties: { items: { type: "array", items: { type: "string" }, description: "Lista de itens sugeridos" } },
           required: ["items"],
           additionalProperties: false,
         } : {
           type: "object",
-          properties: {
-            value: { type: "string", description: "Texto sugerido" }
-          },
+          properties: { value: { type: "string", description: "Texto sugerido" } },
           required: ["value"],
           additionalProperties: false,
         },
       }
     }];
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools,
-        tool_choice: { type: "function", function: { name: "suggest_field" } },
-      }),
-    });
+    const callAI = async (withHighlights: boolean) => {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-pro",
+          messages: [
+            { role: "system", content: buildSystemPrompt(withHighlights) },
+            { role: "user", content: buildUserPrompt(withHighlights) },
+          ],
+          tools,
+          tool_choice: { type: "function", function: { name: "suggest_field" } },
+        }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("AI gateway error:", res.status, errText);
+        const err: any = new Error(`AI gateway: ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
+      const data = await res.json();
+      const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+      if (!toolCall) throw new Error("IA não retornou sugestão estruturada");
+      const args = JSON.parse(toolCall.function.arguments);
+      return fieldConfig.format === "array" ? (args.items || []) : (args.value || "");
+    };
 
-    if (!aiRes.ok) {
-      const errText = await aiRes.text();
-      console.error("AI gateway error:", aiRes.status, errText);
-      if (aiRes.status === 429) {
+    // 7) Rodar A (com DESTAQUES) e B (sem) em paralelo
+    let suggestionA: any = null;
+    let suggestionB: any = null;
+    let aiError: any = null;
+    try {
+      const [resA, resB] = await Promise.all([
+        callAI(true),
+        callAI(false),
+      ]);
+      suggestionA = resA;
+      suggestionB = resB;
+    } catch (e: any) {
+      aiError = e;
+    }
+
+    if (aiError) {
+      const status = aiError.status || 500;
+      if (status === 429) {
         return new Response(JSON.stringify({ error: "Limite de requisições atingido. Tente novamente em instantes." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (aiRes.status === 402) {
+      if (status === 402) {
         return new Response(JSON.stringify({ error: "Créditos esgotados. Adicione créditos na sua workspace." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI gateway: ${aiRes.status}`);
+      throw aiError;
     }
 
-    const aiData = await aiRes.json();
-    const toolCall = aiData?.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      throw new Error("IA não retornou sugestão estruturada");
+    // 8) Registrar A/B test no banco
+    let abTestId: string | null = null;
+    try {
+      // Resolver user_id interno (tabela public.users)
+      let internalUserId: string | null = null;
+      try {
+        const authHeader = req.headers.get("Authorization") || "";
+        const token = authHeader.replace("Bearer ", "");
+        if (token) {
+          const { data: { user } } = await supabase.auth.getUser(token);
+          if (user) {
+            const { data: u } = await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle();
+            internalUserId = u?.id || null;
+          }
+        }
+      } catch (_) { /* ignore */ }
+
+      const { data: ab, error: abErr } = await supabase
+        .from("marketing_persona_ab_tests")
+        .insert({
+          account_id: accountId,
+          user_id: internalUserId,
+          field,
+          field_format: fieldConfig.format,
+          variant_a_suggestion: { value: suggestionA },
+          variant_a_has_highlights: hasHighlights,
+          variant_b_suggestion: { value: suggestionB },
+          instagram_username: instagramUsername,
+          clients_analyzed: clientsAnalyzed,
+          highlights_snapshot: topHighlights,
+        })
+        .select("id")
+        .single();
+      if (abErr) console.error("ab insert error:", abErr);
+      else abTestId = ab?.id || null;
+    } catch (e) {
+      console.error("ab persistence error:", e);
     }
-    const args = JSON.parse(toolCall.function.arguments);
-    const suggestion = fieldConfig.format === "array" ? (args.items || []) : (args.value || "");
 
     return new Response(JSON.stringify({
-      suggestion,
+      // compat: sugestão default = variante A (com destaques) se há highlights, senão B
+      suggestion: hasHighlights ? suggestionA : suggestionB,
       format: fieldConfig.format,
       clientsAnalyzed,
       basedOnRealData: clientsAnalyzed > 0,
       instagramUsername,
       basedOnInstagram: !!instagramUsername,
       instagramHighlights: topHighlights,
+      // A/B test
+      abTestId,
+      variantA: suggestionA,
+      variantB: suggestionB,
+      hasHighlights,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -306,3 +364,4 @@ Retorne APENAS o conteúdo do campo, no formato correto.`;
     });
   }
 });
+
