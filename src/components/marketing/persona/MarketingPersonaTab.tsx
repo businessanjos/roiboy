@@ -84,7 +84,7 @@ const SECTIONS: { id: string; title: string; icon: any; description: string; fie
 const ALL_FIELDS = SECTIONS.flatMap((s) => s.fields.map((f) => f.key));
 
 export function MarketingPersonaTab() {
-  const { persona, isLoading, upsertPersona, suggestField } = useMarketingPersona();
+  const { persona, isLoading, upsertPersona, suggestField, submitAbFeedback } = useMarketingPersona();
 
   const [draft, setDraft] = useState<Partial<MarketingPersona>>({});
   const [arrayInputs, setArrayInputs] = useState<Record<string, string>>({});
@@ -97,6 +97,19 @@ export function MarketingPersonaTab() {
     instagramUsername?: string | null;
     updatedAt?: number;
   } | null>(null);
+
+  // A/B test state
+  const [abDialog, setAbDialog] = useState<{
+    open: boolean;
+    field: PersonaField | null;
+    fieldLabel: string;
+    variantA: string | string[];
+    variantB: string | string[];
+    abTestId: string | null;
+    hasHighlights: boolean;
+  }>({ open: false, field: null, fieldLabel: "", variantA: "", variantB: "", abTestId: null, hasHighlights: false });
+  // Mapa field -> { abTestId, chosenValue } para detectar save implícito
+  const [pendingAbApplied, setPendingAbApplied] = useState<Record<string, { abTestId: string; value: any }>>({});
 
   useEffect(() => {
     if (persona) setDraft(persona);
