@@ -35,13 +35,13 @@ export function ContentProfileProvider({ children }: { children: ReactNode }) {
       const [ig, tt, yt] = await Promise.all([
         supabase.from('instagram_profiles').select('id, username, display_name, avatar_url').eq('account_id', currentUser.account_id),
         supabase.from('tiktok_profiles').select('id, username, display_name, avatar_url').eq('account_id', currentUser.account_id),
-        supabase.from('youtube_channels').select('id, username:channel_handle, display_name:channel_name, avatar_url').eq('account_id', currentUser.account_id),
+        supabase.from('youtube_channels').select('id, username, display_name, profile_picture_url').eq('account_id', currentUser.account_id),
       ]);
 
       const result: ContentProfile[] = [];
-      (ig.data ?? []).forEach((p: any) => result.push({ ...p, platform: 'instagram' }));
-      (tt.data ?? []).forEach((p: any) => result.push({ ...p, platform: 'tiktok' }));
-      (yt.data ?? []).forEach((p: any) => result.push({ ...p, platform: 'youtube' }));
+      (ig.data ?? []).forEach((p: any) => result.push({ id: p.id, username: p.username, display_name: p.display_name, avatar_url: p.avatar_url, platform: 'instagram' }));
+      (tt.data ?? []).forEach((p: any) => result.push({ id: p.id, username: p.username, display_name: p.display_name, avatar_url: p.avatar_url, platform: 'tiktok' }));
+      (yt.data ?? []).forEach((p: any) => result.push({ id: p.id, username: p.username, display_name: p.display_name, avatar_url: p.profile_picture_url, platform: 'youtube' }));
       return result;
     },
     enabled: !!currentUser?.account_id,
