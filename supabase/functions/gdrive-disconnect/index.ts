@@ -38,15 +38,6 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    // Restrição: somente o usuário autorizado pode desconectar
-    const ALLOWED_USER_ID = "72ae91bc-0d35-4574-b9ea-76aa866296a3";
-    if (userId !== ALLOWED_USER_ID) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const admin = createClient(supabaseUrl, serviceKey);
     const { data: profile } = await admin
       .from("users")

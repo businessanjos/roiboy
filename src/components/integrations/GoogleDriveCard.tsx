@@ -241,7 +241,7 @@ export function GoogleDriveCard() {
                 ) : (
                   <Cloud className="h-4 w-4" />
                 )}
-                Conectar Google Drive
+                Conectar Google
               </Button>
             </div>
           </>
