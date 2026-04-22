@@ -485,3 +485,97 @@ function HighlightGroup({ icon: Icon, label, items, accent }: { icon: any; label
     </div>
   );
 }
+
+interface InstagramHighlightsPanelProps {
+  sessionHighlights: {
+    formats: string[];
+    themes: string[];
+    hashtags: string[];
+    instagramUsername?: string | null;
+    updatedAt?: number;
+  } | null;
+}
+
+function InstagramHighlightsPanel({ sessionHighlights }: InstagramHighlightsPanelProps) {
+  const { highlights: cached, isLoading, refreshNow } = useInstagramHighlightsCache();
+
+  // Prioriza dados em-sessão (acabou de rodar IA) sobre cache
+  const display = useMemo(() => {
+    if (sessionHighlights && (sessionHighlights.formats.length || sessionHighlights.themes.length || sessionHighlights.hashtags.length)) {
+      return {
+        formats: sessionHighlights.formats,
+        themes: sessionHighlights.themes,
+        hashtags: sessionHighlights.hashtags,
+        username: sessionHighlights.instagramUsername || cached?.username || null,
+        computedAt: sessionHighlights.updatedAt ? new Date(sessionHighlights.updatedAt).toISOString() : cached?.computed_at,
+        postsAnalyzed: cached?.posts_analyzed || 0,
+        source: "live" as const,
+      };
+    }
+    if (cached) {
+      return {
+        formats: (cached.formats || []).map((it) => formatHighlight(it)),
+        themes: (cached.themes || []).map((it) => formatHighlight(it)),
+        hashtags: (cached.hashtags || []).map((it) => formatHighlight(it, "#")),
+        username: cached.username,
+        computedAt: cached.computed_at,
+        postsAnalyzed: cached.posts_analyzed,
+        source: "cache" as const,
+      };
+    }
+    return null;
+  }, [sessionHighlights, cached]);
+
+  if (isLoading || !display) return null;
+  const hasAny = display.formats.length || display.themes.length || display.hashtags.length;
+  if (!hasAny) return null;
+
+  return (
+    <Card className="border-pink-500/30 bg-gradient-to-br from-pink-500/5 via-background to-background">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Instagram className="h-5 w-5 text-pink-500" />
+              Destaques que a IA usa como base
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Top 3 formatos, temas e hashtags com maior engajamento — recalculados automaticamente todos os dias.
+              {display.computedAt && (
+                <> · Atualizado {timeAgo(display.computedAt)} {display.postsAnalyzed > 0 && `· ${display.postsAnalyzed} posts analisados`}</>
+              )}
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            {display.username && (
+              <Badge variant="outline" className="border-pink-500/40 text-pink-600 dark:text-pink-400 gap-1.5">
+                <Instagram className="h-3 w-3" />
+                @{display.username}
+              </Badge>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => refreshNow.mutate()}
+              disabled={refreshNow.isPending}
+              className="h-8 gap-1.5"
+            >
+              {refreshNow.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Atualizar agora
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-4 md:grid-cols-3">
+        <HighlightGroup icon={Film} label="Top 3 Formatos" items={display.formats} accent="text-blue-500" />
+        <HighlightGroup icon={TrendingUp} label="Top 3 Temas" items={display.themes} accent="text-amber-500" />
+        <HighlightGroup icon={Hash} label="Top 3 Hashtags" items={display.hashtags} accent="text-pink-500" />
+      </CardContent>
+    </Card>
+  );
+}
