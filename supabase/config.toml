@@ -223,3 +223,6 @@ verify_jwt = false
 
 [functions.discover-trends]
 verify_jwt = false
+
+[functions.bulk-process-call-transcripts]
+verify_jwt = false
