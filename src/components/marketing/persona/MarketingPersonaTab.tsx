@@ -18,6 +18,10 @@ import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { canUseMarketingPersonaAiSuggest } from "@/lib/featureFlags";
 import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestionReviews";
+import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
+import { useMarketingReferences } from "@/hooks/useMarketingReferences";
+import { buildMarketingConsistencyReport } from "@/lib/marketingConsistency";
+import { MarketingConsistencyAlertDialog } from "@/components/marketing/ai/MarketingConsistencyAlertDialog";
 
 function formatHighlight(it: HighlightItem | string, prefix = ""): string {
   if (typeof it === "string") return it;
@@ -111,6 +115,8 @@ const ALL_FIELDS = SECTIONS.flatMap((s) => s.fields.map((f) => f.key));
 
 export function MarketingPersonaTab() {
   const { persona, isLoading, upsertPersona, suggestField, submitAbFeedback, evolvePersona } = useMarketingPersona();
+  const { voice } = useMarketingBrandVoice();
+  const { references } = useMarketingReferences();
   const { selectedProfile } = useContentProfile();
   const { currentUser } = useCurrentUser();
   const { reviews, recordReview } = useMarketingAiSuggestionReviews("evolve-marketing-persona");
@@ -143,7 +149,9 @@ export function MarketingPersonaTab() {
   }>({ open: false, field: null, fieldLabel: "", variantA: "", variantB: "", abTestId: null, hasHighlights: false });
   // Mapa field -> { abTestId, chosenValue } para detectar save implícito
   const [pendingAbApplied, setPendingAbApplied] = useState<Record<string, { abTestId: string; value: any }>>({});
+  const [pendingSave, setPendingSave] = useState<Partial<MarketingPersona> | null>(null);
   const evolutionReviewStats = useMemo(() => ({ accepted: reviews.filter((item) => item.decision === 'accepted').length, edited: reviews.filter((item) => item.decision === 'edited').length, rejected: reviews.filter((item) => item.decision === 'rejected').length }), [reviews]);
+  const consistencyReport = useMemo(() => buildMarketingConsistencyReport({ persona: draft, voice, references }), [draft, voice, references]);
 
   const applyEvolutionSuggestions = () => {
     const updates = evolvePersona.data?.suggestedUpdates;
