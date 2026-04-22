@@ -8,7 +8,7 @@ import { Sparkles, Flame, Lightbulb, Calendar as CalendarIcon, Loader2, Copy, Ch
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useContentProfile } from '@/contexts/ContentProfileContext';
-import { useMarketingWeeklyCalendar } from '@/hooks/useMarketingWeeklyCalendar';
+import { MarketingSuggestionEvidence, useMarketingWeeklyCalendar } from '@/hooks/useMarketingWeeklyCalendar';
 import { useMarketingAiSuggestionReviews } from '@/hooks/useMarketingAiSuggestionReviews';
 import { AiSuggestionReviewDialog } from '@/components/marketing/ai/AiSuggestionReviewDialog';
 import { format } from 'date-fns';
@@ -21,6 +21,7 @@ interface PautaItem {
   hook: string;
   cta: string;
   motivo: string;
+  evidence?: MarketingSuggestionEvidence[];
 }
 
 interface PautaResponse {
@@ -28,6 +29,15 @@ interface PautaResponse {
   resumo: string;
   pautas: PautaItem[];
 }
+
+const EVIDENCE_LABELS: Record<MarketingSuggestionEvidence['sourceType'], string> = {
+  idea: 'Ideia',
+  copy: 'Copy',
+  hook: 'Hook',
+  trend: 'Trend',
+  event: 'Evento',
+  'profile-content': 'Perfil',
+};
 
 export function DailyContentPanel() {
   const { currentUser } = useCurrentUser();
@@ -143,6 +153,7 @@ export function DailyContentPanel() {
           hook: todayWeeklySuggestion.hook,
           cta: todayWeeklySuggestion.cta,
           motivo: todayWeeklySuggestion.rationale,
+          evidence: todayWeeklySuggestion.evidence,
         },
       ],
     });
@@ -259,6 +270,22 @@ export function DailyContentPanel() {
                       <p className="text-xs font-semibold text-muted-foreground uppercase">Por quê</p>
                       <p className="text-muted-foreground">{item.rationale}</p>
                     </div>
+                    {!!item.evidence?.length && (
+                      <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase">Evidências usadas</p>
+                        <div className="space-y-2">
+                          {item.evidence.map((evidence, evidenceIndex) => (
+                            <div key={`${item.date}-${idx}-evidence-${evidenceIndex}`} className="space-y-1 text-xs">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline">{EVIDENCE_LABELS[evidence.sourceType]}</Badge>
+                                <span className="font-medium text-foreground">{evidence.sourceLabel}</span>
+                              </div>
+                              <p className="text-muted-foreground">{evidence.reason}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <Button size="sm" variant="ghost" className="w-full" onClick={() => setReviewWeekIdx(idx)}>Revisar sugestão</Button>
                   </CardContent>
                 </Card>
@@ -294,6 +321,22 @@ export function DailyContentPanel() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase">Por quê</p>
                     <p className="text-muted-foreground">{item.motivo}</p>
                   </div>
+                   {!!item.evidence?.length && (
+                     <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+                       <p className="text-xs font-semibold text-muted-foreground uppercase">Evidências usadas</p>
+                       <div className="space-y-2">
+                         {item.evidence.map((evidence, evidenceIndex) => (
+                           <div key={`${idx}-evidence-${evidenceIndex}`} className="space-y-1 text-xs">
+                             <div className="flex flex-wrap items-center gap-2">
+                               <Badge variant="outline">{EVIDENCE_LABELS[evidence.sourceType]}</Badge>
+                               <span className="font-medium text-foreground">{evidence.sourceLabel}</span>
+                             </div>
+                             <p className="text-muted-foreground">{evidence.reason}</p>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
                   <Button size="sm" variant="outline" className="w-full mt-2" onClick={() => handleCopy(item, idx)}>
                     {copiedIdx === idx ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
                     {copiedIdx === idx ? 'Copiado' : 'Copiar pauta'}
