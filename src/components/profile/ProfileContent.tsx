@@ -59,7 +59,7 @@ const STATES = [
 const RESTRICTED_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
 export function ProfileContent() {
-  const { currentUser, updateUser } = useCurrentUser();
+  const { currentUser, updateUser, loading: userLoading } = useCurrentUser();
   const isSalesRep = (() => {
     const role = currentUser?.team_role_name;
     const isAdmin = currentUser?.role === "admin" || currentUser?.is_also_admin;
@@ -81,23 +81,51 @@ export function ProfileContent() {
     neighborhood: "", city: "", state: "", zip_code: "",
   });
 
-  useEffect(() => { fetchProfile(); }, []);
+  useEffect(() => {
+    if (userLoading) return;
+    fetchProfile();
+  }, [userLoading, currentUser?.id, currentUser?.account_id]);
 
   const fetchProfile = async () => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) { setLoading(false); return; }
+      if (!currentUser?.id) {
+        setProfile(null);
+        setAccount(null);
+        return;
+      }
 
-      const { data: userData, error: userError } = await supabase
-        .from("users").select("*").eq("auth_user_id", authUser.id).maybeSingle();
+      const withTimeout = async <T,>(promise: Promise<T>, ms = 8000): Promise<T> => {
+        return await Promise.race([
+          promise,
+          new Promise<T>((_, reject) =>
+            setTimeout(() => reject(new Error("Tempo limite ao carregar perfil")), ms)
+          ),
+        ]);
+      };
+
+      setProfile({
+        id: currentUser.id,
+        name: currentUser.name,
+        email: currentUser.email,
+        role: currentUser.role,
+        account_id: currentUser.account_id,
+        avatar_url: currentUser.avatar_url,
+        auth_user_id: currentUser.auth_user_id,
+      });
+      setEditName(currentUser.name);
+
+      const { data: userData, error: userError } = await withTimeout(
+        (async () => await supabase.from("users").select("*").eq("id", currentUser.id).maybeSingle())()
+      );
       if (userError) throw userError;
 
       if (userData) {
         setProfile(userData as UserProfile);
         setEditName(userData.name);
 
-        const { data: accountData } = await supabase
-          .from("accounts").select("*").eq("id", userData.account_id).maybeSingle();
+        const { data: accountData } = await withTimeout(
+          (async () => await supabase.from("accounts").select("*").eq("id", userData.account_id).maybeSingle())()
+        );
 
         if (accountData) {
           setAccount(accountData as Account);
@@ -114,7 +142,39 @@ export function ProfileContent() {
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
-      toast.error("Erro ao carregar perfil");
+
+      if (currentUser?.account_id) {
+        try {
+          const { data: fallbackAccount } = await supabase
+            .from("accounts")
+            .select("*")
+            .eq("id", currentUser.account_id)
+            .maybeSingle();
+
+          if (fallbackAccount) {
+            setAccount(fallbackAccount as Account);
+            setAccountForm({
+              name: fallbackAccount.name || "",
+              email: fallbackAccount.email || "",
+              phone: fallbackAccount.phone || "",
+              document_type: fallbackAccount.document_type || "cpf",
+              document: fallbackAccount.document || "",
+              contact_name: fallbackAccount.contact_name || "",
+              street: fallbackAccount.street || "",
+              street_number: fallbackAccount.street_number || "",
+              complement: fallbackAccount.complement || "",
+              neighborhood: fallbackAccount.neighborhood || "",
+              city: fallbackAccount.city || "",
+              state: fallbackAccount.state || "",
+              zip_code: fallbackAccount.zip_code || "",
+            });
+          }
+        } catch (fallbackError) {
+          console.error("Error fetching fallback account:", fallbackError);
+        }
+      }
+
+      toast.error("Erro ao carregar perfil completo. Exibindo dados disponíveis.");
     } finally {
       setLoading(false);
     }
