@@ -1,0 +1,148 @@
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { ChevronDown, ChevronUp, FlaskConical, ThumbsUp, ThumbsDown, Trophy } from "lucide-react";
+import { usePersonaAbStats } from "@/hooks/usePersonaAbStats";
+
+export function PersonaAbStatsPanel() {
+  const [open, setOpen] = useState(false);
+  const { data: stats, isLoading } = usePersonaAbStats(30);
+
+  if (isLoading || !stats || stats.total === 0) return null;
+
+  const winner = stats.acceptRateA > stats.acceptRateB ? "A" : stats.acceptRateB > stats.acceptRateA ? "B" : null;
+
+  return (
+    <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 via-background to-background">
+      <CardHeader className="pb-3 cursor-pointer" onClick={() => setOpen((o) => !o)}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <FlaskConical className="h-5 w-5 text-amber-500" />
+            <div>
+              <CardTitle className="text-lg">A/B Test: prompts COM vs SEM Destaques</CardTitle>
+              <CardDescription className="mt-0.5">
+                {stats.total} testes nos últimos 30 dias · {stats.decided} decididos
+                {winner && (
+                  <> · Vencedor atual: <Badge className="ml-1" variant="default">Variante {winner}</Badge></>
+                )}
+              </CardDescription>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon">
+            {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </div>
+      </CardHeader>
+      {open && (
+        <CardContent className="space-y-4 pt-0">
+          <div className="grid md:grid-cols-2 gap-4">
+            <VariantCard
+              label="Variante A — Com DESTAQUES"
+              accent="pink"
+              chosen={stats.chosenA}
+              decided={stats.decided}
+              acceptRate={stats.acceptRateA}
+              thumbsUp={stats.thumbsUpA}
+              thumbsDown={stats.thumbsDownA}
+              thumbsUpRate={stats.thumbsUpRateA}
+              savedWithoutEdit={stats.savedWithoutEditA}
+              isWinner={winner === "A"}
+            />
+            <VariantCard
+              label="Variante B — Sem DESTAQUES (controle)"
+              accent="slate"
+              chosen={stats.chosenB}
+              decided={stats.decided}
+              acceptRate={stats.acceptRateB}
+              thumbsUp={stats.thumbsUpB}
+              thumbsDown={stats.thumbsDownB}
+              thumbsUpRate={stats.thumbsUpRateB}
+              savedWithoutEdit={stats.savedWithoutEditB}
+              isWinner={winner === "B"}
+            />
+          </div>
+
+          {Object.keys(stats.byField).length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Por campo (escolhas A / B / total)
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+                {Object.entries(stats.byField).sort((a, b) => b[1].total - a[1].total).map(([field, v]) => (
+                  <div key={field} className="text-xs flex items-center justify-between border rounded px-2 py-1 bg-muted/30">
+                    <span className="font-medium truncate mr-2">{field}</span>
+                    <span className="text-muted-foreground tabular-nums shrink-0">
+                      <span className="text-pink-500 font-semibold">{v.a}</span>
+                      {" / "}
+                      <span className="font-semibold">{v.b}</span>
+                      {" / "}
+                      {v.total}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {stats.decided < 10 && (
+            <p className="text-xs text-muted-foreground italic">
+              ⚠️ Ainda há poucos dados ({stats.decided} decisões). Recomendado pelo menos 30 testes para conclusão estatística.
+            </p>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+function VariantCard({
+  label, accent, chosen, decided, acceptRate, thumbsUp, thumbsDown, thumbsUpRate, savedWithoutEdit, isWinner,
+}: {
+  label: string;
+  accent: "pink" | "slate";
+  chosen: number;
+  decided: number;
+  acceptRate: number;
+  thumbsUp: number;
+  thumbsDown: number;
+  thumbsUpRate: number;
+  savedWithoutEdit: number;
+  isWinner: boolean;
+}) {
+  const accentClass = accent === "pink" ? "border-pink-500/30 bg-pink-500/5" : "border-border bg-muted/20";
+  const barClass = accent === "pink" ? "[&>div]:bg-pink-500" : "";
+  return (
+    <div className={`rounded-lg border ${accentClass} p-3 space-y-2.5`}>
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold">{label}</span>
+        {isWinner && <Trophy className="h-4 w-4 text-amber-500" />}
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between text-xs mb-1">
+          <span className="text-muted-foreground">Taxa de escolha</span>
+          <span className="font-semibold tabular-nums">{acceptRate}% ({chosen}/{decided})</span>
+        </div>
+        <Progress value={acceptRate} className={`h-1.5 ${barClass}`} />
+      </div>
+
+      <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1 text-emerald-600">
+            <ThumbsUp className="h-3 w-3" /> {thumbsUp}
+          </span>
+          <span className="flex items-center gap-1 text-rose-600">
+            <ThumbsDown className="h-3 w-3" /> {thumbsDown}
+          </span>
+          <span className="text-muted-foreground tabular-nums">({thumbsUpRate}% 👍)</span>
+        </div>
+      </div>
+
+      <div className="text-xs text-muted-foreground">
+        Salvos sem edição: <span className="font-semibold text-foreground tabular-nums">{savedWithoutEdit}</span>
+      </div>
+    </div>
+  );
+}
