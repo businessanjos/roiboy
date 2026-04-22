@@ -245,6 +245,8 @@ Retorne APENAS o conteúdo do campo, no formato correto.`;
       format: fieldConfig.format,
       clientsAnalyzed,
       basedOnRealData: clientsAnalyzed > 0,
+      instagramUsername,
+      basedOnInstagram: !!instagramUsername,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
