@@ -26,6 +26,7 @@ import { ICPDashboard } from '@/components/sales/calls/ICPDashboard';
 import { CallComparative } from '@/components/sales/calls/CallComparative';
 import { IdealScriptGenerator } from '@/components/sales/calls/IdealScriptGenerator';
 import { CloserRanking } from '@/components/sales/calls/CloserRanking';
+import { BulkCallUpload } from '@/components/sales/calls/BulkCallUpload';
 
 const OBJECTION_TYPES = [
   { value: 'price', label: 'Preço', icon: DollarSign, color: 'text-red-500', bgColor: 'bg-red-500/10' },
@@ -377,6 +378,7 @@ export default function SalesScripts() {
               <div className="overflow-x-auto -mx-4 px-4">
                 <TabsList className="h-9 p-0.5 bg-muted/60 gap-0.5 inline-flex w-auto">
                   <TabsTrigger value="analyze" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Mic className="w-3.5 h-3.5" />Analisar</TabsTrigger>
+                  <TabsTrigger value="bulk" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Upload className="w-3.5 h-3.5" />Lote</TabsTrigger>
                   <TabsTrigger value="icp" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Target className="w-3.5 h-3.5" />ICP</TabsTrigger>
                   <TabsTrigger value="comparative" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><TrendingUp className="w-3.5 h-3.5" />Comparativo</TabsTrigger>
                   <TabsTrigger value="ideal-script" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Crown className="w-3.5 h-3.5" />Script Ideal</TabsTrigger>
