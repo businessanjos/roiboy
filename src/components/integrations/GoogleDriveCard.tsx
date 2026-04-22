@@ -91,6 +91,7 @@ export function GoogleDriveCard() {
     } catch (e: unknown) {
       toast({ title: "Erro ao iniciar conexão", description: getGoogleDriveOAuthErrorMessage(e), variant: "destructive" });
     } finally {
+      clearGoogleDriveOAuthPending();
       setConnecting(false);
     }
   };

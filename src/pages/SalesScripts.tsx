@@ -401,6 +401,7 @@ export default function SalesScripts() {
     } catch (e: any) {
       toast.error(getGoogleDriveOAuthErrorMessage(e));
     } finally {
+      clearGoogleDriveOAuthPending();
       setIsConnectingDrive(false);
     }
   };

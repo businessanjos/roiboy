@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 const GOOGLE_DRIVE_OAUTH_PENDING_KEY = "google-drive-oauth-pending";
 const GOOGLE_DRIVE_OAUTH_TIMEOUT_MS = 10000;
+const GOOGLE_DRIVE_OAUTH_MAX_RETRIES = 1;
+const GOOGLE_DRIVE_OAUTH_RETRY_DELAY_MS = 1200;
 
 type GoogleDriveOAuthPending = {
   returnTo: string;
@@ -61,8 +63,9 @@ export function getGoogleDriveCallbackMessage(reason: string | null) {
 
 export function getGoogleDriveOAuthErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
-    if (error.message.toLowerCase().includes("timeout")) {
-      return "A conexão com o Google demorou demais para responder. Tente novamente.";
+    const normalizedMessage = error.message.toLowerCase();
+    if (normalizedMessage.includes("timeout")) {
+      return "A conexão com o Google demorou demais para responder, e a tentativa automática de reconexão não conseguiu concluir.";
     }
 
     return error.message;
@@ -75,33 +78,48 @@ export async function startGoogleDriveOAuth() {
   const returnTo = getCleanGoogleDriveReturnTo();
   setGoogleDriveOAuthPending(returnTo);
 
-  let timeoutId: number | undefined;
+  let lastError: unknown;
 
   try {
-    const result = await Promise.race([
-      supabase.functions.invoke("gdrive-oauth-init", {
-        body: { return_to: returnTo, origin: window.location.origin },
-      }),
-      new Promise<never>((_, reject) => {
-        timeoutId = window.setTimeout(() => reject(new Error("oauth_init_timeout")), GOOGLE_DRIVE_OAUTH_TIMEOUT_MS);
-      }),
-    ]);
+    for (let attempt = 0; attempt <= GOOGLE_DRIVE_OAUTH_MAX_RETRIES; attempt++) {
+      let timeoutId: number | undefined;
 
-    if (result.error) throw result.error;
+      try {
+        const result = await Promise.race([
+          supabase.functions.invoke("gdrive-oauth-init", {
+            body: { return_to: returnTo, origin: window.location.origin },
+          }),
+          new Promise<never>((_, reject) => {
+            timeoutId = window.setTimeout(() => reject(new Error("oauth_init_timeout")), GOOGLE_DRIVE_OAUTH_TIMEOUT_MS);
+          }),
+        ]);
 
-    const authorizeUrl = typeof result.data?.authorize_url === "string" ? result.data.authorize_url : "";
-    if (!authorizeUrl) throw new Error("URL de autorização não recebida.");
+        if (result.error) throw result.error;
 
-    const parsedUrl = new URL(authorizeUrl);
-    if (parsedUrl.hostname !== "accounts.google.com") {
-      throw new Error("URL de autorização inválida.");
+        const authorizeUrl = typeof result.data?.authorize_url === "string" ? result.data.authorize_url : "";
+        if (!authorizeUrl) throw new Error("URL de autorização não recebida.");
+
+        const parsedUrl = new URL(authorizeUrl);
+        if (parsedUrl.hostname !== "accounts.google.com") {
+          throw new Error("URL de autorização inválida.");
+        }
+
+        window.location.assign(authorizeUrl);
+        return;
+      } catch (error) {
+        lastError = error;
+        const isTimeout = error instanceof Error && error.message.toLowerCase().includes("timeout");
+        const canRetry = isTimeout && attempt < GOOGLE_DRIVE_OAUTH_MAX_RETRIES;
+
+        if (!canRetry) throw error;
+
+        await new Promise((resolve) => window.setTimeout(resolve, GOOGLE_DRIVE_OAUTH_RETRY_DELAY_MS));
+      } finally {
+        if (timeoutId) window.clearTimeout(timeoutId);
+      }
     }
-
-    window.location.assign(authorizeUrl);
   } catch (error) {
     clearGoogleDriveOAuthPending();
-    throw error;
-  } finally {
-    if (timeoutId) window.clearTimeout(timeoutId);
+    throw lastError ?? error;
   }
 }
