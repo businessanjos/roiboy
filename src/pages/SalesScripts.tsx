@@ -74,6 +74,8 @@ const SCRIPT_TYPES = [
 interface SalesScript { id: string; title: string; content: string; objection_type: string | null; funnel_stage: string | null; tags: string[] | null; is_active: boolean; created_by: string; created_at: string; }
 interface SalesMaterial { id: string; account_id: string; material_type: string; title: string; content: string; is_active: boolean; created_at: string; file_url: string | null; file_name: string | null; file_size: number | null; }
 interface SalesPlaybook { id: string; account_id: string; title: string; content: string; script_type: string; is_favorite: boolean; generated_from: any; created_at: string; }
+interface GoogleDriveConnection { id: string; google_email: string; is_active: boolean; }
+interface DriveCallFile { id: string; name: string; mimeType: string; modifiedTime: string; webViewLink?: string | null; }
 
 export default function SalesScripts() {
   const { currentUser } = useCurrentUser();
@@ -123,6 +125,12 @@ export default function SalesScripts() {
   const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null; seller_user_id?: string | null; seller_name?: string | null } | null>(null);
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
   const [analysisSubTab, setAnalysisSubTab] = useState('analyze');
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [driveSearch, setDriveSearch] = useState('');
+  const [selectedDriveFile, setSelectedDriveFile] = useState<DriveCallFile | null>(null);
+  const [driveImportedFileId, setDriveImportedFileId] = useState<string | null>(null);
+  const [isConnectingDrive, setIsConnectingDrive] = useState(false);
+  const [isImportingDriveFile, setIsImportingDriveFile] = useState(false);
 
   // Queries
   const { data: materials = [], isLoading: loadingMaterials } = useQuery({
