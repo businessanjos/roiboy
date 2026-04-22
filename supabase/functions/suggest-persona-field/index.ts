@@ -133,11 +133,36 @@ Deno.serve(async (req) => {
     // 4.5) Buscar contexto do Instagram (perfil ativo da conta)
     let instagramContext = "";
     let instagramUsername: string | null = null;
+    let topHighlights: { formats: string[]; themes: string[]; hashtags: string[] } = { formats: [], themes: [], hashtags: [] };
     try {
       const igCtx = await fetchInstagramContext(supabase, accountId);
       if (igCtx?.profile) {
         instagramUsername = igCtx.profile.username;
         instagramContext = buildInstagramContextBlock(igCtx);
+
+        // Extrai top 3 formatos / temas / hashtags dos posts de MAIOR engajamento
+        const top = (igCtx.topPosts || []).slice(0, 20); // já vem ordenado por engagement_rate desc
+        const tally = (arr: (string | null | undefined)[]) => {
+          const map: Record<string, number> = {};
+          arr.forEach((v) => {
+            const k = (v || "").toString().trim();
+            if (!k) return;
+            map[k] = (map[k] || 0) + 1;
+          });
+          return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `${k} (${n}x)`);
+        };
+        topHighlights.formats = tally(top.map((p) => p.post_type));
+        topHighlights.themes = tally(top.map((p) => p.theme));
+        // Hashtags: usa o topHashtags já agregado (filtrado por uses>=2 e ordenado)
+        topHighlights.hashtags = (igCtx.topHashtags || []).slice(0, 3).map((h) => `#${h.tag} (${h.avg_engagement}% eng)`);
+
+        const hl: string[] = [];
+        if (topHighlights.formats.length) hl.push(`- TOP 3 FORMATOS que mais engajam: ${topHighlights.formats.join(", ")}`);
+        if (topHighlights.themes.length) hl.push(`- TOP 3 TEMAS que mais engajam: ${topHighlights.themes.join(", ")}`);
+        if (topHighlights.hashtags.length) hl.push(`- TOP 3 HASHTAGS de melhor performance: ${topHighlights.hashtags.join(", ")}`);
+        if (hl.length) {
+          instagramContext += `\n\n=== DESTAQUES (use estes sinais como PRIORIDADE ao sugerir o campo) ===\n${hl.join("\n")}`;
+        }
       }
     } catch (e) {
       console.error("fetchInstagramContext error:", e);
@@ -247,6 +272,7 @@ Retorne APENAS o conteúdo do campo, no formato correto.`;
       basedOnRealData: clientsAnalyzed > 0,
       instagramUsername,
       basedOnInstagram: !!instagramUsername,
+      instagramHighlights: topHighlights,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
