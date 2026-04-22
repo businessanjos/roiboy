@@ -15,8 +15,7 @@ import { PersonaAbCompareDialog } from "./PersonaAbCompareDialog";
 import { PersonaAbStatsPanel } from "./PersonaAbStatsPanel";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-
-const AI_PERSONA_ALLOWED_EMAIL = "m.quintana@me.com";
+import { canUseMarketingPersonaAiSuggest } from "@/lib/featureFlags";
 
 function formatHighlight(it: HighlightItem | string, prefix = ""): string {
   if (typeof it === "string") return it;
@@ -112,7 +111,7 @@ export function MarketingPersonaTab() {
   const { persona, isLoading, upsertPersona, suggestField, submitAbFeedback } = useMarketingPersona();
   const { selectedProfile } = useContentProfile();
   const { currentUser } = useCurrentUser();
-  const canUseAiSuggest = currentUser?.email?.toLowerCase() === AI_PERSONA_ALLOWED_EMAIL;
+  const canUseAiSuggest = canUseMarketingPersonaAiSuggest(currentUser?.email);
   // Só faz sentido usar perfil ativo quando ele é Instagram (única plataforma analisada hoje pela Persona)
   const activeInstagramProfileId = selectedProfile?.platform === "instagram" ? selectedProfile.id : null;
   const activeInstagramUsername = selectedProfile?.platform === "instagram" ? selectedProfile.username : null;
