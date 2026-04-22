@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorM
 import { WebhooksTab } from "./webhooks/WebhooksTab";
 import { ThreeCPlusAgentConfig } from "./ThreeCPlusAgentConfig";
 import { OmieIntegrationTab } from "./OmieIntegrationTab";
+import { GoogleDriveCard } from "./GoogleDriveCard";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -500,6 +501,10 @@ export function IntegrationsContent() {
               <Building className="h-4 w-4" />
               <span>Omie</span>
             </TabsTrigger>
+            <TabsTrigger value="gdrive" className="gap-2 px-3 py-2">
+              <Cloud className="h-4 w-4" />
+              <span>Google Drive</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -926,6 +931,11 @@ export function IntegrationsContent() {
         {/* Omie Tab */}
         <TabsContent value="omie" className="space-y-4">
           <OmieIntegrationTab />
+        </TabsContent>
+
+        {/* Google Drive Tab */}
+        <TabsContent value="gdrive" className="space-y-4">
+          <GoogleDriveCard />
         </TabsContent>
       </Tabs>
     </div>

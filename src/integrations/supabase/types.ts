@@ -6197,6 +6197,140 @@ export type Database = {
           },
         ]
       }
+      google_drive_connections: {
+        Row: {
+          access_token: string | null
+          account_id: string
+          connected_at: string
+          connected_by: string | null
+          created_at: string
+          google_email: string
+          google_user_id: string | null
+          id: string
+          is_active: boolean
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string | null
+          refresh_token: string
+          scope: string | null
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_id: string
+          connected_at?: string
+          connected_by?: string | null
+          created_at?: string
+          google_email: string
+          google_user_id?: string | null
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          refresh_token: string
+          scope?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          account_id?: string
+          connected_at?: string
+          connected_by?: string | null
+          created_at?: string
+          google_email?: string
+          google_user_id?: string | null
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          refresh_token?: string
+          scope?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_drive_connections_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_drive_folders: {
+        Row: {
+          account_id: string
+          connection_id: string
+          created_at: string
+          created_by: string | null
+          drive_folder_id: string
+          files_synced_count: number
+          folder_name: string
+          id: string
+          is_active: boolean
+          is_shared_drive: boolean
+          last_page_token: string | null
+          last_synced_at: string | null
+          seller_name: string | null
+          shared_drive_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          connection_id: string
+          created_at?: string
+          created_by?: string | null
+          drive_folder_id: string
+          files_synced_count?: number
+          folder_name: string
+          id?: string
+          is_active?: boolean
+          is_shared_drive?: boolean
+          last_page_token?: string | null
+          last_synced_at?: string | null
+          seller_name?: string | null
+          shared_drive_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          connection_id?: string
+          created_at?: string
+          created_by?: string | null
+          drive_folder_id?: string
+          files_synced_count?: number
+          folder_name?: string
+          id?: string
+          is_active?: boolean
+          is_shared_drive?: boolean
+          last_page_token?: string | null
+          last_synced_at?: string | null
+          seller_name?: string | null
+          shared_drive_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_drive_folders_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_drive_folders_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "google_drive_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_benefits: {
         Row: {
           account_id: string

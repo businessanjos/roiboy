@@ -226,3 +226,12 @@ verify_jwt = false
 
 [functions.bulk-process-call-transcripts]
 verify_jwt = false
+
+[functions.gdrive-oauth-init]
+verify_jwt = false
+
+[functions.gdrive-oauth-callback]
+verify_jwt = false
+
+[functions.gdrive-disconnect]
+verify_jwt = false
