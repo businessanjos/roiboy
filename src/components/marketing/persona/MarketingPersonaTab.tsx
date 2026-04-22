@@ -314,35 +314,11 @@ export function MarketingPersonaTab() {
       {/* Painel de resultados do A/B Test */}
       <PersonaAbStatsPanel />
 
-      {/* Destaques do Instagram (atualizados a cada Sugestão da IA) */}
-      {highlights && (highlights.formats.length > 0 || highlights.themes.length > 0 || highlights.hashtags.length > 0) && (
-        <Card className="border-pink-500/30 bg-gradient-to-br from-pink-500/5 via-background to-background">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Instagram className="h-5 w-5 text-pink-500" />
-                  Destaques que a IA usou como base
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  Top 3 formatos, temas e hashtags com maior engajamento — extraídos automaticamente dos posts recentes.
-                </CardDescription>
-              </div>
-              {highlights.instagramUsername && (
-                <Badge variant="outline" className="border-pink-500/40 text-pink-600 dark:text-pink-400 gap-1.5">
-                  <Instagram className="h-3 w-3" />
-                  baseado em @{highlights.instagramUsername}
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
-            <HighlightGroup icon={Film} label="Top 3 Formatos" items={highlights.formats} accent="text-blue-500" />
-            <HighlightGroup icon={TrendingUp} label="Top 3 Temas" items={highlights.themes} accent="text-amber-500" />
-            <HighlightGroup icon={Hash} label="Top 3 Hashtags" items={highlights.hashtags} accent="text-pink-500" />
-          </CardContent>
-        </Card>
-      )}
+      {/* Destaques do Instagram (cache atualizado por cron diário + fallback ao vivo) */}
+      <InstagramHighlightsPanel
+        sessionHighlights={highlights}
+      />
+
 
       {/* Sections */}
       {SECTIONS.map((section) => {
