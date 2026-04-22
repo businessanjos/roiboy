@@ -135,15 +135,29 @@ function extractHashtags(caption: string | null): string[] {
 export async function fetchInstagramContext(
   supabase: any,
   accountId: string,
+  profileId?: string | null,
 ): Promise<InstagramContext | null> {
-  const { data: profile } = await supabase
-    .from("instagram_profiles")
-    .select("id, username, display_name, followers_count")
-    .eq("account_id", accountId)
-    .eq("is_active", true)
-    .order("followers_count", { ascending: false, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
+  let profile: any = null;
+  if (profileId) {
+    const { data } = await supabase
+      .from("instagram_profiles")
+      .select("id, username, display_name, followers_count, account_id")
+      .eq("id", profileId)
+      .maybeSingle();
+    // Só usa o perfil se pertencer à conta — segurança
+    if (data && data.account_id === accountId) profile = data;
+  }
+  if (!profile) {
+    const { data } = await supabase
+      .from("instagram_profiles")
+      .select("id, username, display_name, followers_count")
+      .eq("account_id", accountId)
+      .eq("is_active", true)
+      .order("followers_count", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    profile = data;
+  }
 
   if (!profile) return null;
 
