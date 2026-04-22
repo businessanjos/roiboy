@@ -65,12 +65,14 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const returnTo = (body?.return_to as string) || "/settings?tab=integrations";
+    const appOrigin = (body?.origin as string) || req.headers.get("origin") || null;
 
     // State assinado simples: base64(JSON({user_id, account_id, return_to, nonce}))
     const stateObj = {
       u: userId,
       a: profile.account_id,
       r: returnTo,
+      o: appOrigin,
       n: crypto.randomUUID(),
       t: Date.now(),
     };
