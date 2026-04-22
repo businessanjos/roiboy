@@ -27,6 +27,7 @@ import { CallComparative } from '@/components/sales/calls/CallComparative';
 import { IdealScriptGenerator } from '@/components/sales/calls/IdealScriptGenerator';
 import { CloserRanking } from '@/components/sales/calls/CloserRanking';
 import { BulkCallUpload } from '@/components/sales/calls/BulkCallUpload';
+import { clearGoogleDriveOAuthPending, getGoogleDriveCallbackMessage, getGoogleDriveOAuthErrorMessage, getGoogleDriveOAuthPending, startGoogleDriveOAuth } from '@/lib/googleDriveOAuth';
 
 const OBJECTION_TYPES = [
   { value: 'price', label: 'Preço', icon: DollarSign, color: 'text-red-500', bgColor: 'bg-red-500/10' },
@@ -129,7 +130,7 @@ export default function SalesScripts() {
   const [driveSearch, setDriveSearch] = useState('');
   const [selectedDriveFile, setSelectedDriveFile] = useState<DriveCallFile | null>(null);
   const [driveImportedFileId, setDriveImportedFileId] = useState<string | null>(null);
-  const [isConnectingDrive, setIsConnectingDrive] = useState(false);
+  const [isConnectingDrive, setIsConnectingDrive] = useState(() => !!getGoogleDriveOAuthPending());
   const [isImportingDriveFile, setIsImportingDriveFile] = useState(false);
 
   // Queries
@@ -366,14 +367,25 @@ export default function SalesScripts() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get('gdrive');
-    if (!status) return;
+    const pendingConnection = getGoogleDriveOAuthPending();
+
+    if (!status) {
+      if (!pendingConnection || Date.now() - pendingConnection.startedAt > 20_000) {
+        clearGoogleDriveOAuthPending();
+        setIsConnectingDrive(false);
+      }
+      return;
+    }
+
+    clearGoogleDriveOAuthPending();
+    setIsConnectingDrive(false);
 
     if (status === 'connected') {
       toast.success('Google Drive conectado com sucesso.');
       refetchDriveConnection();
       refetchDriveFiles();
     } else if (status === 'error') {
-      toast.error(`Falha ao conectar Google Drive: ${params.get('reason') || 'desconhecido'}`);
+      toast.error(getGoogleDriveCallbackMessage(params.get('reason')));
     }
 
     params.delete('gdrive');
@@ -385,15 +397,10 @@ export default function SalesScripts() {
   const handleConnectDrive = async () => {
     setIsConnectingDrive(true);
     try {
-      const returnTo = `${window.location.pathname}${window.location.search}`;
-      const { data, error } = await supabase.functions.invoke('gdrive-oauth-init', {
-        body: { return_to: returnTo, origin: window.location.origin },
-      });
-      if (error) throw error;
-      if (!data?.authorize_url) throw new Error('URL de autorização não recebida');
-      window.location.href = data.authorize_url as string;
+      await startGoogleDriveOAuth();
     } catch (e: any) {
-      toast.error(e?.message || 'Erro ao conectar Google Drive');
+      toast.error(getGoogleDriveOAuthErrorMessage(e));
+    } finally {
       setIsConnectingDrive(false);
     }
   };

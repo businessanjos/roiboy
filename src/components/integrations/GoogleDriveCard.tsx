@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { clearGoogleDriveOAuthPending, getGoogleDriveCallbackMessage, getGoogleDriveOAuthErrorMessage, getGoogleDriveOAuthPending, startGoogleDriveOAuth } from "@/lib/googleDriveOAuth";
 import { CheckCircle2, XCircle, Loader2, LogOut, Cloud, ExternalLink, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,7 +26,7 @@ export function GoogleDriveCard() {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [connecting, setConnecting] = useState(false);
+  const [connecting, setConnecting] = useState(() => !!getGoogleDriveOAuthPending());
   const [disconnecting, setDisconnecting] = useState(false);
   const [connection, setConnection] = useState<DriveConnection | null>(null);
 
@@ -52,7 +53,18 @@ export function GoogleDriveCard() {
   // Lida com retorno do callback OAuth
   useEffect(() => {
     const status = searchParams.get("gdrive");
-    if (!status) return;
+    const pendingConnection = getGoogleDriveOAuthPending();
+    if (!status) {
+      if (!pendingConnection || Date.now() - pendingConnection.startedAt > 20_000) {
+        clearGoogleDriveOAuthPending();
+        setConnecting(false);
+      }
+      return;
+    }
+
+    clearGoogleDriveOAuthPending();
+    setConnecting(false);
+
     if (status === "connected") {
       toast({
         title: "Google Drive conectado!",
@@ -60,10 +72,9 @@ export function GoogleDriveCard() {
       });
       fetchConnection();
     } else if (status === "error") {
-      const reason = searchParams.get("reason") || "desconhecido";
       toast({
         title: "Falha ao conectar Google Drive",
-        description: `Motivo: ${reason}`,
+        description: getGoogleDriveCallbackMessage(searchParams.get("reason")),
         variant: "destructive",
       });
     }
@@ -76,16 +87,10 @@ export function GoogleDriveCard() {
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const returnTo = `${window.location.pathname}${window.location.search}`;
-      const { data, error } = await supabase.functions.invoke("gdrive-oauth-init", {
-        body: { return_to: returnTo, origin: window.location.origin },
-      });
-      if (error) throw error;
-      if (!data?.authorize_url) throw new Error("URL de autorização não recebida.");
-      window.location.href = data.authorize_url as string;
+      await startGoogleDriveOAuth();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erro desconhecido";
-      toast({ title: "Erro ao iniciar conexão", description: msg, variant: "destructive" });
+      toast({ title: "Erro ao iniciar conexão", description: getGoogleDriveOAuthErrorMessage(e), variant: "destructive" });
+    } finally {
       setConnecting(false);
     }
   };
