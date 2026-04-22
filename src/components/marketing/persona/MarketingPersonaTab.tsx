@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { PersonaAbCompareDialog } from "./PersonaAbCompareDialog";
 import { PersonaAbStatsPanel } from "./PersonaAbStatsPanel";
+import { useContentProfile } from "@/contexts/ContentProfileContext";
 
 function formatHighlight(it: HighlightItem | string, prefix = ""): string {
   if (typeof it === "string") return it;
@@ -106,6 +107,10 @@ const ALL_FIELDS = SECTIONS.flatMap((s) => s.fields.map((f) => f.key));
 
 export function MarketingPersonaTab() {
   const { persona, isLoading, upsertPersona, suggestField, submitAbFeedback } = useMarketingPersona();
+  const { selectedProfile } = useContentProfile();
+  // Só faz sentido usar perfil ativo quando ele é Instagram (única plataforma analisada hoje pela Persona)
+  const activeInstagramProfileId = selectedProfile?.platform === "instagram" ? selectedProfile.id : null;
+  const activeInstagramUsername = selectedProfile?.platform === "instagram" ? selectedProfile.username : null;
 
   const [draft, setDraft] = useState<Partial<MarketingPersona>>({});
   const [arrayInputs, setArrayInputs] = useState<Record<string, string>>({});
@@ -165,7 +170,7 @@ export function MarketingPersonaTab() {
   const handleSuggest = async (key: PersonaField) => {
     setSuggestingField(key);
     try {
-      const res = await suggestField.mutateAsync(key);
+      const res = await suggestField.mutateAsync({ field: key, instagramProfileId: activeInstagramProfileId });
 
       // Atualiza painel de destaques
       if (res.instagramHighlights && (res.instagramHighlights.formats?.length || res.instagramHighlights.themes?.length || res.instagramHighlights.hashtags?.length)) {
@@ -317,6 +322,8 @@ export function MarketingPersonaTab() {
       {/* Destaques do Instagram (cache atualizado por cron diário + fallback ao vivo) */}
       <InstagramHighlightsPanel
         sessionHighlights={highlights}
+        profileId={activeInstagramProfileId}
+        fallbackUsername={activeInstagramUsername}
       />
 
 
@@ -494,10 +501,12 @@ interface InstagramHighlightsPanelProps {
     instagramUsername?: string | null;
     updatedAt?: number;
   } | null;
+  profileId?: string | null;
+  fallbackUsername?: string | null;
 }
 
-function InstagramHighlightsPanel({ sessionHighlights }: InstagramHighlightsPanelProps) {
-  const { highlights: cached, isLoading, refreshNow } = useInstagramHighlightsCache();
+function InstagramHighlightsPanel({ sessionHighlights, profileId, fallbackUsername }: InstagramHighlightsPanelProps) {
+  const { highlights: cached, isLoading, refreshNow } = useInstagramHighlightsCache(profileId);
 
   // Prioriza dados em-sessão (acabou de rodar IA) sobre cache
   const display = useMemo(() => {
@@ -506,7 +515,7 @@ function InstagramHighlightsPanel({ sessionHighlights }: InstagramHighlightsPane
         formats: sessionHighlights.formats,
         themes: sessionHighlights.themes,
         hashtags: sessionHighlights.hashtags,
-        username: sessionHighlights.instagramUsername || cached?.username || null,
+        username: fallbackUsername || sessionHighlights.instagramUsername || cached?.username || null,
         computedAt: sessionHighlights.updatedAt ? new Date(sessionHighlights.updatedAt).toISOString() : cached?.computed_at,
         postsAnalyzed: cached?.posts_analyzed || 0,
         source: "live" as const,
@@ -517,7 +526,7 @@ function InstagramHighlightsPanel({ sessionHighlights }: InstagramHighlightsPane
         formats: (cached.formats || []).map((it) => formatHighlight(it)),
         themes: (cached.themes || []).map((it) => formatHighlight(it)),
         hashtags: (cached.hashtags || []).map((it) => formatHighlight(it, "#")),
-        username: cached.username,
+        username: fallbackUsername || cached.username,
         computedAt: cached.computed_at,
         postsAnalyzed: cached.posts_analyzed,
         source: "cache" as const,

@@ -100,10 +100,12 @@ export function useMarketingPersona() {
   });
 
   const suggestField = useMutation({
-    mutationFn: async (field: PersonaField) => {
+    mutationFn: async (input: PersonaField | { field: PersonaField; instagramProfileId?: string | null }) => {
       if (!accountId) throw new Error("Sem conta");
+      const field = typeof input === "string" ? input : input.field;
+      const instagramProfileId = typeof input === "string" ? undefined : input.instagramProfileId || undefined;
       const { data, error } = await supabase.functions.invoke("suggest-persona-field", {
-        body: { accountId, field, currentPersona: persona },
+        body: { accountId, field, currentPersona: persona, instagramProfileId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
