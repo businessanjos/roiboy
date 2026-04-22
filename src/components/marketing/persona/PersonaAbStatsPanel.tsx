@@ -155,3 +155,63 @@ function VariantCard({
     </div>
   );
 }
+
+function StatTestBlock({ test }: { test: ReturnType<typeof twoProportionZTest> }) {
+  const { significant, significanceLabel, minSampleReached, pValue, z, diff, ciLow, ciHigh, pA, pB, winner, message } = test;
+
+  // Visual: cor / ícone conforme resultado
+  const variantStyles = !minSampleReached
+    ? { border: "border-muted-foreground/30", bg: "bg-muted/30", icon: <MinusCircle className="h-5 w-5 text-muted-foreground" />, label: "Amostra insuficiente" }
+    : significant
+      ? { border: "border-emerald-500/40", bg: "bg-emerald-500/5", icon: <CheckCircle2 className="h-5 w-5 text-emerald-600" />, label: `Diferença ${significanceLabel}` }
+      : significanceLabel === "tendência"
+        ? { border: "border-amber-500/40", bg: "bg-amber-500/5", icon: <AlertCircle className="h-5 w-5 text-amber-600" />, label: "Tendência (não conclusivo)" }
+        : { border: "border-border", bg: "bg-muted/20", icon: <MinusCircle className="h-5 w-5 text-muted-foreground" />, label: "Sem diferença significativa" };
+
+  const diffPct = (diff * 100).toFixed(1);
+  const diffSign = diff > 0 ? "+" : "";
+
+  return (
+    <div className={`rounded-lg border ${variantStyles.border} ${variantStyles.bg} p-3 space-y-2`}>
+      <div className="flex items-start gap-2">
+        {variantStyles.icon}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Sigma className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-sm font-semibold">Teste estatístico (z-test de duas proporções)</span>
+            <Badge variant={significant ? "default" : "secondary"} className="text-xs">{variantStyles.label}</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">{message}</p>
+        </div>
+      </div>
+
+      {minSampleReached && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1.5 border-t border-border/40">
+          <Stat label="Taxa A" value={formatPct(pA)} />
+          <Stat label="Taxa B" value={formatPct(pB)} />
+          <Stat
+            label="Diferença (A−B)"
+            value={`${diffSign}${diffPct} pp`}
+            valueClass={significant ? (winner === "A" ? "text-emerald-600" : "text-rose-600") : ""}
+          />
+          <Stat label="p-value" value={formatP(pValue)} />
+          <Stat label="z-score" value={z.toFixed(2)} />
+          <Stat
+            label="IC 95% da diferença"
+            value={`[${(ciLow * 100).toFixed(1)}; ${(ciHigh * 100).toFixed(1)}] pp`}
+            wide
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, valueClass = "", wide = false }: { label: string; value: string; valueClass?: string; wide?: boolean }) {
+  return (
+    <div className={`text-xs ${wide ? "col-span-2" : ""}`}>
+      <div className="text-muted-foreground">{label}</div>
+      <div className={`font-semibold tabular-nums ${valueClass}`}>{value}</div>
+    </div>
+  );
+}
