@@ -292,6 +292,9 @@ export function MarketingPersonaTab() {
         </CardHeader>
       </Card>
 
+      {/* Painel de resultados do A/B Test */}
+      <PersonaAbStatsPanel />
+
       {/* Destaques do Instagram (atualizados a cada Sugestão da IA) */}
       {highlights && (highlights.formats.length > 0 || highlights.themes.length > 0 || highlights.hashtags.length > 0) && (
         <Card className="border-pink-500/30 bg-gradient-to-br from-pink-500/5 via-background to-background">
