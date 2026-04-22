@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Save, Loader2, Plus, X, Target, Brain, Heart, MessageSquare, Database, Instagram, TrendingUp, Hash, Film, RefreshCw } from "lucide-react";
+import { Sparkles, Save, Loader2, Plus, X, Target, Brain, Heart, MessageSquare, Database, Instagram, TrendingUp, Hash, Film, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PersonaAbCompareDialog } from "./PersonaAbCompareDialog";
 import { PersonaAbStatsPanel } from "./PersonaAbStatsPanel";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
@@ -108,7 +109,7 @@ const SECTIONS: { id: string; title: string; icon: any; description: string; fie
 const ALL_FIELDS = SECTIONS.flatMap((s) => s.fields.map((f) => f.key));
 
 export function MarketingPersonaTab() {
-  const { persona, isLoading, upsertPersona, suggestField, submitAbFeedback } = useMarketingPersona();
+  const { persona, isLoading, upsertPersona, suggestField, submitAbFeedback, evolvePersona } = useMarketingPersona();
   const { selectedProfile } = useContentProfile();
   const { currentUser } = useCurrentUser();
   const canUseAiSuggest = canUseMarketingPersonaAiSuggest(currentUser?.email);
@@ -140,6 +141,37 @@ export function MarketingPersonaTab() {
   }>({ open: false, field: null, fieldLabel: "", variantA: "", variantB: "", abTestId: null, hasHighlights: false });
   // Mapa field -> { abTestId, chosenValue } para detectar save implícito
   const [pendingAbApplied, setPendingAbApplied] = useState<Record<string, { abTestId: string; value: any }>>({});
+
+  const applyEvolutionSuggestions = () => {
+    const updates = evolvePersona.data?.suggestedUpdates;
+    if (!updates) return;
+
+    setDraft((current) => {
+      const next = { ...current };
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        const typedKey = key as PersonaField;
+        if (Array.isArray(value)) {
+          const existing = Array.isArray(next[typedKey]) ? (next[typedKey] as string[]) : [];
+          next[typedKey] = Array.from(new Set([...existing, ...value])) as any;
+          return;
+        }
+        next[typedKey] = value as any;
+      });
+      return next;
+    });
+    setIsDirty(true);
+    toast.success("Sugestões da IA aplicadas na Persona");
+  };
+
+  const handleEvolvePersona = async () => {
+    await evolvePersona.mutateAsync({
+      profileId: selectedProfile?.id,
+      profilePlatform: selectedProfile?.platform,
+      profileUsername: selectedProfile?.username,
+      profileDisplayName: selectedProfile?.display_name,
+    });
+  };
 
   useEffect(() => {
     if (persona) setDraft(persona);
@@ -304,6 +336,19 @@ export function MarketingPersonaTab() {
             </Button>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline">{selectedProfile ? `Perfil ativo: @${selectedProfile.username}` : "Sem perfil ativo"}</Badge>
+            <Button type="button" variant="outline" onClick={handleEvolvePersona} disabled={evolvePersona.isPending}>
+              {evolvePersona.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              {evolvePersona.isPending ? "Analisando Persona..." : "Evoluir com IA"}
+            </Button>
+            {evolvePersona.data?.suggestedUpdates && Object.keys(evolvePersona.data.suggestedUpdates).length > 0 && (
+              <Button type="button" onClick={applyEvolutionSuggestions}>
+                <CheckCircle2 className="h-4 w-4 mr-2" />Aplicar sugestões
+              </Button>
+            )}
+          </div>
+
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Completude da Persona</span>
@@ -322,6 +367,60 @@ export function MarketingPersonaTab() {
 
       {/* Painel de resultados do A/B Test */}
       <PersonaAbStatsPanel />
+
+      {evolvePersona.data && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Evolução da Persona com IA
+            </CardTitle>
+            <CardDescription>{evolvePersona.data.summary}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-md border bg-background p-4">
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">Score sugerido</div>
+                <div className="mt-2 text-2xl font-semibold">{evolvePersona.data.completionScore}%</div>
+              </div>
+              <div className="rounded-md border bg-background p-4 md:col-span-2">
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">Forças já percebidas</div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {evolvePersona.data.strengths.map((item) => (
+                    <Badge key={item} variant="secondary">{item}</Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {evolvePersona.data.gaps.length > 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Lacunas detectadas</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {evolvePersona.data.gaps.map((gap) => (
+                      <li key={gap}>{gap}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="grid gap-3 lg:grid-cols-3">
+              {evolvePersona.data.recommendations.map((recommendation) => (
+                <div key={recommendation.title} className="rounded-md border bg-background p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-sm font-semibold leading-tight">{recommendation.title}</h4>
+                    <Badge variant={recommendation.priority === "alta" ? "default" : "outline"}>{recommendation.priority}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{recommendation.detail}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Destaques do Instagram (cache atualizado por cron diário + fallback ao vivo) */}
       <InstagramHighlightsPanel
