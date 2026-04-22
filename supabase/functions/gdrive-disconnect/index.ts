@@ -49,9 +49,9 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
     const { data: profile } = await admin
-      .from("profiles")
+      .from("users")
       .select("account_id")
-      .eq("user_id", userId)
+      .eq("auth_user_id", userId)
       .maybeSingle();
     if (!profile?.account_id) {
       return new Response(JSON.stringify({ error: "no_account" }), {
