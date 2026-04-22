@@ -115,7 +115,7 @@ export function ProfileContent() {
       setEditName(currentUser.name);
 
       const { data: userData, error: userError } = await withTimeout(
-        supabase.from("users").select("*").eq("id", currentUser.id).maybeSingle()
+        (async () => await supabase.from("users").select("*").eq("id", currentUser.id).maybeSingle())()
       );
       if (userError) throw userError;
 
@@ -124,7 +124,7 @@ export function ProfileContent() {
         setEditName(userData.name);
 
         const { data: accountData } = await withTimeout(
-          supabase.from("accounts").select("*").eq("id", userData.account_id).maybeSingle()
+          (async () => await supabase.from("accounts").select("*").eq("id", userData.account_id).maybeSingle())()
         );
 
         if (accountData) {
