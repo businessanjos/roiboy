@@ -337,7 +337,7 @@ export default function SalesScripts() {
     onSuccess: async (data) => {
       setTranscriptAnalysis(data.analysis);
       const preview = (data.fullTranscript || '').substring(0, 200);
-      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null, deal_id: selectedDealId || null, call_outcome: callOutcome || null, client_id: selectedClientId || null, outcome_notes: outcomeNotes || null, seller_user_id: selectedSellerId || null } as any);
+      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null, deal_id: selectedDealId || null, call_outcome: callOutcome || null, client_id: selectedClientId || null, outcome_notes: outcomeNotes || null, seller_user_id: selectedSellerId || null, product_id: selectedProductId || null } as any);
       queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] });
       toast.success('Análise concluída e salva!');
     },
@@ -362,6 +362,62 @@ export default function SalesScripts() {
   });
 
   const getOutcomeConfig = (outcome: string | null) => CALL_OUTCOMES.find(o => o.value === outcome);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('gdrive');
+    if (!status) return;
+
+    if (status === 'connected') {
+      toast.success('Google Drive conectado com sucesso.');
+      refetchDriveConnection();
+      refetchDriveFiles();
+    } else if (status === 'error') {
+      toast.error(`Falha ao conectar Google Drive: ${params.get('reason') || 'desconhecido'}`);
+    }
+
+    params.delete('gdrive');
+    params.delete('reason');
+    const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    window.history.replaceState({}, '', next);
+  }, [refetchDriveConnection, refetchDriveFiles]);
+
+  const handleConnectDrive = async () => {
+    setIsConnectingDrive(true);
+    try {
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      const { data, error } = await supabase.functions.invoke('gdrive-oauth-init', {
+        body: { return_to: returnTo, origin: window.location.origin },
+      });
+      if (error) throw error;
+      if (!data?.authorize_url) throw new Error('URL de autorização não recebida');
+      window.location.href = data.authorize_url as string;
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao conectar Google Drive');
+      setIsConnectingDrive(false);
+    }
+  };
+
+  const handleImportDriveFile = async (file: DriveCallFile) => {
+    setIsImportingDriveFile(true);
+    setDriveImportedFileId(file.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('gdrive-read-call-file', {
+        body: { fileId: file.id, fileName: file.name, mimeType: file.mimeType },
+      });
+      if (error) throw error;
+      const transcript = (data?.transcript as string | undefined)?.trim();
+      if (!transcript) throw new Error('Não foi possível extrair a transcrição do arquivo selecionado');
+      setSelectedDriveFile(file);
+      setTranscriptEntries([{ id: Date.now(), text: transcript, file: null }]);
+      toast.success(`Arquivo "${file.name}" importado do Google Drive.`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao importar arquivo do Google Drive');
+    } finally {
+      setIsImportingDriveFile(false);
+      setDriveImportedFileId(null);
+    }
+  };
 
   const handleCopy = async (content: string) => { await navigator.clipboard.writeText(content); toast.success('Copiado!'); };
   const filteredScripts = scripts.filter(s => { const ms = searchQuery === '' || s.title.toLowerCase().includes(searchQuery.toLowerCase()) || s.content.toLowerCase().includes(searchQuery.toLowerCase()); const mo = filterObjection === 'all' || s.objection_type === filterObjection; const mf = filterFunnel === 'all' || s.funnel_stage === filterFunnel; return ms && mo && mf; });
