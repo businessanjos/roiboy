@@ -28,7 +28,12 @@ export function PersonaAbStatsPanel() {
               <CardDescription className="mt-0.5">
                 {stats.total} testes nos últimos 30 dias · {stats.decided} decididos
                 {winner && (
-                  <> · Vencedor atual: <Badge className="ml-1" variant="default">Variante {winner}</Badge></>
+                  <> · Vencedor: <Badge className="ml-1" variant={test.significant ? "default" : "secondary"}>
+                    Variante {winner}{test.significant ? " ✓" : " (provisório)"}
+                  </Badge></>
+                )}
+                {test.minSampleReached && (
+                  <> · p = <span className="font-semibold tabular-nums">{formatP(test.pValue)}</span></>
                 )}
               </CardDescription>
             </div>
