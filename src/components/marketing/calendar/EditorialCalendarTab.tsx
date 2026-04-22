@@ -573,11 +573,33 @@ export function EditorialCalendarTab() {
             <div className="space-y-4">
               <Card className="p-4 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase">Hook</p>
-                <p className="text-sm whitespace-pre-wrap">{generatedCopy.hook}</p>
+                <RadioGroup
+                  value={generatedCopy.selectedHook}
+                  onValueChange={(value) => void handleSelectGeneratedOption("selectedHook", value)}
+                  className="gap-2"
+                >
+                  {generatedCopy.hookOptions.map((option, index) => (
+                    <label key={`hook-option-${index}`} className="flex items-start gap-3 rounded-md border border-border bg-background p-3 text-sm cursor-pointer">
+                      <RadioGroupItem value={option} id={`hook-option-${index}`} className="mt-1" />
+                      <span className="whitespace-pre-wrap leading-relaxed">{option}</span>
+                    </label>
+                  ))}
+                </RadioGroup>
               </Card>
               <Card className="p-4 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase">CTA</p>
-                <p className="text-sm whitespace-pre-wrap">{generatedCopy.cta}</p>
+                <RadioGroup
+                  value={generatedCopy.selectedCta}
+                  onValueChange={(value) => void handleSelectGeneratedOption("selectedCta", value)}
+                  className="gap-2"
+                >
+                  {generatedCopy.ctaOptions.map((option, index) => (
+                    <label key={`cta-option-${index}`} className="flex items-start gap-3 rounded-md border border-border bg-background p-3 text-sm cursor-pointer">
+                      <RadioGroupItem value={option} id={`cta-option-${index}`} className="mt-1" />
+                      <span className="whitespace-pre-wrap leading-relaxed">{option}</span>
+                    </label>
+                  ))}
+                </RadioGroup>
               </Card>
               <Card className="p-4 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase">Rascunho</p>
