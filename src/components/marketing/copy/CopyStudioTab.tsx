@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Copy as CopyIcon, Star, Trash2, Loader2 } from "lucide-react";
-import { useMarketingCopy, CopyType } from "@/hooks/useMarketingCopy";
+import { useMarketingCopy, CopyObjective, CopyType } from "@/hooks/useMarketingCopy";
 import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
+import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,7 +29,9 @@ const COPY_LABELS: Record<CopyType, string> = {
 export function CopyStudioTab() {
   const { history, generateCopy, toggleFavorite, deleteCopy } = useMarketingCopy();
   const { voice } = useMarketingBrandVoice();
+  const { selectedProfile } = useContentProfile();
   const [copyType, setCopyType] = useState<CopyType>("caption");
+  const [objective, setObjective] = useState<CopyObjective>("educar");
   const [brief, setBrief] = useState("");
   const [format_, setFormat_] = useState("");
   const [platform, setPlatform] = useState("instagram");
@@ -39,7 +42,19 @@ export function CopyStudioTab() {
   const submit = () => {
     if (!brief.trim()) { toast.error("Descreva o briefing"); return; }
     generateCopy.mutate(
-      { copyType, brief, format: format_, platform, hook, useBrandVoice },
+      {
+        copyType,
+        brief,
+        objective,
+        format: format_,
+        platform,
+        hook,
+        useBrandVoice,
+        profileId: selectedProfile?.id,
+        profilePlatform: selectedProfile?.platform,
+        profileUsername: selectedProfile?.username,
+        profileDisplayName: selectedProfile?.display_name,
+      },
       { onSuccess: (d) => setOutput(d.output) }
     );
   };
@@ -93,6 +108,24 @@ export function CopyStudioTab() {
             <Input value={format_} onChange={(e) => setFormat_(e.target.value)} placeholder="reel, carrossel..." />
           </div>
         </div>
+
+        <div className="space-y-2">
+          <Label>Objetivo</Label>
+          <Select value={objective} onValueChange={(v) => setObjective(v as CopyObjective)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="educar">Educar</SelectItem>
+              <SelectItem value="converter">Converter</SelectItem>
+              <SelectItem value="reter">Reter</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedProfile && (
+          <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            Base ativa: <strong>@{selectedProfile.username}</strong> · {selectedProfile.platform}
+          </div>
+        )}
 
         {(copyType === "caption" || copyType === "script") && (
           <div className="space-y-2">

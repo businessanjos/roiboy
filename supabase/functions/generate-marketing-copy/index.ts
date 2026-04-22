@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock } from "../_shared/marketing-context.ts";
+import { fetchVoiceAndPersona, buildBrandVoiceBlock, buildPersonaBlock, fetchInstagramContext, buildInstagramContextBlock } from "../_shared/marketing-context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,11 +18,79 @@ const COPY_TYPES: Record<string, { label: string; instruction: string }> = {
   email: { label: "E-mail marketing", instruction: "Escreva um e-mail com assunto, abertura, corpo e CTA." },
 };
 
+const OBJECTIVE_INSTRUCTIONS: Record<string, string> = {
+  educar: "Priorize clareza, utilidade, autoridade e valor prático. Ensine algo acionável sem parecer aula chata.",
+  converter: "Priorize desejo, urgência, objeções, prova e CTA forte. Direcione para ação comercial sem soar forçado.",
+  reter: "Priorize conexão, recorrência, comunidade, identificação e continuidade. Faça a audiência querer voltar e acompanhar.",
+};
+
+async function fetchTiktokCopyContext(supabase: any, accountId: string, profileId: string) {
+  const { data: profile } = await supabase
+    .from("tiktok_profiles")
+    .select("id, username, display_name, followers_count, account_id")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  if (!profile || profile.account_id !== accountId) return "";
+
+  const { data: posts } = await supabase
+    .from("tiktok_posts")
+    .select("caption, category, hashtags, sound_name, views, likes, comments, shares, engagement_rate, ai_objective")
+    .eq("profile_id", profileId)
+    .order("engagement_rate", { ascending: false, nullsFirst: false })
+    .limit(8);
+
+  const lines = ["\n\n=== BASE REAL DO TIKTOK SELECIONADO ===", `Perfil: @${profile.username}`];
+  (posts || []).forEach((post: any, index: number) => {
+    const caption = (post.caption || "").replace(/\s+/g, " ").slice(0, 140);
+    lines.push(`${index + 1}. ${post.category || "sem categoria"} · objetivo ${post.ai_objective || "n/a"} · ${Number(post.engagement_rate || 0).toFixed(2)}% eng · ${post.views || 0} views · hashtags ${(post.hashtags || []).slice(0, 5).map((tag: string) => `#${tag}`).join(" ")} — \"${caption}\"`);
+  });
+  return lines.join("\n");
+}
+
+async function fetchYoutubeCopyContext(supabase: any, accountId: string, profileId: string) {
+  const { data: channel } = await supabase
+    .from("youtube_channels")
+    .select("id, username, display_name, subscribers_count, account_id")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  if (!channel || channel.account_id !== accountId) return "";
+
+  const { data: videos } = await supabase
+    .from("youtube_videos")
+    .select("title, caption, category, video_type, views, likes, comments, engagement_rate, ai_objective")
+    .eq("channel_id", profileId)
+    .order("engagement_rate", { ascending: false, nullsFirst: false })
+    .limit(8);
+
+  const lines = ["\n\n=== BASE REAL DO YOUTUBE SELECIONADO ===", `Canal: @${channel.username}`];
+  (videos || []).forEach((video: any, index: number) => {
+    const caption = (video.caption || video.title || "").replace(/\s+/g, " ").slice(0, 140);
+    lines.push(`${index + 1}. ${video.video_type || "video"} · ${video.category || "sem categoria"} · objetivo ${video.ai_objective || "n/a"} · ${Number(video.engagement_rate || 0).toFixed(2)}% eng · ${video.views || 0} views — \"${caption}\"`);
+  });
+  return lines.join("\n");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { accountId, copyType = "caption", brief, ideaId, format, platform, hook, useBrandVoice = true } = await req.json();
+    const {
+      accountId,
+      copyType = "caption",
+      brief,
+      objective = "educar",
+      ideaId,
+      format,
+      platform,
+      hook,
+      useBrandVoice = true,
+      profileId,
+      profilePlatform,
+      profileUsername,
+      profileDisplayName,
+    } = await req.json();
 
     if (!accountId || !brief) {
       return new Response(JSON.stringify({ error: "accountId e brief são obrigatórios" }), {
@@ -34,23 +102,39 @@ Deno.serve(async (req) => {
 
     let voiceContext = "";
     let personaContext = "";
+    let profileContext = "";
     if (useBrandVoice) {
       const { voice, persona } = await fetchVoiceAndPersona(supabase, accountId);
       voiceContext = buildBrandVoiceBlock(voice);
       personaContext = buildPersonaBlock(persona);
     }
 
-    const typeCfg = COPY_TYPES[copyType] || COPY_TYPES.caption;
+    if (profileId && profilePlatform === "instagram") {
+      const instagramContext = await fetchInstagramContext(supabase, accountId, profileId);
+      profileContext = buildInstagramContextBlock(instagramContext);
+    } else if (profileId && profilePlatform === "tiktok") {
+      profileContext = await fetchTiktokCopyContext(supabase, accountId, profileId);
+    } else if (profileId && profilePlatform === "youtube") {
+      profileContext = await fetchYoutubeCopyContext(supabase, accountId, profileId);
+    }
 
-    const systemPrompt = `Você é uma copywriter sênior especializada em conteúdo para Instagram, TikTok e YouTube, com profundo conhecimento do mercado de estética brasileiro. Escreva sempre em português do Brasil.${voiceContext}${personaContext}`;
+    const typeCfg = COPY_TYPES[copyType] || COPY_TYPES.caption;
+    const objectiveInstruction = OBJECTIVE_INSTRUCTIONS[objective] || OBJECTIVE_INSTRUCTIONS.educar;
+
+    const systemPrompt = `Você é uma copywriter sênior especializada em conteúdo para Instagram, TikTok e YouTube, com profundo conhecimento do mercado de estética brasileiro. Escreva sempre em português do Brasil.${voiceContext}${personaContext}${profileContext}`;
 
     const userPrompt = `Tarefa: ${typeCfg.instruction}
+
+Objetivo principal: ${objective}
+Diretriz do objetivo: ${objectiveInstruction}
 
 Briefing: ${brief}
 ${format ? `Formato: ${format}` : ""}
 ${platform ? `Plataforma: ${platform}` : ""}
 ${hook ? `Hook obrigatório: ${hook}` : ""}
+${profileId ? `Perfil selecionado: @${profileUsername || "perfil"}${profileDisplayName ? ` (${profileDisplayName})` : ""} em ${profilePlatform}` : ""}
 
+Use como base os conteúdos e padrões que já performaram melhor no perfil selecionado. Gere variações coerentes com esse histórico, adaptadas ao objetivo pedido.
 Entregue apenas o conteúdo final, sem explicações.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -91,7 +175,7 @@ Entregue apenas o conteúdo final, sem explicações.`;
         copy_type: copyType,
         prompt: brief,
         output,
-        context: { format, platform, hook, useBrandVoice },
+        context: { format, platform, hook, useBrandVoice, objective, profileId, profilePlatform, profileUsername },
         model: "google/gemini-2.5-pro",
         created_by: createdBy,
       })

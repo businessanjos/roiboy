@@ -7,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Star, Trash2, Sparkles, Plus, Copy as CopyIcon, ExternalLink, Flame, TrendingUp, Filter } from "lucide-react";
+import { Star, Trash2, Sparkles, Plus, Copy as CopyIcon, ExternalLink, Flame, TrendingUp, Filter, Loader2 } from "lucide-react";
 import { useMarketingHooks, type HookCategory } from "@/hooks/useMarketingHooks";
 import { useMarketingIdeas } from "@/hooks/useMarketingIdeas";
+import { useMarketingCopy, type CopyObjective } from "@/hooks/useMarketingCopy";
+import { useContentProfile } from "@/contexts/ContentProfileContext";
 import { toast } from "sonner";
 
 const CATEGORIES: { value: HookCategory; label: string; emoji: string }[] = [
@@ -29,11 +31,16 @@ const PLATFORM_LABELS: Record<string, string> = {
 export function HooksTab() {
   const { hooks, isLoading, extractFromPosts, createHook, toggleFavorite, deleteHook, incrementUsage } = useMarketingHooks();
   const { createIdea } = useMarketingIdeas();
+  const { generateCopy } = useMarketingCopy();
+  const { selectedProfile } = useContentProfile();
 
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterPlatform, setFilterPlatform] = useState<string>("all");
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [search, setSearch] = useState("");
+  const [hookBrief, setHookBrief] = useState("");
+  const [hookObjective, setHookObjective] = useState<CopyObjective>("educar");
+  const [generatedHooks, setGeneratedHooks] = useState<string[]>([]);
 
   const [addOpen, setAddOpen] = useState(false);
   const [newHook, setNewHook] = useState({ text: "", category: "curiosidade" as HookCategory, notes: "" });
@@ -70,8 +77,95 @@ export function HooksTab() {
     toast.success("Copiado");
   };
 
+  const handleGenerateHooks = () => {
+    if (!hookBrief.trim()) {
+      toast.error("Descreva o tema para gerar hooks");
+      return;
+    }
+
+    generateCopy.mutate({
+      copyType: "hook",
+      brief: hookBrief,
+      objective: hookObjective,
+      platform: selectedProfile?.platform || "instagram",
+      useBrandVoice: true,
+      profileId: selectedProfile?.id,
+      profilePlatform: selectedProfile?.platform,
+      profileUsername: selectedProfile?.username,
+      profileDisplayName: selectedProfile?.display_name,
+    }, {
+      onSuccess: (data) => {
+        const parsedHooks = data.output
+          .split(/\n+/)
+          .map((line) => line.replace(/^\s*\d+[.)-]?\s*/, "").trim())
+          .filter(Boolean);
+        setGeneratedHooks(parsedHooks);
+      },
+    });
+  };
+
   return (
     <div className="space-y-6">
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Gerador de Hooks com IA
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Textarea
+            placeholder="Tema, oferta, transformação ou contexto para os hooks..."
+            value={hookBrief}
+            onChange={(e) => setHookBrief(e.target.value)}
+            rows={3}
+          />
+          <div className="grid gap-3 md:grid-cols-[180px_1fr] md:items-end">
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Objetivo</div>
+              <Select value={hookObjective} onValueChange={(v) => setHookObjective(v as CopyObjective)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="educar">Educar</SelectItem>
+                  <SelectItem value="converter">Converter</SelectItem>
+                  <SelectItem value="reter">Reter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-3 md:items-end">
+              {selectedProfile && (
+                <div className="text-xs text-muted-foreground">Base ativa: <strong>@{selectedProfile.username}</strong> · {selectedProfile.platform}</div>
+              )}
+              <Button onClick={handleGenerateHooks} disabled={generateCopy.isPending}>
+                {generateCopy.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                {generateCopy.isPending ? "Gerando..." : "Gerar hooks"}
+              </Button>
+            </div>
+          </div>
+
+          {generatedHooks.length > 0 && (
+            <div className="grid gap-2 md:grid-cols-2">
+              {generatedHooks.map((generatedHook, index) => (
+                <div key={`${generatedHook}-${index}`} className="rounded-md border border-border bg-background p-3 space-y-3">
+                  <p className="text-sm leading-relaxed">{generatedHook}</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => handleCopy(generatedHook)} className="flex-1">
+                      <CopyIcon className="h-3.5 w-3.5 mr-1" />Copiar
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => createHook.mutate({ text: generatedHook, category: "promessa", notes: `Gerado com IA para objetivo ${hookObjective}` })}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />Salvar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
