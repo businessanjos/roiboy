@@ -179,24 +179,47 @@ Deno.serve(async (req) => {
       if (filled) personaContext = `\n\nO QUE JÁ FOI DEFINIDO NA PERSONA:\n${filled}`;
     }
 
+    const hasHighlights = topHighlights.formats.length + topHighlights.themes.length + topHighlights.hashtags.length > 0;
+
     const systemPrompt = `Você é um estrategista de marketing sênior especializado no MERCADO DE ESTÉTICA brasileiro.
 
 Sua missão é sugerir conteúdo PROFUNDO, ESPECÍFICO e ACIONÁVEL para o campo "${fieldConfig.label}" da Persona do cliente.
+
+=== HIERARQUIA DE PRIORIDADE DAS FONTES (OBRIGATÓRIA) ===
+Quando houver conflito ou escolha entre sinais, siga esta ordem RÍGIDA — nunca inverta:
+
+1. 🥇 DESTAQUES DO INSTAGRAM (Top 3 formatos, temas e hashtags) — PESO MÁXIMO.
+   São a evidência empírica do que JÁ ressoa com o público. Devem moldar:
+   - vocabulary: extraia palavras/expressões dos temas e hashtags top.
+   - emotional_triggers / pains / desires: infira o que esses temas tocam emocionalmente.
+   - channels / references_consumed: priorize formatos que performam (ex: Reels educativo).
+   - tom geral de QUALQUER campo: alinhe ao que engaja.
+   Se um destaque contradisser um dado de CRM/diagnóstico, o DESTAQUE VENCE.
+
+2. 🥈 DADOS REAIS DE CLIENTES (CRM Rykas + Eternum) — peso médio.
+   Use para grounding demográfico/firmográfico (profissão, faturamento, localização, segmento).
+   NÃO devem sobrescrever destaques quando o campo é psicográfico ou de linguagem.
+
+3. 🥉 DIAGNÓSTICOS (dores/expectativas declaradas) — peso de apoio.
+   Complementam dores e desejos, mas só quando NÃO houver destaque relevante para o tema.
+
+4. 📚 Conhecimento geral do nicho — fallback apenas se nenhum dado real existir.
 
 REGRAS CRÍTICAS:
 - Use linguagem REAL do nicho, não clichês de marketing.
 - Seja ESPECÍFICO ao mercado de estética avançada (médicas, biomédicas, dentistas com foco em HOF, esteticistas).
 - NUNCA invente dados que contradigam os dados reais fornecidos.
-- Se receber dados reais de clientes, BASEIE sua resposta neles.
-- Se receber dados de PERFORMANCE REAL DO INSTAGRAM, use os formatos, hashtags e temas que JÁ funcionam para inferir o que ressoa com o público.
-- Para campos como "vocabulary", "channels", "emotional_triggers" e "pains", priorize sinais vindos das captions e temas dos posts de melhor engajamento.
+- ${hasHighlights ? "HÁ destaques do Instagram disponíveis — eles DEVEM ser a espinha dorsal da sugestão." : "Sem destaques do Instagram — apoie-se em CRM + diagnósticos."}
 - Para arrays, retorne itens curtos e diretos (1 linha cada).
 - Para texto, seja conciso (máx 3 frases).
 
 Descrição do campo: ${fieldConfig.description}
 Formato de retorno: ${fieldConfig.format === "array" ? "Array de strings (use a tool)" : "Texto único (use a tool)"}`;
 
-    const userPrompt = `Sugira o melhor conteúdo possível para o campo "${fieldConfig.label}" da Persona.${clientsContext}${instagramContext}${personaContext}
+    const userPrompt = `Sugira o melhor conteúdo possível para o campo "${fieldConfig.label}" da Persona.
+
+⚠️ LEMBRETE DE PRIORIDADE: Se houver bloco "DESTAQUES" abaixo, ele tem PESO MÁXIMO sobre CRM e diagnósticos. Ancore a sugestão neles primeiro, depois enriqueça com os demais.
+${clientsContext}${instagramContext}${personaContext}
 
 Retorne APENAS o conteúdo do campo, no formato correto.`;
 
