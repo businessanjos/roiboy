@@ -1,17 +1,36 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMarketingPersona, PersonaField, isArrayField, MarketingPersona } from "@/hooks/useMarketingPersona";
+import { useInstagramHighlightsCache, type HighlightItem } from "@/hooks/useInstagramHighlightsCache";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Save, Loader2, Plus, X, Target, Brain, Heart, MessageSquare, Database, Instagram, TrendingUp, Hash, Film } from "lucide-react";
+import { Sparkles, Save, Loader2, Plus, X, Target, Brain, Heart, MessageSquare, Database, Instagram, TrendingUp, Hash, Film, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { PersonaAbCompareDialog } from "./PersonaAbCompareDialog";
 import { PersonaAbStatsPanel } from "./PersonaAbStatsPanel";
+
+function formatHighlight(it: HighlightItem | string, prefix = ""): string {
+  if (typeof it === "string") return it;
+  if (it.avg_engagement) return `${prefix}${it.label} (${it.avg_engagement}% eng)`;
+  return `${prefix}${it.label}${it.count ? ` (${it.count}x)` : ""}`;
+}
+
+function timeAgo(iso?: string): string {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "agora";
+  if (m < 60) return `há ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `há ${h}h`;
+  const d = Math.floor(h / 24);
+  return `há ${d}d`;
+}
 
 interface FieldDef {
   key: PersonaField;
