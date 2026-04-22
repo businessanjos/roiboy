@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { accountId, field, currentPersona } = await req.json();
+    const { accountId, field, currentPersona, instagramProfileId } = await req.json();
 
     if (!accountId || !field) {
       return new Response(JSON.stringify({ error: "accountId e field são obrigatórios" }), {
@@ -136,11 +136,13 @@ Deno.serve(async (req) => {
     let instagramUsername: string | null = null;
     let topHighlights: { formats: string[]; themes: string[]; hashtags: string[] } = { formats: [], themes: [], hashtags: [] };
     try {
-      // 1) Tenta cache
-      const { data: cached } = await supabase
+      // 1) Tenta cache (filtrando por profile_id quando o usuário escolheu um perfil ativo)
+      let cachedQuery = supabase
         .from("instagram_highlights_cache")
-        .select("username, formats, themes, hashtags, computed_at")
-        .eq("account_id", accountId)
+        .select("username, formats, themes, hashtags, computed_at, profile_id")
+        .eq("account_id", accountId);
+      if (instagramProfileId) cachedQuery = cachedQuery.eq("profile_id", instagramProfileId);
+      const { data: cached } = await cachedQuery
         .order("computed_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -164,12 +166,12 @@ Deno.serve(async (req) => {
 
         // Para o bloco completo de performance, ainda buscamos o contexto ao vivo (formato/hashtag stats são leves).
         try {
-          const igCtx = await fetchInstagramContext(supabase, accountId);
+          const igCtx = await fetchInstagramContext(supabase, accountId, instagramProfileId);
           if (igCtx?.profile) instagramContext = buildInstagramContextBlock(igCtx);
         } catch (_) { /* opcional */ }
       } else {
         // 2) Fallback ao vivo + popula cache
-        const igCtx = await fetchInstagramContext(supabase, accountId);
+        const igCtx = await fetchInstagramContext(supabase, accountId, instagramProfileId);
         if (igCtx?.profile) {
           instagramUsername = igCtx.profile.username;
           instagramContext = buildInstagramContextBlock(igCtx);
@@ -188,18 +190,22 @@ Deno.serve(async (req) => {
           topHighlights.themes = tally(top.map((p) => p.theme));
           topHighlights.hashtags = (igCtx.topHashtags || []).slice(0, 3).map((h) => `#${h.tag} (${h.avg_engagement}% eng)`);
 
-          // Popula cache em background (best-effort)
+          // Popula cache em background (best-effort) — usa o profileId fornecido OU resolve pelo username
           try {
-            const { data: profile } = await supabase
-              .from("instagram_profiles")
-              .select("id")
-              .eq("account_id", accountId)
-              .eq("username", igCtx.profile.username)
-              .maybeSingle();
-            if (profile?.id) {
+            let resolvedProfileId = instagramProfileId || null;
+            if (!resolvedProfileId) {
+              const { data: profile } = await supabase
+                .from("instagram_profiles")
+                .select("id")
+                .eq("account_id", accountId)
+                .eq("username", igCtx.profile.username)
+                .maybeSingle();
+              resolvedProfileId = profile?.id || null;
+            }
+            if (resolvedProfileId) {
               await supabase.from("instagram_highlights_cache").upsert({
                 account_id: accountId,
-                profile_id: profile.id,
+                profile_id: resolvedProfileId,
                 username: igCtx.profile.username,
                 formats: tally(top.map((p) => p.post_type)).map((s) => ({ label: s.split(" (")[0], count: Number(s.match(/\((\d+)x\)/)?.[1] || 0) })),
                 themes: tally(top.map((p) => p.theme)).map((s) => ({ label: s.split(" (")[0], count: Number(s.match(/\((\d+)x\)/)?.[1] || 0) })),
