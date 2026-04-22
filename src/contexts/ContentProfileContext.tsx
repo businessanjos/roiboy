@@ -33,14 +33,18 @@ export function ContentProfileProvider({ children }: { children: ReactNode }) {
       if (!currentUser?.account_id) return [];
 
       const [ig, tt, yt] = await Promise.all([
-        supabase.from('instagram_profiles').select('id, username, display_name, avatar_url').eq('account_id', currentUser.account_id),
-        supabase.from('tiktok_profiles').select('id, username, display_name, avatar_url').eq('account_id', currentUser.account_id),
+        supabase.from('instagram_profiles').select('id, username, display_name, profile_picture_url').eq('account_id', currentUser.account_id),
+        supabase.from('tiktok_profiles').select('id, username, display_name, profile_picture_url').eq('account_id', currentUser.account_id),
         supabase.from('youtube_channels').select('id, username, display_name, profile_picture_url').eq('account_id', currentUser.account_id),
       ]);
 
+      if (ig.error) console.error('[ContentProfiles] instagram error:', ig.error);
+      if (tt.error) console.error('[ContentProfiles] tiktok error:', tt.error);
+      if (yt.error) console.error('[ContentProfiles] youtube error:', yt.error);
+
       const result: ContentProfile[] = [];
-      (ig.data ?? []).forEach((p: any) => result.push({ id: p.id, username: p.username, display_name: p.display_name, avatar_url: p.avatar_url, platform: 'instagram' }));
-      (tt.data ?? []).forEach((p: any) => result.push({ id: p.id, username: p.username, display_name: p.display_name, avatar_url: p.avatar_url, platform: 'tiktok' }));
+      (ig.data ?? []).forEach((p: any) => result.push({ id: p.id, username: p.username, display_name: p.display_name, avatar_url: p.profile_picture_url, platform: 'instagram' }));
+      (tt.data ?? []).forEach((p: any) => result.push({ id: p.id, username: p.username, display_name: p.display_name, avatar_url: p.profile_picture_url, platform: 'tiktok' }));
       (yt.data ?? []).forEach((p: any) => result.push({ id: p.id, username: p.username, display_name: p.display_name, avatar_url: p.profile_picture_url, platform: 'youtube' }));
       return result;
     },
