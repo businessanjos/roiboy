@@ -162,6 +162,9 @@ export default function Leads() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterResponsibleUserId, setFilterResponsibleUserId] = useState<string>("all");
+  const [filterCreatedFrom, setFilterCreatedFrom] = useState("");
+  const [filterCreatedTo, setFilterCreatedTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   
@@ -1100,10 +1103,30 @@ export default function Leads() {
     }
   };
 
-  const hasActiveFilters = filterSource !== "all";
+  const responsibleOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    leads.forEach((lead) => {
+      if (lead.responsible_user_id && lead.responsible_user?.name) {
+        map.set(lead.responsible_user_id, lead.responsible_user.name);
+      }
+    });
+
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [leads]);
+
+  const hasActiveFilters =
+    filterSource !== "all" ||
+    filterResponsibleUserId !== "all" ||
+    !!filterCreatedFrom ||
+    !!filterCreatedTo;
   
   const clearFilters = () => {
     setFilterSource("all");
+    setFilterResponsibleUserId("all");
+    setFilterCreatedFrom("");
+    setFilterCreatedTo("");
   };
 
   const filteredLeads = useMemo(() => leads.filter((lead) => {
@@ -1113,9 +1136,28 @@ export default function Leads() {
       lead.email?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesSource = filterSource === "all" || lead.source === filterSource;
+    const matchesResponsible = filterResponsibleUserId === "all" || lead.responsible_user_id === filterResponsibleUserId;
+    const leadCreatedAt = new Date(lead.created_at);
+    const matchesCreatedFrom = !filterCreatedFrom || leadCreatedAt >= new Date(`${filterCreatedFrom}T00:00:00`);
+    const matchesCreatedTo = !filterCreatedTo || leadCreatedAt <= new Date(`${filterCreatedTo}T23:59:59.999`);
     
-    return matchesSearch && matchesSource;
-  }), [leads, searchQuery, filterSource]);
+    return matchesSearch && matchesSource && matchesResponsible && matchesCreatedFrom && matchesCreatedTo;
+  }), [leads, searchQuery, filterSource, filterResponsibleUserId, filterCreatedFrom, filterCreatedTo]);
+
+  const filteredNewLeads = useMemo(
+    () => filteredLeads.filter((lead) => lead.status === "new"),
+    [filteredLeads]
+  );
+
+  const filteredContactedLeads = useMemo(
+    () => filteredLeads.filter((lead) => lead.status === "contacted"),
+    [filteredLeads]
+  );
+
+  const filteredQualifiedLeads = useMemo(
+    () => filteredLeads.filter((lead) => lead.status === "qualified"),
+    [filteredLeads]
+  );
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
@@ -1128,7 +1170,7 @@ export default function Leads() {
   // Reset page on filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterSource]);
+  }, [searchQuery, filterSource, filterResponsibleUserId, filterCreatedFrom, filterCreatedTo]);
 
   const getInitials = (name: string) => {
     return name
@@ -1204,22 +1246,22 @@ export default function Leads() {
         <div className="flex items-center gap-4 overflow-x-auto pb-2">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 min-w-fit">
             <Users className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">{leads.length}</span>
+            <span className="text-sm font-medium">{filteredLeads.length}</span>
             <span className="text-xs text-muted-foreground">Total</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 min-w-fit">
             <div className="w-2 h-2 rounded-full bg-blue-500" />
-            <span className="text-sm font-medium">{newLeads.length}</span>
+            <span className="text-sm font-medium">{filteredNewLeads.length}</span>
             <span className="text-xs text-muted-foreground">Novos</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 min-w-fit">
             <div className="w-2 h-2 rounded-full bg-amber-500" />
-            <span className="text-sm font-medium">{contactedLeads.length}</span>
+            <span className="text-sm font-medium">{filteredContactedLeads.length}</span>
             <span className="text-xs text-muted-foreground">Contatados</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 min-w-fit">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-sm font-medium">{qualifiedLeads.length}</span>
+            <span className="text-sm font-medium">{filteredQualifiedLeads.length}</span>
             <span className="text-xs text-muted-foreground">Qualificados</span>
           </div>
         </div>
@@ -1236,7 +1278,7 @@ export default function Leads() {
             />
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Select value={filterSource} onValueChange={setFilterSource}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Origem" />
@@ -1250,6 +1292,34 @@ export default function Leads() {
                 ))}
               </SelectContent>
             </Select>
+
+            <Select value={filterResponsibleUserId} onValueChange={setFilterResponsibleUserId}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Quem cadastrou</SelectItem>
+                {responsibleOptions.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Input
+              type="date"
+              className="w-[160px]"
+              value={filterCreatedFrom}
+              onChange={(e) => setFilterCreatedFrom(e.target.value)}
+            />
+
+            <Input
+              type="date"
+              className="w-[160px]"
+              value={filterCreatedTo}
+              onChange={(e) => setFilterCreatedTo(e.target.value)}
+            />
             
             
             {hasActiveFilters && (
@@ -1259,6 +1329,10 @@ export default function Leads() {
             )}
           </div>
         </div>
+
+        <p className="text-sm text-muted-foreground px-4 pb-2">
+          No filtro atual: <span className="font-medium text-foreground">{filteredNewLeads.length} novas oportunidades</span> de {filteredLeads.length} leads.
+        </p>
         </div>
 
         {/* Scrollable Leads List */}
