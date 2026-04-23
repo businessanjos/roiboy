@@ -6,6 +6,55 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+type OAuthState = {
+  u: string;
+  a: string;
+  r: string;
+  o?: string | null;
+  n: string;
+  t: number;
+};
+
+function getRedirectContext(stateParam: string | null, fallbackBase: string) {
+  if (!stateParam) {
+    return {
+      appBase: fallbackBase,
+      returnTo: "/settings?tab=integrations",
+      parsedState: null as OAuthState | null,
+    };
+  }
+
+  try {
+    const parsedState = JSON.parse(atob(stateParam)) as Partial<OAuthState>;
+    const appBase =
+      typeof parsedState.o === "string" && /^https?:\/\//.test(parsedState.o)
+        ? parsedState.o
+        : fallbackBase;
+    const returnTo =
+      typeof parsedState.r === "string" && parsedState.r.startsWith("/")
+        ? parsedState.r
+        : "/settings?tab=integrations";
+
+    return {
+      appBase,
+      returnTo,
+      parsedState: parsedState as OAuthState,
+    };
+  } catch {
+    return {
+      appBase: fallbackBase,
+      returnTo: "/settings?tab=integrations",
+      parsedState: null as OAuthState | null,
+    };
+  }
+}
+
+function buildRedirectUrl(base: string, returnTo: string, status: "connected" | "error", reason?: string) {
+  const sep = returnTo.includes("?") ? "&" : "?";
+  const reasonParam = reason ? `&reason=${encodeURIComponent(reason)}` : "";
+  return `${base}${returnTo}${sep}gdrive=${status}${reasonParam}`;
+}
+
 function htmlRedirect(targetUrl: string, message: string) {
   return new Response(
     `<!doctype html><html><head><meta charset="utf-8"><title>Google Drive</title>
@@ -28,27 +77,26 @@ Deno.serve(async (req) => {
 
   const appBase =
     Deno.env.get("APP_BASE_URL") || "https://iamroy.app";
+  const redirectContext = getRedirectContext(state, appBase);
 
   try {
     if (errorParam) {
       return htmlRedirect(
-        `${appBase}/settings?tab=integrations&gdrive=error&reason=${encodeURIComponent(errorParam)}`,
+        buildRedirectUrl(redirectContext.appBase, redirectContext.returnTo, "error", errorParam),
         `Falha na autorização: ${errorParam}`
       );
     }
     if (!code || !state) {
       return htmlRedirect(
-        `${appBase}/settings?tab=integrations&gdrive=error&reason=missing_code`,
+        buildRedirectUrl(redirectContext.appBase, redirectContext.returnTo, "error", "missing_code"),
         "Parâmetros ausentes."
       );
     }
 
-    let parsedState: { u: string; a: string; r: string; o?: string | null; n: string; t: number };
-    try {
-      parsedState = JSON.parse(atob(state));
-    } catch {
+    const parsedState = redirectContext.parsedState;
+    if (!parsedState) {
       return htmlRedirect(
-        `${appBase}/settings?tab=integrations&gdrive=error&reason=invalid_state`,
+        buildRedirectUrl(redirectContext.appBase, redirectContext.returnTo, "error", "invalid_state"),
         "State inválido."
       );
     }
@@ -75,7 +123,7 @@ Deno.serve(async (req) => {
     if (!tokenRes.ok) {
       console.error("token exchange failed", tokenJson);
       return htmlRedirect(
-        `${appBase}/settings?tab=integrations&gdrive=error&reason=token_exchange`,
+        buildRedirectUrl(redirectContext.appBase, redirectContext.returnTo, "error", "token_exchange"),
         `Falha ao trocar código: ${tokenJson?.error || tokenRes.status}`
       );
     }
@@ -87,7 +135,7 @@ Deno.serve(async (req) => {
 
     if (!refreshToken) {
       return htmlRedirect(
-        `${appBase}/settings?tab=integrations&gdrive=error&reason=no_refresh_token`,
+        buildRedirectUrl(redirectContext.appBase, redirectContext.returnTo, "error", "no_refresh_token"),
         "Google não retornou refresh_token. Revogue o acesso e tente novamente."
       );
     }
@@ -127,22 +175,19 @@ Deno.serve(async (req) => {
     if (upsertErr) {
       console.error("upsert connection error", upsertErr);
       return htmlRedirect(
-        `${appBase}/settings?tab=integrations&gdrive=error&reason=db`,
+        buildRedirectUrl(redirectContext.appBase, redirectContext.returnTo, "error", "db"),
         `Erro ao salvar conexão: ${upsertErr.message}`
       );
     }
 
-    const returnTo = parsedState.r || "/settings?tab=integrations";
-    const targetBase = parsedState.o || appBase;
-    const sep = returnTo.includes("?") ? "&" : "?";
     return htmlRedirect(
-      `${targetBase}${returnTo}${sep}gdrive=connected`,
+      buildRedirectUrl(redirectContext.appBase, redirectContext.returnTo, "connected"),
       "Conexão concluída! Redirecionando..."
     );
   } catch (e) {
     console.error("gdrive-oauth-callback error", e);
     return htmlRedirect(
-      `${appBase}/settings?tab=integrations&gdrive=error&reason=exception`,
+      buildRedirectUrl(redirectContext.appBase, redirectContext.returnTo, "error", "exception"),
       `Erro: ${e instanceof Error ? e.message : "unknown"}`
     );
   }
