@@ -118,10 +118,7 @@ Deno.serve(async (req) => {
 
       if (existingRequest) {
         if (existingRequest.status === "approved") {
-          const appliedFilters: SharedFilters = reqFilters || {};
-          const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, share.dashboard_id, share.account_id, appliedFilters);
-          const filterOptions = await fetchFilterOptions(supabaseAdmin, share.account_id);
-          return new Response(JSON.stringify({ status: "approved", ...dashboardData, filterOptions }), {
+          return new Response(JSON.stringify({ status: "approved" }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
@@ -193,18 +190,49 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (request.status === "approved") {
-        // Apply filters if provided (e.g. default "year" range from client)
-        const appliedFilters: SharedFilters = reqFilters || {};
-        const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, share.dashboard_id, share.account_id, appliedFilters);
-        const filterOptions = await fetchFilterOptions(supabaseAdmin, share.account_id);
-        return new Response(JSON.stringify({ status: "approved", ...dashboardData, filterOptions }), {
+      return new Response(JSON.stringify({ status: request.status }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Action: load_dashboard — fetch approved dashboard data after status check succeeds
+    if (action === "load_dashboard") {
+      if (!email) {
+        return new Response(JSON.stringify({ error: "Email obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const { data: request } = await supabaseAdmin
+        .from("insights_share_access_requests")
+        .select("status")
+        .eq("share_id", share.id)
+        .eq("email", normalizedEmail)
+        .single();
+
+      if (!request) {
+        return new Response(JSON.stringify({ status: "no_request" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      return new Response(JSON.stringify({ status: request.status }), {
+      if (request.status !== "approved") {
+        return new Response(JSON.stringify({ status: request.status }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const appliedFilters: SharedFilters = reqFilters || {};
+      const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, share.dashboard_id, share.account_id, appliedFilters);
+      const filterOptions = await fetchFilterOptions(supabaseAdmin, share.account_id);
+
+      return new Response(JSON.stringify({ status: "approved", ...dashboardData, filterOptions }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
