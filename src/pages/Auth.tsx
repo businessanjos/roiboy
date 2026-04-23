@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { PasswordStrength, validatePassword, usePasswordStrength } from "@/components/ui/password-strength";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { RoyLogo } from "@/components/ui/roy-logo";
+import { Separator } from "@/components/ui/separator";
 import { 
   loginFormSchema, 
   signupFormSchema, 
@@ -27,7 +28,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 export default function Auth() {
-  const { user, loading, signIn, signUp, resetPassword } = useAuth();
+  const { user, loading, signIn, signInWithGoogle, signUp, resetPassword } = useAuth();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") === "signup" ? "signup" : "login";
   
@@ -171,6 +172,20 @@ export default function Auth() {
     }
 
     setIsSubmitting(false);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setIsSubmitting(true);
+
+    const { error } = await signInWithGoogle();
+
+    if (error) {
+      setError("Erro ao entrar com Google. Tente novamente.");
+      toast.error("Falha ao entrar com Google");
+      setIsSubmitting(false);
+      return;
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -489,8 +504,20 @@ export default function Auth() {
               )}
 
               <TabsContent value="login" className="mt-0">
+                <div className="space-y-4">
+                  <Button type="button" variant="outline" className="w-full" disabled={isSubmitting} onClick={handleGoogleSignIn}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="mr-2 text-base leading-none">G</span>}
+                    Entrar com Google
+                  </Button>
+                  <div className="relative">
+                    <Separator />
+                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                      ou continue com email
+                    </span>
+                  </div>
+                </div>
                 <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+                  <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4 pt-4">
                     <FormField
                       control={loginForm.control}
                       name="email"
@@ -569,8 +596,20 @@ export default function Auth() {
               </TabsContent>
 
               <TabsContent value="signup" className="mt-0">
+                <div className="space-y-4">
+                  <Button type="button" variant="outline" className="w-full" disabled={isSubmitting} onClick={handleGoogleSignIn}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="mr-2 text-base leading-none">G</span>}
+                    Continuar com Google
+                  </Button>
+                  <div className="relative">
+                    <Separator />
+                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                      ou crie com email
+                    </span>
+                  </div>
+                </div>
                 <Form {...signupForm}>
-                  <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
+                  <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4 pt-4">
                     <FormField
                       control={signupForm.control}
                       name="name"
