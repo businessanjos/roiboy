@@ -198,6 +198,28 @@ export default function SharedInsights() {
     };
   }, []);
 
+  const loadDashboard = useCallback(async (emailToLoad: string, filters = getDefaultDateFilters()) => {
+    const { data, error } = await callEdgeFunction("load_dashboard", {
+      email: emailToLoad,
+      filters,
+    });
+
+    if (error || !data || data.status !== "approved") {
+      return false;
+    }
+
+    setDashboardData({
+      dashboard: data.dashboard,
+      visuals: data.visuals,
+      visualsData: data.visualsData || {},
+      filterOptions: data.filterOptions,
+    });
+    setStatus("approved");
+    setInitialLoad(false);
+    setErrorMessage("");
+    return true;
+  }, [callEdgeFunction, getDefaultDateFilters]);
+
   const checkAccess = async (emailToCheck: string) => {
     setStatus("loading");
     const defaultFilters = getDefaultDateFilters();
@@ -212,14 +234,11 @@ export default function SharedInsights() {
     }
 
     if (data.status === "approved") {
-      setDashboardData({
-        dashboard: data.dashboard,
-        visuals: data.visuals,
-        visualsData: data.visualsData || {},
-        filterOptions: data.filterOptions,
-      });
-      setStatus("approved");
-      setInitialLoad(false);
+      const loaded = await loadDashboard(emailToCheck, defaultFilters);
+      if (!loaded) {
+        setStatus("pending");
+        setErrorMessage("Seu acesso foi liberado, mas o painel ainda está carregando. Aguarde alguns segundos.");
+      }
     } else if (data.status === "rejected") {
       setStatus("rejected");
     } else if (data.status === "pending") {
@@ -247,15 +266,11 @@ export default function SharedInsights() {
     }
 
     if (data.status === "approved") {
-      setDashboardData({
-        dashboard: data.dashboard,
-        visuals: data.visuals,
-        visualsData: data.visualsData || {},
-        filterOptions: data.filterOptions,
-      });
-      setStatus("approved");
-      // Trigger a filtered fetch immediately to ensure data parity
-      setInitialLoad(false);
+      const loaded = await loadDashboard(normalizedEmail, defaultFilters);
+      if (!loaded) {
+        setStatus("pending");
+        setErrorMessage("Seu acesso foi liberado, mas o painel ainda está carregando. Aguarde alguns segundos.");
+      }
     } else if (data.status === "rejected") {
       setStatus("rejected");
     } else {
@@ -349,6 +364,9 @@ export default function SharedInsights() {
               <Loader2 className="h-3 w-3 animate-spin" />
               Verificando automaticamente...
             </div>
+            {errorMessage && (
+              <p className="text-xs text-muted-foreground">{errorMessage}</p>
+            )}
           </CardContent>
         </Card>
       </div>
