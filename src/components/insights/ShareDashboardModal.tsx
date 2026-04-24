@@ -81,12 +81,12 @@ function ExternalAccessTab({ dashboardId }: { dashboardId: string }) {
   if (created) {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-3">
-          <div className="flex items-center gap-2 text-green-700">
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
             <CheckCircle className="h-5 w-5" />
             <span className="font-medium">Acesso criado!</span>
           </div>
-          <p className="text-sm text-green-600">
+          <p className="text-sm text-foreground/80">
             Compartilhe as credenciais abaixo com a pessoa que vai acessar o painel:
           </p>
           <div className="space-y-2 text-sm">
@@ -402,7 +402,7 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
               {isActive ? (
-                <Badge variant="default" className="bg-green-600">Ativo</Badge>
+                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20">Ativo</Badge>
               ) : (
                 <Badge variant="secondary">Desativado</Badge>
               )}
@@ -495,7 +495,7 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {requests.map((req) => (
-                  <div key={req.id} className="flex items-center justify-between rounded-md border px-3 py-2">
+                  <div key={req.id} className="flex items-center justify-between rounded-md border px-3 py-2 gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
                         {req.email}
@@ -503,18 +503,16 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
                           <span className="ml-1 text-xs text-muted-foreground font-normal">({req.request_count}x)</span>
                         )}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {req.status === "pending" && "Aguardando"}
-                        {req.status === "approved" && "Liberado"}
-                        {req.status === "rejected" && "Recusado"}
-                      </p>
+                      {req.status === "pending" && (
+                        <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
+                      )}
                     </div>
                     {req.status === "pending" && (
-                      <div className="flex items-center gap-1 ml-2">
+                      <div className="flex items-center gap-1 shrink-0">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                          className="h-8 w-8 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
                           onClick={() => handleAction(req.id, "approve")}
                           disabled={processingId === req.id}
                         >
@@ -523,7 +521,7 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleAction(req.id, "reject")}
                           disabled={processingId === req.id}
                         >
@@ -532,21 +530,22 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
                       </div>
                     )}
                     {req.status === "approved" && (
-                      <div className="flex items-center gap-1 ml-2">
-                        <Badge variant="outline" className="text-green-600 border-green-200">Liberado</Badge>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20">Liberado</Badge>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 opacity-40 hover:opacity-100 text-destructive hover:text-destructive hover:bg-red-50"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleAction(req.id, "reject")}
                           disabled={processingId === req.id}
+                          title="Revogar acesso"
                         >
-                          {processingId === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                          {processingId === req.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
                         </Button>
                       </div>
                     )}
                     {req.status === "rejected" && (
-                      <Badge variant="outline" className="text-destructive border-red-200">Recusado</Badge>
+                      <Badge variant="outline" className="text-destructive border-destructive/30 shrink-0">Recusado</Badge>
                     )}
                   </div>
                 ))}
