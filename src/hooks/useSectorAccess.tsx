@@ -26,6 +26,9 @@ export function useSectorAccess() {
   const accountId = currentUser?.account_id;
   const userRole = currentUser?.role;
   const teamRoleName = currentUser?.team_role_name;
+  const isAlsoAdmin = currentUser?.is_also_admin === true;
+  const teamRoleNamesAll = currentUser?.team_role_names || (teamRoleName ? [teamRoleName] : []);
+  const isTeamRoleAdmin = teamRoleNamesAll.includes("Admin");
 
   const { data: sectorAccess = [], isLoading } = useQuery({
     queryKey: ["user-sector-access", userId],
