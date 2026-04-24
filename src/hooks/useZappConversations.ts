@@ -285,7 +285,10 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       console.warn(`[ZappConversations] SECURITY: Filtered out ${assignments.length - filtered.length} assignments that didn't match department`);
     }
 
-    if (integrationId && !hasGlobalVisibility) {
+    // Always isolate by selected instance when one is chosen — even for admins.
+    // Admins still have global visibility ACROSS instances by switching the selector,
+    // but a selected instance must show only its own conversations.
+    if (integrationId) {
       const beforeCount = filtered.length;
       const currentSectorDeptId = sectorDepartment.id;
 
