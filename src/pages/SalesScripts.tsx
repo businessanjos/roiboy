@@ -749,6 +749,24 @@ export default function SalesScripts() {
                             })}
                           </div>
                         )}
+                        {hasMoreDriveFiles && driveScope !== 'drives-root' && (
+                          <div className="border-t p-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="w-full gap-2 text-xs"
+                              onClick={() => fetchMoreDriveFiles()}
+                              disabled={loadingMoreDriveFiles || isImportingDriveFile}
+                            >
+                              {loadingMoreDriveFiles ? (
+                                <><Loader2 className="w-3.5 h-3.5 animate-spin" />Carregando mais...</>
+                              ) : (
+                                <>Carregar mais</>
+                              )}
+                            </Button>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between gap-2">
