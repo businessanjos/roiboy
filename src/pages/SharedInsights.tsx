@@ -324,17 +324,27 @@ export default function SharedInsights() {
     );
   }
 
-  if (status === "invalid" || status === "inactive") {
+  if (status === "invalid" || status === "inactive" || status === "expired") {
+    const title =
+      status === "expired"
+        ? "Link expirado"
+        : status === "inactive"
+        ? "Link desativado"
+        : "Link indisponível";
+    const fallback =
+      status === "expired"
+        ? "Este link expirou. Solicite ao proprietário um novo link."
+        : status === "inactive"
+        ? "Este link de compartilhamento foi desativado pelo proprietário."
+        : "Este link foi atualizado e não é mais válido. Solicite o novo link ao proprietário.";
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="pt-8 pb-8 space-y-4">
             <XCircle className="h-12 w-12 text-destructive mx-auto" />
-            <h2 className="text-xl font-semibold">Link indisponível</h2>
+            <h2 className="text-xl font-semibold">{title}</h2>
             <p className="text-muted-foreground text-sm">
-              {status === "inactive" 
-                ? "Este link de compartilhamento foi desativado pelo proprietário." 
-                : "Este link não existe ou expirou."}
+              {errorMessage || fallback}
             </p>
           </CardContent>
         </Card>
