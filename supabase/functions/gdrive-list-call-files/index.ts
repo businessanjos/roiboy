@@ -234,17 +234,21 @@ Deno.serve(async (req) => {
     const conditions: string[] = ["trashed=false"];
 
     if (scope === "shared-with-me") {
-      conditions.push("sharedWithMe=true");
-      conditions.push(`(mimeType='${FOLDER_MIME}' or ${FILE_MIME_QUERY})`);
-      if (search) conditions.push(`name contains '${search}'`);
       if (folderId) {
+        // We're navigating INSIDE a folder that lives under "Shared with me".
+        // Once we're inside a folder, Drive expects a regular "in parents" query — keeping
+        // sharedWithMe=true would return zero items (a known Drive API quirk).
         conditions.push(`'${folderId.replace(/'/g, "\\'")}' in parents`);
+      } else {
+        conditions.push("sharedWithMe=true");
       }
+      conditions.push(`(mimeType='${FOLDER_MIME}' or ${NON_FOLDER_FILTER})`);
+      if (search) conditions.push(`name contains '${search}'`);
     } else if (scope === "shared-drive") {
       const target = folderId || driveId;
       if (!target) throw new Error("driveId obrigatório para listar Shared Drive");
       conditions.push(`'${target.replace(/'/g, "\\'")}' in parents`);
-      conditions.push(`(mimeType='${FOLDER_MIME}' or ${FILE_MIME_QUERY})`);
+      conditions.push(`(mimeType='${FOLDER_MIME}' or ${NON_FOLDER_FILTER})`);
       if (search) conditions.push(`name contains '${search}'`);
     } else {
       // my-drive
@@ -253,7 +257,7 @@ Deno.serve(async (req) => {
       } else {
         conditions.push(`'root' in parents`);
       }
-      conditions.push(`(mimeType='${FOLDER_MIME}' or ${FILE_MIME_QUERY})`);
+      conditions.push(`(mimeType='${FOLDER_MIME}' or ${NON_FOLDER_FILTER})`);
       if (search) conditions.push(`name contains '${search}'`);
     }
 
