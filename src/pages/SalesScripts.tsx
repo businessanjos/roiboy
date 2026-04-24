@@ -249,13 +249,10 @@ export default function SalesScripts() {
   });
 
   const { data: driveListing, isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
-    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveSearch, driveFolderId, driveConnection?.id],
+    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveFolderId, driveConnection?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('gdrive-list-call-files', {
-        body: {
-          search: driveSearch || undefined,
-          folderId: driveSearch ? undefined : (driveFolderId || 'root'),
-        },
+        body: { folderId: driveFolderId || 'root' },
       });
       if (error) throw error;
       return data as { items: DriveCallFile[]; currentFolder: DriveFolderInfo | null };
