@@ -79,6 +79,8 @@ interface SalesPlaybook { id: string; account_id: string; title: string; content
 interface GoogleDriveConnection { id: string; google_email: string; is_active: boolean; }
 interface DriveCallFile { id: string; name: string; mimeType: string; modifiedTime: string; webViewLink?: string | null; isFolder?: boolean; }
 interface DriveFolderInfo { id: string; name: string; parentId: string | null; }
+type DriveScope = 'drives-root' | 'my-drive' | 'shared-with-me' | 'shared-drive';
+interface DriveNavLevel { folderId: string; scope: DriveScope; driveId: string | null; folderName: string; }
 
 export default function SalesScripts() {
   const { currentUser } = useCurrentUser();
