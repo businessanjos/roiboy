@@ -55,13 +55,28 @@ function buildRedirectUrl(base: string, returnTo: string, status: "connected" | 
   return `${base}${returnTo}${sep}gdrive=${status}${reasonParam}`;
 }
 
+function escapeForJs(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/</g, "\\u003c");
+}
+
 function htmlRedirect(targetUrl: string, message: string) {
+  const safeUrl = escapeForJs(targetUrl);
   return new Response(
     `<!doctype html><html><head><meta charset="utf-8"><title>Google Drive</title>
-<meta http-equiv="refresh" content="0;url=${targetUrl}"/></head>
+<meta http-equiv="refresh" content="0;url=${targetUrl}"/>
+<script>window.location.replace('${safeUrl}');</script>
+</head>
 <body style="font-family:system-ui;padding:32px;text-align:center">
-<p>${message}</p><p><a href="${targetUrl}">Voltar ao app</a></p></body></html>`,
-    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
+<p>${message}</p><p><a href="${targetUrl}">Voltar ao app</a></p>
+<script>setTimeout(function(){window.location.href='${safeUrl}';},50);</script>
+</body></html>`,
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    }
   );
 }
 
