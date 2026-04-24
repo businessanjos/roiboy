@@ -261,14 +261,17 @@ Deno.serve(async (req) => {
     }
 
     const q = conditions.join(" and ");
+    const pageToken = body.data.pageToken?.trim() || "";
+    const pageSize = body.data.pageSize ?? 100;
 
     const url = new URL("https://www.googleapis.com/drive/v3/files");
     url.searchParams.set("q", q);
-    url.searchParams.set("fields", "files(id,name,mimeType,modifiedTime,webViewLink,parents,driveId)");
+    url.searchParams.set("fields", "nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink,parents,driveId)");
     url.searchParams.set("orderBy", "folder,name");
-    url.searchParams.set("pageSize", "200");
+    url.searchParams.set("pageSize", String(pageSize));
     url.searchParams.set("supportsAllDrives", "true");
     url.searchParams.set("includeItemsFromAllDrives", "true");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
 
     if (scope === "shared-drive") {
       url.searchParams.set("corpora", "drive");
