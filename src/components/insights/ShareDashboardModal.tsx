@@ -188,19 +188,21 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [shareId, setShareId] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(true);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [savingExpiry, setSavingExpiry] = useState(false);
 
   const fetchShare = useCallback(async () => {
     if (!currentUser || !dashboardId) return;
     setLoading(true);
     try {
-      const { data } = await supabase
+      const { data } = await (supabase
         .from("insights_dashboard_shares")
-        .select("id, share_token, is_active")
+        .select("id, share_token, is_active, expires_at") as any)
         .eq("dashboard_id", dashboardId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -210,9 +212,11 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
         setShareToken(data.share_token);
         setShareId(data.id);
         setIsActive(data.is_active);
+        setExpiresAt(data.expires_at ?? null);
       } else {
         setShareToken(null);
         setShareId(null);
+        setExpiresAt(null);
       }
     } finally {
       setLoading(false);
