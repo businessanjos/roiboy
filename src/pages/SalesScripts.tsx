@@ -696,13 +696,22 @@ export default function SalesScripts() {
                   </Select>
                   <p className="text-xs text-muted-foreground">A inteligência será gerada já vinculada ao produto escolhido.</p>
 
-                  {selectedDriveFile ? (
+                  {importedDriveFileNames.length > 0 ? (
+                    <div className="rounded-md border bg-muted/40 p-3 space-y-1">
+                      <p className="text-sm font-medium">{importedDriveFileNames.length === 1 ? 'Arquivo importado' : `${importedDriveFileNames.length} arquivos importados`}</p>
+                      <ul className="text-xs text-muted-foreground space-y-0.5 max-h-24 overflow-y-auto">
+                        {importedDriveFileNames.map((name, idx) => (
+                          <li key={idx} className="truncate">• {name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : selectedDriveFile ? (
                     <div className="rounded-md border bg-muted/40 p-3">
                       <p className="text-sm font-medium">Arquivo importado</p>
                       <p className="text-xs text-muted-foreground truncate">{selectedDriveFile.name}</p>
                     </div>
                   ) : (
-                    <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Você também pode continuar colando ou enviando a transcrição manualmente abaixo.</div>
+                    <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Selecione um ou mais arquivos do Drive para análise comparativa, ou cole/envie a transcrição manualmente abaixo.</div>
                   )}
                 </div>
               </div>
