@@ -253,13 +253,17 @@ export default function SalesScripts() {
   });
 
   const { data: driveListing, isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
-    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveFolderId, driveConnection?.id],
+    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveScope, driveFolderId, driveCurrentDriveId, driveConnection?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('gdrive-list-call-files', {
-        body: { folderId: driveFolderId || 'root' },
+        body: {
+          scope: driveScope,
+          folderId: driveFolderId || undefined,
+          driveId: driveCurrentDriveId || undefined,
+        },
       });
       if (error) throw error;
-      return data as { items: DriveCallFile[]; currentFolder: DriveFolderInfo | null };
+      return data as { items: DriveCallFile[]; currentFolder: DriveFolderInfo | null; scope?: DriveScope };
     },
     enabled: !!driveConnection?.is_active,
   });
