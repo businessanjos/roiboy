@@ -545,6 +545,19 @@ export default function SalesScripts() {
     setSelectedDriveFileIds(new Set());
   };
 
+  // Jump to a specific level in the breadcrumb stack (index = position in driveFolderStack)
+  const handleNavigateToStackIndex = (index: number) => {
+    setDriveFolderStack(prev => {
+      const target = prev[index];
+      if (!target) return prev;
+      setDriveScope(target.scope);
+      setDriveCurrentDriveId(target.driveId);
+      setDriveFolderId(target.folderId);
+      return prev.slice(0, index);
+    });
+    setSelectedDriveFileIds(new Set());
+  };
+
   const toggleDriveFileSelection = (fileId: string) => {
     setSelectedDriveFileIds(prev => {
       const next = new Set(prev);
