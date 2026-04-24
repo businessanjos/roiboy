@@ -79,6 +79,8 @@ interface SalesPlaybook { id: string; account_id: string; title: string; content
 interface GoogleDriveConnection { id: string; google_email: string; is_active: boolean; }
 interface DriveCallFile { id: string; name: string; mimeType: string; modifiedTime: string; webViewLink?: string | null; isFolder?: boolean; }
 interface DriveFolderInfo { id: string; name: string; parentId: string | null; }
+type DriveScope = 'drives-root' | 'my-drive' | 'shared-with-me' | 'shared-drive';
+interface DriveNavLevel { folderId: string; scope: DriveScope; driveId: string | null; folderName: string; }
 
 export default function SalesScripts() {
   const { currentUser } = useCurrentUser();
@@ -134,8 +136,10 @@ export default function SalesScripts() {
   const [driveImportedFileId, setDriveImportedFileId] = useState<string | null>(null);
   const [isConnectingDrive, setIsConnectingDrive] = useState(() => !!getGoogleDriveOAuthPending());
   const [isImportingDriveFile, setIsImportingDriveFile] = useState(false);
-  const [driveFolderId, setDriveFolderId] = useState<string>('root');
-  const [driveFolderStack, setDriveFolderStack] = useState<DriveFolderInfo[]>([]);
+  const [driveFolderId, setDriveFolderId] = useState<string>('');
+  const [driveScope, setDriveScope] = useState<DriveScope>('drives-root');
+  const [driveCurrentDriveId, setDriveCurrentDriveId] = useState<string | null>(null);
+  const [driveFolderStack, setDriveFolderStack] = useState<DriveNavLevel[]>([]);
   const [selectedDriveFileIds, setSelectedDriveFileIds] = useState<Set<string>>(new Set());
   const [importedDriveFileNames, setImportedDriveFileNames] = useState<string[]>([]);
 
@@ -249,13 +253,17 @@ export default function SalesScripts() {
   });
 
   const { data: driveListing, isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
-    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveFolderId, driveConnection?.id],
+    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveScope, driveFolderId, driveCurrentDriveId, driveConnection?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('gdrive-list-call-files', {
-        body: { folderId: driveFolderId || 'root' },
+        body: {
+          scope: driveScope,
+          folderId: driveFolderId || undefined,
+          driveId: driveCurrentDriveId || undefined,
+        },
       });
       if (error) throw error;
-      return data as { items: DriveCallFile[]; currentFolder: DriveFolderInfo | null };
+      return data as { items: DriveCallFile[]; currentFolder: DriveFolderInfo | null; scope?: DriveScope };
     },
     enabled: !!driveConnection?.is_active,
   });
@@ -415,10 +423,35 @@ export default function SalesScripts() {
   };
 
   const handleEnterFolder = (folder: DriveCallFile) => {
-    if (currentDriveFolder) {
-      setDriveFolderStack(prev => [...prev, currentDriveFolder]);
+    // Save current level on the stack
+    setDriveFolderStack(prev => [
+      ...prev,
+      {
+        folderId: driveFolderId,
+        scope: driveScope,
+        driveId: driveCurrentDriveId,
+        folderName: currentDriveFolder?.name || (driveScope === 'drives-root' ? 'Drives' : 'Meu Drive'),
+      },
+    ]);
+
+    // Translate virtual ids when entering from the drives root
+    if (folder.id === '__my_drive__') {
+      setDriveScope('my-drive');
+      setDriveCurrentDriveId(null);
+      setDriveFolderId('');
+    } else if (folder.id === '__shared_with_me__') {
+      setDriveScope('shared-with-me');
+      setDriveCurrentDriveId(null);
+      setDriveFolderId('');
+    } else if (folder.id.startsWith('__shared_drive__:')) {
+      const did = folder.id.slice('__shared_drive__:'.length);
+      setDriveScope('shared-drive');
+      setDriveCurrentDriveId(did);
+      setDriveFolderId(did);
+    } else {
+      // Normal subfolder — keep current scope/driveId
+      setDriveFolderId(folder.id);
     }
-    setDriveFolderId(folder.id);
     setSelectedDriveFileIds(new Set());
   };
 
@@ -426,7 +459,15 @@ export default function SalesScripts() {
     setDriveFolderStack(prev => {
       const next = [...prev];
       const last = next.pop();
-      setDriveFolderId(last?.id || 'root');
+      if (last) {
+        setDriveScope(last.scope);
+        setDriveCurrentDriveId(last.driveId);
+        setDriveFolderId(last.folderId);
+      } else {
+        setDriveScope('drives-root');
+        setDriveCurrentDriveId(null);
+        setDriveFolderId('');
+      }
       return next;
     });
     setSelectedDriveFileIds(new Set());
@@ -434,7 +475,9 @@ export default function SalesScripts() {
 
   const handleNavigateRoot = () => {
     setDriveFolderStack([]);
-    setDriveFolderId('root');
+    setDriveScope('drives-root');
+    setDriveCurrentDriveId(null);
+    setDriveFolderId('');
     setSelectedDriveFileIds(new Set());
   };
 
@@ -586,21 +629,21 @@ export default function SalesScripts() {
                       {/* Breadcrumb / navigation */}
                       <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
                         <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1" onClick={handleNavigateRoot} disabled={isImportingDriveFile}>
-                          <Home className="w-3.5 h-3.5" />Meu Drive
+                          <Home className="w-3.5 h-3.5" />Drives
                         </Button>
-                        {driveFolderStack.map((folder, idx) => (
-                          <span key={folder.id} className="flex items-center gap-1">
+                        {driveFolderStack.map((level) => (
+                          <span key={`${level.scope}-${level.folderId}`} className="flex items-center gap-1">
                             <span>/</span>
-                            <span className="truncate max-w-[140px]">{folder.name}</span>
+                            <span className="truncate max-w-[140px]">{level.folderName}</span>
                           </span>
                         ))}
-                        {currentDriveFolder && currentDriveFolder.id !== 'root' && (
+                        {currentDriveFolder && driveScope !== 'drives-root' && (
                           <span className="flex items-center gap-1">
                             <span>/</span>
                             <span className="font-medium text-foreground truncate max-w-[160px]">{currentDriveFolder.name}</span>
                           </span>
                         )}
-                        {(driveFolderStack.length > 0 || (currentDriveFolder && currentDriveFolder.id !== 'root')) && (
+                        {driveScope !== 'drives-root' && (
                           <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1 ml-auto" onClick={handleNavigateBack} disabled={isImportingDriveFile}>
                             <ArrowLeft className="w-3.5 h-3.5" />Voltar
                           </Button>

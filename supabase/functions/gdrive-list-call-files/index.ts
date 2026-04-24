@@ -9,6 +9,13 @@ const corsHeaders = {
 const BodySchema = z.object({
   search: z.string().trim().max(120).optional(),
   folderId: z.string().trim().max(120).optional(),
+  // Scope of listing:
+  // - "my-drive" (default): user's My Drive
+  // - "shared-with-me": files shared with the user
+  // - "shared-drive": list inside a Shared Drive (driveId required)
+  // - "drives-root": virtual root showing "Meu Drive", "Compartilhados comigo" and Shared Drives
+  scope: z.enum(["my-drive", "shared-with-me", "shared-drive", "drives-root"]).optional(),
+  driveId: z.string().trim().max(120).optional(),
 });
 
 const FILE_MIME_QUERY = [
@@ -18,6 +25,11 @@ const FILE_MIME_QUERY = [
 ].join(" or ");
 
 const FOLDER_MIME = "application/vnd.google-apps.folder";
+
+// Virtual folder IDs for the root picker
+const VIRTUAL_MY_DRIVE = "__my_drive__";
+const VIRTUAL_SHARED_WITH_ME = "__shared_with_me__";
+const VIRTUAL_SHARED_DRIVE_PREFIX = "__shared_drive__:";
 
 async function getAuthenticatedContext(req: Request) {
   const authHeader = req.headers.get("Authorization");
@@ -112,7 +124,7 @@ async function fetchFolderInfo(accessToken: string, folderId: string) {
     return { id: "root", name: "Meu Drive", parentId: null as string | null };
   }
   const url = new URL(`https://www.googleapis.com/drive/v3/files/${folderId}`);
-  url.searchParams.set("fields", "id,name,parents");
+  url.searchParams.set("fields", "id,name,parents,driveId");
   url.searchParams.set("supportsAllDrives", "true");
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -126,6 +138,21 @@ async function fetchFolderInfo(accessToken: string, folderId: string) {
     name: json.name as string,
     parentId: (json.parents?.[0] as string | undefined) ?? null,
   };
+}
+
+async function listSharedDrives(accessToken: string) {
+  const url = new URL("https://www.googleapis.com/drive/v3/drives");
+  url.searchParams.set("pageSize", "100");
+  url.searchParams.set("fields", "drives(id,name)");
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    console.warn("listSharedDrives failed", json);
+    return [] as Array<{ id: string; name: string }>;
+  }
+  return (json.drives || []) as Array<{ id: string; name: string }>;
 }
 
 Deno.serve(async (req) => {
@@ -144,36 +171,109 @@ Deno.serve(async (req) => {
 
     const { accessToken, googleEmail } = await getAuthenticatedContext(req);
     const search = body.data.search?.replace(/'/g, "\\'") || "";
-    const folderId = body.data.folderId?.trim() || "";
+    const rawFolderId = body.data.folderId?.trim() || "";
+    let scope = body.data.scope || "my-drive";
+    let driveId = body.data.driveId?.trim() || "";
+    let folderId = rawFolderId;
 
-    // Build query: when searching globally (no folder), search by name across drive.
-    // When inside a folder, list folder contents (folders first, then matching files).
+    // Translate virtual folder IDs into the right scope/driveId/folderId.
+    if (folderId === VIRTUAL_MY_DRIVE) {
+      scope = "my-drive";
+      folderId = "";
+    } else if (folderId === VIRTUAL_SHARED_WITH_ME) {
+      scope = "shared-with-me";
+      folderId = "";
+    } else if (folderId.startsWith(VIRTUAL_SHARED_DRIVE_PREFIX)) {
+      scope = "shared-drive";
+      driveId = folderId.slice(VIRTUAL_SHARED_DRIVE_PREFIX.length);
+      folderId = driveId; // Shared drive root folder id == driveId
+    }
+
+    // Virtual root: present "Meu Drive", "Compartilhados comigo" and each Shared Drive as folders.
+    if (scope === "drives-root") {
+      const drives = await listSharedDrives(accessToken);
+      const items = [
+        {
+          id: VIRTUAL_MY_DRIVE,
+          name: "Meu Drive",
+          mimeType: FOLDER_MIME,
+          modifiedTime: "",
+          webViewLink: null,
+          isFolder: true,
+        },
+        {
+          id: VIRTUAL_SHARED_WITH_ME,
+          name: "Compartilhados comigo",
+          mimeType: FOLDER_MIME,
+          modifiedTime: "",
+          webViewLink: null,
+          isFolder: true,
+        },
+        ...drives.map((d) => ({
+          id: `${VIRTUAL_SHARED_DRIVE_PREFIX}${d.id}`,
+          name: d.name,
+          mimeType: FOLDER_MIME,
+          modifiedTime: "",
+          webViewLink: null,
+          isFolder: true,
+        })),
+      ];
+
+      return new Response(
+        JSON.stringify({
+          connection_email: googleEmail,
+          currentFolder: { id: "drives-root", name: "Drives", parentId: null },
+          scope: "drives-root",
+          items,
+          files: [],
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build query depending on scope
     const conditions: string[] = ["trashed=false"];
 
-    if (folderId) {
-      conditions.push(`'${folderId.replace(/'/g, "\\'")}' in parents`);
+    if (scope === "shared-with-me") {
+      conditions.push("sharedWithMe=true");
+      conditions.push(`(mimeType='${FOLDER_MIME}' or ${FILE_MIME_QUERY})`);
+      if (search) conditions.push(`name contains '${search}'`);
+      if (folderId) {
+        conditions.push(`'${folderId.replace(/'/g, "\\'")}' in parents`);
+      }
+    } else if (scope === "shared-drive") {
+      const target = folderId || driveId;
+      if (!target) throw new Error("driveId obrigatório para listar Shared Drive");
+      conditions.push(`'${target.replace(/'/g, "\\'")}' in parents`);
       conditions.push(`(mimeType='${FOLDER_MIME}' or ${FILE_MIME_QUERY})`);
       if (search) conditions.push(`name contains '${search}'`);
     } else {
-      // Top-level / global search: include folders too, so user can pick a folder
-      conditions.push(`(mimeType='${FOLDER_MIME}' or ${FILE_MIME_QUERY})`);
-      if (search) {
-        conditions.push(`name contains '${search}'`);
+      // my-drive
+      if (folderId) {
+        conditions.push(`'${folderId.replace(/'/g, "\\'")}' in parents`);
       } else {
-        // Default root view: only show items directly under root
         conditions.push(`'root' in parents`);
       }
+      conditions.push(`(mimeType='${FOLDER_MIME}' or ${FILE_MIME_QUERY})`);
+      if (search) conditions.push(`name contains '${search}'`);
     }
 
     const q = conditions.join(" and ");
 
     const url = new URL("https://www.googleapis.com/drive/v3/files");
     url.searchParams.set("q", q);
-    url.searchParams.set("fields", "files(id,name,mimeType,modifiedTime,webViewLink,parents)");
+    url.searchParams.set("fields", "files(id,name,mimeType,modifiedTime,webViewLink,parents,driveId)");
     url.searchParams.set("orderBy", "folder,name");
     url.searchParams.set("pageSize", "200");
     url.searchParams.set("supportsAllDrives", "true");
     url.searchParams.set("includeItemsFromAllDrives", "true");
+
+    if (scope === "shared-drive") {
+      url.searchParams.set("corpora", "drive");
+      url.searchParams.set("driveId", driveId);
+    } else {
+      url.searchParams.set("corpora", "allDrives");
+    }
 
     const driveRes = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -195,22 +295,57 @@ Deno.serve(async (req) => {
 
     // Resolve current folder info for breadcrumb / parent navigation
     let currentFolder: { id: string; name: string; parentId: string | null } | null = null;
-    if (folderId) {
-      try {
-        currentFolder = await fetchFolderInfo(accessToken, folderId);
-      } catch (e) {
-        console.warn("fetchFolderInfo failed", e);
+    if (scope === "shared-drive") {
+      if (folderId && folderId !== driveId) {
+        try {
+          currentFolder = await fetchFolderInfo(accessToken, folderId);
+        } catch (e) {
+          console.warn("fetchFolderInfo failed", e);
+        }
+      } else {
+        // At the root of a shared drive
+        try {
+          const url2 = new URL(`https://www.googleapis.com/drive/v3/drives/${driveId}`);
+          url2.searchParams.set("fields", "id,name");
+          const res2 = await fetch(url2.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
+          const json2 = await res2.json();
+          if (res2.ok) {
+            currentFolder = { id: driveId, name: json2.name, parentId: null };
+          }
+        } catch (e) {
+          console.warn("fetch shared drive name failed", e);
+        }
+      }
+    } else if (scope === "shared-with-me") {
+      if (folderId) {
+        try {
+          currentFolder = await fetchFolderInfo(accessToken, folderId);
+        } catch (e) {
+          console.warn("fetchFolderInfo failed", e);
+        }
+      } else {
+        currentFolder = { id: VIRTUAL_SHARED_WITH_ME, name: "Compartilhados comigo", parentId: null };
       }
     } else {
-      currentFolder = { id: "root", name: search ? "Resultados da busca" : "Meu Drive", parentId: null };
+      // my-drive
+      if (folderId) {
+        try {
+          currentFolder = await fetchFolderInfo(accessToken, folderId);
+        } catch (e) {
+          console.warn("fetchFolderInfo failed", e);
+        }
+      } else {
+        currentFolder = { id: "root", name: "Meu Drive", parentId: null };
+      }
     }
 
     return new Response(
       JSON.stringify({
         connection_email: googleEmail,
         currentFolder,
+        scope,
+        driveId: scope === "shared-drive" ? driveId : null,
         items,
-        // legacy field for backward compat
         files: items.filter((i: any) => !i.isFolder),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
