@@ -9,11 +9,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Copy, Check, Link2, Loader2, Shield, ShieldOff, CheckCircle, XCircle, UserPlus, Eye, EyeOff } from "lucide-react";
+import { Copy, Check, Link2, Loader2, Shield, ShieldOff, CheckCircle, XCircle, UserPlus, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ShareDashboardModalProps {
   open: boolean;
@@ -270,6 +281,34 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
     toast.success(newActive ? "Link reativado" : "Link desativado");
   };
 
+  const regenerateLink = async () => {
+    if (!shareId || !currentUser) return;
+    setLoading(true);
+    try {
+      const newToken = crypto.randomUUID();
+      const { error } = await supabase
+        .from("insights_dashboard_shares")
+        .update({ share_token: newToken, is_active: true })
+        .eq("id", shareId);
+      if (error) throw error;
+
+      // Apaga solicitações antigas para que os e-mails antes recusados/aprovados possam solicitar acesso novamente
+      await supabase
+        .from("insights_share_access_requests")
+        .delete()
+        .eq("share_id", shareId);
+
+      setShareToken(newToken);
+      setIsActive(true);
+      setRequests([]);
+      toast.success("Novo link gerado! O link anterior foi invalidado.");
+    } catch {
+      toast.error("Erro ao gerar novo link");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const copyLink = async () => {
     if (!shareToken) return;
     const url = `https://iamroy.app/shared/insights/${shareToken}`;
@@ -334,7 +373,7 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
             </Button>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
               {isActive ? (
                 <Badge variant="default" className="bg-green-600">Ativo</Badge>
@@ -342,13 +381,36 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
                 <Badge variant="secondary">Desativado</Badge>
               )}
             </div>
-            <Button variant="ghost" size="sm" onClick={toggleActive}>
-              {isActive ? (
-                <><ShieldOff className="h-4 w-4 mr-1" /> Desativar</>
-              ) : (
-                <><Shield className="h-4 w-4 mr-1" /> Reativar</>
-              )}
-            </Button>
+            <div className="flex items-center gap-1">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" disabled={loading}>
+                    <RefreshCw className="h-4 w-4 mr-1" /> Gerar novo link
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Gerar novo link de compartilhamento?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      O link atual será <strong>invalidado imediatamente</strong> e qualquer pessoa que já o tenha não conseguirá mais acessar o painel. Todas as solicitações de acesso anteriores serão apagadas, permitindo que e-mails recusados solicitem acesso novamente.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={regenerateLink}>
+                      Sim, gerar novo link
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button variant="ghost" size="sm" onClick={toggleActive}>
+                {isActive ? (
+                  <><ShieldOff className="h-4 w-4 mr-1" /> Desativar</>
+                ) : (
+                  <><Shield className="h-4 w-4 mr-1" /> Reativar</>
+                )}
+              </Button>
+            </div>
           </div>
 
           <div className="border-t pt-3">
