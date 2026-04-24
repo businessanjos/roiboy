@@ -128,6 +128,22 @@ export default function SharedInsights() {
     return res;
   }, [token]);
 
+  // Centraliza o tratamento de erros de token (rotacionado, expirado, desativado)
+  const handleTokenError = useCallback((errCode: string | undefined, message?: string) => {
+    // Limpa o cache do email para forçar nova solicitação se o usuário receber outro link
+    localStorage.removeItem("shared_insights_email");
+    if (errCode === "expired") {
+      setStatus("expired");
+      setErrorMessage(message || "Este link expirou.");
+    } else if (errCode === "inactive") {
+      setStatus("inactive");
+      setErrorMessage(message || "Este link foi desativado pelo proprietário.");
+    } else {
+      setStatus("invalid");
+      setErrorMessage(message || "Este link foi atualizado e não é mais válido. Solicite o novo link ao proprietário.");
+    }
+  }, []);
+
   // Fetch filtered data
   const fetchFilteredData = useCallback(async () => {
     if (status !== "approved" || !email) return;
@@ -142,13 +158,18 @@ export default function SharedInsights() {
           productId,
         },
       });
+      // Se token foi rotacionado/expirou enquanto a sessão estava aberta, derruba o usuário
+      if (data?.error && ["not_found", "expired", "inactive"].includes(data.error)) {
+        handleTokenError(data.error, data.message);
+        return;
+      }
       if (!error && data?.visualsData) {
         setDashboardData(prev => prev ? { ...prev, visualsData: data.visualsData } : prev);
       }
     } finally {
       setFiltersLoading(false);
     }
-  }, [status, email, dateRange, userId, productId, callEdgeFunction]);
+  }, [status, email, dateRange, userId, productId, callEdgeFunction, handleTokenError]);
 
   // Re-fetch when filters change (skip during initial load since initial data is already filtered)
   const [initialLoad, setInitialLoad] = useState(true);
@@ -157,6 +178,19 @@ export default function SharedInsights() {
     fetchFilteredData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preset, customRange, userId, productId]);
+
+  // Re-validação periódica do token enquanto o painel está aberto.
+  // Garante que sessões abertas sejam derrubadas se o dono rotacionar/expirar/desativar o link.
+  useEffect(() => {
+    if (status !== "approved") return;
+    const interval = setInterval(async () => {
+      const { data } = await callEdgeFunction("validate");
+      if (data?.error && ["not_found", "expired", "inactive"].includes(data.error)) {
+        handleTokenError(data.error, data.message);
+      }
+    }, 60000); // a cada 60s
+    return () => clearInterval(interval);
+  }, [status, callEdgeFunction, handleTokenError]);
 
   // Initial validation
   useEffect(() => {
