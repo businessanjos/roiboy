@@ -725,7 +725,13 @@ export default function SalesScripts() {
         {/* ANALYSIS */}
         <TabsContent value="analysis">
           <div className="space-y-4">
-            <div><h2 className="text-lg font-semibold mb-1">Central de Calls</h2><p className="text-sm text-muted-foreground">Análise, ICP, comparativo e ranking do time</p></div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><BarChart3 className="w-5 h-5 text-primary" /></div>
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight">Central de Calls</h2>
+                <p className="text-sm text-muted-foreground">Análise, ICP, comparativo e ranking do time</p>
+              </div>
+            </div>
 
             <Tabs value={analysisSubTab} onValueChange={setAnalysisSubTab}>
               <div className="overflow-x-auto -mx-4 px-4">
