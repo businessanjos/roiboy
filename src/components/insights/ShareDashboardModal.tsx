@@ -81,12 +81,12 @@ function ExternalAccessTab({ dashboardId }: { dashboardId: string }) {
   if (created) {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-3">
-          <div className="flex items-center gap-2 text-green-700">
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
             <CheckCircle className="h-5 w-5" />
             <span className="font-medium">Acesso criado!</span>
           </div>
-          <p className="text-sm text-green-600">
+          <p className="text-sm text-foreground/80">
             Compartilhe as credenciais abaixo com a pessoa que vai acessar o painel:
           </p>
           <div className="space-y-2 text-sm">
