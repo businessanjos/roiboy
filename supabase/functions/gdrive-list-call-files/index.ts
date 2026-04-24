@@ -20,13 +20,10 @@ const BodySchema = z.object({
   pageSize: z.number().int().min(10).max(500).optional(),
 });
 
-const FILE_MIME_QUERY = [
-  "mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document'",
-  "mimeType='text/plain'",
-  "mimeType='application/vnd.google-apps.document'",
-].join(" or ");
-
+// We list folders + any non-folder file. The previous restrictive whitelist (.docx/.txt/Google Docs)
+// hid PDFs, audios, videos and other transcript formats from the user.
 const FOLDER_MIME = "application/vnd.google-apps.folder";
+const NON_FOLDER_FILTER = `mimeType != '${FOLDER_MIME}'`;
 
 // Virtual folder IDs for the root picker
 const VIRTUAL_MY_DRIVE = "__my_drive__";
