@@ -142,6 +142,7 @@ export default function SalesScripts() {
   const [driveFolderStack, setDriveFolderStack] = useState<DriveNavLevel[]>([]);
   const [selectedDriveFileIds, setSelectedDriveFileIds] = useState<Set<string>>(new Set());
   const [importedDriveFileNames, setImportedDriveFileNames] = useState<string[]>([]);
+  const [driveFilter, setDriveFilter] = useState<'all' | 'folders' | 'files'>('all');
 
   // Queries
   const { data: materials = [], isLoading: loadingMaterials } = useQuery({
