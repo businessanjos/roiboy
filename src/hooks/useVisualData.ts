@@ -7,7 +7,7 @@ import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval,
 import { ptBR } from "date-fns/locale";
 import { filterByLeadField, filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealField, filterByDealFields } from "@/hooks/useDealFieldFilter";
-import { buildFunnelStageData } from "@/hooks/funnelData";
+import { buildFunnelStageData, detectDuplicateStagesInPipeline } from "@/hooks/funnelData";
 
 export interface AggregatedDataPoint {
   name: string;
