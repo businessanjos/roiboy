@@ -115,14 +115,40 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
         if (stagesError) console.error('Error fetching stages order:', stagesError);
 
         if (stages && stages.length > 0) {
-          const orderMap = new Map(stages.map(s => [s.name, s.display_order]));
-          result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
+          // Deduplicate stages by name (multiple pipelines can have same stage names).
+          // Keep the smallest display_order for ordering and first non-empty color.
+          const uniqueStagesMap = new Map<string, { name: string; display_order: number; color: string | null }>();
+          for (const stage of stages) {
+            const existing = uniqueStagesMap.get(stage.name);
+            if (!existing) {
+              uniqueStagesMap.set(stage.name, { name: stage.name, display_order: stage.display_order, color: stage.color });
+            } else {
+              if ((stage.display_order ?? 999) < (existing.display_order ?? 999)) {
+                existing.display_order = stage.display_order;
+              }
+              if (!existing.color && stage.color) existing.color = stage.color;
+            }
+          }
+          const uniqueStages = Array.from(uniqueStagesMap.values());
+          const orderMap = new Map(uniqueStages.map(s => [s.name, s.display_order]));
+
+          // Deduplicate result by name first (in case aggregation produced duplicates)
+          const resultMap = new Map<string, AggregatedDataPoint>();
+          for (const item of result) {
+            const existing = resultMap.get(item.name);
+            if (!existing) {
+              resultMap.set(item.name, { ...item });
+            } else {
+              existing.value = (existing.value || 0) + (item.value || 0);
+              existing.count = (existing.count || 0) + (item.count || 0);
+              if (!existing.color && item.color) existing.color = item.color;
+            }
+          }
 
           // Ensure ALL pipeline stages appear, even with 0 deals
-          const existingNames = new Set(result.map(r => r.name));
-          for (const stage of stages) {
-            if (!existingNames.has(stage.name)) {
-              result.push({
+          for (const stage of uniqueStages) {
+            if (!resultMap.has(stage.name)) {
+              resultMap.set(stage.name, {
                 name: stage.name,
                 value: 0,
                 count: 0,
@@ -130,8 +156,10 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
               });
             }
           }
-          // Re-sort after adding missing stages
-          result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
+
+          result = Array.from(resultMap.values()).sort(
+            (a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999)
+          );
         }
 
         // Append "Ganhos" (won deals) using the same filters as regular stages
