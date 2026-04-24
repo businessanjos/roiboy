@@ -8,13 +8,16 @@ const corsHeaders = {
 
 const BodySchema = z.object({
   search: z.string().trim().max(120).optional(),
+  folderId: z.string().trim().max(120).optional(),
 });
 
-const DRIVE_SCOPE_QUERY = [
+const FILE_MIME_QUERY = [
   "mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document'",
   "mimeType='text/plain'",
   "mimeType='application/vnd.google-apps.document'",
 ].join(" or ");
+
+const FOLDER_MIME = "application/vnd.google-apps.folder";
 
 async function getAuthenticatedContext(req: Request) {
   const authHeader = req.headers.get("Authorization");
@@ -104,6 +107,27 @@ async function getAuthenticatedContext(req: Request) {
   return { accessToken, connectionId: connection.id, googleEmail: connection.google_email };
 }
 
+async function fetchFolderInfo(accessToken: string, folderId: string) {
+  if (folderId === "root") {
+    return { id: "root", name: "Meu Drive", parentId: null as string | null };
+  }
+  const url = new URL(`https://www.googleapis.com/drive/v3/files/${folderId}`);
+  url.searchParams.set("fields", "id,name,parents");
+  url.searchParams.set("supportsAllDrives", "true");
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(`Falha ao obter pasta [${res.status}]: ${JSON.stringify(json)}`);
+  }
+  return {
+    id: json.id as string,
+    name: json.name as string,
+    parentId: (json.parents?.[0] as string | undefined) ?? null,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -120,19 +144,34 @@ Deno.serve(async (req) => {
 
     const { accessToken, googleEmail } = await getAuthenticatedContext(req);
     const search = body.data.search?.replace(/'/g, "\\'") || "";
-    const q = [
-      "trashed=false",
-      `(${DRIVE_SCOPE_QUERY})`,
-      search ? `name contains '${search}'` : null,
-    ]
-      .filter(Boolean)
-      .join(" and ");
+    const folderId = body.data.folderId?.trim() || "";
+
+    // Build query: when searching globally (no folder), search by name across drive.
+    // When inside a folder, list folder contents (folders first, then matching files).
+    const conditions: string[] = ["trashed=false"];
+
+    if (folderId) {
+      conditions.push(`'${folderId.replace(/'/g, "\\'")}' in parents`);
+      conditions.push(`(mimeType='${FOLDER_MIME}' or ${FILE_MIME_QUERY})`);
+      if (search) conditions.push(`name contains '${search}'`);
+    } else {
+      // Top-level / global search: include folders too, so user can pick a folder
+      conditions.push(`(mimeType='${FOLDER_MIME}' or ${FILE_MIME_QUERY})`);
+      if (search) {
+        conditions.push(`name contains '${search}'`);
+      } else {
+        // Default root view: only show items directly under root
+        conditions.push(`'root' in parents`);
+      }
+    }
+
+    const q = conditions.join(" and ");
 
     const url = new URL("https://www.googleapis.com/drive/v3/files");
     url.searchParams.set("q", q);
-    url.searchParams.set("fields", "files(id,name,mimeType,modifiedTime,webViewLink)");
-    url.searchParams.set("orderBy", "modifiedTime desc");
-    url.searchParams.set("pageSize", "50");
+    url.searchParams.set("fields", "files(id,name,mimeType,modifiedTime,webViewLink,parents)");
+    url.searchParams.set("orderBy", "folder,name");
+    url.searchParams.set("pageSize", "200");
     url.searchParams.set("supportsAllDrives", "true");
     url.searchParams.set("includeItemsFromAllDrives", "true");
 
@@ -145,16 +184,34 @@ Deno.serve(async (req) => {
       throw new Error(`Falha ao listar arquivos do Google Drive [${driveRes.status}]: ${JSON.stringify(driveJson)}`);
     }
 
+    const items = (driveJson.files || []).map((file: any) => ({
+      id: file.id,
+      name: file.name,
+      mimeType: file.mimeType,
+      modifiedTime: file.modifiedTime,
+      webViewLink: file.webViewLink,
+      isFolder: file.mimeType === FOLDER_MIME,
+    }));
+
+    // Resolve current folder info for breadcrumb / parent navigation
+    let currentFolder: { id: string; name: string; parentId: string | null } | null = null;
+    if (folderId) {
+      try {
+        currentFolder = await fetchFolderInfo(accessToken, folderId);
+      } catch (e) {
+        console.warn("fetchFolderInfo failed", e);
+      }
+    } else {
+      currentFolder = { id: "root", name: search ? "Resultados da busca" : "Meu Drive", parentId: null };
+    }
+
     return new Response(
       JSON.stringify({
         connection_email: googleEmail,
-        files: (driveJson.files || []).map((file: any) => ({
-          id: file.id,
-          name: file.name,
-          mimeType: file.mimeType,
-          modifiedTime: file.modifiedTime,
-          webViewLink: file.webViewLink,
-        })),
+        currentFolder,
+        items,
+        // legacy field for backward compat
+        files: items.filter((i: any) => !i.isFolder),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
