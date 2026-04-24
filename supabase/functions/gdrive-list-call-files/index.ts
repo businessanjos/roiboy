@@ -16,6 +16,8 @@ const BodySchema = z.object({
   // - "drives-root": virtual root showing "Meu Drive", "Compartilhados comigo" and Shared Drives
   scope: z.enum(["my-drive", "shared-with-me", "shared-drive", "drives-root"]).optional(),
   driveId: z.string().trim().max(120).optional(),
+  pageToken: z.string().trim().max(2048).optional(),
+  pageSize: z.number().int().min(10).max(500).optional(),
 });
 
 const FILE_MIME_QUERY = [
