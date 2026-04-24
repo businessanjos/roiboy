@@ -439,6 +439,49 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
             </div>
           </div>
 
+          {/* Expiração temporal */}
+          <div className="border-t pt-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-sm font-medium">Expiração do link</Label>
+              {expiresAt && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateExpiry(null)}
+                  disabled={savingExpiry}
+                  className="h-7 text-xs"
+                >
+                  Remover
+                </Button>
+              )}
+            </div>
+            <Input
+              type="datetime-local"
+              value={expiresAt ? new Date(expiresAt).toISOString().slice(0, 16) : ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                updateExpiry(v ? new Date(v).toISOString() : null);
+              }}
+              disabled={savingExpiry}
+              className="text-sm"
+            />
+            {expiresAt ? (
+              new Date(expiresAt).getTime() < Date.now() ? (
+                <p className="text-xs text-destructive">
+                  ⚠️ Este link já expirou em {new Date(expiresAt).toLocaleString("pt-BR")}.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Acesso expira em {new Date(expiresAt).toLocaleString("pt-BR")}.
+                </p>
+              )
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Sem expiração — o link vale até ser desativado ou rotacionado.
+              </p>
+            )}
+          </div>
+
           <div className="border-t pt-3">
             <h4 className="text-sm font-medium mb-2">Solicitações de Acesso</h4>
             {loadingRequests ? (
