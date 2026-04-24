@@ -13,9 +13,8 @@ import { cn } from "@/lib/utils";
 interface Integration {
   id: string;
   display_name: string | null;
-  name: string | null;
-  phone_number: string | null;
   status: string | null;
+  config: { phone_number?: string; instance_name?: string; name?: string } | null;
 }
 
 interface ZappInstanceSwitcherProps {
@@ -51,7 +50,7 @@ export function ZappInstanceSwitcher({
     (async () => {
       const { data, error } = await supabase
         .from("integrations")
-        .select("id, display_name, name, phone_number, status")
+        .select("id, display_name, status, config")
         .eq("account_id", accountId)
         .eq("sector_id", sectorId)
         .order("created_at", { ascending: true });
@@ -61,7 +60,7 @@ export function ZappInstanceSwitcher({
         console.error("[InstanceSwitcher] error loading integrations", error);
         setIntegrations([]);
       } else {
-        setIntegrations((data as Integration[]) || []);
+        setIntegrations((data as unknown as Integration[]) || []);
       }
       setLoading(false);
     })();
@@ -75,8 +74,12 @@ export function ZappInstanceSwitcher({
   if (!sectorId || integrations.length <= 1) return null;
 
   const formatLabel = (it: Integration) => {
-    const name = it.display_name || it.name || "Instância";
-    const phone = it.phone_number ? ` · ${it.phone_number}` : "";
+    const name =
+      it.display_name ||
+      it.config?.instance_name ||
+      it.config?.name ||
+      "Instância";
+    const phone = it.config?.phone_number ? ` · ${it.config.phone_number}` : "";
     return `${name}${phone}`;
   };
 
@@ -115,7 +118,7 @@ export function ZappInstanceSwitcher({
                   <span
                     className={cn(
                       "h-2 w-2 rounded-full shrink-0",
-                      connected ? "bg-emerald-500" : "bg-red-500"
+                      connected ? "bg-success" : "bg-destructive"
                     )}
                   />
                   <span className="truncate">{formatLabel(it)}</span>
