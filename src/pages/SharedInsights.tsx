@@ -29,7 +29,7 @@ import { ptBR } from "date-fns/locale";
 import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-type Status = "loading" | "invalid" | "inactive" | "email_prompt" | "pending" | "rejected" | "approved";
+type Status = "loading" | "invalid" | "inactive" | "expired" | "email_prompt" | "pending" | "rejected" | "approved";
 
 type DatePreset = "today" | "week" | "month" | "quarter" | "year" | "last_month" | "custom";
 
@@ -128,6 +128,22 @@ export default function SharedInsights() {
     return res;
   }, [token]);
 
+  // Centraliza o tratamento de erros de token (rotacionado, expirado, desativado)
+  const handleTokenError = useCallback((errCode: string | undefined, message?: string) => {
+    // Limpa o cache do email para forçar nova solicitação se o usuário receber outro link
+    localStorage.removeItem("shared_insights_email");
+    if (errCode === "expired") {
+      setStatus("expired");
+      setErrorMessage(message || "Este link expirou.");
+    } else if (errCode === "inactive") {
+      setStatus("inactive");
+      setErrorMessage(message || "Este link foi desativado pelo proprietário.");
+    } else {
+      setStatus("invalid");
+      setErrorMessage(message || "Este link foi atualizado e não é mais válido. Solicite o novo link ao proprietário.");
+    }
+  }, []);
+
   // Fetch filtered data
   const fetchFilteredData = useCallback(async () => {
     if (status !== "approved" || !email) return;
@@ -142,13 +158,18 @@ export default function SharedInsights() {
           productId,
         },
       });
+      // Se token foi rotacionado/expirou enquanto a sessão estava aberta, derruba o usuário
+      if (data?.error && ["not_found", "expired", "inactive"].includes(data.error)) {
+        handleTokenError(data.error, data.message);
+        return;
+      }
       if (!error && data?.visualsData) {
         setDashboardData(prev => prev ? { ...prev, visualsData: data.visualsData } : prev);
       }
     } finally {
       setFiltersLoading(false);
     }
-  }, [status, email, dateRange, userId, productId, callEdgeFunction]);
+  }, [status, email, dateRange, userId, productId, callEdgeFunction, handleTokenError]);
 
   // Re-fetch when filters change (skip during initial load since initial data is already filtered)
   const [initialLoad, setInitialLoad] = useState(true);
@@ -158,21 +179,28 @@ export default function SharedInsights() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preset, customRange, userId, productId]);
 
+  // Re-validação periódica do token enquanto o painel está aberto.
+  // Garante que sessões abertas sejam derrubadas se o dono rotacionar/expirar/desativar o link.
+  useEffect(() => {
+    if (status !== "approved") return;
+    const interval = setInterval(async () => {
+      const { data } = await callEdgeFunction("validate");
+      if (data?.error && ["not_found", "expired", "inactive"].includes(data.error)) {
+        handleTokenError(data.error, data.message);
+      }
+    }, 60000); // a cada 60s
+    return () => clearInterval(interval);
+  }, [status, callEdgeFunction, handleTokenError]);
+
   // Initial validation
   useEffect(() => {
     if (!token) { setStatus("invalid"); return; }
 
     const init = async () => {
       const { data, error } = await callEdgeFunction("validate");
-      
+
       if (error || !data?.valid) {
-        if (data?.error === "inactive") {
-          setStatus("inactive");
-          setErrorMessage(data?.message || "Link desativado");
-        } else {
-          setStatus("invalid");
-          setErrorMessage(data?.message || "Link inválido");
-        }
+        handleTokenError(data?.error, data?.message);
         return;
       }
 
@@ -186,7 +214,7 @@ export default function SharedInsights() {
     };
 
     init();
-  }, [token]);
+  }, [token, callEdgeFunction, handleTokenError]);
 
   const getDefaultDateFilters = useCallback(() => {
     const range = getDateRangeFromPreset("year");
@@ -296,17 +324,27 @@ export default function SharedInsights() {
     );
   }
 
-  if (status === "invalid" || status === "inactive") {
+  if (status === "invalid" || status === "inactive" || status === "expired") {
+    const title =
+      status === "expired"
+        ? "Link expirado"
+        : status === "inactive"
+        ? "Link desativado"
+        : "Link indisponível";
+    const fallback =
+      status === "expired"
+        ? "Este link expirou. Solicite ao proprietário um novo link."
+        : status === "inactive"
+        ? "Este link de compartilhamento foi desativado pelo proprietário."
+        : "Este link foi atualizado e não é mais válido. Solicite o novo link ao proprietário.";
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="pt-8 pb-8 space-y-4">
             <XCircle className="h-12 w-12 text-destructive mx-auto" />
-            <h2 className="text-xl font-semibold">Link indisponível</h2>
+            <h2 className="text-xl font-semibold">{title}</h2>
             <p className="text-muted-foreground text-sm">
-              {status === "inactive" 
-                ? "Este link de compartilhamento foi desativado pelo proprietário." 
-                : "Este link não existe ou expirou."}
+              {errorMessage || fallback}
             </p>
           </CardContent>
         </Card>

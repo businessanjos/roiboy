@@ -7519,8 +7519,10 @@ export type Database = {
           created_at: string
           created_by: string
           dashboard_id: string
+          expires_at: string | null
           id: string
           is_active: boolean
+          rotated_at: string | null
           share_token: string
         }
         Insert: {
@@ -7528,8 +7530,10 @@ export type Database = {
           created_at?: string
           created_by: string
           dashboard_id: string
+          expires_at?: string | null
           id?: string
           is_active?: boolean
+          rotated_at?: string | null
           share_token: string
         }
         Update: {
@@ -7537,8 +7541,10 @@ export type Database = {
           created_at?: string
           created_by?: string
           dashboard_id?: string
+          expires_at?: string | null
           id?: string
           is_active?: boolean
+          rotated_at?: string | null
           share_token?: string
         }
         Relationships: [

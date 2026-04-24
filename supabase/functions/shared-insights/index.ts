@@ -71,15 +71,16 @@ Deno.serve(async (req) => {
     // Find the share by token
     const { data: share } = await supabaseAdmin
       .from("insights_dashboard_shares")
-      .select("id, dashboard_id, is_active, account_id")
+      .select("id, dashboard_id, is_active, account_id, expires_at, rotated_at")
       .eq("share_token", token)
-      .single();
+      .maybeSingle();
 
     if (!share) {
-      return new Response(JSON.stringify({ error: "not_found", message: "Link inválido ou expirado" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Token não existe (inválido ou foi rotacionado e este é o link antigo)
+      return new Response(
+        JSON.stringify({ error: "not_found", message: "Este link foi atualizado pelo proprietário e não é mais válido. Solicite o novo link." }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (!share.is_active) {
@@ -89,12 +90,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Verifica expiração temporal
+    if (share.expires_at && new Date(share.expires_at).getTime() < Date.now()) {
+      return new Response(
+        JSON.stringify({ error: "expired", message: "Este link expirou. Solicite ao proprietário um novo link." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Action: validate — just check if token exists and is active
     if (action === "validate") {
-      return new Response(JSON.stringify({ valid: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ valid: true, rotated_at: share.rotated_at, expires_at: share.expires_at }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Action: request_access — create or check access request

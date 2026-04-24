@@ -188,19 +188,21 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [shareId, setShareId] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(true);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [savingExpiry, setSavingExpiry] = useState(false);
 
   const fetchShare = useCallback(async () => {
     if (!currentUser || !dashboardId) return;
     setLoading(true);
     try {
-      const { data } = await supabase
+      const { data } = await (supabase
         .from("insights_dashboard_shares")
-        .select("id, share_token, is_active")
+        .select("id, share_token, is_active, expires_at") as any)
         .eq("dashboard_id", dashboardId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -210,9 +212,11 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
         setShareToken(data.share_token);
         setShareId(data.id);
         setIsActive(data.is_active);
+        setExpiresAt(data.expires_at ?? null);
       } else {
         setShareToken(null);
         setShareId(null);
+        setExpiresAt(null);
       }
     } finally {
       setLoading(false);
@@ -286,9 +290,13 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
     setLoading(true);
     try {
       const newToken = crypto.randomUUID();
-      const { error } = await supabase
+      const { error } = await (supabase
         .from("insights_dashboard_shares")
-        .update({ share_token: newToken, is_active: true })
+        .update({
+          share_token: newToken,
+          is_active: true,
+          rotated_at: new Date().toISOString(),
+        } as any) as any)
         .eq("id", shareId);
       if (error) throw error;
 
@@ -301,11 +309,29 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
       setShareToken(newToken);
       setIsActive(true);
       setRequests([]);
-      toast.success("Novo link gerado! O link anterior foi invalidado.");
+      toast.success("Novo link gerado! O link anterior foi invalidado imediatamente.");
     } catch {
       toast.error("Erro ao gerar novo link");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateExpiry = async (newValue: string | null) => {
+    if (!shareId) return;
+    setSavingExpiry(true);
+    try {
+      const { error } = await (supabase
+        .from("insights_dashboard_shares")
+        .update({ expires_at: newValue } as any) as any)
+        .eq("id", shareId);
+      if (error) throw error;
+      setExpiresAt(newValue);
+      toast.success(newValue ? "Data de expiração definida" : "Expiração removida");
+    } catch {
+      toast.error("Erro ao atualizar expiração");
+    } finally {
+      setSavingExpiry(false);
     }
   };
 
@@ -411,6 +437,49 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
                 )}
               </Button>
             </div>
+          </div>
+
+          {/* Expiração temporal */}
+          <div className="border-t pt-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-sm font-medium">Expiração do link</Label>
+              {expiresAt && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateExpiry(null)}
+                  disabled={savingExpiry}
+                  className="h-7 text-xs"
+                >
+                  Remover
+                </Button>
+              )}
+            </div>
+            <Input
+              type="datetime-local"
+              value={expiresAt ? new Date(expiresAt).toISOString().slice(0, 16) : ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                updateExpiry(v ? new Date(v).toISOString() : null);
+              }}
+              disabled={savingExpiry}
+              className="text-sm"
+            />
+            {expiresAt ? (
+              new Date(expiresAt).getTime() < Date.now() ? (
+                <p className="text-xs text-destructive">
+                  ⚠️ Este link já expirou em {new Date(expiresAt).toLocaleString("pt-BR")}.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Acesso expira em {new Date(expiresAt).toLocaleString("pt-BR")}.
+                </p>
+              )
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Sem expiração — o link vale até ser desativado ou rotacionado.
+              </p>
+            )}
           </div>
 
           <div className="border-t pt-3">
