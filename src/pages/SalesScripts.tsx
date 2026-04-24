@@ -487,16 +487,27 @@ export default function SalesScripts() {
   };
 
   const handleEnterFolder = (folder: DriveCallFile) => {
-    // Save current level on the stack
-    setDriveFolderStack(prev => [
-      ...prev,
-      {
-        folderId: driveFolderId,
-        scope: driveScope,
-        driveId: driveCurrentDriveId,
-        folderName: currentDriveFolder?.name || (driveScope === 'drives-root' ? 'Drives' : 'Meu Drive'),
-      },
-    ]);
+    const isLeavingDrivesRoot = driveScope === 'drives-root';
+
+    // Save current level on the stack — but skip when leaving the virtual drives root
+    // (the Home/"Drives" button already represents that level).
+    if (!isLeavingDrivesRoot) {
+      setDriveFolderStack(prev => [
+        ...prev,
+        {
+          folderId: driveFolderId,
+          scope: driveScope,
+          driveId: driveCurrentDriveId,
+          folderName:
+            currentDriveFolder?.name ||
+            (driveScope === 'my-drive'
+              ? 'Meu Drive'
+              : driveScope === 'shared-with-me'
+                ? 'Compartilhados comigo'
+                : 'Drive Compartilhado'),
+        },
+      ]);
+    }
 
     // Translate virtual ids when entering from the drives root
     if (folder.id === '__my_drive__') {
@@ -542,6 +553,19 @@ export default function SalesScripts() {
     setDriveScope('drives-root');
     setDriveCurrentDriveId(null);
     setDriveFolderId('');
+    setSelectedDriveFileIds(new Set());
+  };
+
+  // Jump to a specific level in the breadcrumb stack (index = position in driveFolderStack)
+  const handleNavigateToStackIndex = (index: number) => {
+    setDriveFolderStack(prev => {
+      const target = prev[index];
+      if (!target) return prev;
+      setDriveScope(target.scope);
+      setDriveCurrentDriveId(target.driveId);
+      setDriveFolderId(target.folderId);
+      return prev.slice(0, index);
+    });
     setSelectedDriveFileIds(new Set());
   };
 
@@ -691,28 +715,67 @@ export default function SalesScripts() {
                   ) : (
                     <>
                       {/* Breadcrumb / navigation */}
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
-                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1" onClick={handleNavigateRoot} disabled={isImportingDriveFile}>
-                          <Home className="w-3.5 h-3.5" />Drives
-                        </Button>
-                        {driveFolderStack.map((level) => (
-                          <span key={`${level.scope}-${level.folderId}`} className="flex items-center gap-1">
-                            <span>/</span>
-                            <span className="truncate max-w-[140px]">{level.folderName}</span>
-                          </span>
-                        ))}
-                        {currentDriveFolder && driveScope !== 'drives-root' && (
-                          <span className="flex items-center gap-1">
-                            <span>/</span>
-                            <span className="font-medium text-foreground truncate max-w-[160px]">{currentDriveFolder.name}</span>
-                          </span>
-                        )}
-                        {driveScope !== 'drives-root' && (
-                          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1 ml-auto" onClick={handleNavigateBack} disabled={isImportingDriveFile}>
-                            <ArrowLeft className="w-3.5 h-3.5" />Voltar
-                          </Button>
-                        )}
-                      </div>
+                      {(() => {
+                        // Build full path: Drives > [stack levels] > current folder
+                        const scopeLabel = (s: DriveScope, fallback?: string) => {
+                          if (s === 'my-drive') return 'Meu Drive';
+                          if (s === 'shared-with-me') return 'Compartilhados comigo';
+                          if (s === 'shared-drive') return fallback || 'Drive Compartilhado';
+                          return 'Drives';
+                        };
+                        // Crumbs from the stack (older levels), each clickable
+                        const stackCrumbs = driveFolderStack.map((level, idx) => ({
+                          key: `stack-${idx}-${level.folderId}`,
+                          label: level.folderName || scopeLabel(level.scope),
+                          onClick: () => handleNavigateToStackIndex(idx),
+                          clickable: true,
+                        }));
+                        // If current scope isn't represented yet at the top of the stack,
+                        // synthesize a "scope root" crumb so user can see e.g. "Meu Drive" or "Compartilhados comigo".
+                        const topOfStack = driveFolderStack[driveFolderStack.length - 1];
+                        const scopeRootAlreadyShown =
+                          topOfStack &&
+                          topOfStack.scope === driveScope &&
+                          (driveScope !== 'shared-drive' || topOfStack.driveId === driveCurrentDriveId);
+                        const scopeCrumb =
+                          driveScope !== 'drives-root' && !scopeRootAlreadyShown && currentDriveFolder
+                            ? null // current folder name already conveys it
+                            : null;
+                        return (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+                            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1" onClick={handleNavigateRoot} disabled={isImportingDriveFile}>
+                              <Home className="w-3.5 h-3.5" />Drives
+                            </Button>
+                            {stackCrumbs.map(crumb => (
+                              <span key={crumb.key} className="flex items-center gap-1">
+                                <span>/</span>
+                                <button
+                                  type="button"
+                                  onClick={crumb.onClick}
+                                  disabled={isImportingDriveFile}
+                                  className="truncate max-w-[160px] hover:text-foreground hover:underline underline-offset-2 transition-colors"
+                                >
+                                  {crumb.label}
+                                </button>
+                              </span>
+                            ))}
+                            {scopeCrumb}
+                            {currentDriveFolder && driveScope !== 'drives-root' && (
+                              <span className="flex items-center gap-1">
+                                <span>/</span>
+                                <span className="font-medium text-foreground truncate max-w-[200px]">
+                                  {currentDriveFolder.name}
+                                </span>
+                              </span>
+                            )}
+                            {driveScope !== 'drives-root' && (
+                              <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1 ml-auto" onClick={handleNavigateBack} disabled={isImportingDriveFile}>
+                                <ArrowLeft className="w-3.5 h-3.5" />Voltar
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {driveScope !== 'drives-root' && (
                         <div className="flex items-center gap-2 text-xs">
