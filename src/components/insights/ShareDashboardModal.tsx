@@ -290,9 +290,13 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
     setLoading(true);
     try {
       const newToken = crypto.randomUUID();
-      const { error } = await supabase
+      const { error } = await (supabase
         .from("insights_dashboard_shares")
-        .update({ share_token: newToken, is_active: true })
+        .update({
+          share_token: newToken,
+          is_active: true,
+          rotated_at: new Date().toISOString(),
+        } as any) as any)
         .eq("id", shareId);
       if (error) throw error;
 
@@ -305,11 +309,29 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
       setShareToken(newToken);
       setIsActive(true);
       setRequests([]);
-      toast.success("Novo link gerado! O link anterior foi invalidado.");
+      toast.success("Novo link gerado! O link anterior foi invalidado imediatamente.");
     } catch {
       toast.error("Erro ao gerar novo link");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateExpiry = async (newValue: string | null) => {
+    if (!shareId) return;
+    setSavingExpiry(true);
+    try {
+      const { error } = await (supabase
+        .from("insights_dashboard_shares")
+        .update({ expires_at: newValue } as any) as any)
+        .eq("id", shareId);
+      if (error) throw error;
+      setExpiresAt(newValue);
+      toast.success(newValue ? "Data de expiração definida" : "Expiração removida");
+    } catch {
+      toast.error("Erro ao atualizar expiração");
+    } finally {
+      setSavingExpiry(false);
     }
   };
 
