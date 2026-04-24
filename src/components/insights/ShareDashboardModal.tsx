@@ -281,6 +281,34 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
     toast.success(newActive ? "Link reativado" : "Link desativado");
   };
 
+  const regenerateLink = async () => {
+    if (!shareId || !currentUser) return;
+    setLoading(true);
+    try {
+      const newToken = crypto.randomUUID();
+      const { error } = await supabase
+        .from("insights_dashboard_shares")
+        .update({ share_token: newToken, is_active: true })
+        .eq("id", shareId);
+      if (error) throw error;
+
+      // Apaga solicitações antigas para que os e-mails antes recusados/aprovados possam solicitar acesso novamente
+      await supabase
+        .from("insights_share_access_requests")
+        .delete()
+        .eq("share_id", shareId);
+
+      setShareToken(newToken);
+      setIsActive(true);
+      setRequests([]);
+      toast.success("Novo link gerado! O link anterior foi invalidado.");
+    } catch {
+      toast.error("Erro ao gerar novo link");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const copyLink = async () => {
     if (!shareToken) return;
     const url = `https://iamroy.app/shared/insights/${shareToken}`;
