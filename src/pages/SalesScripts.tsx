@@ -253,23 +253,39 @@ export default function SalesScripts() {
     enabled: !!currentUser?.auth_user_id && !!accountId,
   });
 
-  const { data: driveListing, isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
+  const {
+    data: driveListing,
+    isLoading: loadingDriveFiles,
+    isFetchingNextPage: loadingMoreDriveFiles,
+    fetchNextPage: fetchMoreDriveFiles,
+    hasNextPage: hasMoreDriveFiles,
+    refetch: refetchDriveFiles,
+  } = useInfiniteQuery({
     queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveScope, driveFolderId, driveCurrentDriveId, driveConnection?.id],
-    queryFn: async () => {
+    queryFn: async ({ pageParam }) => {
       const { data, error } = await supabase.functions.invoke('gdrive-list-call-files', {
         body: {
           scope: driveScope,
           folderId: driveFolderId || undefined,
           driveId: driveCurrentDriveId || undefined,
+          pageToken: pageParam || undefined,
+          pageSize: 100,
         },
       });
       if (error) throw error;
-      return data as { items: DriveCallFile[]; currentFolder: DriveFolderInfo | null; scope?: DriveScope };
+      return data as {
+        items: DriveCallFile[];
+        currentFolder: DriveFolderInfo | null;
+        scope?: DriveScope;
+        nextPageToken?: string | null;
+      };
     },
+    initialPageParam: '' as string,
+    getNextPageParam: (lastPage) => lastPage?.nextPageToken || undefined,
     enabled: !!driveConnection?.is_active,
   });
-  const driveItemsRaw: DriveCallFile[] = driveListing?.items || [];
-  const currentDriveFolder: DriveFolderInfo | null = driveListing?.currentFolder || null;
+  const driveItemsRaw: DriveCallFile[] = (driveListing?.pages || []).flatMap(p => p?.items || []);
+  const currentDriveFolder: DriveFolderInfo | null = driveListing?.pages?.[0]?.currentFolder || null;
   // At the virtual drives root, always show all entries (they are all "folders").
   const driveItems: DriveCallFile[] = driveScope === 'drives-root'
     ? driveItemsRaw
