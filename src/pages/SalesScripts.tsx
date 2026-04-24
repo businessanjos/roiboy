@@ -129,7 +129,7 @@ export default function SalesScripts() {
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
   const [analysisSubTab, setAnalysisSubTab] = useState('analyze');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [driveSearch, setDriveSearch] = useState('');
+  
   const [selectedDriveFile, setSelectedDriveFile] = useState<DriveCallFile | null>(null);
   const [driveImportedFileId, setDriveImportedFileId] = useState<string | null>(null);
   const [isConnectingDrive, setIsConnectingDrive] = useState(() => !!getGoogleDriveOAuthPending());
@@ -419,7 +419,6 @@ export default function SalesScripts() {
       setDriveFolderStack(prev => [...prev, currentDriveFolder]);
     }
     setDriveFolderId(folder.id);
-    setDriveSearch('');
     setSelectedDriveFileIds(new Set());
   };
 
@@ -430,14 +429,12 @@ export default function SalesScripts() {
       setDriveFolderId(last?.id || 'root');
       return next;
     });
-    setDriveSearch('');
     setSelectedDriveFileIds(new Set());
   };
 
   const handleNavigateRoot = () => {
     setDriveFolderStack([]);
     setDriveFolderId('root');
-    setDriveSearch('');
     setSelectedDriveFileIds(new Set());
   };
 
