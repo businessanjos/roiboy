@@ -487,16 +487,27 @@ export default function SalesScripts() {
   };
 
   const handleEnterFolder = (folder: DriveCallFile) => {
-    // Save current level on the stack
-    setDriveFolderStack(prev => [
-      ...prev,
-      {
-        folderId: driveFolderId,
-        scope: driveScope,
-        driveId: driveCurrentDriveId,
-        folderName: currentDriveFolder?.name || (driveScope === 'drives-root' ? 'Drives' : 'Meu Drive'),
-      },
-    ]);
+    const isLeavingDrivesRoot = driveScope === 'drives-root';
+
+    // Save current level on the stack — but skip when leaving the virtual drives root
+    // (the Home/"Drives" button already represents that level).
+    if (!isLeavingDrivesRoot) {
+      setDriveFolderStack(prev => [
+        ...prev,
+        {
+          folderId: driveFolderId,
+          scope: driveScope,
+          driveId: driveCurrentDriveId,
+          folderName:
+            currentDriveFolder?.name ||
+            (driveScope === 'my-drive'
+              ? 'Meu Drive'
+              : driveScope === 'shared-with-me'
+                ? 'Compartilhados comigo'
+                : 'Drive Compartilhado'),
+        },
+      ]);
+    }
 
     // Translate virtual ids when entering from the drives root
     if (folder.id === '__my_drive__') {
