@@ -232,7 +232,12 @@ export default function SharedInsights() {
       filters,
     });
 
-    if (error || !data || data.status !== "approved") {
+    if (error) {
+      console.error("[SharedInsights] load_dashboard request failed:", error);
+      return false;
+    }
+    if (!data || data.status !== "approved") {
+      console.warn("[SharedInsights] load_dashboard returned non-approved status:", data?.status, data);
       return false;
     }
 
