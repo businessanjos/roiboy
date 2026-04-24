@@ -142,6 +142,7 @@ export default function SalesScripts() {
   const [driveFolderStack, setDriveFolderStack] = useState<DriveNavLevel[]>([]);
   const [selectedDriveFileIds, setSelectedDriveFileIds] = useState<Set<string>>(new Set());
   const [importedDriveFileNames, setImportedDriveFileNames] = useState<string[]>([]);
+  const [driveFilter, setDriveFilter] = useState<'all' | 'folders' | 'files'>('all');
 
   // Queries
   const { data: materials = [], isLoading: loadingMaterials } = useQuery({
@@ -267,8 +268,16 @@ export default function SalesScripts() {
     },
     enabled: !!driveConnection?.is_active,
   });
-  const driveItems: DriveCallFile[] = driveListing?.items || [];
+  const driveItemsRaw: DriveCallFile[] = driveListing?.items || [];
   const currentDriveFolder: DriveFolderInfo | null = driveListing?.currentFolder || null;
+  // At the virtual drives root, always show all entries (they are all "folders").
+  const driveItems: DriveCallFile[] = driveScope === 'drives-root'
+    ? driveItemsRaw
+    : driveItemsRaw.filter(i => {
+        if (driveFilter === 'folders') return !!i.isFolder;
+        if (driveFilter === 'files') return !i.isFolder;
+        return true;
+      });
 
   const { data: scripts = [], isLoading: loadingScripts } = useQuery({
     queryKey: ['sales-scripts', accountId],
@@ -649,6 +658,34 @@ export default function SalesScripts() {
                           </Button>
                         )}
                       </div>
+
+                      {driveScope !== 'drives-root' && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">Mostrar:</span>
+                          <div className="inline-flex rounded-md border bg-background p-0.5">
+                            {([
+                              { value: 'all', label: 'Tudo' },
+                              { value: 'folders', label: 'Pastas' },
+                              { value: 'files', label: 'Arquivos' },
+                            ] as const).map(opt => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setDriveFilter(opt.value)}
+                                disabled={isImportingDriveFile}
+                                className={cn(
+                                  "h-6 px-2 rounded-sm text-xs transition-colors",
+                                  driveFilter === opt.value
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:bg-muted"
+                                )}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="max-h-80 overflow-y-auto rounded-md border">
                         {loadingDriveFiles ? (
