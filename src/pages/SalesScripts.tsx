@@ -423,10 +423,35 @@ export default function SalesScripts() {
   };
 
   const handleEnterFolder = (folder: DriveCallFile) => {
-    if (currentDriveFolder) {
-      setDriveFolderStack(prev => [...prev, currentDriveFolder]);
+    // Save current level on the stack
+    setDriveFolderStack(prev => [
+      ...prev,
+      {
+        folderId: driveFolderId,
+        scope: driveScope,
+        driveId: driveCurrentDriveId,
+        folderName: currentDriveFolder?.name || (driveScope === 'drives-root' ? 'Drives' : 'Meu Drive'),
+      },
+    ]);
+
+    // Translate virtual ids when entering from the drives root
+    if (folder.id === '__my_drive__') {
+      setDriveScope('my-drive');
+      setDriveCurrentDriveId(null);
+      setDriveFolderId('');
+    } else if (folder.id === '__shared_with_me__') {
+      setDriveScope('shared-with-me');
+      setDriveCurrentDriveId(null);
+      setDriveFolderId('');
+    } else if (folder.id.startsWith('__shared_drive__:')) {
+      const did = folder.id.slice('__shared_drive__:'.length);
+      setDriveScope('shared-drive');
+      setDriveCurrentDriveId(did);
+      setDriveFolderId(did);
+    } else {
+      // Normal subfolder — keep current scope/driveId
+      setDriveFolderId(folder.id);
     }
-    setDriveFolderId(folder.id);
     setSelectedDriveFileIds(new Set());
   };
 
@@ -434,7 +459,15 @@ export default function SalesScripts() {
     setDriveFolderStack(prev => {
       const next = [...prev];
       const last = next.pop();
-      setDriveFolderId(last?.id || 'root');
+      if (last) {
+        setDriveScope(last.scope);
+        setDriveCurrentDriveId(last.driveId);
+        setDriveFolderId(last.folderId);
+      } else {
+        setDriveScope('drives-root');
+        setDriveCurrentDriveId(null);
+        setDriveFolderId('');
+      }
       return next;
     });
     setSelectedDriveFileIds(new Set());
@@ -442,7 +475,9 @@ export default function SalesScripts() {
 
   const handleNavigateRoot = () => {
     setDriveFolderStack([]);
-    setDriveFolderId('root');
+    setDriveScope('drives-root');
+    setDriveCurrentDriveId(null);
+    setDriveFolderId('');
     setSelectedDriveFileIds(new Set());
   };
 
