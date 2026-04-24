@@ -626,7 +626,7 @@ export default function SalesScripts() {
                               if (item.isFolder) {
                                 return (
                                   <button key={item.id} type="button" className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/50" onClick={() => handleEnterFolder(item)} disabled={isImportingDriveFile}>
-                                    <Folder className="w-4 h-4 shrink-0 text-amber-500" />
+                                    <Folder className="w-4 h-4 shrink-0 text-primary" />
                                     <div className="min-w-0 flex-1">
                                       <p className="truncate text-sm font-medium">{item.name}</p>
                                       <p className="text-xs text-muted-foreground">Pasta</p>
