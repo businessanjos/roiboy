@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildFunnelStageData,
   dedupeStagesByName,
+  detectDuplicateStagesInPipeline,
   type FunnelStageRow,
   type FunnelDataPoint,
 } from "./funnelData";
