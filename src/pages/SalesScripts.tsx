@@ -16,7 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { toast } from 'sonner';
-import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3, Crown, ThumbsDown, PhoneOff, CalendarClock, UserCheck, TrendingUp, ChevronsUpDown, Check, Cloud, Link2, FolderOpen } from 'lucide-react';
+import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3, Crown, ThumbsDown, PhoneOff, CalendarClock, UserCheck, TrendingUp, ChevronsUpDown, Check, Cloud, Link2, FolderOpen, Folder, ArrowLeft, Home, FileType2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import MarkdownRenderer from '@/components/sales/MarkdownRenderer';
 import CommissionCalculator from '@/components/sales/CommissionCalculator';
@@ -76,7 +77,8 @@ interface SalesScript { id: string; title: string; content: string; objection_ty
 interface SalesMaterial { id: string; account_id: string; material_type: string; title: string; content: string; is_active: boolean; created_at: string; file_url: string | null; file_name: string | null; file_size: number | null; }
 interface SalesPlaybook { id: string; account_id: string; title: string; content: string; script_type: string; is_favorite: boolean; generated_from: any; created_at: string; }
 interface GoogleDriveConnection { id: string; google_email: string; is_active: boolean; }
-interface DriveCallFile { id: string; name: string; mimeType: string; modifiedTime: string; webViewLink?: string | null; }
+interface DriveCallFile { id: string; name: string; mimeType: string; modifiedTime: string; webViewLink?: string | null; isFolder?: boolean; }
+interface DriveFolderInfo { id: string; name: string; parentId: string | null; }
 
 export default function SalesScripts() {
   const { currentUser } = useCurrentUser();
@@ -132,6 +134,10 @@ export default function SalesScripts() {
   const [driveImportedFileId, setDriveImportedFileId] = useState<string | null>(null);
   const [isConnectingDrive, setIsConnectingDrive] = useState(() => !!getGoogleDriveOAuthPending());
   const [isImportingDriveFile, setIsImportingDriveFile] = useState(false);
+  const [driveFolderId, setDriveFolderId] = useState<string>('root');
+  const [driveFolderStack, setDriveFolderStack] = useState<DriveFolderInfo[]>([]);
+  const [selectedDriveFileIds, setSelectedDriveFileIds] = useState<Set<string>>(new Set());
+  const [importedDriveFileNames, setImportedDriveFileNames] = useState<string[]>([]);
 
   // Queries
   const { data: materials = [], isLoading: loadingMaterials } = useQuery({
@@ -242,17 +248,22 @@ export default function SalesScripts() {
     enabled: !!currentUser?.auth_user_id && !!accountId,
   });
 
-  const { data: driveFiles = [], isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
-    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveSearch, driveConnection?.id],
+  const { data: driveListing, isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
+    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveSearch, driveFolderId, driveConnection?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('gdrive-list-call-files', {
-        body: { search: driveSearch || undefined },
+        body: {
+          search: driveSearch || undefined,
+          folderId: driveSearch ? undefined : (driveFolderId || 'root'),
+        },
       });
       if (error) throw error;
-      return (data?.files || []) as DriveCallFile[];
+      return data as { items: DriveCallFile[]; currentFolder: DriveFolderInfo | null };
     },
     enabled: !!driveConnection?.is_active,
   });
+  const driveItems: DriveCallFile[] = driveListing?.items || [];
+  const currentDriveFolder: DriveFolderInfo | null = driveListing?.currentFolder || null;
 
   const { data: scripts = [], isLoading: loadingScripts } = useQuery({
     queryKey: ['sales-scripts', accountId],
@@ -406,21 +417,81 @@ export default function SalesScripts() {
     }
   };
 
-  const handleImportDriveFile = async (file: DriveCallFile) => {
+  const handleEnterFolder = (folder: DriveCallFile) => {
+    if (currentDriveFolder) {
+      setDriveFolderStack(prev => [...prev, currentDriveFolder]);
+    }
+    setDriveFolderId(folder.id);
+    setDriveSearch('');
+    setSelectedDriveFileIds(new Set());
+  };
+
+  const handleNavigateBack = () => {
+    setDriveFolderStack(prev => {
+      const next = [...prev];
+      const last = next.pop();
+      setDriveFolderId(last?.id || 'root');
+      return next;
+    });
+    setDriveSearch('');
+    setSelectedDriveFileIds(new Set());
+  };
+
+  const handleNavigateRoot = () => {
+    setDriveFolderStack([]);
+    setDriveFolderId('root');
+    setDriveSearch('');
+    setSelectedDriveFileIds(new Set());
+  };
+
+  const toggleDriveFileSelection = (fileId: string) => {
+    setSelectedDriveFileIds(prev => {
+      const next = new Set(prev);
+      if (next.has(fileId)) next.delete(fileId);
+      else next.add(fileId);
+      return next;
+    });
+  };
+
+  const handleImportSelectedDriveFiles = async () => {
+    const selected = driveItems.filter(i => !i.isFolder && selectedDriveFileIds.has(i.id));
+    if (selected.length === 0) {
+      toast.error('Selecione ao menos um arquivo');
+      return;
+    }
     setIsImportingDriveFile(true);
-    setDriveImportedFileId(file.id);
     try {
-      const { data, error } = await supabase.functions.invoke('gdrive-read-call-file', {
-        body: { fileId: file.id, fileName: file.name, mimeType: file.mimeType },
+      const newEntries: Array<{ id: number; text: string; file: File | null }> = [];
+      const importedNames: string[] = [];
+      for (const file of selected) {
+        setDriveImportedFileId(file.id);
+        const { data, error } = await supabase.functions.invoke('gdrive-read-call-file', {
+          body: { fileId: file.id, fileName: file.name, mimeType: file.mimeType },
+        });
+        if (error) {
+          toast.error(`Erro ao importar "${file.name}": ${error.message}`);
+          continue;
+        }
+        const transcript = (data?.transcript as string | undefined)?.trim();
+        if (!transcript) {
+          toast.error(`Sem transcrição em "${file.name}"`);
+          continue;
+        }
+        newEntries.push({ id: Date.now() + newEntries.length, text: transcript, file: null });
+        importedNames.push(file.name);
+      }
+      if (newEntries.length === 0) return;
+      // Replace empty default entries; otherwise append
+      setTranscriptEntries(prev => {
+        const hasContent = prev.some(e => e.text.trim() || e.file);
+        return hasContent ? [...prev, ...newEntries] : newEntries;
       });
-      if (error) throw error;
-      const transcript = (data?.transcript as string | undefined)?.trim();
-      if (!transcript) throw new Error('Não foi possível extrair a transcrição do arquivo selecionado');
-      setSelectedDriveFile(file);
-      setTranscriptEntries([{ id: Date.now(), text: transcript, file: null }]);
-      toast.success(`Arquivo "${file.name}" importado do Google Drive.`);
+      setImportedDriveFileNames(importedNames);
+      setSelectedDriveFile(selected[0]);
+      setSelectedDriveFileIds(new Set());
+      toast.success(`${importedNames.length} arquivo(s) importado(s) do Google Drive.`);
     } catch (e: any) {
-      toast.error(e?.message || 'Erro ao importar arquivo do Google Drive');
+      toast.error(e?.message || 'Erro ao importar arquivos do Google Drive');
     } finally {
       setIsImportingDriveFile(false);
       setDriveImportedFileId(null);
@@ -518,25 +589,94 @@ export default function SalesScripts() {
                     </Button>
                   ) : (
                     <>
-                      <Input placeholder="Buscar arquivo no Drive..." value={driveSearch} onChange={e => setDriveSearch(e.target.value)} />
-                      <div className="max-h-56 overflow-y-auto rounded-md border">
+                      {/* Breadcrumb / navigation */}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1" onClick={handleNavigateRoot} disabled={isImportingDriveFile}>
+                          <Home className="w-3.5 h-3.5" />Meu Drive
+                        </Button>
+                        {driveFolderStack.map((folder, idx) => (
+                          <span key={folder.id} className="flex items-center gap-1">
+                            <span>/</span>
+                            <span className="truncate max-w-[140px]">{folder.name}</span>
+                          </span>
+                        ))}
+                        {currentDriveFolder && currentDriveFolder.id !== 'root' && (
+                          <span className="flex items-center gap-1">
+                            <span>/</span>
+                            <span className="font-medium text-foreground truncate max-w-[160px]">{currentDriveFolder.name}</span>
+                          </span>
+                        )}
+                        {(driveFolderStack.length > 0 || (currentDriveFolder && currentDriveFolder.id !== 'root')) && (
+                          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1 ml-auto" onClick={handleNavigateBack} disabled={isImportingDriveFile}>
+                            <ArrowLeft className="w-3.5 h-3.5" />Voltar
+                          </Button>
+                        )}
+                      </div>
+
+                      <Input placeholder="Buscar em todo o Drive..." value={driveSearch} onChange={e => setDriveSearch(e.target.value)} />
+
+                      <div className="max-h-72 overflow-y-auto rounded-md border">
                         {loadingDriveFiles ? (
-                          <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando arquivos...</div>
-                        ) : driveFiles.length === 0 ? (
-                          <div className="p-4 text-sm text-muted-foreground">Nenhum arquivo de transcrição encontrado.</div>
+                          <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando...</div>
+                        ) : driveItems.length === 0 ? (
+                          <div className="p-4 text-sm text-muted-foreground">{driveSearch ? 'Nenhum resultado encontrado.' : 'Pasta vazia.'}</div>
                         ) : (
                           <div className="divide-y">
-                            {driveFiles.map(file => (
-                              <button key={file.id} type="button" className={cn("flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-muted/50", selectedDriveFile?.id === file.id && "bg-muted/60")} onClick={() => handleImportDriveFile(file)} disabled={isImportingDriveFile}>
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium">{file.name}</p>
-                                  <p className="text-xs text-muted-foreground">{new Date(file.modifiedTime).toLocaleDateString('pt-BR')}</p>
-                                </div>
-                                {isImportingDriveFile && driveImportedFileId === file.id ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <FolderOpen className="w-4 h-4 shrink-0 text-muted-foreground" />}
-                              </button>
-                            ))}
+                            {driveItems.map(item => {
+                              if (item.isFolder) {
+                                return (
+                                  <button key={item.id} type="button" className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/50" onClick={() => handleEnterFolder(item)} disabled={isImportingDriveFile}>
+                                    <Folder className="w-4 h-4 shrink-0 text-primary" />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-sm font-medium">{item.name}</p>
+                                      <p className="text-xs text-muted-foreground">Pasta</p>
+                                    </div>
+                                    <ArrowRight className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                  </button>
+                                );
+                              }
+                              const isSelected = selectedDriveFileIds.has(item.id);
+                              const isImporting = isImportingDriveFile && driveImportedFileId === item.id;
+                              return (
+                                <label
+                                  key={item.id}
+                                  className={cn(
+                                    "flex w-full items-center gap-3 p-3 cursor-pointer hover:bg-muted/50",
+                                    isSelected && "bg-primary/10"
+                                  )}
+                                >
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleDriveFileSelection(item.id)}
+                                    disabled={isImportingDriveFile}
+                                  />
+                                  <FileType2 className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium">{item.name}</p>
+                                    <p className="text-xs text-muted-foreground">{new Date(item.modifiedTime).toLocaleDateString('pt-BR')}</p>
+                                  </div>
+                                  {isImporting && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                                </label>
+                              );
+                            })}
                           </div>
                         )}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {selectedDriveFileIds.size > 0 ? `${selectedDriveFileIds.size} arquivo(s) selecionado(s)` : 'Selecione um ou mais arquivos para análise comparativa'}
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleImportSelectedDriveFiles}
+                          disabled={selectedDriveFileIds.size === 0 || isImportingDriveFile}
+                          className="gap-2"
+                        >
+                          {isImportingDriveFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                          Importar selecionados
+                        </Button>
                       </div>
                     </>
                   )}
@@ -556,13 +696,22 @@ export default function SalesScripts() {
                   </Select>
                   <p className="text-xs text-muted-foreground">A inteligência será gerada já vinculada ao produto escolhido.</p>
 
-                  {selectedDriveFile ? (
+                  {importedDriveFileNames.length > 0 ? (
+                    <div className="rounded-md border bg-muted/40 p-3 space-y-1">
+                      <p className="text-sm font-medium">{importedDriveFileNames.length === 1 ? 'Arquivo importado' : `${importedDriveFileNames.length} arquivos importados`}</p>
+                      <ul className="text-xs text-muted-foreground space-y-0.5 max-h-24 overflow-y-auto">
+                        {importedDriveFileNames.map((name, idx) => (
+                          <li key={idx} className="truncate">• {name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : selectedDriveFile ? (
                     <div className="rounded-md border bg-muted/40 p-3">
                       <p className="text-sm font-medium">Arquivo importado</p>
                       <p className="text-xs text-muted-foreground truncate">{selectedDriveFile.name}</p>
                     </div>
                   ) : (
-                    <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Você também pode continuar colando ou enviando a transcrição manualmente abaixo.</div>
+                    <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Selecione um ou mais arquivos do Drive para análise comparativa, ou cole/envie a transcrição manualmente abaixo.</div>
                   )}
                 </div>
               </div>
