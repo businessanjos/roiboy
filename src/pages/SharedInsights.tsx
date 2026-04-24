@@ -198,15 +198,9 @@ export default function SharedInsights() {
 
     const init = async () => {
       const { data, error } = await callEdgeFunction("validate");
-      
+
       if (error || !data?.valid) {
-        if (data?.error === "inactive") {
-          setStatus("inactive");
-          setErrorMessage(data?.message || "Link desativado");
-        } else {
-          setStatus("invalid");
-          setErrorMessage(data?.message || "Link inválido");
-        }
+        handleTokenError(data?.error, data?.message);
         return;
       }
 
@@ -220,7 +214,7 @@ export default function SharedInsights() {
     };
 
     init();
-  }, [token]);
+  }, [token, callEdgeFunction, handleTokenError]);
 
   const getDefaultDateFilters = useCallback(() => {
     const range = getDateRangeFromPreset("year");
