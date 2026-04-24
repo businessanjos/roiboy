@@ -1137,11 +1137,12 @@ export default function RoyZapp() {
             }, { replace: true });
 
             // Persist preference for this user/sector
-            if (currentUser?.auth_user_id && selectedSectorId) {
+            if (currentUser?.auth_user_id && currentUser?.account_id && selectedSectorId) {
               supabase
                 .from("user_instance_preferences")
                 .upsert({
                   user_id: currentUser.auth_user_id,
+                  account_id: currentUser.account_id,
                   sector_id: selectedSectorId,
                   integration_id: integrationId,
                 }, { onConflict: "user_id,sector_id" })
