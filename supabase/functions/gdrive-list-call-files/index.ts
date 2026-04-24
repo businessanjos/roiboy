@@ -352,6 +352,7 @@ Deno.serve(async (req) => {
         driveId: scope === "shared-drive" ? driveId : null,
         items,
         files: items.filter((i: any) => !i.isFolder),
+        nextPageToken: driveJson.nextPageToken || null,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
