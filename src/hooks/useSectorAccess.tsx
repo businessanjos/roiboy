@@ -26,6 +26,9 @@ export function useSectorAccess() {
   const accountId = currentUser?.account_id;
   const userRole = currentUser?.role;
   const teamRoleName = currentUser?.team_role_name;
+  const isAlsoAdmin = currentUser?.is_also_admin === true;
+  const teamRoleNamesAll = currentUser?.team_role_names || (teamRoleName ? [teamRoleName] : []);
+  const isTeamRoleAdmin = teamRoleNamesAll.includes("Admin");
 
   const { data: sectorAccess = [], isLoading } = useQuery({
     queryKey: ["user-sector-access", userId],
@@ -69,13 +72,12 @@ export function useSectorAccess() {
 
   const hasSectorAccess = (sectorId: SectorId): boolean => {
     
-    // Admins have access to all other sectors
-    if (userRole === "admin") return true;
+    // Admins (role admin, "Também é Admin", or team role "Admin") have access to all sectors
+    if (userRole === "admin" || isAlsoAdmin || isTeamRoleAdmin) return true;
     
     // Bypass for operation team roles in operacoes sector
     if (sectorId === "operacoes") {
-      const teamRoleNames = currentUser?.team_role_names || (teamRoleName ? [teamRoleName] : []);
-      if (teamRoleNames.some(name => OPERATION_TEAM_ROLES.includes(name))) {
+      if (teamRoleNamesAll.some(name => OPERATION_TEAM_ROLES.includes(name))) {
         return true;
       }
     }
