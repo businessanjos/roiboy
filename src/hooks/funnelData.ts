@@ -58,18 +58,25 @@ export interface DuplicateStageInPipeline {
 export function detectDuplicateStagesInPipeline(
   stages: FunnelStageRow[]
 ): DuplicateStageInPipeline[] {
-  const grouped = new Map<string, { pipeline_id: string; stage_name: string; ids: string[] }>();
+  const grouped = new Map<
+    string,
+    { pipeline_id: string; stage_name: string; ids: string[]; raw_names: Set<string> }
+  >();
   for (const stage of stages) {
     if (!stage.pipeline_id || !stage.id) continue;
-    const key = `${stage.pipeline_id}::${stage.name}`;
+    const normalized = normalizeStageName(stage.name);
+    if (!normalized) continue;
+    const key = `${stage.pipeline_id}::${normalized}`;
     const entry = grouped.get(key);
     if (entry) {
       entry.ids.push(stage.id);
+      entry.raw_names.add(stage.name);
     } else {
       grouped.set(key, {
         pipeline_id: stage.pipeline_id,
         stage_name: stage.name,
         ids: [stage.id],
+        raw_names: new Set([stage.name]),
       });
     }
   }
