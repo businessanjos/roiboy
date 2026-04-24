@@ -7,6 +7,33 @@
  * (e.g. "Reunião Agendada" existing in pipelines A and B).
  */
 
+/**
+ * Normalize a stage name so that variations caused by accidental
+ * whitespace, capitalization, accents or punctuation collapse into
+ * a single bucket.
+ *
+ * Used as the comparison key for deduplication and duplicate
+ * detection. The original (display) name is preserved separately.
+ *
+ * Examples that all collapse to "reuniao agendada":
+ *   "Reunião Agendada"
+ *   "  reuniao  agendada "
+ *   "REUNIÃO  AGENDADA"
+ *   "Reunião — Agendada"
+ */
+export function normalizeStageName(name: string | null | undefined): string {
+  if (name == null) return "";
+  return name
+    .toString()
+    .normalize("NFD")
+    // strip combining diacritics
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    // replace any non-alphanumeric run with a single space
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 export interface FunnelStageRow {
   id?: string;
   name: string;
