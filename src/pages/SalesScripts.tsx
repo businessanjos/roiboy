@@ -136,8 +136,10 @@ export default function SalesScripts() {
   const [driveImportedFileId, setDriveImportedFileId] = useState<string | null>(null);
   const [isConnectingDrive, setIsConnectingDrive] = useState(() => !!getGoogleDriveOAuthPending());
   const [isImportingDriveFile, setIsImportingDriveFile] = useState(false);
-  const [driveFolderId, setDriveFolderId] = useState<string>('root');
-  const [driveFolderStack, setDriveFolderStack] = useState<DriveFolderInfo[]>([]);
+  const [driveFolderId, setDriveFolderId] = useState<string>('');
+  const [driveScope, setDriveScope] = useState<DriveScope>('drives-root');
+  const [driveCurrentDriveId, setDriveCurrentDriveId] = useState<string | null>(null);
+  const [driveFolderStack, setDriveFolderStack] = useState<DriveNavLevel[]>([]);
   const [selectedDriveFileIds, setSelectedDriveFileIds] = useState<Set<string>>(new Set());
   const [importedDriveFileNames, setImportedDriveFileNames] = useState<string[]>([]);
 
