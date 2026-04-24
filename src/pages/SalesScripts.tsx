@@ -129,7 +129,7 @@ export default function SalesScripts() {
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
   const [analysisSubTab, setAnalysisSubTab] = useState('analyze');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [driveSearch, setDriveSearch] = useState('');
+  
   const [selectedDriveFile, setSelectedDriveFile] = useState<DriveCallFile | null>(null);
   const [driveImportedFileId, setDriveImportedFileId] = useState<string | null>(null);
   const [isConnectingDrive, setIsConnectingDrive] = useState(() => !!getGoogleDriveOAuthPending());
@@ -249,13 +249,10 @@ export default function SalesScripts() {
   });
 
   const { data: driveListing, isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
-    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveSearch, driveFolderId, driveConnection?.id],
+    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveFolderId, driveConnection?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('gdrive-list-call-files', {
-        body: {
-          search: driveSearch || undefined,
-          folderId: driveSearch ? undefined : (driveFolderId || 'root'),
-        },
+        body: { folderId: driveFolderId || 'root' },
       });
       if (error) throw error;
       return data as { items: DriveCallFile[]; currentFolder: DriveFolderInfo | null };
@@ -422,7 +419,6 @@ export default function SalesScripts() {
       setDriveFolderStack(prev => [...prev, currentDriveFolder]);
     }
     setDriveFolderId(folder.id);
-    setDriveSearch('');
     setSelectedDriveFileIds(new Set());
   };
 
@@ -433,14 +429,12 @@ export default function SalesScripts() {
       setDriveFolderId(last?.id || 'root');
       return next;
     });
-    setDriveSearch('');
     setSelectedDriveFileIds(new Set());
   };
 
   const handleNavigateRoot = () => {
     setDriveFolderStack([]);
     setDriveFolderId('root');
-    setDriveSearch('');
     setSelectedDriveFileIds(new Set());
   };
 
@@ -613,13 +607,11 @@ export default function SalesScripts() {
                         )}
                       </div>
 
-                      <Input placeholder="Buscar em todo o Drive..." value={driveSearch} onChange={e => setDriveSearch(e.target.value)} />
-
-                      <div className="max-h-72 overflow-y-auto rounded-md border">
+                      <div className="max-h-80 overflow-y-auto rounded-md border">
                         {loadingDriveFiles ? (
                           <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando...</div>
                         ) : driveItems.length === 0 ? (
-                          <div className="p-4 text-sm text-muted-foreground">{driveSearch ? 'Nenhum resultado encontrado.' : 'Pasta vazia.'}</div>
+                          <div className="p-4 text-sm text-muted-foreground">Pasta vazia. Use o botão "Voltar" ou "Meu Drive" para navegar.</div>
                         ) : (
                           <div className="divide-y">
                             {driveItems.map(item => {
