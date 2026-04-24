@@ -248,17 +248,22 @@ export default function SalesScripts() {
     enabled: !!currentUser?.auth_user_id && !!accountId,
   });
 
-  const { data: driveFiles = [], isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
-    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveSearch, driveConnection?.id],
+  const { data: driveListing, isLoading: loadingDriveFiles, refetch: refetchDriveFiles } = useQuery({
+    queryKey: ['google-drive-call-files', currentUser?.auth_user_id, driveSearch, driveFolderId, driveConnection?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('gdrive-list-call-files', {
-        body: { search: driveSearch || undefined },
+        body: {
+          search: driveSearch || undefined,
+          folderId: driveSearch ? undefined : (driveFolderId || 'root'),
+        },
       });
       if (error) throw error;
-      return (data?.files || []) as DriveCallFile[];
+      return data as { items: DriveCallFile[]; currentFolder: DriveFolderInfo | null };
     },
     enabled: !!driveConnection?.is_active,
   });
+  const driveItems: DriveCallFile[] = driveListing?.items || [];
+  const currentDriveFolder: DriveFolderInfo | null = driveListing?.currentFolder || null;
 
   const { data: scripts = [], isLoading: loadingScripts } = useQuery({
     queryKey: ['sales-scripts', accountId],
