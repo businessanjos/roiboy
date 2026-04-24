@@ -29,7 +29,7 @@ import { ptBR } from "date-fns/locale";
 import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-type Status = "loading" | "invalid" | "inactive" | "email_prompt" | "pending" | "rejected" | "approved";
+type Status = "loading" | "invalid" | "inactive" | "expired" | "email_prompt" | "pending" | "rejected" | "approved";
 
 type DatePreset = "today" | "week" | "month" | "quarter" | "year" | "last_month" | "custom";
 
