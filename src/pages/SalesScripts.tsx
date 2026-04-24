@@ -268,8 +268,16 @@ export default function SalesScripts() {
     },
     enabled: !!driveConnection?.is_active,
   });
-  const driveItems: DriveCallFile[] = driveListing?.items || [];
+  const driveItemsRaw: DriveCallFile[] = driveListing?.items || [];
   const currentDriveFolder: DriveFolderInfo | null = driveListing?.currentFolder || null;
+  // At the virtual drives root, always show all entries (they are all "folders").
+  const driveItems: DriveCallFile[] = driveScope === 'drives-root'
+    ? driveItemsRaw
+    : driveItemsRaw.filter(i => {
+        if (driveFilter === 'folders') return !!i.isFolder;
+        if (driveFilter === 'files') return !i.isFolder;
+        return true;
+      });
 
   const { data: scripts = [], isLoading: loadingScripts } = useQuery({
     queryKey: ['sales-scripts', accountId],
