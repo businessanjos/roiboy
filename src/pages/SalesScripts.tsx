@@ -589,25 +589,94 @@ export default function SalesScripts() {
                     </Button>
                   ) : (
                     <>
-                      <Input placeholder="Buscar arquivo no Drive..." value={driveSearch} onChange={e => setDriveSearch(e.target.value)} />
-                      <div className="max-h-56 overflow-y-auto rounded-md border">
+                      {/* Breadcrumb / navigation */}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1" onClick={handleNavigateRoot} disabled={isImportingDriveFile}>
+                          <Home className="w-3.5 h-3.5" />Meu Drive
+                        </Button>
+                        {driveFolderStack.map((folder, idx) => (
+                          <span key={folder.id} className="flex items-center gap-1">
+                            <span>/</span>
+                            <span className="truncate max-w-[140px]">{folder.name}</span>
+                          </span>
+                        ))}
+                        {currentDriveFolder && currentDriveFolder.id !== 'root' && (
+                          <span className="flex items-center gap-1">
+                            <span>/</span>
+                            <span className="font-medium text-foreground truncate max-w-[160px]">{currentDriveFolder.name}</span>
+                          </span>
+                        )}
+                        {(driveFolderStack.length > 0 || (currentDriveFolder && currentDriveFolder.id !== 'root')) && (
+                          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1 ml-auto" onClick={handleNavigateBack} disabled={isImportingDriveFile}>
+                            <ArrowLeft className="w-3.5 h-3.5" />Voltar
+                          </Button>
+                        )}
+                      </div>
+
+                      <Input placeholder="Buscar em todo o Drive..." value={driveSearch} onChange={e => setDriveSearch(e.target.value)} />
+
+                      <div className="max-h-72 overflow-y-auto rounded-md border">
                         {loadingDriveFiles ? (
-                          <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando arquivos...</div>
-                        ) : driveFiles.length === 0 ? (
-                          <div className="p-4 text-sm text-muted-foreground">Nenhum arquivo de transcrição encontrado.</div>
+                          <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando...</div>
+                        ) : driveItems.length === 0 ? (
+                          <div className="p-4 text-sm text-muted-foreground">{driveSearch ? 'Nenhum resultado encontrado.' : 'Pasta vazia.'}</div>
                         ) : (
                           <div className="divide-y">
-                            {driveFiles.map(file => (
-                              <button key={file.id} type="button" className={cn("flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-muted/50", selectedDriveFile?.id === file.id && "bg-muted/60")} onClick={() => handleImportDriveFile(file)} disabled={isImportingDriveFile}>
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium">{file.name}</p>
-                                  <p className="text-xs text-muted-foreground">{new Date(file.modifiedTime).toLocaleDateString('pt-BR')}</p>
-                                </div>
-                                {isImportingDriveFile && driveImportedFileId === file.id ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <FolderOpen className="w-4 h-4 shrink-0 text-muted-foreground" />}
-                              </button>
-                            ))}
+                            {driveItems.map(item => {
+                              if (item.isFolder) {
+                                return (
+                                  <button key={item.id} type="button" className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/50" onClick={() => handleEnterFolder(item)} disabled={isImportingDriveFile}>
+                                    <Folder className="w-4 h-4 shrink-0 text-amber-500" />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-sm font-medium">{item.name}</p>
+                                      <p className="text-xs text-muted-foreground">Pasta</p>
+                                    </div>
+                                    <ArrowRight className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                  </button>
+                                );
+                              }
+                              const isSelected = selectedDriveFileIds.has(item.id);
+                              const isImporting = isImportingDriveFile && driveImportedFileId === item.id;
+                              return (
+                                <label
+                                  key={item.id}
+                                  className={cn(
+                                    "flex w-full items-center gap-3 p-3 cursor-pointer hover:bg-muted/50",
+                                    isSelected && "bg-primary/10"
+                                  )}
+                                >
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleDriveFileSelection(item.id)}
+                                    disabled={isImportingDriveFile}
+                                  />
+                                  <FileType2 className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium">{item.name}</p>
+                                    <p className="text-xs text-muted-foreground">{new Date(item.modifiedTime).toLocaleDateString('pt-BR')}</p>
+                                  </div>
+                                  {isImporting && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                                </label>
+                              );
+                            })}
                           </div>
                         )}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {selectedDriveFileIds.size > 0 ? `${selectedDriveFileIds.size} arquivo(s) selecionado(s)` : 'Selecione um ou mais arquivos para análise comparativa'}
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleImportSelectedDriveFiles}
+                          disabled={selectedDriveFileIds.size === 0 || isImportingDriveFile}
+                          className="gap-2"
+                        >
+                          {isImportingDriveFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                          Importar selecionados
+                        </Button>
                       </div>
                     </>
                   )}
