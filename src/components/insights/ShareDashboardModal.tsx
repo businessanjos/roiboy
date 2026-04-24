@@ -373,7 +373,7 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
             </Button>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
               {isActive ? (
                 <Badge variant="default" className="bg-green-600">Ativo</Badge>
@@ -381,13 +381,36 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
                 <Badge variant="secondary">Desativado</Badge>
               )}
             </div>
-            <Button variant="ghost" size="sm" onClick={toggleActive}>
-              {isActive ? (
-                <><ShieldOff className="h-4 w-4 mr-1" /> Desativar</>
-              ) : (
-                <><Shield className="h-4 w-4 mr-1" /> Reativar</>
-              )}
-            </Button>
+            <div className="flex items-center gap-1">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" disabled={loading}>
+                    <RefreshCw className="h-4 w-4 mr-1" /> Gerar novo link
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Gerar novo link de compartilhamento?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      O link atual será <strong>invalidado imediatamente</strong> e qualquer pessoa que já o tenha não conseguirá mais acessar o painel. Todas as solicitações de acesso anteriores serão apagadas, permitindo que e-mails recusados solicitem acesso novamente.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={regenerateLink}>
+                      Sim, gerar novo link
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button variant="ghost" size="sm" onClick={toggleActive}>
+                {isActive ? (
+                  <><ShieldOff className="h-4 w-4 mr-1" /> Desativar</>
+                ) : (
+                  <><Shield className="h-4 w-4 mr-1" /> Reativar</>
+                )}
+              </Button>
+            </div>
           </div>
 
           <div className="border-t pt-3">
