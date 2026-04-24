@@ -1115,7 +1115,7 @@ async function applyLeadFieldFilters(
     const selectColumns = isMultiSelect ? 'lead_id, value_json' : 'lead_id, value_text';
 
     let allValues: any[] = [];
-    const batchSize = 500;
+    const batchSize = 100;
     for (let i = 0; i < leadIds.length; i += batchSize) {
       const batch = leadIds.slice(i, i + batchSize);
       const { data } = await supabase
@@ -1182,7 +1182,8 @@ async function enrichLeadsWithMql(supabase: any, accountId: string, leads: any[]
 
   const leadIds = leads.map(l => l.id);
   let allMqlValues: any[] = [];
-  const batchSize = 500;
+  // Mantém URL bem abaixo de ~8KB (Postgrest/fetch falha com TypeError em URLs muito longas)
+  const batchSize = 100;
 
   for (let i = 0; i < leadIds.length; i += batchSize) {
     const batch = leadIds.slice(i, i + batchSize);
@@ -1223,7 +1224,7 @@ async function enrichLeadsWithFaturamento(supabase: any, accountId: string, lead
 
   const leadIds = leads.map(l => l.id);
   let allValues: any[] = [];
-  const batchSize = 500;
+  const batchSize = 100;
 
   for (let i = 0; i < leadIds.length; i += batchSize) {
     const batch = leadIds.slice(i, i + batchSize);
