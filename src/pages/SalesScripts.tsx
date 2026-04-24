@@ -632,26 +632,47 @@ export default function SalesScripts() {
   const materialCountByType = MATERIAL_TYPES.map(mt => ({ ...mt, count: materials.filter(m => m.material_type === mt.value).length }));
 
   return (
-    <div className="p-4 space-y-4 max-w-6xl mx-auto pb-20 md:pb-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1"><MessageSquareText className="w-7 h-7 text-primary" /><h1 className="text-xl font-bold">Scripts de Vendas</h1></div>
-          <p className="text-muted-foreground text-xs">{isSalesRep ? "Playbooks de vendas" : "Materiais, playbooks, análise de calls, comissões e scripts"}</p>
+    <div className="px-4 md:px-8 py-6 md:py-8 space-y-6 max-w-[1400px] mx-auto pb-20 md:pb-12">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/60">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center shrink-0">
+            <MessageSquareText className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Scripts de Vendas</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              {isSalesRep ? "Playbooks de vendas" : "Materiais, playbooks, análise de calls, comissões e scripts"}
+            </p>
+          </div>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         {isSalesRep ? (
-          <TabsList className="grid w-full grid-cols-1 mb-4">
-            <TabsTrigger value="playbooks" className="gap-1.5"><Sparkles className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Playbooks</span></TabsTrigger>
+          <TabsList className="grid w-full grid-cols-1 mb-6 h-12 p-1 bg-muted/50">
+            <TabsTrigger value="playbooks" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-medium">Playbooks</span>
+            </TabsTrigger>
           </TabsList>
         ) : (
-          <TabsList className="grid w-full grid-cols-5 mb-4">
-            <TabsTrigger value="materials" className="gap-1.5"><Package className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Materiais</span></TabsTrigger>
-            <TabsTrigger value="playbooks" className="gap-1.5"><Sparkles className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Playbooks</span></TabsTrigger>
-            <TabsTrigger value="analysis" className="gap-1.5"><BarChart3 className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Calls</span></TabsTrigger>
-            <TabsTrigger value="commission" className="gap-1.5"><DollarSign className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Comissões</span></TabsTrigger>
-            <TabsTrigger value="scripts" className="gap-1.5"><BookOpen className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Scripts</span></TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5 mb-6 h-12 p-1 bg-muted/50">
+            <TabsTrigger value="materials" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Package className="w-4 h-4" /><span className="text-sm font-medium">Materiais</span>
+            </TabsTrigger>
+            <TabsTrigger value="playbooks" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Sparkles className="w-4 h-4" /><span className="text-sm font-medium">Playbooks</span>
+            </TabsTrigger>
+            <TabsTrigger value="analysis" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <BarChart3 className="w-4 h-4" /><span className="text-sm font-medium">Calls</span>
+            </TabsTrigger>
+            <TabsTrigger value="commission" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <DollarSign className="w-4 h-4" /><span className="text-sm font-medium">Comissões</span>
+            </TabsTrigger>
+            <TabsTrigger value="scripts" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <BookOpen className="w-4 h-4" /><span className="text-sm font-medium">Scripts</span>
+            </TabsTrigger>
           </TabsList>
         )}
 
