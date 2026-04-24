@@ -77,7 +77,8 @@ interface SalesScript { id: string; title: string; content: string; objection_ty
 interface SalesMaterial { id: string; account_id: string; material_type: string; title: string; content: string; is_active: boolean; created_at: string; file_url: string | null; file_name: string | null; file_size: number | null; }
 interface SalesPlaybook { id: string; account_id: string; title: string; content: string; script_type: string; is_favorite: boolean; generated_from: any; created_at: string; }
 interface GoogleDriveConnection { id: string; google_email: string; is_active: boolean; }
-interface DriveCallFile { id: string; name: string; mimeType: string; modifiedTime: string; webViewLink?: string | null; }
+interface DriveCallFile { id: string; name: string; mimeType: string; modifiedTime: string; webViewLink?: string | null; isFolder?: boolean; }
+interface DriveFolderInfo { id: string; name: string; parentId: string | null; }
 
 export default function SalesScripts() {
   const { currentUser } = useCurrentUser();
@@ -133,6 +134,10 @@ export default function SalesScripts() {
   const [driveImportedFileId, setDriveImportedFileId] = useState<string | null>(null);
   const [isConnectingDrive, setIsConnectingDrive] = useState(() => !!getGoogleDriveOAuthPending());
   const [isImportingDriveFile, setIsImportingDriveFile] = useState(false);
+  const [driveFolderId, setDriveFolderId] = useState<string>('root');
+  const [driveFolderStack, setDriveFolderStack] = useState<DriveFolderInfo[]>([]);
+  const [selectedDriveFileIds, setSelectedDriveFileIds] = useState<Set<string>>(new Set());
+  const [importedDriveFileNames, setImportedDriveFileNames] = useState<string[]>([]);
 
   // Queries
   const { data: materials = [], isLoading: loadingMaterials } = useQuery({
