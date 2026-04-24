@@ -402,7 +402,7 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
               {isActive ? (
-                <Badge variant="default" className="bg-green-600">Ativo</Badge>
+                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20">Ativo</Badge>
               ) : (
                 <Badge variant="secondary">Desativado</Badge>
               )}
