@@ -6197,6 +6197,56 @@ export type Database = {
           },
         ]
       }
+      funnel_config_alerts: {
+        Row: {
+          account_id: string
+          alert_type: string
+          created_at: string
+          details: Json | null
+          duplicate_stage_ids: string[] | null
+          id: string
+          pipeline_id: string | null
+          resolved: boolean
+          resolved_at: string | null
+          stage_name: string | null
+          visual_id: string | null
+        }
+        Insert: {
+          account_id: string
+          alert_type: string
+          created_at?: string
+          details?: Json | null
+          duplicate_stage_ids?: string[] | null
+          id?: string
+          pipeline_id?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          stage_name?: string | null
+          visual_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          alert_type?: string
+          created_at?: string
+          details?: Json | null
+          duplicate_stage_ids?: string[] | null
+          id?: string
+          pipeline_id?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          stage_name?: string | null
+          visual_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_config_alerts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_drive_connections: {
         Row: {
           access_token: string | null
