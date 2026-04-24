@@ -3,6 +3,7 @@ import {
   buildFunnelStageData,
   dedupeStagesByName,
   detectDuplicateStagesInPipeline,
+  normalizeStageName,
   type FunnelStageRow,
   type FunnelDataPoint,
 } from "./funnelData";
