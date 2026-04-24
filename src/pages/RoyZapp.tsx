@@ -1125,6 +1125,32 @@ export default function RoyZapp() {
           onRequestNotificationPermission={requestNotificationPermission}
           onRefreshMessages={refreshMessages}
           isRefreshingMessages={isRefreshingMessages}
+          accountId={currentUser?.account_id}
+          selectedIntegrationId={selectedIntegrationId}
+          onSelectIntegration={(integrationId) => {
+            if (integrationId === selectedIntegrationId) return;
+            setSelectedIntegrationId(integrationId);
+            setSelectedConversation(null);
+            setSearchParams(prev => {
+              prev.set('integrationId', integrationId);
+              return prev;
+            }, { replace: true });
+
+            // Persist preference for this user/sector
+            if (currentUser?.auth_user_id && currentUser?.account_id && selectedSectorId) {
+              supabase
+                .from("user_instance_preferences")
+                .upsert({
+                  user_id: currentUser.auth_user_id,
+                  account_id: currentUser.account_id,
+                  sector_id: selectedSectorId,
+                  integration_id: integrationId,
+                }, { onConflict: "user_id,sector_id" })
+                .then(({ error }) => {
+                  if (error) console.error("[RoyZapp] save instance preference error", error);
+                });
+            }
+          }}
         />
       </div>
 

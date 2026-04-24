@@ -34,6 +34,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ZappConversationItem } from "./ZappConversationItem";
+import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
 import { ZappTeamList } from "./ZappTeamList";
 import { ZappTagsList } from "./ZappTagsList";
 import { ZappSettingsPanel } from "./ZappSettingsPanel";
@@ -147,7 +148,11 @@ interface ZappConversationPanelProps {
   // Refresh messages
   onRefreshMessages?: () => void;
   isRefreshingMessages?: boolean;
-  
+
+  // Instance switcher
+  accountId?: string | null;
+  selectedIntegrationId?: string;
+  onSelectIntegration?: (integrationId: string) => void;
 }
 
 export const ZappConversationPanel = memo(function ZappConversationPanel({
@@ -231,6 +236,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onPullFromQueue,
   onRefreshMessages,
   isRefreshingMessages,
+  accountId,
+  selectedIntegrationId,
+  onSelectIntegration,
 }: ZappConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
@@ -269,6 +277,16 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {/* Visible instance switcher (only renders if 2+ instances exist) */}
+          {sectorId && onSelectIntegration && (
+            <ZappInstanceSwitcher
+              accountId={accountId}
+              sectorId={sectorId}
+              selectedIntegrationId={selectedIntegrationId}
+              onChange={onSelectIntegration}
+              className="mr-1"
+            />
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
