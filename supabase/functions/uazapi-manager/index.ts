@@ -202,13 +202,14 @@ function getInstanceToken(instance: UazapiInstanceLike): string | undefined {
 }
 
 function getInstanceUpdatedAt(instance: UazapiInstanceLike): number {
+  const nestedInstance = asRecord(instance.instance);
   const updatedValue =
     getString((instance as Record<string, unknown>)?.updated) ||
     getString((instance as Record<string, unknown>)?.created) ||
     getString(instance.data?.updated) ||
     getString(instance.data?.created) ||
-    getString(instance.instance?.updated) ||
-    getString(instance.instance?.created);
+    getString(nestedInstance?.updated) ||
+    getString(nestedInstance?.created);
 
   if (!updatedValue) return 0;
   const ts = Date.parse(updatedValue);
@@ -663,12 +664,14 @@ Deno.serve(async (req) => {
 
       // Try connect with current token; if 401 (token belongs to a different server), re-init and retry
       try {
-        result = await uazapiInstance("/instance/connect", "POST", activeToken, {}, sectorServer);
-        const isAuthError = result?.code === 401 || /invalid token/i.test(result?.message || "");
+        const ensuredToken = activeToken!;
+        const connectResult: any = await uazapiInstance("/instance/connect", "POST", ensuredToken, {}, sectorServer);
+        result = connectResult;
+        const isAuthError = connectResult?.code === 401 || /invalid token/i.test(connectResult?.message || "");
         if (isAuthError) {
           console.warn("[uazapi-manager] Connect returned auth error, re-initializing instance on sector server");
           activeToken = await initOnSectorServer();
-          result = await uazapiInstance("/instance/connect", "POST", activeToken, {}, sectorServer);
+          result = await uazapiInstance("/instance/connect", "POST", activeToken!, {}, sectorServer);
         }
       } catch (e) {
         console.error("[uazapi-manager] connect failed:", e);
