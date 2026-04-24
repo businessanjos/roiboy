@@ -8,9 +8,56 @@
  */
 
 export interface FunnelStageRow {
+  id?: string;
   name: string;
   display_order: number | null;
   color: string | null;
+  pipeline_id?: string | null;
+}
+
+export interface DuplicateStageInPipeline {
+  pipeline_id: string;
+  stage_name: string;
+  stage_ids: string[];
+  count: number;
+}
+
+/**
+ * Detect stages that share the same name *within the same pipeline*.
+ * This is a real configuration error (the funnel becomes ambiguous).
+ * Stages with same name across DIFFERENT pipelines are fine here —
+ * they are handled by `dedupeStagesByName`.
+ */
+export function detectDuplicateStagesInPipeline(
+  stages: FunnelStageRow[]
+): DuplicateStageInPipeline[] {
+  const grouped = new Map<string, { pipeline_id: string; stage_name: string; ids: string[] }>();
+  for (const stage of stages) {
+    if (!stage.pipeline_id || !stage.id) continue;
+    const key = `${stage.pipeline_id}::${stage.name}`;
+    const entry = grouped.get(key);
+    if (entry) {
+      entry.ids.push(stage.id);
+    } else {
+      grouped.set(key, {
+        pipeline_id: stage.pipeline_id,
+        stage_name: stage.name,
+        ids: [stage.id],
+      });
+    }
+  }
+  const dups: DuplicateStageInPipeline[] = [];
+  for (const entry of grouped.values()) {
+    if (entry.ids.length > 1) {
+      dups.push({
+        pipeline_id: entry.pipeline_id,
+        stage_name: entry.stage_name,
+        stage_ids: entry.ids,
+        count: entry.ids.length,
+      });
+    }
+  }
+  return dups;
 }
 
 export interface FunnelDataPoint {
