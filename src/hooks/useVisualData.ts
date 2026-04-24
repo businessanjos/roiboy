@@ -109,13 +109,50 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
       if (chartType === 'funnel' && dimension.field === 'stage_name') {
         const { data: stages, error: stagesError } = await supabase
           .from('deal_stages')
-          .select('name, display_order, color')
+          .select('id, name, display_order, color, pipeline_id')
           .eq('account_id', accountId)
           .order('display_order', { ascending: true });
 
         if (stagesError) console.error('Error fetching stages order:', stagesError);
 
         if (stages && stages.length > 0) {
+          // Validate: same stage name MUST NOT appear twice in the same pipeline.
+          // This is a configuration error that makes the funnel ambiguous.
+          const duplicates = detectDuplicateStagesInPipeline(stages as any);
+          if (duplicates.length > 0) {
+            for (const dup of duplicates) {
+              console.warn(
+                '[funnel-config-alert] Duplicate stage name in same pipeline',
+                {
+                  account_id: accountId,
+                  pipeline_id: dup.pipeline_id,
+                  stage_name: dup.stage_name,
+                  stage_ids: dup.stage_ids,
+                  occurrences: dup.count,
+                }
+              );
+              // Persist alert (idempotent via partial unique index on open alerts)
+              try {
+                await supabase.from('funnel_config_alerts').insert({
+                  account_id: accountId,
+                  alert_type: 'duplicate_stage_in_pipeline',
+                  pipeline_id: dup.pipeline_id,
+                  stage_name: dup.stage_name,
+                  duplicate_stage_ids: dup.stage_ids,
+                  details: {
+                    occurrences: dup.count,
+                    detected_in_chart_type: chartType,
+                    dimension_field: dimension.field,
+                  },
+                });
+              } catch (e) {
+                // Most likely the unique-on-open index rejected a duplicate
+                // open alert — that's the desired idempotent behavior.
+                console.debug('[funnel-config-alert] insert skipped', e);
+              }
+            }
+          }
+
           result = buildFunnelStageData(result, stages);
         }
 
