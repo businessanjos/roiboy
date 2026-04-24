@@ -613,13 +613,11 @@ export default function SalesScripts() {
                         )}
                       </div>
 
-                      <Input placeholder="Buscar em todo o Drive..." value={driveSearch} onChange={e => setDriveSearch(e.target.value)} />
-
-                      <div className="max-h-72 overflow-y-auto rounded-md border">
+                      <div className="max-h-80 overflow-y-auto rounded-md border">
                         {loadingDriveFiles ? (
                           <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando...</div>
                         ) : driveItems.length === 0 ? (
-                          <div className="p-4 text-sm text-muted-foreground">{driveSearch ? 'Nenhum resultado encontrado.' : 'Pasta vazia.'}</div>
+                          <div className="p-4 text-sm text-muted-foreground">Pasta vazia. Use o botão "Voltar" ou "Meu Drive" para navegar.</div>
                         ) : (
                           <div className="divide-y">
                             {driveItems.map(item => {
