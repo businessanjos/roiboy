@@ -659,6 +659,34 @@ export default function SalesScripts() {
                         )}
                       </div>
 
+                      {driveScope !== 'drives-root' && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">Mostrar:</span>
+                          <div className="inline-flex rounded-md border bg-background p-0.5">
+                            {([
+                              { value: 'all', label: 'Tudo' },
+                              { value: 'folders', label: 'Pastas' },
+                              { value: 'files', label: 'Arquivos' },
+                            ] as const).map(opt => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setDriveFilter(opt.value)}
+                                disabled={isImportingDriveFile}
+                                className={cn(
+                                  "h-6 px-2 rounded-sm text-xs transition-colors",
+                                  driveFilter === opt.value
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:bg-muted"
+                                )}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="max-h-80 overflow-y-auto rounded-md border">
                         {loadingDriveFiles ? (
                           <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando...</div>
