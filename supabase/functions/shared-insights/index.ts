@@ -1115,7 +1115,7 @@ async function applyLeadFieldFilters(
     const selectColumns = isMultiSelect ? 'lead_id, value_json' : 'lead_id, value_text';
 
     let allValues: any[] = [];
-    const batchSize = 500;
+    const batchSize = 100;
     for (let i = 0; i < leadIds.length; i += batchSize) {
       const batch = leadIds.slice(i, i + batchSize);
       const { data } = await supabase
