@@ -3895,6 +3895,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          name_normalized: string | null
           pipeline_id: string
           probability: number | null
           updated_at: string
@@ -3907,6 +3908,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          name_normalized?: string | null
           pipeline_id: string
           probability?: number | null
           updated_at?: string
@@ -3919,6 +3921,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          name_normalized?: string | null
           pipeline_id?: string
           probability?: number | null
           updated_at?: string
@@ -16524,6 +16527,7 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
+      normalize_stage_name: { Args: { p_name: string }; Returns: string }
       process_recurring_entries: { Args: never; Returns: number }
       record_login_attempt: {
         Args: {
@@ -16554,6 +16558,7 @@ export type Database = {
         Args: { p_status: string; p_token: string }
         Returns: Json
       }
+      unaccent_immutable: { Args: { p_text: string }; Returns: string }
       use_coupon: {
         Args: {
           p_account_id: string

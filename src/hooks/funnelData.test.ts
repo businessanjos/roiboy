@@ -3,6 +3,7 @@ import {
   buildFunnelStageData,
   dedupeStagesByName,
   detectDuplicateStagesInPipeline,
+  normalizeStageName,
   type FunnelStageRow,
   type FunnelDataPoint,
 } from "./funnelData";
@@ -252,5 +253,89 @@ describe("detectDuplicateStagesInPipeline", () => {
       { id: "x", name: "Sem Pipeline", display_order: 0, color: null },
     ];
     expect(detectDuplicateStagesInPipeline(stages)).toEqual([]);
+  });
+});
+
+describe("normalizeStageName", () => {
+  it("returns empty string for null/undefined/empty input", () => {
+    expect(normalizeStageName(null)).toBe("");
+    expect(normalizeStageName(undefined)).toBe("");
+    expect(normalizeStageName("")).toBe("");
+    expect(normalizeStageName("   ")).toBe("");
+  });
+
+  it("trims and lowercases", () => {
+    expect(normalizeStageName("  Reuniao Agendada  ")).toBe("reuniao agendada");
+    expect(normalizeStageName("REUNIAO AGENDADA")).toBe("reuniao agendada");
+  });
+
+  it("strips accents (NFD)", () => {
+    expect(normalizeStageName("Reunião Agendada")).toBe("reuniao agendada");
+    expect(normalizeStageName("Negociação")).toBe("negociacao");
+    expect(normalizeStageName("São Paulo")).toBe("sao paulo");
+  });
+
+  it("collapses internal whitespace and punctuation runs", () => {
+    expect(normalizeStageName("Reunião   Agendada")).toBe("reuniao agendada");
+    expect(normalizeStageName("Reunião — Agendada")).toBe("reuniao agendada");
+    expect(normalizeStageName("Reunião / Agendada")).toBe("reuniao agendada");
+    expect(normalizeStageName("Reunião-Agendada!")).toBe("reuniao agendada");
+  });
+
+  it("treats variants as equal", () => {
+    const variants = [
+      "Reunião Agendada",
+      "reuniao agendada",
+      "REUNIÃO  AGENDADA",
+      "  Reunião — Agendada  ",
+      "reuniao-agendada",
+    ];
+    const norms = variants.map(normalizeStageName);
+    for (const n of norms) expect(n).toBe(norms[0]);
+  });
+});
+
+describe("normalization integration in funnel helpers", () => {
+  it("collapses accent/case/whitespace variants across pipelines into one bar", () => {
+    const stages: FunnelStageRow[] = [
+      { id: "s1", name: "Reunião Agendada", display_order: 1, color: "#fff", pipeline_id: "p1" },
+      { id: "s2", name: "REUNIAO  AGENDADA", display_order: 2, color: null, pipeline_id: "p2" },
+      { id: "s3", name: "  reuniao agendada ", display_order: 3, color: null, pipeline_id: "p3" },
+    ];
+    const aggregated: FunnelDataPoint[] = [
+      { name: "Reunião Agendada", value: 10, count: 1 },
+      { name: "REUNIAO AGENDADA", value: 20, count: 2 },
+      { name: "reuniao  agendada", value: 5, count: 1 },
+    ];
+    const out = buildFunnelStageData(aggregated, stages);
+    expect(out).toHaveLength(1);
+    expect(out[0].value).toBe(35);
+    expect(out[0].count).toBe(4);
+    // Display name is the canonical pipeline name (lowest display_order = s1)
+    expect(out[0].name).toBe("Reunião Agendada");
+  });
+
+  it("dedupeStagesByName collapses normalized variants", () => {
+    const stages: FunnelStageRow[] = [
+      { id: "s1", name: "Negociação", display_order: 5, color: "#aaa", pipeline_id: "p1" },
+      { id: "s2", name: "negociacao", display_order: 2, color: null, pipeline_id: "p2" },
+      { id: "s3", name: " NEGOCIAÇÃO ", display_order: 9, color: null, pipeline_id: "p3" },
+    ];
+    const out = dedupeStagesByName(stages);
+    expect(out).toHaveLength(1);
+    expect(out[0].display_order).toBe(2); // smallest wins
+    expect(out[0].color).toBe("#aaa"); // first non-empty kept
+  });
+
+  it("detectDuplicateStagesInPipeline flags accent/case variants in same pipeline", () => {
+    const stages: FunnelStageRow[] = [
+      { id: "a", name: "Reunião Agendada", display_order: 1, color: null, pipeline_id: "p1" },
+      { id: "b", name: "REUNIAO AGENDADA", display_order: 2, color: null, pipeline_id: "p1" },
+      { id: "c", name: "  reuniao  agendada  ", display_order: 3, color: null, pipeline_id: "p1" },
+    ];
+    const dups = detectDuplicateStagesInPipeline(stages);
+    expect(dups).toHaveLength(1);
+    expect(dups[0].count).toBe(3);
+    expect(dups[0].pipeline_id).toBe("p1");
   });
 });

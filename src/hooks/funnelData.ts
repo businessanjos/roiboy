@@ -7,6 +7,33 @@
  * (e.g. "Reunião Agendada" existing in pipelines A and B).
  */
 
+/**
+ * Normalize a stage name so that variations caused by accidental
+ * whitespace, capitalization, accents or punctuation collapse into
+ * a single bucket.
+ *
+ * Used as the comparison key for deduplication and duplicate
+ * detection. The original (display) name is preserved separately.
+ *
+ * Examples that all collapse to "reuniao agendada":
+ *   "Reunião Agendada"
+ *   "  reuniao  agendada "
+ *   "REUNIÃO  AGENDADA"
+ *   "Reunião — Agendada"
+ */
+export function normalizeStageName(name: string | null | undefined): string {
+  if (name == null) return "";
+  return name
+    .toString()
+    .normalize("NFD")
+    // strip combining diacritics
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    // replace any non-alphanumeric run with a single space
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 export interface FunnelStageRow {
   id?: string;
   name: string;
@@ -31,18 +58,25 @@ export interface DuplicateStageInPipeline {
 export function detectDuplicateStagesInPipeline(
   stages: FunnelStageRow[]
 ): DuplicateStageInPipeline[] {
-  const grouped = new Map<string, { pipeline_id: string; stage_name: string; ids: string[] }>();
+  const grouped = new Map<
+    string,
+    { pipeline_id: string; stage_name: string; ids: string[]; raw_names: Set<string> }
+  >();
   for (const stage of stages) {
     if (!stage.pipeline_id || !stage.id) continue;
-    const key = `${stage.pipeline_id}::${stage.name}`;
+    const normalized = normalizeStageName(stage.name);
+    if (!normalized) continue;
+    const key = `${stage.pipeline_id}::${normalized}`;
     const entry = grouped.get(key);
     if (entry) {
       entry.ids.push(stage.id);
+      entry.raw_names.add(stage.name);
     } else {
       grouped.set(key, {
         pipeline_id: stage.pipeline_id,
         stage_name: stage.name,
         ids: [stage.id],
+        raw_names: new Set([stage.name]),
       });
     }
   }
@@ -83,9 +117,11 @@ export function dedupeStagesByName(stages: FunnelStageRow[]): UniqueStage[] {
   const map = new Map<string, UniqueStage>();
   for (const stage of stages) {
     const order = stage.display_order ?? 999;
-    const existing = map.get(stage.name);
+    const key = normalizeStageName(stage.name);
+    if (!key) continue;
+    const existing = map.get(key);
     if (!existing) {
-      map.set(stage.name, {
+      map.set(key, {
         name: stage.name,
         display_order: order,
         color: stage.color,
@@ -107,24 +143,37 @@ export function dedupeStagesByName(stages: FunnelStageRow[]): UniqueStage[] {
  * de-duplicated list of funnel points.
  *
  * Rules:
+ * - Names are matched using `normalizeStageName` so that variations in
+ *   whitespace, casing, accents or punctuation collapse together.
  * - If the aggregated result contains duplicate names, sum their values
  *   and counts and keep the first non-empty color.
  * - Every unique stage from the pipeline must appear at least once,
  *   even with value 0 (so the funnel shows the full path).
  * - Final order respects the pipeline display_order.
+ * - The display name kept is the one coming from the pipeline stage
+ *   (canonical), falling back to the aggregated row name when the stage
+ *   is not in the pipeline.
  */
 export function buildFunnelStageData(
   aggregatedResult: FunnelDataPoint[],
   stages: FunnelStageRow[]
 ): FunnelDataPoint[] {
   const uniqueStages = dedupeStagesByName(stages);
-  const orderMap = new Map(uniqueStages.map((s) => [s.name, s.display_order]));
+  const orderMap = new Map(
+    uniqueStages.map((s) => [normalizeStageName(s.name), s.display_order])
+  );
+  const canonicalNameMap = new Map(
+    uniqueStages.map((s) => [normalizeStageName(s.name), s.name])
+  );
 
   const resultMap = new Map<string, FunnelDataPoint>();
   for (const item of aggregatedResult) {
-    const existing = resultMap.get(item.name);
+    const key = normalizeStageName(item.name);
+    if (!key) continue;
+    const canonical = canonicalNameMap.get(key) ?? item.name;
+    const existing = resultMap.get(key);
     if (!existing) {
-      resultMap.set(item.name, { ...item });
+      resultMap.set(key, { ...item, name: canonical });
     } else {
       existing.value = (existing.value || 0) + (item.value || 0);
       existing.count = (existing.count || 0) + (item.count || 0);
@@ -133,8 +182,9 @@ export function buildFunnelStageData(
   }
 
   for (const stage of uniqueStages) {
-    if (!resultMap.has(stage.name)) {
-      resultMap.set(stage.name, {
+    const key = normalizeStageName(stage.name);
+    if (!resultMap.has(key)) {
+      resultMap.set(key, {
         name: stage.name,
         value: 0,
         count: 0,
@@ -144,6 +194,8 @@ export function buildFunnelStageData(
   }
 
   return Array.from(resultMap.values()).sort(
-    (a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999)
+    (a, b) =>
+      (orderMap.get(normalizeStageName(a.name)) ?? 999) -
+      (orderMap.get(normalizeStageName(b.name)) ?? 999)
   );
 }
