@@ -417,21 +417,81 @@ export default function SalesScripts() {
     }
   };
 
-  const handleImportDriveFile = async (file: DriveCallFile) => {
+  const handleEnterFolder = (folder: DriveCallFile) => {
+    if (currentDriveFolder) {
+      setDriveFolderStack(prev => [...prev, currentDriveFolder]);
+    }
+    setDriveFolderId(folder.id);
+    setDriveSearch('');
+    setSelectedDriveFileIds(new Set());
+  };
+
+  const handleNavigateBack = () => {
+    setDriveFolderStack(prev => {
+      const next = [...prev];
+      const last = next.pop();
+      setDriveFolderId(last?.id || 'root');
+      return next;
+    });
+    setDriveSearch('');
+    setSelectedDriveFileIds(new Set());
+  };
+
+  const handleNavigateRoot = () => {
+    setDriveFolderStack([]);
+    setDriveFolderId('root');
+    setDriveSearch('');
+    setSelectedDriveFileIds(new Set());
+  };
+
+  const toggleDriveFileSelection = (fileId: string) => {
+    setSelectedDriveFileIds(prev => {
+      const next = new Set(prev);
+      if (next.has(fileId)) next.delete(fileId);
+      else next.add(fileId);
+      return next;
+    });
+  };
+
+  const handleImportSelectedDriveFiles = async () => {
+    const selected = driveItems.filter(i => !i.isFolder && selectedDriveFileIds.has(i.id));
+    if (selected.length === 0) {
+      toast.error('Selecione ao menos um arquivo');
+      return;
+    }
     setIsImportingDriveFile(true);
-    setDriveImportedFileId(file.id);
     try {
-      const { data, error } = await supabase.functions.invoke('gdrive-read-call-file', {
-        body: { fileId: file.id, fileName: file.name, mimeType: file.mimeType },
+      const newEntries: Array<{ id: number; text: string; file: File | null }> = [];
+      const importedNames: string[] = [];
+      for (const file of selected) {
+        setDriveImportedFileId(file.id);
+        const { data, error } = await supabase.functions.invoke('gdrive-read-call-file', {
+          body: { fileId: file.id, fileName: file.name, mimeType: file.mimeType },
+        });
+        if (error) {
+          toast.error(`Erro ao importar "${file.name}": ${error.message}`);
+          continue;
+        }
+        const transcript = (data?.transcript as string | undefined)?.trim();
+        if (!transcript) {
+          toast.error(`Sem transcrição em "${file.name}"`);
+          continue;
+        }
+        newEntries.push({ id: Date.now() + newEntries.length, text: transcript, file: null });
+        importedNames.push(file.name);
+      }
+      if (newEntries.length === 0) return;
+      // Replace empty default entries; otherwise append
+      setTranscriptEntries(prev => {
+        const hasContent = prev.some(e => e.text.trim() || e.file);
+        return hasContent ? [...prev, ...newEntries] : newEntries;
       });
-      if (error) throw error;
-      const transcript = (data?.transcript as string | undefined)?.trim();
-      if (!transcript) throw new Error('Não foi possível extrair a transcrição do arquivo selecionado');
-      setSelectedDriveFile(file);
-      setTranscriptEntries([{ id: Date.now(), text: transcript, file: null }]);
-      toast.success(`Arquivo "${file.name}" importado do Google Drive.`);
+      setImportedDriveFileNames(importedNames);
+      setSelectedDriveFile(selected[0]);
+      setSelectedDriveFileIds(new Set());
+      toast.success(`${importedNames.length} arquivo(s) importado(s) do Google Drive.`);
     } catch (e: any) {
-      toast.error(e?.message || 'Erro ao importar arquivo do Google Drive');
+      toast.error(e?.message || 'Erro ao importar arquivos do Google Drive');
     } finally {
       setIsImportingDriveFile(false);
       setDriveImportedFileId(null);
