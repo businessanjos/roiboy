@@ -136,13 +136,52 @@ export default function SalesScripts() {
   const [driveImportedFileId, setDriveImportedFileId] = useState<string | null>(null);
   const [isConnectingDrive, setIsConnectingDrive] = useState(() => !!getGoogleDriveOAuthPending());
   const [isImportingDriveFile, setIsImportingDriveFile] = useState(false);
-  const [driveFolderId, setDriveFolderId] = useState<string>('');
-  const [driveScope, setDriveScope] = useState<DriveScope>('drives-root');
-  const [driveCurrentDriveId, setDriveCurrentDriveId] = useState<string | null>(null);
-  const [driveFolderStack, setDriveFolderStack] = useState<DriveNavLevel[]>([]);
+  // Restore last drive location from localStorage (per user)
+  const driveLocationStorageKey = currentUser?.auth_user_id
+    ? `salesScripts:lastDriveLocation:${currentUser.auth_user_id}`
+    : null;
+  const restoredDriveLocation = (() => {
+    if (typeof window === 'undefined' || !driveLocationStorageKey) return null;
+    try {
+      const raw = window.localStorage.getItem(driveLocationStorageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as {
+        scope?: DriveScope;
+        folderId?: string;
+        driveId?: string | null;
+        stack?: DriveNavLevel[];
+      };
+      return parsed;
+    } catch {
+      return null;
+    }
+  })();
+
+  const [driveFolderId, setDriveFolderId] = useState<string>(restoredDriveLocation?.folderId ?? '');
+  const [driveScope, setDriveScope] = useState<DriveScope>(restoredDriveLocation?.scope ?? 'drives-root');
+  const [driveCurrentDriveId, setDriveCurrentDriveId] = useState<string | null>(restoredDriveLocation?.driveId ?? null);
+  const [driveFolderStack, setDriveFolderStack] = useState<DriveNavLevel[]>(restoredDriveLocation?.stack ?? []);
   const [selectedDriveFileIds, setSelectedDriveFileIds] = useState<Set<string>>(new Set());
   const [importedDriveFileNames, setImportedDriveFileNames] = useState<string[]>([]);
   const [driveFilter, setDriveFilter] = useState<'all' | 'folders' | 'files'>('all');
+
+  // Persist last drive location whenever it changes
+  useEffect(() => {
+    if (typeof window === 'undefined' || !driveLocationStorageKey) return;
+    try {
+      window.localStorage.setItem(
+        driveLocationStorageKey,
+        JSON.stringify({
+          scope: driveScope,
+          folderId: driveFolderId,
+          driveId: driveCurrentDriveId,
+          stack: driveFolderStack,
+        })
+      );
+    } catch {
+      // ignore quota errors
+    }
+  }, [driveLocationStorageKey, driveScope, driveFolderId, driveCurrentDriveId, driveFolderStack]);
 
   // Queries
   const { data: materials = [], isLoading: loadingMaterials } = useQuery({
