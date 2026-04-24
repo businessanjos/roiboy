@@ -629,21 +629,21 @@ export default function SalesScripts() {
                       {/* Breadcrumb / navigation */}
                       <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
                         <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1" onClick={handleNavigateRoot} disabled={isImportingDriveFile}>
-                          <Home className="w-3.5 h-3.5" />Meu Drive
+                          <Home className="w-3.5 h-3.5" />Drives
                         </Button>
-                        {driveFolderStack.map((folder, idx) => (
-                          <span key={folder.id} className="flex items-center gap-1">
+                        {driveFolderStack.map((level) => (
+                          <span key={`${level.scope}-${level.folderId}`} className="flex items-center gap-1">
                             <span>/</span>
-                            <span className="truncate max-w-[140px]">{folder.name}</span>
+                            <span className="truncate max-w-[140px]">{level.folderName}</span>
                           </span>
                         ))}
-                        {currentDriveFolder && currentDriveFolder.id !== 'root' && (
+                        {currentDriveFolder && driveScope !== 'drives-root' && (
                           <span className="flex items-center gap-1">
                             <span>/</span>
                             <span className="font-medium text-foreground truncate max-w-[160px]">{currentDriveFolder.name}</span>
                           </span>
                         )}
-                        {(driveFolderStack.length > 0 || (currentDriveFolder && currentDriveFolder.id !== 'root')) && (
+                        {driveScope !== 'drives-root' && (
                           <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1 ml-auto" onClick={handleNavigateBack} disabled={isImportingDriveFile}>
                             <ArrowLeft className="w-3.5 h-3.5" />Voltar
                           </Button>
