@@ -147,7 +147,11 @@ interface ZappConversationPanelProps {
   // Refresh messages
   onRefreshMessages?: () => void;
   isRefreshingMessages?: boolean;
-  
+
+  // Instance switcher
+  accountId?: string | null;
+  selectedIntegrationId?: string;
+  onSelectIntegration?: (integrationId: string) => void;
 }
 
 export const ZappConversationPanel = memo(function ZappConversationPanel({
@@ -231,6 +235,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onPullFromQueue,
   onRefreshMessages,
   isRefreshingMessages,
+  accountId,
+  selectedIntegrationId,
+  onSelectIntegration,
 }: ZappConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
