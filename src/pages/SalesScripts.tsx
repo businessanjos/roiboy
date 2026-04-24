@@ -746,8 +746,8 @@ export default function SalesScripts() {
               </div>
 
               <TabsContent value="analyze" className="space-y-6 mt-4">
-            <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4">
-              <div className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+            <Card className="overflow-hidden"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4 pt-6">
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="space-y-2 rounded-lg border bg-card p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
