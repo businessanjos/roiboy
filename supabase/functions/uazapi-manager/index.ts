@@ -201,6 +201,52 @@ function getInstanceToken(instance: UazapiInstanceLike): string | undefined {
   return instance.token || instance.instance?.token || getString(instance.data?.token);
 }
 
+function getInstanceUpdatedAt(instance: UazapiInstanceLike): number {
+  const updatedValue =
+    getString((instance as Record<string, unknown>)?.updated) ||
+    getString((instance as Record<string, unknown>)?.created) ||
+    getString(instance.data?.updated) ||
+    getString(instance.data?.created) ||
+    getString(instance.instance?.updated) ||
+    getString(instance.instance?.created);
+
+  if (!updatedValue) return 0;
+  const ts = Date.parse(updatedValue);
+  return Number.isNaN(ts) ? 0 : ts;
+}
+
+function selectBestInstanceMatch(
+  instances: UazapiInstanceLike[],
+  instanceName?: string,
+  preferredToken?: string,
+): UazapiInstanceLike | undefined {
+  if (instances.length === 0) return undefined;
+
+  const named = instanceName
+    ? instances.filter((instance) => getInstanceName(instance) === instanceName)
+    : instances;
+
+  const pool = named.length > 0 ? named : instances;
+  const tokenMatch = preferredToken
+    ? pool.find((instance) => getInstanceToken(instance) === preferredToken)
+    : undefined;
+
+  if (tokenMatch) return tokenMatch;
+
+  return [...pool].sort((a, b) => {
+    const aStatus = resolveStatusSnapshot(a);
+    const bStatus = resolveStatusSnapshot(b);
+
+    if (aStatus.connected !== bStatus.connected) {
+      return aStatus.connected ? -1 : 1;
+    }
+
+    const aUpdated = getInstanceUpdatedAt(a);
+    const bUpdated = getInstanceUpdatedAt(b);
+    return bUpdated - aUpdated;
+  })[0];
+}
+
 function resolveStatusSnapshot(payload: unknown): StatusSnapshot {
   const record = asRecord(payload);
   if (!record) return { state: "unknown", connected: false };
@@ -319,11 +365,12 @@ async function resolveLiveStatusesForIntegrations(
       const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, server);
       const all = extractInstancesList(allRaw);
 
-      for (const instance of all) {
-        const name = getInstanceName(instance);
-        if (!name || !remaining.has(name)) continue;
-        snapshots.set(name, resolveStatusSnapshot(instance));
-        remaining.delete(name);
+      for (const [instanceName, token] of Array.from(remaining.entries())) {
+        const match = selectBestInstanceMatch(all, instanceName, token);
+        if (!match) continue;
+
+        snapshots.set(instanceName, resolveStatusSnapshot(match));
+        remaining.delete(instanceName);
       }
     } catch (adminErr) {
       console.warn(`[uazapi-manager] Admin fetchInstances failed for sector ${sid} (server: ${server.source})`);
@@ -538,7 +585,7 @@ Deno.serve(async (req) => {
       try {
         const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, sectorServer);
         const all = extractInstancesList(allRaw);
-        const inst = all.find((i) => getInstanceName(i) === instanceName);
+        const inst = selectBestInstanceMatch(all, instanceName, token);
 
         if (inst) {
           statusSnapshot = resolveStatusSnapshot(inst);
