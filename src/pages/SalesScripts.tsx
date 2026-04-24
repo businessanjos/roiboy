@@ -632,26 +632,47 @@ export default function SalesScripts() {
   const materialCountByType = MATERIAL_TYPES.map(mt => ({ ...mt, count: materials.filter(m => m.material_type === mt.value).length }));
 
   return (
-    <div className="p-4 space-y-4 max-w-6xl mx-auto pb-20 md:pb-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1"><MessageSquareText className="w-7 h-7 text-primary" /><h1 className="text-xl font-bold">Scripts de Vendas</h1></div>
-          <p className="text-muted-foreground text-xs">{isSalesRep ? "Playbooks de vendas" : "Materiais, playbooks, análise de calls, comissões e scripts"}</p>
+    <div className="px-4 md:px-8 py-6 md:py-8 space-y-6 max-w-[1400px] mx-auto pb-20 md:pb-12">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/60">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center shrink-0">
+            <MessageSquareText className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Scripts de Vendas</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              {isSalesRep ? "Playbooks de vendas" : "Materiais, playbooks, análise de calls, comissões e scripts"}
+            </p>
+          </div>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         {isSalesRep ? (
-          <TabsList className="grid w-full grid-cols-1 mb-4">
-            <TabsTrigger value="playbooks" className="gap-1.5"><Sparkles className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Playbooks</span></TabsTrigger>
+          <TabsList className="grid w-full grid-cols-1 mb-6 h-12 p-1 bg-muted/50">
+            <TabsTrigger value="playbooks" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-medium">Playbooks</span>
+            </TabsTrigger>
           </TabsList>
         ) : (
-          <TabsList className="grid w-full grid-cols-5 mb-4">
-            <TabsTrigger value="materials" className="gap-1.5"><Package className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Materiais</span></TabsTrigger>
-            <TabsTrigger value="playbooks" className="gap-1.5"><Sparkles className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Playbooks</span></TabsTrigger>
-            <TabsTrigger value="analysis" className="gap-1.5"><BarChart3 className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Calls</span></TabsTrigger>
-            <TabsTrigger value="commission" className="gap-1.5"><DollarSign className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Comissões</span></TabsTrigger>
-            <TabsTrigger value="scripts" className="gap-1.5"><BookOpen className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Scripts</span></TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5 mb-6 h-12 p-1 bg-muted/50">
+            <TabsTrigger value="materials" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Package className="w-4 h-4" /><span className="text-sm font-medium">Materiais</span>
+            </TabsTrigger>
+            <TabsTrigger value="playbooks" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Sparkles className="w-4 h-4" /><span className="text-sm font-medium">Playbooks</span>
+            </TabsTrigger>
+            <TabsTrigger value="analysis" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <BarChart3 className="w-4 h-4" /><span className="text-sm font-medium">Calls</span>
+            </TabsTrigger>
+            <TabsTrigger value="commission" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <DollarSign className="w-4 h-4" /><span className="text-sm font-medium">Comissões</span>
+            </TabsTrigger>
+            <TabsTrigger value="scripts" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <BookOpen className="w-4 h-4" /><span className="text-sm font-medium">Scripts</span>
+            </TabsTrigger>
           </TabsList>
         )}
 
@@ -667,11 +688,36 @@ export default function SalesScripts() {
         {/* PLAYBOOKS */}
         <TabsContent value="playbooks">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <div><h2 className="text-lg font-semibold">{isSalesRep ? "Playbooks" : "Playbooks Gerados"}</h2><p className="text-sm text-muted-foreground">{isSalesRep ? "Playbooks disponíveis para consulta" : `Scripts personalizados (${materials.length} materiais)`}</p></div>
-            {!isSalesRep && <Button onClick={() => setGenerateDialogOpen(true)} disabled={materials.length === 0}><Sparkles className="w-4 h-4 mr-2" />Gerar Novo Script</Button>}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Sparkles className="w-5 h-5 text-primary" /></div>
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight">{isSalesRep ? "Playbooks" : "Playbooks Gerados"}</h2>
+                <p className="text-sm text-muted-foreground">{isSalesRep ? "Playbooks disponíveis para consulta" : `Scripts personalizados a partir de ${materials.length} materiais`}</p>
+              </div>
+            </div>
+            {!isSalesRep && <Button onClick={() => setGenerateDialogOpen(true)} disabled={materials.length === 0} className="gap-2"><Sparkles className="w-4 h-4" />Gerar Novo Script</Button>}
           </div>
           {!isSalesRep && materials.length === 0 && <Card className="mb-6 border-primary/30 bg-primary/5"><CardContent className="p-4 flex items-center gap-3"><AlertCircle className="w-5 h-5 text-primary shrink-0" /><p className="text-sm"><strong>Dica:</strong> Cadastre materiais na aba "Materiais" para gerar scripts mais precisos.</p></CardContent></Card>}
-          {loadingPlaybooks ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div> : playbooks.length === 0 ? <Card><CardContent className="p-12 text-center"><Sparkles className="w-12 h-12 mx-auto mb-4 text-muted-foreground" /><h3 className="text-lg font-semibold mb-2">Nenhum playbook</h3></CardContent></Card> : (
+          {loadingPlaybooks ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div> : playbooks.length === 0 ? (
+            <Card className="border-dashed border-2 bg-muted/20">
+              <CardContent className="py-16 px-6 text-center max-w-md mx-auto">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
+                  <Sparkles className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Nenhum playbook ainda</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  {isSalesRep
+                    ? "Os playbooks gerados pela equipe aparecerão aqui."
+                    : "Gere seu primeiro script personalizado a partir dos materiais cadastrados."}
+                </p>
+                {!isSalesRep && (
+                  <Button onClick={() => setGenerateDialogOpen(true)} disabled={materials.length === 0} className="gap-2">
+                    <Sparkles className="w-4 h-4" />Gerar Primeiro Script
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{playbooks.map(pb => { const st = getScriptType(pb.script_type); const Icon = st?.icon || FileText; return (<Card key={pb.id} className="group hover:border-primary/30 transition-colors cursor-pointer" onClick={() => setViewingPlaybook(pb)}><CardHeader className="pb-2"><div className="flex items-start justify-between gap-2"><div className="flex items-center gap-2 flex-1 min-w-0"><Icon className="w-5 h-5 text-primary shrink-0" /><CardTitle className="text-base line-clamp-1">{pb.title}</CardTitle></div>{!isSalesRep && <div className="flex gap-1" onClick={e => e.stopPropagation()}><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleFavoriteMutation.mutate({ id: pb.id, isFavorite: pb.is_favorite })}>{pb.is_favorite ? <Star className="w-4 h-4 text-primary fill-primary" /> : <StarOff className="w-4 h-4 text-muted-foreground" />}</Button><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeletePlaybookDialog(pb)}><Trash2 className="w-4 h-4" /></Button></div>}</div></CardHeader><CardContent><Badge variant="secondary" className="text-xs mb-2">{st?.label || pb.script_type}</Badge><p className="text-sm text-muted-foreground line-clamp-3">{pb.content.replace(/[#*`]/g, '').substring(0, 200)}...</p><p className="text-xs text-muted-foreground mt-2">{new Date(pb.created_at).toLocaleDateString('pt-BR')}</p></CardContent></Card>); })}</div>
           )}
         </TabsContent>
@@ -679,7 +725,13 @@ export default function SalesScripts() {
         {/* ANALYSIS */}
         <TabsContent value="analysis">
           <div className="space-y-4">
-            <div><h2 className="text-lg font-semibold mb-1">Central de Calls</h2><p className="text-sm text-muted-foreground">Análise, ICP, comparativo e ranking do time</p></div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><BarChart3 className="w-5 h-5 text-primary" /></div>
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight">Central de Calls</h2>
+                <p className="text-sm text-muted-foreground">Análise, ICP, comparativo e ranking do time</p>
+              </div>
+            </div>
 
             <Tabs value={analysisSubTab} onValueChange={setAnalysisSubTab}>
               <div className="overflow-x-auto -mx-4 px-4">
@@ -694,8 +746,8 @@ export default function SalesScripts() {
               </div>
 
               <TabsContent value="analyze" className="space-y-6 mt-4">
-            <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4">
-              <div className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+            <Card className="overflow-hidden"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4 pt-6">
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="space-y-2 rounded-lg border bg-card p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
