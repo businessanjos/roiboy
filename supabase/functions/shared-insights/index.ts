@@ -1224,7 +1224,7 @@ async function enrichLeadsWithFaturamento(supabase: any, accountId: string, lead
 
   const leadIds = leads.map(l => l.id);
   let allValues: any[] = [];
-  const batchSize = 500;
+  const batchSize = 100;
 
   for (let i = 0; i < leadIds.length; i += batchSize) {
     const batch = leadIds.slice(i, i + batchSize);
