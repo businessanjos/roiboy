@@ -195,3 +195,62 @@ describe("buildFunnelStageData (regression: no duplicate stage names)", () => {
     expect(names.filter((n) => n === "Reunião Agendada")).toHaveLength(1);
   });
 });
+
+describe("detectDuplicateStagesInPipeline", () => {
+  it("returns empty when every stage has a unique name within its pipeline", () => {
+    const stages: FunnelStageRow[] = [
+      { id: "s1", name: "Lead", display_order: 0, color: null, pipeline_id: "p1" },
+      { id: "s2", name: "Reunião Agendada", display_order: 1, color: null, pipeline_id: "p1" },
+      { id: "s3", name: "Reunião Agendada", display_order: 1, color: null, pipeline_id: "p2" },
+    ];
+    expect(detectDuplicateStagesInPipeline(stages)).toEqual([]);
+  });
+
+  it("flags two stages with the same name inside a single pipeline", () => {
+    const stages: FunnelStageRow[] = [
+      { id: "s1", name: "Reunião Agendada", display_order: 1, color: null, pipeline_id: "p1" },
+      { id: "s2", name: "Reunião Agendada", display_order: 2, color: null, pipeline_id: "p1" },
+    ];
+    const dups = detectDuplicateStagesInPipeline(stages);
+    expect(dups).toHaveLength(1);
+    expect(dups[0]).toMatchObject({
+      pipeline_id: "p1",
+      stage_name: "Reunião Agendada",
+      count: 2,
+    });
+    expect(dups[0].stage_ids.sort()).toEqual(["s1", "s2"]);
+  });
+
+  it("flags 3+ duplicates and reports the correct count", () => {
+    const stages: FunnelStageRow[] = [
+      { id: "a", name: "Follow Up", display_order: 5, color: null, pipeline_id: "p1" },
+      { id: "b", name: "Follow Up", display_order: 6, color: null, pipeline_id: "p1" },
+      { id: "c", name: "Follow Up", display_order: 7, color: null, pipeline_id: "p1" },
+    ];
+    const dups = detectDuplicateStagesInPipeline(stages);
+    expect(dups).toHaveLength(1);
+    expect(dups[0].count).toBe(3);
+    expect(dups[0].stage_ids).toHaveLength(3);
+  });
+
+  it("reports separate alerts for separate pipelines", () => {
+    const stages: FunnelStageRow[] = [
+      { id: "a", name: "Reunião", display_order: 1, color: null, pipeline_id: "p1" },
+      { id: "b", name: "Reunião", display_order: 2, color: null, pipeline_id: "p1" },
+      { id: "c", name: "Reunião", display_order: 1, color: null, pipeline_id: "p2" },
+      { id: "d", name: "Reunião", display_order: 2, color: null, pipeline_id: "p2" },
+    ];
+    const dups = detectDuplicateStagesInPipeline(stages);
+    expect(dups).toHaveLength(2);
+    const pipelineIds = dups.map((d) => d.pipeline_id).sort();
+    expect(pipelineIds).toEqual(["p1", "p2"]);
+  });
+
+  it("ignores stages without id or pipeline_id (cannot be uniquely attributed)", () => {
+    const stages: FunnelStageRow[] = [
+      { name: "Sem ID", display_order: 0, color: null, pipeline_id: "p1" },
+      { id: "x", name: "Sem Pipeline", display_order: 0, color: null },
+    ];
+    expect(detectDuplicateStagesInPipeline(stages)).toEqual([]);
+  });
+});
