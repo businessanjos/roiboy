@@ -70,12 +70,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         currentUser.team_role_id,
       ].filter(Boolean))) as string[];
 
-      if (roleIds.length === 0) {
-        setPermissions([]);
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
+      // We don't early-return when roleIds is empty: the user may still have
+      // sector access granted via the admin panel without a team role.
 
       // Fetch permissions for all assigned roles
       const rolePermsPromise = roleIds.length > 0
