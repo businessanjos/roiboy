@@ -6,6 +6,7 @@ import { sectors, SectorId } from "@/config/sectors";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase } from "lucide-react";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
 
@@ -133,7 +134,8 @@ export default function Sectors() {
   const navigate = useNavigate();
   const { currentUser, loading: userLoading } = useCurrentUser();
   const { setCurrentSector } = useSector();
-  const { hasSectorAccess } = useSectorAccess();
+  const { hasSectorAccess, sectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
+  const { isSuperAdmin } = useSuperAdmin();
   const [accountName, setAccountName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -158,13 +160,34 @@ export default function Sectors() {
   const RH_ALLOWED_EMAIL = "m.quintana@me.com";
 
   const availableSectors = useMemo(() => {
+    // While the access list is still loading, render nothing instead of
+    // falling back to "show everything". This prevents non-admin users from
+    // briefly seeing all sectors before the RLS data finishes loading.
+    if (sectorAccessLoading) return [];
+
     let filtered = sectors.filter((s) => hasSectorAccess(s.id));
     // RH is only visible to the allowed email
     if (currentUser?.email !== RH_ALLOWED_EMAIL) {
       filtered = filtered.filter(s => s.id !== "rh");
     }
+
+    // Diagnostic log — helps identify cases where a user sees more sectors
+    // than expected (e.g. stale production build, unexpected admin flag).
+    if (typeof window !== "undefined") {
+      // eslint-disable-next-line no-console
+      console.info("[Sectors] access decision", {
+        userId: currentUser?.id,
+        email: currentUser?.email,
+        role: currentUser?.role,
+        is_also_admin: currentUser?.is_also_admin,
+        isSuperAdmin,
+        activeSectorIds: (sectorAccess || []).map((a) => a.sector_id),
+        visibleSectorIds: filtered.map((s) => s.id),
+      });
+    }
+
     return filtered;
-  }, [hasSectorAccess, currentUser?.email]);
+  }, [hasSectorAccess, sectorAccessLoading, sectorAccess, currentUser, isSuperAdmin]);
 
   const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "everia", "rh"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
