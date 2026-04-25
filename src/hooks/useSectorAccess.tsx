@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
 import { useSuperAdmin } from "./useSuperAdmin";
 import { SectorId } from "@/config/sectors";
-import { hasExactRole } from "@/lib/roles";
 
 interface SectorAccess {
   sector_id: SectorId;
@@ -22,10 +21,7 @@ export function useSectorAccess() {
   const userId = currentUser?.id;
   const accountId = currentUser?.account_id;
   const userRole = currentUser?.role;
-  const teamRoleName = currentUser?.team_role_name;
   const isAlsoAdmin = currentUser?.is_also_admin === true;
-  const teamRoleNamesAll = currentUser?.team_role_names || (teamRoleName ? [teamRoleName] : []);
-  const isTeamRoleAdmin = teamRoleNamesAll.some((name) => hasExactRole(name, "Admin"));
 
   const { data: sectorAccess = [], isLoading } = useQuery({
     queryKey: ["user-sector-access", userId],
@@ -70,7 +66,7 @@ export function useSectorAccess() {
   const hasSectorAccess = (sectorId: SectorId): boolean => {
     
     // Only explicit admin flags bypass the per-user sector settings from the admin panel.
-    if (userRole === "admin" || isAlsoAdmin || isTeamRoleAdmin) return true;
+    if (userRole === "admin" || isAlsoAdmin) return true;
     
     return sectorAccess.some((access) => access.sector_id === sectorId);
   };
