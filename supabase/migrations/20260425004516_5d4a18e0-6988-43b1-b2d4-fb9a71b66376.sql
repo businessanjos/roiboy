@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.zapp_conversations_account_group_unique;
