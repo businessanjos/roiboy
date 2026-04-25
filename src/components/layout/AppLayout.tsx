@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, Navigate } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { Sidebar, MobileHeader } from "./Sidebar";
 import { GlobalHeader } from "./GlobalHeader";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +16,8 @@ import { useSector } from "@/contexts/SectorContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getSectorByRoute, routeBelongsToSector } from "@/config/sectors";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
@@ -25,8 +27,10 @@ export function AppLayout() {
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [forceRender, setForceRender] = useState(false);
   const { currentSector } = useSector();
+  const location = useLocation();
   const isInVendas = currentSector?.id === "vendas";
   const { currentUser } = useCurrentUser();
+  const { hasSectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
 
   // Check if user is external (viewer role with external dashboard access)
   const { data: externalAccess } = useQuery({
@@ -103,6 +107,18 @@ export function AppLayout() {
   // Redirect to choose plan if trial expired and no active subscription
   if (isTrialExpired && !hasAccess) {
     return <Navigate to="/choose-plan" replace />;
+  }
+
+  const routeSector = location.pathname !== "/setores"
+    ? currentSector && routeBelongsToSector(location.pathname, currentSector.id)
+      ? currentSector
+      : getSectorByRoute(location.pathname)
+    : null;
+  const skipSectorGuard = ["/setores", "/settings", "/profile", "/notifications", "/account-settings", "/billing"].some((path) =>
+    location.pathname === path || location.pathname.startsWith(`${path}/`)
+  );
+  if (!sectorAccessLoading && routeSector && !skipSectorGuard && !hasSectorAccess(routeSector.id)) {
+    return <Navigate to="/setores" replace />;
   }
 
   return (

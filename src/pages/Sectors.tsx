@@ -5,6 +5,7 @@ import { useSector } from "@/contexts/SectorContext";
 import { sectors, SectorId } from "@/config/sectors";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { hasExactRole, roleNameMatches } from "@/lib/roles";
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { ArrowRight, BarChart3, Wallet, Target, Palette, MessageCircle, Zap, Bot, Briefcase } from "lucide-react";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
@@ -160,14 +161,14 @@ export default function Sectors() {
 
   const isSalesRep = useMemo(() => {
     const role = currentUser?.team_role_name;
-    return !!role && SALES_REP_ROLES.includes(role);
+    return roleNameMatches(role, SALES_REP_ROLES);
   }, [currentUser?.team_role_name]);
 
   const isManager = useMemo(() => {
     const role = currentUser?.role;
     const teamRole = currentUser?.team_role_name;
     return role === "admin" || currentUser?.is_also_admin || 
-           teamRole === "Gestor" || teamRole === "Admin";
+           hasExactRole(teamRole, "Gestor") || hasExactRole(teamRole, "Admin");
   }, [currentUser?.role, currentUser?.is_also_admin, currentUser?.team_role_name]);
 
   const RH_ALLOWED_EMAIL = "m.quintana@me.com";

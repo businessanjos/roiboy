@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { roleNameMatches } from "@/lib/roles";
 
 interface UserProfile {
   id: string;
@@ -63,7 +64,7 @@ export function ProfileContent() {
   const isSalesRep = (() => {
     const role = currentUser?.team_role_name;
     const isAdmin = currentUser?.role === "admin" || currentUser?.is_also_admin;
-    return !!role && RESTRICTED_ROLES.includes(role) && !isAdmin;
+    return roleNameMatches(role, RESTRICTED_ROLES) && !isAdmin;
   })();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [account, setAccount] = useState<Account | null>(null);

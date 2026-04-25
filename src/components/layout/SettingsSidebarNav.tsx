@@ -8,6 +8,7 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMemo } from "react";
+import { roleNameMatches } from "@/lib/roles";
 
 const RESTRICTED_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
@@ -32,7 +33,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
   const isSalesRep = useMemo(() => {
     const role = currentUser?.team_role_name;
     const isAdminUser = currentUser?.role === "admin" || currentUser?.is_also_admin;
-    return !!role && RESTRICTED_ROLES.includes(role) && !isAdminUser;
+    return roleNameMatches(role, RESTRICTED_ROLES) && !isAdminUser;
   }, [currentUser?.team_role_name, currentUser?.role, currentUser?.is_also_admin]);
 
   const activeTab = searchParams.get("tab") || "profile";

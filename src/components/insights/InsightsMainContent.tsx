@@ -13,6 +13,7 @@ import { ShareDashboardModal } from "./ShareDashboardModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
 import { startOfMonth, endOfMonth } from "date-fns";
+import { hasExactRole } from "@/lib/roles";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -134,7 +135,7 @@ export function InsightsMainContent() {
     if (!currentUser) return false;
     const role = currentUser.role;
     const teamRole = currentUser.team_role_name;
-    return role === 'admin' || currentUser.is_also_admin || teamRole === 'Admin' || teamRole === 'Gestor';
+    return role === 'admin' || currentUser.is_also_admin || hasExactRole(teamRole, 'Admin') || hasExactRole(teamRole, 'Gestor');
   }, [currentUser]);
 
   const hasVisuals = visuals && visuals.length > 0;

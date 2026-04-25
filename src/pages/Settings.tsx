@@ -13,6 +13,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMemo } from "react";
 import { ProfileContent } from "@/components/profile/ProfileContent";
+import { roleNameMatches } from "@/lib/roles";
 
 import { MeetingPreferencesCard } from "@/components/settings/MeetingPreferencesCard";
 import { PlanUsageCard } from "@/components/plan";
@@ -30,7 +31,7 @@ export default function Settings() {
   const isSalesRep = useMemo(() => {
     const role = currentUser?.team_role_name;
     const isAdminUser = currentUser?.role === "admin" || currentUser?.is_also_admin;
-    return !!role && RESTRICTED_ROLES.includes(role) && !isAdminUser;
+    return roleNameMatches(role, RESTRICTED_ROLES) && !isAdminUser;
   }, [currentUser?.team_role_name, currentUser?.role, currentUser?.is_also_admin]);
 
   const activeTab = searchParams.get("tab") || "profile";
