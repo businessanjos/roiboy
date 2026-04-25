@@ -220,6 +220,8 @@ export default function Admin() {
         return <UsersTab users={allUsers} accounts={accounts} isLoading={loadingUsers} />;
       case 'permissions':
         return <AdminPermissionsTab accounts={accounts} />;
+      case 'access-audit':
+        return <AccessAuditTab />;
       case 'audit':
         return <AuditLogViewer />;
       case 'costs':
