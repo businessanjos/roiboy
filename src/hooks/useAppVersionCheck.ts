@@ -18,7 +18,7 @@ const AUTO_RELOAD_DELAY_MS = 30 * 1000;
 const TOAST_ID = "app-version-update";
 const STORAGE_KEY = "app:initial-version";
 
-async function fetchVersion(): Promise<string | null> {
+export async function fetchAppVersion(): Promise<string | null> {
   try {
     const res = await fetch(`${VERSION_URL}?t=${Date.now()}`, {
       cache: "no-store",
@@ -32,7 +32,7 @@ async function fetchVersion(): Promise<string | null> {
   }
 }
 
-function hardReload() {
+export function hardReloadApp() {
   // Best-effort cache wipe before reloading so the next paint loads the new
   // hashed assets even on aggressive browser/CDN caches.
   try {
@@ -44,6 +44,15 @@ function hardReload() {
   }
   // Reload bypassing the bfcache/disk cache.
   window.location.reload();
+}
+
+/** Version recorded the first time the app booted in this session, if any. */
+export function getInitialAppVersion(): string | null {
+  try {
+    return sessionStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function useAppVersionCheck() {
@@ -58,7 +67,7 @@ export function useAppVersionCheck() {
     let timer: number | undefined;
 
     const init = async () => {
-      const current = await fetchVersion();
+      const current = await fetchAppVersion();
       if (cancelled) return;
       if (!current) return; // no version.json shipped yet — nothing to compare against
       initialVersionRef.current = current;
@@ -71,7 +80,7 @@ export function useAppVersionCheck() {
 
     const check = async () => {
       if (promptedRef.current) return;
-      const latest = await fetchVersion();
+      const latest = await fetchAppVersion();
       if (cancelled || !latest) return;
       const initial = initialVersionRef.current;
       if (!initial) {
@@ -86,11 +95,11 @@ export function useAppVersionCheck() {
           duration: AUTO_RELOAD_DELAY_MS,
           action: {
             label: "Recarregar agora",
-            onClick: () => hardReload(),
+            onClick: () => hardReloadApp(),
           },
         });
         // Auto-reload as a safety net so users never stay on a stale build.
-        window.setTimeout(() => hardReload(), AUTO_RELOAD_DELAY_MS);
+        window.setTimeout(() => hardReloadApp(), AUTO_RELOAD_DELAY_MS);
       }
     };
 
