@@ -133,7 +133,7 @@ export default function Sectors() {
   const navigate = useNavigate();
   const { currentUser, loading: userLoading } = useCurrentUser();
   const { setCurrentSector } = useSector();
-  const { hasSectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
+  const { hasSectorAccess } = useSectorAccess();
   const [accountName, setAccountName] = useState<string | null>(null);
 
   useEffect(() => {
