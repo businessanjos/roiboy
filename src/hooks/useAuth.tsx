@@ -37,6 +37,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }, 5000);
 
+    // Helper: check if the server has marked this user for forced re-login.
+    // If yes, sign out immediately so they pick up the new role/permissions.
+    const enforceForceRelogin = async (currentSession: Session) => {
+      try {
+        // Token issued-at (iat) is in seconds since epoch.
+        const issuedAtMs = (currentSession as any).access_token
+          ? // Decode iat from JWT payload without external libs
+            (() => {
+              try {
+                const payload = JSON.parse(
+                  atob(currentSession.access_token.split(".")[1])
+                );
+                return typeof payload.iat === "number" ? payload.iat * 1000 : Date.now();
+              } catch {
+                return Date.now();
+              }
+            })()
+          : Date.now();
+
+        const { data, error } = await supabase.rpc("check_force_relogin", {
+          p_session_issued_at: new Date(issuedAtMs).toISOString(),
+        });
+        if (error) {
+          console.warn("[useAuth] force_relogin check failed:", error.message);
+          return false;
+        }
+        if (data === true) {
+          console.warn("[useAuth] Server requested forced re-login. Signing out.");
+          await supabase.auth.signOut();
+          if (mounted) {
+            setSession(null);
+            setUser(null);
+            setLoading(false);
+          }
+          return true;
+        }
+      } catch (err) {
+        console.warn("[useAuth] force_relogin check threw:", err);
+      }
+      return false;
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
@@ -56,6 +98,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             prev && prev.id === currentSession.user.id ? prev : currentSession.user
           );
           setLoading(false);
+
+          // Defer the RPC check so we don't block the auth listener.
+          if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+            setTimeout(() => {
+              if (mounted) void enforceForceRelogin(currentSession);
+            }, 0);
+          }
         }
       }
     );
