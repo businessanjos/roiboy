@@ -121,6 +121,11 @@ export function SectorsHealthBanner(props: SectorsHealthBannerProps) {
     <div
       role={tone === "warn" ? "alert" : "status"}
       aria-live="polite"
+      data-testid="sectors-health-banner"
+      data-tone={tone}
+      data-has-error={hasError ? "true" : "false"}
+      data-stalled={stalled ? "true" : "false"}
+      data-stuck-empty={stuckEmpty ? "true" : "false"}
       className={cn(
         "mb-6 rounded-lg border px-4 py-3 text-sm flex gap-3 items-start",
         toneClasses[tone],
