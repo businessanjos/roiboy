@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Save, RefreshCw, Search, Shield, Users, Building2, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { sectors } from "@/config/sectors";
 import { cn } from "@/lib/utils";
+import { UserManagementPanel } from "./UserManagementPanel";
 
 interface Account {
   id: string;
