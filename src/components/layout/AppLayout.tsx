@@ -117,9 +117,7 @@ export function AppLayout() {
       ? currentSector
       : getSectorByRoute(location.pathname)
     : null;
-  const skipSectorGuard = ["/setores", "/settings", "/profile", "/notifications", "/account-settings", "/billing"].some((path) =>
-    location.pathname === path || location.pathname.startsWith(`${path}/`)
-  );
+  const skipSectorGuard = isSkippedRoute(location.pathname);
   if (!sectorAccessLoading && routeSector && !skipSectorGuard && !hasSectorAccess(routeSector.id)) {
     return <Navigate to="/setores" replace />;
   }
