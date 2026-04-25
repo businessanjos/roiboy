@@ -14,12 +14,11 @@ import { cn } from "@/lib/utils";
 interface UserRow {
   id: string;
   email: string | null;
-  full_name: string | null;
+  name: string | null;
   role: string | null;
   is_also_admin: boolean | null;
   account_id: string;
   team_role_id: string | null;
-  team_role_ids: string[] | null;
 }
 
 interface SectorAccessRow {
