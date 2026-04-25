@@ -47,10 +47,10 @@ export function AccessAuditTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("users")
-        .select("id, email, name, role, is_also_admin, account_id, team_role_id, team_role_ids")
+        .select("id, email, name, role, is_also_admin, account_id, team_role_id")
         .order("name", { ascending: true });
       if (error) throw error;
-      return (data || []) as UserRow[];
+      return ((data || []) as unknown) as UserRow[];
     },
   });
 
