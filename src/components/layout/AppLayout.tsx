@@ -106,6 +106,14 @@ export function AppLayout() {
     return <Navigate to="/auth" replace />;
   }
 
+  // Hard block: if a super admin has deactivated this user (users.is_active=false),
+  // sign them out immediately. This complements the auth ban_duration set by the
+  // admin-manage-user edge function, which only kicks in on token refresh.
+  if (currentUser && currentUser.is_active === false) {
+    void supabase.auth.signOut();
+    return <Navigate to="/auth?reason=inactive" replace />;
+  }
+
   // If user has external dashboard access and role is viewer, redirect
   if (currentUser?.role === "viewer" && externalAccess && externalAccess.length > 0) {
     return <Navigate to="/external/insights" replace />;

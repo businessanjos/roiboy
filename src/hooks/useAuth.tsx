@@ -140,10 +140,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeSession();
 
+    // Re-check force_relogin whenever the tab regains focus, so a super admin's
+    // role/email/password/inactivation changes apply within seconds instead of
+    // waiting for the next ~1h token refresh.
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      supabase.auth.getSession().then(({ data: { session: s } }) => {
+        if (mounted && s) void enforceForceRelogin(s);
+      });
+    };
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       mounted = false;
       clearTimeout(safetyTimeout);
       subscription.unsubscribe();
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 
