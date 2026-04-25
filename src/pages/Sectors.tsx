@@ -309,7 +309,7 @@ export default function Sectors() {
         />
 
         {/* All 6 Areas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="sectors-grid">
           {coreSectors.map((sector) => {
             const identity = SECTOR_IDENTITY[sector.id];
             const IconComponent = identity?.overrideIcon || sector.icon;
@@ -318,6 +318,8 @@ export default function Sectors() {
               <div
                 key={sector.id}
                 onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
+                data-testid="sector-card"
+                data-sector-id={sector.id}
                 className={cn(
                   "group relative p-5 rounded-xl border border-l-[3px] bg-card overflow-hidden transition-all duration-300",
                   identity?.accent || "border-l-primary",
