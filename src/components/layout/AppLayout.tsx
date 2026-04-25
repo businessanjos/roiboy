@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getSectorByRoute, routeBelongsToSector } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
+import { decideRouteAccess, isSkippedRoute } from "@/lib/access/routeAccess";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
