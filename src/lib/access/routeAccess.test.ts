@@ -76,9 +76,7 @@ describe("decideRouteAccess — sales user with royzapp + everia enabled", () =>
   it("BLOCKS routes from sectors the user does not have", () => {
     const decision = decideRouteAccess("/financial/cash-flow", ctx);
     expect(decision.allowed).toBe(false);
-    if (!decision.allowed) {
-      expect(decision.redirectTo).toBe("/setores");
-    }
+    expect(decision.allowed === false && decision.redirectTo).toBe("/setores");
   });
 });
 
