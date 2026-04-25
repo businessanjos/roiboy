@@ -332,8 +332,8 @@ export default function SharedInsights() {
     if (data.status === "approved") {
       const loaded = await loadDashboard(normalizedEmail, defaultFilters);
       if (!loaded) {
-        setStatus("pending");
-        setErrorMessage("Seu acesso foi liberado, mas o painel ainda está carregando. Aguarde alguns segundos.");
+        setStatus("load_error");
+        setErrorMessage("Não foi possível carregar o painel agora. Pode estar processando muitos dados — tente novamente em alguns segundos.");
       }
     } else if (data.status === "rejected") {
       setStatus("rejected");
