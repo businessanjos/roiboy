@@ -16,7 +16,7 @@ const MAX_PROCESSING_TIME_MS = 25000;
 // handleAiAnalysis removed — analyze-message edge function was decommissioned
 
 async function handleClientAnalysis(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   job: { id: string; account_id: string; client_id: string | null; payload: Record<string, unknown> | null },
 ) {
   const p = job.payload || {};
@@ -118,7 +118,7 @@ async function handleClientAnalysis(
 }
 
 async function handleClientSuggest(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   job: { id: string; account_id: string; payload: Record<string, unknown> | null },
 ) {
   const p = job.payload || {};
