@@ -151,7 +151,7 @@ export const sectors: Sector[] = [
     bgColor: "bg-amber-500/10",
     defaultRoute: "/roy-zapp",
     navItems: [
-      { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP", permission: PERMISSIONS.SETTINGS_VIEW },
+      { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
@@ -164,7 +164,7 @@ export const sectors: Sector[] = [
     bgColor: "bg-violet-500/10",
     defaultRoute: "/ever-ia",
     navItems: [
-      { to: "/ever-ia", icon: Bot, label: "Ever IA", permission: PERMISSIONS.SETTINGS_VIEW },
+      { to: "/ever-ia", icon: Bot, label: "Ever IA" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
