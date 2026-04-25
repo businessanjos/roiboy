@@ -137,14 +137,24 @@ export function UserManagementPanel({
       <CardContent className="space-y-5">
         {/* Role + active */}
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Função (role)</Label>
+          <div className="space-y-1.5 md:col-span-2">
+            <Label className="text-xs">Perfil de Acesso</Label>
             <Select defaultValue={currentRole} onValueChange={(v) => roleMut.mutate(v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                {ACCESS_PROFILES.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    <div className="flex flex-col">
+                      <span>{r.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{r.hint}</span>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            <p className="text-[10px] text-muted-foreground">
+              Cargo (ex: Mentor, Consultor, Head) é gerenciado em Configurações › Equipe.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Acesso ao sistema</Label>
