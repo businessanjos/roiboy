@@ -27,6 +27,7 @@ import { RoyLogo } from "@/components/ui/roy-logo";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useReloadPermissions } from "@/hooks/useReloadPermissions";
 
 export function GlobalHeader() {
   const { currentUser } = useCurrentUser();
