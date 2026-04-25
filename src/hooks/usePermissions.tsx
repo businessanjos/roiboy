@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { hasExactRole } from "@/lib/roles";
 
 // All available permissions in the system
 export const PERMISSIONS = {
@@ -54,7 +55,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       // Admin can be: role === 'admin', role === 'super_admin', is_also_admin === true, or team_role_name === "Admin"
       const isAdminRole = currentUser.role === "admin" || currentUser.role === "super_admin";
       const hasAdminFlag = currentUser.is_also_admin === true;
-      const hasAdminTeamRole = currentUser.team_role_name === "Admin";
+      const hasAdminTeamRole = hasExactRole(currentUser.team_role_name, "Admin") || currentUser.team_role_names?.some((name) => hasExactRole(name, "Admin"));
       
       if (isAdminRole || hasAdminFlag || hasAdminTeamRole) {
         // Admin has all permissions
@@ -72,20 +73,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (userError || !userData?.team_role_id) {
-        // No team_role_id assigned - give default permissions based on user role
-        // This ensures users can still navigate even without a specific team role
-        const defaultPermissions = [
-          PERMISSIONS.CLIENTS_VIEW,
-          PERMISSIONS.CLIENTS_EDIT,
-          PERMISSIONS.REPORTS_VIEW,
-          PERMISSIONS.EVENTS_VIEW,
-          PERMISSIONS.FORMS_VIEW,
-          PERMISSIONS.PRODUCTS_VIEW,
-          PERMISSIONS.TEAM_VIEW,
-          PERMISSIONS.SETTINGS_VIEW, // Allow access to settings, reminders, whatsapp groups, etc.
-          PERMISSIONS.ROYZAPP_ACCESS,
-        ];
-        setPermissions(defaultPermissions);
+        setPermissions([]);
         setIsAdmin(false);
         setLoading(false);
         return;
@@ -103,22 +91,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       
       const fetchedPerms = permsData?.map((p) => p.permission) || [];
       
-      // Fallback: if role_permissions returned empty but user has a valid team_role_id,
-      // grant default permissions to avoid leaving the user with zero access
       if (fetchedPerms.length === 0 && userData.team_role_id) {
-        console.warn("role_permissions returned empty for role_id:", userData.team_role_id, "- applying default permissions");
-        const defaultPermissions = [
-          PERMISSIONS.CLIENTS_VIEW,
-          PERMISSIONS.CLIENTS_EDIT,
-          PERMISSIONS.REPORTS_VIEW,
-          PERMISSIONS.EVENTS_VIEW,
-          PERMISSIONS.FORMS_VIEW,
-          PERMISSIONS.PRODUCTS_VIEW,
-          PERMISSIONS.TEAM_VIEW,
-          PERMISSIONS.SETTINGS_VIEW,
-          PERMISSIONS.ROYZAPP_ACCESS,
-        ];
-        setPermissions(defaultPermissions);
+        console.warn("role_permissions returned empty for role_id:", userData.team_role_id);
+        setPermissions([]);
       } else {
         setPermissions(fetchedPerms);
       }
