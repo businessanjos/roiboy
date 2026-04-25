@@ -31,46 +31,53 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = useCallback(async () => {
+  const fetchUser = useCallback(async (attempt = 0): Promise<void> => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      
+
       if (!authUser) {
         setCurrentUser(null);
         setLoading(false);
         return;
       }
-      
+
       // Fetch user profile
       const { data, error } = await supabase
         .from("users")
         .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin, zapp_signature, zapp_signature_enabled, team_role_id, team_role:team_roles(name)")
         .eq("auth_user_id", authUser.id)
         .maybeSingle();
-      
+
       if (error || !data) {
-        console.error("Error fetching user profile:", error);
+        console.error("[useCurrentUser] Error fetching user profile (attempt " + attempt + "):", error);
+        // Retry up to 2 more times with exponential backoff. Transient
+        // failures (network, cold RLS, refresh token race) were silently
+        // leaving the whole app in a permanent loading state.
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
+          return fetchUser(attempt + 1);
+        }
         setCurrentUser(null);
         setLoading(false);
         return;
       }
-      
+
       // Fetch all roles from junction table (parallel-safe, no dependency on profile query besides user id)
       const { data: userRolesData } = await supabase
         .from("user_team_roles")
         .select("team_role_id, team_role:team_roles(name)")
         .eq("user_id", data.id);
-      
+
       const teamRoleNames = (userRolesData || []).map((ur: any) => ur.team_role?.name).filter(Boolean);
       const teamRoleIds = (userRolesData || []).map((ur: any) => ur.team_role_id);
-      
+
       let teamRoleName = (data as any).team_role?.name;
       const teamRoleId = (data as any).team_role_id;
-      
+
       if (teamRoleNames.length > 0 && !teamRoleName) {
         teamRoleName = teamRoleNames[0];
       }
-      
+
       setCurrentUser({
         ...data,
         team_role_name: teamRoleName,
@@ -78,10 +85,14 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
         team_role_id: teamRoleId,
         team_role_ids: teamRoleIds,
       } as CurrentUser);
+      setLoading(false);
     } catch (error) {
-      console.error("Error fetching current user:", error);
+      console.error("[useCurrentUser] Unexpected error (attempt " + attempt + "):", error);
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
+        return fetchUser(attempt + 1);
+      }
       setCurrentUser(null);
-    } finally {
       setLoading(false);
     }
   }, []);
