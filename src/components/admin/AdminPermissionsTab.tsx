@@ -78,7 +78,7 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
       if (!accountId) return [];
       const { data, error } = await supabase
         .from("users")
-        .select("id, name, email, avatar_url, role, auth_user_id")
+        .select("id, name, email, avatar_url, role, auth_user_id, is_active")
         .eq("account_id", accountId)
         .order("name");
       if (error) throw error;
