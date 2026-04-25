@@ -291,14 +291,17 @@ export default function SharedInsights() {
 
     if (error || !data) {
       setStatus("email_prompt");
+      setErrorMessage(error?.message === "timeout" ? "Tempo esgotado ao consultar o servidor. Tente novamente." : "");
       return;
     }
 
     if (data.status === "approved") {
       const loaded = await loadDashboard(emailToCheck, defaultFilters);
       if (!loaded) {
-        setStatus("pending");
-        setErrorMessage("Seu acesso foi liberado, mas o painel ainda está carregando. Aguarde alguns segundos.");
+        // Approved mas o painel não carregou (timeout/erro). Não voltar para "pending":
+        // mostra erro real com botão de retry.
+        setStatus("load_error");
+        setErrorMessage("Não foi possível carregar o painel agora. Pode estar processando muitos dados — tente novamente em alguns segundos.");
       }
     } else if (data.status === "rejected") {
       setStatus("rejected");
