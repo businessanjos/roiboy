@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { SectorId } from "@/config/sectors";
-import { hasExactRole, roleNameMatches } from "@/lib/roles";
+import { hasExactRole } from "@/lib/roles";
 
 export interface UserSectorAccessData {
   sector_id: string;
@@ -53,9 +53,6 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
     fetchSectorAccess();
   }, [fetchSectorAccess]);
 
-  // Team roles that automatically have permission in the Operations sector
-  const OPERATION_TEAM_ROLES = ["CX", "CS", "Consultor"];
-
   // Check if user can manage (create/edit/delete) resources in a sector
   // Admin, manager and member roles can manage; viewer cannot; null sector means global (only admin can manage)
   const canManageSector = useCallback((sectorId: SectorId | string | null): boolean => {
@@ -69,14 +66,6 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
 
     // If sector is null (global resource), only admins can manage
     if (!sectorId) return false;
-
-    // Check if user has an operation team role and is accessing operacoes sector
-    if (sectorId === "operacoes") {
-      const teamRoleNames = currentUser?.team_role_names || (currentUser?.team_role_name ? [currentUser.team_role_name] : []);
-      if (teamRoleNames.some(name => roleNameMatches(name, OPERATION_TEAM_ROLES))) {
-        return true;
-      }
-    }
 
     // Find user's access to this sector via explicit registration
     const access = sectorAccess.find(
