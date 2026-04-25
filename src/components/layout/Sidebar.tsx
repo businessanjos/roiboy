@@ -110,6 +110,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     
     // Only explicit permissions/admin flags may show items; role labels cannot bypass admin-panel settings.
     const showAllItems = isAdmin || isSuperAdmin || currentUser?.role === "admin" || currentUser?.is_also_admin;
+    const isSalesRepUser = roleNameMatches(teamRoleName, SALES_REP_ROLES) && !showAllItems;
     
     // No sector selected - return empty (sidebar won't render)
     if (!currentSector) return [];
@@ -128,10 +129,12 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       sectorItems = sectorItems.filter(item => item.to !== "/sales-team/spiffs");
     }
 
-    // Admins, role-based access, or during loading - show all sector items
+    // Admins can see all sector items. Everyone else must pass explicit permissions.
     if (showAllItems) return sectorItems;
     
     return sectorItems.filter((item) => {
+      if (isSalesRepUser && item.to === "/sales-team") return false;
+      if (isSalesRepUser && item.to === "/sales-team/spiffs") return false;
       if (!item.permission) return true;
       if (permissionsLoading) return false;
       return hasPermission(item.permission);

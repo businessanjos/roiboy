@@ -98,9 +98,11 @@ export function decideRouteAccess(
   };
 }
 
+const MANAGEMENT_PERMISSIONS = new Set(["team.view", "team.edit", "settings.edit"]);
+
 /**
- * Mirrors usePermissions: union of role-derived perms and the perms implied
- * by every active sector's nav items.
+ * Mirrors usePermissions: union of role-derived perms and safe perms implied
+ * by every active sector. Sector access never grants management permissions.
  */
 export function resolvePermissions(
   rolePermissions: string[],
@@ -113,7 +115,9 @@ export function resolvePermissions(
     for (const item of sector.navItems) {
       if (!item.permission) continue;
       const perms = Array.isArray(item.permission) ? item.permission : [item.permission];
-      perms.forEach((p) => merged.add(p));
+      perms
+        .filter((permission) => !MANAGEMENT_PERMISSIONS.has(permission))
+        .forEach((p) => merged.add(p));
     }
   }
   return merged;

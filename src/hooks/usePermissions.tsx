@@ -81,7 +81,15 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
       const fromRoles = (permsData || []).map((p) => p.permission);
 
-      // Derive permissions from active sector access using the sectors config
+      // Derive only base navigation permissions from active sector access.
+      // CRITICAL: sector access must never grant management/admin permissions by itself.
+      // Example: a Closer needs the Vendas sector for Pipeline, but must NOT receive
+      // TEAM_VIEW just because /sales-team is also inside that sector.
+      const MANAGEMENT_PERMISSIONS = new Set<string>([
+        PERMISSIONS.TEAM_VIEW,
+        PERMISSIONS.TEAM_EDIT,
+        PERMISSIONS.SETTINGS_EDIT,
+      ]);
       const fromSectors: string[] = [];
       for (const access of sectorAccess || []) {
         const sector = sectors.find((s) => s.id === access.sector_id);
@@ -89,7 +97,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         for (const item of sector.navItems) {
           if (!item.permission) continue;
           const perms = Array.isArray(item.permission) ? item.permission : [item.permission];
-          fromSectors.push(...perms);
+          fromSectors.push(...perms.filter((permission) => !MANAGEMENT_PERMISSIONS.has(permission)));
         }
       }
 
