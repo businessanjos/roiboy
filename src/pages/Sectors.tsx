@@ -280,7 +280,7 @@ export default function Sectors() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-testid="sectors-page">
       <div className="container mx-auto px-6 py-12 max-w-5xl">
         {/* Header */}
         <div className="flex flex-col items-center mb-14">
