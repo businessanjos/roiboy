@@ -85,9 +85,7 @@ export function AccessAuditTab() {
 
   const roleIds = useMemo(() => {
     if (!selectedUser) return [];
-    return Array.from(
-      new Set([...(selectedUser.team_role_id]].filter(Boolean))
-    ) as string[];
+    return Array.from(new Set([selectedUser.team_role_id].filter(Boolean))) as string[];
   }, [selectedUser]);
 
   const { data: rolePerms = [] } = useQuery({
