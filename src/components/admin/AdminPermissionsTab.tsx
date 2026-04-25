@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Save, RefreshCw, Search, Shield, Users, Building2, ShieldCheck } from "lucide-react";
+import { Loader2, Save, RefreshCw, Search, Shield, Users, Building2, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { sectors } from "@/config/sectors";
 import { cn } from "@/lib/utils";
 
@@ -279,7 +279,7 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="flex items-center gap-2 flex-1 min-w-[260px] max-w-md">
+            <div className="flex items-center gap-2 flex-1 min-w-[260px] max-w-xl">
               <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger className="flex-1">
@@ -296,6 +296,41 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                   ))}
                 </SelectContent>
               </Select>
+              {(() => {
+                const idx = users.findIndex((u) => u.id === selectedUserId);
+                const total = users.length;
+                const canPrev = idx > 0;
+                const canNext = idx >= 0 && idx < total - 1;
+                return (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      disabled={!canPrev}
+                      onClick={() => canPrev && setSelectedUserId(users[idx - 1].id)}
+                      title="Usuário anterior"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {total > 0 && idx >= 0 && (
+                      <span className="text-xs text-muted-foreground tabular-nums px-1 min-w-[44px] text-center">
+                        {idx + 1} / {total}
+                      </span>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      disabled={!canNext}
+                      onClick={() => canNext && setSelectedUserId(users[idx + 1].id)}
+                      title="Próximo usuário"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-2">
               <Button
