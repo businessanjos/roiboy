@@ -121,13 +121,6 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     
     let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
     
-    // Hide "Gestão" (/sales-team) from sales reps (SDR, Closer, Vendas, Vendedor)
-    const isSalesRepRole = roleNameMatches(teamRoleName, SALES_REP_ROLES) && 
-      !(currentUser?.role === "admin" || currentUser?.is_also_admin);
-    if (isSalesRepRole) {
-      sectorItems = sectorItems.filter(item => item.to !== "/sales-team");
-    }
-
     // SPIFFs: restrito apenas a Jonathan, Everton e Maikol
     const userName = (currentUser?.name || "").toLowerCase();
     const canSeeSpiffs = userName.includes("jonathan") || userName.includes("everton") || userName.includes("maikol");
@@ -142,7 +135,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       if (!item.permission) return true;
       return hasPermission(item.permission);
     });
-  }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.team_role_name, currentUser?.name]);
+  }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.is_also_admin, currentUser?.team_role_name, currentUser?.name]);
 
   const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "configuracoes"];
 
