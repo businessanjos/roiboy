@@ -307,6 +307,27 @@ Deno.serve(async (req: Request) => {
           .from("users")
           .update({ force_relogin_at: new Date().toISOString() })
           .eq("id", body.user_row_id);
+
+        // Audit log only when role actually changed.
+        if (prevRow && prevRow.role !== body.role) {
+          await writeAuditLog(admin, {
+            account_id: prevRow.account_id,
+            actor_user_id: actor.user_id,
+            actor_name: actor.name,
+            actor_email: actor.email,
+            action: "user.access_profile_changed",
+            entity_id: prevRow.id,
+            entity_name: prevRow.name || prevRow.email,
+            details: {
+              field: "role",
+              from: prevRow.role,
+              to: body.role,
+              target_email: prevRow.email,
+              source: "super_admin_panel",
+            },
+            req,
+          });
+        }
         return json(200, { success: true, message: "Perfil de acesso atualizado." });
       }
 
