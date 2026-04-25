@@ -331,10 +331,10 @@ async function fetchDashboardDataWithVisuals(supabase: any, dashboardId: string,
     const results = await mapWithConcurrency(visuals, 2, async (visual: any) => {
         try {
           const isDataTable = visual.chart_type === 'data_table';
-          const data = await fetchVisualData(supabase, accountId, visual, filters);
+          const data = await withTimeout(fetchVisualData(supabase, accountId, visual, filters), 10000, [] as AggregatedDataPoint[]);
           let drilldownData: DrilldownRecord[] | undefined;
           if (isDataTable) {
-            drilldownData = await fetchDrilldownRecords(supabase, accountId, visual.config as VisualConfig, filters);
+            drilldownData = await withTimeout(fetchDrilldownRecords(supabase, accountId, visual.config as VisualConfig, filters), 10000, [] as DrilldownRecord[]);
           }
           return { id: visual.id, data, drilldownData };
         } catch (err) {
@@ -862,6 +862,13 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, mapper: (item
   });
   await Promise.all(workers);
   return results;
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), timeoutMs)),
+  ]);
 }
 
 function getGroupName(item: any, dimension: VisualConfig['dimension']): string {
