@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  fetchAppVersion,
+  getInitialAppVersion,
+  hardReloadApp,
+} from "@/hooks/useAppVersionCheck";
 
 /**
  * Health-check banner shown on /setores. It surfaces three signals so users
@@ -50,6 +55,7 @@ export function SectorsHealthBanner(props: SectorsHealthBannerProps) {
   } = props;
 
   const [stalled, setStalled] = useState(false);
+  const [newVersion, setNewVersion] = useState<string | null>(null);
 
   const stillLoading = userLoading || permissionsLoading || sectorAccessLoading;
 
@@ -62,6 +68,28 @@ export function SectorsHealthBanner(props: SectorsHealthBannerProps) {
     return () => window.clearTimeout(t);
   }, [stillLoading]);
 
+  // While the page is still loading, probe /version.json so we can offer a
+  // one-click hard reload if the production bundle is already behind a newer
+  // deployment. This is a no-op in dev (version.json is not shipped).
+  useEffect(() => {
+    if (!stillLoading) return;
+    let cancelled = false;
+    const probe = async () => {
+      const latest = await fetchAppVersion();
+      if (cancelled || !latest) return;
+      const initial = getInitialAppVersion();
+      if (initial && latest !== initial) {
+        setNewVersion(latest);
+      }
+    };
+    probe();
+    const t = window.setInterval(probe, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(t);
+    };
+  }, [stillLoading]);
+
   const errors: { label: string; message: string }[] = [];
   const userMsg = describeError(userError);
   if (userMsg) errors.push({ label: "Usuário", message: userMsg });
@@ -72,9 +100,10 @@ export function SectorsHealthBanner(props: SectorsHealthBannerProps) {
 
   const hasError = errors.length > 0;
   const stuckEmpty = !stillLoading && !hasError && visibleSectorCount === 0 && !isAdmin;
+  const hasNewVersion = !!newVersion;
 
   let tone: "ok" | "loading" | "warn" = "ok";
-  if (hasError || stalled || stuckEmpty) tone = "warn";
+  if (hasError || stalled || stuckEmpty || hasNewVersion) tone = "warn";
   else if (stillLoading) tone = "loading";
 
   // Healthy + finished loading: keep the UI clean, do not render anything.
@@ -105,6 +134,24 @@ export function SectorsHealthBanner(props: SectorsHealthBannerProps) {
         aria-hidden
       />
       <div className="flex-1 min-w-0">
+        {hasNewVersion && (
+          <div className="mb-2">
+            <p className="font-medium">
+              Há uma nova versão da plataforma publicada.
+            </p>
+            <button
+              type="button"
+              onClick={() => hardReloadApp()}
+              className={cn(
+                "mt-2 inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground",
+                "px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity",
+              )}
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+              Atualizar versão agora
+            </button>
+          </div>
+        )}
         {tone === "loading" && (
           <p>
             Verificando suas permissões…
@@ -115,7 +162,7 @@ export function SectorsHealthBanner(props: SectorsHealthBannerProps) {
             </span>
           </p>
         )}
-        {tone === "warn" && stalled && !hasError && (
+        {tone === "warn" && stalled && !hasError && !hasNewVersion && (
           <p className="font-medium">
             A verificação está demorando mais que o esperado.
             <button
