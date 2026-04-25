@@ -370,6 +370,23 @@ export default function Sectors() {
             );
           })}
         </div>
+
+        {/* Explicit empty state — surfaces when loading is done, no errors,
+            but the user has no sectors assigned. Used by E2E tests as a
+            stable, non-text-based signal. */}
+        {!stillLoading && coreSectors.length === 0 && !(isAdmin || isSuperAdmin) && (
+          <div
+            data-testid="sectors-empty-state"
+            className="mt-8 rounded-lg border border-border bg-card px-6 py-8 text-center"
+          >
+            <p className="text-sm font-medium text-foreground">
+              Nenhum setor liberado para o seu usuário.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Peça a um administrador para revisar suas permissões em Admin → Permissões.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
