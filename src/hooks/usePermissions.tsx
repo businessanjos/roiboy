@@ -51,13 +51,12 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Check if user is admin (has all permissions)
-      // Admin can be: role === 'admin', role === 'super_admin', is_also_admin === true, or team_role_name === "Admin"
+      // Check if user is a real admin (has all permissions).
+      // Team role names must NOT bypass admin-panel permission settings.
       const isAdminRole = currentUser.role === "admin" || currentUser.role === "super_admin";
       const hasAdminFlag = currentUser.is_also_admin === true;
-      const hasAdminTeamRole = hasExactRole(currentUser.team_role_name, "Admin") || currentUser.team_role_names?.some((name) => hasExactRole(name, "Admin"));
       
-      if (isAdminRole || hasAdminFlag || hasAdminTeamRole) {
+      if (isAdminRole || hasAdminFlag) {
         // Admin has all permissions
         setPermissions(Object.values(PERMISSIONS));
         setIsAdmin(true);
@@ -65,34 +64,33 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Fetch permissions based on user's team_role_id
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("team_role_id")
-        .eq("id", currentUser.id)
-        .single();
+      // Fetch permissions based on all roles assigned in the admin panel.
+      const roleIds = Array.from(new Set([
+        ...(currentUser.team_role_ids || []),
+        currentUser.team_role_id,
+      ].filter(Boolean))) as string[];
 
-      if (userError || !userData?.team_role_id) {
+      if (roleIds.length === 0) {
         setPermissions([]);
         setIsAdmin(false);
         setLoading(false);
         return;
       }
 
-      // Fetch permissions for this role
+      // Fetch permissions for all assigned roles
       const { data: permsData, error: permsError } = await supabase
         .from("role_permissions")
         .select("permission")
-        .eq("role_id", userData.team_role_id);
+        .in("role_id", roleIds);
 
       if (permsError) {
         console.error("Error fetching permissions:", permsError);
       }
       
-      const fetchedPerms = permsData?.map((p) => p.permission) || [];
+      const fetchedPerms = Array.from(new Set(permsData?.map((p) => p.permission) || []));
       
-      if (fetchedPerms.length === 0 && userData.team_role_id) {
-        console.warn("role_permissions returned empty for role_id:", userData.team_role_id);
+      if (fetchedPerms.length === 0) {
+        console.warn("role_permissions returned empty for role_ids:", roleIds);
         setPermissions([]);
       } else {
         setPermissions(fetchedPerms);
