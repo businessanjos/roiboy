@@ -5,12 +5,8 @@ import {
   CreditCard, Video, Key, ArrowLeft,
 } from "lucide-react";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMemo } from "react";
-import { roleNameMatches } from "@/lib/roles";
-
-const RESTRICTED_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
 interface NavItem {
   id: string;
@@ -27,14 +23,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { hasVendasAccess } = useSectorAccess();
-  const { currentUser } = useCurrentUser();
   const { isAdmin } = usePermissions();
-
-  const isSalesRep = useMemo(() => {
-    const role = currentUser?.team_role_name;
-    const isAdminUser = currentUser?.role === "admin" || currentUser?.is_also_admin;
-    return roleNameMatches(role, RESTRICTED_ROLES) && !isAdminUser;
-  }, [currentUser?.team_role_name, currentUser?.role, currentUser?.is_also_admin]);
 
   const activeTab = searchParams.get("tab") || "profile";
 
@@ -55,7 +44,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
       },
     ];
 
-    if (!isSalesRep) {
+    if (isAdmin) {
       const adminItems: NavItem[] = [
         { id: "team", label: "Equipe", icon: UserCircle },
         { id: "sectors", label: "Setores", icon: Users },
@@ -77,7 +66,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
     groups.push({ title: "Sistema", items: systemItems });
 
     return groups;
-  }, [isSalesRep, hasVendasAccess, isAdmin]);
+  }, [hasVendasAccess, isAdmin]);
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });
