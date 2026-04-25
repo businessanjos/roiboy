@@ -26,15 +26,15 @@ interface Membership {
   email: string;
 }
 
-const ROLES = [
-  { value: "admin", label: "Admin" },
-  { value: "head", label: "Head" },
-  { value: "gestor", label: "Gestor" },
-  { value: "leader", label: "Líder" },
-  { value: "mentor", label: "Mentor" },
-  { value: "consultor", label: "Consultor" },
-  { value: "cx", label: "CX" },
-  { value: "cs", label: "CS" },
+// Perfil de Acesso ao sistema (NÃO confundir com Cargo).
+// Cargo (Mentor, Consultor, Head, Líder, CX, CS, etc.) é gerenciado em
+// Configurações › Equipe (tabela team_roles). Aqui controlamos apenas o
+// nível de acesso reconhecido pelo motor de permissões.
+const ACCESS_PROFILES = [
+  { value: "admin", label: "Admin", hint: "Acesso total ao sistema" },
+  { value: "gestor", label: "Gestor", hint: "Gerencia equipe e configurações" },
+  { value: "member", label: "Membro", hint: "Uso padrão" },
+  { value: "viewer", label: "Viewer", hint: "Apenas visualização" },
 ];
 
 export function UserManagementPanel({
