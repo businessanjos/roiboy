@@ -48,6 +48,47 @@ function json(status: number, body: Record<string, unknown>) {
   });
 }
 
+// Registra um evento de auditoria. Falhas são apenas logadas — nunca bloqueiam
+// a operação principal, mas garantem rastreabilidade de quem mudou o quê.
+async function writeAuditLog(
+  admin: any,
+  params: {
+    account_id: string;
+    actor_user_id: string | null;
+    actor_name: string | null;
+    actor_email: string | null;
+    action: string;
+    entity_id: string | null;
+    entity_name: string | null;
+    details: Record<string, unknown>;
+    req: Request;
+  },
+) {
+  try {
+    const ip =
+      params.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      params.req.headers.get("cf-connecting-ip") ||
+      null;
+    const userAgent = params.req.headers.get("user-agent") || null;
+
+    await admin.from("audit_logs").insert({
+      account_id: params.account_id,
+      user_id: params.actor_user_id,
+      user_name: params.actor_name,
+      user_email: params.actor_email,
+      action: params.action,
+      entity_type: "user",
+      entity_id: params.entity_id,
+      entity_name: params.entity_name,
+      details: params.details,
+      ip_address: ip,
+      user_agent: userAgent,
+    });
+  } catch (err) {
+    console.error("audit log write failed:", err);
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -85,6 +126,19 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       targetAuthUserId = row?.auth_user_id || null;
     }
+
+    // Resolve actor (super admin) identity for audit trail.
+    const { data: actorRow } = await admin
+      .from("users")
+      .select("id, name, email, account_id")
+      .eq("auth_user_id", requester.id)
+      .limit(1)
+      .maybeSingle();
+    const actor = {
+      user_id: actorRow?.id || null,
+      name: actorRow?.name || requester.email || null,
+      email: actorRow?.email || requester.email || null,
+    };
 
     switch (action) {
       case "list_memberships": {
@@ -172,6 +226,15 @@ Deno.serve(async (req: Request) => {
         if (typeof body.is_active !== "boolean") {
           return json(400, { error: "is_active é obrigatório" });
         }
+
+        // Snapshot previous state(s) for audit trail before mutating.
+        let prevQuery = admin
+          .from("users")
+          .select("id, account_id, name, email, role, is_active")
+          .eq("auth_user_id", targetAuthUserId);
+        if (body.user_row_id) prevQuery = prevQuery.eq("id", body.user_row_id) as any;
+        const { data: prevRows } = await prevQuery;
+
         const banDuration = body.is_active ? "none" : "876000h"; // ~100 years
         const { error: authErr } = await admin.auth.admin.updateUserById(targetAuthUserId, {
           ban_duration: banDuration,
@@ -186,6 +249,29 @@ Deno.serve(async (req: Request) => {
         if (body.user_row_id) updateQuery = updateQuery.eq("id", body.user_row_id) as any;
         const { error: dbErr } = await updateQuery;
         if (dbErr) return json(400, { error: dbErr.message });
+
+        // Audit log: one entry per affected membership (status actually changed).
+        for (const row of prevRows || []) {
+          if (row.is_active === body.is_active) continue;
+          await writeAuditLog(admin, {
+            account_id: row.account_id,
+            actor_user_id: actor.user_id,
+            actor_name: actor.name,
+            actor_email: actor.email,
+            action: body.is_active ? "user.activated" : "user.deactivated",
+            entity_id: row.id,
+            entity_name: row.name || row.email,
+            details: {
+              field: "is_active",
+              from: row.is_active,
+              to: body.is_active,
+              auth_user_id: targetAuthUserId,
+              target_email: row.email,
+              source: "super_admin_panel",
+            },
+            req,
+          });
+        }
 
         return json(200, {
           success: true,
@@ -203,6 +289,14 @@ Deno.serve(async (req: Request) => {
             allowed: ACCESS_PROFILES,
           });
         }
+
+        // Snapshot previous role for audit trail.
+        const { data: prevRow } = await admin
+          .from("users")
+          .select("id, account_id, name, email, role")
+          .eq("id", body.user_row_id)
+          .maybeSingle();
+
         const { error } = await admin
           .from("users")
           .update({ role: body.role })
@@ -213,6 +307,27 @@ Deno.serve(async (req: Request) => {
           .from("users")
           .update({ force_relogin_at: new Date().toISOString() })
           .eq("id", body.user_row_id);
+
+        // Audit log only when role actually changed.
+        if (prevRow && prevRow.role !== body.role) {
+          await writeAuditLog(admin, {
+            account_id: prevRow.account_id,
+            actor_user_id: actor.user_id,
+            actor_name: actor.name,
+            actor_email: actor.email,
+            action: "user.access_profile_changed",
+            entity_id: prevRow.id,
+            entity_name: prevRow.name || prevRow.email,
+            details: {
+              field: "role",
+              from: prevRow.role,
+              to: body.role,
+              target_email: prevRow.email,
+              source: "super_admin_panel",
+            },
+            req,
+          });
+        }
         return json(200, { success: true, message: "Perfil de acesso atualizado." });
       }
 
