@@ -112,7 +112,7 @@ async function cleanupAgentState(baseDomain: string, agentApiToken: string) {
 }
 
 async function logCall(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   userData: { id: string; account_id: string },
   phone: string,
   contactName?: string,
