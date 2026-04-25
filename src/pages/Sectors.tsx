@@ -9,7 +9,8 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SectorsHealthBanner } from "@/components/sectors/SectorsHealthBanner";
-import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase } from "lucide-react";
+import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase, AlertTriangle, RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
 
 // Visual identity for each core sector — accent color + geometric pattern
@@ -144,8 +145,34 @@ export default function Sectors() {
     sectorSettingsError,
   } = useSectorAccess();
   const { isSuperAdmin } = useSuperAdmin();
-  const { permissions, loading: permissionsLoading, isAdmin } = usePermissions();
+  const { permissions, loading: permissionsLoading, isAdmin, refetchPermissions } = usePermissions();
+  const queryClient = useQueryClient();
   const [accountName, setAccountName] = useState<string | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
+
+  const stillLoading = userLoading || permissionsLoading || sectorAccessLoading;
+
+  // After 10s of loading, surface a fallback UI so the user is never stuck
+  // on an infinite spinner. They can retry or hard-reload from there.
+  useEffect(() => {
+    if (!stillLoading) {
+      setTimedOut(false);
+      return;
+    }
+    const t = window.setTimeout(() => setTimedOut(true), 10_000);
+    return () => window.clearTimeout(t);
+  }, [stillLoading]);
+
+  const handleRetry = async () => {
+    setTimedOut(false);
+    // Invalidate the queries that feed this page and refetch permissions.
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["user-sector-access"] }),
+      queryClient.invalidateQueries({ queryKey: ["sector-settings"] }),
+      queryClient.invalidateQueries({ queryKey: ["current-user"] }),
+      refetchPermissions(),
+    ]);
+  };
 
   useEffect(() => {
     const fetchAccountName = async () => {
@@ -200,6 +227,53 @@ export default function Sectors() {
 
   const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "everia", "rh"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
+
+  // Timed-out fallback: replaces the full page (not just the banner) so the
+  // user gets a clear, actionable error state instead of an empty grid.
+  if (timedOut && stillLoading) {
+    const errorMsg =
+      (sectorAccessError instanceof Error && sectorAccessError.message) ||
+      (sectorSettingsError instanceof Error && sectorSettingsError.message) ||
+      "Não conseguimos confirmar suas permissões em tempo hábil.";
+
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <div className="max-w-md w-full text-center space-y-5">
+          <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/15 flex items-center justify-center">
+            <AlertTriangle className="h-6 w-6 text-amber-600" aria-hidden />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              A página demorou demais para carregar
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">{errorMsg}</p>
+            <p className="text-xs text-muted-foreground/80 mt-3">
+              Etapas pendentes: {userLoading ? "usuário " : ""}
+              {permissionsLoading ? "permissões " : ""}
+              {sectorAccessLoading ? "setores" : ""}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden />
+              Tentar novamente
+            </button>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              Recarregar página
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
