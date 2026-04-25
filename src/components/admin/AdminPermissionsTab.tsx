@@ -279,14 +279,23 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="relative flex-1 min-w-[240px] max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar usuário..."
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex items-center gap-2 flex-1 min-w-[260px] max-w-md">
+              <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecionar usuário..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{u.name}</span>
+                        <span className="text-xs text-muted-foreground">— {u.email}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-2">
               <Button
