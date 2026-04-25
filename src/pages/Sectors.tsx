@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { usePermissions } from "@/hooks/usePermissions";
+import { SectorsHealthBanner } from "@/components/sectors/SectorsHealthBanner";
 import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase } from "lucide-react";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
 
@@ -134,8 +136,15 @@ export default function Sectors() {
   const navigate = useNavigate();
   const { currentUser, loading: userLoading } = useCurrentUser();
   const { setCurrentSector } = useSector();
-  const { hasSectorAccess, sectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
+  const {
+    hasSectorAccess,
+    sectorAccess,
+    isLoading: sectorAccessLoading,
+    sectorAccessError,
+    sectorSettingsError,
+  } = useSectorAccess();
   const { isSuperAdmin } = useSuperAdmin();
+  const { permissions, loading: permissionsLoading, isAdmin } = usePermissions();
   const [accountName, setAccountName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -209,6 +218,17 @@ export default function Sectors() {
             Selecione uma área para continuar
           </p>
         </div>
+
+        <SectorsHealthBanner
+          userLoading={userLoading}
+          permissionsLoading={permissionsLoading}
+          permissionsCount={permissions.length}
+          sectorAccessLoading={sectorAccessLoading}
+          sectorAccessError={sectorAccessError}
+          sectorSettingsError={sectorSettingsError}
+          visibleSectorCount={availableSectors.length}
+          isAdmin={isAdmin || isSuperAdmin}
+        />
 
         {/* All 6 Areas */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
