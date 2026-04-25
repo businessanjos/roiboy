@@ -242,7 +242,7 @@ export function UserManagementPanel({
             <Select value={linkRole} onValueChange={setLinkRole}>
               <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                {ACCESS_PROFILES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <Button onClick={() => linkMut.mutate()} disabled={!linkAccountId || linkMut.isPending}>
