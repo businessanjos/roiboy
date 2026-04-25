@@ -28,9 +28,7 @@ const navGroups: NavGroup[] = [
     title: "Gestão",
     items: [
       { id: "accounts", label: "Contas", icon: Building2 },
-      { id: "users", label: "Usuários", icon: Users },
-      { id: "permissions", label: "Permissões", icon: KeyRound },
-      { id: "access-audit", label: "Auditoria de Acesso", icon: ScanSearch },
+      { id: "permissions", label: "Usuários & Permissões", icon: KeyRound },
     ],
   },
   {
