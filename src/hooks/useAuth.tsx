@@ -125,6 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (existingSession) {
           setSession(existingSession);
           setUser(existingSession.user);
+          // Check forced re-login on resume
+          setTimeout(() => {
+            if (mounted) void enforceForceRelogin(existingSession);
+          }, 0);
         }
         setLoading(false);
       } catch (err) {
