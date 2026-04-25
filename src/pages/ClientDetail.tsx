@@ -933,7 +933,7 @@ export default function ClientDetail() {
     setReprocessingMessages(true);
     try {
       // Find an active WhatsApp integration for this account
-      const { data: integration, error: integrationError } = await supabase
+      const { data: integration, error: integrationError } = await (supabase as any)
         .from("integrations")
         .select("id")
         .eq("account_id", accountId)
