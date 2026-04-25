@@ -957,8 +957,8 @@ export default function RoyZapp() {
     return clientId ? clientProducts[clientId] || [] : [];
   }, [selectedConversation, clientProducts]);
 
-  // Check access permission
-  const hasZappAccess = isAdmin || hasPermission(PERMISSIONS.ROYZAPP_ACCESS);
+  // Check access permission — admin panel "royzapp" sector toggle is the source of truth.
+  const hasZappAccess = isAdmin || hasSectorAccess("royzapp") || hasPermission(PERMISSIONS.ROYZAPP_ACCESS);
 
   if (permissionsLoading || loading) {
     return (
