@@ -52,7 +52,7 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
   );
 
   const [accountId, setAccountId] = useState<string>("");
-  const [userSearch, setUserSearch] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [pending, setPending] = useState<Map<PendingKey, Partial<UserSectorAccess>>>(new Map());
   const [pendingSuperAdmin, setPendingSuperAdmin] = useState<Map<string, boolean>>(new Map());
   const [saving, setSaving] = useState(false);
@@ -61,11 +61,11 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
     if (!accountId && sortedAccounts.length) setAccountId(sortedAccounts[0].id);
   }, [sortedAccounts, accountId]);
 
-  // Reset pending changes when switching account
+  // Reset pending changes and selected user when switching account
   useEffect(() => {
     setPending(new Map());
     setPendingSuperAdmin(new Map());
-    setUserSearch("");
+    setSelectedUserId("");
   }, [accountId]);
 
   const activeSectors = useMemo(() => sectors.filter((s) => !s.comingSoon), []);
@@ -124,15 +124,17 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
     return superAdminIds.includes(authUserId);
   };
 
+  // Auto-select first user when list loads
+  useEffect(() => {
+    if (users.length && !selectedUserId) {
+      setSelectedUserId(users[0].id);
+    }
+  }, [users, selectedUserId]);
+
   const filteredUsers = useMemo(() => {
-    const term = userSearch.trim().toLowerCase();
-    if (!term) return users;
-    return users.filter(
-      (u) =>
-        u.name?.toLowerCase().includes(term) ||
-        u.email?.toLowerCase().includes(term)
-    );
-  }, [users, userSearch]);
+    if (!selectedUserId) return [];
+    return users.filter((u) => u.id === selectedUserId);
+  }, [users, selectedUserId]);
 
   const getAccess = (userId: string, sectorId: string) =>
     accessList.find((a) => a.user_id === userId && a.sector_id === sectorId);
@@ -277,14 +279,23 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="relative flex-1 min-w-[240px] max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar usuário..."
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex items-center gap-2 flex-1 min-w-[260px] max-w-md">
+              <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecionar usuário..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{u.name}</span>
+                        <span className="text-xs text-muted-foreground">— {u.email}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-2">
               <Button
