@@ -18,6 +18,15 @@ type Action =
   | "unlink_account"
   | "list_memberships";
 
+// Perfis de Acesso oficiais do sistema. NÃO confundir com "cargo"
+// (mentor, consultor, head, etc.) — esses são gerenciados em team_roles.
+const ACCESS_PROFILES = ["admin", "gestor", "member", "viewer"] as const;
+type AccessProfile = typeof ACCESS_PROFILES[number];
+
+function isValidAccessProfile(value: unknown): value is AccessProfile {
+  return typeof value === "string" && (ACCESS_PROFILES as readonly string[]).includes(value);
+}
+
 interface RequestBody {
   action: Action;
   // Target identifiers (any combination):
@@ -187,6 +196,13 @@ Deno.serve(async (req: Request) => {
       case "set_role": {
         if (!body.user_row_id) return json(400, { error: "user_row_id é obrigatório" });
         if (!body.role) return json(400, { error: "role é obrigatório" });
+        if (!isValidAccessProfile(body.role)) {
+          return json(400, {
+            error: `Perfil de acesso inválido: "${body.role}". Valores aceitos: ${ACCESS_PROFILES.join(", ")}.`,
+            code: "invalid_access_profile",
+            allowed: ACCESS_PROFILES,
+          });
+        }
         const { error } = await admin
           .from("users")
           .update({ role: body.role })
@@ -197,16 +213,24 @@ Deno.serve(async (req: Request) => {
           .from("users")
           .update({ force_relogin_at: new Date().toISOString() })
           .eq("id", body.user_row_id);
-        return json(200, { success: true, message: "Função (role) atualizada." });
+        return json(200, { success: true, message: "Perfil de acesso atualizado." });
       }
 
       case "link_account": {
         if (!targetAuthUserId) return json(400, { error: "auth_user_id é obrigatório" });
         if (!body.account_id) return json(400, { error: "account_id é obrigatório" });
+        const role = body.role ?? "member";
+        if (!isValidAccessProfile(role)) {
+          return json(400, {
+            error: `Perfil de acesso inválido: "${body.role}". Valores aceitos: ${ACCESS_PROFILES.join(", ")}.`,
+            code: "invalid_access_profile",
+            allowed: ACCESS_PROFILES,
+          });
+        }
         const { data, error } = await admin.rpc("admin_link_user_to_account", {
           target_auth_user_id: targetAuthUserId,
           target_account_id: body.account_id,
-          p_role: body.role || "consultor",
+          p_role: role,
           p_name: body.name || null,
           p_email: null,
         });
