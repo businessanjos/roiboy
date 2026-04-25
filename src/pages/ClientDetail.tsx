@@ -2310,10 +2310,28 @@ export default function ClientDetail() {
             return (
               <Card className="shadow-card">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Histórico Completo</CardTitle>
-                  <CardDescription>
-                    Todas as interações e eventos do cliente em um só lugar
-                  </CardDescription>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-base">Histórico Completo</CardTitle>
+                      <CardDescription>
+                        Todas as interações e eventos do cliente em um só lugar
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleReprocessMessages}
+                      disabled={reprocessingMessages || !client?.phone_e164}
+                      title={!client?.phone_e164 ? "Cliente sem telefone cadastrado" : "Reenviar eventos do WhatsApp ao backend"}
+                    >
+                      {reprocessingMessages ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Reprocessar mensagens faltantes
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="pt-4">
                   <Timeline 
