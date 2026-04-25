@@ -122,10 +122,38 @@ export default function SharedInsights() {
   const hasActiveFilters = userId !== "all" || productId !== "all" || preset !== "year";
 
   const callEdgeFunction = useCallback(async (action: string, extraBody: Record<string, any> = {}) => {
-    const res = await supabase.functions.invoke("shared-insights", {
-      body: { action, token, ...extraBody },
-    });
-    return res;
+    // Usa fetch direto com timeout longo (120s) em vez de supabase.functions.invoke,
+    // que tem timeout interno curto e derruba load_dashboard em dashboards pesados.
+    const SUPABASE_URL = "https://mtzoavtbtqflufyccern.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10em9hdnRidHFmbHVmeWNjZXJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4NDQ2MDYsImV4cCI6MjA4MTQyMDYwNn0.aFVdVFXwpE7iU7G_u-Ehh-FBFxH32fHiZVo8-RzRGUA";
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/shared-insights`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ action, token, ...extraBody }),
+        signal: controller.signal,
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        return { data, error: { message: data?.error || `HTTP ${response.status}` } };
+      }
+      return { data, error: null };
+    } catch (err: any) {
+      const isAbort = err?.name === "AbortError";
+      console.error("[SharedInsights] callEdgeFunction failed:", action, err);
+      return {
+        data: null,
+        error: { message: isAbort ? "timeout" : (err?.message || "network_error") },
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }, [token]);
 
   // Centraliza o tratamento de erros de token (rotacionado, expirado, desativado)
