@@ -180,13 +180,13 @@ export function SectorsHealthBanner(props: SectorsHealthBannerProps) {
           </p>
         )}
         {tone === "warn" && stuckEmpty && (
-          <p className="font-medium">
+          <p className="font-medium" data-testid="sectors-health-stuck-empty">
             Nenhum setor liberado para o seu usuário. Peça a um administrador
             para revisar suas permissões em Admin → Permissões.
           </p>
         )}
         {hasError && (
-          <div>
+          <div data-testid="sectors-health-error">
             <p className="font-medium">
               Não foi possível carregar todas as permissões. Veja os detalhes
               abaixo e tente recarregar.
