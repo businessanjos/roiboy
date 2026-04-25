@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSector } from "@/contexts/SectorContext";
-import { Bell, Moon, Sun, LogOut, Settings, Shield } from "lucide-react";
+import { Bell, Moon, Sun, LogOut, Settings, Shield, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
