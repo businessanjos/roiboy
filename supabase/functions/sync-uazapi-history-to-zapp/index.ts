@@ -195,6 +195,13 @@ Deno.serve(async (req) => {
         const groupName = chat.wa_name || chat.name || "Grupo";
         const directPhone = !isGroup ? normalizePhone(chat.phone || chatId) : "";
 
+        // If filtering to a specific phone, skip groups and any chat that doesn't match
+        if (targetPhone) {
+          if (isGroup) continue;
+          const matches = directPhone === targetPhone || (targetPhoneAlt && directPhone === targetPhoneAlt);
+          if (!matches) continue;
+        }
+
         let msgOffset = 0;
         let syncedThisChat = false;
         while (msgOffset < maxMessagesPerChat) {
