@@ -135,7 +135,7 @@ function SectorPattern({ sectorId }: { sectorId: string }) {
 
 export default function Sectors() {
   const navigate = useNavigate();
-  const { currentUser, loading: userLoading } = useCurrentUser();
+  const { currentUser, loading: userLoading, refetchUser } = useCurrentUser();
   const { setCurrentSector } = useSector();
   const {
     hasSectorAccess,
@@ -165,11 +165,13 @@ export default function Sectors() {
 
   const handleRetry = async () => {
     setTimedOut(false);
-    // Invalidate the queries that feed this page and refetch permissions.
+    // CRITICAL: refetch the user FIRST, otherwise the cascading queries
+    // (permissions, sector access) stay disabled because they depend on
+    // currentUser.id. Then invalidate the dependent queries.
+    await refetchUser();
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["user-sector-access"] }),
       queryClient.invalidateQueries({ queryKey: ["sector-settings"] }),
-      queryClient.invalidateQueries({ queryKey: ["current-user"] }),
       refetchPermissions(),
     ]);
   };
