@@ -11,28 +11,18 @@ import { LossReasonsManager } from "@/components/settings/LossReasonsManager";
 import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useMemo } from "react";
 import { ProfileContent } from "@/components/profile/ProfileContent";
-import { roleNameMatches } from "@/lib/roles";
 
 import { MeetingPreferencesCard } from "@/components/settings/MeetingPreferencesCard";
 import { PlanUsageCard } from "@/components/plan";
 
 import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
 
-const RESTRICTED_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
-
 export default function Settings() {
   const [searchParams] = useSearchParams();
   const { hasVendasAccess } = useSectorAccess();
   const { currentUser } = useCurrentUser();
   const { isAdmin } = usePermissions();
-
-  const isSalesRep = useMemo(() => {
-    const role = currentUser?.team_role_name;
-    const isAdminUser = currentUser?.role === "admin" || currentUser?.is_also_admin;
-    return roleNameMatches(role, RESTRICTED_ROLES) && !isAdminUser;
-  }, [currentUser?.team_role_name, currentUser?.role, currentUser?.is_also_admin]);
 
   const activeTab = searchParams.get("tab") || "profile";
 
@@ -49,9 +39,9 @@ export default function Settings() {
           </div>
         );
       case "team":
-        return !isSalesRep ? <TeamManager /> : null;
+        return isAdmin ? <TeamManager /> : null;
       case "sectors":
-        return !isSalesRep ? (
+        return isAdmin ? (
           <div className="space-y-4">
             <UserSectorAccessManager />
             <SectorPinSettings />
