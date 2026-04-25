@@ -29,7 +29,7 @@ import { ptBR } from "date-fns/locale";
 import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-type Status = "loading" | "invalid" | "inactive" | "expired" | "email_prompt" | "pending" | "rejected" | "approved";
+type Status = "loading" | "invalid" | "inactive" | "expired" | "email_prompt" | "pending" | "rejected" | "approved" | "load_error";
 
 type DatePreset = "today" | "week" | "month" | "quarter" | "year" | "last_month" | "custom";
 
@@ -122,10 +122,38 @@ export default function SharedInsights() {
   const hasActiveFilters = userId !== "all" || productId !== "all" || preset !== "year";
 
   const callEdgeFunction = useCallback(async (action: string, extraBody: Record<string, any> = {}) => {
-    const res = await supabase.functions.invoke("shared-insights", {
-      body: { action, token, ...extraBody },
-    });
-    return res;
+    // Usa fetch direto com timeout longo (120s) em vez de supabase.functions.invoke,
+    // que tem timeout interno curto e derruba load_dashboard em dashboards pesados.
+    const SUPABASE_URL = "https://mtzoavtbtqflufyccern.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10em9hdnRidHFmbHVmeWNjZXJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4NDQ2MDYsImV4cCI6MjA4MTQyMDYwNn0.aFVdVFXwpE7iU7G_u-Ehh-FBFxH32fHiZVo8-RzRGUA";
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/shared-insights`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ action, token, ...extraBody }),
+        signal: controller.signal,
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        return { data, error: { message: data?.error || `HTTP ${response.status}` } };
+      }
+      return { data, error: null };
+    } catch (err: any) {
+      const isAbort = err?.name === "AbortError";
+      console.error("[SharedInsights] callEdgeFunction failed:", action, err);
+      return {
+        data: null,
+        error: { message: isAbort ? "timeout" : (err?.message || "network_error") },
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }, [token]);
 
   // Centraliza o tratamento de erros de token (rotacionado, expirado, desativado)
@@ -263,14 +291,17 @@ export default function SharedInsights() {
 
     if (error || !data) {
       setStatus("email_prompt");
+      setErrorMessage(error?.message === "timeout" ? "Tempo esgotado ao consultar o servidor. Tente novamente." : "");
       return;
     }
 
     if (data.status === "approved") {
       const loaded = await loadDashboard(emailToCheck, defaultFilters);
       if (!loaded) {
-        setStatus("pending");
-        setErrorMessage("Seu acesso foi liberado, mas o painel ainda está carregando. Aguarde alguns segundos.");
+        // Approved mas o painel não carregou (timeout/erro). Não voltar para "pending":
+        // mostra erro real com botão de retry.
+        setStatus("load_error");
+        setErrorMessage("Não foi possível carregar o painel agora. Pode estar processando muitos dados — tente novamente em alguns segundos.");
       }
     } else if (data.status === "rejected") {
       setStatus("rejected");
@@ -301,8 +332,8 @@ export default function SharedInsights() {
     if (data.status === "approved") {
       const loaded = await loadDashboard(normalizedEmail, defaultFilters);
       if (!loaded) {
-        setStatus("pending");
-        setErrorMessage("Seu acesso foi liberado, mas o painel ainda está carregando. Aguarde alguns segundos.");
+        setStatus("load_error");
+        setErrorMessage("Não foi possível carregar o painel agora. Pode estar processando muitos dados — tente novamente em alguns segundos.");
       }
     } else if (data.status === "rejected") {
       setStatus("rejected");
@@ -426,6 +457,32 @@ export default function SharedInsights() {
             <p className="text-muted-foreground text-sm">
               O proprietário recusou o acesso ao painel para <strong>{email}</strong>.
             </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (status === "load_error") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="pt-8 pb-8 space-y-4">
+            <XCircle className="h-12 w-12 text-destructive mx-auto" />
+            <h2 className="text-xl font-semibold">Não foi possível carregar o painel</h2>
+            <p className="text-muted-foreground text-sm">
+              {errorMessage || "Tente novamente em instantes."}
+            </p>
+            <Button
+              onClick={() => {
+                setErrorMessage("");
+                checkAccess(email);
+              }}
+              className="mx-auto"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Tentar novamente
+            </Button>
           </CardContent>
         </Card>
       </div>
