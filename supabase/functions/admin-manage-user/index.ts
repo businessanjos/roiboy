@@ -127,6 +127,19 @@ Deno.serve(async (req: Request) => {
       targetAuthUserId = row?.auth_user_id || null;
     }
 
+    // Resolve actor (super admin) identity for audit trail.
+    const { data: actorRow } = await admin
+      .from("users")
+      .select("id, name, email, account_id")
+      .eq("auth_user_id", requester.id)
+      .limit(1)
+      .maybeSingle();
+    const actor = {
+      user_id: actorRow?.id || null,
+      name: actorRow?.name || requester.email || null,
+      email: actorRow?.email || requester.email || null,
+    };
+
     switch (action) {
       case "list_memberships": {
         if (!targetAuthUserId) return json(400, { error: "auth_user_id é obrigatório" });
