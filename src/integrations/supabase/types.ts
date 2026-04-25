@@ -14649,6 +14649,7 @@ export type Database = {
           email: string
           force_relogin_at: string | null
           id: string
+          is_active: boolean
           is_also_admin: boolean
           meeting_email_advance: string | null
           meeting_email_template: string | null
@@ -14667,6 +14668,7 @@ export type Database = {
           email: string
           force_relogin_at?: string | null
           id?: string
+          is_active?: boolean
           is_also_admin?: boolean
           meeting_email_advance?: string | null
           meeting_email_template?: string | null
@@ -14685,6 +14687,7 @@ export type Database = {
           email?: string
           force_relogin_at?: string | null
           id?: string
+          is_active?: boolean
           is_also_admin?: boolean
           meeting_email_advance?: string | null
           meeting_email_template?: string | null
@@ -16332,6 +16335,26 @@ export type Database = {
     }
     Functions: {
       activate_scheduled_contracts: { Args: never; Returns: number }
+      admin_link_user_to_account: {
+        Args: {
+          p_email?: string
+          p_name?: string
+          p_role?: string
+          target_account_id: string
+          target_auth_user_id: string
+        }
+        Returns: string
+      }
+      admin_list_user_memberships: {
+        Args: { target_auth_user_id: string }
+        Returns: {
+          account_id: string
+          account_name: string
+          is_active: boolean
+          role: string
+          user_id: string
+        }[]
+      }
       can_manage_spiff_payments: {
         Args: { _auth_user_id: string }
         Returns: boolean
@@ -16466,6 +16489,17 @@ export type Database = {
         }[]
       }
       get_my_account_id: { Args: never; Returns: string }
+      get_my_user_accounts: {
+        Args: never
+        Returns: {
+          account_id: string
+          account_name: string
+          is_active: boolean
+          is_super_admin: boolean
+          role: string
+          user_id: string
+        }[]
+      }
       get_participant_by_rsvp_token: {
         Args: { p_token: string }
         Returns: {
