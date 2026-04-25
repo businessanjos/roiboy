@@ -26,15 +26,15 @@ interface Membership {
   email: string;
 }
 
-const ROLES = [
-  { value: "admin", label: "Admin" },
-  { value: "head", label: "Head" },
-  { value: "gestor", label: "Gestor" },
-  { value: "leader", label: "Líder" },
-  { value: "mentor", label: "Mentor" },
-  { value: "consultor", label: "Consultor" },
-  { value: "cx", label: "CX" },
-  { value: "cs", label: "CS" },
+// Perfil de Acesso ao sistema (NÃO confundir com Cargo).
+// Cargo (Mentor, Consultor, Head, Líder, CX, CS, etc.) é gerenciado em
+// Configurações › Equipe (tabela team_roles). Aqui controlamos apenas o
+// nível de acesso reconhecido pelo motor de permissões.
+const ACCESS_PROFILES = [
+  { value: "admin", label: "Admin", hint: "Acesso total ao sistema" },
+  { value: "gestor", label: "Gestor", hint: "Gerencia equipe e configurações" },
+  { value: "member", label: "Membro", hint: "Uso padrão" },
+  { value: "viewer", label: "Viewer", hint: "Apenas visualização" },
 ];
 
 export function UserManagementPanel({
@@ -56,7 +56,7 @@ export function UserManagementPanel({
   const [newEmail, setNewEmail] = useState(currentEmail);
   const [newPassword, setNewPassword] = useState("");
   const [linkAccountId, setLinkAccountId] = useState<string>("");
-  const [linkRole, setLinkRole] = useState<string>("consultor");
+  const [linkRole, setLinkRole] = useState<string>("member");
 
   const memberships = useQuery({
     queryKey: ["admin-memberships", authUserId],
@@ -137,14 +137,24 @@ export function UserManagementPanel({
       <CardContent className="space-y-5">
         {/* Role + active */}
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Função (role)</Label>
+          <div className="space-y-1.5 md:col-span-2">
+            <Label className="text-xs">Perfil de Acesso</Label>
             <Select defaultValue={currentRole} onValueChange={(v) => roleMut.mutate(v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                {ACCESS_PROFILES.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    <div className="flex flex-col">
+                      <span>{r.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{r.hint}</span>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            <p className="text-[10px] text-muted-foreground">
+              Cargo (ex: Mentor, Consultor, Head) é gerenciado em Configurações › Equipe.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Acesso ao sistema</Label>
@@ -232,7 +242,7 @@ export function UserManagementPanel({
             <Select value={linkRole} onValueChange={setLinkRole}>
               <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                {ACCESS_PROFILES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <Button onClick={() => linkMut.mutate()} disabled={!linkAccountId || linkMut.isPending}>
