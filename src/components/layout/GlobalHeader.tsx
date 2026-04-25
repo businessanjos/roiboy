@@ -175,6 +175,16 @@ export function GlobalHeader() {
               <Settings className="mr-2 h-4 w-4" />
               Configurações
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.preventDefault();
+                reloadPermissions();
+              }}
+              disabled={reloadingPermissions}
+            >
+              <RefreshCw className={cn("mr-2 h-4 w-4", reloadingPermissions && "animate-spin")} />
+              {reloadingPermissions ? "Recarregando…" : "Recarregar permissões"}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
