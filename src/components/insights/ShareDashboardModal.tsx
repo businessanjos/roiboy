@@ -562,31 +562,35 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
 export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboardName }: ShareDashboardModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5" />
             Compartilhar "{dashboardName}"
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="external" className="w-full">
-          <TabsList className="w-full">
-            <TabsTrigger value="external" className="flex-1">
-              <UserPlus className="h-4 w-4 mr-1" /> Acesso Externo
-            </TabsTrigger>
-            <TabsTrigger value="link" className="flex-1">
-              <Link2 className="h-4 w-4 mr-1" /> Link Público
-            </TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="external" className="w-full flex flex-col flex-1 min-h-0">
+          <div className="px-6 pt-4 shrink-0">
+            <TabsList className="w-full">
+              <TabsTrigger value="external" className="flex-1">
+                <UserPlus className="h-4 w-4 mr-1" /> Acesso Externo
+              </TabsTrigger>
+              <TabsTrigger value="link" className="flex-1">
+                <Link2 className="h-4 w-4 mr-1" /> Link Público
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="external" className="mt-4">
-            <ExternalAccessTab dashboardId={dashboardId} />
-          </TabsContent>
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+            <TabsContent value="external" className="mt-4">
+              <ExternalAccessTab dashboardId={dashboardId} />
+            </TabsContent>
 
-          <TabsContent value="link" className="mt-4">
-            <ShareLinkTab dashboardId={dashboardId} dashboardName={dashboardName} />
-          </TabsContent>
+            <TabsContent value="link" className="mt-4">
+              <ShareLinkTab dashboardId={dashboardId} dashboardName={dashboardName} />
+            </TabsContent>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>
