@@ -524,6 +524,18 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                       );
                     })}
                   </div>
+
+                  {/* Super-admin panel: role / email / password / active / multi-account */}
+                  <div className="mt-4 pt-4 border-t">
+                    <UserManagementPanel
+                      authUserId={user.auth_user_id}
+                      currentEmail={user.email}
+                      currentRole={user.role}
+                      currentRowId={user.id}
+                      isActive={user.is_active !== false}
+                      accounts={sortedAccounts}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
