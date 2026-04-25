@@ -20,6 +20,7 @@ import { getSectorByRoute, routeBelongsToSector } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
 import { isSkippedRoute } from "@/lib/access/routeAccess";
+import { useAppVersionCheck } from "@/hooks/useAppVersionCheck";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
@@ -34,6 +35,9 @@ export function AppLayout() {
   const { currentUser } = useCurrentUser();
   const { hasSectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
+
+  // Background poll for new deploys → toast + auto-reload to bust stale assets.
+  useAppVersionCheck();
 
   // Check if user is external (viewer role with external dashboard access)
   const { data: externalAccess } = useQuery({
