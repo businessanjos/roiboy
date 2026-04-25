@@ -147,6 +147,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Ensure the user actually granted Drive access on the consent screen.
+    // If they unchecked it, Google still returns a token — but every Drive API call will 403.
+    if (!scope.includes("https://www.googleapis.com/auth/drive")) {
+      return htmlRedirect(
+        buildRedirectUrl(redirectContext.appBase, redirectContext.returnTo, "error", "missing_drive_scope"),
+        "Você precisa marcar a permissão 'Ver e baixar todos os seus arquivos do Google Drive' na tela de consentimento do Google. Tente conectar novamente e aceite todas as permissões solicitadas."
+      );
+    }
+
     const userInfoRes = await fetch(
       "https://openidconnect.googleapis.com/v1/userinfo",
       { headers: { Authorization: `Bearer ${accessToken}` } }
