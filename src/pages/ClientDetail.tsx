@@ -920,6 +920,65 @@ export default function ClientDetail() {
     }
   };
 
+  // Reprocess missing messages from UAZAPI for this client
+  const handleReprocessMessages = async () => {
+    if (!client?.phone_e164) {
+      toast.error("Cliente sem telefone cadastrado");
+      return;
+    }
+    if (!accountId) {
+      toast.error("Conta não carregada");
+      return;
+    }
+    setReprocessingMessages(true);
+    try {
+      // Find an active WhatsApp integration for this account
+      const { data: integration, error: integrationError } = await supabase
+        .from("integrations")
+        .select("id")
+        .eq("account_id", accountId)
+        .eq("provider", "uazapi")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (integrationError || !integration) {
+        toast.error("Nenhuma integração WhatsApp ativa encontrada");
+        return;
+      }
+
+      // Sync last 30 days of messages for this phone only
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+
+      const { data, error } = await supabase.functions.invoke("sync-uazapi-history-to-zapp", {
+        body: {
+          integration_id: integration.id,
+          target_phone: client.phone_e164,
+          start: start.toISOString(),
+          max_messages_per_chat: 5000,
+        },
+      });
+
+      if (error) throw error;
+
+      const inserted = (data as any)?.stats?.messagesInserted ?? 0;
+      const duplicates = (data as any)?.stats?.duplicates ?? 0;
+      toast.success(
+        inserted > 0
+          ? `${inserted} mensagem(ns) recuperada(s)${duplicates ? ` • ${duplicates} já existiam` : ""}`
+          : "Nenhuma mensagem nova encontrada"
+      );
+      await refreshTimeline();
+    } catch (err: any) {
+      console.error("Erro ao reprocessar mensagens:", err);
+      toast.error(err?.message || "Erro ao reprocessar mensagens");
+    } finally {
+      setReprocessingMessages(false);
+    }
+  };
+
   // Lightweight timeline-only refresh (no full page loading state)
   const refreshTimeline = async () => {
     if (!id || !accountId) return;
