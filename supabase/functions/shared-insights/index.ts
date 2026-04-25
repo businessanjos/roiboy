@@ -326,10 +326,9 @@ async function fetchDashboardDataWithVisuals(supabase: any, dashboardId: string,
   const visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }> = {};
 
   if (visuals && visuals.length > 0) {
-    // Roda todos os visuais em paralelo (em vez de batches de 5 sequenciais)
-    // para reduzir o tempo total de resposta em dashboards pesados.
-    const results = await Promise.all(
-      visuals.map(async (visual: any) => {
+    // Limita a concorrência: rodar todos os visuais ao mesmo tempo sobrecarrega
+    // o runtime em dashboards pesados e pode derrubar a função com 503.
+    const results = await mapWithConcurrency(visuals, 2, async (visual: any) => {
         try {
           const isDataTable = visual.chart_type === 'data_table';
           const data = await fetchVisualData(supabase, accountId, visual, filters);
@@ -342,8 +341,7 @@ async function fetchDashboardDataWithVisuals(supabase: any, dashboardId: string,
           console.error(`Error fetching data for visual ${visual.id}:`, err);
           return { id: visual.id, data: [], drilldownData: undefined };
         }
-      })
-    );
+      });
     for (const result of results) {
       visualsData[result.id] = { data: result.data, drilldownData: result.drilldownData };
     }
@@ -851,6 +849,19 @@ async function paginateQuery(query: any): Promise<any[]> {
     from += pageSize;
   }
   return all;
+}
+
+async function mapWithConcurrency<T, R>(items: T[], limit: number, mapper: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex++;
+      results[currentIndex] = await mapper(items[currentIndex]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 function getGroupName(item: any, dimension: VisualConfig['dimension']): string {
