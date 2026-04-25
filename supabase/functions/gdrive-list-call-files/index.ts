@@ -287,6 +287,11 @@ Deno.serve(async (req) => {
     const driveJson = await driveRes.json();
 
     if (!driveRes.ok) {
+      if (driveRes.status === 403 && JSON.stringify(driveJson).includes("ACCESS_TOKEN_SCOPE_INSUFFICIENT")) {
+        throw new Error(
+          "Sua conexão com o Google Drive não tem permissão de leitura dos arquivos. Desconecte e conecte novamente, marcando todas as permissões na tela do Google."
+        );
+      }
       throw new Error(`Falha ao listar arquivos do Google Drive [${driveRes.status}]: ${JSON.stringify(driveJson)}`);
     }
 
