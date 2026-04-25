@@ -54,6 +54,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { hasExactRole, roleNameMatches } from "@/lib/roles";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,29 +114,25 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       
       // Financeiro, Gestor, Admin roles have full access to the financial sector
       if (currentSector.id === "financeiro") {
-        return teamRoleName === "Financeiro" || 
-               teamRoleName === "Gestor" || 
-               teamRoleName === "Admin";
+        return roleNameMatches(teamRoleName, ["Financeiro"]) || 
+               hasExactRole(teamRoleName, "Gestor") || 
+               hasExactRole(teamRoleName, "Admin");
       }
       
       // CX, CS, Consultor roles have full access to the operations sector
       // Also allow mentor system role as bypass for operations
       if (currentSector.id === "operacoes") {
-        return teamRoleName === "CX" || 
-               teamRoleName === "CS" || 
-               teamRoleName === "Consultor" ||
-               teamRoleName === "Gestor" ||
-               teamRoleName === "Admin" ||
+        return roleNameMatches(teamRoleName, ["CX", "CS", "Consultor"]) ||
+               hasExactRole(teamRoleName, "Gestor") ||
+               hasExactRole(teamRoleName, "Admin") ||
                userRole === "mentor";
       }
       
       // Vendedor, Closer, SDR roles have full access to the sales sector
       if (currentSector.id === "vendas") {
-        return teamRoleName === "Vendedor" || 
-               teamRoleName === "Closer" || 
-               teamRoleName === "SDR" ||
-               teamRoleName === "Gestor" ||
-               teamRoleName === "Admin";
+        return roleNameMatches(teamRoleName, ["Vendedor", "Closer", "SDR"]) ||
+               hasExactRole(teamRoleName, "Gestor") ||
+               hasExactRole(teamRoleName, "Admin");
       }
       
       return false;
@@ -155,7 +152,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
     
     // Hide "Gestão" (/sales-team) from sales reps (SDR, Closer, Vendas, Vendedor)
-    const isSalesRepRole = !!teamRoleName && SALES_REP_ROLES.includes(teamRoleName) && 
+    const isSalesRepRole = roleNameMatches(teamRoleName, SALES_REP_ROLES) && 
       !(currentUser?.role === "admin" || currentUser?.is_also_admin);
     if (isSalesRepRole) {
       sectorItems = sectorItems.filter(item => item.to !== "/sales-team");
@@ -182,7 +179,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const isSalesRep = useMemo(() => {
     const role = currentUser?.team_role_name;
     const isAdminUser = currentUser?.role === "admin" || currentUser?.is_also_admin;
-    return !!role && SALES_REP_ROLES.includes(role) && !isAdminUser;
+    return roleNameMatches(role, SALES_REP_ROLES) && !isAdminUser;
   }, [currentUser]);
 
   const salesRepOtherSectors = useMemo(() => {
