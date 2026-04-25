@@ -2,7 +2,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Activity, Building2, Users,
-  FileText, Cpu, ArrowLeft, Shield,
+  FileText, Cpu, ArrowLeft, Shield, KeyRound,
 } from "lucide-react";
 
 interface NavItem {
@@ -29,6 +29,7 @@ const navGroups: NavGroup[] = [
     items: [
       { id: "accounts", label: "Contas", icon: Building2 },
       { id: "users", label: "Usuários", icon: Users },
+      { id: "permissions", label: "Permissões", icon: KeyRound },
     ],
   },
   {
