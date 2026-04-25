@@ -27,6 +27,7 @@ interface AccountUser {
   avatar_url: string | null;
   role: string;
   auth_user_id: string | null;
+  is_active?: boolean;
 }
 
 interface UserSectorAccess {
