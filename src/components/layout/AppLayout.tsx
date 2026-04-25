@@ -16,7 +16,7 @@ import { useSector } from "@/contexts/SectorContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getSectorByRoute } from "@/config/sectors";
+import { getSectorByRoute, routeBelongsToSector } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 
 export function AppLayout() {
@@ -110,7 +110,9 @@ export function AppLayout() {
   }
 
   const routeSector = location.pathname !== "/setores"
-    ? getSectorByRoute(location.pathname) || currentSector
+    ? currentSector && routeBelongsToSector(location.pathname, currentSector.id)
+      ? currentSector
+      : getSectorByRoute(location.pathname)
     : null;
   const skipSectorGuard = ["/setores", "/settings", "/profile", "/notifications", "/account-settings", "/billing"].some((path) =>
     location.pathname === path || location.pathname.startsWith(`${path}/`)
