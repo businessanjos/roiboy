@@ -23,7 +23,7 @@ export function useSectorAccess() {
   const userRole = currentUser?.role;
   const isAlsoAdmin = currentUser?.is_also_admin === true;
 
-  const { data: sectorAccess = [], isLoading } = useQuery({
+  const { data: sectorAccess = [], isLoading, error: sectorAccessError } = useQuery({
     queryKey: ["user-sector-access", userId],
     queryFn: async () => {
       if (!userId) return [];
@@ -42,7 +42,7 @@ export function useSectorAccess() {
     refetchOnWindowFocus: false,
   });
 
-  const { data: sectorSettings = [] } = useQuery({
+  const { data: sectorSettings = [], error: sectorSettingsError } = useQuery({
     queryKey: ["sector-settings", accountId],
     queryFn: async () => {
       if (!accountId) return [];
@@ -93,5 +93,7 @@ export function useSectorAccess() {
     isSectorRoyzappEnabled,
     canAccessSectorRoyzapp,
     hasVendasAccess,
+    sectorAccessError,
+    sectorSettingsError,
   };
 }
