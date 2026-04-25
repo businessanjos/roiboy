@@ -1,0 +1,464 @@
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Loader2, Save, RefreshCw, Search, Shield, Users, Building2, ShieldCheck } from "lucide-react";
+import { sectors } from "@/config/sectors";
+import { cn } from "@/lib/utils";
+
+interface Account {
+  id: string;
+  name: string;
+}
+
+interface AccountUser {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+  role: string;
+  auth_user_id: string | null;
+}
+
+interface UserSectorAccess {
+  id: string;
+  user_id: string;
+  sector_id: string;
+  role_in_sector: string;
+  is_active: boolean;
+}
+
+const SECTOR_ROLES = [
+  { value: "admin", label: "Admin" },
+  { value: "manager", label: "Gestor" },
+  { value: "member", label: "Membro" },
+  { value: "viewer", label: "Viewer" },
+];
+
+type PendingKey = string; // `${userId}::${sectorId}`
+
+export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
+  const sortedAccounts = useMemo(
+    () => [...accounts].sort((a, b) => a.name.localeCompare(b.name)),
+    [accounts]
+  );
+
+  const [accountId, setAccountId] = useState<string>("");
+  const [userSearch, setUserSearch] = useState("");
+  const [pending, setPending] = useState<Map<PendingKey, Partial<UserSectorAccess>>>(new Map());
+  const [pendingSuperAdmin, setPendingSuperAdmin] = useState<Map<string, boolean>>(new Map());
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!accountId && sortedAccounts.length) setAccountId(sortedAccounts[0].id);
+  }, [sortedAccounts, accountId]);
+
+  // Reset pending changes when switching account
+  useEffect(() => {
+    setPending(new Map());
+    setPendingSuperAdmin(new Map());
+    setUserSearch("");
+  }, [accountId]);
+
+  const activeSectors = useMemo(() => sectors.filter((s) => !s.comingSoon), []);
+
+  const { data: users = [], isLoading: loadingUsers, refetch: refetchUsers } = useQuery({
+    queryKey: ["admin-permissions-users", accountId],
+    queryFn: async (): Promise<AccountUser[]> => {
+      if (!accountId) return [];
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, name, email, avatar_url, role, auth_user_id")
+        .eq("account_id", accountId)
+        .order("name");
+      if (error) throw error;
+      return (data || []) as AccountUser[];
+    },
+    enabled: !!accountId,
+  });
+
+  const { data: accessList = [], isLoading: loadingAccess, refetch: refetchAccess } = useQuery({
+    queryKey: ["admin-permissions-access", accountId],
+    queryFn: async (): Promise<UserSectorAccess[]> => {
+      if (!accountId) return [];
+      const { data, error } = await supabase
+        .from("user_sector_access")
+        .select("id, user_id, sector_id, role_in_sector, is_active")
+        .eq("account_id", accountId);
+      if (error) throw error;
+      return (data || []) as UserSectorAccess[];
+    },
+    enabled: !!accountId,
+  });
+
+  const authUserIds = useMemo(
+    () => users.map((u) => u.auth_user_id).filter(Boolean) as string[],
+    [users]
+  );
+
+  const { data: superAdminIds = [], refetch: refetchSuperAdmins } = useQuery({
+    queryKey: ["admin-permissions-superadmins", authUserIds],
+    queryFn: async (): Promise<string[]> => {
+      if (!authUserIds.length) return [];
+      const { data, error } = await supabase
+        .from("super_admins")
+        .select("user_id")
+        .in("user_id", authUserIds);
+      if (error) throw error;
+      return (data || []).map((r: { user_id: string }) => r.user_id);
+    },
+    enabled: authUserIds.length > 0,
+  });
+
+  const isSuperAdminEffective = (authUserId: string | null) => {
+    if (!authUserId) return false;
+    if (pendingSuperAdmin.has(authUserId)) return pendingSuperAdmin.get(authUserId)!;
+    return superAdminIds.includes(authUserId);
+  };
+
+  const filteredUsers = useMemo(() => {
+    const term = userSearch.trim().toLowerCase();
+    if (!term) return users;
+    return users.filter(
+      (u) =>
+        u.name?.toLowerCase().includes(term) ||
+        u.email?.toLowerCase().includes(term)
+    );
+  }, [users, userSearch]);
+
+  const getAccess = (userId: string, sectorId: string) =>
+    accessList.find((a) => a.user_id === userId && a.sector_id === sectorId);
+
+  const getEffective = (userId: string, sectorId: string) => {
+    const key: PendingKey = `${userId}::${sectorId}`;
+    const p = pending.get(key);
+    const existing = getAccess(userId, sectorId);
+    return {
+      isActive: p?.is_active ?? existing?.is_active ?? false,
+      role: (p?.role_in_sector ?? existing?.role_in_sector ?? "member") as string,
+      hasPending: pending.has(key),
+    };
+  };
+
+  const setEffective = (userId: string, sectorId: string, changes: Partial<UserSectorAccess>) => {
+    const key: PendingKey = `${userId}::${sectorId}`;
+    const next = new Map(pending);
+    const existing = next.get(key) || {};
+    next.set(key, { ...existing, ...changes });
+    setPending(next);
+  };
+
+  const toggleSuperAdmin = (authUserId: string, value: boolean) => {
+    const next = new Map(pendingSuperAdmin);
+    next.set(authUserId, value);
+    setPendingSuperAdmin(next);
+  };
+
+  const totalChanges = pending.size + pendingSuperAdmin.size;
+
+  const handleSave = async () => {
+    if (!accountId || totalChanges === 0) return;
+    setSaving(true);
+    let errors = 0;
+
+    try {
+      // Sector access changes
+      for (const [key, changes] of pending.entries()) {
+        const [userId, sectorId] = key.split("::");
+        const existing = getAccess(userId, sectorId);
+
+        if (existing) {
+          if (changes.is_active === false) {
+            const { error } = await supabase
+              .from("user_sector_access")
+              .delete()
+              .eq("id", existing.id);
+            if (error) errors++;
+          } else {
+            const { error } = await supabase
+              .from("user_sector_access")
+              .update({
+                role_in_sector: changes.role_in_sector ?? existing.role_in_sector,
+                is_active: changes.is_active ?? existing.is_active,
+              })
+              .eq("id", existing.id);
+            if (error) errors++;
+          }
+        } else if (changes.is_active !== false) {
+          const { error } = await supabase.from("user_sector_access").insert({
+            account_id: accountId,
+            user_id: userId,
+            sector_id: sectorId,
+            role_in_sector: changes.role_in_sector || "member",
+            is_active: true,
+          });
+          if (error) errors++;
+        }
+      }
+
+      // Super admin changes
+      for (const [authUserId, value] of pendingSuperAdmin.entries()) {
+        if (value) {
+          const { error } = await supabase
+            .from("super_admins")
+            .upsert({ user_id: authUserId }, { onConflict: "user_id" });
+          if (error) errors++;
+        } else {
+          const { error } = await supabase
+            .from("super_admins")
+            .delete()
+            .eq("user_id", authUserId);
+          if (error) errors++;
+        }
+      }
+
+      if (errors > 0) {
+        toast.error(`${errors} alteração(ões) falharam. Verifique o console.`);
+      } else {
+        toast.success("Permissões salvas com sucesso!");
+      }
+
+      setPending(new Map());
+      setPendingSuperAdmin(new Map());
+      await Promise.all([refetchAccess(), refetchSuperAdmins()]);
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao salvar permissões");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = () => {
+    setPending(new Map());
+    setPendingSuperAdmin(new Map());
+  };
+
+  const loading = loadingUsers || loadingAccess;
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Permissões por Usuário
+              </CardTitle>
+              <CardDescription>
+                Defina quais áreas cada usuário pode acessar e o papel dentro de cada uma.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue placeholder="Selecionar conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortedAccounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3 justify-between">
+            <div className="relative flex-1 min-w-[240px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar usuário..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  refetchUsers();
+                  refetchAccess();
+                  refetchSuperAdmins();
+                }}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              {totalChanges > 0 && (
+                <Button variant="ghost" size="sm" onClick={handleReset} disabled={saving}>
+                  Descartar
+                </Button>
+              )}
+              <Button onClick={handleSave} disabled={saving || totalChanges === 0}>
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Salvar {totalChanges > 0 ? `(${totalChanges})` : ""}
+              </Button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <Users className="h-10 w-10 mb-2 opacity-50" />
+              <p className="text-sm">Nenhum usuário encontrado nesta conta.</p>
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-medium sticky left-0 bg-muted/40 z-10 min-w-[260px]">
+                        Usuário
+                      </th>
+                      <th className="text-center px-3 py-3 font-medium whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1">
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                          Super Admin
+                        </div>
+                      </th>
+                      {activeSectors.map((s) => (
+                        <th key={s.id} className="text-center px-3 py-3 font-medium whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <s.icon className={cn("h-3.5 w-3.5", s.color)} />
+                            {s.name}
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} className="border-t hover:bg-muted/20">
+                        <td className="px-4 py-3 sticky left-0 bg-background z-10">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.avatar_url || undefined} />
+                              <AvatarFallback className="text-xs">
+                                {user.name?.charAt(0).toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="font-medium truncate flex items-center gap-1.5">
+                                {user.name}
+                                {user.role === "admin" && (
+                                  <Badge variant="secondary" className="text-[10px] h-4">
+                                    Admin
+                                  </Badge>
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {user.email}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Super Admin */}
+                        <td className="px-3 py-3 text-center">
+                          {user.auth_user_id ? (
+                            <div
+                              className={cn(
+                                "inline-flex",
+                                pendingSuperAdmin.has(user.auth_user_id) && "ring-2 ring-primary/40 rounded-full"
+                              )}
+                            >
+                              <Switch
+                                checked={isSuperAdminEffective(user.auth_user_id)}
+                                onCheckedChange={(v) => toggleSuperAdmin(user.auth_user_id!, v)}
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+
+                        {/* Sectors */}
+                        {activeSectors.map((sector) => {
+                          const eff = getEffective(user.id, sector.id);
+                          return (
+                            <td key={sector.id} className="px-3 py-3 text-center">
+                              <div
+                                className={cn(
+                                  "flex flex-col items-center gap-1.5",
+                                  eff.hasPending && "ring-2 ring-primary/40 rounded-md p-1"
+                                )}
+                              >
+                                <Switch
+                                  checked={eff.isActive}
+                                  onCheckedChange={(v) =>
+                                    setEffective(user.id, sector.id, {
+                                      is_active: v,
+                                      role_in_sector: v ? eff.role || "member" : eff.role,
+                                    })
+                                  }
+                                />
+                                {eff.isActive && (
+                                  <Select
+                                    value={eff.role}
+                                    onValueChange={(v) =>
+                                      setEffective(user.id, sector.id, { role_in_sector: v })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-7 px-2 text-xs w-[92px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {SECTOR_ROLES.map((r) => (
+                                        <SelectItem key={r.value} value={r.value} className="text-xs">
+                                          {r.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="text-xs text-muted-foreground space-y-1 pt-2">
+            <p>
+              <span className="font-medium text-foreground">Admin:</span> acesso total ao setor ·{" "}
+              <span className="font-medium text-foreground">Gestor:</span> gerencia equipe e dados ·{" "}
+              <span className="font-medium text-foreground">Membro:</span> acesso padrão ·{" "}
+              <span className="font-medium text-foreground">Viewer:</span> apenas leitura.
+            </p>
+            <p>
+              Usuários marcados como <Badge variant="secondary" className="text-[10px] h-4">Admin</Badge> da conta
+              já têm acesso completo a todos os setores, independentemente desta configuração.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
