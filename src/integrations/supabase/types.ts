@@ -14647,6 +14647,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           email: string
+          force_relogin_at: string | null
           id: string
           is_also_admin: boolean
           meeting_email_advance: string | null
@@ -14664,6 +14665,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email: string
+          force_relogin_at?: string | null
           id?: string
           is_also_admin?: boolean
           meeting_email_advance?: string | null
@@ -14681,6 +14683,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email?: string
+          force_relogin_at?: string | null
           id?: string
           is_also_admin?: boolean
           meeting_email_advance?: string | null
@@ -16331,6 +16334,10 @@ export type Database = {
       activate_scheduled_contracts: { Args: never; Returns: number }
       can_manage_spiff_payments: {
         Args: { _auth_user_id: string }
+        Returns: boolean
+      }
+      check_force_relogin: {
+        Args: { p_session_issued_at: string }
         Returns: boolean
       }
       check_rate_limit: {
