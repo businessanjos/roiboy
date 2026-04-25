@@ -462,7 +462,7 @@ Deno.serve(async (req) => {
             const calEventData = await calResp.json();
             console.log("Zoom meeting registered in Google Calendar successfully, event ID:", calEventData.id);
             // Store the Google Calendar event ID for later sync
-            meetingResult.google_calendar_event_id = calEventData.id;
+            (meetingResult as any).google_calendar_event_id = calEventData.id;
           } else {
             console.error("Failed to create Google Calendar event for Zoom meeting:", await calResp.text());
           }
@@ -499,8 +499,8 @@ Deno.serve(async (req) => {
     } else if (platform === "zoom") {
       taskUpdateData.zoom_meeting_id = meetingResult.meeting_id;
       // Also store Google Calendar event ID if Zoom meeting was synced to Calendar
-      if (meetingResult.google_calendar_event_id) {
-        taskUpdateData.google_calendar_event_id = meetingResult.google_calendar_event_id;
+      if ((meetingResult as any).google_calendar_event_id) {
+        taskUpdateData.google_calendar_event_id = (meetingResult as any).google_calendar_event_id;
       }
     }
 
