@@ -59,25 +59,17 @@ function escapeForJs(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/</g, "\\u003c");
 }
 
-function htmlRedirect(targetUrl: string, message: string) {
-  const safeUrl = escapeForJs(targetUrl);
-  return new Response(
-    `<!doctype html><html><head><meta charset="utf-8"><title>Google Drive</title>
-<meta http-equiv="refresh" content="0;url=${targetUrl}"/>
-<script>window.location.replace('${safeUrl}');</script>
-</head>
-<body style="font-family:system-ui;padding:32px;text-align:center">
-<p>${message}</p><p><a href="${targetUrl}">Voltar ao app</a></p>
-<script>setTimeout(function(){window.location.href='${safeUrl}';},50);</script>
-</body></html>`,
-    {
-      status: 200,
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
-    }
-  );
+function htmlRedirect(targetUrl: string, _message: string) {
+  // Use a real HTTP 302 redirect so the browser navigates instantly back to the app
+  // instead of rendering an intermediate HTML page (which some environments display
+  // as raw text when Content-Type negotiation fails).
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: targetUrl,
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
 Deno.serve(async (req) => {
