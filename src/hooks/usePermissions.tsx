@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
-import { hasExactRole } from "@/lib/roles";
 
 // All available permissions in the system
 export const PERMISSIONS = {
