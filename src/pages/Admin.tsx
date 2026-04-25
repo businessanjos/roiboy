@@ -52,6 +52,7 @@ import { useImpersonation } from "@/hooks/useImpersonation";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { SystemStatusMonitor } from "@/components/admin/SystemStatusMonitor";
 import { AdminPermissionsTab } from "@/components/admin/AdminPermissionsTab";
+import { AccessAuditTab } from "@/components/admin/AccessAuditTab";
 import { Briefcase, TrendingUp as TrendingUpIcon, Users as UsersIcon, Calendar, DollarSign as DollarSignIcon, Lightbulb, FileText as FileTextIcon, Receipt, RefreshCcw, CreditCard as CreditCardIcon, PieChart, Target, Bell, Building2 as Building2Icon, BarChart3 } from "lucide-react";
 
 interface Account {
