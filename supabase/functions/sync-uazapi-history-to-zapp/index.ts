@@ -120,6 +120,9 @@ Deno.serve(async (req) => {
     const endMs = body.end ? Date.parse(String(body.end)) : Date.now();
     const maxChats = Number(body.max_chats || 2000);
     const maxMessagesPerChat = Number(body.max_messages_per_chat || 10000);
+    const targetPhoneRaw = body.target_phone ? String(body.target_phone) : "";
+    const targetPhone = targetPhoneRaw ? normalizePhone(targetPhoneRaw) : "";
+    const targetPhoneAlt = targetPhone ? phoneWithoutBrazilNinth(targetPhone) : null;
 
     if (!integrationId || Number.isNaN(startMs) || Number.isNaN(endMs)) {
       return json(400, { error: "integration_id, start/end inválidos" });
