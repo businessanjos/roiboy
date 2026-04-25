@@ -217,13 +217,22 @@ export default function Admin() {
       case 'accounts':
         return <AccountsTab accounts={accounts} allUsers={allUsers} isLoading={loadingAccounts} />;
       case 'users':
-        return <UsersTab users={allUsers} accounts={accounts} isLoading={loadingUsers} />;
       case 'permissions':
+        // 'Usuários' was merged into 'Permissões' (Usuários & Permissões).
         return <AdminPermissionsTab accounts={accounts} />;
       case 'access-audit':
-        return <AccessAuditTab />;
       case 'audit':
-        return <AuditLogViewer />;
+        // Auditoria de Acesso foi consolidada dentro de 'Auditoria'.
+        return (
+          <Tabs defaultValue={activeTab === 'access-audit' ? 'access' : 'logs'} className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="logs">Logs do sistema</TabsTrigger>
+              <TabsTrigger value="access">Auditoria de acesso</TabsTrigger>
+            </TabsList>
+            <TabsContent value="logs"><AuditLogViewer /></TabsContent>
+            <TabsContent value="access"><AccessAuditTab /></TabsContent>
+          </Tabs>
+        );
       case 'costs':
         return <AICostsTab accounts={accounts} />;
       default:

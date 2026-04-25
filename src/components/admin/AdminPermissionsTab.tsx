@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Save, RefreshCw, Search, Shield, Users, Building2, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { sectors } from "@/config/sectors";
 import { cn } from "@/lib/utils";
+import { UserManagementPanel } from "./UserManagementPanel";
 
 interface Account {
   id: string;
@@ -26,6 +27,7 @@ interface AccountUser {
   avatar_url: string | null;
   role: string;
   auth_user_id: string | null;
+  is_active?: boolean;
 }
 
 interface UserSectorAccess {
@@ -76,7 +78,7 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
       if (!accountId) return [];
       const { data, error } = await supabase
         .from("users")
-        .select("id, name, email, avatar_url, role, auth_user_id")
+        .select("id, name, email, avatar_url, role, auth_user_id, is_active")
         .eq("account_id", accountId)
         .order("name");
       if (error) throw error;
@@ -521,6 +523,18 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                         </div>
                       );
                     })}
+                  </div>
+
+                  {/* Super-admin panel: role / email / password / active / multi-account */}
+                  <div className="mt-4 pt-4 border-t">
+                    <UserManagementPanel
+                      authUserId={user.auth_user_id}
+                      currentEmail={user.email}
+                      currentRole={user.role}
+                      currentRowId={user.id}
+                      isActive={user.is_active !== false}
+                      accounts={sortedAccounts}
+                    />
                   </div>
                 </div>
               ))}
