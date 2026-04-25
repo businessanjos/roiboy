@@ -131,11 +131,12 @@ describe("decideRouteAccess — never produces a redirect loop", () => {
 
     for (const path of protectedPaths) {
       const decision = decideRouteAccess(path, ctx);
-      if (decision.allowed) continue;
+      if (decision.allowed === true) continue;
       // The destination must itself be allowed for the same user, otherwise
       // we'd ping-pong between path → redirectTo → redirectTo → …
-      const next = decideRouteAccess(decision.redirectTo, ctx);
-      expect(next.allowed, `Loop risk at ${path} → ${decision.redirectTo}`).toBe(true);
+      const target = decision.redirectTo;
+      const next = decideRouteAccess(target, ctx);
+      expect(next.allowed, `Loop risk at ${path} → ${target}`).toBe(true);
     }
   });
 });
