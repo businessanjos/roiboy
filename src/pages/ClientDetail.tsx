@@ -194,6 +194,7 @@ export default function ClientDetail() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<{ type: 'network' | 'not_found' | 'permission'; message: string } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [reprocessingMessages, setReprocessingMessages] = useState(false);
   const [roiDialogOpen, setRoiDialogOpen] = useState(false);
   
   // Product editing state
