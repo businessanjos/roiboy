@@ -51,7 +51,48 @@ export async function invokeWhatsAppManager(
   }
 
   console.log(`[whatsapp-routing] Using ${functionName} for integration ${integrationId}`);
-  return supabase.functions.invoke(functionName, { body });
+  return invokeWithRetry(functionName, body);
+}
+
+/**
+ * Invoke a Supabase edge function with automatic retry on transient 503 errors
+ * (SUPABASE_EDGE_RUNTIME_ERROR / boot failures). Uses exponential backoff.
+ */
+async function invokeWithRetry(
+  functionName: string,
+  body: Record<string, unknown>,
+  maxAttempts = 3,
+): Promise<{ data: any; error: any }> {
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const result = await supabase.functions.invoke(functionName, { body });
+    const err = result.error;
+    if (!err) return result;
+
+    // Detect transient edge-runtime errors (503 cold-start / boot failure)
+    const msg = String(err?.message || "");
+    const ctx: any = (err as any)?.context;
+    const status = ctx?.status ?? ctx?.response?.status;
+    const isTransient =
+      status === 503 ||
+      msg.includes("503") ||
+      msg.includes("SUPABASE_EDGE_RUNTIME_ERROR") ||
+      msg.includes("temporarily unavailable") ||
+      msg.includes("Failed to fetch");
+
+    if (!isTransient || attempt === maxAttempts) {
+      return result;
+    }
+
+    lastError = err;
+    const delayMs = 300 * Math.pow(2, attempt - 1); // 300ms, 600ms, 1200ms
+    console.warn(
+      `[whatsapp-routing] ${functionName} transient error (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs}ms:`,
+      msg,
+    );
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return { data: null, error: lastError };
 }
 
 /**
