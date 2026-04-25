@@ -56,7 +56,7 @@ export function UserManagementPanel({
   const [newEmail, setNewEmail] = useState(currentEmail);
   const [newPassword, setNewPassword] = useState("");
   const [linkAccountId, setLinkAccountId] = useState<string>("");
-  const [linkRole, setLinkRole] = useState<string>("consultor");
+  const [linkRole, setLinkRole] = useState<string>("member");
 
   const memberships = useQuery({
     queryKey: ["admin-memberships", authUserId],
