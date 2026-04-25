@@ -226,6 +226,15 @@ Deno.serve(async (req: Request) => {
         if (typeof body.is_active !== "boolean") {
           return json(400, { error: "is_active é obrigatório" });
         }
+
+        // Snapshot previous state(s) for audit trail before mutating.
+        let prevQuery = admin
+          .from("users")
+          .select("id, account_id, name, email, role, is_active")
+          .eq("auth_user_id", targetAuthUserId);
+        if (body.user_row_id) prevQuery = prevQuery.eq("id", body.user_row_id) as any;
+        const { data: prevRows } = await prevQuery;
+
         const banDuration = body.is_active ? "none" : "876000h"; // ~100 years
         const { error: authErr } = await admin.auth.admin.updateUserById(targetAuthUserId, {
           ban_duration: banDuration,
@@ -240,6 +249,29 @@ Deno.serve(async (req: Request) => {
         if (body.user_row_id) updateQuery = updateQuery.eq("id", body.user_row_id) as any;
         const { error: dbErr } = await updateQuery;
         if (dbErr) return json(400, { error: dbErr.message });
+
+        // Audit log: one entry per affected membership (status actually changed).
+        for (const row of prevRows || []) {
+          if (row.is_active === body.is_active) continue;
+          await writeAuditLog(admin, {
+            account_id: row.account_id,
+            actor_user_id: actor.user_id,
+            actor_name: actor.name,
+            actor_email: actor.email,
+            action: body.is_active ? "user.activated" : "user.deactivated",
+            entity_id: row.id,
+            entity_name: row.name || row.email,
+            details: {
+              field: "is_active",
+              from: row.is_active,
+              to: body.is_active,
+              auth_user_id: targetAuthUserId,
+              target_email: row.email,
+              source: "super_admin_panel",
+            },
+            req,
+          });
+        }
 
         return json(200, {
           success: true,
@@ -257,6 +289,14 @@ Deno.serve(async (req: Request) => {
             allowed: ACCESS_PROFILES,
           });
         }
+
+        // Snapshot previous role for audit trail.
+        const { data: prevRow } = await admin
+          .from("users")
+          .select("id, account_id, name, email, role")
+          .eq("id", body.user_row_id)
+          .maybeSingle();
+
         const { error } = await admin
           .from("users")
           .update({ role: body.role })
