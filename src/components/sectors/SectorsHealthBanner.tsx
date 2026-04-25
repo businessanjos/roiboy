@@ -143,8 +143,8 @@ export function SectorsHealthBanner(props: SectorsHealthBannerProps) {
               type="button"
               onClick={() => hardReloadApp()}
               className={cn(
-                "mt-2 inline-flex items-center gap-2 rounded-md bg-amber-600 text-white",
-                "px-3 py-1.5 text-xs font-medium hover:bg-amber-700 transition-colors",
+                "mt-2 inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground",
+                "px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity",
               )}
             >
               <RefreshCw className="h-3.5 w-3.5" aria-hidden />
