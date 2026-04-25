@@ -237,7 +237,10 @@ export default function Sectors() {
       "Não conseguimos confirmar suas permissões em tempo hábil.";
 
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div
+        className="min-h-screen bg-background flex items-center justify-center px-6"
+        data-testid="sectors-timeout-fallback"
+      >
         <div className="max-w-md w-full text-center space-y-5">
           <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
             <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden />
@@ -257,6 +260,7 @@ export default function Sectors() {
             <button
               type="button"
               onClick={handleRetry}
+              data-testid="sectors-timeout-retry"
               className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
             >
               <RefreshCw className="h-4 w-4" aria-hidden />
@@ -276,7 +280,7 @@ export default function Sectors() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-testid="sectors-page">
       <div className="container mx-auto px-6 py-12 max-w-5xl">
         {/* Header */}
         <div className="flex flex-col items-center mb-14">
@@ -305,7 +309,7 @@ export default function Sectors() {
         />
 
         {/* All 6 Areas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="sectors-grid">
           {coreSectors.map((sector) => {
             const identity = SECTOR_IDENTITY[sector.id];
             const IconComponent = identity?.overrideIcon || sector.icon;
@@ -314,6 +318,8 @@ export default function Sectors() {
               <div
                 key={sector.id}
                 onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
+                data-testid="sector-card"
+                data-sector-id={sector.id}
                 className={cn(
                   "group relative p-5 rounded-xl border border-l-[3px] bg-card overflow-hidden transition-all duration-300",
                   identity?.accent || "border-l-primary",
@@ -364,6 +370,23 @@ export default function Sectors() {
             );
           })}
         </div>
+
+        {/* Explicit empty state — surfaces when loading is done, no errors,
+            but the user has no sectors assigned. Used by E2E tests as a
+            stable, non-text-based signal. */}
+        {!stillLoading && coreSectors.length === 0 && !(isAdmin || isSuperAdmin) && (
+          <div
+            data-testid="sectors-empty-state"
+            className="mt-8 rounded-lg border border-border bg-card px-6 py-8 text-center"
+          >
+            <p className="text-sm font-medium text-foreground">
+              Nenhum setor liberado para o seu usuário.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Peça a um administrador para revisar suas permissões em Admin → Permissões.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
