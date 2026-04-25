@@ -54,7 +54,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { hasExactRole, roleNameMatches } from "@/lib/roles";
+import { roleNameMatches } from "@/lib/roles";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,42 +104,10 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
   // Filter nav items based on permissions, super admin status, and current sector
   const filteredNavItems = useMemo(() => {
-    // Team role name for special access checks
     const teamRoleName = currentUser?.team_role_name;
-    const userRole = currentUser?.role;
     
-    // Check if user has full access to the current sector based on their role
-    const hasFullSectorAccess = () => {
-      if (!currentSector) return false;
-      
-      // Financeiro, Gestor, Admin roles have full access to the financial sector
-      if (currentSector.id === "financeiro") {
-        return roleNameMatches(teamRoleName, ["Financeiro"]) || 
-               hasExactRole(teamRoleName, "Gestor") || 
-               hasExactRole(teamRoleName, "Admin");
-      }
-      
-      // CX, CS, Consultor roles have full access to the operations sector
-      // Also allow mentor system role as bypass for operations
-      if (currentSector.id === "operacoes") {
-        return roleNameMatches(teamRoleName, ["CX", "CS", "Consultor"]) ||
-               hasExactRole(teamRoleName, "Gestor") ||
-               hasExactRole(teamRoleName, "Admin") ||
-               userRole === "mentor";
-      }
-      
-      // Vendedor, Closer, SDR roles have full access to the sales sector
-      if (currentSector.id === "vendas") {
-        return roleNameMatches(teamRoleName, ["Vendedor", "Closer", "SDR"]) ||
-               hasExactRole(teamRoleName, "Gestor") ||
-               hasExactRole(teamRoleName, "Admin");
-      }
-      
-      return false;
-    };
-    
-    // During loading OR for admins, show all items to avoid empty sidebar
-    const showAllItems = permissionsLoading || isAdmin || isSuperAdmin || currentUser?.role === "admin" || hasFullSectorAccess();
+    // Only explicit permissions/admin flags may show items; role labels cannot bypass admin-panel settings.
+    const showAllItems = permissionsLoading || isAdmin || isSuperAdmin || currentUser?.role === "admin" || currentUser?.is_also_admin;
     
     // No sector selected - return empty (sidebar won't render)
     if (!currentSector) return [];
