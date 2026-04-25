@@ -37,6 +37,12 @@ const ACCESS_PROFILES = [
   { value: "viewer", label: "Viewer", hint: "Apenas visualização" },
 ];
 
+const ACCESS_PROFILE_VALUES = new Set(ACCESS_PROFILES.map((p) => p.value));
+
+function accessProfileLabel(value: string): string {
+  return ACCESS_PROFILES.find((p) => p.value === value)?.label ?? value;
+}
+
 export function UserManagementPanel({
   authUserId,
   currentEmail,
@@ -212,42 +218,78 @@ export function UserManagementPanel({
             <Building2 className="h-3.5 w-3.5" /> Contas vinculadas
           </Label>
           <div className="space-y-1.5">
-            {(memberships.data || []).map((m) => (
-              <div key={m.user_id} className="flex items-center justify-between gap-2 px-3 py-2 border rounded-md">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm truncate">{m.account_name || m.account_id}</span>
-                  <Badge variant="secondary" className="text-[10px]">{m.role}</Badge>
-                  {!m.is_active && <Badge variant="outline" className="text-[10px]">inativo</Badge>}
+            {(memberships.data || []).map((m) => {
+              const isOfficial = ACCESS_PROFILE_VALUES.has(m.role);
+              return (
+                <div key={m.user_id} className="flex items-center justify-between gap-2 px-3 py-2 border rounded-md">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm truncate">{m.account_name || m.account_id}</span>
+                    <Badge
+                      variant={isOfficial ? "secondary" : "destructive"}
+                      className="text-[10px]"
+                      title={isOfficial ? "Perfil de acesso" : "Valor legado — atualize para um perfil oficial"}
+                    >
+                      {accessProfileLabel(m.role)}
+                    </Badge>
+                    {!m.is_active && <Badge variant="outline" className="text-[10px]">inativo</Badge>}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => unlinkMut.mutate(m.user_id)}
+                    disabled={unlinkMut.isPending}
+                    title="Remover vínculo"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => unlinkMut.mutate(m.user_id)}
-                  disabled={unlinkMut.isPending}
-                  title="Remover vínculo"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          <div className="flex gap-2 pt-1">
-            <Select value={linkAccountId} onValueChange={setLinkAccountId}>
-              <SelectTrigger className="flex-1"><SelectValue placeholder="Vincular a outra conta…" /></SelectTrigger>
-              <SelectContent>
-                {availableAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={linkRole} onValueChange={setLinkRole}>
-              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {ACCESS_PROFILES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Button onClick={() => linkMut.mutate()} disabled={!linkAccountId || linkMut.isPending}>
-              {linkMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            </Button>
+
+          <div className="pt-2 space-y-2 border-t">
+            <Label className="text-xs">Vincular a outra conta</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Cargos (Mentor, Consultor, Head, etc.) são definidos em Configurações › Equipe. Aqui escolha apenas o
+              <strong> Perfil de Acesso</strong> ao sistema.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-[1fr_220px_auto]">
+              <Select value={linkAccountId} onValueChange={setLinkAccountId}>
+                <SelectTrigger><SelectValue placeholder="Selecione a conta…" /></SelectTrigger>
+                <SelectContent>
+                  {availableAccounts.length === 0 ? (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                      Nenhuma conta disponível
+                    </div>
+                  ) : (
+                    availableAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)
+                  )}
+                </SelectContent>
+              </Select>
+              <Select value={linkRole} onValueChange={setLinkRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Perfil de acesso" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ACCESS_PROFILES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      <div className="flex flex-col">
+                        <span className="text-sm">{r.label}</span>
+                        <span className="text-[11px] text-muted-foreground">{r.hint}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={() => linkMut.mutate()}
+                disabled={!linkAccountId || linkMut.isPending}
+                title="Vincular conta"
+              >
+                {linkMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
