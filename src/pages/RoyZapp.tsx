@@ -81,6 +81,7 @@ export default function RoyZapp() {
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { hasVendasAccess, hasSectorAccess } = useSectorAccess();
   const navigate = useNavigate();
+  const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Get sector and integrationId from URL if provided
