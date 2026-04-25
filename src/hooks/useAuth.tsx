@@ -41,10 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // If yes, sign out immediately so they pick up the new role/permissions.
     const enforceForceRelogin = async (currentSession: Session) => {
       try {
-        // Token issued-at (iat) is in seconds since epoch.
-        const issuedAtMs = (currentSession as any).access_token
-          ? // Decode iat from JWT payload without external libs
-            (() => {
+        // Use the real login timestamp, not the JWT iat.
+        // A background token refresh can create a new iat after force_relogin_at,
+        // which would incorrectly let an old browser session keep access.
+        const sessionStartedAtMs = currentSession.user.last_sign_in_at
+          ? new Date(currentSession.user.last_sign_in_at).getTime()
+          : (() => {
               try {
                 const payload = JSON.parse(
                   atob(currentSession.access_token.split(".")[1])
@@ -53,11 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               } catch {
                 return Date.now();
               }
-            })()
-          : Date.now();
+            })();
 
         const { data, error } = await supabase.rpc("check_force_relogin", {
-          p_session_issued_at: new Date(issuedAtMs).toISOString(),
+          p_session_issued_at: new Date(sessionStartedAtMs).toISOString(),
         });
         if (error) {
           console.warn("[useAuth] force_relogin check failed:", error.message);
