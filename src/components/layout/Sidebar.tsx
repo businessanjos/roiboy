@@ -38,6 +38,7 @@ import { useTheme } from "next-themes";
 import { SidebarPlanInfo } from "./SidebarPlanInfo";
 import { useSector } from "@/contexts/SectorContext";
 import { sectors as allSectors, SectorId } from "@/config/sectors";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
 import {
   Sheet,
   SheetContent,
@@ -98,6 +99,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const navigate = useNavigate();
   // Use centralized super admin hook (eliminates duplicate RPC call)
   const { isSuperAdmin } = useSuperAdmin();
+  const { hasSectorAccess } = useSectorAccess();
 
   // Hook for ROY zAPP instance selection
   const { openZappForSector, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useSidebarZappNavigation();
@@ -155,8 +157,9 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     return SALES_REP_ALLOWED_SECTORS
       .filter(id => id !== currentSector.id)
       .map(id => allSectors.find(s => s.id === id))
+      .filter((sector) => sector && hasSectorAccess(sector.id))
       .filter(Boolean) as typeof allSectors;
-  }, [isSalesRep, currentSector]);
+  }, [isSalesRep, currentSector, hasSectorAccess]);
 
   const showRegularUI = true;
 
