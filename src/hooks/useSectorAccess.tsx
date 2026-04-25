@@ -16,14 +16,14 @@ interface SectorSettings {
 }
 
 export function useSectorAccess() {
-  const { currentUser } = useCurrentUser();
-  
+  const { currentUser, loading: userLoading } = useCurrentUser();
+
   const userId = currentUser?.id;
   const accountId = currentUser?.account_id;
   const userRole = currentUser?.role;
   const isAlsoAdmin = currentUser?.is_also_admin === true;
 
-  const { data: sectorAccess = [], isLoading, error: sectorAccessError } = useQuery({
+  const { data: sectorAccess = [], isLoading: sectorAccessQueryLoading, error: sectorAccessError } = useQuery({
     queryKey: ["user-sector-access", userId],
     queryFn: async () => {
       if (!userId) return [];
@@ -40,6 +40,7 @@ export function useSectorAccess() {
     enabled: !!userId,
     staleTime: 300000, // OPTIMIZED: 5 minutes (up from 60 seconds) - sector access rarely changes
     refetchOnWindowFocus: false,
+    retry: 2,
   });
 
   const { data: sectorSettings = [], error: sectorSettingsError } = useQuery({
@@ -58,7 +59,15 @@ export function useSectorAccess() {
     enabled: !!accountId,
     staleTime: 300000, // OPTIMIZED: 5 minutes
     refetchOnWindowFocus: false,
+    retry: 2,
   });
+
+  // CRITICAL: only report "loading" while we are actually fetching data.
+  // If the user resolution finished (success or failure) without a userId,
+  // we must NOT keep the page stuck on a spinner forever — that was the
+  // root cause of the production lock-up on /setores.
+  const isLoading = userLoading || (!!userId && sectorAccessQueryLoading);
+
 
   // Use centralized super admin hook (eliminates duplicate RPC calls)
   const { isSuperAdmin } = useSuperAdmin();
