@@ -166,8 +166,12 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
 
   const totalChanges = pending.size + pendingSuperAdmin.size;
 
-  const handleSave = async () => {
-    if (!accountId || totalChanges === 0) return;
+  const handleSave = async (options?: { advanceToNext?: boolean }): Promise<boolean> => {
+    if (!accountId || totalChanges === 0) {
+      // Nothing to save — still allow advance if requested
+      if (options?.advanceToNext) advanceToNextUser();
+      return true;
+    }
     setSaving(true);
     let errors = 0;
 
@@ -224,18 +228,34 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
 
       if (errors > 0) {
         toast.error(`${errors} alteração(ões) falharam. Verifique o console.`);
-      } else {
-        toast.success("Permissões salvas com sucesso!");
+        return false;
       }
+
+      toast.success(
+        options?.advanceToNext ? "Salvo! Indo para o próximo usuário…" : "Permissões salvas com sucesso!"
+      );
 
       setPending(new Map());
       setPendingSuperAdmin(new Map());
       await Promise.all([refetchAccess(), refetchSuperAdmins()]);
+
+      if (options?.advanceToNext) advanceToNextUser();
+      return true;
     } catch (e) {
       console.error(e);
       toast.error("Erro ao salvar permissões");
+      return false;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const advanceToNextUser = () => {
+    const idx = users.findIndex((u) => u.id === selectedUserId);
+    if (idx >= 0 && idx < users.length - 1) {
+      setSelectedUserId(users[idx + 1].id);
+    } else {
+      toast.info("Você já está no último usuário.");
     }
   };
 
