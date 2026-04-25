@@ -463,6 +463,32 @@ export default function SharedInsights() {
     );
   }
 
+  if (status === "load_error") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="pt-8 pb-8 space-y-4">
+            <XCircle className="h-12 w-12 text-destructive mx-auto" />
+            <h2 className="text-xl font-semibold">Não foi possível carregar o painel</h2>
+            <p className="text-muted-foreground text-sm">
+              {errorMessage || "Tente novamente em instantes."}
+            </p>
+            <Button
+              onClick={() => {
+                setErrorMessage("");
+                checkAccess(email);
+              }}
+              className="mx-auto"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Approved — show dashboard with real visuals
   if (status === "approved" && dashboardData) {
     const { visuals, visualsData, filterOptions } = dashboardData;
