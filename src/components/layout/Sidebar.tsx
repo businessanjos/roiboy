@@ -133,8 +133,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     if (showAllItems) return sectorItems;
     
     return sectorItems.filter((item) => {
-      if (isSalesRep && item.to === "/sales-team") return false;
-      if (isSalesRep && item.to === "/sales-team/spiffs") return false;
+      if (isSalesRepUser && item.to === "/sales-team") return false;
+      if (isSalesRepUser && item.to === "/sales-team/spiffs") return false;
       if (!item.permission) return true;
       if (permissionsLoading) return false;
       return hasPermission(item.permission);
