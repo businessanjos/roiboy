@@ -109,7 +109,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     const teamRoleName = currentUser?.team_role_name;
     
     // Only explicit permissions/admin flags may show items; role labels cannot bypass admin-panel settings.
-    const showAllItems = permissionsLoading || isAdmin || isSuperAdmin || currentUser?.role === "admin" || currentUser?.is_also_admin;
+    const showAllItems = isAdmin || isSuperAdmin || currentUser?.role === "admin" || currentUser?.is_also_admin;
     
     // No sector selected - return empty (sidebar won't render)
     if (!currentSector) return [];
@@ -133,6 +133,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     
     return sectorItems.filter((item) => {
       if (!item.permission) return true;
+      if (permissionsLoading) return false;
       return hasPermission(item.permission);
     });
   }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.is_also_admin, currentUser?.team_role_name, currentUser?.name]);
