@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { SectorId } from "@/config/sectors";
-import { hasExactRole } from "@/lib/roles";
 
 export interface UserSectorAccessData {
   sector_id: string;
@@ -56,11 +55,9 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
   // Check if user can manage (create/edit/delete) resources in a sector
   // Admin, manager and member roles can manage; viewer cannot; null sector means global (only admin can manage)
   const canManageSector = useCallback((sectorId: SectorId | string | null): boolean => {
-    // Super admin, account admin, Team Role "Admin", or "Também é Admin" can manage everything
+    // Only explicit admin flags bypass per-user sector settings from the admin panel.
     if (
       currentUser?.role === "admin" || 
-      currentUser?.team_role_names?.some((name) => hasExactRole(name, "Admin")) || 
-      hasExactRole(currentUser?.team_role_name, "Admin") || 
       currentUser?.is_also_admin === true
     ) return true;
 
@@ -82,7 +79,6 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
   const hasAccessToSector = useCallback((sectorId: SectorId | string | null): boolean => {
     if (
       currentUser?.role === "admin" || 
-      hasExactRole(currentUser?.team_role_name, "Admin") || 
       currentUser?.is_also_admin === true
     ) return true;
     if (!sectorId) return true; // Global resources are viewable by all
@@ -96,7 +92,6 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
   const getRoleInSector = useCallback((sectorId: SectorId | string | null): string | null => {
     if (
       currentUser?.role === "admin" || 
-      hasExactRole(currentUser?.team_role_name, "Admin") || 
       currentUser?.is_also_admin === true
     ) return "admin";
     if (!sectorId) return null;
