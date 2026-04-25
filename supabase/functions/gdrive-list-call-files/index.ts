@@ -73,7 +73,7 @@ async function getAuthenticatedContext(req: Request) {
 
   const { data: connection, error: connectionError } = await admin
     .from("google_drive_connections")
-    .select("id, access_token, refresh_token, token_expires_at, google_email, is_active")
+    .select("id, access_token, refresh_token, token_expires_at, google_email, is_active, scope")
     .eq("account_id", profile.account_id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -81,6 +81,18 @@ async function getAuthenticatedContext(req: Request) {
   if (connectionError) throw connectionError;
   if (!connection?.is_active) {
     throw new Error("Google Drive não conectado");
+  }
+
+  // Block early if the saved connection doesn't include a Drive scope.
+  // This happens when the user unchecks the Drive permission on Google's consent screen.
+  const grantedScopes = (connection.scope || "").split(/\s+/).filter(Boolean);
+  const hasDriveRead =
+    grantedScopes.includes("https://www.googleapis.com/auth/drive") ||
+    grantedScopes.includes("https://www.googleapis.com/auth/drive.readonly");
+  if (!hasDriveRead) {
+    throw new Error(
+      "Sua conexão com o Google Drive foi feita SEM permissão de leitura dos arquivos. Vá em Configurações → Integrações → Google Drive, clique em Desconectar, depois em Conectar novamente. Na tela do Google, MARQUE a caixa 'Ver e baixar todos os seus arquivos do Google Drive' antes de clicar em Continuar."
+    );
   }
 
   let accessToken = connection.access_token;

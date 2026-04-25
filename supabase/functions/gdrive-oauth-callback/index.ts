@@ -147,9 +147,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Ensure the user actually granted Drive access on the consent screen.
-    // If they unchecked it, Google still returns a token — but every Drive API call will 403.
-    if (!scope.includes("https://www.googleapis.com/auth/drive")) {
+    // Ensure the user actually granted Drive read access on the consent screen.
+    // Google may silently downgrade or omit the scope if the user unchecks the box,
+    // so we explicitly require either `drive` or `drive.readonly`.
+    const grantedScopes = scope.split(/\s+/).filter(Boolean);
+    const hasDriveRead =
+      grantedScopes.includes("https://www.googleapis.com/auth/drive") ||
+      grantedScopes.includes("https://www.googleapis.com/auth/drive.readonly");
+    if (!hasDriveRead) {
+      console.error("missing drive scope. granted:", grantedScopes);
       return htmlRedirect(
         buildRedirectUrl(redirectContext.appBase, redirectContext.returnTo, "error", "missing_drive_scope"),
         "Você precisa marcar a permissão 'Ver e baixar todos os seus arquivos do Google Drive' na tela de consentimento do Google. Tente conectar novamente e aceite todas as permissões solicitadas."
