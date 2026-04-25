@@ -324,124 +324,120 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
               <p className="text-sm">Nenhum usuário encontrado nesta conta.</p>
             </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40">
-                    <tr>
-                      <th className="text-left px-4 py-3 font-medium sticky left-0 bg-muted/40 z-10 min-w-[260px]">
-                        Usuário
-                      </th>
-                      <th className="text-center px-3 py-3 font-medium whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1">
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                          Super Admin
-                        </div>
-                      </th>
-                      {activeSectors.map((s) => (
-                        <th key={s.id} className="text-center px-3 py-3 font-medium whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <s.icon className={cn("h-3.5 w-3.5", s.color)} />
-                            {s.name}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id} className="border-t hover:bg-muted/20">
-                        <td className="px-4 py-3 sticky left-0 bg-background z-10">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={user.avatar_url || undefined} />
-                              <AvatarFallback className="text-xs">
-                                {user.name?.charAt(0).toUpperCase() || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0">
-                              <p className="font-medium truncate flex items-center gap-1.5">
-                                {user.name}
-                                {user.role === "admin" && (
-                                  <Badge variant="secondary" className="text-[10px] h-4">
-                                    Admin
-                                  </Badge>
-                                )}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {user.email}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Super Admin */}
-                        <td className="px-3 py-3 text-center">
-                          {user.auth_user_id ? (
-                            <div
-                              className={cn(
-                                "inline-flex",
-                                pendingSuperAdmin.has(user.auth_user_id) && "ring-2 ring-primary/40 rounded-full"
-                              )}
-                            >
-                              <Switch
-                                checked={isSuperAdminEffective(user.auth_user_id)}
-                                onCheckedChange={(v) => toggleSuperAdmin(user.auth_user_id!, v)}
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+            <div className="space-y-3">
+              {filteredUsers.map((user) => (
+                <div
+                  key={user.id}
+                  className="border rounded-lg p-4 bg-card hover:border-primary/30 transition-colors"
+                >
+                  {/* User header */}
+                  <div className="flex items-center justify-between gap-4 flex-wrap mb-4 pb-3 border-b">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={user.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs">
+                          {user.name?.charAt(0).toUpperCase() || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="font-medium flex items-center gap-1.5">
+                          {user.name}
+                          {user.role === "admin" && (
+                            <Badge variant="secondary" className="text-[10px] h-4">
+                              Admin
+                            </Badge>
                           )}
-                        </td>
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
 
-                        {/* Sectors */}
-                        {activeSectors.map((sector) => {
-                          const eff = getEffective(user.id, sector.id);
-                          return (
-                            <td key={sector.id} className="px-3 py-3 text-center">
-                              <div
-                                className={cn(
-                                  "flex flex-col items-center gap-1.5",
-                                  eff.hasPending && "ring-2 ring-primary/40 rounded-md p-1"
-                                )}
-                              >
-                                <Switch
-                                  checked={eff.isActive}
-                                  onCheckedChange={(v) =>
-                                    setEffective(user.id, sector.id, {
-                                      is_active: v,
-                                      role_in_sector: v ? eff.role || "member" : eff.role,
-                                    })
-                                  }
-                                />
-                                {eff.isActive && (
-                                  <Select
-                                    value={eff.role}
-                                    onValueChange={(v) =>
-                                      setEffective(user.id, sector.id, { role_in_sector: v })
-                                    }
-                                  >
-                                    <SelectTrigger className="h-7 px-2 text-xs w-[92px]">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {SECTOR_ROLES.map((r) => (
-                                        <SelectItem key={r.value} value={r.value} className="text-xs">
-                                          {r.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                )}
+                    {/* Super Admin toggle */}
+                    {user.auth_user_id && (
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/30",
+                          pendingSuperAdmin.has(user.auth_user_id) && "ring-2 ring-primary/40"
+                        )}
+                      >
+                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                        <Label className="text-xs font-medium cursor-pointer">
+                          Super Admin
+                        </Label>
+                        <Switch
+                          checked={isSuperAdminEffective(user.auth_user_id)}
+                          onCheckedChange={(v) => toggleSuperAdmin(user.auth_user_id!, v)}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sectors grid - 5 per row on large screens */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+                    {activeSectors.map((sector) => {
+                      const eff = getEffective(user.id, sector.id);
+                      const Icon = sector.icon;
+                      return (
+                        <div
+                          key={sector.id}
+                          className={cn(
+                            "rounded-lg border p-3 transition-all",
+                            eff.isActive
+                              ? "bg-card border-primary/30"
+                              : "bg-muted/20 border-border",
+                            eff.hasPending && "ring-2 ring-primary/40"
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <div className={cn("p-1 rounded", sector.bgColor)}>
+                                <Icon className={cn("h-3.5 w-3.5", sector.color)} />
                               </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              <span className="text-xs font-medium truncate">
+                                {sector.name}
+                              </span>
+                            </div>
+                            <Switch
+                              checked={eff.isActive}
+                              onCheckedChange={(v) =>
+                                setEffective(user.id, sector.id, {
+                                  is_active: v,
+                                  role_in_sector: v ? eff.role || "member" : eff.role,
+                                })
+                              }
+                            />
+                          </div>
+                          {eff.isActive ? (
+                            <Select
+                              value={eff.role}
+                              onValueChange={(v) =>
+                                setEffective(user.id, sector.id, { role_in_sector: v })
+                              }
+                            >
+                              <SelectTrigger className="h-7 px-2 text-xs w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SECTOR_ROLES.map((r) => (
+                                  <SelectItem key={r.value} value={r.value} className="text-xs">
+                                    {r.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground text-center py-1">
+                              Sem acesso
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
