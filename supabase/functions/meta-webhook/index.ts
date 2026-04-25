@@ -312,12 +312,12 @@ Deno.serve(async (req) => {
 
               // Create assignment
               if (conversation && departmentId) {
-                await supabase.from("zapp_conversation_assignments").insert({
+                await supabase.from("zapp_conversation_assignments").upsert({
                   account_id: accountId,
                   zapp_conversation_id: conversation.id,
                   department_id: departmentId,
                   status: "open",
-                }).onConflict("zapp_conversation_id").merge();
+                }, { onConflict: "zapp_conversation_id" });
               }
             }
 
