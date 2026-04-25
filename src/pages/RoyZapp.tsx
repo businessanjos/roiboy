@@ -46,7 +46,9 @@ import {
   Loader2,
   X,
   Building2,
+  RefreshCw,
 } from "lucide-react";
+import { useReloadPermissions } from "@/hooks/useReloadPermissions";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
