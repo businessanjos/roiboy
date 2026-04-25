@@ -237,7 +237,10 @@ export default function Sectors() {
       "Não conseguimos confirmar suas permissões em tempo hábil.";
 
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div
+        className="min-h-screen bg-background flex items-center justify-center px-6"
+        data-testid="sectors-timeout-fallback"
+      >
         <div className="max-w-md w-full text-center space-y-5">
           <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
             <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden />
@@ -257,6 +260,7 @@ export default function Sectors() {
             <button
               type="button"
               onClick={handleRetry}
+              data-testid="sectors-timeout-retry"
               className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
             >
               <RefreshCw className="h-4 w-4" aria-hidden />
