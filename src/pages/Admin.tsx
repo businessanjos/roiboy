@@ -589,10 +589,11 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // First delete all related data in order
-      await supabase.from('users').delete().eq('account_id', id);
-      await supabase.from('account_settings').delete().eq('account_id', id);
-      const { error } = await supabase.from('accounts').delete().eq('id', id);
+      // Cascade delete: removes ALL related data (contracts, clients, financial, etc.)
+      // in a single transaction via SECURITY DEFINER function.
+      const { error } = await (supabase as any).rpc('delete_account_cascade', {
+        p_account_id: id,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
