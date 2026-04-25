@@ -326,28 +326,26 @@ async function fetchDashboardDataWithVisuals(supabase: any, dashboardId: string,
   const visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }> = {};
 
   if (visuals && visuals.length > 0) {
-    const batchSize = 5;
-    for (let i = 0; i < visuals.length; i += batchSize) {
-      const batch = visuals.slice(i, i + batchSize);
-      const results = await Promise.all(
-        batch.map(async (visual: any) => {
-          try {
-            const isDataTable = visual.chart_type === 'data_table';
-            const data = await fetchVisualData(supabase, accountId, visual, filters);
-            let drilldownData: DrilldownRecord[] | undefined;
-            if (isDataTable) {
-              drilldownData = await fetchDrilldownRecords(supabase, accountId, visual.config as VisualConfig, filters);
-            }
-            return { id: visual.id, data, drilldownData };
-          } catch (err) {
-            console.error(`Error fetching data for visual ${visual.id}:`, err);
-            return { id: visual.id, data: [], drilldownData: undefined };
+    // Roda todos os visuais em paralelo (em vez de batches de 5 sequenciais)
+    // para reduzir o tempo total de resposta em dashboards pesados.
+    const results = await Promise.all(
+      visuals.map(async (visual: any) => {
+        try {
+          const isDataTable = visual.chart_type === 'data_table';
+          const data = await fetchVisualData(supabase, accountId, visual, filters);
+          let drilldownData: DrilldownRecord[] | undefined;
+          if (isDataTable) {
+            drilldownData = await fetchDrilldownRecords(supabase, accountId, visual.config as VisualConfig, filters);
           }
-        })
-      );
-      for (const result of results) {
-        visualsData[result.id] = { data: result.data, drilldownData: result.drilldownData };
-      }
+          return { id: visual.id, data, drilldownData };
+        } catch (err) {
+          console.error(`Error fetching data for visual ${visual.id}:`, err);
+          return { id: visual.id, data: [], drilldownData: undefined };
+        }
+      })
+    );
+    for (const result of results) {
+      visualsData[result.id] = { data: result.data, drilldownData: result.drilldownData };
     }
   }
 
