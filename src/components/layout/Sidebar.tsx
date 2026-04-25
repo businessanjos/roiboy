@@ -128,10 +128,12 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       sectorItems = sectorItems.filter(item => item.to !== "/sales-team/spiffs");
     }
 
-    // Admins, role-based access, or during loading - show all sector items
+    // Admins can see all sector items. Everyone else must pass explicit permissions.
     if (showAllItems) return sectorItems;
     
     return sectorItems.filter((item) => {
+      if (isSalesRep && item.to === "/sales-team") return false;
+      if (isSalesRep && item.to === "/sales-team/spiffs") return false;
       if (!item.permission) return true;
       if (permissionsLoading) return false;
       return hasPermission(item.permission);
