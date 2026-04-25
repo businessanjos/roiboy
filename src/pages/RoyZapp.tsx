@@ -46,7 +46,9 @@ import {
   Loader2,
   X,
   Building2,
+  RefreshCw,
 } from "lucide-react";
+import { useReloadPermissions } from "@/hooks/useReloadPermissions";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -79,6 +81,7 @@ export default function RoyZapp() {
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { hasVendasAccess, hasSectorAccess } = useSectorAccess();
   const navigate = useNavigate();
+  const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Get sector and integrationId from URL if provided
@@ -983,16 +986,26 @@ export default function RoyZapp() {
           </div>
           <h2 className="text-zapp-text text-xl font-semibold">Acesso Restrito</h2>
           <p className="text-zapp-text-muted">
-            Você não tem permissão para acessar o ROY zAPP. Entre em contato com um administrador para solicitar acesso.
+            Você não tem permissão para acessar o ROY zAPP. Se um administrador acabou de liberar seu acesso, clique em <strong>Recarregar permissões</strong> antes de tentar novamente.
           </p>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/dashboard")}
-            className="border-zapp-border text-zapp-text hover:bg-zapp-hover"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar ao Dashboard
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button
+              variant="default"
+              onClick={reloadPermissions}
+              disabled={reloadingPermissions}
+            >
+              <RefreshCw className={cn("h-4 w-4 mr-2", reloadingPermissions && "animate-spin")} />
+              {reloadingPermissions ? "Recarregando…" : "Recarregar permissões"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/dashboard")}
+              className="border-zapp-border text-zapp-text hover:bg-zapp-hover"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar ao Dashboard
+            </Button>
+          </div>
         </div>
       </div>
     );

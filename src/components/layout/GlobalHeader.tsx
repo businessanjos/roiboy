@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSector } from "@/contexts/SectorContext";
-import { Bell, Moon, Sun, LogOut, Settings, Shield } from "lucide-react";
+import { Bell, Moon, Sun, LogOut, Settings, Shield, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,6 +27,7 @@ import { RoyLogo } from "@/components/ui/roy-logo";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useReloadPermissions } from "@/hooks/useReloadPermissions";
 
 export function GlobalHeader() {
   const { currentUser } = useCurrentUser();
@@ -38,6 +39,7 @@ export function GlobalHeader() {
   const { clearSector } = useSector();
   const { isAdmin } = usePermissions();
   const { isSuperAdmin } = useSuperAdmin();
+  const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
 
   const showAdminButton = isAdmin || isSuperAdmin;
 
@@ -172,6 +174,16 @@ export function GlobalHeader() {
             <DropdownMenuItem onClick={() => navigate("/settings")}>
               <Settings className="mr-2 h-4 w-4" />
               Configurações
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.preventDefault();
+                reloadPermissions();
+              }}
+              disabled={reloadingPermissions}
+            >
+              <RefreshCw className={cn("mr-2 h-4 w-4", reloadingPermissions && "animate-spin")} />
+              {reloadingPermissions ? "Recarregando…" : "Recarregar permissões"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
