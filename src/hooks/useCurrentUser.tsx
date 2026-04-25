@@ -46,7 +46,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       // Fetch user profile
       const { data, error } = await supabase
         .from("users")
-        .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin, zapp_signature, zapp_signature_enabled, team_role_id, team_role:team_roles(name)")
+        .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin, is_active, zapp_signature, zapp_signature_enabled, team_role_id, team_role:team_roles(name)")
         .eq("auth_user_id", authUser.id)
         .maybeSingle();
 
