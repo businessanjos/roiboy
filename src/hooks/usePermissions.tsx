@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { sectors } from "@/config/sectors";
 
 // All available permissions in the system
 export const PERMISSIONS = {
@@ -69,31 +70,52 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         currentUser.team_role_id,
       ].filter(Boolean))) as string[];
 
-      if (roleIds.length === 0) {
-        setPermissions([]);
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
+      // We don't early-return when roleIds is empty: the user may still have
+      // sector access granted via the admin panel without a team role.
 
       // Fetch permissions for all assigned roles
-      const { data: permsData, error: permsError } = await supabase
-        .from("role_permissions")
-        .select("permission")
-        .in("role_id", roleIds);
+      const rolePermsPromise = roleIds.length > 0
+        ? supabase
+            .from("role_permissions")
+            .select("permission")
+            .in("role_id", roleIds)
+        : Promise.resolve({ data: [] as { permission: string }[], error: null });
 
-      if (permsError) {
-        console.error("Error fetching permissions:", permsError);
+      // Also fetch sector access from admin panel — each active sector grants
+      // the permissions referenced by its nav items, so the admin panel
+      // toggles directly translate into runtime permissions.
+      const sectorAccessPromise = supabase
+        .from("user_sector_access")
+        .select("sector_id, role_in_sector, is_active")
+        .eq("user_id", currentUser.id)
+        .eq("is_active", true);
+
+      const [{ data: permsData, error: permsError }, { data: sectorAccess, error: sectorErr }] =
+        await Promise.all([rolePermsPromise, sectorAccessPromise]);
+
+      if (permsError) console.error("Error fetching role permissions:", permsError);
+      if (sectorErr) console.error("Error fetching sector access:", sectorErr);
+
+      const fromRoles = (permsData || []).map((p) => p.permission);
+
+      // Derive permissions from active sector access using the sectors config
+      const fromSectors: string[] = [];
+      for (const access of sectorAccess || []) {
+        const sector = sectors.find((s) => s.id === access.sector_id);
+        if (!sector) continue;
+        for (const item of sector.navItems) {
+          if (!item.permission) continue;
+          const perms = Array.isArray(item.permission) ? item.permission : [item.permission];
+          fromSectors.push(...perms);
+        }
       }
-      
-      const fetchedPerms = Array.from(new Set(permsData?.map((p) => p.permission) || []));
-      
-      if (fetchedPerms.length === 0) {
-        console.warn("role_permissions returned empty for role_ids:", roleIds);
-        setPermissions([]);
-      } else {
-        setPermissions(fetchedPerms);
+
+      const merged = Array.from(new Set([...fromRoles, ...fromSectors]));
+
+      if (merged.length === 0) {
+        console.warn("No permissions resolved for user", currentUser.id, { roleIds, sectorAccess });
       }
+      setPermissions(merged);
 
       setIsAdmin(false);
     } catch (error) {
