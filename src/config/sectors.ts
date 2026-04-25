@@ -55,7 +55,7 @@ import {
   
   type LucideIcon,
 } from "lucide-react";
-import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
+import { Permission, PERMISSIONS } from "@/lib/access/permissions";
 
 export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "rh" | "configuracoes";
 
