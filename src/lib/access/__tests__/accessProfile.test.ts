@@ -75,9 +75,7 @@ describe("Perfil de Acesso: Viewer", () => {
 
     const decision = decideRouteAccess("/dashboard", ctx);
     expect(decision.allowed).toBe(false);
-    if (!decision.allowed) {
-      expect(decision.redirectTo).toBe("/setores");
-    }
+    expect(decision.allowed === false && decision.redirectTo).toBe("/setores");
   });
 
   it("viewer COM sector Operações ativo + permission CLIENTS_VIEW abre /clients", () => {
@@ -135,9 +133,7 @@ describe("Perfil de Acesso: Membro", () => {
 
     const decision = decideRouteAccess("/financial/cash-flow", ctx);
     expect(decision.allowed).toBe(false);
-    if (!decision.allowed) {
-      expect(decision.redirectTo).toBe("/setores");
-    }
+    expect(decision.allowed === false && decision.redirectTo).toBe("/setores");
   });
 
   it("membro com sector Vendas NÃO recebe gestão (/sales-team)", () => {
