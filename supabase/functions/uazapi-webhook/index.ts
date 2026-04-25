@@ -803,7 +803,7 @@ Deno.serve(async (req) => {
             else if (mimePrefix === "video") mediaType = "video";
             else mediaType = "document";
           } else {
-            const rawType = String(msg.type || msg.messageType || msgAny.messageType || "").toLowerCase();
+            const rawType = String((msg as any).type || (msg as any).messageType || msgAny.messageType || "").toLowerCase();
             if (rawType.includes("ptt") || rawType.includes("audio")) {
               mediaType = "audio";
             } else if (rawType.includes("image")) {
@@ -1856,7 +1856,7 @@ Deno.serve(async (req) => {
         // This saves 6-8 queries from the hot path per inbound message
         // ============================================
         
-        const lastMsgAt = existingZappConvo?.last_message_at ? new Date(existingZappConvo.last_message_at as string).getTime() : 0;
+        const lastMsgAt = (existingZappConvo as any)?.last_message_at ? new Date((existingZappConvo as any).last_message_at as string).getTime() : 0;
         const isBurstMessage = lastMsgAt > 0 && (Date.now() - lastMsgAt) < 5000;
         
         if (direction === "inbound" && phone && !isBurstMessage) {
