@@ -32,12 +32,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
-import { usePermissions, PERMISSIONS, Permission } from "@/hooks/usePermissions";
+import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useTheme } from "next-themes";
 import { SidebarPlanInfo } from "./SidebarPlanInfo";
 import { useSector } from "@/contexts/SectorContext";
 import { sectors as allSectors, SectorId } from "@/config/sectors";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
 import {
   Sheet,
   SheetContent,
@@ -54,7 +55,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { hasExactRole, roleNameMatches } from "@/lib/roles";
+import { roleNameMatches } from "@/lib/roles";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -98,48 +99,17 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const navigate = useNavigate();
   // Use centralized super admin hook (eliminates duplicate RPC call)
   const { isSuperAdmin } = useSuperAdmin();
+  const { hasSectorAccess } = useSectorAccess();
 
   // Hook for ROY zAPP instance selection
   const { openZappForSector, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useSidebarZappNavigation();
 
   // Filter nav items based on permissions, super admin status, and current sector
   const filteredNavItems = useMemo(() => {
-    // Team role name for special access checks
     const teamRoleName = currentUser?.team_role_name;
-    const userRole = currentUser?.role;
     
-    // Check if user has full access to the current sector based on their role
-    const hasFullSectorAccess = () => {
-      if (!currentSector) return false;
-      
-      // Financeiro, Gestor, Admin roles have full access to the financial sector
-      if (currentSector.id === "financeiro") {
-        return roleNameMatches(teamRoleName, ["Financeiro"]) || 
-               hasExactRole(teamRoleName, "Gestor") || 
-               hasExactRole(teamRoleName, "Admin");
-      }
-      
-      // CX, CS, Consultor roles have full access to the operations sector
-      // Also allow mentor system role as bypass for operations
-      if (currentSector.id === "operacoes") {
-        return roleNameMatches(teamRoleName, ["CX", "CS", "Consultor"]) ||
-               hasExactRole(teamRoleName, "Gestor") ||
-               hasExactRole(teamRoleName, "Admin") ||
-               userRole === "mentor";
-      }
-      
-      // Vendedor, Closer, SDR roles have full access to the sales sector
-      if (currentSector.id === "vendas") {
-        return roleNameMatches(teamRoleName, ["Vendedor", "Closer", "SDR"]) ||
-               hasExactRole(teamRoleName, "Gestor") ||
-               hasExactRole(teamRoleName, "Admin");
-      }
-      
-      return false;
-    };
-    
-    // During loading OR for admins, show all items to avoid empty sidebar
-    const showAllItems = permissionsLoading || isAdmin || isSuperAdmin || currentUser?.role === "admin" || hasFullSectorAccess();
+    // Only explicit permissions/admin flags may show items; role labels cannot bypass admin-panel settings.
+    const showAllItems = isAdmin || isSuperAdmin || currentUser?.role === "admin" || currentUser?.is_also_admin;
     
     // No sector selected - return empty (sidebar won't render)
     if (!currentSector) return [];
@@ -151,13 +121,6 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     
     let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
     
-    // Hide "Gestão" (/sales-team) from sales reps (SDR, Closer, Vendas, Vendedor)
-    const isSalesRepRole = roleNameMatches(teamRoleName, SALES_REP_ROLES) && 
-      !(currentUser?.role === "admin" || currentUser?.is_also_admin);
-    if (isSalesRepRole) {
-      sectorItems = sectorItems.filter(item => item.to !== "/sales-team");
-    }
-
     // SPIFFs: restrito apenas a Jonathan, Everton e Maikol
     const userName = (currentUser?.name || "").toLowerCase();
     const canSeeSpiffs = userName.includes("jonathan") || userName.includes("everton") || userName.includes("maikol");
@@ -170,9 +133,10 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     
     return sectorItems.filter((item) => {
       if (!item.permission) return true;
+      if (permissionsLoading) return false;
       return hasPermission(item.permission);
     });
-  }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.team_role_name, currentUser?.name]);
+  }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.is_also_admin, currentUser?.team_role_name, currentUser?.name]);
 
   const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "configuracoes"];
 
@@ -187,8 +151,9 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     return SALES_REP_ALLOWED_SECTORS
       .filter(id => id !== currentSector.id)
       .map(id => allSectors.find(s => s.id === id))
+      .filter((sector) => sector && hasSectorAccess(sector.id))
       .filter(Boolean) as typeof allSectors;
-  }, [isSalesRep, currentSector]);
+  }, [isSalesRep, currentSector, hasSectorAccess]);
 
   const showRegularUI = true;
 

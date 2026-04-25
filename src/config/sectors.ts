@@ -266,9 +266,14 @@ export function getSectorById(id: SectorId): Sector | undefined {
 }
 
 export function getSectorByRoute(route: string): Sector | undefined {
-  return sectors.find((sector) =>
+  const matches = sectors.filter((sector) =>
     sector.navItems.some((item) => route.startsWith(item.to))
   );
+  return matches.sort((a, b) => {
+    const aLength = Math.max(...a.navItems.filter((item) => route.startsWith(item.to)).map((item) => item.to.length));
+    const bLength = Math.max(...b.navItems.filter((item) => route.startsWith(item.to)).map((item) => item.to.length));
+    return bLength - aLength;
+  })[0];
 }
 
 // Check if a route belongs to a specific sector

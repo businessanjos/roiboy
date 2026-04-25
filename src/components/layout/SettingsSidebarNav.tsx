@@ -5,12 +5,8 @@ import {
   CreditCard, Video, Key, ArrowLeft,
 } from "lucide-react";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { usePermissions } from "@/hooks/usePermissions";
+import { PERMISSIONS, usePermissions } from "@/hooks/usePermissions";
 import { useMemo } from "react";
-import { roleNameMatches } from "@/lib/roles";
-
-const RESTRICTED_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
 interface NavItem {
   id: string;
@@ -27,14 +23,9 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { hasVendasAccess } = useSectorAccess();
-  const { currentUser } = useCurrentUser();
-  const { isAdmin } = usePermissions();
-
-  const isSalesRep = useMemo(() => {
-    const role = currentUser?.team_role_name;
-    const isAdminUser = currentUser?.role === "admin" || currentUser?.is_also_admin;
-    return roleNameMatches(role, RESTRICTED_ROLES) && !isAdminUser;
-  }, [currentUser?.team_role_name, currentUser?.role, currentUser?.is_also_admin]);
+  const { isAdmin, hasPermission } = usePermissions();
+  const canViewSettings = isAdmin || hasPermission(PERMISSIONS.SETTINGS_VIEW);
+  const canEditSettings = isAdmin || hasPermission(PERMISSIONS.SETTINGS_EDIT);
 
   const activeTab = searchParams.get("tab") || "profile";
 
@@ -47,37 +38,47 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
           { id: "meetings", label: "Reuniões", icon: Video },
         ],
       },
-      {
+    ];
+
+    if (canViewSettings) {
+      groups.push({
         title: "Plano & Cobrança",
         items: [
           { id: "plan", label: "Uso & Assinatura", icon: CreditCard },
         ],
-      },
-    ];
+      });
+    }
 
-    if (!isSalesRep) {
+    if (isAdmin) {
       const adminItems: NavItem[] = [
         { id: "team", label: "Equipe", icon: UserCircle },
         { id: "sectors", label: "Setores", icon: Users },
       ];
-      if (hasVendasAccess) {
+      if (hasVendasAccess && canEditSettings) {
         adminItems.push({ id: "sales", label: "Vendas", icon: Target });
       }
       groups.push({ title: "Gestão", items: adminItems });
     }
 
-    const systemItems: NavItem[] = [
-      { id: "integrations", label: "Integrações", icon: Plug },
-      { id: "security", label: "Segurança", icon: Shield },
-      { id: "members-book", label: "Members Book", icon: Book },
-    ];
+    const systemItems: NavItem[] = [];
+    if (canEditSettings) {
+      systemItems.push({ id: "integrations", label: "Integrações", icon: Plug });
+    }
+    if (canViewSettings) {
+      systemItems.push(
+        { id: "security", label: "Segurança", icon: Shield },
+        { id: "members-book", label: "Members Book", icon: Book },
+      );
+    }
     if (isAdmin) {
       systemItems.push({ id: "api-key", label: "API Key", icon: Key });
     }
-    groups.push({ title: "Sistema", items: systemItems });
+    if (systemItems.length > 0) {
+      groups.push({ title: "Sistema", items: systemItems });
+    }
 
     return groups;
-  }, [isSalesRep, hasVendasAccess, isAdmin]);
+  }, [hasVendasAccess, isAdmin, canViewSettings, canEditSettings]);
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });

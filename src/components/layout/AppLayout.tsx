@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getSectorByRoute, routeBelongsToSector } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
@@ -31,6 +32,7 @@ export function AppLayout() {
   const isInVendas = currentSector?.id === "vendas";
   const { currentUser } = useCurrentUser();
   const { hasSectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
 
   // Check if user is external (viewer role with external dashboard access)
   const { data: externalAccess } = useQuery({
@@ -118,6 +120,11 @@ export function AppLayout() {
     location.pathname === path || location.pathname.startsWith(`${path}/`)
   );
   if (!sectorAccessLoading && routeSector && !skipSectorGuard && !hasSectorAccess(routeSector.id)) {
+    return <Navigate to="/setores" replace />;
+  }
+
+  const routeItem = routeSector?.navItems.find((item) => location.pathname.startsWith(item.to));
+  if (!permissionsLoading && routeSector && !skipSectorGuard && routeItem?.permission && !hasPermission(routeItem.permission)) {
     return <Navigate to="/setores" replace />;
   }
 

@@ -5,14 +5,9 @@ import { useSector } from "@/contexts/SectorContext";
 import { sectors, SectorId } from "@/config/sectors";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { hasExactRole, roleNameMatches } from "@/lib/roles";
-import { RoyLogo } from "@/components/ui/roy-logo";
-import { ArrowRight, BarChart3, Wallet, Target, Palette, MessageCircle, Zap, Bot, Briefcase } from "lucide-react";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase } from "lucide-react";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
-
-// Sectors accessible by sales rep roles
-const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "configuracoes"];
-const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
 // Visual identity for each core sector — accent color + geometric pattern
 const SECTOR_IDENTITY: Record<string, {
@@ -138,6 +133,7 @@ export default function Sectors() {
   const navigate = useNavigate();
   const { currentUser, loading: userLoading } = useCurrentUser();
   const { setCurrentSector } = useSector();
+  const { hasSectorAccess } = useSectorAccess();
   const [accountName, setAccountName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -159,31 +155,16 @@ export default function Sectors() {
     navigate(defaultRoute);
   };
 
-  const isSalesRep = useMemo(() => {
-    const role = currentUser?.team_role_name;
-    return roleNameMatches(role, SALES_REP_ROLES);
-  }, [currentUser?.team_role_name]);
-
-  const isManager = useMemo(() => {
-    const role = currentUser?.role;
-    const teamRole = currentUser?.team_role_name;
-    return role === "admin" || currentUser?.is_also_admin || 
-           hasExactRole(teamRole, "Gestor") || hasExactRole(teamRole, "Admin");
-  }, [currentUser?.role, currentUser?.is_also_admin, currentUser?.team_role_name]);
-
   const RH_ALLOWED_EMAIL = "m.quintana@me.com";
 
   const availableSectors = useMemo(() => {
-    let filtered = sectors;
-    if (isSalesRep && !isManager) {
-      filtered = filtered.filter(s => SALES_REP_ALLOWED_SECTORS.includes(s.id));
-    }
+    let filtered = sectors.filter((s) => hasSectorAccess(s.id));
     // RH is only visible to the allowed email
     if (currentUser?.email !== RH_ALLOWED_EMAIL) {
       filtered = filtered.filter(s => s.id !== "rh");
     }
     return filtered;
-  }, [isSalesRep, isManager, currentUser?.email]);
+  }, [hasSectorAccess, currentUser?.email]);
 
   const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "everia", "rh"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);

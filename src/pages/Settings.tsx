@@ -10,29 +10,21 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { LossReasonsManager } from "@/components/settings/LossReasonsManager";
 import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useMemo } from "react";
+import { PERMISSIONS, usePermissions } from "@/hooks/usePermissions";
 import { ProfileContent } from "@/components/profile/ProfileContent";
-import { roleNameMatches } from "@/lib/roles";
 
 import { MeetingPreferencesCard } from "@/components/settings/MeetingPreferencesCard";
 import { PlanUsageCard } from "@/components/plan";
 
 import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
 
-const RESTRICTED_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
-
 export default function Settings() {
   const [searchParams] = useSearchParams();
   const { hasVendasAccess } = useSectorAccess();
   const { currentUser } = useCurrentUser();
-  const { isAdmin } = usePermissions();
-
-  const isSalesRep = useMemo(() => {
-    const role = currentUser?.team_role_name;
-    const isAdminUser = currentUser?.role === "admin" || currentUser?.is_also_admin;
-    return roleNameMatches(role, RESTRICTED_ROLES) && !isAdminUser;
-  }, [currentUser?.team_role_name, currentUser?.role, currentUser?.is_also_admin]);
+  const { isAdmin, hasPermission } = usePermissions();
+  const canViewSettings = isAdmin || hasPermission(PERMISSIONS.SETTINGS_VIEW);
+  const canEditSettings = isAdmin || hasPermission(PERMISSIONS.SETTINGS_EDIT);
 
   const activeTab = searchParams.get("tab") || "profile";
 
@@ -43,36 +35,36 @@ export default function Settings() {
       case "meetings":
         return <MeetingPreferencesCard />;
       case "plan":
-        return (
+        return canViewSettings ? (
           <div className="space-y-6">
             <PlanUsageCard />
           </div>
-        );
+        ) : null;
       case "team":
-        return !isSalesRep ? <TeamManager /> : null;
+        return isAdmin ? <TeamManager /> : null;
       case "sectors":
-        return !isSalesRep ? (
+        return isAdmin ? (
           <div className="space-y-4">
             <UserSectorAccessManager />
             <SectorPinSettings />
           </div>
         ) : null;
       case "sales":
-        return hasVendasAccess ? (
+        return hasVendasAccess && canEditSettings ? (
           <div className="space-y-6">
             <ActivityTypesManager />
             <LossReasonsManager />
           </div>
         ) : null;
       case "integrations":
-        return <IntegrationsContent />;
+        return canEditSettings ? <IntegrationsContent /> : null;
       case "security":
-        return (
+        return canViewSettings ? (
           <div className="space-y-4">
             <SessionsManager />
             <SecurityAuditViewer />
           </div>
-        );
+        ) : null;
       case "members-book":
         return null;
       case "api-key":
