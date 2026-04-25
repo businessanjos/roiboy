@@ -369,14 +369,34 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                   Descartar
                 </Button>
               )}
-              <Button onClick={handleSave} disabled={saving || totalChanges === 0}>
-                {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Salvar {totalChanges > 0 ? `(${totalChanges})` : ""}
-              </Button>
+              {(() => {
+                const idx = users.findIndex((u) => u.id === selectedUserId);
+                const isLast = idx >= 0 && idx === users.length - 1;
+                return (
+                  <>
+                    <Button onClick={() => handleSave()} disabled={saving || totalChanges === 0} variant="outline">
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Salvar {totalChanges > 0 ? `(${totalChanges})` : ""}
+                    </Button>
+                    <Button
+                      onClick={() => handleSave({ advanceToNext: true })}
+                      disabled={saving || isLast}
+                      title={isLast ? "Você está no último usuário" : "Salvar e ir para o próximo"}
+                    >
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 mr-1" />
+                      )}
+                      Salvar e continuar
+                    </Button>
+                  </>
+                );
+              })()}
             </div>
           </div>
 
