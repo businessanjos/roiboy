@@ -10,6 +10,8 @@ interface CurrentUser {
   account_id: string;
   auth_user_id: string | null;
   is_also_admin?: boolean;
+  /** When false, the super admin has revoked this user's access. */
+  is_active?: boolean;
   zapp_signature: string | null;
   zapp_signature_enabled: boolean;
   team_role_name?: string;
