@@ -32,7 +32,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
-import { usePermissions, PERMISSIONS, Permission } from "@/hooks/usePermissions";
+import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useTheme } from "next-themes";
 import { SidebarPlanInfo } from "./SidebarPlanInfo";
