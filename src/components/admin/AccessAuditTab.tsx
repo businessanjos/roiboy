@@ -47,8 +47,8 @@ export function AccessAuditTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("users")
-        .select("id, email, full_name, role, is_also_admin, account_id, team_role_id, team_role_ids")
-        .order("full_name", { ascending: true });
+        .select("id, email, name, role, is_also_admin, account_id, team_role_id, team_role_ids")
+        .order("name", { ascending: true });
       if (error) throw error;
       return (data || []) as UserRow[];
     },
@@ -59,7 +59,7 @@ export function AccessAuditTab() {
     if (!q) return users;
     return users.filter(
       (u) =>
-        u.full_name?.toLowerCase().includes(q) ||
+        u.name?.toLowerCase().includes(q) ||
         u.email?.toLowerCase().includes(q) ||
         u.role?.toLowerCase().includes(q)
     );
@@ -86,7 +86,7 @@ export function AccessAuditTab() {
   const roleIds = useMemo(() => {
     if (!selectedUser) return [];
     return Array.from(
-      new Set([...(selectedUser.team_role_ids || []), selectedUser.team_role_id].filter(Boolean))
+      new Set([...(selectedUser.team_role_id]].filter(Boolean))
     ) as string[];
   }, [selectedUser]);
 
@@ -263,7 +263,7 @@ export function AccessAuditTab() {
                     )}
                   >
                     <div className="font-medium text-sm truncate">
-                      {u.full_name || "(sem nome)"}
+                      {u.name || "(sem nome)"}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">{u.email}</div>
                     <div className="flex gap-1 mt-1 flex-wrap">
@@ -309,7 +309,7 @@ export function AccessAuditTab() {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                     <div>
                       <span className="text-muted-foreground">Nome: </span>
-                      <span className="font-medium">{selectedUser.full_name || "—"}</span>
+                      <span className="font-medium">{selectedUser.name || "—"}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Email: </span>
