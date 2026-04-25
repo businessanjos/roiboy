@@ -52,7 +52,7 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
   );
 
   const [accountId, setAccountId] = useState<string>("");
-  const [userSearch, setUserSearch] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [pending, setPending] = useState<Map<PendingKey, Partial<UserSectorAccess>>>(new Map());
   const [pendingSuperAdmin, setPendingSuperAdmin] = useState<Map<string, boolean>>(new Map());
   const [saving, setSaving] = useState(false);
@@ -61,11 +61,11 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
     if (!accountId && sortedAccounts.length) setAccountId(sortedAccounts[0].id);
   }, [sortedAccounts, accountId]);
 
-  // Reset pending changes when switching account
+  // Reset pending changes and selected user when switching account
   useEffect(() => {
     setPending(new Map());
     setPendingSuperAdmin(new Map());
-    setUserSearch("");
+    setSelectedUserId("");
   }, [accountId]);
 
   const activeSectors = useMemo(() => sectors.filter((s) => !s.comingSoon), []);
@@ -124,15 +124,17 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
     return superAdminIds.includes(authUserId);
   };
 
+  // Auto-select first user when list loads
+  useEffect(() => {
+    if (users.length && !selectedUserId) {
+      setSelectedUserId(users[0].id);
+    }
+  }, [users, selectedUserId]);
+
   const filteredUsers = useMemo(() => {
-    const term = userSearch.trim().toLowerCase();
-    if (!term) return users;
-    return users.filter(
-      (u) =>
-        u.name?.toLowerCase().includes(term) ||
-        u.email?.toLowerCase().includes(term)
-    );
-  }, [users, userSearch]);
+    if (!selectedUserId) return [];
+    return users.filter((u) => u.id === selectedUserId);
+  }, [users, selectedUserId]);
 
   const getAccess = (userId: string, sectorId: string) =>
     accessList.find((a) => a.user_id === userId && a.sector_id === sectorId);
