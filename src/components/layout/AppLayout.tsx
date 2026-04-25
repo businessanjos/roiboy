@@ -109,9 +109,9 @@ export function AppLayout() {
     return <Navigate to="/choose-plan" replace />;
   }
 
-  const routeSector = currentSector && location.pathname !== "/setores"
-    ? currentSector
-    : getSectorByRoute(location.pathname);
+  const routeSector = location.pathname !== "/setores"
+    ? getSectorByRoute(location.pathname) || currentSector
+    : null;
   const skipSectorGuard = ["/setores", "/settings", "/profile", "/notifications", "/account-settings", "/billing"].some((path) =>
     location.pathname === path || location.pathname.startsWith(`${path}/`)
   );
