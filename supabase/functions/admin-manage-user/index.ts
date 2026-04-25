@@ -48,6 +48,47 @@ function json(status: number, body: Record<string, unknown>) {
   });
 }
 
+// Registra um evento de auditoria. Falhas são apenas logadas — nunca bloqueiam
+// a operação principal, mas garantem rastreabilidade de quem mudou o quê.
+async function writeAuditLog(
+  admin: any,
+  params: {
+    account_id: string;
+    actor_user_id: string | null;
+    actor_name: string | null;
+    actor_email: string | null;
+    action: string;
+    entity_id: string | null;
+    entity_name: string | null;
+    details: Record<string, unknown>;
+    req: Request;
+  },
+) {
+  try {
+    const ip =
+      params.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      params.req.headers.get("cf-connecting-ip") ||
+      null;
+    const userAgent = params.req.headers.get("user-agent") || null;
+
+    await admin.from("audit_logs").insert({
+      account_id: params.account_id,
+      user_id: params.actor_user_id,
+      user_name: params.actor_name,
+      user_email: params.actor_email,
+      action: params.action,
+      entity_type: "user",
+      entity_id: params.entity_id,
+      entity_name: params.entity_name,
+      details: params.details,
+      ip_address: ip,
+      user_agent: userAgent,
+    });
+  } catch (err) {
+    console.error("audit log write failed:", err);
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
