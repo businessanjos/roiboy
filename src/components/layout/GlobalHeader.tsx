@@ -39,6 +39,7 @@ export function GlobalHeader() {
   const { clearSector } = useSector();
   const { isAdmin } = usePermissions();
   const { isSuperAdmin } = useSuperAdmin();
+  const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
 
   const showAdminButton = isAdmin || isSuperAdmin;
 
