@@ -882,6 +882,19 @@ export default function RoyZapp() {
     });
   }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, currentUser?.team_role_name]);
 
+  // Tag counts (over all visible assignments, ignoring current tag filter)
+  const tagCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: assignments.length };
+    for (const a of assignments) {
+      if (a.conversation_tags) {
+        for (const ct of a.conversation_tags) {
+          counts[ct.tag_id] = (counts[ct.tag_id] || 0) + 1;
+        }
+      }
+    }
+    return counts;
+  }, [assignments]);
+
   // getAgentName is defined above (near line 873)
 
   // Memoized stats to avoid recalculating on every render
@@ -1068,6 +1081,7 @@ export default function RoyZapp() {
           filteredAssignments={filteredAssignments}
           agents={agents}
           tags={tags}
+          tagCounts={tagCounts}
           departments={departments}
           teamUsers={teamUsers}
           availableProducts={availableProducts}

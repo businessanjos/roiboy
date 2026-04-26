@@ -81,6 +81,7 @@ interface ZappConversationPanelProps {
   filteredAssignments: ConversationAssignment[];
   agents: Agent[];
   tags: ZappTag[];
+  tagCounts?: Record<string, number>;
   departments: Department[];
   teamUsers: { id: string; name: string; email: string; avatar_url: string | null; role: string; team_role_id: string | null; team_role?: { id: string; name: string; color: string } | null }[];
   availableProducts: { id: string; name: string; color: string | null }[];
@@ -180,6 +181,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   filteredAssignments,
   agents,
   tags,
+  tagCounts,
   departments,
   teamUsers,
   availableProducts,
@@ -640,9 +642,13 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                 )}
               >
                 Todas
+                {typeof tagCounts?.all === "number" && (
+                  <span className="ml-1 opacity-80">({tagCounts.all})</span>
+                )}
               </button>
               {tags.filter(t => t.is_active).map((tag) => {
                 const active = filterTagId === tag.id;
+                const count = tagCounts?.[tag.id] ?? 0;
                 return (
                   <button
                     key={tag.id}
@@ -660,6 +666,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                       style={{ backgroundColor: tag.color }}
                     />
                     <span className="truncate max-w-[120px]">{tag.name}</span>
+                    <span className="opacity-80">({count})</span>
                   </button>
                 );
               })}
