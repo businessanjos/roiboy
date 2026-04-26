@@ -44,7 +44,7 @@ export function buildProductIndex(products: ProductLite[]): ProductIndex {
     if (key && !byKey[key]) byKey[key] = entry;
   };
 
-  for (const p of products) {
+  for (const p of sorted) {
     const entry: ResolvedProduct = { name: p.name, color: p.color };
     byId[p.id] = entry;
 
