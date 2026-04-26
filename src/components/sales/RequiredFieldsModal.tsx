@@ -51,18 +51,34 @@ export function RequiredFieldsModal({
   accountId,
   onComplete,
   outcomeType,
+  clientId,
 }: RequiredFieldsModalProps) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [breakdown, setBreakdown] = useState<PaymentBreakdownItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [briefingComplete, setBriefingComplete] = useState(false);
 
-  // Reset values when modal opens
+  const showBriefing = outcomeType === "won";
+
+  // Reset values when modal opens; pre-check briefing status
   useEffect(() => {
     if (open) {
       setValues({});
       setBreakdown([]);
+      setBriefingComplete(false);
+
+      if (showBriefing && dealId) {
+        supabase
+          .from("deal_operation_briefings")
+          .select("is_complete")
+          .eq("deal_id", dealId)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.is_complete) setBriefingComplete(true);
+          });
+      }
     }
-  }, [open]);
+  }, [open, dealId, showBriefing]);
 
   const paymentMethodField = missingFields.find((f) => f.name === PAYMENT_METHOD_FIELD_NAME);
   const paymentMethodValue = paymentMethodField ? values[paymentMethodField.id] : undefined;
