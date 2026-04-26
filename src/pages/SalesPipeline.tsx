@@ -737,13 +737,13 @@ export default function SalesPipeline() {
         .eq("deal_id", dealId)
         .maybeSingle();
       if (!briefing?.is_complete) {
-        toast.error(
-          "Preencha o Briefing para Operação antes de Ganhar este negócio.",
-          {
-            description: "Abra o card e vá até a aba 'Briefing Op.' para completar os campos obrigatórios.",
-            duration: 6000,
-          }
-        );
+        setBriefingModal({
+          open: true,
+          dealId,
+          clientId: deal.client_id ?? null,
+          dealTitle: deal.title,
+        });
+        toast.info("Preencha o Briefing para Operação para Ganhar este negócio.");
         return;
       }
     }
