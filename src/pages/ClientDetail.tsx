@@ -2378,6 +2378,12 @@ export default function ClientDetail() {
                 </CardContent>
               </Card>
             );
+          case "briefing":
+            return (
+              <OperationBriefingForm
+                clientId={id!}
+              />
+            );
           case "campos":
             return (
               <Card className="shadow-card">
