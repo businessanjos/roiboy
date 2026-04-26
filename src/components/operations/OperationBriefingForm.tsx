@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -17,28 +17,39 @@ import {
 } from "@/components/ui/select";
 import { ClipboardList, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { CountryStateCity, type LocationFields } from "./CountryStateCity";
+import { getCountry } from "@/lib/countries";
+import { useExchangeRate, formatBRL, formatCurrency } from "@/hooks/useExchangeRate";
 
 type Periodo = "mensal" | "trimestral" | "semestral" | "anual";
 
 export interface OperationBriefingData {
   id?: string;
 
-  // Estruturados (preferenciais para análise)
-  tempo_atuacao_anos: string; // numeric
-  faturamento_mes_1: string; // numeric (R$)
+  // Localização
+  pais: string;
+  pais_codigo: string;
+  estado: string;
+  estado_uf: string;
+  cidade: string;
+  moeda_codigo: string;
+
+  // Estruturados (preferenciais para análise) — valores na moeda do país
+  tempo_atuacao_anos: string;
+  faturamento_mes_1: string;
   faturamento_mes_2: string;
   faturamento_mes_3: string;
-  ticket_medio: string; // numeric (R$)
-  margem_lucro_percent: string; // numeric (0-100)
-  meta_faturamento: string; // numeric (R$)
-  trafego_investimento_valor: string; // numeric (R$)
+  ticket_medio: string;
+  margem_lucro_percent: string;
+  meta_faturamento: string;
+  trafego_investimento_valor: string;
   trafego_investimento_periodo: Periodo | "";
   tem_caixa_bool: boolean | null;
-  caixa_valor: string; // numeric (R$)
-  horas_atende_dia_num: string; // numeric
-  dias_atende_semana_num: string; // numeric
-  numero_funcionarios_num: string; // integer
-  numero_salas: string; // integer
+  caixa_valor: string;
+  horas_atende_dia_num: string;
+  dias_atende_semana_num: string;
+  numero_funcionarios_num: string;
+  numero_salas: string;
   ja_fez_mentoria_bool: boolean | null;
   ja_fez_mentoria_quem: string;
   conhece_cliente_nossa_bool: boolean | null;
@@ -47,7 +58,6 @@ export interface OperationBriefingData {
   // Texto livre / categóricos
   foco_atuacao: string;
   objetivo_mentoria: string;
-  cidade: string;
   estrutura_clinica: string;
   especialidade: string;
   da_aulas: boolean;
@@ -59,6 +69,12 @@ export interface OperationBriefingData {
 }
 
 const EMPTY: OperationBriefingData = {
+  pais: "",
+  pais_codigo: "",
+  estado: "",
+  estado_uf: "",
+  cidade: "",
+  moeda_codigo: "BRL",
   tempo_atuacao_anos: "",
   faturamento_mes_1: "",
   faturamento_mes_2: "",
@@ -80,7 +96,6 @@ const EMPTY: OperationBriefingData = {
   conhece_cliente_nossa_quem: "",
   foco_atuacao: "",
   objetivo_mentoria: "",
-  cidade: "",
   estrutura_clinica: "",
   especialidade: "",
   da_aulas: false,
@@ -90,7 +105,37 @@ const EMPTY: OperationBriefingData = {
   is_complete: false,
 };
 
-// Campos essenciais para considerar "completo" e liberar o ganho
+// Validação contextual: estado só obrigatório no Brasil.
+export function getMissingFields(b: Partial<OperationBriefingData> | null | undefined): string[] {
+  if (!b) return ["briefing"];
+  const missing: string[] = [];
+  const must: (keyof OperationBriefingData)[] = [
+    "tempo_atuacao_anos",
+    "faturamento_mes_1",
+    "faturamento_mes_2",
+    "faturamento_mes_3",
+    "ticket_medio",
+    "margem_lucro_percent",
+    "foco_atuacao",
+    "objetivo_mentoria",
+    "pais_codigo",
+    "cidade",
+    "estrutura_clinica",
+    "numero_funcionarios_num",
+    "meta_faturamento",
+    "especialidade",
+  ];
+  for (const f of must) {
+    const v = (b as any)[f];
+    if (v === null || v === undefined || String(v).trim() === "") missing.push(f);
+  }
+  // Estado só obrigatório quando o país é Brasil
+  if ((b.pais_codigo || "").toUpperCase() === "BR") {
+    if (!String(b.estado_uf || "").trim()) missing.push("estado_uf");
+  }
+  return missing;
+}
+
 export const REQUIRED_BRIEFING_FIELDS: (keyof OperationBriefingData)[] = [
   "tempo_atuacao_anos",
   "faturamento_mes_1",
@@ -100,6 +145,7 @@ export const REQUIRED_BRIEFING_FIELDS: (keyof OperationBriefingData)[] = [
   "margem_lucro_percent",
   "foco_atuacao",
   "objetivo_mentoria",
+  "pais_codigo",
   "cidade",
   "estrutura_clinica",
   "numero_funcionarios_num",
@@ -108,18 +154,13 @@ export const REQUIRED_BRIEFING_FIELDS: (keyof OperationBriefingData)[] = [
 ];
 
 export function isBriefingComplete(b: Partial<OperationBriefingData> | null | undefined): boolean {
-  if (!b) return false;
-  return REQUIRED_BRIEFING_FIELDS.every((f) => {
-    const v = (b as any)[f];
-    return v !== null && v !== undefined && String(v).trim() !== "";
-  });
+  return getMissingFields(b).length === 0;
 }
 
 interface OperationBriefingFormProps {
   dealId?: string | null;
   clientId?: string | null;
   onSaved?: (data: OperationBriefingData) => void;
-  /** Quando true, mostra apenas leitura (ex.: visualização rápida) */
   readOnly?: boolean;
 }
 
@@ -137,6 +178,13 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   const [data, setData] = useState<OperationBriefingData>(EMPTY);
   const [originalId, setOriginalId] = useState<string | null>(null);
 
+  // Cotação para a moeda atual (puxa apenas se ≠ BRL)
+  const { data: fx } = useExchangeRate(data.moeda_codigo);
+  const country = useMemo(() => getCountry(data.pais_codigo), [data.pais_codigo]);
+  const symbol = country?.currencySymbol || "R$";
+  const currencyCode = data.moeda_codigo || "BRL";
+  const isBRL = currencyCode === "BRL";
+
   const load = useCallback(async () => {
     if (!dealId && !clientId) {
       setLoading(false);
@@ -153,10 +201,15 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     }
     if (row) {
       setOriginalId(row.id);
-      // Migração suave: se não houver dados estruturados, tentamos inferir do legado
       const r: any = row;
       setData({
         ...EMPTY,
+        pais: toStr(r.pais),
+        pais_codigo: toStr(r.pais_codigo) || (r.cidade ? "BR" : ""),
+        estado: toStr(r.estado),
+        estado_uf: toStr(r.estado_uf),
+        cidade: toStr(r.cidade),
+        moeda_codigo: toStr(r.moeda_codigo) || "BRL",
         tempo_atuacao_anos: toStr(r.tempo_atuacao_anos ?? extractFirstNumber(r.tempo_atuacao)),
         faturamento_mes_1: toStr(r.faturamento_mes_1),
         faturamento_mes_2: toStr(r.faturamento_mes_2),
@@ -178,7 +231,6 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         conhece_cliente_nossa_quem: toStr(r.conhece_cliente_nossa_quem ?? r.conhece_cliente_nossa),
         foco_atuacao: toStr(r.foco_atuacao),
         objetivo_mentoria: toStr(r.objetivo_mentoria),
-        cidade: toStr(r.cidade),
         estrutura_clinica: toStr(r.estrutura_clinica),
         especialidade: toStr(r.especialidade),
         da_aulas: !!r.da_aulas,
@@ -202,6 +254,16 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     setData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const updateLocation = (loc: LocationFields) => {
+    setData((prev) => ({ ...prev, ...loc }));
+  };
+
+  // Quando muda o país, automaticamente troca a moeda padrão
+  const handleCountryChange = (code: string) => {
+    const c = getCountry(code);
+    if (c) update("moeda_codigo", c.currency);
+  };
+
   const handleSave = async () => {
     if (!currentUser?.account_id) {
       toast.error("Usuário sem conta vinculada");
@@ -210,13 +272,13 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     setSaving(true);
     const complete = isBriefingComplete(data);
 
-    // Resumo legado para retrocompatibilidade
+    const symbolForResume = country?.currencySymbol || "R$";
     const faturamentosResumo = [data.faturamento_mes_1, data.faturamento_mes_2, data.faturamento_mes_3]
-      .map((v) => (v ? `R$ ${v}` : "-"))
+      .map((v) => (v ? `${symbolForResume} ${v}` : "-"))
       .join(" / ");
 
     const trafegoResumo = data.trafego_investimento_valor
-      ? `R$ ${data.trafego_investimento_valor}/${data.trafego_investimento_periodo || "—"}`
+      ? `${symbolForResume} ${data.trafego_investimento_valor}/${data.trafego_investimento_periodo || "—"}`
       : "";
 
     const payload: any = {
@@ -224,7 +286,15 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       deal_id: dealId || null,
       client_id: clientId || null,
 
-      // Estruturados (numéricos)
+      // Localização
+      pais: data.pais || null,
+      pais_codigo: data.pais_codigo || null,
+      estado: data.estado || null,
+      estado_uf: data.estado_uf || null,
+      cidade: data.cidade || null,
+      moeda_codigo: data.moeda_codigo || "BRL",
+
+      // Estruturados
       tempo_atuacao_anos: toNum(data.tempo_atuacao_anos),
       faturamento_mes_1: toNum(data.faturamento_mes_1),
       faturamento_mes_2: toNum(data.faturamento_mes_2),
@@ -245,10 +315,8 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       conhece_cliente_nossa_bool: data.conhece_cliente_nossa_bool,
       conhece_cliente_nossa_quem: data.conhece_cliente_nossa_quem || null,
 
-      // Texto livre
       foco_atuacao: data.foco_atuacao || null,
       objetivo_mentoria: data.objetivo_mentoria || null,
-      cidade: data.cidade || null,
       estrutura_clinica: data.estrutura_clinica || null,
       especialidade: data.especialidade || null,
       da_aulas: data.da_aulas,
@@ -256,7 +324,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       equipamentos: data.equipamentos || null,
       observacoes: data.observacoes || null,
 
-      // Legado (preenchido a partir dos estruturados)
+      // Legado
       tempo_atuacao: data.tempo_atuacao_anos ? `${data.tempo_atuacao_anos} anos` : null,
       ultimos_faturamentos: faturamentosResumo,
       margem_lucro: data.margem_lucro_percent ? `${data.margem_lucro_percent}%` : null,
@@ -268,25 +336,19 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         data.tem_caixa_bool === null
           ? null
           : data.tem_caixa_bool
-            ? data.caixa_valor
-              ? `Sim - R$ ${data.caixa_valor}`
-              : "Sim"
+            ? data.caixa_valor ? `Sim - ${symbolForResume} ${data.caixa_valor}` : "Sim"
             : "Não",
       ja_fez_mentoria:
         data.ja_fez_mentoria_bool === null
           ? null
           : data.ja_fez_mentoria_bool
-            ? data.ja_fez_mentoria_quem
-              ? `Sim - ${data.ja_fez_mentoria_quem}`
-              : "Sim"
+            ? data.ja_fez_mentoria_quem ? `Sim - ${data.ja_fez_mentoria_quem}` : "Sim"
             : "Não",
       conhece_cliente_nossa:
         data.conhece_cliente_nossa_bool === null
           ? null
           : data.conhece_cliente_nossa_bool
-            ? data.conhece_cliente_nossa_quem
-              ? `Sim - ${data.conhece_cliente_nossa_quem}`
-              : "Sim"
+            ? data.conhece_cliente_nossa_quem ? `Sim - ${data.conhece_cliente_nossa_quem}` : "Sim"
             : "Não",
 
       is_complete: complete,
@@ -326,8 +388,21 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     );
   }
 
-  const complete = isBriefingComplete(data);
-  const missing = REQUIRED_BRIEFING_FIELDS.filter((f) => !String((data as any)[f] ?? "").trim());
+  const missing = getMissingFields(data);
+  const complete = missing.length === 0;
+  const fxRate = fx?.rate ?? 0;
+  const showConversion = !isBRL && fxRate > 0;
+
+  // Componente local que injeta a moeda corrente
+  const Money = (props: Omit<MoneyFieldProps, "currencySymbol" | "currencyCode" | "fxRate" | "showConversion">) => (
+    <MoneyField
+      {...props}
+      currencySymbol={symbol}
+      currencyCode={currencyCode}
+      fxRate={fxRate}
+      showConversion={showConversion}
+    />
+  );
 
   return (
     <Card className="shadow-card">
@@ -342,18 +417,55 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
               </CardDescription>
             </div>
           </div>
-          {complete ? (
-            <Badge variant="secondary" className="gap-1">
-              <CheckCircle2 className="h-3 w-3" /> Completo
-            </Badge>
-          ) : (
-            <Badge variant="destructive" className="gap-1">
-              <AlertCircle className="h-3 w-3" /> {missing.length} pendente(s)
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {!isBRL && (
+              <Badge variant="outline" className="gap-1">
+                Moeda: {currencyCode}
+                {showConversion && <span className="text-muted-foreground">· 1 {currencyCode} = {formatBRL(fxRate)}</span>}
+              </Badge>
+            )}
+            {complete ? (
+              <Badge variant="secondary" className="gap-1">
+                <CheckCircle2 className="h-3 w-3" /> Completo
+              </Badge>
+            ) : (
+              <Badge variant="destructive" className="gap-1">
+                <AlertCircle className="h-3 w-3" /> {missing.length} pendente(s)
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        <Section title="Localização">
+          <CountryStateCity
+            value={{
+              pais: data.pais,
+              pais_codigo: data.pais_codigo,
+              estado: data.estado,
+              estado_uf: data.estado_uf,
+              cidade: data.cidade,
+            }}
+            onChange={updateLocation}
+            onCountryChange={handleCountryChange}
+            disabled={readOnly}
+          />
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="text-xs">Moeda dos valores financeiros</Label>
+            <Select value={data.moeda_codigo} onValueChange={(v) => update("moeda_codigo", v)} disabled={readOnly}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {[currencyCode, "BRL", "USD", "EUR", "GBP"].filter((v, i, a) => a.indexOf(v) === i).map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Valores monetários são salvos na moeda original. {showConversion && `Conversão automática para BRL com cotação do dia (1 ${currencyCode} = ${formatBRL(fxRate)}).`}
+            </p>
+          </div>
+        </Section>
+
         <Section title="Negócio do cliente">
           <NumberField
             label="Tempo de atuação (anos) *"
@@ -365,25 +477,24 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
           />
           <TextField label="Especialidade *" value={data.especialidade} onChange={(v) => update("especialidade", v)} placeholder="ex.: Sobrancelha" readOnly={readOnly} />
           <TextField label="Foco de atuação *" value={data.foco_atuacao} onChange={(v) => update("foco_atuacao", v)} placeholder="ex.: Sobrancelha, Lash" readOnly={readOnly} />
-          <TextField label="Cidade *" value={data.cidade} onChange={(v) => update("cidade", v)} placeholder="ex.: Santa Cruz do Sul" readOnly={readOnly} />
         </Section>
 
         <Section title="Faturamento e finanças">
           <div className="sm:col-span-2 space-y-2 rounded-md border p-3">
-            <Label className="text-xs font-semibold">Últimos 3 faturamentos (R$) *</Label>
+            <Label className="text-xs font-semibold">Últimos 3 faturamentos ({currencyCode}) *</Label>
             <div className="grid grid-cols-3 gap-2">
-              <NumberField label="Mês -3" value={data.faturamento_mes_3} onChange={(v) => update("faturamento_mes_3", v)} placeholder="60000" prefix="R$" readOnly={readOnly} compact />
-              <NumberField label="Mês -2" value={data.faturamento_mes_2} onChange={(v) => update("faturamento_mes_2", v)} placeholder="55000" prefix="R$" readOnly={readOnly} compact />
-              <NumberField label="Mês -1" value={data.faturamento_mes_1} onChange={(v) => update("faturamento_mes_1", v)} placeholder="70000" prefix="R$" readOnly={readOnly} compact />
+              <Money label="Mês -3" value={data.faturamento_mes_3} onChange={(v) => update("faturamento_mes_3", v)} placeholder="60000" readOnly={readOnly} compact />
+              <Money label="Mês -2" value={data.faturamento_mes_2} onChange={(v) => update("faturamento_mes_2", v)} placeholder="55000" readOnly={readOnly} compact />
+              <Money label="Mês -1" value={data.faturamento_mes_1} onChange={(v) => update("faturamento_mes_1", v)} placeholder="70000" readOnly={readOnly} compact />
             </div>
             <p className="text-[11px] text-muted-foreground">
               Digite só o número, sem &quot;mil&quot;. Ex.: 60000 (não &quot;60 mil&quot;).
             </p>
           </div>
 
-          <NumberField label="Ticket médio *" value={data.ticket_medio} onChange={(v) => update("ticket_medio", v)} placeholder="4000" prefix="R$" readOnly={readOnly} />
+          <Money label="Ticket médio *" value={data.ticket_medio} onChange={(v) => update("ticket_medio", v)} placeholder="4000" readOnly={readOnly} />
           <NumberField label="Margem de lucro *" value={data.margem_lucro_percent} onChange={(v) => update("margem_lucro_percent", v)} placeholder="50" suffix="%" readOnly={readOnly} max={100} />
-          <NumberField label="Meta de faturamento *" value={data.meta_faturamento} onChange={(v) => update("meta_faturamento", v)} placeholder="100000" prefix="R$" readOnly={readOnly} />
+          <Money label="Meta de faturamento *" value={data.meta_faturamento} onChange={(v) => update("meta_faturamento", v)} placeholder="100000" readOnly={readOnly} />
 
           <div className="space-y-1.5">
             <Label className="text-xs">Tem caixa?</Label>
@@ -403,7 +514,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
                 </SelectContent>
               </Select>
               {data.tem_caixa_bool === true && (
-                <NumberField label="" value={data.caixa_valor} onChange={(v) => update("caixa_valor", v)} placeholder="Valor (R$)" prefix="R$" readOnly={readOnly} compact className="flex-1" />
+                <Money label="" value={data.caixa_valor} onChange={(v) => update("caixa_valor", v)} placeholder="Valor" readOnly={readOnly} compact className="flex-1" />
               )}
             </div>
           </div>
@@ -411,7 +522,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
           <div className="space-y-1.5">
             <Label className="text-xs">Tráfego / Investimento</Label>
             <div className="flex gap-2">
-              <NumberField label="" value={data.trafego_investimento_valor} onChange={(v) => update("trafego_investimento_valor", v)} placeholder="2200" prefix="R$" readOnly={readOnly} compact className="flex-1" />
+              <Money label="" value={data.trafego_investimento_valor} onChange={(v) => update("trafego_investimento_valor", v)} placeholder="2200" readOnly={readOnly} compact className="flex-1" />
               <Select
                 value={data.trafego_investimento_periodo}
                 onValueChange={(v) => update("trafego_investimento_periodo", v as Periodo)}
@@ -519,32 +630,13 @@ function TextField({
 }
 
 function NumberField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  prefix,
-  suffix,
-  readOnly,
-  compact,
-  className,
-  integer,
-  max,
+  label, value, onChange, placeholder, prefix, suffix, readOnly, compact, className, integer, max,
 }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  prefix?: string;
-  suffix?: string;
-  readOnly?: boolean;
-  compact?: boolean;
-  className?: string;
-  integer?: boolean;
-  max?: number;
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; prefix?: string; suffix?: string;
+  readOnly?: boolean; compact?: boolean; className?: string; integer?: boolean; max?: number;
 }) {
   const handle = (raw: string) => {
-    // Aceita só dígitos e separador decimal
     let cleaned = raw.replace(/[^\d.,]/g, "").replace(",", ".");
     if (integer) cleaned = cleaned.replace(/[.,]/g, "");
     if (cleaned !== "" && max !== undefined) {
@@ -558,9 +650,7 @@ function NumberField({
     <div className={`space-y-1.5 ${className ?? ""}`}>
       {label && <Label className="text-xs">{label}</Label>}
       <div className="relative flex items-center">
-        {prefix && (
-          <span className="absolute left-3 text-xs text-muted-foreground pointer-events-none">{prefix}</span>
-        )}
+        {prefix && (<span className="absolute left-3 text-xs text-muted-foreground pointer-events-none">{prefix}</span>)}
         <Input
           value={value}
           inputMode="decimal"
@@ -569,10 +659,53 @@ function NumberField({
           readOnly={readOnly}
           className={`${prefix ? "pl-9" : ""} ${suffix ? "pr-12" : ""} ${compact ? "h-9" : ""}`}
         />
-        {suffix && (
-          <span className="absolute right-3 text-xs text-muted-foreground pointer-events-none">{suffix}</span>
-        )}
+        {suffix && (<span className="absolute right-3 text-xs text-muted-foreground pointer-events-none">{suffix}</span>)}
       </div>
+    </div>
+  );
+}
+
+interface MoneyFieldProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  readOnly?: boolean;
+  compact?: boolean;
+  className?: string;
+  currencySymbol: string;
+  currencyCode: string;
+  fxRate: number;
+  showConversion: boolean;
+}
+
+function MoneyField({
+  label, value, onChange, placeholder, readOnly, compact, className,
+  currencySymbol, currencyCode, fxRate, showConversion,
+}: MoneyFieldProps) {
+  const numeric = Number(String(value || "").replace(",", "."));
+  const valid = Number.isFinite(numeric) && numeric > 0;
+  const brlEquivalent = valid && showConversion ? numeric * fxRate : 0;
+
+  return (
+    <div className={`space-y-1 ${className ?? ""}`}>
+      <NumberField
+        label={label}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        prefix={currencySymbol}
+        readOnly={readOnly}
+        compact={compact}
+      />
+      {showConversion && valid && (
+        <p className="text-[11px] text-muted-foreground pl-1">
+          ≈ {formatBRL(brlEquivalent)} <span className="opacity-70">(cotação de hoje)</span>
+        </p>
+      )}
+      {!showConversion && valid && currencyCode !== "BRL" && fxRate === 0 && (
+        <p className="text-[11px] text-muted-foreground pl-1">Cotação indisponível para {currencyCode}</p>
+      )}
     </div>
   );
 }
@@ -598,21 +731,11 @@ function SwitchField({ label, checked, onChange, disabled }: { label: string; ch
 }
 
 function BoolWithDetail({
-  label,
-  boolValue,
-  detailValue,
-  onBoolChange,
-  onDetailChange,
-  detailPlaceholder,
-  readOnly,
+  label, boolValue, detailValue, onBoolChange, onDetailChange, detailPlaceholder, readOnly,
 }: {
-  label: string;
-  boolValue: boolean | null;
-  detailValue: string;
-  onBoolChange: (v: boolean) => void;
-  onDetailChange: (v: string) => void;
-  detailPlaceholder?: string;
-  readOnly?: boolean;
+  label: string; boolValue: boolean | null; detailValue: string;
+  onBoolChange: (v: boolean) => void; onDetailChange: (v: string) => void;
+  detailPlaceholder?: string; readOnly?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
