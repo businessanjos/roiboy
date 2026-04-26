@@ -3889,100 +3889,151 @@ export type Database = {
       deal_operation_briefings: {
         Row: {
           account_id: string
+          caixa_valor: number | null
           cidade: string | null
           client_id: string | null
           completed_at: string | null
           completed_by: string | null
           conhece_cliente_nossa: string | null
+          conhece_cliente_nossa_bool: boolean | null
+          conhece_cliente_nossa_quem: string | null
           created_at: string
           created_by: string | null
           da_aulas: boolean | null
           da_cursos: boolean | null
           deal_id: string | null
           dias_atende_semana: string | null
+          dias_atende_semana_num: number | null
           equipamentos: string | null
           especialidade: string | null
           estrutura_clinica: string | null
+          faturamento_mes_1: number | null
+          faturamento_mes_2: number | null
+          faturamento_mes_3: number | null
           foco_atuacao: string | null
           horas_atende_dia: string | null
+          horas_atende_dia_num: number | null
           id: string
           is_complete: boolean
           ja_fez_mentoria: string | null
+          ja_fez_mentoria_bool: boolean | null
+          ja_fez_mentoria_quem: string | null
           margem_lucro: string | null
+          margem_lucro_percent: number | null
           meta_faturamento: number | null
           numero_funcionarios: string | null
+          numero_funcionarios_num: number | null
+          numero_salas: number | null
           objetivo_mentoria: string | null
           observacoes: string | null
           tem_caixa: string | null
+          tem_caixa_bool: boolean | null
           tempo_atuacao: string | null
+          tempo_atuacao_anos: number | null
           ticket_medio: number | null
           trafego_investimento: string | null
+          trafego_investimento_periodo: string | null
+          trafego_investimento_valor: number | null
           ultimos_faturamentos: string | null
           updated_at: string
         }
         Insert: {
           account_id: string
+          caixa_valor?: number | null
           cidade?: string | null
           client_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
           conhece_cliente_nossa?: string | null
+          conhece_cliente_nossa_bool?: boolean | null
+          conhece_cliente_nossa_quem?: string | null
           created_at?: string
           created_by?: string | null
           da_aulas?: boolean | null
           da_cursos?: boolean | null
           deal_id?: string | null
           dias_atende_semana?: string | null
+          dias_atende_semana_num?: number | null
           equipamentos?: string | null
           especialidade?: string | null
           estrutura_clinica?: string | null
+          faturamento_mes_1?: number | null
+          faturamento_mes_2?: number | null
+          faturamento_mes_3?: number | null
           foco_atuacao?: string | null
           horas_atende_dia?: string | null
+          horas_atende_dia_num?: number | null
           id?: string
           is_complete?: boolean
           ja_fez_mentoria?: string | null
+          ja_fez_mentoria_bool?: boolean | null
+          ja_fez_mentoria_quem?: string | null
           margem_lucro?: string | null
+          margem_lucro_percent?: number | null
           meta_faturamento?: number | null
           numero_funcionarios?: string | null
+          numero_funcionarios_num?: number | null
+          numero_salas?: number | null
           objetivo_mentoria?: string | null
           observacoes?: string | null
           tem_caixa?: string | null
+          tem_caixa_bool?: boolean | null
           tempo_atuacao?: string | null
+          tempo_atuacao_anos?: number | null
           ticket_medio?: number | null
           trafego_investimento?: string | null
+          trafego_investimento_periodo?: string | null
+          trafego_investimento_valor?: number | null
           ultimos_faturamentos?: string | null
           updated_at?: string
         }
         Update: {
           account_id?: string
+          caixa_valor?: number | null
           cidade?: string | null
           client_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
           conhece_cliente_nossa?: string | null
+          conhece_cliente_nossa_bool?: boolean | null
+          conhece_cliente_nossa_quem?: string | null
           created_at?: string
           created_by?: string | null
           da_aulas?: boolean | null
           da_cursos?: boolean | null
           deal_id?: string | null
           dias_atende_semana?: string | null
+          dias_atende_semana_num?: number | null
           equipamentos?: string | null
           especialidade?: string | null
           estrutura_clinica?: string | null
+          faturamento_mes_1?: number | null
+          faturamento_mes_2?: number | null
+          faturamento_mes_3?: number | null
           foco_atuacao?: string | null
           horas_atende_dia?: string | null
+          horas_atende_dia_num?: number | null
           id?: string
           is_complete?: boolean
           ja_fez_mentoria?: string | null
+          ja_fez_mentoria_bool?: boolean | null
+          ja_fez_mentoria_quem?: string | null
           margem_lucro?: string | null
+          margem_lucro_percent?: number | null
           meta_faturamento?: number | null
           numero_funcionarios?: string | null
+          numero_funcionarios_num?: number | null
+          numero_salas?: number | null
           objetivo_mentoria?: string | null
           observacoes?: string | null
           tem_caixa?: string | null
+          tem_caixa_bool?: boolean | null
           tempo_atuacao?: string | null
+          tempo_atuacao_anos?: number | null
           ticket_medio?: number | null
           trafego_investimento?: string | null
+          trafego_investimento_periodo?: string | null
+          trafego_investimento_valor?: number | null
           ultimos_faturamentos?: string | null
           updated_at?: string
         }
