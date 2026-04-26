@@ -3906,6 +3906,8 @@ export type Database = {
           dias_atende_semana_num: number | null
           equipamentos: string | null
           especialidade: string | null
+          estado: string | null
+          estado_uf: string | null
           estrutura_clinica: string | null
           faturamento_mes_1: number | null
           faturamento_mes_2: number | null
@@ -3921,11 +3923,14 @@ export type Database = {
           margem_lucro: string | null
           margem_lucro_percent: number | null
           meta_faturamento: number | null
+          moeda_codigo: string | null
           numero_funcionarios: string | null
           numero_funcionarios_num: number | null
           numero_salas: number | null
           objetivo_mentoria: string | null
           observacoes: string | null
+          pais: string | null
+          pais_codigo: string | null
           tem_caixa: string | null
           tem_caixa_bool: boolean | null
           tempo_atuacao: string | null
@@ -3956,6 +3961,8 @@ export type Database = {
           dias_atende_semana_num?: number | null
           equipamentos?: string | null
           especialidade?: string | null
+          estado?: string | null
+          estado_uf?: string | null
           estrutura_clinica?: string | null
           faturamento_mes_1?: number | null
           faturamento_mes_2?: number | null
@@ -3971,11 +3978,14 @@ export type Database = {
           margem_lucro?: string | null
           margem_lucro_percent?: number | null
           meta_faturamento?: number | null
+          moeda_codigo?: string | null
           numero_funcionarios?: string | null
           numero_funcionarios_num?: number | null
           numero_salas?: number | null
           objetivo_mentoria?: string | null
           observacoes?: string | null
+          pais?: string | null
+          pais_codigo?: string | null
           tem_caixa?: string | null
           tem_caixa_bool?: boolean | null
           tempo_atuacao?: string | null
@@ -4006,6 +4016,8 @@ export type Database = {
           dias_atende_semana_num?: number | null
           equipamentos?: string | null
           especialidade?: string | null
+          estado?: string | null
+          estado_uf?: string | null
           estrutura_clinica?: string | null
           faturamento_mes_1?: number | null
           faturamento_mes_2?: number | null
@@ -4021,11 +4033,14 @@ export type Database = {
           margem_lucro?: string | null
           margem_lucro_percent?: number | null
           meta_faturamento?: number | null
+          moeda_codigo?: string | null
           numero_funcionarios?: string | null
           numero_funcionarios_num?: number | null
           numero_salas?: number | null
           objetivo_mentoria?: string | null
           observacoes?: string | null
+          pais?: string | null
+          pais_codigo?: string | null
           tem_caixa?: string | null
           tem_caixa_bool?: boolean | null
           tempo_atuacao?: string | null
