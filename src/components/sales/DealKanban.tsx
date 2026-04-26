@@ -19,6 +19,7 @@ import { RequiredFieldsModal } from "./RequiredFieldsModal";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useBatchDealActivityStatus } from "@/hooks/useBatchDealActivityStatus";
+import { resolveProductMap } from "./productColorResolver";
 
 interface DealKanbanProps {
   stages: DealStage[];
@@ -114,43 +115,12 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     };
 
     const resolveProductUUIDs = async (map: Record<string, string>): Promise<Record<string, { name: string; color: string | null }>> => {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const result: Record<string, { name: string; color: string | null }> = {};
-
       // Fetch ALL products once — small table, lets us match by id, slug, or name
       const { data: allProducts } = await supabase
         .from("products")
         .select("id, name, color");
 
-      const byId: Record<string, { name: string; color: string | null }> = {};
-      const byKey: Record<string, { name: string; color: string | null }> = {};
-      const slugify = (s: string) =>
-        s.toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-z0-9]+/g, "_")
-          .replace(/^_|_$/g, "");
-
-      (allProducts || []).forEach(p => {
-        byId[p.id] = { name: p.name, color: p.color };
-        byKey[slugify(p.name)] = { name: p.name, color: p.color };
-        // Also strip common "ren_" / "Ren. " renewal prefix for fallback matching
-        const stripped = slugify(p.name).replace(/^ren_/, "");
-        if (stripped && !byKey[stripped]) {
-          byKey[stripped] = { name: p.name, color: p.color };
-        }
-      });
-
-      for (const [dealId, value] of Object.entries(map)) {
-        if (uuidRegex.test(value) && byId[value]) {
-          result[dealId] = byId[value];
-        } else {
-          const key = slugify(value);
-          const matched = byKey[key] || byKey[key.replace(/^ren_/, "")];
-          result[dealId] = matched || { name: value, color: null };
-        }
-      }
-      return result;
+      return resolveProductMap(map, allProducts || []);
     };
 
     Promise.all([
