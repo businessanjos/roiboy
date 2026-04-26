@@ -860,6 +860,13 @@ export default function Products() {
                 </div>
               </TabsContent>
 
+              <TabsContent value="bonuses" className="space-y-4 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  Cadastre os bônus inclusos neste produto. Quando o vendedor marcar este produto como Ganha, verá uma lista enxuta dos bônus aqui cadastrados para selecionar.
+                </p>
+                <ProductBonusesTab productId={editingId} accountId={currentUser?.account_id ?? ""} />
+              </TabsContent>
+
               {!isRenewal && <TabsContent value="mql" className="space-y-4 pt-2">
                 <p className="text-sm text-muted-foreground">
                   Defina os critérios para que um lead seja considerado MQL (Marketing Qualified Lead) para este produto.
