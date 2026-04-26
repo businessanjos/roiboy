@@ -22,6 +22,7 @@ import {
 } from "@/components/sales/PaymentBreakdownComposer";
 import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from "@/components/operations/OperationBriefingForm";
 import { Separator } from "@/components/ui/separator";
+import { BonusSelector } from "@/components/sales/BonusSelector";
 
 interface RequiredFieldsModalProps {
   open: boolean;
@@ -40,6 +41,9 @@ interface RequiredFieldsModalProps {
 
 const PAYMENT_METHOD_FIELD_NAME = "Forma da Pagamento";
 const PAYMENT_BREAKDOWN_FIELD_NAME = "Detalhamento de Pagamento";
+const BONUS_FIELD_NAMES = ["Ganhou Bônus?", "Bônus"];
+
+const isBonusField = (name: string) => BONUS_FIELD_NAMES.includes(name);
 
 export function RequiredFieldsModal({
   open,
