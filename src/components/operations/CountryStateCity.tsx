@@ -201,7 +201,7 @@ function CityAutocomplete({
                 onClick={() => handleSelect(s)}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-start gap-2 border-b last:border-b-0"
               >
-                <MapPin className="h-4 w-4 mt-0.5 text-cyan-500 flex-shrink-0" />
+                <MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
                 <div>
                   <div className="font-medium">{city}</div>
                   <div className="text-[11px] text-muted-foreground line-clamp-1">{s.display_name}</div>
