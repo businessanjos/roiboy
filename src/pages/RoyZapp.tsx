@@ -1081,6 +1081,7 @@ export default function RoyZapp() {
           filteredAssignments={filteredAssignments}
           agents={agents}
           tags={tags}
+          tagCounts={tagCounts}
           departments={departments}
           teamUsers={teamUsers}
           availableProducts={availableProducts}
