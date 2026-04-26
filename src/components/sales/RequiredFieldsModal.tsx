@@ -22,6 +22,7 @@ import {
 } from "@/components/sales/PaymentBreakdownComposer";
 import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from "@/components/operations/OperationBriefingForm";
 import { Separator } from "@/components/ui/separator";
+import { BonusSelector } from "@/components/sales/BonusSelector";
 
 interface RequiredFieldsModalProps {
   open: boolean;
@@ -40,6 +41,9 @@ interface RequiredFieldsModalProps {
 
 const PAYMENT_METHOD_FIELD_NAME = "Forma da Pagamento";
 const PAYMENT_BREAKDOWN_FIELD_NAME = "Detalhamento de Pagamento";
+const BONUS_FIELD_NAMES = ["Ganhou Bônus?", "Bônus"];
+
+const isBonusField = (name: string) => BONUS_FIELD_NAMES.includes(name);
 
 export function RequiredFieldsModal({
   open,
@@ -152,6 +156,12 @@ export function RequiredFieldsModal({
             break;
         }
 
+        // Bonus fields are always stored as JSON arrays of selected labels
+        if (isBonusField(field.name)) {
+          valueData.value_json = Array.isArray(value) ? value : [];
+          valueData.value_text = null;
+        }
+
         const { error } = await supabase
           .from("deal_field_values")
           .upsert(valueData, { onConflict: "deal_id,field_id" });
@@ -247,26 +257,37 @@ export function RequiredFieldsModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {displayedFields.map((field) => (
-            <div key={field.id} className="space-y-2">
-              <Label className="text-sm font-medium">
-                {field.name} <span className="text-destructive">*</span>
-              </Label>
-              <InlineFieldInput
-                field={field}
-                value={values[field.id]}
-                onChange={(newValue) => handleValueChange(field.id, newValue)}
-              />
-              {field.id === paymentMethodField?.id && needsBreakdown && (
-                <PaymentBreakdownComposer
-                  paymentMethodValue={paymentMethodValue as string}
-                  paymentMethodLabel={paymentMethodLabel}
-                  value={breakdown}
-                  onChange={setBreakdown}
-                />
-              )}
-            </div>
-          ))}
+          {displayedFields.map((field) => {
+            const bonusField = isBonusField(field.name);
+            return (
+              <div key={field.id} className="space-y-2">
+                <Label className="text-sm font-medium">
+                  {field.name} <span className="text-destructive">*</span>
+                </Label>
+                {bonusField ? (
+                  <BonusSelector
+                    dealId={dealId}
+                    value={Array.isArray(values[field.id]) ? (values[field.id] as string[]) : []}
+                    onChange={(newValue) => handleValueChange(field.id, newValue)}
+                  />
+                ) : (
+                  <InlineFieldInput
+                    field={field}
+                    value={values[field.id]}
+                    onChange={(newValue) => handleValueChange(field.id, newValue)}
+                  />
+                )}
+                {field.id === paymentMethodField?.id && needsBreakdown && (
+                  <PaymentBreakdownComposer
+                    paymentMethodValue={paymentMethodValue as string}
+                    paymentMethodLabel={paymentMethodLabel}
+                    value={breakdown}
+                    onChange={setBreakdown}
+                  />
+                )}
+              </div>
+            );
+          })}
 
           {showBriefing && (
             <div className="space-y-3 pt-2">

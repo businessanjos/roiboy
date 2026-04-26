@@ -29,6 +29,7 @@ import { LoadingScreen } from "@/components/ui/loading-screen";
 import { toast } from "sonner";
 import { getMlsBadgeClasses, getMlsLevelLabel, MLS_LEVELS } from "@/lib/mls-utils";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
+import { ProductBonusesTab } from "@/components/products/ProductBonusesTab";
 
 interface SessionPhase {
   duration_hours: string;
@@ -427,9 +428,10 @@ export default function Products() {
             </DialogHeader>
 
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className={`w-full grid ${isRenewal ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              <TabsList className={`w-full grid ${isRenewal ? 'grid-cols-3' : 'grid-cols-4'}`}>
                 <TabsTrigger value="general">Geral</TabsTrigger>
                 <TabsTrigger value="deliverables">Entregas</TabsTrigger>
+                <TabsTrigger value="bonuses">Bônus</TabsTrigger>
                 {!isRenewal && <TabsTrigger value="mql">Qualificação MQL</TabsTrigger>}
               </TabsList>
 
@@ -856,6 +858,13 @@ export default function Products() {
                     </div>
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="bonuses" className="space-y-4 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  Cadastre os bônus inclusos neste produto. Quando o vendedor marcar este produto como Ganha, verá uma lista enxuta dos bônus aqui cadastrados para selecionar.
+                </p>
+                <ProductBonusesTab productId={editingId} accountId={currentUser?.account_id ?? ""} />
               </TabsContent>
 
               {!isRenewal && <TabsContent value="mql" className="space-y-4 pt-2">
