@@ -20,6 +20,8 @@ import {
   getMethodsForPaymentOption,
   isBreakdownComplete,
 } from "@/components/sales/PaymentBreakdownComposer";
+import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from "@/components/operations/OperationBriefingForm";
+import { Separator } from "@/components/ui/separator";
 
 interface RequiredFieldsModalProps {
   open: boolean;
@@ -32,6 +34,8 @@ interface RequiredFieldsModalProps {
   onComplete: () => void;
   /** Optional: "won" or "lost" - changes the dialog messaging */
   outcomeType?: "won" | "lost";
+  /** Optional client id, used to pre-load/save the operation briefing */
+  clientId?: string | null;
 }
 
 const PAYMENT_METHOD_FIELD_NAME = "Forma da Pagamento";
@@ -47,18 +51,34 @@ export function RequiredFieldsModal({
   accountId,
   onComplete,
   outcomeType,
+  clientId,
 }: RequiredFieldsModalProps) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [breakdown, setBreakdown] = useState<PaymentBreakdownItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [briefingComplete, setBriefingComplete] = useState(false);
 
-  // Reset values when modal opens
+  const showBriefing = outcomeType === "won";
+
+  // Reset values when modal opens; pre-check briefing status
   useEffect(() => {
     if (open) {
       setValues({});
       setBreakdown([]);
+      setBriefingComplete(false);
+
+      if (showBriefing && dealId) {
+        supabase
+          .from("deal_operation_briefings")
+          .select("is_complete")
+          .eq("deal_id", dealId)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.is_complete) setBriefingComplete(true);
+          });
+      }
     }
-  }, [open]);
+  }, [open, dealId, showBriefing]);
 
   const paymentMethodField = missingFields.find((f) => f.name === PAYMENT_METHOD_FIELD_NAME);
   const paymentMethodValue = paymentMethodField ? values[paymentMethodField.id] : undefined;
@@ -83,7 +103,8 @@ export function RequiredFieldsModal({
   });
 
   const breakdownOk = !needsBreakdown || isBreakdownComplete(breakdown);
-  const canSave = allFieldsFilled && breakdownOk;
+  const briefingOk = !showBriefing || briefingComplete;
+  const canSave = allFieldsFilled && breakdownOk && briefingOk;
 
   const handleSave = async () => {
     setSaving(true);
@@ -219,7 +240,7 @@ export function RequiredFieldsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className={`${showBriefing ? "max-w-3xl" : "max-w-md"} max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle>Campos Obrigatórios</DialogTitle>
           <DialogDescription>{getDescription()}</DialogDescription>
@@ -246,6 +267,23 @@ export function RequiredFieldsModal({
               )}
             </div>
           ))}
+
+          {showBriefing && (
+            <div className="space-y-3 pt-2">
+              {displayedFields.length > 0 && <Separator />}
+              <div>
+                <h3 className="text-sm font-semibold">Briefing para Operação</h3>
+                <p className="text-xs text-muted-foreground">
+                  Preencha o briefing estruturado abaixo. Salve para liberar o botão "Preencher e Ganhar".
+                </p>
+              </div>
+              <OperationBriefingForm
+                dealId={dealId}
+                clientId={clientId ?? null}
+                onSaved={(data: OperationBriefingData) => setBriefingComplete(isBriefingComplete(data))}
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">

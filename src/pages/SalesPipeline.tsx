@@ -83,7 +83,7 @@ import {
 } from "@/components/ui/popover";
 import LeadsTab from "@/components/sales/LeadsTab";
 import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingScheduleDialog";
-import { OperationBriefingModal } from "@/components/operations/OperationBriefingModal";
+
 
 export default function SalesPipeline() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -317,21 +317,16 @@ export default function SalesPipeline() {
     outcomeType: "won" | "lost";
     missingFields: CustomField[];
     pendingLostReason?: string;
+    clientId?: string | null;
   }>({
     open: false,
     dealId: "",
     dealTitle: "",
     outcomeType: "won",
     missingFields: [],
+    clientId: null,
   });
 
-  // State for the Operation Briefing modal (required to win)
-  const [briefingModal, setBriefingModal] = useState<{
-    open: boolean;
-    dealId: string;
-    clientId: string | null;
-    dealTitle: string;
-  }>({ open: false, dealId: "", clientId: null, dealTitle: "" });
 
   // Handle URL query param to open deal detail automatically
   useEffect(() => {
@@ -716,34 +711,29 @@ export default function SalesPipeline() {
       return;
     }
 
-    // Validate required fields for "won" outcome (unless skipping after modal fill)
+    // Validate required fields + briefing for "won" outcome (unless skipping after modal fill)
     if (!skipValidation && currentUser?.account_id) {
       const validation = await validateDealOutcome(dealId, "won", currentUser.account_id);
-      if (!validation.canMoveToStage && validation.missingFields.length > 0) {
-        setOutcomeRequiredFieldsModal({
-          open: true,
-          dealId,
-          dealTitle: deal.title,
-          outcomeType: "won",
-          missingFields: validation.missingFields,
-        });
-        return;
-      }
 
-      // Validate Operation Briefing — required to win the deal
+      // Check briefing completeness in parallel
       const { data: briefing } = await supabase
         .from("deal_operation_briefings")
         .select("is_complete")
         .eq("deal_id", dealId)
         .maybeSingle();
-      if (!briefing?.is_complete) {
-        setBriefingModal({
+      const briefingIncomplete = !briefing?.is_complete;
+
+      const hasMissingFields = !validation.canMoveToStage && validation.missingFields.length > 0;
+
+      if (hasMissingFields || briefingIncomplete) {
+        setOutcomeRequiredFieldsModal({
           open: true,
           dealId,
-          clientId: deal.client_id ?? null,
           dealTitle: deal.title,
-        });
-        toast.info("Preencha o Briefing para Operação para Ganhar este negócio.");
+          outcomeType: "won",
+          missingFields: hasMissingFields ? validation.missingFields : [],
+          clientId: deal.client_id ?? null,
+        } as any);
         return;
       }
     }
@@ -1687,6 +1677,7 @@ export default function SalesPipeline() {
         accountId={currentUser?.account_id || ""}
         onComplete={handleOutcomeRequiredFieldsComplete}
         outcomeType={outcomeRequiredFieldsModal.outcomeType}
+        clientId={outcomeRequiredFieldsModal.clientId ?? null}
       />
 
       {/* Meeting Schedule Dialog - opens when deal moves to "reunião agendada" */}
@@ -1699,19 +1690,6 @@ export default function SalesPipeline() {
         participantName={meetingDialog.participantName}
         participantPhone={meetingDialog.participantPhone}
         stageName={meetingDialog.stageName}
-      />
-
-      {/* Operation Briefing Modal — required to win deals */}
-      <OperationBriefingModal
-        open={briefingModal.open}
-        onOpenChange={(open) => setBriefingModal(prev => ({ ...prev, open }))}
-        dealId={briefingModal.dealId}
-        clientId={briefingModal.clientId}
-        dealTitle={briefingModal.dealTitle}
-        onCompleted={() => {
-          // Re-attempt marking as won, now with briefing complete
-          handleMarkAsWon(briefingModal.dealId);
-        }}
       />
     </>
   );
