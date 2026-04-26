@@ -240,7 +240,7 @@ export function RequiredFieldsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className={`${showBriefing ? "max-w-3xl" : "max-w-md"} max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle>Campos Obrigatórios</DialogTitle>
           <DialogDescription>{getDescription()}</DialogDescription>
@@ -267,6 +267,23 @@ export function RequiredFieldsModal({
               )}
             </div>
           ))}
+
+          {showBriefing && (
+            <div className="space-y-3 pt-2">
+              {displayedFields.length > 0 && <Separator />}
+              <div>
+                <h3 className="text-sm font-semibold">Briefing para Operação</h3>
+                <p className="text-xs text-muted-foreground">
+                  Preencha o briefing estruturado abaixo. Salve para liberar o botão "Preencher e Ganhar".
+                </p>
+              </div>
+              <OperationBriefingForm
+                dealId={dealId}
+                clientId={clientId ?? null}
+                onSaved={(data: OperationBriefingData) => setBriefingComplete(isBriefingComplete(data))}
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
