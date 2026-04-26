@@ -33,19 +33,27 @@ export function buildProductIndex(products: ProductLite[]): ProductIndex {
   const byId: Record<string, ResolvedProduct> = {};
   const byKey: Record<string, ResolvedProduct> = {};
 
+  const registerKey = (key: string, entry: ResolvedProduct) => {
+    if (key && !byKey[key]) byKey[key] = entry;
+  };
+
   for (const p of products) {
     const entry: ResolvedProduct = { name: p.name, color: p.color };
     byId[p.id] = entry;
 
     const key = slugifyProductKey(p.name);
-    if (key) byKey[key] = entry;
+    registerKey(key, entry);
 
     // Strip leading "ren_" so renewal slugs (e.g. "ren_rykas_mentoring")
     // can still match the parent product if the renewal SKU is missing.
-    const stripped = key.replace(/^ren_/, "");
-    if (stripped && !byKey[stripped]) {
-      byKey[stripped] = entry;
-    }
+    registerKey(key.replace(/^ren_/, ""), entry);
+
+    // Strip Portuguese stop-words so legacy slugs like "conselho_anjo" still
+    // match products named "Conselho de Anjo".
+    const stopwords = /(^|_)(de|da|do|das|dos|e)(_|$)/g;
+    const compact = key.replace(stopwords, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+    registerKey(compact, entry);
+    registerKey(compact.replace(/^ren_/, ""), entry);
   }
 
   return { byId, byKey };
