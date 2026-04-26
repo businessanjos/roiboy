@@ -720,6 +720,23 @@ export default function SalesPipeline() {
         });
         return;
       }
+
+      // Validate Operation Briefing — required to win the deal
+      const { data: briefing } = await supabase
+        .from("deal_operation_briefings")
+        .select("is_complete")
+        .eq("deal_id", dealId)
+        .maybeSingle();
+      if (!briefing?.is_complete) {
+        toast.error(
+          "Preencha o Briefing para Operação antes de Ganhar este negócio.",
+          {
+            description: "Abra o card e vá até a aba 'Briefing Op.' para completar os campos obrigatórios.",
+            duration: 6000,
+          }
+        );
+        return;
+      }
     }
 
     setProcessingWonDealId(dealId);
