@@ -115,39 +115,39 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
 
     const resolveProductUUIDs = async (map: Record<string, string>): Promise<Record<string, { name: string; color: string | null }>> => {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const unresolvedUUIDs = [...new Set(
-        Object.values(map).filter(value => uuidRegex.test(value))
-      )];
-
       const result: Record<string, { name: string; color: string | null }> = {};
 
-      if (unresolvedUUIDs.length === 0) {
-        // No UUIDs to resolve — values are already labels
-        for (const [dealId, value] of Object.entries(map)) {
-          result[dealId] = { name: value, color: null };
-        }
-        return result;
-      }
+      // Fetch ALL products once — small table, lets us match by id, slug, or name
+      const { data: allProducts } = await supabase
+        .from("products")
+        .select("id, name, color");
 
-      const idChunks = chunk(unresolvedUUIDs, CHUNK_SIZE);
-      const chunkedResults = await Promise.all(
-        idChunks.map(ids =>
-          supabase.from("products").select("id, name, color").in("id", ids)
-        )
-      );
+      const byId: Record<string, { name: string; color: string | null }> = {};
+      const byKey: Record<string, { name: string; color: string | null }> = {};
+      const slugify = (s: string) =>
+        s.toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_|_$/g, "");
 
-      const productMap: Record<string, { name: string; color: string | null }> = {};
-      for (const res of chunkedResults) {
-        if (res.data) {
-          res.data.forEach(p => { productMap[p.id] = { name: p.name, color: p.color }; });
+      (allProducts || []).forEach(p => {
+        byId[p.id] = { name: p.name, color: p.color };
+        byKey[slugify(p.name)] = { name: p.name, color: p.color };
+        // Also strip common "ren_" / "Ren. " renewal prefix for fallback matching
+        const stripped = slugify(p.name).replace(/^ren_/, "");
+        if (stripped && !byKey[stripped]) {
+          byKey[stripped] = { name: p.name, color: p.color };
         }
-      }
+      });
 
       for (const [dealId, value] of Object.entries(map)) {
-        if (productMap[value]) {
-          result[dealId] = productMap[value];
+        if (uuidRegex.test(value) && byId[value]) {
+          result[dealId] = byId[value];
         } else {
-          result[dealId] = { name: value, color: null };
+          const key = slugify(value);
+          const matched = byKey[key] || byKey[key.replace(/^ren_/, "")];
+          result[dealId] = matched || { name: value, color: null };
         }
       }
       return result;
