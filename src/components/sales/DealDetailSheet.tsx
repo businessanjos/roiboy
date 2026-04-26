@@ -1696,6 +1696,13 @@ export function DealDetailSheet({
                   <TabsContent value="activities" className="mt-3">
                     <DealActivitiesTab dealId={deal.id} leadId={deal.lead_id} />
                   </TabsContent>
+
+                  <TabsContent value="briefing" className="mt-3">
+                    <OperationBriefingForm
+                      dealId={deal.id}
+                      clientId={deal.client_id || null}
+                    />
+                  </TabsContent>
                 </Tabs>
               </div>
             </div>
