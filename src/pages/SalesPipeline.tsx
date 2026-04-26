@@ -317,12 +317,14 @@ export default function SalesPipeline() {
     outcomeType: "won" | "lost";
     missingFields: CustomField[];
     pendingLostReason?: string;
+    clientId?: string | null;
   }>({
     open: false,
     dealId: "",
     dealTitle: "",
     outcomeType: "won",
     missingFields: [],
+    clientId: null,
   });
 
   // State for the Operation Briefing modal (required to win)
