@@ -103,7 +103,8 @@ export function RequiredFieldsModal({
   });
 
   const breakdownOk = !needsBreakdown || isBreakdownComplete(breakdown);
-  const canSave = allFieldsFilled && breakdownOk;
+  const briefingOk = !showBriefing || briefingComplete;
+  const canSave = allFieldsFilled && breakdownOk && briefingOk;
 
   const handleSave = async () => {
     setSaving(true);
