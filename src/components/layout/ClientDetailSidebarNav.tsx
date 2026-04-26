@@ -38,6 +38,7 @@ const navGroups: NavGroup[] = [
   {
     title: "Dados",
     items: [
+      { id: "briefing", label: "Briefing Op.", icon: ClipboardList },
       { id: "fichas", label: "Fichas", icon: FileText },
       { id: "campos", label: "Campos", icon: Grid3X3 },
       { id: "cx", label: "Momentos CX", icon: Heart },
