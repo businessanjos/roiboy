@@ -8,55 +8,83 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ClipboardList, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
+type Periodo = "mensal" | "trimestral" | "semestral" | "anual";
+
 export interface OperationBriefingData {
   id?: string;
-  tempo_atuacao: string;
-  ja_fez_mentoria: string;
-  conhece_cliente_nossa: string;
-  ultimos_faturamentos: string;
-  ticket_medio: string;
-  margem_lucro: string;
-  horas_atende_dia: string;
+
+  // Estruturados (preferenciais para análise)
+  tempo_atuacao_anos: string; // numeric
+  faturamento_mes_1: string; // numeric (R$)
+  faturamento_mes_2: string;
+  faturamento_mes_3: string;
+  ticket_medio: string; // numeric (R$)
+  margem_lucro_percent: string; // numeric (0-100)
+  meta_faturamento: string; // numeric (R$)
+  trafego_investimento_valor: string; // numeric (R$)
+  trafego_investimento_periodo: Periodo | "";
+  tem_caixa_bool: boolean | null;
+  caixa_valor: string; // numeric (R$)
+  horas_atende_dia_num: string; // numeric
+  dias_atende_semana_num: string; // numeric
+  numero_funcionarios_num: string; // integer
+  numero_salas: string; // integer
+  ja_fez_mentoria_bool: boolean | null;
+  ja_fez_mentoria_quem: string;
+  conhece_cliente_nossa_bool: boolean | null;
+  conhece_cliente_nossa_quem: string;
+
+  // Texto livre / categóricos
   foco_atuacao: string;
   objetivo_mentoria: string;
   cidade: string;
   estrutura_clinica: string;
-  numero_funcionarios: string;
-  meta_faturamento: string;
   especialidade: string;
   da_aulas: boolean;
-  dias_atende_semana: string;
-  trafego_investimento: string;
   da_cursos: boolean;
-  tem_caixa: string;
   equipamentos: string;
   observacoes: string;
+
   is_complete: boolean;
 }
 
 const EMPTY: OperationBriefingData = {
-  tempo_atuacao: "",
-  ja_fez_mentoria: "",
-  conhece_cliente_nossa: "",
-  ultimos_faturamentos: "",
+  tempo_atuacao_anos: "",
+  faturamento_mes_1: "",
+  faturamento_mes_2: "",
+  faturamento_mes_3: "",
   ticket_medio: "",
-  margem_lucro: "",
-  horas_atende_dia: "",
+  margem_lucro_percent: "",
+  meta_faturamento: "",
+  trafego_investimento_valor: "",
+  trafego_investimento_periodo: "",
+  tem_caixa_bool: null,
+  caixa_valor: "",
+  horas_atende_dia_num: "",
+  dias_atende_semana_num: "",
+  numero_funcionarios_num: "",
+  numero_salas: "",
+  ja_fez_mentoria_bool: null,
+  ja_fez_mentoria_quem: "",
+  conhece_cliente_nossa_bool: null,
+  conhece_cliente_nossa_quem: "",
   foco_atuacao: "",
   objetivo_mentoria: "",
   cidade: "",
   estrutura_clinica: "",
-  numero_funcionarios: "",
-  meta_faturamento: "",
   especialidade: "",
   da_aulas: false,
-  dias_atende_semana: "",
-  trafego_investimento: "",
   da_cursos: false,
-  tem_caixa: "",
   equipamentos: "",
   observacoes: "",
   is_complete: false,
@@ -64,15 +92,17 @@ const EMPTY: OperationBriefingData = {
 
 // Campos essenciais para considerar "completo" e liberar o ganho
 export const REQUIRED_BRIEFING_FIELDS: (keyof OperationBriefingData)[] = [
-  "tempo_atuacao",
-  "ultimos_faturamentos",
+  "tempo_atuacao_anos",
+  "faturamento_mes_1",
+  "faturamento_mes_2",
+  "faturamento_mes_3",
   "ticket_medio",
-  "margem_lucro",
+  "margem_lucro_percent",
   "foco_atuacao",
   "objetivo_mentoria",
   "cidade",
   "estrutura_clinica",
-  "numero_funcionarios",
+  "numero_funcionarios_num",
   "meta_faturamento",
   "especialidade",
 ];
@@ -93,6 +123,13 @@ interface OperationBriefingFormProps {
   readOnly?: boolean;
 }
 
+const toStr = (v: any) => (v === null || v === undefined ? "" : String(v));
+const toNum = (v: string): number | null => {
+  if (v === "" || v === null || v === undefined) return null;
+  const n = Number(String(v).replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+};
+
 export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = false }: OperationBriefingFormProps) {
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
@@ -110,20 +147,46 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     if (dealId) query = query.eq("deal_id", dealId);
     else if (clientId) query = query.eq("client_id", clientId);
 
-    const { data: rows, error } = await query.maybeSingle();
+    const { data: row, error } = await query.maybeSingle();
     if (error && error.code !== "PGRST116") {
       console.error("Erro ao carregar briefing:", error);
     }
-    if (rows) {
-      setOriginalId(rows.id);
+    if (row) {
+      setOriginalId(row.id);
+      // Migração suave: se não houver dados estruturados, tentamos inferir do legado
+      const r: any = row;
       setData({
         ...EMPTY,
-        ...Object.fromEntries(
-          Object.entries(rows).map(([k, v]) => [k, v === null ? (typeof (EMPTY as any)[k] === "boolean" ? false : "") : v])
-        ),
-        ticket_medio: rows.ticket_medio?.toString() ?? "",
-        meta_faturamento: rows.meta_faturamento?.toString() ?? "",
-      } as OperationBriefingData);
+        tempo_atuacao_anos: toStr(r.tempo_atuacao_anos ?? extractFirstNumber(r.tempo_atuacao)),
+        faturamento_mes_1: toStr(r.faturamento_mes_1),
+        faturamento_mes_2: toStr(r.faturamento_mes_2),
+        faturamento_mes_3: toStr(r.faturamento_mes_3),
+        ticket_medio: toStr(r.ticket_medio),
+        margem_lucro_percent: toStr(r.margem_lucro_percent ?? extractFirstNumber(r.margem_lucro)),
+        meta_faturamento: toStr(r.meta_faturamento),
+        trafego_investimento_valor: toStr(r.trafego_investimento_valor),
+        trafego_investimento_periodo: (r.trafego_investimento_periodo as Periodo) || "",
+        tem_caixa_bool: r.tem_caixa_bool,
+        caixa_valor: toStr(r.caixa_valor),
+        horas_atende_dia_num: toStr(r.horas_atende_dia_num ?? extractFirstNumber(r.horas_atende_dia)),
+        dias_atende_semana_num: toStr(r.dias_atende_semana_num ?? extractFirstNumber(r.dias_atende_semana)),
+        numero_funcionarios_num: toStr(r.numero_funcionarios_num ?? extractFirstNumber(r.numero_funcionarios)),
+        numero_salas: toStr(r.numero_salas ?? extractFirstNumber(r.estrutura_clinica)),
+        ja_fez_mentoria_bool: r.ja_fez_mentoria_bool,
+        ja_fez_mentoria_quem: toStr(r.ja_fez_mentoria_quem ?? r.ja_fez_mentoria),
+        conhece_cliente_nossa_bool: r.conhece_cliente_nossa_bool,
+        conhece_cliente_nossa_quem: toStr(r.conhece_cliente_nossa_quem ?? r.conhece_cliente_nossa),
+        foco_atuacao: toStr(r.foco_atuacao),
+        objetivo_mentoria: toStr(r.objetivo_mentoria),
+        cidade: toStr(r.cidade),
+        estrutura_clinica: toStr(r.estrutura_clinica),
+        especialidade: toStr(r.especialidade),
+        da_aulas: !!r.da_aulas,
+        da_cursos: !!r.da_cursos,
+        equipamentos: toStr(r.equipamentos),
+        observacoes: toStr(r.observacoes),
+        is_complete: !!r.is_complete,
+      });
     } else {
       setOriginalId(null);
       setData(EMPTY);
@@ -146,31 +209,86 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     }
     setSaving(true);
     const complete = isBriefingComplete(data);
+
+    // Resumo legado para retrocompatibilidade
+    const faturamentosResumo = [data.faturamento_mes_1, data.faturamento_mes_2, data.faturamento_mes_3]
+      .map((v) => (v ? `R$ ${v}` : "-"))
+      .join(" / ");
+
+    const trafegoResumo = data.trafego_investimento_valor
+      ? `R$ ${data.trafego_investimento_valor}/${data.trafego_investimento_periodo || "—"}`
+      : "";
+
     const payload: any = {
       account_id: currentUser.account_id,
       deal_id: dealId || null,
       client_id: clientId || null,
-      tempo_atuacao: data.tempo_atuacao || null,
-      ja_fez_mentoria: data.ja_fez_mentoria || null,
-      conhece_cliente_nossa: data.conhece_cliente_nossa || null,
-      ultimos_faturamentos: data.ultimos_faturamentos || null,
-      ticket_medio: data.ticket_medio ? Number(String(data.ticket_medio).replace(",", ".")) : null,
-      margem_lucro: data.margem_lucro || null,
-      horas_atende_dia: data.horas_atende_dia || null,
+
+      // Estruturados (numéricos)
+      tempo_atuacao_anos: toNum(data.tempo_atuacao_anos),
+      faturamento_mes_1: toNum(data.faturamento_mes_1),
+      faturamento_mes_2: toNum(data.faturamento_mes_2),
+      faturamento_mes_3: toNum(data.faturamento_mes_3),
+      ticket_medio: toNum(data.ticket_medio),
+      margem_lucro_percent: toNum(data.margem_lucro_percent),
+      meta_faturamento: toNum(data.meta_faturamento),
+      trafego_investimento_valor: toNum(data.trafego_investimento_valor),
+      trafego_investimento_periodo: data.trafego_investimento_periodo || null,
+      tem_caixa_bool: data.tem_caixa_bool,
+      caixa_valor: toNum(data.caixa_valor),
+      horas_atende_dia_num: toNum(data.horas_atende_dia_num),
+      dias_atende_semana_num: toNum(data.dias_atende_semana_num),
+      numero_funcionarios_num: data.numero_funcionarios_num ? Math.trunc(Number(data.numero_funcionarios_num)) : null,
+      numero_salas: data.numero_salas ? Math.trunc(Number(data.numero_salas)) : null,
+      ja_fez_mentoria_bool: data.ja_fez_mentoria_bool,
+      ja_fez_mentoria_quem: data.ja_fez_mentoria_quem || null,
+      conhece_cliente_nossa_bool: data.conhece_cliente_nossa_bool,
+      conhece_cliente_nossa_quem: data.conhece_cliente_nossa_quem || null,
+
+      // Texto livre
       foco_atuacao: data.foco_atuacao || null,
       objetivo_mentoria: data.objetivo_mentoria || null,
       cidade: data.cidade || null,
       estrutura_clinica: data.estrutura_clinica || null,
-      numero_funcionarios: data.numero_funcionarios || null,
-      meta_faturamento: data.meta_faturamento ? Number(String(data.meta_faturamento).replace(",", ".")) : null,
       especialidade: data.especialidade || null,
       da_aulas: data.da_aulas,
-      dias_atende_semana: data.dias_atende_semana || null,
-      trafego_investimento: data.trafego_investimento || null,
       da_cursos: data.da_cursos,
-      tem_caixa: data.tem_caixa || null,
       equipamentos: data.equipamentos || null,
       observacoes: data.observacoes || null,
+
+      // Legado (preenchido a partir dos estruturados)
+      tempo_atuacao: data.tempo_atuacao_anos ? `${data.tempo_atuacao_anos} anos` : null,
+      ultimos_faturamentos: faturamentosResumo,
+      margem_lucro: data.margem_lucro_percent ? `${data.margem_lucro_percent}%` : null,
+      horas_atende_dia: data.horas_atende_dia_num ? `${data.horas_atende_dia_num}h` : null,
+      dias_atende_semana: data.dias_atende_semana_num ? `${data.dias_atende_semana_num} dias` : null,
+      numero_funcionarios: data.numero_funcionarios_num || null,
+      trafego_investimento: trafegoResumo || null,
+      tem_caixa:
+        data.tem_caixa_bool === null
+          ? null
+          : data.tem_caixa_bool
+            ? data.caixa_valor
+              ? `Sim - R$ ${data.caixa_valor}`
+              : "Sim"
+            : "Não",
+      ja_fez_mentoria:
+        data.ja_fez_mentoria_bool === null
+          ? null
+          : data.ja_fez_mentoria_bool
+            ? data.ja_fez_mentoria_quem
+              ? `Sim - ${data.ja_fez_mentoria_quem}`
+              : "Sim"
+            : "Não",
+      conhece_cliente_nossa:
+        data.conhece_cliente_nossa_bool === null
+          ? null
+          : data.conhece_cliente_nossa_bool
+            ? data.conhece_cliente_nossa_quem
+              ? `Sim - ${data.conhece_cliente_nossa_quem}`
+              : "Sim"
+            : "Não",
+
       is_complete: complete,
       completed_at: complete ? new Date().toISOString() : null,
       completed_by: complete ? currentUser.id : null,
@@ -220,7 +338,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
             <div>
               <CardTitle className="text-base">Briefing para Operação</CardTitle>
               <CardDescription>
-                Informações estruturadas que a Operação precisa receber do Comercial
+                Dados estruturados — usados em análises, BI e dashboards.
               </CardDescription>
             </div>
           </div>
@@ -237,32 +355,114 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       </CardHeader>
       <CardContent className="space-y-6">
         <Section title="Negócio do cliente">
-          <Field label="Tempo de atuação *" value={data.tempo_atuacao} onChange={(v) => update("tempo_atuacao", v)} placeholder="ex.: 12 anos" readOnly={readOnly} />
-          <Field label="Especialidade *" value={data.especialidade} onChange={(v) => update("especialidade", v)} placeholder="ex.: Sobrancelha" readOnly={readOnly} />
-          <Field label="Foco de atuação *" value={data.foco_atuacao} onChange={(v) => update("foco_atuacao", v)} placeholder="ex.: Sobrancelha, Lash" readOnly={readOnly} />
-          <Field label="Cidade *" value={data.cidade} onChange={(v) => update("cidade", v)} placeholder="ex.: Santa Cruz do Sul" readOnly={readOnly} />
+          <NumberField
+            label="Tempo de atuação (anos) *"
+            value={data.tempo_atuacao_anos}
+            onChange={(v) => update("tempo_atuacao_anos", v)}
+            placeholder="ex.: 12"
+            suffix="anos"
+            readOnly={readOnly}
+          />
+          <TextField label="Especialidade *" value={data.especialidade} onChange={(v) => update("especialidade", v)} placeholder="ex.: Sobrancelha" readOnly={readOnly} />
+          <TextField label="Foco de atuação *" value={data.foco_atuacao} onChange={(v) => update("foco_atuacao", v)} placeholder="ex.: Sobrancelha, Lash" readOnly={readOnly} />
+          <TextField label="Cidade *" value={data.cidade} onChange={(v) => update("cidade", v)} placeholder="ex.: Santa Cruz do Sul" readOnly={readOnly} />
         </Section>
 
         <Section title="Faturamento e finanças">
-          <Field label="Últimos 3 faturamentos *" value={data.ultimos_faturamentos} onChange={(v) => update("ultimos_faturamentos", v)} placeholder="ex.: 60 mil / 55 / 70" readOnly={readOnly} />
-          <Field label="Ticket médio (R$) *" type="number" value={data.ticket_medio} onChange={(v) => update("ticket_medio", v)} placeholder="ex.: 4000" readOnly={readOnly} />
-          <Field label="Margem de lucro *" value={data.margem_lucro} onChange={(v) => update("margem_lucro", v)} placeholder="ex.: 50%" readOnly={readOnly} />
-          <Field label="Meta de faturamento (R$) *" type="number" value={data.meta_faturamento} onChange={(v) => update("meta_faturamento", v)} placeholder="ex.: 100000" readOnly={readOnly} />
-          <Field label="Tem caixa?" value={data.tem_caixa} onChange={(v) => update("tem_caixa", v)} placeholder="Sim / Não / valor" readOnly={readOnly} />
-          <Field label="Tráfego / investimento" value={data.trafego_investimento} onChange={(v) => update("trafego_investimento", v)} placeholder="ex.: R$ 2.200/mês" readOnly={readOnly} />
+          <div className="sm:col-span-2 space-y-2 rounded-md border p-3">
+            <Label className="text-xs font-semibold">Últimos 3 faturamentos (R$) *</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <NumberField label="Mês -3" value={data.faturamento_mes_3} onChange={(v) => update("faturamento_mes_3", v)} placeholder="60000" prefix="R$" readOnly={readOnly} compact />
+              <NumberField label="Mês -2" value={data.faturamento_mes_2} onChange={(v) => update("faturamento_mes_2", v)} placeholder="55000" prefix="R$" readOnly={readOnly} compact />
+              <NumberField label="Mês -1" value={data.faturamento_mes_1} onChange={(v) => update("faturamento_mes_1", v)} placeholder="70000" prefix="R$" readOnly={readOnly} compact />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Digite só o número, sem &quot;mil&quot;. Ex.: 60000 (não &quot;60 mil&quot;).
+            </p>
+          </div>
+
+          <NumberField label="Ticket médio *" value={data.ticket_medio} onChange={(v) => update("ticket_medio", v)} placeholder="4000" prefix="R$" readOnly={readOnly} />
+          <NumberField label="Margem de lucro *" value={data.margem_lucro_percent} onChange={(v) => update("margem_lucro_percent", v)} placeholder="50" suffix="%" readOnly={readOnly} max={100} />
+          <NumberField label="Meta de faturamento *" value={data.meta_faturamento} onChange={(v) => update("meta_faturamento", v)} placeholder="100000" prefix="R$" readOnly={readOnly} />
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tem caixa?</Label>
+            <div className="flex gap-2 items-stretch">
+              <Select
+                value={data.tem_caixa_bool === null ? "" : data.tem_caixa_bool ? "sim" : "nao"}
+                onValueChange={(v) => {
+                  update("tem_caixa_bool", v === "sim" ? true : v === "nao" ? false : null);
+                  if (v !== "sim") update("caixa_valor", "");
+                }}
+                disabled={readOnly}
+              >
+                <SelectTrigger className="w-28"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sim">Sim</SelectItem>
+                  <SelectItem value="nao">Não</SelectItem>
+                </SelectContent>
+              </Select>
+              {data.tem_caixa_bool === true && (
+                <NumberField label="" value={data.caixa_valor} onChange={(v) => update("caixa_valor", v)} placeholder="Valor (R$)" prefix="R$" readOnly={readOnly} compact className="flex-1" />
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tráfego / Investimento</Label>
+            <div className="flex gap-2">
+              <NumberField label="" value={data.trafego_investimento_valor} onChange={(v) => update("trafego_investimento_valor", v)} placeholder="2200" prefix="R$" readOnly={readOnly} compact className="flex-1" />
+              <Select
+                value={data.trafego_investimento_periodo}
+                onValueChange={(v) => update("trafego_investimento_periodo", v as Periodo)}
+                disabled={readOnly}
+              >
+                <SelectTrigger className="w-36"><SelectValue placeholder="Período" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mensal">Mensal</SelectItem>
+                  <SelectItem value="trimestral">Trimestral</SelectItem>
+                  <SelectItem value="semestral">Semestral</SelectItem>
+                  <SelectItem value="anual">Anual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </Section>
 
         <Section title="Estrutura da clínica">
-          <Field label="Estrutura *" value={data.estrutura_clinica} onChange={(v) => update("estrutura_clinica", v)} placeholder="ex.: 3 salas" readOnly={readOnly} />
-          <Field label="Nº de funcionários *" value={data.numero_funcionarios} onChange={(v) => update("numero_funcionarios", v)} placeholder="ex.: 1 colaboradora + 1 biomédica aluga sala" readOnly={readOnly} />
-          <Field label="Horas atende por dia" value={data.horas_atende_dia} onChange={(v) => update("horas_atende_dia", v)} placeholder="ex.: 8h" readOnly={readOnly} />
-          <Field label="Dias atende na semana" value={data.dias_atende_semana} onChange={(v) => update("dias_atende_semana", v)} placeholder="ex.: 3 dias e meio" readOnly={readOnly} />
+          <TextField label="Estrutura *" value={data.estrutura_clinica} onChange={(v) => update("estrutura_clinica", v)} placeholder="ex.: 3 salas, recepção, copa" readOnly={readOnly} />
+          <NumberField label="Nº de salas" value={data.numero_salas} onChange={(v) => update("numero_salas", v)} placeholder="3" readOnly={readOnly} integer />
+          <NumberField label="Nº de funcionários *" value={data.numero_funcionarios_num} onChange={(v) => update("numero_funcionarios_num", v)} placeholder="2" readOnly={readOnly} integer />
+          <NumberField label="Horas atende por dia" value={data.horas_atende_dia_num} onChange={(v) => update("horas_atende_dia_num", v)} placeholder="8" suffix="h" readOnly={readOnly} max={24} />
+          <NumberField label="Dias atende por semana" value={data.dias_atende_semana_num} onChange={(v) => update("dias_atende_semana_num", v)} placeholder="5" suffix="dias" readOnly={readOnly} max={7} />
           <FieldArea label="Equipamentos" value={data.equipamentos} onChange={(v) => update("equipamentos", v)} placeholder="ex.: Laser que fica 15 dias na clínica" readOnly={readOnly} />
         </Section>
 
         <Section title="Histórico e objetivo">
-          <Field label="Já fez mentoria?" value={data.ja_fez_mentoria} onChange={(v) => update("ja_fez_mentoria", v)} placeholder="ex.: Sim - Alan Spadoni / Fernanda Toquito" readOnly={readOnly} />
-          <Field label="Conhece alguma cliente nossa?" value={data.conhece_cliente_nossa} onChange={(v) => update("conhece_cliente_nossa", v)} placeholder="Sim/Não - quem" readOnly={readOnly} />
+          <BoolWithDetail
+            label="Já fez mentoria?"
+            boolValue={data.ja_fez_mentoria_bool}
+            detailValue={data.ja_fez_mentoria_quem}
+            onBoolChange={(b) => {
+              update("ja_fez_mentoria_bool", b);
+              if (!b) update("ja_fez_mentoria_quem", "");
+            }}
+            onDetailChange={(v) => update("ja_fez_mentoria_quem", v)}
+            detailPlaceholder="Quem? Ex.: Alan Spadoni"
+            readOnly={readOnly}
+          />
+          <BoolWithDetail
+            label="Conhece alguma cliente nossa?"
+            boolValue={data.conhece_cliente_nossa_bool}
+            detailValue={data.conhece_cliente_nossa_quem}
+            onBoolChange={(b) => {
+              update("conhece_cliente_nossa_bool", b);
+              if (!b) update("conhece_cliente_nossa_quem", "");
+            }}
+            onDetailChange={(v) => update("conhece_cliente_nossa_quem", v)}
+            detailPlaceholder="Quem?"
+            readOnly={readOnly}
+          />
           <FieldArea label="Objetivo com a mentoria *" value={data.objetivo_mentoria} onChange={(v) => update("objetivo_mentoria", v)} placeholder="O que ela quer alcançar" readOnly={readOnly} />
           <div className="grid grid-cols-2 gap-3">
             <SwitchField label="Dá aulas" checked={data.da_aulas} onChange={(v) => update("da_aulas", v)} disabled={readOnly} />
@@ -290,6 +490,14 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   );
 }
 
+// =============== Helpers internos ===============
+
+function extractFirstNumber(s: any): string {
+  if (!s) return "";
+  const m = String(s).match(/\d+(?:[.,]\d+)?/);
+  return m ? m[0].replace(",", ".") : "";
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
@@ -299,13 +507,72 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({
-  label, value, onChange, placeholder, type = "text", readOnly,
-}: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; readOnly?: boolean }) {
+function TextField({
+  label, value, onChange, placeholder, readOnly,
+}: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; readOnly?: boolean }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-xs">{label}</Label>
-      <Input value={value} type={type} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly} />
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly} />
+    </div>
+  );
+}
+
+function NumberField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  prefix,
+  suffix,
+  readOnly,
+  compact,
+  className,
+  integer,
+  max,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  prefix?: string;
+  suffix?: string;
+  readOnly?: boolean;
+  compact?: boolean;
+  className?: string;
+  integer?: boolean;
+  max?: number;
+}) {
+  const handle = (raw: string) => {
+    // Aceita só dígitos e separador decimal
+    let cleaned = raw.replace(/[^\d.,]/g, "").replace(",", ".");
+    if (integer) cleaned = cleaned.replace(/[.,]/g, "");
+    if (cleaned !== "" && max !== undefined) {
+      const n = Number(cleaned);
+      if (Number.isFinite(n) && n > max) cleaned = String(max);
+    }
+    onChange(cleaned);
+  };
+
+  return (
+    <div className={`space-y-1.5 ${className ?? ""}`}>
+      {label && <Label className="text-xs">{label}</Label>}
+      <div className="relative flex items-center">
+        {prefix && (
+          <span className="absolute left-3 text-xs text-muted-foreground pointer-events-none">{prefix}</span>
+        )}
+        <Input
+          value={value}
+          inputMode="decimal"
+          onChange={(e) => handle(e.target.value)}
+          placeholder={placeholder}
+          readOnly={readOnly}
+          className={`${prefix ? "pl-9" : ""} ${suffix ? "pr-12" : ""} ${compact ? "h-9" : ""}`}
+        />
+        {suffix && (
+          <span className="absolute right-3 text-xs text-muted-foreground pointer-events-none">{suffix}</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -326,6 +593,52 @@ function SwitchField({ label, checked, onChange, disabled }: { label: string; ch
     <div className="flex items-center justify-between rounded-md border p-2">
       <Label className="text-xs">{label}</Label>
       <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} />
+    </div>
+  );
+}
+
+function BoolWithDetail({
+  label,
+  boolValue,
+  detailValue,
+  onBoolChange,
+  onDetailChange,
+  detailPlaceholder,
+  readOnly,
+}: {
+  label: string;
+  boolValue: boolean | null;
+  detailValue: string;
+  onBoolChange: (v: boolean) => void;
+  onDetailChange: (v: string) => void;
+  detailPlaceholder?: string;
+  readOnly?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      <div className="flex gap-2">
+        <Select
+          value={boolValue === null ? "" : boolValue ? "sim" : "nao"}
+          onValueChange={(v) => onBoolChange(v === "sim")}
+          disabled={readOnly}
+        >
+          <SelectTrigger className="w-28"><SelectValue placeholder="—" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="sim">Sim</SelectItem>
+            <SelectItem value="nao">Não</SelectItem>
+          </SelectContent>
+        </Select>
+        {boolValue && (
+          <Input
+            value={detailValue}
+            onChange={(e) => onDetailChange(e.target.value)}
+            placeholder={detailPlaceholder}
+            readOnly={readOnly}
+            className="flex-1"
+          />
+        )}
+      </div>
     </div>
   );
 }
