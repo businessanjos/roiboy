@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OperationBriefingForm } from "@/components/operations/OperationBriefingForm";
 import {
   Select,
   SelectContent,
