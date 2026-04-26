@@ -34,6 +34,8 @@ interface RequiredFieldsModalProps {
   onComplete: () => void;
   /** Optional: "won" or "lost" - changes the dialog messaging */
   outcomeType?: "won" | "lost";
+  /** Optional client id, used to pre-load/save the operation briefing */
+  clientId?: string | null;
 }
 
 const PAYMENT_METHOD_FIELD_NAME = "Forma da Pagamento";
