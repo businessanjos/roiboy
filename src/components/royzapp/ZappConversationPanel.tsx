@@ -683,14 +683,42 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       <ScrollArea className="flex-1">
         {activeView === "inbox" && (
           <div className="divide-y divide-zapp-border">
-            {filteredAssignments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                <div className="w-20 h-20 rounded-full bg-zapp-panel flex items-center justify-center mb-4">
-                  <MessageSquare className="h-10 w-10 text-zapp-text-muted" />
+            {filteredAssignments.length === 0 ? (() => {
+              const activeTag = filterTagId !== "all"
+                ? tags.find(t => t.id === filterTagId)
+                : null;
+              const hasSearch = searchQuery.trim().length > 0;
+              const hasTag = !!activeTag;
+
+              let message = "Nenhuma conversa encontrada";
+              if (hasSearch && hasTag) {
+                message = `Nenhuma conversa para "${searchQuery}" com a etiqueta "${activeTag!.name}"`;
+              } else if (hasSearch) {
+                message = `Nenhuma conversa para "${searchQuery}"`;
+              } else if (hasTag) {
+                message = `Nenhuma conversa com a etiqueta "${activeTag!.name}"`;
+              }
+
+              return (
+                <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                  <div className="w-20 h-20 rounded-full bg-zapp-panel flex items-center justify-center mb-4">
+                    <MessageSquare className="h-10 w-10 text-zapp-text-muted" />
+                  </div>
+                  <p className="text-zapp-text-muted text-sm">{message}</p>
+                  {(hasSearch || hasTag) && (
+                    <button
+                      onClick={() => {
+                        if (hasSearch) setSearchQuery("");
+                        if (hasTag) setFilterTagId("all");
+                      }}
+                      className="mt-3 text-xs text-zapp-accent hover:underline"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
                 </div>
-                <p className="text-zapp-text-muted text-sm">Nenhuma conversa encontrada</p>
-              </div>
-            ) : (
+              );
+            })() : (
               <>
                 {/* Pinned Groups Section - Only show when viewing groups */}
                 {filterConversationType === "group" && (() => {
