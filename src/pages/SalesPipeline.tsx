@@ -1684,6 +1684,7 @@ export default function SalesPipeline() {
         accountId={currentUser?.account_id || ""}
         onComplete={handleOutcomeRequiredFieldsComplete}
         outcomeType={outcomeRequiredFieldsModal.outcomeType}
+        clientId={outcomeRequiredFieldsModal.clientId ?? null}
       />
 
       {/* Meeting Schedule Dialog - opens when deal moves to "reunião agendada" */}
