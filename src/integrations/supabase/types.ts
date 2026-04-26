@@ -3886,6 +3886,151 @@ export type Database = {
           },
         ]
       }
+      deal_operation_briefings: {
+        Row: {
+          account_id: string
+          cidade: string | null
+          client_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          conhece_cliente_nossa: string | null
+          created_at: string
+          created_by: string | null
+          da_aulas: boolean | null
+          da_cursos: boolean | null
+          deal_id: string | null
+          dias_atende_semana: string | null
+          equipamentos: string | null
+          especialidade: string | null
+          estrutura_clinica: string | null
+          foco_atuacao: string | null
+          horas_atende_dia: string | null
+          id: string
+          is_complete: boolean
+          ja_fez_mentoria: string | null
+          margem_lucro: string | null
+          meta_faturamento: number | null
+          numero_funcionarios: string | null
+          objetivo_mentoria: string | null
+          observacoes: string | null
+          tem_caixa: string | null
+          tempo_atuacao: string | null
+          ticket_medio: number | null
+          trafego_investimento: string | null
+          ultimos_faturamentos: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          cidade?: string | null
+          client_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          conhece_cliente_nossa?: string | null
+          created_at?: string
+          created_by?: string | null
+          da_aulas?: boolean | null
+          da_cursos?: boolean | null
+          deal_id?: string | null
+          dias_atende_semana?: string | null
+          equipamentos?: string | null
+          especialidade?: string | null
+          estrutura_clinica?: string | null
+          foco_atuacao?: string | null
+          horas_atende_dia?: string | null
+          id?: string
+          is_complete?: boolean
+          ja_fez_mentoria?: string | null
+          margem_lucro?: string | null
+          meta_faturamento?: number | null
+          numero_funcionarios?: string | null
+          objetivo_mentoria?: string | null
+          observacoes?: string | null
+          tem_caixa?: string | null
+          tempo_atuacao?: string | null
+          ticket_medio?: number | null
+          trafego_investimento?: string | null
+          ultimos_faturamentos?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          cidade?: string | null
+          client_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          conhece_cliente_nossa?: string | null
+          created_at?: string
+          created_by?: string | null
+          da_aulas?: boolean | null
+          da_cursos?: boolean | null
+          deal_id?: string | null
+          dias_atende_semana?: string | null
+          equipamentos?: string | null
+          especialidade?: string | null
+          estrutura_clinica?: string | null
+          foco_atuacao?: string | null
+          horas_atende_dia?: string | null
+          id?: string
+          is_complete?: boolean
+          ja_fez_mentoria?: string | null
+          margem_lucro?: string | null
+          meta_faturamento?: number | null
+          numero_funcionarios?: string | null
+          objetivo_mentoria?: string | null
+          observacoes?: string | null
+          tem_caixa?: string | null
+          tempo_atuacao?: string | null
+          ticket_medio?: number | null
+          trafego_investimento?: string | null
+          ultimos_faturamentos?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_operation_briefings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_operation_briefings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "deal_operation_briefings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_operation_briefings_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_operation_briefings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_operation_briefings_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_stages: {
         Row: {
           account_id: string

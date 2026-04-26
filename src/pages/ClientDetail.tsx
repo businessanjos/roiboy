@@ -28,6 +28,7 @@ import { ClientLogoUpload } from "@/components/client/ClientLogoUpload";
 import { ContractTimer } from "@/components/client/ContractTimer";
 import { ClientContracts } from "@/components/client/ClientContracts";
 import { ClientFormResponses } from "@/components/client/ClientFormResponses";
+import { OperationBriefingForm } from "@/components/operations/OperationBriefingForm";
 import { ClientRelationships } from "@/components/client/ClientRelationships";
 import { ClientDeals } from "@/components/client/ClientDeals";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
@@ -2376,6 +2377,12 @@ export default function ClientDetail() {
                   <ClientFormResponses clientId={id!} />
                 </CardContent>
               </Card>
+            );
+          case "briefing":
+            return (
+              <OperationBriefingForm
+                clientId={id!}
+              />
             );
           case "campos":
             return (
