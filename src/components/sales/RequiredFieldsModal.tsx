@@ -257,6 +257,23 @@ export function RequiredFieldsModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {showBriefing && (
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold">Briefing para Operação</h3>
+                <p className="text-xs text-muted-foreground">
+                  Preencha o briefing estruturado abaixo. Salve para liberar o botão "Preencher e Ganhar".
+                </p>
+              </div>
+              <OperationBriefingForm
+                dealId={dealId}
+                clientId={clientId ?? null}
+                onSaved={(data: OperationBriefingData) => setBriefingComplete(isBriefingComplete(data))}
+              />
+              {displayedFields.length > 0 && <Separator />}
+            </div>
+          )}
+
           {displayedFields.map((field) => {
             const bonusField = isBonusField(field.name);
             return (
@@ -288,23 +305,6 @@ export function RequiredFieldsModal({
               </div>
             );
           })}
-
-          {showBriefing && (
-            <div className="space-y-3 pt-2">
-              {displayedFields.length > 0 && <Separator />}
-              <div>
-                <h3 className="text-sm font-semibold">Briefing para Operação</h3>
-                <p className="text-xs text-muted-foreground">
-                  Preencha o briefing estruturado abaixo. Salve para liberar o botão "Preencher e Ganhar".
-                </p>
-              </div>
-              <OperationBriefingForm
-                dealId={dealId}
-                clientId={clientId ?? null}
-                onSaved={(data: OperationBriefingData) => setBriefingComplete(isBriefingComplete(data))}
-              />
-            </div>
-          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
