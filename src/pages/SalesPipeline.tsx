@@ -1698,19 +1698,6 @@ export default function SalesPipeline() {
         participantPhone={meetingDialog.participantPhone}
         stageName={meetingDialog.stageName}
       />
-
-      {/* Operation Briefing Modal — required to win deals */}
-      <OperationBriefingModal
-        open={briefingModal.open}
-        onOpenChange={(open) => setBriefingModal(prev => ({ ...prev, open }))}
-        dealId={briefingModal.dealId}
-        clientId={briefingModal.clientId}
-        dealTitle={briefingModal.dealTitle}
-        onCompleted={() => {
-          // Re-attempt marking as won, now with briefing complete
-          handleMarkAsWon(briefingModal.dealId);
-        }}
-      />
     </>
   );
 }
