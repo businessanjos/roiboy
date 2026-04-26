@@ -201,7 +201,21 @@ export default function RoyZapp() {
   const [filterConversationType, setFilterConversationType] = useState<"all" | "individual" | "group">("all");
   const [filterArchived, setFilterArchived] = useState(false);
   const [filterProductId, setFilterProductId] = useState<string>("all");
-  const [filterTagId, setFilterTagId] = useState<string>("all");
+  const [filterTagId, setFilterTagId] = useState<string>(() => {
+    if (typeof window === "undefined") return "all";
+    try {
+      return localStorage.getItem("royzapp:filterTagId") || "all";
+    } catch {
+      return "all";
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("royzapp:filterTagId", filterTagId);
+    } catch {
+      // ignore quota / privacy mode errors
+    }
+  }, [filterTagId]);
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
   
