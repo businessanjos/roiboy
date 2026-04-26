@@ -325,6 +325,14 @@ export default function SalesPipeline() {
     missingFields: [],
   });
 
+  // State for the Operation Briefing modal (required to win)
+  const [briefingModal, setBriefingModal] = useState<{
+    open: boolean;
+    dealId: string;
+    clientId: string | null;
+    dealTitle: string;
+  }>({ open: false, dealId: "", clientId: null, dealTitle: "" });
+
   // Handle URL query param to open deal detail automatically
   useEffect(() => {
     const dealIdFromUrl = searchParams.get('deal');
