@@ -975,7 +975,7 @@ export function CustomFieldsManager({
 
   const content = (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         {!isControlled && (
           <div>
             <h3 className="text-lg font-medium">Campos Personalizados</h3>
@@ -985,6 +985,15 @@ export function CustomFieldsManager({
           </div>
         )}
         {fieldDialog}
+      </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar campos..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 h-9"
+        />
       </div>
       {fieldsList}
     </div>
