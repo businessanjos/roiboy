@@ -156,6 +156,12 @@ export function RequiredFieldsModal({
             break;
         }
 
+        // Bonus fields are always stored as JSON arrays of selected labels
+        if (isBonusField(field.name)) {
+          valueData.value_json = Array.isArray(value) ? value : [];
+          valueData.value_text = null;
+        }
+
         const { error } = await supabase
           .from("deal_field_values")
           .upsert(valueData, { onConflict: "deal_id,field_id" });
