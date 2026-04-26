@@ -716,34 +716,29 @@ export default function SalesPipeline() {
       return;
     }
 
-    // Validate required fields for "won" outcome (unless skipping after modal fill)
+    // Validate required fields + briefing for "won" outcome (unless skipping after modal fill)
     if (!skipValidation && currentUser?.account_id) {
       const validation = await validateDealOutcome(dealId, "won", currentUser.account_id);
-      if (!validation.canMoveToStage && validation.missingFields.length > 0) {
-        setOutcomeRequiredFieldsModal({
-          open: true,
-          dealId,
-          dealTitle: deal.title,
-          outcomeType: "won",
-          missingFields: validation.missingFields,
-        });
-        return;
-      }
 
-      // Validate Operation Briefing — required to win the deal
+      // Check briefing completeness in parallel
       const { data: briefing } = await supabase
         .from("deal_operation_briefings")
         .select("is_complete")
         .eq("deal_id", dealId)
         .maybeSingle();
-      if (!briefing?.is_complete) {
-        setBriefingModal({
+      const briefingIncomplete = !briefing?.is_complete;
+
+      const hasMissingFields = !validation.canMoveToStage && validation.missingFields.length > 0;
+
+      if (hasMissingFields || briefingIncomplete) {
+        setOutcomeRequiredFieldsModal({
           open: true,
           dealId,
-          clientId: deal.client_id ?? null,
           dealTitle: deal.title,
-        });
-        toast.info("Preencha o Briefing para Operação para Ganhar este negócio.");
+          outcomeType: "won",
+          missingFields: hasMissingFields ? validation.missingFields : [],
+          clientId: deal.client_id ?? null,
+        } as any);
         return;
       }
     }
