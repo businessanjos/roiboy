@@ -181,6 +181,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   filteredAssignments,
   agents,
   tags,
+  tagCounts,
   departments,
   teamUsers,
   availableProducts,
