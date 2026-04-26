@@ -257,26 +257,37 @@ export function RequiredFieldsModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {displayedFields.map((field) => (
-            <div key={field.id} className="space-y-2">
-              <Label className="text-sm font-medium">
-                {field.name} <span className="text-destructive">*</span>
-              </Label>
-              <InlineFieldInput
-                field={field}
-                value={values[field.id]}
-                onChange={(newValue) => handleValueChange(field.id, newValue)}
-              />
-              {field.id === paymentMethodField?.id && needsBreakdown && (
-                <PaymentBreakdownComposer
-                  paymentMethodValue={paymentMethodValue as string}
-                  paymentMethodLabel={paymentMethodLabel}
-                  value={breakdown}
-                  onChange={setBreakdown}
-                />
-              )}
-            </div>
-          ))}
+          {displayedFields.map((field) => {
+            const bonusField = isBonusField(field.name);
+            return (
+              <div key={field.id} className="space-y-2">
+                <Label className="text-sm font-medium">
+                  {field.name} <span className="text-destructive">*</span>
+                </Label>
+                {bonusField ? (
+                  <BonusSelector
+                    dealId={dealId}
+                    value={Array.isArray(values[field.id]) ? (values[field.id] as string[]) : []}
+                    onChange={(newValue) => handleValueChange(field.id, newValue)}
+                  />
+                ) : (
+                  <InlineFieldInput
+                    field={field}
+                    value={values[field.id]}
+                    onChange={(newValue) => handleValueChange(field.id, newValue)}
+                  />
+                )}
+                {field.id === paymentMethodField?.id && needsBreakdown && (
+                  <PaymentBreakdownComposer
+                    paymentMethodValue={paymentMethodValue as string}
+                    paymentMethodLabel={paymentMethodLabel}
+                    value={breakdown}
+                    onChange={setBreakdown}
+                  />
+                )}
+              </div>
+            );
+          })}
 
           {showBriefing && (
             <div className="space-y-3 pt-2">
