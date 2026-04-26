@@ -81,6 +81,7 @@ interface ZappConversationPanelProps {
   filteredAssignments: ConversationAssignment[];
   agents: Agent[];
   tags: ZappTag[];
+  tagCounts?: Record<string, number>;
   departments: Department[];
   teamUsers: { id: string; name: string; email: string; avatar_url: string | null; role: string; team_role_id: string | null; team_role?: { id: string; name: string; color: string } | null }[];
   availableProducts: { id: string; name: string; color: string | null }[];
