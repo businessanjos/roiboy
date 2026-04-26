@@ -83,6 +83,7 @@ import {
 } from "@/components/ui/popover";
 import LeadsTab from "@/components/sales/LeadsTab";
 import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingScheduleDialog";
+import { OperationBriefingModal } from "@/components/operations/OperationBriefingModal";
 
 export default function SalesPipeline() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -323,6 +324,14 @@ export default function SalesPipeline() {
     outcomeType: "won",
     missingFields: [],
   });
+
+  // State for the Operation Briefing modal (required to win)
+  const [briefingModal, setBriefingModal] = useState<{
+    open: boolean;
+    dealId: string;
+    clientId: string | null;
+    dealTitle: string;
+  }>({ open: false, dealId: "", clientId: null, dealTitle: "" });
 
   // Handle URL query param to open deal detail automatically
   useEffect(() => {
@@ -728,13 +737,13 @@ export default function SalesPipeline() {
         .eq("deal_id", dealId)
         .maybeSingle();
       if (!briefing?.is_complete) {
-        toast.error(
-          "Preencha o Briefing para Operação antes de Ganhar este negócio.",
-          {
-            description: "Abra o card e vá até a aba 'Briefing Op.' para completar os campos obrigatórios.",
-            duration: 6000,
-          }
-        );
+        setBriefingModal({
+          open: true,
+          dealId,
+          clientId: deal.client_id ?? null,
+          dealTitle: deal.title,
+        });
+        toast.info("Preencha o Briefing para Operação para Ganhar este negócio.");
         return;
       }
     }
@@ -1690,6 +1699,19 @@ export default function SalesPipeline() {
         participantName={meetingDialog.participantName}
         participantPhone={meetingDialog.participantPhone}
         stageName={meetingDialog.stageName}
+      />
+
+      {/* Operation Briefing Modal — required to win deals */}
+      <OperationBriefingModal
+        open={briefingModal.open}
+        onOpenChange={(open) => setBriefingModal(prev => ({ ...prev, open }))}
+        dealId={briefingModal.dealId}
+        clientId={briefingModal.clientId}
+        dealTitle={briefingModal.dealTitle}
+        onCompleted={() => {
+          // Re-attempt marking as won, now with briefing complete
+          handleMarkAsWon(briefingModal.dealId);
+        }}
       />
     </>
   );
