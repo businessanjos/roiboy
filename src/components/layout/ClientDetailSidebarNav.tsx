@@ -68,7 +68,7 @@ export function ClientDetailSidebarNav({
     <>
       <div className="p-3 border-b border-border">
         <button
-          onClick={() => { navigate(-1); onNavigate?.(); }}
+          onClick={() => { navigate("/clients"); onNavigate?.(); }}
           className={cn(
             "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
             "text-muted-foreground hover:bg-muted hover:text-foreground"
