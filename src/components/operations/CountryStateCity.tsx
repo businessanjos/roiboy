@@ -56,7 +56,13 @@ export function CountryStateCity({ value, onChange, onCountryChange, disabled }:
           <SelectTrigger><SelectValue placeholder="Selecione o país" /></SelectTrigger>
           <SelectContent className="max-h-72">
             {COUNTRIES.map((c) => (
-              <SelectItem key={c.code} value={c.code}>{c.name} ({c.currency})</SelectItem>
+              <SelectItem key={c.code} value={c.code}>
+                <span className="flex items-center gap-2">
+                  <span className="text-base leading-none">{c.flag}</span>
+                  <span>{c.name}</span>
+                  <span className="text-xs text-muted-foreground">({c.currency})</span>
+                </span>
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
