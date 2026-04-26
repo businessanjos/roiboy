@@ -33,6 +33,13 @@ export function buildProductIndex(products: ProductLite[]): ProductIndex {
   const byId: Record<string, ResolvedProduct> = {};
   const byKey: Record<string, ResolvedProduct> = {};
 
+  // Index non-renewal products first so that derived keys (e.g. "rykas_mentoring")
+  // resolve to the parent product instead of the renewal SKU.
+  const sorted = [...products].sort((a, b) => {
+    const aRen = /^ren\.?\s/i.test(a.name) ? 1 : 0;
+    const bRen = /^ren\.?\s/i.test(b.name) ? 1 : 0;
+    return aRen - bRen;
+  });
   const registerKey = (key: string, entry: ResolvedProduct) => {
     if (key && !byKey[key]) byKey[key] = entry;
   };
