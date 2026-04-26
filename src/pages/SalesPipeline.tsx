@@ -83,7 +83,7 @@ import {
 } from "@/components/ui/popover";
 import LeadsTab from "@/components/sales/LeadsTab";
 import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingScheduleDialog";
-import { OperationBriefingModal } from "@/components/operations/OperationBriefingModal";
+
 
 export default function SalesPipeline() {
   const [searchParams, setSearchParams] = useSearchParams();
