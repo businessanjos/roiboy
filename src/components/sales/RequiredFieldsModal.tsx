@@ -20,6 +20,8 @@ import {
   getMethodsForPaymentOption,
   isBreakdownComplete,
 } from "@/components/sales/PaymentBreakdownComposer";
+import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from "@/components/operations/OperationBriefingForm";
+import { Separator } from "@/components/ui/separator";
 
 interface RequiredFieldsModalProps {
   open: boolean;
