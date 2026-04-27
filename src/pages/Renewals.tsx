@@ -401,6 +401,9 @@ export default function Renewals() {
   // Aba "Vencidos" usa filtros próprios (independentes de "A Vencer")
   const filteredExpired = contracts.filter((c) => {
     if (c.days_until_expiry >= 0) return false;
+    // Apenas vencimentos de 2026
+    const expYear = c.end_date ? new Date(c.end_date).getUTCFullYear() : 0;
+    if (expYear !== 2026) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       if (
