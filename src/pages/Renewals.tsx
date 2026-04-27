@@ -356,6 +356,20 @@ export default function Renewals() {
   const uniqueConsultoras = [...new Set(contracts.map(c => c.responsible_name).filter(Boolean))] as string[];
   const uniqueProdutos = [...new Set(contracts.map(c => c.product_name).filter(Boolean))] as string[];
 
+  // Helpers para mapear contrato → categorias dos filtros
+  const tempoCategory = (days: number): string | null => {
+    if (days <= 30) return "urgent";
+    if (days <= 60) return "warning";
+    if (days <= 90) return "ok";
+    return "later";
+  };
+  const chanceCategory = (score: number | undefined): string | null => {
+    if (score === undefined) return null;
+    if (score >= 70) return "alta";
+    if (score >= 40) return "media";
+    return "baixa";
+  };
+
   const filtered = contracts.filter((c) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -365,33 +379,32 @@ export default function Renewals() {
         !c.product_name?.toLowerCase().includes(q)
       ) return false;
     }
-    if (filterConsultora !== "all" && c.responsible_name !== filterConsultora) return false;
-    if (filterProduto !== "all" && c.product_name !== filterProduto) return false;
-    if (filterTempo !== "all") {
-      if (filterTempo === "urgent" && c.days_until_expiry > 30) return false;
-      if (filterTempo === "warning" && (c.days_until_expiry <= 30 || c.days_until_expiry > 60)) return false;
-      if (filterTempo === "ok" && (c.days_until_expiry <= 60 || c.days_until_expiry > 90)) return false;
-      if (filterTempo === "later" && c.days_until_expiry <= 90) return false;
-      if (filterTempo === "year2026") {
-        const y = c.end_date ? new Date(c.end_date).getUTCFullYear() : 0;
-        if (y !== 2026) return false;
+    if (filterConsultora.length > 0 && (!c.responsible_name || !filterConsultora.includes(c.responsible_name))) return false;
+    if (filterProduto.length > 0 && (!c.product_name || !filterProduto.includes(c.product_name))) return false;
+    if (filterTempo.length > 0) {
+      const cat = tempoCategory(c.days_until_expiry);
+      const year = c.end_date ? new Date(c.end_date).getUTCFullYear() : 0;
+      const matchesYear2026 = filterTempo.includes("year2026") && year === 2026;
+      const matchesCat = cat ? filterTempo.includes(cat) : false;
+      if (!matchesCat && !matchesYear2026) return false;
+    }
+    if (filterChance.length > 0) {
+      const score = chanceScores[c.client_id];
+      if (score === undefined) {
+        // ainda carregando — manter visível
+      } else {
+        const cat = chanceCategory(score);
+        if (!cat || !filterChance.includes(cat)) return false;
       }
     }
-    if (filterChance !== "all") {
-      const score = chanceScores[c.client_id];
-      if (score === undefined) return true; // still loading, show it
-      if (filterChance === "alta" && score < 70) return false;
-      if (filterChance === "media" && (score < 40 || score >= 70)) return false;
-      if (filterChance === "baixa" && score >= 40) return false;
-    }
-    if (filterStatus !== "all") {
+    if (filterStatus.length > 0) {
       const currentOutcome = outcomeMap[c.id]?.outcome || "pending";
-      if (filterStatus !== currentOutcome) return false;
+      if (!filterStatus.includes(currentOutcome)) return false;
     }
-    if (filterQuarter !== "all" && c.end_date) {
-      const month = new Date(c.end_date).getUTCMonth() + 1; // 1-12
-      const q = Math.ceil(month / 3); // 1..4
-      if (`Q${q}` !== filterQuarter) return false;
+    if (filterQuarter.length > 0 && c.end_date) {
+      const month = new Date(c.end_date).getUTCMonth() + 1;
+      const q = Math.ceil(month / 3);
+      if (!filterQuarter.includes(`Q${q}`)) return false;
     }
     return true;
   });
@@ -412,19 +425,18 @@ export default function Renewals() {
         !c.product_name?.toLowerCase().includes(q)
       ) return false;
     }
-    if (expiredFilterConsultora !== "all" && c.responsible_name !== expiredFilterConsultora) return false;
-    if (expiredFilterProduto !== "all" && c.product_name !== expiredFilterProduto) return false;
-    if (expiredFilterChance !== "all") {
+    if (expiredFilterConsultora.length > 0 && (!c.responsible_name || !expiredFilterConsultora.includes(c.responsible_name))) return false;
+    if (expiredFilterProduto.length > 0 && (!c.product_name || !expiredFilterProduto.includes(c.product_name))) return false;
+    if (expiredFilterChance.length > 0) {
       const score = chanceScores[c.client_id];
       if (score !== undefined) {
-        if (expiredFilterChance === "alta" && score < 70) return false;
-        if (expiredFilterChance === "media" && (score < 40 || score >= 70)) return false;
-        if (expiredFilterChance === "baixa" && score >= 40) return false;
+        const cat = chanceCategory(score);
+        if (!cat || !expiredFilterChance.includes(cat)) return false;
       }
     }
-    if (expiredFilterAno !== "all") {
+    if (expiredFilterAno.length > 0) {
       const year = c.end_date ? new Date(c.end_date).getUTCFullYear().toString() : "";
-      if (year !== expiredFilterAno) return false;
+      if (!expiredFilterAno.includes(year)) return false;
     }
     return true;
   });
