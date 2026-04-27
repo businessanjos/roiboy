@@ -663,6 +663,7 @@ function isMetodoProprio(field: CustomField): boolean {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateCurrentStep()) return;
+    setError(null);
     setSubmitting(true);
     try {
       // Merge split spouse fields back into original field
