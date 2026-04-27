@@ -1881,6 +1881,36 @@ export default function Clients() {
         </div>
       </div>
 
+      {/* Status tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="h-auto flex-wrap bg-muted/50 p-1 gap-1 justify-start">
+          <TabsTrigger
+            value="active"
+            className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            Ativos
+          </TabsTrigger>
+          <TabsTrigger
+            value="awaiting"
+            className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            Aguardando Contrato
+          </TabsTrigger>
+          <TabsTrigger
+            value="hold"
+            className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            Hold
+          </TabsTrigger>
+          <TabsTrigger
+            value="cancelled"
+            className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            Cancelados
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {/* Search and Filters */}
       <div className="space-y-3">
         <div className="flex gap-2">
