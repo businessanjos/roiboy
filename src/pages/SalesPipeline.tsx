@@ -1550,6 +1550,15 @@ export default function SalesPipeline() {
                       })()}
                     </p>
                   </div>
+                  <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
+                  <div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Ticket Médio</p>
+                    <p className="text-lg sm:text-xl font-semibold">
+                      {filteredWonDealsByMonth.length > 0
+                        ? formatCurrency(filteredWonTotal / filteredWonDealsByMonth.length)
+                        : "—"}
+                    </p>
+                  </div>
                 </div>
 
                 <DealListView 
