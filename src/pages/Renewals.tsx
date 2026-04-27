@@ -834,49 +834,41 @@ export default function Renewals() {
 
           {/* Filtros */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-            <Select value={expiredFilterProduto} onValueChange={setExpiredFilterProduto}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Produto" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos produtos</SelectItem>
-                {expiredUniqueProdutos.sort().map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={expiredFilterConsultora} onValueChange={setExpiredFilterConsultora}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Consultora" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas consultoras</SelectItem>
-                {expiredUniqueConsultoras.sort().map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={expiredFilterChance} onValueChange={setExpiredFilterChance}>
-              <SelectTrigger className="w-full sm:w-[150px]">
-                <SelectValue placeholder="Chance" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas chances</SelectItem>
-                <SelectItem value="alta">Alta</SelectItem>
-                <SelectItem value="media">Média</SelectItem>
-                <SelectItem value="baixa">Baixa</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={expiredFilterAno} onValueChange={setExpiredFilterAno}>
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="Ano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os anos</SelectItem>
-                <SelectItem value="2025">2025</SelectItem>
-                <SelectItem value="2026">2026</SelectItem>
-              </SelectContent>
-            </Select>
+            <MultiSelectFilter
+              label="Produto"
+              width="w-full sm:w-[180px]"
+              selected={expiredFilterProduto}
+              onChange={setExpiredFilterProduto}
+              options={expiredUniqueProdutos.sort().map((n) => ({ value: n, label: n }))}
+            />
+            <MultiSelectFilter
+              label="Consultora"
+              width="w-full sm:w-[180px]"
+              selected={expiredFilterConsultora}
+              onChange={setExpiredFilterConsultora}
+              options={expiredUniqueConsultoras.sort().map((n) => ({ value: n, label: n }))}
+            />
+            <MultiSelectFilter
+              label="Chance"
+              width="w-full sm:w-[150px]"
+              selected={expiredFilterChance}
+              onChange={setExpiredFilterChance}
+              options={[
+                { value: "alta", label: "Alta" },
+                { value: "media", label: "Média" },
+                { value: "baixa", label: "Baixa" },
+              ]}
+            />
+            <MultiSelectFilter
+              label="Ano"
+              width="w-full sm:w-[140px]"
+              selected={expiredFilterAno}
+              onChange={setExpiredFilterAno}
+              options={[
+                { value: "2025", label: "2025" },
+                { value: "2026", label: "2026" },
+              ]}
+            />
           </div>
 
           {renderContractsTable(
