@@ -61,6 +61,7 @@ export default function Renewals() {
   const [filterTempo, setFilterTempo] = useState("all");
   const [filterChance, setFilterChance] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterQuarter, setFilterQuarter] = useState("all");
   // Filtros independentes da aba "Vencidos"
   const [expiredFilterConsultora, setExpiredFilterConsultora] = useState("all");
   const [expiredFilterProduto, setExpiredFilterProduto] = useState("all");
@@ -386,6 +387,11 @@ export default function Renewals() {
     if (filterStatus !== "all") {
       const currentOutcome = outcomeMap[c.id]?.outcome || "pending";
       if (filterStatus !== currentOutcome) return false;
+    }
+    if (filterQuarter !== "all" && c.end_date) {
+      const month = new Date(c.end_date).getUTCMonth() + 1; // 1-12
+      const q = Math.ceil(month / 3); // 1..4
+      if (`Q${q}` !== filterQuarter) return false;
     }
     return true;
   });
@@ -757,6 +763,18 @@ export default function Renewals() {
                 <SelectItem value="alta">Alta</SelectItem>
                 <SelectItem value="media">Média</SelectItem>
                 <SelectItem value="baixa">Baixa</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterQuarter} onValueChange={setFilterQuarter}>
+              <SelectTrigger className="w-full sm:w-[130px]">
+                <SelectValue placeholder="Quarter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos quarters</SelectItem>
+                <SelectItem value="Q1">Q1</SelectItem>
+                <SelectItem value="Q2">Q2</SelectItem>
+                <SelectItem value="Q3">Q3</SelectItem>
+                <SelectItem value="Q4">Q4</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
