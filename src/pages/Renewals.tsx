@@ -593,7 +593,11 @@ export default function Renewals() {
         <TabsList>
           <TabsTrigger value="pending" className="gap-2">
             <CalendarDays className="h-4 w-4" />
-            A Vencer ({filtered.length})
+            A Vencer ({filteredUpcoming.length})
+          </TabsTrigger>
+          <TabsTrigger value="expired" className="gap-2">
+            <CalendarX className="h-4 w-4" />
+            Vencidos ({filteredExpired.length})
           </TabsTrigger>
           <TabsTrigger value="results" className="gap-2">
             <TrendingDown className="h-4 w-4" />
