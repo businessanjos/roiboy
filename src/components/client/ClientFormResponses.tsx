@@ -621,6 +621,8 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                           </p>
                           {isEditing(response.id) ? (
                             <div className="mt-1">{renderEditField(fieldId, value)}</div>
+                          ) : isStructured(value) ? (
+                            renderStructured(value)
                           ) : (
                             <p className={cn(
                               "text-sm text-foreground break-words",
