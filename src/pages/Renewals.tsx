@@ -61,6 +61,11 @@ export default function Renewals() {
   const [filterTempo, setFilterTempo] = useState("all");
   const [filterChance, setFilterChance] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  // Filtros independentes da aba "Vencidos"
+  const [expiredFilterConsultora, setExpiredFilterConsultora] = useState("all");
+  const [expiredFilterProduto, setExpiredFilterProduto] = useState("all");
+  const [expiredFilterChance, setExpiredFilterChance] = useState("all");
+  const [expiredFilterAno, setExpiredFilterAno] = useState<string>("all");
   const [chanceScores, setChanceScores] = useState<Record<string, number>>({});
   const [outcomeMap, setOutcomeMap] = useState<Record<string, { id: string; outcome: string }>>({});
   const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
