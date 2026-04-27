@@ -1,0 +1,14 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ClientFormResponses — multiselect rendering > snapshot: chips structure for multiselect with opt_* values 1`] = `
+<span
+  class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border"
+  style="background-color: rgba(16, 185, 129, 0.102); color: rgb(16, 185, 129); border-color: #10b98140;"
+>
+  <span
+    class="h-1.5 w-1.5 rounded-full"
+    style="background-color: rgb(16, 185, 129);"
+  />
+  Aumentar faturamento
+</span>
+`;
