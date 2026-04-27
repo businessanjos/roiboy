@@ -711,27 +711,20 @@ export default function SalesPipeline() {
       return;
     }
 
-    // Validate required fields + briefing for "won" outcome (unless skipping after modal fill)
+    // Validate required fields for "won" outcome (unless skipping after modal fill)
+    // Briefing operacional é OPCIONAL — não bloqueia o ganho
     if (!skipValidation && currentUser?.account_id) {
       const validation = await validateDealOutcome(dealId, "won", currentUser.account_id);
 
-      // Check briefing completeness in parallel
-      const { data: briefing } = await supabase
-        .from("deal_operation_briefings")
-        .select("is_complete")
-        .eq("deal_id", dealId)
-        .maybeSingle();
-      const briefingIncomplete = !briefing?.is_complete;
-
       const hasMissingFields = !validation.canMoveToStage && validation.missingFields.length > 0;
 
-      if (hasMissingFields || briefingIncomplete) {
+      if (hasMissingFields) {
         setOutcomeRequiredFieldsModal({
           open: true,
           dealId,
           dealTitle: deal.title,
           outcomeType: "won",
-          missingFields: hasMissingFields ? validation.missingFields : [],
+          missingFields: validation.missingFields,
           clientId: deal.client_id ?? null,
         } as any);
         return;
