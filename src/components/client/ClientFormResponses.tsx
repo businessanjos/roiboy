@@ -6,7 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Loader2, FileText, ChevronDown, ChevronRight, Building2, CheckCircle2, Pencil, Save, X } from "lucide-react";
+import {
+  Loader2, FileText, ChevronDown, ChevronRight, Building2, CheckCircle2,
+  Pencil, Save, X, Mail, Phone, Calendar as CalendarIcon, MapPin, Hash,
+  DollarSign, Link as LinkIcon, User, Sparkles, ListChecks, Type,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
