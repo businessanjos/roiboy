@@ -2081,6 +2081,16 @@ export default function Clients() {
         </div>
       </div>
 
+      {/* Status tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="active">Ativos</TabsTrigger>
+          <TabsTrigger value="awaiting">Aguardando Contrato</TabsTrigger>
+          <TabsTrigger value="hold">Hold</TabsTrigger>
+          <TabsTrigger value="cancelled">Cancelados</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {viewMode === "table" ? (
         <Card className="shadow-card flex-1 overflow-hidden">
           <ScrollArea className="h-[calc(100vh-260px)]" orientation="both">
