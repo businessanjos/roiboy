@@ -165,6 +165,13 @@ interface AllProduct {
   is_active: boolean;
 }
 
+interface FormResponseSummary {
+  id: string;
+  title: string;
+  submitted_at: string;
+  fieldCount: number;
+}
+
 const getCategoryLabel = (category: string) => {
   const labels: Record<string, string> = {
     revenue: "Receita",
@@ -183,7 +190,7 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const { currentUser, loading: userLoading } = useCurrentUser();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [client, setClient] = useState<Client | null>(null);
   const [clientProducts, setClientProducts] = useState<ClientProduct[]>([]);
   const [score, setScore] = useState<ScoreSnapshot | null>(null);
@@ -249,6 +256,7 @@ export default function ClientDetail() {
 
   // Forms for sending to client
   const [availableForms, setAvailableForms] = useState<{ id: string; title: string }[]>([]);
+  const [formResponseSummaries, setFormResponseSummaries] = useState<FormResponseSummary[]>([]);
   
   // Team users for responsible user selection
   const [teamUsers, setTeamUsers] = useState<{ id: string; name: string; email: string }[]>([]);
@@ -288,6 +296,10 @@ export default function ClientDetail() {
     if (!error && data) {
       setTeamUsers(data);
     }
+  };
+
+  const openFichasTab = () => {
+    setSearchParams({ tab: "fichas" });
   };
 
   const copyFormLink = async (formId: string, formTitle: string) => {
@@ -849,6 +861,14 @@ export default function ClientDetail() {
       });
 
       // Add form responses
+      const formResponseData = (formResponsesResult.data || []).map((response: any) => ({
+        id: response.id,
+        title: response.forms?.title || "Formulário",
+        submitted_at: response.submitted_at,
+        fieldCount: Object.keys(response.responses || {}).length,
+      }));
+      setFormResponseSummaries(formResponseData);
+
       (formResponsesResult.data || []).forEach((response: any) => {
         const responseCount = Object.keys(response.responses || {}).length;
         timelineItems.push({
@@ -1112,6 +1132,14 @@ export default function ClientDetail() {
       });
 
       // Add form responses
+      const formResponseData = (formResponsesResult.data || []).map((response: any) => ({
+        id: response.id,
+        title: response.forms?.title || "Formulário",
+        submitted_at: response.submitted_at,
+        fieldCount: Object.keys(response.responses || {}).length,
+      }));
+      setFormResponseSummaries(formResponseData);
+
       (formResponsesResult.data || []).forEach((response: any) => {
         const responseCount = Object.keys(response.responses || {}).length;
         timelineItems.push({
@@ -2298,6 +2326,30 @@ export default function ClientDetail() {
                   </span>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {formResponseSummaries.length > 0 && searchParams.get("tab") !== "fichas" && (
+        <Card className="shadow-card border-primary/30 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="rounded-md bg-primary/10 p-2 text-primary">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Ficha preenchida encontrada</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formResponseSummaries[0].title} • {formResponseSummaries[0].fieldCount} campo(s) • {format(new Date(formResponseSummaries[0].submitted_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
+              </div>
+              <Button onClick={openFichasTab} className="shrink-0">
+                <FileText className="h-4 w-4 mr-2" />
+                Abrir ficha
+              </Button>
             </div>
           </CardContent>
         </Card>
