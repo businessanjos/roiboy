@@ -553,27 +553,121 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   return (
     <div className="space-y-6">
       {/* Hero summary */}
-      {formResponses.length > 0 && (
-        <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
-              <FileText className="h-6 w-6 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">
-                {formResponses.length === 1
-                  ? "1 ficha preenchida pelo cliente"
-                  : `${formResponses.length} fichas preenchidas pelo cliente`}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Última resposta em {format(new Date(formResponses[0].submitted_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                {" • "}
-                {formResponses.reduce((acc, r) => acc + Object.keys(r.responses).length, 0)} campos respondidos no total
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {formResponses.length > 0 && (() => {
+        let totalFilled = 0;
+        let multiCount = 0;
+        let currencyCount = 0;
+        let phoneCount = 0;
+        const missingLabels: { label: string; rawValue: string }[] = [];
+
+        formResponses.forEach((r) => {
+          Object.entries(r.responses).forEach(([fid, v]) => {
+            if (v === null || v === undefined || v === "") return;
+            totalFilled++;
+            const fdef = customFieldsMap.get(fid);
+            const ftype = fdef?.field_type || "";
+            if (ftype === "multi_select" || Array.isArray(v)) multiCount++;
+            if (ftype === "currency") currencyCount++;
+            if (/telefone|whats|celular|fone/i.test(fdef?.name || "")) phoneCount++;
+
+            // Detect values without resolved label (option IDs like opt_xxx with no match)
+            const opts = fdef?.options;
+            const checkValue = (single: any) => {
+              if (typeof single !== "string") return;
+              if (!opts || !Array.isArray(opts) || opts.length === 0) return;
+              const match = opts.find((o: any) => o.value === single);
+              if (!match) {
+                missingLabels.push({ label: fdef?.name || fid, rawValue: single });
+              }
+            };
+            if (Array.isArray(v)) v.forEach(checkValue); else checkValue(v);
+          });
+        });
+
+        return (
+          <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+            <CardContent className="p-5 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                  <FileText className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">
+                    {formResponses.length === 1
+                      ? "1 ficha preenchida pelo cliente"
+                      : `${formResponses.length} fichas preenchidas pelo cliente`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Última resposta em {format(new Date(formResponses[0].submitted_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-lg border bg-card/60 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Preenchidos</span>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums">{totalFilled}</p>
+                </div>
+                <div className="rounded-lg border bg-card/60 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ListChecks className="h-3.5 w-3.5 text-violet-600" />
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Multiselect</span>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums">{multiCount}</p>
+                </div>
+                <div className="rounded-lg border bg-card/60 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Moeda</span>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums">{currencyCount}</p>
+                </div>
+                <div className="rounded-lg border bg-card/60 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Phone className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Telefone</span>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums">{phoneCount}</p>
+                </div>
+              </div>
+
+              {missingLabels.length > 0 && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <X className="h-3.5 w-3.5 text-amber-600" />
+                    <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                      {missingLabels.length} {missingLabels.length === 1 ? "valor" : "valores"} sem label resolvido
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mb-2">
+                    Estes valores foram salvos mas a opção correspondente não existe mais no campo. Edite o campo customizado para incluir o label.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {missingLabels.slice(0, 12).map((m, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:text-amber-300"
+                        title={`${m.label}: ${m.rawValue}`}
+                      >
+                        <span className="font-semibold">{m.label}:</span>
+                        <code className="font-mono">{m.rawValue}</code>
+                      </span>
+                    ))}
+                    {missingLabels.length > 12 && (
+                      <span className="text-[11px] text-muted-foreground self-center">
+                        +{missingLabels.length - 12} mais
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Form Responses */}
       {formResponses.map((response) => {
