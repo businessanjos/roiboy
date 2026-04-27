@@ -525,8 +525,8 @@ export default function Clients() {
       if (filterResponsible !== "all") params.set("responsible_user_id", filterResponsible);
       if (filterProduct !== "all") params.set("product_id", filterProduct);
       
-      if (filterContract !== "all") params.set("contract_filter", filterContract);
-      if (filterClientStatus !== "all") params.set("client_status", filterClientStatus);
+      if (effectiveContractFilter) params.set("contract_filter", effectiveContractFilter);
+      if (filterClientStatus !== "all" && activeTab === "all") params.set("client_status", filterClientStatus);
       params.set("sort", sortOrder);
       
       const response = await fetch(
