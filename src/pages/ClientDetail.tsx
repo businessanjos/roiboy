@@ -165,6 +165,13 @@ interface AllProduct {
   is_active: boolean;
 }
 
+interface FormResponseSummary {
+  id: string;
+  title: string;
+  submitted_at: string;
+  fieldCount: number;
+}
+
 const getCategoryLabel = (category: string) => {
   const labels: Record<string, string> = {
     revenue: "Receita",
@@ -183,7 +190,7 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const { currentUser, loading: userLoading } = useCurrentUser();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [client, setClient] = useState<Client | null>(null);
   const [clientProducts, setClientProducts] = useState<ClientProduct[]>([]);
   const [score, setScore] = useState<ScoreSnapshot | null>(null);
@@ -249,6 +256,7 @@ export default function ClientDetail() {
 
   // Forms for sending to client
   const [availableForms, setAvailableForms] = useState<{ id: string; title: string }[]>([]);
+  const [formResponseSummaries, setFormResponseSummaries] = useState<FormResponseSummary[]>([]);
   
   // Team users for responsible user selection
   const [teamUsers, setTeamUsers] = useState<{ id: string; name: string; email: string }[]>([]);
@@ -288,6 +296,10 @@ export default function ClientDetail() {
     if (!error && data) {
       setTeamUsers(data);
     }
+  };
+
+  const openFichasTab = () => {
+    setSearchParams({ tab: "fichas" });
   };
 
   const copyFormLink = async (formId: string, formTitle: string) => {
