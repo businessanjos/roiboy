@@ -240,32 +240,39 @@ Deno.serve(async (req) => {
 
       console.log(`[${clientIP}] Searching client by phone: normalized=${normalizedPhone}, lastDigits=${lastDigits}`);
 
-      // 1. Exact match on phone_e164
+      // 1. Exact match on phone_e164 — try both with and without "+" prefix
+      const phoneNoPlus = normalizedPhone.replace(/^\+/, '');
       const { data: exactClient } = await supabase
         .from("clients")
         .select("id")
         .eq("account_id", form.account_id)
-        .eq("phone_e164", normalizedPhone)
+        .in("phone_e164", [normalizedPhone, phoneNoPlus])
         .maybeSingle();
 
       if (exactClient) {
         resolvedClientId = exactClient.id;
         console.log(`[${clientIP}] Found client by exact phone match: ${resolvedClientId}`);
       } else {
-        // 2. Fuzzy match: search clients whose phone ends with same 8 digits
-        const { data: allClients } = await supabase
-          .from("clients")
-          .select("id, phone_e164, additional_phones")
-          .eq("account_id", form.account_id);
+        // 2. Fuzzy match: search clients whose phone ends with same 8 digits.
+        // Use range() to bypass the 1000-row PostgREST default limit, paging through all clients.
+        const PAGE = 1000;
+        let from = 0;
+        let matchedClient: { id: string } | null = null;
 
-        if (allClients) {
-          const matchedClient = allClients.find(c => {
-            // Check primary phone
+        while (!matchedClient) {
+          const { data: page, error: pageError } = await supabase
+            .from("clients")
+            .select("id, phone_e164, additional_phones")
+            .eq("account_id", form.account_id)
+            .range(from, from + PAGE - 1);
+
+          if (pageError || !page || page.length === 0) break;
+
+          matchedClient = page.find(c => {
             if (c.phone_e164) {
               const cDigits = c.phone_e164.replace(/\D/g, '');
               if (cDigits.slice(-8) === lastDigits) return true;
             }
-            // Check additional_phones
             if (c.additional_phones && Array.isArray(c.additional_phones)) {
               return (c.additional_phones as string[]).some((p: string) => {
                 const pDigits = String(p).replace(/\D/g, '');
@@ -273,16 +280,20 @@ Deno.serve(async (req) => {
               });
             }
             return false;
-          });
+          }) || null;
 
-          if (matchedClient) {
-            resolvedClientId = matchedClient.id;
-            console.log(`[${clientIP}] Found client by fuzzy phone match (last 8 digits): ${resolvedClientId}`);
-          } else {
-            console.log(`[${clientIP}] No client found for phone ${normalizedPhone} (last8=${lastDigits}), response will be unlinked`);
-          }
+          if (page.length < PAGE) break;
+          from += PAGE;
+        }
+
+        if (matchedClient) {
+          resolvedClientId = matchedClient.id;
+          console.log(`[${clientIP}] Found client by fuzzy phone match (last 8 digits): ${resolvedClientId}`);
+        } else {
+          console.log(`[${clientIP}] No client found for phone ${normalizedPhone} (last8=${lastDigits}), response will be unlinked`);
         }
       }
+
     }
 
     // Insert form response
