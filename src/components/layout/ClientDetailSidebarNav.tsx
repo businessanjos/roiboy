@@ -19,28 +19,22 @@ interface NavGroup {
 
 const navGroups: NavGroup[] = [
   {
-    title: "Principal",
+    title: "Histórico",
     items: [
       { id: "timeline", label: "Timeline", icon: Clock },
-      
       { id: "agenda", label: "Agenda", icon: Calendar },
-    ],
-  },
-  {
-    title: "Comercial",
-    items: [
       { id: "deals", label: "Negócios", icon: TrendingUp },
       { id: "contracts", label: "Contratos", icon: FileSignature },
       { id: "subscriptions", label: "Financeiro", icon: CreditCard },
-      { id: "sales", label: "Metas & Vendas", icon: Target },
     ],
   },
   {
-    title: "Dados",
+    title: "Informações",
     items: [
-      { id: "briefing", label: "Briefing Op.", icon: ClipboardList },
-      { id: "fichas", label: "Fichas", icon: FileText },
+      { id: "fichas", label: "Fichas (Formulário)", icon: FileText },
+      { id: "briefing", label: "Briefing Comercial", icon: ClipboardList },
       { id: "campos", label: "Campos", icon: Grid3X3 },
+      { id: "sales", label: "Metas & Vendas", icon: Target },
       { id: "cx", label: "Momentos CX", icon: Heart },
       { id: "vinculos", label: "Vínculos", icon: Link2 },
     ],
