@@ -382,7 +382,41 @@ export default function Renewals() {
   });
 
   const filteredUpcoming = filtered.filter((c) => c.days_until_expiry >= 0);
-  const filteredExpired = filtered.filter((c) => c.days_until_expiry < 0);
+
+  // Aba "Vencidos" usa filtros próprios (independentes de "A Vencer")
+  const filteredExpired = contracts.filter((c) => {
+    if (c.days_until_expiry >= 0) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (
+        !c.client_name.toLowerCase().includes(q) &&
+        !c.client_email?.toLowerCase().includes(q) &&
+        !c.product_name?.toLowerCase().includes(q)
+      ) return false;
+    }
+    if (expiredFilterConsultora !== "all" && c.responsible_name !== expiredFilterConsultora) return false;
+    if (expiredFilterProduto !== "all" && c.product_name !== expiredFilterProduto) return false;
+    if (expiredFilterChance !== "all") {
+      const score = chanceScores[c.client_id];
+      if (score !== undefined) {
+        if (expiredFilterChance === "alta" && score < 70) return false;
+        if (expiredFilterChance === "media" && (score < 40 || score >= 70)) return false;
+        if (expiredFilterChance === "baixa" && score >= 40) return false;
+      }
+    }
+    if (expiredFilterAno !== "all") {
+      const year = c.end_date ? new Date(c.end_date).getUTCFullYear().toString() : "";
+      if (year !== expiredFilterAno) return false;
+    }
+    return true;
+  });
+
+  const expiredUniqueConsultoras = [...new Set(
+    contracts.filter(c => c.days_until_expiry < 0).map(c => c.responsible_name).filter(Boolean)
+  )] as string[];
+  const expiredUniqueProdutos = [...new Set(
+    contracts.filter(c => c.days_until_expiry < 0).map(c => c.product_name).filter(Boolean)
+  )] as string[];
 
   const urgentCount = filteredUpcoming.filter((c) => c.days_until_expiry <= 30).length;
   const warningCount = filteredUpcoming.filter((c) => c.days_until_expiry > 30 && c.days_until_expiry <= 60).length;
