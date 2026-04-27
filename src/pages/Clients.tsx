@@ -272,6 +272,16 @@ export default function Clients() {
   const [filterContract, setFilterContract] = usePersistedFilter<string>("clients", "contract", "all");
   const [filterResponsible, setFilterResponsible] = usePersistedFilter<string>("clients", "responsible", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
+  const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
+
+  // Tab → contract filter mapping (overrides filterContract on fetch)
+  const tabContractFilter: Record<string, string | null> = {
+    active: "active",
+    awaiting: "none",
+    hold: "paused,suspended",
+    cancelled: "cancelled,dismissed,ended",
+  };
+  const effectiveContractFilter = tabContractFilter[activeTab] ?? (filterContract !== "all" ? filterContract : null);
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
