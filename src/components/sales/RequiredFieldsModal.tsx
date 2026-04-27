@@ -263,7 +263,7 @@ export function RequiredFieldsModal({
               <div>
                 <h3 className="text-sm font-semibold">Briefing para Operação</h3>
                 <p className="text-xs text-muted-foreground">
-                  Preencha o briefing estruturado abaixo. Salve para liberar o botão "Preencher e Ganhar".
+                  Opcional — pode ser preenchido depois pela equipe de operações.
                 </p>
               </div>
               <OperationBriefingForm
