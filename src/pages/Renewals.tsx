@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
+import { MultiSelectFilter } from "@/components/renewals/MultiSelectFilter";
 
 interface RenewalContract {
   id: string;
@@ -56,17 +57,17 @@ export default function Renewals() {
   const [contracts, setContracts] = useState<RenewalContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterConsultora, setFilterConsultora] = useState("all");
-  const [filterProduto, setFilterProduto] = useState("all");
-  const [filterTempo, setFilterTempo] = useState("all");
-  const [filterChance, setFilterChance] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterQuarter, setFilterQuarter] = useState("all");
+  const [filterConsultora, setFilterConsultora] = useState<string[]>([]);
+  const [filterProduto, setFilterProduto] = useState<string[]>([]);
+  const [filterTempo, setFilterTempo] = useState<string[]>([]);
+  const [filterChance, setFilterChance] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterQuarter, setFilterQuarter] = useState<string[]>([]);
   // Filtros independentes da aba "Vencidos"
-  const [expiredFilterConsultora, setExpiredFilterConsultora] = useState("all");
-  const [expiredFilterProduto, setExpiredFilterProduto] = useState("all");
-  const [expiredFilterChance, setExpiredFilterChance] = useState("all");
-  const [expiredFilterAno, setExpiredFilterAno] = useState<string>("all");
+  const [expiredFilterConsultora, setExpiredFilterConsultora] = useState<string[]>([]);
+  const [expiredFilterProduto, setExpiredFilterProduto] = useState<string[]>([]);
+  const [expiredFilterChance, setExpiredFilterChance] = useState<string[]>([]);
+  const [expiredFilterAno, setExpiredFilterAno] = useState<string[]>([]);
   const [chanceScores, setChanceScores] = useState<Record<string, number>>({});
   const [outcomeMap, setOutcomeMap] = useState<Record<string, { id: string; outcome: string }>>({});
   const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
@@ -356,6 +357,20 @@ export default function Renewals() {
   const uniqueConsultoras = [...new Set(contracts.map(c => c.responsible_name).filter(Boolean))] as string[];
   const uniqueProdutos = [...new Set(contracts.map(c => c.product_name).filter(Boolean))] as string[];
 
+  // Helpers para mapear contrato → categorias dos filtros
+  const tempoCategory = (days: number): string | null => {
+    if (days <= 30) return "urgent";
+    if (days <= 60) return "warning";
+    if (days <= 90) return "ok";
+    return "later";
+  };
+  const chanceCategory = (score: number | undefined): string | null => {
+    if (score === undefined) return null;
+    if (score >= 70) return "alta";
+    if (score >= 40) return "media";
+    return "baixa";
+  };
+
   const filtered = contracts.filter((c) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -365,33 +380,32 @@ export default function Renewals() {
         !c.product_name?.toLowerCase().includes(q)
       ) return false;
     }
-    if (filterConsultora !== "all" && c.responsible_name !== filterConsultora) return false;
-    if (filterProduto !== "all" && c.product_name !== filterProduto) return false;
-    if (filterTempo !== "all") {
-      if (filterTempo === "urgent" && c.days_until_expiry > 30) return false;
-      if (filterTempo === "warning" && (c.days_until_expiry <= 30 || c.days_until_expiry > 60)) return false;
-      if (filterTempo === "ok" && (c.days_until_expiry <= 60 || c.days_until_expiry > 90)) return false;
-      if (filterTempo === "later" && c.days_until_expiry <= 90) return false;
-      if (filterTempo === "year2026") {
-        const y = c.end_date ? new Date(c.end_date).getUTCFullYear() : 0;
-        if (y !== 2026) return false;
+    if (filterConsultora.length > 0 && (!c.responsible_name || !filterConsultora.includes(c.responsible_name))) return false;
+    if (filterProduto.length > 0 && (!c.product_name || !filterProduto.includes(c.product_name))) return false;
+    if (filterTempo.length > 0) {
+      const cat = tempoCategory(c.days_until_expiry);
+      const year = c.end_date ? new Date(c.end_date).getUTCFullYear() : 0;
+      const matchesYear2026 = filterTempo.includes("year2026") && year === 2026;
+      const matchesCat = cat ? filterTempo.includes(cat) : false;
+      if (!matchesCat && !matchesYear2026) return false;
+    }
+    if (filterChance.length > 0) {
+      const score = chanceScores[c.client_id];
+      if (score === undefined) {
+        // ainda carregando — manter visível
+      } else {
+        const cat = chanceCategory(score);
+        if (!cat || !filterChance.includes(cat)) return false;
       }
     }
-    if (filterChance !== "all") {
-      const score = chanceScores[c.client_id];
-      if (score === undefined) return true; // still loading, show it
-      if (filterChance === "alta" && score < 70) return false;
-      if (filterChance === "media" && (score < 40 || score >= 70)) return false;
-      if (filterChance === "baixa" && score >= 40) return false;
-    }
-    if (filterStatus !== "all") {
+    if (filterStatus.length > 0) {
       const currentOutcome = outcomeMap[c.id]?.outcome || "pending";
-      if (filterStatus !== currentOutcome) return false;
+      if (!filterStatus.includes(currentOutcome)) return false;
     }
-    if (filterQuarter !== "all" && c.end_date) {
-      const month = new Date(c.end_date).getUTCMonth() + 1; // 1-12
-      const q = Math.ceil(month / 3); // 1..4
-      if (`Q${q}` !== filterQuarter) return false;
+    if (filterQuarter.length > 0 && c.end_date) {
+      const month = new Date(c.end_date).getUTCMonth() + 1;
+      const q = Math.ceil(month / 3);
+      if (!filterQuarter.includes(`Q${q}`)) return false;
     }
     return true;
   });
@@ -412,19 +426,18 @@ export default function Renewals() {
         !c.product_name?.toLowerCase().includes(q)
       ) return false;
     }
-    if (expiredFilterConsultora !== "all" && c.responsible_name !== expiredFilterConsultora) return false;
-    if (expiredFilterProduto !== "all" && c.product_name !== expiredFilterProduto) return false;
-    if (expiredFilterChance !== "all") {
+    if (expiredFilterConsultora.length > 0 && (!c.responsible_name || !expiredFilterConsultora.includes(c.responsible_name))) return false;
+    if (expiredFilterProduto.length > 0 && (!c.product_name || !expiredFilterProduto.includes(c.product_name))) return false;
+    if (expiredFilterChance.length > 0) {
       const score = chanceScores[c.client_id];
       if (score !== undefined) {
-        if (expiredFilterChance === "alta" && score < 70) return false;
-        if (expiredFilterChance === "media" && (score < 40 || score >= 70)) return false;
-        if (expiredFilterChance === "baixa" && score >= 40) return false;
+        const cat = chanceCategory(score);
+        if (!cat || !expiredFilterChance.includes(cat)) return false;
       }
     }
-    if (expiredFilterAno !== "all") {
+    if (expiredFilterAno.length > 0) {
       const year = c.end_date ? new Date(c.end_date).getUTCFullYear().toString() : "";
-      if (year !== expiredFilterAno) return false;
+      if (!expiredFilterAno.includes(year)) return false;
     }
     return true;
   });
@@ -722,108 +735,66 @@ export default function Renewals() {
                 className="pl-9"
               />
             </div>
-            <div className="flex flex-col gap-1 w-full sm:w-auto">
-              <label className="text-xs font-medium text-muted-foreground px-1">Consultor</label>
-              <Select value={filterConsultora} onValueChange={setFilterConsultora}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue>{filterConsultora === "all" ? "Todos" : filterConsultora}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {uniqueConsultoras.sort().map((name) => (
-                    <SelectItem key={name} value={name}>{name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1 w-full sm:w-auto">
-              <label className="text-xs font-medium text-muted-foreground px-1">Produto</label>
-              <Select value={filterProduto} onValueChange={setFilterProduto}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue>{filterProduto === "all" ? "Todos" : filterProduto}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {uniqueProdutos.sort().map((name) => (
-                    <SelectItem key={name} value={name}>{name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1 w-full sm:w-auto">
-              <label className="text-xs font-medium text-muted-foreground px-1">Prazo</label>
-              <Select value={filterTempo} onValueChange={setFilterTempo}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue>
-                    {filterTempo === "all" ? "Todos" :
-                     filterTempo === "urgent" ? "Até 30 dias" :
-                     filterTempo === "warning" ? "31 a 60 dias" :
-                     filterTempo === "ok" ? "61 a 90 dias" :
-                     filterTempo === "later" ? "Mais de 90 dias" :
-                     filterTempo === "year2026" ? "Vencimento em 2026" : "Todos"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="urgent">Até 30 dias</SelectItem>
-                  <SelectItem value="warning">31 a 60 dias</SelectItem>
-                  <SelectItem value="ok">61 a 90 dias</SelectItem>
-                  <SelectItem value="later">Mais de 90 dias</SelectItem>
-                  <SelectItem value="year2026">Vencimento em 2026</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1 w-full sm:w-auto">
-              <label className="text-xs font-medium text-muted-foreground px-1">Chance</label>
-              <Select value={filterChance} onValueChange={setFilterChance}>
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue>
-                    {filterChance === "all" ? "Todos" :
-                     filterChance === "alta" ? "Alta" :
-                     filterChance === "media" ? "Média" :
-                     filterChance === "baixa" ? "Baixa" : "Todos"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="media">Média</SelectItem>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1 w-full sm:w-auto">
-              <label className="text-xs font-medium text-muted-foreground px-1">Quarter</label>
-              <Select value={filterQuarter} onValueChange={setFilterQuarter}>
-                <SelectTrigger className="w-full sm:w-[130px]">
-                  <SelectValue>{filterQuarter === "all" ? "Todos" : filterQuarter}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="Q1">Q1</SelectItem>
-                  <SelectItem value="Q2">Q2</SelectItem>
-                  <SelectItem value="Q3">Q3</SelectItem>
-                  <SelectItem value="Q4">Q4</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1 w-full sm:w-auto">
-              <label className="text-xs font-medium text-muted-foreground px-1">Status</label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue>
-                    {filterStatus === "all" ? "Todos" :
-                     filterStatus === "pending" ? "Pendente" :
-                     filterStatus === "negotiating" ? "Em Negociação" : "Todos"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="negotiating">Em Negociação</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <MultiSelectFilter
+              label="Consultor"
+              width="w-full sm:w-[180px]"
+              selected={filterConsultora}
+              onChange={setFilterConsultora}
+              options={uniqueConsultoras.sort().map((n) => ({ value: n, label: n }))}
+            />
+            <MultiSelectFilter
+              label="Produto"
+              width="w-full sm:w-[180px]"
+              selected={filterProduto}
+              onChange={setFilterProduto}
+              options={uniqueProdutos.sort().map((n) => ({ value: n, label: n }))}
+            />
+            <MultiSelectFilter
+              label="Prazo"
+              width="w-full sm:w-[200px]"
+              selected={filterTempo}
+              onChange={setFilterTempo}
+              options={[
+                { value: "urgent", label: "Até 30 dias" },
+                { value: "warning", label: "31 a 60 dias" },
+                { value: "ok", label: "61 a 90 dias" },
+                { value: "later", label: "Mais de 90 dias" },
+                { value: "year2026", label: "Vencimento em 2026" },
+              ]}
+            />
+            <MultiSelectFilter
+              label="Chance"
+              width="w-full sm:w-[150px]"
+              selected={filterChance}
+              onChange={setFilterChance}
+              options={[
+                { value: "alta", label: "Alta" },
+                { value: "media", label: "Média" },
+                { value: "baixa", label: "Baixa" },
+              ]}
+            />
+            <MultiSelectFilter
+              label="Quarter"
+              width="w-full sm:w-[150px]"
+              selected={filterQuarter}
+              onChange={setFilterQuarter}
+              options={[
+                { value: "Q1", label: "Q1" },
+                { value: "Q2", label: "Q2" },
+                { value: "Q3", label: "Q3" },
+                { value: "Q4", label: "Q4" },
+              ]}
+            />
+            <MultiSelectFilter
+              label="Status"
+              width="w-full sm:w-[180px]"
+              selected={filterStatus}
+              onChange={setFilterStatus}
+              options={[
+                { value: "pending", label: "Pendente" },
+                { value: "negotiating", label: "Em Negociação" },
+              ]}
+            />
           </div>
 
           {/* Table */}
@@ -863,49 +834,41 @@ export default function Renewals() {
 
           {/* Filtros */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-            <Select value={expiredFilterProduto} onValueChange={setExpiredFilterProduto}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Produto" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos produtos</SelectItem>
-                {expiredUniqueProdutos.sort().map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={expiredFilterConsultora} onValueChange={setExpiredFilterConsultora}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Consultora" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas consultoras</SelectItem>
-                {expiredUniqueConsultoras.sort().map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={expiredFilterChance} onValueChange={setExpiredFilterChance}>
-              <SelectTrigger className="w-full sm:w-[150px]">
-                <SelectValue placeholder="Chance" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas chances</SelectItem>
-                <SelectItem value="alta">Alta</SelectItem>
-                <SelectItem value="media">Média</SelectItem>
-                <SelectItem value="baixa">Baixa</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={expiredFilterAno} onValueChange={setExpiredFilterAno}>
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="Ano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os anos</SelectItem>
-                <SelectItem value="2025">2025</SelectItem>
-                <SelectItem value="2026">2026</SelectItem>
-              </SelectContent>
-            </Select>
+            <MultiSelectFilter
+              label="Produto"
+              width="w-full sm:w-[180px]"
+              selected={expiredFilterProduto}
+              onChange={setExpiredFilterProduto}
+              options={expiredUniqueProdutos.sort().map((n) => ({ value: n, label: n }))}
+            />
+            <MultiSelectFilter
+              label="Consultora"
+              width="w-full sm:w-[180px]"
+              selected={expiredFilterConsultora}
+              onChange={setExpiredFilterConsultora}
+              options={expiredUniqueConsultoras.sort().map((n) => ({ value: n, label: n }))}
+            />
+            <MultiSelectFilter
+              label="Chance"
+              width="w-full sm:w-[150px]"
+              selected={expiredFilterChance}
+              onChange={setExpiredFilterChance}
+              options={[
+                { value: "alta", label: "Alta" },
+                { value: "media", label: "Média" },
+                { value: "baixa", label: "Baixa" },
+              ]}
+            />
+            <MultiSelectFilter
+              label="Ano"
+              width="w-full sm:w-[140px]"
+              selected={expiredFilterAno}
+              onChange={setExpiredFilterAno}
+              options={[
+                { value: "2025", label: "2025" },
+                { value: "2026", label: "2026" },
+              ]}
+            />
           </div>
 
           {renderContractsTable(
