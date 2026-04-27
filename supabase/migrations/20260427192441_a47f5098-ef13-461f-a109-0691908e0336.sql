@@ -1,0 +1,2 @@
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS country TEXT;
+COMMENT ON COLUMN public.clients.country IS 'ISO 3166-1 alpha-2 country code (e.g. BR, US, PT). Used to format currency/phone in client views.';

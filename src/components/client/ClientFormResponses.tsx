@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { resolveClientLocale, formatCurrencyForLocale, type ClientLocale } from "@/lib/clientCurrency";
 
 interface ClientFormResponsesProps {
   clientId: string;
@@ -80,6 +81,9 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
+  const [clientLocale, setClientLocale] = useState<ClientLocale>(() =>
+    resolveClientLocale({ country: null, phone: null })
+  );
   const { currentUser } = useCurrentUser();
 
   useEffect(() => {
@@ -101,12 +105,18 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     try {
       const { data: clientData, error: clientError } = await supabase
         .from("clients")
-        .select("account_id")
+        .select("account_id, country, phone_e164")
         .eq("id", clientId)
         .maybeSingle();
 
       if (clientError) throw clientError;
       const accountId = clientData?.account_id;
+      setClientLocale(
+        resolveClientLocale({
+          country: (clientData as any)?.country ?? null,
+          phone: (clientData as any)?.phone_e164 ?? null,
+        })
+      );
 
       if (accountId) {
         const { data: fieldsData } = await supabase
@@ -798,12 +808,18 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                               );
                             }
 
-                            // 2) Currency
+                            // 2) Currency — formata na moeda do país do cliente
                             if (fieldType === "currency") {
                               return (
-                                <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                                  {formatCurrency(value)}
-                                </p>
+                                <div>
+                                  <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                    {formatCurrencyForLocale(value, clientLocale)}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {clientLocale.currency} · {clientLocale.countryName}
+                                    {clientLocale.inferred && " (detectado pelo telefone)"}
+                                  </p>
+                                </div>
                               );
                             }
 
