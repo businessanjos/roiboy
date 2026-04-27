@@ -178,11 +178,14 @@ export default function Renewals() {
 
     try {
       const today = new Date();
+      // Estender janela: tudo a vencer até o fim de 2026 (ou pelo menos 90 dias à frente)
+      const endOf2026 = new Date("2026-12-31T23:59:59");
       const in90Days = new Date(today);
       in90Days.setDate(today.getDate() + 90);
+      const futureLimit = endOf2026 > in90Days ? endOf2026 : in90Days;
       const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
-      // 1) Fetch contracts expiring in next 90 days (future renewals)
+      // 1) Fetch contracts expiring from today through end of 2026 (future renewals)
       const { data: futureData, error: futureError } = await supabase
         .from("client_contracts")
         .select(`
@@ -194,9 +197,10 @@ export default function Renewals() {
         .eq("status", "active")
         .not("end_date", "is", null)
         .gte("end_date", formatDate(today))
-        .lte("end_date", formatDate(in90Days))
+        .lte("end_date", formatDate(futureLimit))
         .is("parent_contract_id", null)
-        .order("end_date", { ascending: true });
+        .order("end_date", { ascending: true })
+        .limit(2000);
 
       // 2) Fetch already expired contracts that have pending/negotiating outcomes
       const { data: expiredPendingOutcomes } = await supabase
@@ -365,7 +369,12 @@ export default function Renewals() {
     if (filterTempo !== "all") {
       if (filterTempo === "urgent" && c.days_until_expiry > 30) return false;
       if (filterTempo === "warning" && (c.days_until_expiry <= 30 || c.days_until_expiry > 60)) return false;
-      if (filterTempo === "ok" && c.days_until_expiry <= 60) return false;
+      if (filterTempo === "ok" && (c.days_until_expiry <= 60 || c.days_until_expiry > 90)) return false;
+      if (filterTempo === "later" && c.days_until_expiry <= 90) return false;
+      if (filterTempo === "year2026") {
+        const y = c.end_date ? new Date(c.end_date).getUTCFullYear() : 0;
+        if (y !== 2026) return false;
+      }
     }
     if (filterChance !== "all") {
       const score = chanceScores[c.client_id];
@@ -619,7 +628,7 @@ export default function Renewals() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Renovações</h1>
           <p className="text-sm text-muted-foreground">
-            Contratos com vencimento nos próximos 90 dias
+            Contratos a vencer até o fim de 2026
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchRenewals} disabled={loading}>
@@ -727,7 +736,7 @@ export default function Renewals() {
               </SelectContent>
             </Select>
             <Select value={filterTempo} onValueChange={setFilterTempo}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Tempo Restante" />
               </SelectTrigger>
               <SelectContent>
@@ -735,6 +744,8 @@ export default function Renewals() {
                 <SelectItem value="urgent">Até 30 dias</SelectItem>
                 <SelectItem value="warning">31 a 60 dias</SelectItem>
                 <SelectItem value="ok">61 a 90 dias</SelectItem>
+                <SelectItem value="later">Mais de 90 dias</SelectItem>
+                <SelectItem value="year2026">Vencimento em 2026</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterChance} onValueChange={setFilterChance}>
@@ -763,7 +774,7 @@ export default function Renewals() {
           {/* Table */}
           {renderContractsTable(
             filteredUpcoming,
-            "Nenhum contrato a vencer nos próximos 90 dias",
+            "Nenhum contrato a vencer até o fim de 2026",
             "Todos os contratos estão com vencimento distante.",
           )}
         </TabsContent>
