@@ -278,6 +278,53 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     return String(value);
   };
 
+  // ====== Typed formatters ======
+  const formatCurrency = (value: any): string => {
+    const raw = String(value ?? "").replace(/[^\d.,-]/g, "");
+    // pt-BR: "1.234,56" -> 1234.56
+    const normalized = raw.includes(",")
+      ? raw.replace(/\./g, "").replace(",", ".")
+      : raw;
+    const n = typeof value === "number" ? value : Number(normalized);
+    if (!isFinite(n)) return String(value ?? "—");
+    return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  };
+
+  const formatPhone = (value: any): string => {
+    const digits = String(value ?? "").replace(/\D/g, "");
+    if (!digits) return "—";
+    if (digits.length === 13 && digits.startsWith("55")) {
+      return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+    }
+    if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return String(value);
+  };
+
+  const formatDateValue = (value: any): string => {
+    if (!value) return "—";
+    try {
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return String(value);
+      return format(d, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    } catch {
+      return String(value);
+    }
+  };
+
+  const formatLocation = (value: any): string => {
+    if (!value) return "—";
+    const v = typeof value === "string" ? tryParseJSON(value) : value;
+    if (v && typeof v === "object") {
+      const parts = [v.address, v.city, v.state, v.country].filter(Boolean);
+      return parts.length ? parts.join(", ") : JSON.stringify(v);
+    }
+    return String(v);
+  };
+
+  // Heuristic: detect phone-shaped fields by label
+  const isPhoneLabel = (label?: string) => /telefone|whats|celular|fone/i.test(label || "");
+
   const formatValue = (value: any, fieldId?: string): string => {
     if (value === null || value === undefined) return "—";
     if (typeof value === "boolean") return value ? "Sim" : "Não";
