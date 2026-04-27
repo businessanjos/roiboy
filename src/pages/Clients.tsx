@@ -749,7 +749,7 @@ export default function Clients() {
       fetchClients();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, sortOrder]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, sortOrder, activeTab]);
 
   // Fetch client stages when account is available
   useEffect(() => {
