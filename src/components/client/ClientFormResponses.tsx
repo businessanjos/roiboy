@@ -365,103 +365,142 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   const isEditing = (id: string) => editingId === id;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Hero summary */}
+      {formResponses.length > 0 && (
+        <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+              <FileText className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">
+                {formResponses.length === 1
+                  ? "1 ficha preenchida pelo cliente"
+                  : `${formResponses.length} fichas preenchidas pelo cliente`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Última resposta em {format(new Date(formResponses[0].submitted_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                {" • "}
+                {formResponses.reduce((acc, r) => acc + Object.keys(r.responses).length, 0)} campos respondidos no total
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Form Responses */}
-      {formResponses.map((response) => (
-        <Card key={response.id} className="overflow-hidden">
+      {formResponses.map((response) => {
+        const entries = Object.entries(response.responses).filter(
+          ([, v]) => v !== null && v !== undefined && v !== ""
+        );
+        return (
+        <Card key={response.id} className="overflow-hidden shadow-sm">
           <Collapsible 
             open={expandedResponses.has(response.id)} 
             onOpenChange={() => toggleResponse(response.id)}
           >
             <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {expandedResponses.has(response.id) ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <FileText className="h-5 w-5 text-primary" />
-                    <div>
-                      <CardTitle className="text-base">
+              <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors py-4 bg-muted/20">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <CardTitle className="text-base truncate">
                         {response.forms?.title || "Formulário"}
                       </CardTitle>
                       <CardDescription className="text-xs">
                         Preenchido em {format(new Date(response.submitted_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         {response.last_edited_at && (
-                          <span className="ml-2 text-muted-foreground">
+                          <span className="ml-2">
                             • Editado em {format(new Date(response.last_edited_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </span>
                         )}
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {Object.keys(response.responses).length} campo(s)
-                  </Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="secondary" className="text-xs">
+                      {entries.length} {entries.length === 1 ? "campo" : "campos"}
+                    </Badge>
+                    {expandedResponses.has(response.id) ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="pt-0 pb-4">
-                <div className="space-y-3 border-t pt-4">
-                  {/* Edit/Save buttons */}
-                  <div className="flex justify-end gap-2 mb-2">
-                    {isEditing(response.id) ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={cancelEditing}
-                          disabled={saving}
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Cancelar
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => saveEditing(response.id)}
-                          disabled={saving}
-                        >
-                          {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-                          Salvar
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startEditing(response);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Editar
+              <CardContent className="pt-5 pb-5">
+                {/* Edit/Save buttons */}
+                <div className="flex justify-end gap-2 mb-4">
+                  {isEditing(response.id) ? (
+                    <>
+                      <Button variant="ghost" size="sm" onClick={cancelEditing} disabled={saving}>
+                        <X className="h-4 w-4 mr-1" /> Cancelar
                       </Button>
-                    )}
-                  </div>
+                      <Button size="sm" onClick={() => saveEditing(response.id)} disabled={saving}>
+                        {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                        Salvar
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); startEditing(response); }}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" /> Editar
+                    </Button>
+                  )}
+                </div>
 
-                  {Object.entries(response.responses).map(([fieldId, value]) => (
-                    <div key={fieldId} className="grid grid-cols-3 gap-2 text-sm">
-                      <span className="text-muted-foreground font-medium">
-                        {getFieldLabel(fieldId)}
-                      </span>
-                      <span className="col-span-2">
-                        {isEditing(response.id)
-                          ? renderEditField(fieldId, value)
-                          : formatValue(value, fieldId)
-                        }
-                      </span>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {entries.map(([fieldId, value]) => {
+                    const label = getFieldLabel(fieldId);
+                    const { Icon, tone, bg } = getFieldVisual(label, value, fieldId);
+                    const long = isLongText(value) && !isEditing(response.id);
+                    return (
+                      <div
+                        key={fieldId}
+                        className={cn(
+                          "rounded-lg border bg-card p-3 flex gap-3 transition-colors hover:border-primary/40",
+                          long && "md:col-span-2"
+                        )}
+                      >
+                        <div className={cn("h-9 w-9 rounded-md flex items-center justify-center shrink-0", bg)}>
+                          <Icon className={cn("h-4 w-4", tone)} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
+                            {label}
+                          </p>
+                          {isEditing(response.id) ? (
+                            <div className="mt-1">{renderEditField(fieldId, value)}</div>
+                          ) : (
+                            <p className={cn(
+                              "text-sm text-foreground break-words",
+                              long ? "whitespace-pre-wrap leading-relaxed" : "font-medium"
+                            )}>
+                              {formatValue(value, fieldId)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </CollapsibleContent>
           </Collapsible>
         </Card>
-      ))}
+        );
+      })}
+
 
       {/* Legacy Diagnostic */}
       {diagnostic && (
