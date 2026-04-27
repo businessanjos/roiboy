@@ -663,6 +663,7 @@ function isMetodoProprio(field: CustomField): boolean {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateCurrentStep()) return;
+    setError(null);
     setSubmitting(true);
     try {
       // Merge split spouse fields back into original field
@@ -772,21 +773,75 @@ function isMetodoProprio(field: CustomField): boolean {
         }
       }
 
-      const { data, error } = await supabase.functions.invoke("submit-form-response", {
-        body: {
-          formId,
-          clientId: clientData?.id || null,
-          clientName: clientName.trim() || null,
-          clientPhone: clientPhone.trim() || null,
-          responses: mergedResponses,
-        },
+      const payload = {
+        formId,
+        clientId: clientData?.id || null,
+        clientName: clientName.trim() || null,
+        clientPhone: clientPhone.trim() || null,
+        responses: mergedResponses,
+      };
+
+      console.info("[PublicForm] Submitting form response", {
+        formId,
+        clientId: payload.clientId,
+        clientName: payload.clientName,
+        clientPhone: payload.clientPhone,
+        responseCount: Object.keys(mergedResponses).length,
+        responseKeys: Object.keys(mergedResponses),
       });
-      if (error) throw error;
-      if (data.error) { toast.error(data.error); return; }
+
+      const { data, error } = await supabase.functions.invoke("submit-form-response", {
+        body: payload,
+      });
+
+      if (error) {
+        // FunctionsHttpError exposes the response so we can read the server message
+        let serverMessage: string | null = null;
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx && typeof ctx.json === "function") {
+            const body = await ctx.json();
+            serverMessage = body?.error || body?.message || null;
+            console.error("[PublicForm] Edge function error body:", body);
+          } else if (ctx && typeof ctx.text === "function") {
+            const text = await ctx.text();
+            serverMessage = text || null;
+            console.error("[PublicForm] Edge function error text:", text);
+          }
+        } catch (parseErr) {
+          console.error("[PublicForm] Failed to parse edge function error body:", parseErr);
+        }
+        console.error("[PublicForm] Edge function invoke error:", {
+          name: (error as any)?.name,
+          message: (error as any)?.message,
+          status: (error as any)?.context?.status,
+          serverMessage,
+        });
+        throw new Error(serverMessage || (error as any)?.message || "Falha de comunicação com o servidor");
+      }
+
+      if (data?.error) {
+        console.error("[PublicForm] Server returned error in payload:", data);
+        throw new Error(data.error);
+      }
+
+      console.info("[PublicForm] Submission saved", data);
       setSubmitted(true);
     } catch (err: any) {
-      console.error("Error submitting form:", err);
-      toast.error("Erro ao enviar resposta");
+      const detail =
+        err?.message ||
+        (typeof err === "string" ? err : null) ||
+        "Erro desconhecido ao enviar a resposta.";
+      console.error("[PublicForm] Error submitting form:", {
+        message: detail,
+        error: err,
+        stack: err?.stack,
+      });
+      setError(detail);
+      toast.error("Não foi possível enviar o formulário", {
+        description: detail,
+        duration: 8000,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -2075,6 +2130,38 @@ function isMetodoProprio(field: CustomField): boolean {
                 </motion.div>
               </AnimatePresence>
             </div>
+
+            {/* Submission error banner */}
+            {error && (
+              <div
+                role="alert"
+                className="mx-6 sm:mx-8 mb-4 rounded-lg border p-4 flex items-start gap-3"
+                style={{
+                  borderColor: "rgba(239,68,68,0.35)",
+                  backgroundColor: "rgba(239,68,68,0.08)",
+                  color: dark.text,
+                }}
+              >
+                <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" style={{ color: dark.error }} />
+                <div className="flex-1 text-sm">
+                  <p className="font-semibold mb-0.5" style={{ color: dark.error }}>
+                    Não foi possível enviar o formulário
+                  </p>
+                  <p style={{ color: dark.textSecondary }}>{error}</p>
+                  <p className="mt-2 text-xs" style={{ color: dark.textTertiary }}>
+                    Tente novamente. Se o erro persistir, copie esta mensagem e envie ao suporte.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="shrink-0 rounded-md p-1 hover:bg-white/5"
+                  aria-label="Fechar"
+                >
+                  <X className="h-4 w-4" style={{ color: dark.textTertiary }} />
+                </button>
+              </div>
+            )}
 
             {/* Actions */}
             <div
