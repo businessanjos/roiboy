@@ -233,6 +233,51 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     return opt?.label || value;
   };
 
+  // Try to parse a string that looks like JSON
+  const tryParseJSON = (value: any): any => {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    if (
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]"))
+    ) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  };
+
+  const humanizeKey = (key: string): string => {
+    const map: Record<string, string> = {
+      hasEmployees: "Possui colaboradores",
+      employees: "Colaboradores",
+      cargo: "Cargo",
+      regime: "Regime",
+      nome: "Nome",
+      name: "Nome",
+      quantidade: "Quantidade",
+      qtd: "Quantidade",
+      tipo: "Tipo",
+      valor: "Valor",
+      descricao: "Descrição",
+      observacao: "Observação",
+    };
+    if (map[key]) return map[key];
+    return key
+      .replace(/[_-]/g, " ")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/^./, (c) => c.toUpperCase());
+  };
+
+  const formatScalar = (value: any): string => {
+    if (value === null || value === undefined || value === "") return "—";
+    if (typeof value === "boolean") return value ? "Sim" : "Não";
+    return String(value);
+  };
+
   const formatValue = (value: any, fieldId?: string): string => {
     if (value === null || value === undefined) return "—";
     if (typeof value === "boolean") return value ? "Sim" : "Não";
@@ -249,9 +294,104 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
       }
     }
 
-    if (Array.isArray(value)) return value.join(", ");
-    if (typeof value === "object") return JSON.stringify(value);
-    return String(value);
+    const parsed = tryParseJSON(value);
+    if (Array.isArray(parsed)) return parsed.map(v => typeof v === "object" ? "" : v).join(", ");
+    if (typeof parsed === "object" && parsed !== null) return "";
+    return String(parsed);
+  };
+
+  // Render rich content for objects / arrays of objects (e.g. employees list)
+  const renderStructured = (value: any): React.ReactNode | null => {
+    const parsed = tryParseJSON(value);
+    if (parsed === null || parsed === undefined) return null;
+
+    // Array of primitives -> chips
+    if (Array.isArray(parsed) && parsed.every(v => typeof v !== "object" || v === null)) {
+      if (parsed.length === 0) return <span className="text-muted-foreground">—</span>;
+      return (
+        <div className="flex flex-wrap gap-1.5 mt-1">
+          {parsed.map((v, i) => (
+            <span key={i} className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium">
+              {formatScalar(v)}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    // Array of objects -> mini cards
+    if (Array.isArray(parsed) && parsed.some(v => typeof v === "object" && v !== null)) {
+      if (parsed.length === 0) return <span className="text-muted-foreground">—</span>;
+      return (
+        <div className="mt-2 space-y-2">
+          {parsed.map((item, i) => (
+            <div key={i} className="rounded-md border bg-muted/30 p-2.5">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+                  {i + 1}
+                </span>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Item {i + 1}
+                </span>
+              </div>
+              {typeof item === "object" && item !== null ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                  {Object.entries(item).map(([k, v]) => (
+                    <div key={k} className="flex flex-col">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{humanizeKey(k)}</span>
+                      <span className="text-sm font-medium">{formatScalar(v)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-sm">{formatScalar(item)}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Single object -> key/value grid
+    if (typeof parsed === "object") {
+      const entries = Object.entries(parsed);
+      if (entries.length === 0) return <span className="text-muted-foreground">—</span>;
+
+      // Special pattern: { hasX: bool, x: [...] } — render the array prominently
+      const boolKey = entries.find(([k, v]) => typeof v === "boolean" && k.startsWith("has"));
+      const arrKey = entries.find(([, v]) => Array.isArray(v));
+      if (boolKey && arrKey) {
+        return (
+          <div className="mt-1 space-y-2">
+            <div className="text-sm">
+              <span className="font-medium">{humanizeKey(boolKey[0])}:</span>{" "}
+              <span>{boolKey[1] ? "Sim" : "Não"}</span>
+            </div>
+            {boolKey[1] && renderStructured(arrKey[1])}
+          </div>
+        );
+      }
+
+      return (
+        <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+          {entries.map(([k, v]) => (
+            <div key={k} className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{humanizeKey(k)}</span>
+              <span className="text-sm font-medium break-words">
+                {typeof v === "object" && v !== null ? JSON.stringify(v) : formatScalar(v)}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const isStructured = (value: any): boolean => {
+    const parsed = tryParseJSON(value);
+    return (typeof parsed === "object" && parsed !== null);
   };
 
   const renderEditField = (fieldId: string, value: any) => {
