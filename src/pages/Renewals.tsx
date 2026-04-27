@@ -178,11 +178,14 @@ export default function Renewals() {
 
     try {
       const today = new Date();
+      // Estender janela: tudo a vencer até o fim de 2026 (ou pelo menos 90 dias à frente)
+      const endOf2026 = new Date("2026-12-31T23:59:59");
       const in90Days = new Date(today);
       in90Days.setDate(today.getDate() + 90);
+      const futureLimit = endOf2026 > in90Days ? endOf2026 : in90Days;
       const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
-      // 1) Fetch contracts expiring in next 90 days (future renewals)
+      // 1) Fetch contracts expiring from today through end of 2026 (future renewals)
       const { data: futureData, error: futureError } = await supabase
         .from("client_contracts")
         .select(`
@@ -194,9 +197,10 @@ export default function Renewals() {
         .eq("status", "active")
         .not("end_date", "is", null)
         .gte("end_date", formatDate(today))
-        .lte("end_date", formatDate(in90Days))
+        .lte("end_date", formatDate(futureLimit))
         .is("parent_contract_id", null)
-        .order("end_date", { ascending: true });
+        .order("end_date", { ascending: true })
+        .limit(2000);
 
       // 2) Fetch already expired contracts that have pending/negotiating outcomes
       const { data: expiredPendingOutcomes } = await supabase
