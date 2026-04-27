@@ -272,6 +272,16 @@ export default function Clients() {
   const [filterContract, setFilterContract] = usePersistedFilter<string>("clients", "contract", "all");
   const [filterResponsible, setFilterResponsible] = usePersistedFilter<string>("clients", "responsible", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
+  const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
+
+  // Tab → contract filter mapping (overrides filterContract on fetch)
+  const tabContractFilter: Record<string, string | null> = {
+    active: "active",
+    awaiting: "none",
+    hold: "paused,suspended",
+    cancelled: "cancelled,dismissed,ended",
+  };
+  const effectiveContractFilter = tabContractFilter[activeTab] ?? (filterContract !== "all" ? filterContract : null);
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -515,8 +525,8 @@ export default function Clients() {
       if (filterResponsible !== "all") params.set("responsible_user_id", filterResponsible);
       if (filterProduct !== "all") params.set("product_id", filterProduct);
       
-      if (filterContract !== "all") params.set("contract_filter", filterContract);
-      if (filterClientStatus !== "all") params.set("client_status", filterClientStatus);
+      if (effectiveContractFilter) params.set("contract_filter", effectiveContractFilter);
+      if (filterClientStatus !== "all" && activeTab === "all") params.set("client_status", filterClientStatus);
       params.set("sort", sortOrder);
       
       const response = await fetch(
@@ -739,7 +749,7 @@ export default function Clients() {
       fetchClients();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, sortOrder]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, sortOrder, activeTab]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -2070,6 +2080,16 @@ export default function Clients() {
           </div>
         </div>
       </div>
+
+      {/* Status tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="active">Ativos</TabsTrigger>
+          <TabsTrigger value="awaiting">Aguardando Contrato</TabsTrigger>
+          <TabsTrigger value="hold">Hold</TabsTrigger>
+          <TabsTrigger value="cancelled">Cancelados</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {viewMode === "table" ? (
         <Card className="shadow-card flex-1 overflow-hidden">

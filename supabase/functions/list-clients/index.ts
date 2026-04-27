@@ -251,12 +251,23 @@ Deno.serve(async (req) => {
         }
         return emptyResponse();
       }
-    } else if (statusBasedFilters.includes(contractFilter)) {
+    } else if (
+      contractFilter
+        .split(",")
+        .map((s) => s.trim())
+        .every((s) => statusBasedFilters.includes(s)) &&
+      contractFilter.length > 0
+    ) {
+      const statuses = contractFilter
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => statusBasedFilters.includes(s));
+
       const { data: statusContracts } = await supabase
         .from("client_contracts")
         .select("client_id")
         .eq("account_id", accountId)
-        .eq("status", contractFilter);
+        .in("status", statuses);
 
       statusContractClientIds = [
         ...new Set(statusContracts?.map((c) => c.client_id) || []),
