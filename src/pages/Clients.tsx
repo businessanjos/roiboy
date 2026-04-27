@@ -1883,30 +1883,34 @@ export default function Clients() {
 
       {/* Status tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="h-auto flex-wrap bg-muted/50 p-1 gap-1 justify-start">
+        <TabsList className="h-auto w-full flex-wrap justify-start bg-transparent border-b border-border rounded-none p-0 gap-6">
           <TabsTrigger
             value="active"
-            className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-emerald-600 data-[state=active]:border-emerald-600 transition-colors"
           >
-            Ativos
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            <span className="font-medium">Ativos</span>
           </TabsTrigger>
           <TabsTrigger
             value="awaiting"
-            className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-sky-600 data-[state=active]:border-sky-600 transition-colors"
           >
-            Aguardando Contrato
+            <Clock className="h-4 w-4 mr-2" />
+            <span className="font-medium">Aguardando Contrato</span>
           </TabsTrigger>
           <TabsTrigger
             value="hold"
-            className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-amber-600 data-[state=active]:border-amber-600 transition-colors"
           >
-            Hold
+            <PauseCircle className="h-4 w-4 mr-2" />
+            <span className="font-medium">Hold</span>
           </TabsTrigger>
           <TabsTrigger
             value="cancelled"
-            className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-red-600 data-[state=active]:border-red-600 transition-colors"
           >
-            Cancelados
+            <XCircle className="h-4 w-4 mr-2" />
+            <span className="font-medium">Cancelados</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
