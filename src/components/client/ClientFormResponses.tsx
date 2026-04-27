@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { resolveClientLocale, formatCurrencyForLocale, type ClientLocale } from "@/lib/clientCurrency";
 
 interface ClientFormResponsesProps {
   clientId: string;
