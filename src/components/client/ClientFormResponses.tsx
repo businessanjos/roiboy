@@ -105,12 +105,18 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     try {
       const { data: clientData, error: clientError } = await supabase
         .from("clients")
-        .select("account_id")
+        .select("account_id, country, phone_e164")
         .eq("id", clientId)
         .maybeSingle();
 
       if (clientError) throw clientError;
       const accountId = clientData?.account_id;
+      setClientLocale(
+        resolveClientLocale({
+          country: (clientData as any)?.country ?? null,
+          phone: (clientData as any)?.phone_e164 ?? null,
+        })
+      );
 
       if (accountId) {
         const { data: fieldsData } = await supabase
