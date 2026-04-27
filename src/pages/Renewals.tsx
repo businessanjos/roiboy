@@ -774,7 +774,7 @@ export default function Renewals() {
           {/* Table */}
           {renderContractsTable(
             filteredUpcoming,
-            "Nenhum contrato a vencer nos próximos 90 dias",
+            "Nenhum contrato a vencer até o fim de 2026",
             "Todos os contratos estão com vencimento distante.",
           )}
         </TabsContent>
