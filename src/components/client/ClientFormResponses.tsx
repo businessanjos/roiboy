@@ -288,7 +288,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
         if (Array.isArray(value)) {
           return value.map(v => resolveOptionLabel(field.options!, String(v))).join(", ");
         }
-        if (typeof value === "string" && value.startsWith("opt_")) {
+        if (typeof value === "string") {
           return resolveOptionLabel(field.options, value);
         }
       }
