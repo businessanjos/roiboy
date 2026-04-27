@@ -765,6 +765,18 @@ export default function Renewals() {
                 <SelectItem value="baixa">Baixa</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={filterQuarter} onValueChange={setFilterQuarter}>
+              <SelectTrigger className="w-full sm:w-[130px]">
+                <SelectValue placeholder="Quarter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos quarters</SelectItem>
+                <SelectItem value="Q1">Q1</SelectItem>
+                <SelectItem value="Q2">Q2</SelectItem>
+                <SelectItem value="Q3">Q3</SelectItem>
+                <SelectItem value="Q4">Q4</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Status" />
