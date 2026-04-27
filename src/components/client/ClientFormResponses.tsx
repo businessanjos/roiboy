@@ -619,18 +619,40 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                           <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
                             {label}
                           </p>
-                          {isEditing(response.id) ? (
-                            <div className="mt-1">{renderEditField(fieldId, value)}</div>
-                          ) : isStructured(value) ? (
-                            renderStructured(value)
-                          ) : (
-                            <p className={cn(
-                              "text-sm text-foreground break-words",
-                              long ? "whitespace-pre-wrap leading-relaxed" : "font-medium"
-                            )}>
-                              {formatValue(value, fieldId)}
-                            </p>
-                          )}
+                          {(() => {
+                            const fieldDef = customFieldsMap.get(fieldId);
+                            const hasOptions = !!(fieldDef?.options && Array.isArray(fieldDef.options) && fieldDef.options.length > 0);
+                            if (isEditing(response.id)) {
+                              return <div className="mt-1">{renderEditField(fieldId, value)}</div>;
+                            }
+                            // If field has defined options, ALWAYS resolve labels (even for arrays)
+                            if (hasOptions) {
+                              const values = Array.isArray(value) ? value : [value];
+                              return (
+                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                  {values.map((v, i) => {
+                                    const label = resolveOptionLabel(fieldDef!.options!, String(v));
+                                    return (
+                                      <span key={i} className="inline-flex items-center rounded-md bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">
+                                        {label}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            }
+                            if (isStructured(value)) {
+                              return renderStructured(value);
+                            }
+                            return (
+                              <p className={cn(
+                                "text-sm text-foreground break-words",
+                                long ? "whitespace-pre-wrap leading-relaxed" : "font-medium"
+                              )}>
+                                {formatValue(value, fieldId)}
+                              </p>
+                            );
+                          })()}
                         </div>
                       </div>
                     );
