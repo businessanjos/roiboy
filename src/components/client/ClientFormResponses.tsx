@@ -808,12 +808,18 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                               );
                             }
 
-                            // 2) Currency
+                            // 2) Currency — formata na moeda do país do cliente
                             if (fieldType === "currency") {
                               return (
-                                <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                                  {formatCurrency(value)}
-                                </p>
+                                <div>
+                                  <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                    {formatCurrencyForLocale(value, clientLocale)}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {clientLocale.currency} · {clientLocale.countryName}
+                                    {clientLocale.inferred && " (detectado pelo telefone)"}
+                                  </p>
+                                </div>
                               );
                             }
 
