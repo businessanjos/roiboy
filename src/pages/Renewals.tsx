@@ -719,74 +719,108 @@ export default function Renewals() {
                 className="pl-9"
               />
             </div>
-            <Select value={filterConsultora} onValueChange={setFilterConsultora}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Consultora" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas consultoras</SelectItem>
-                {uniqueConsultoras.sort().map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterProduto} onValueChange={setFilterProduto}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Produto" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos produtos</SelectItem>
-                {uniqueProdutos.sort().map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterTempo} onValueChange={setFilterTempo}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Tempo Restante" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os prazos</SelectItem>
-                <SelectItem value="urgent">Até 30 dias</SelectItem>
-                <SelectItem value="warning">31 a 60 dias</SelectItem>
-                <SelectItem value="ok">61 a 90 dias</SelectItem>
-                <SelectItem value="later">Mais de 90 dias</SelectItem>
-                <SelectItem value="year2026">Vencimento em 2026</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterChance} onValueChange={setFilterChance}>
-              <SelectTrigger className="w-full sm:w-[150px]">
-                <SelectValue placeholder="Chance" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas chances</SelectItem>
-                <SelectItem value="alta">Alta</SelectItem>
-                <SelectItem value="media">Média</SelectItem>
-                <SelectItem value="baixa">Baixa</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterQuarter} onValueChange={setFilterQuarter}>
-              <SelectTrigger className="w-full sm:w-[130px]">
-                <SelectValue placeholder="Quarter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos quarters</SelectItem>
-                <SelectItem value="Q1">Q1</SelectItem>
-                <SelectItem value="Q2">Q2</SelectItem>
-                <SelectItem value="Q3">Q3</SelectItem>
-                <SelectItem value="Q4">Q4</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos status</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="negotiating">Em Negociação</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col gap-1 w-full sm:w-auto">
+              <label className="text-xs font-medium text-muted-foreground px-1">Consultor</label>
+              <Select value={filterConsultora} onValueChange={setFilterConsultora}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue>{filterConsultora === "all" ? "Todos" : filterConsultora}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {uniqueConsultoras.sort().map((name) => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1 w-full sm:w-auto">
+              <label className="text-xs font-medium text-muted-foreground px-1">Produto</label>
+              <Select value={filterProduto} onValueChange={setFilterProduto}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue>{filterProduto === "all" ? "Todos" : filterProduto}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {uniqueProdutos.sort().map((name) => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1 w-full sm:w-auto">
+              <label className="text-xs font-medium text-muted-foreground px-1">Prazo</label>
+              <Select value={filterTempo} onValueChange={setFilterTempo}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue>
+                    {filterTempo === "all" ? "Todos" :
+                     filterTempo === "urgent" ? "Até 30 dias" :
+                     filterTempo === "warning" ? "31 a 60 dias" :
+                     filterTempo === "ok" ? "61 a 90 dias" :
+                     filterTempo === "later" ? "Mais de 90 dias" :
+                     filterTempo === "year2026" ? "Vencimento em 2026" : "Todos"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="urgent">Até 30 dias</SelectItem>
+                  <SelectItem value="warning">31 a 60 dias</SelectItem>
+                  <SelectItem value="ok">61 a 90 dias</SelectItem>
+                  <SelectItem value="later">Mais de 90 dias</SelectItem>
+                  <SelectItem value="year2026">Vencimento em 2026</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1 w-full sm:w-auto">
+              <label className="text-xs font-medium text-muted-foreground px-1">Chance</label>
+              <Select value={filterChance} onValueChange={setFilterChance}>
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue>
+                    {filterChance === "all" ? "Todos" :
+                     filterChance === "alta" ? "Alta" :
+                     filterChance === "media" ? "Média" :
+                     filterChance === "baixa" ? "Baixa" : "Todos"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="alta">Alta</SelectItem>
+                  <SelectItem value="media">Média</SelectItem>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1 w-full sm:w-auto">
+              <label className="text-xs font-medium text-muted-foreground px-1">Quarter</label>
+              <Select value={filterQuarter} onValueChange={setFilterQuarter}>
+                <SelectTrigger className="w-full sm:w-[130px]">
+                  <SelectValue>{filterQuarter === "all" ? "Todos" : filterQuarter}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="Q1">Q1</SelectItem>
+                  <SelectItem value="Q2">Q2</SelectItem>
+                  <SelectItem value="Q3">Q3</SelectItem>
+                  <SelectItem value="Q4">Q4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1 w-full sm:w-auto">
+              <label className="text-xs font-medium text-muted-foreground px-1">Status</label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue>
+                    {filterStatus === "all" ? "Todos" :
+                     filterStatus === "pending" ? "Pendente" :
+                     filterStatus === "negotiating" ? "Em Negociação" : "Todos"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="negotiating">Em Negociação</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Table */}
