@@ -2081,37 +2081,6 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Status tabs */}
-      <div className="border-b border-border">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="h-auto flex-wrap bg-transparent p-0 gap-1 justify-start">
-            <TabsTrigger
-              value="active"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md"
-            >
-              Ativos
-            </TabsTrigger>
-            <TabsTrigger
-              value="awaiting"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md"
-            >
-              Aguardando Contrato
-            </TabsTrigger>
-            <TabsTrigger
-              value="hold"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md"
-            >
-              Hold
-            </TabsTrigger>
-            <TabsTrigger
-              value="cancelled"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md"
-            >
-              Cancelados
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
 
       {viewMode === "table" ? (
         <Card className="shadow-card flex-1 overflow-hidden">
