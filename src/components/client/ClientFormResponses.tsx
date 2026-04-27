@@ -483,8 +483,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     );
   };
 
-  const formatCurrency = (value: number) => 
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  // (formatCurrency defined above)
 
   // Detect a sensible icon + visual treatment based on field name & value
   const getFieldVisual = (label: string, value: any, fieldId?: string) => {
