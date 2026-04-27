@@ -61,6 +61,11 @@ export default function Renewals() {
   const [filterTempo, setFilterTempo] = useState("all");
   const [filterChance, setFilterChance] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  // Filtros independentes da aba "Vencidos"
+  const [expiredFilterConsultora, setExpiredFilterConsultora] = useState("all");
+  const [expiredFilterProduto, setExpiredFilterProduto] = useState("all");
+  const [expiredFilterChance, setExpiredFilterChance] = useState("all");
+  const [expiredFilterAno, setExpiredFilterAno] = useState<string>("all");
   const [chanceScores, setChanceScores] = useState<Record<string, number>>({});
   const [outcomeMap, setOutcomeMap] = useState<Record<string, { id: string; outcome: string }>>({});
   const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
@@ -377,7 +382,41 @@ export default function Renewals() {
   });
 
   const filteredUpcoming = filtered.filter((c) => c.days_until_expiry >= 0);
-  const filteredExpired = filtered.filter((c) => c.days_until_expiry < 0);
+
+  // Aba "Vencidos" usa filtros próprios (independentes de "A Vencer")
+  const filteredExpired = contracts.filter((c) => {
+    if (c.days_until_expiry >= 0) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (
+        !c.client_name.toLowerCase().includes(q) &&
+        !c.client_email?.toLowerCase().includes(q) &&
+        !c.product_name?.toLowerCase().includes(q)
+      ) return false;
+    }
+    if (expiredFilterConsultora !== "all" && c.responsible_name !== expiredFilterConsultora) return false;
+    if (expiredFilterProduto !== "all" && c.product_name !== expiredFilterProduto) return false;
+    if (expiredFilterChance !== "all") {
+      const score = chanceScores[c.client_id];
+      if (score !== undefined) {
+        if (expiredFilterChance === "alta" && score < 70) return false;
+        if (expiredFilterChance === "media" && (score < 40 || score >= 70)) return false;
+        if (expiredFilterChance === "baixa" && score >= 40) return false;
+      }
+    }
+    if (expiredFilterAno !== "all") {
+      const year = c.end_date ? new Date(c.end_date).getUTCFullYear().toString() : "";
+      if (year !== expiredFilterAno) return false;
+    }
+    return true;
+  });
+
+  const expiredUniqueConsultoras = [...new Set(
+    contracts.filter(c => c.days_until_expiry < 0).map(c => c.responsible_name).filter(Boolean)
+  )] as string[];
+  const expiredUniqueProdutos = [...new Set(
+    contracts.filter(c => c.days_until_expiry < 0).map(c => c.product_name).filter(Boolean)
+  )] as string[];
 
   const urgentCount = filteredUpcoming.filter((c) => c.days_until_expiry <= 30).length;
   const warningCount = filteredUpcoming.filter((c) => c.days_until_expiry > 30 && c.days_until_expiry <= 60).length;
@@ -754,6 +793,53 @@ export default function Renewals() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+            <Select value={expiredFilterProduto} onValueChange={setExpiredFilterProduto}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Produto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos produtos</SelectItem>
+                {expiredUniqueProdutos.sort().map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={expiredFilterConsultora} onValueChange={setExpiredFilterConsultora}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Consultora" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas consultoras</SelectItem>
+                {expiredUniqueConsultoras.sort().map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={expiredFilterChance} onValueChange={setExpiredFilterChance}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="Chance" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas chances</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="media">Média</SelectItem>
+                <SelectItem value="baixa">Baixa</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={expiredFilterAno} onValueChange={setExpiredFilterAno}>
+              <SelectTrigger className="w-full sm:w-[140px]">
+                <SelectValue placeholder="Ano" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os anos</SelectItem>
+                <SelectItem value="2025">2025</SelectItem>
+                <SelectItem value="2026">2026</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {renderContractsTable(
