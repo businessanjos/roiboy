@@ -86,6 +86,16 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     fetchData();
   }, [clientId]);
 
+  // Auto-expand all responses on first load so the consultant sees everything immediately
+  useEffect(() => {
+    if (!hasAutoExpanded && (formResponses.length > 0 || diagnostic)) {
+      const ids = new Set<string>(formResponses.map(r => r.id));
+      if (diagnostic) ids.add("diagnostic");
+      setExpandedResponses(ids);
+      setHasAutoExpanded(true);
+    }
+  }, [formResponses, diagnostic, hasAutoExpanded]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
