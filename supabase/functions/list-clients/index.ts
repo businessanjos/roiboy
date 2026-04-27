@@ -376,10 +376,7 @@ Deno.serve(async (req) => {
       query = query.in("id", preFilterIds);
     }
 
-    // Exclude clients with any contract (used by contract_filter=none)
-    if (excludeContractClientIds && excludeContractClientIds.length > 0) {
-      query = query.not("id", "in", `(${excludeContractClientIds.join(",")})`);
-    }
+
 
     const { data: clients, error: clientsError, count } = await query;
 
