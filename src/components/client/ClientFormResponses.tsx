@@ -81,6 +81,9 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
+  const [clientLocale, setClientLocale] = useState<ClientLocale>(() =>
+    resolveClientLocale({ country: null, phone: null })
+  );
   const { currentUser } = useCurrentUser();
 
   useEffect(() => {
