@@ -154,32 +154,19 @@ Deno.serve(async (req) => {
     let statusContractClientIds: string[] | null = null;
     const statusBasedFilters = ["active", "cancelled", "suspended", "pending", "paused", "ended", "dismissed", "dropout_7d", "scheduled"];
 
+    // For "none" we keep the (smaller) list of clients WITH contracts to exclude later via .not("id","in",...)
+    let excludeContractClientIds: string[] | null = null;
+
     if (contractFilter === "none") {
-      // Clients WITHOUT any contract
+      // Clients WITHOUT any contract — collect IDs of clients WITH contracts (smaller URL than including all clients without)
       const { data: allClientsWithContracts } = await supabase
         .from("client_contracts")
         .select("client_id")
         .eq("account_id", accountId);
-      
-      const clientsWithContracts = new Set(
-        (allClientsWithContracts || []).map((c) => c.client_id)
-      );
-      
-      const { data: allAccountClients } = await supabase
-        .from("clients")
-        .select("id")
-        .eq("account_id", accountId);
-      
-      statusContractClientIds = (allAccountClients || [])
-        .filter((c) => !clientsWithContracts.has(c.id))
-        .map((c) => c.id);
 
-      if (statusContractClientIds.length === 0) {
-        if (auth.method === "api_key" && auth.apiKeyId) {
-          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
-        }
-        return emptyResponse();
-      }
+      excludeContractClientIds = [
+        ...new Set((allClientsWithContracts || []).map((c) => c.client_id)),
+      ];
     } else if (contractFilter === "expired") {
       // Clients with active contracts where end_date < today
       const { data: expiredContracts } = await supabase
