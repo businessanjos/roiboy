@@ -442,7 +442,7 @@ export default function Renewals() {
         <TabsList>
           <TabsTrigger value="pending" className="gap-2">
             <CalendarDays className="h-4 w-4" />
-            Pendentes ({filtered.length})
+            A Vencer ({filtered.length})
           </TabsTrigger>
           <TabsTrigger value="results" className="gap-2">
             <TrendingDown className="h-4 w-4" />
