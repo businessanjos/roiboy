@@ -376,10 +376,14 @@ export default function Renewals() {
     return true;
   });
 
-  const urgentCount = filtered.filter((c) => c.days_until_expiry <= 30).length;
-  const warningCount = filtered.filter((c) => c.days_until_expiry > 30 && c.days_until_expiry <= 60).length;
-  const okCount = filtered.filter((c) => c.days_until_expiry > 60).length;
-  const totalRenewalValue = filtered.reduce((sum, c) => sum + c.renewal_value, 0);
+  const filteredUpcoming = filtered.filter((c) => c.days_until_expiry >= 0);
+  const filteredExpired = filtered.filter((c) => c.days_until_expiry < 0);
+
+  const urgentCount = filteredUpcoming.filter((c) => c.days_until_expiry <= 30).length;
+  const warningCount = filteredUpcoming.filter((c) => c.days_until_expiry > 30 && c.days_until_expiry <= 60).length;
+  const okCount = filteredUpcoming.filter((c) => c.days_until_expiry > 60).length;
+  const totalRenewalValue = filteredUpcoming.reduce((sum, c) => sum + c.renewal_value, 0);
+  const totalExpiredValue = filteredExpired.reduce((sum, c) => sum + c.renewal_value, 0);
 
   const getUrgencyBadge = (days: number) => {
     if (days <= 30) {
