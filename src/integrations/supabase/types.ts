@@ -2491,6 +2491,7 @@ export type Database = {
           complement: string | null
           contract_end_date: string | null
           contract_start_date: string | null
+          country: string | null
           cpf: string | null
           created_at: string
           emails: Json | null
@@ -2546,6 +2547,7 @@ export type Database = {
           complement?: string | null
           contract_end_date?: string | null
           contract_start_date?: string | null
+          country?: string | null
           cpf?: string | null
           created_at?: string
           emails?: Json | null
@@ -2601,6 +2603,7 @@ export type Database = {
           complement?: string | null
           contract_end_date?: string | null
           contract_start_date?: string | null
+          country?: string | null
           cpf?: string | null
           created_at?: string
           emails?: Json | null
