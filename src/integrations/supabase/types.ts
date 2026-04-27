@@ -16677,6 +16677,12 @@ export type Database = {
           total_revenue: number
         }[]
       }
+      get_clients_without_contracts: {
+        Args: { p_account_id: string }
+        Returns: {
+          client_id: string
+        }[]
+      }
       get_current_user_account_id: { Args: never; Returns: string }
       get_current_user_id: { Args: never; Returns: string }
       get_dashboard_contract_counts: {
