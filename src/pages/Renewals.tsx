@@ -386,6 +386,14 @@ export default function Renewals() {
   const totalExpiredValue = filteredExpired.reduce((sum, c) => sum + c.renewal_value, 0);
 
   const getUrgencyBadge = (days: number) => {
+    if (days < 0) {
+      return (
+        <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 gap-1">
+          <CalendarX className="h-3 w-3" />
+          Vencido há {Math.abs(days)} dias
+        </Badge>
+      );
+    }
     if (days <= 30) {
       return (
         <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 gap-1">
