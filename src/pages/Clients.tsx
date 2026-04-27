@@ -1890,6 +1890,11 @@ export default function Clients() {
           >
             <CheckCircle2 className="h-4 w-4 mr-2" />
             <span className="font-medium">Ativos</span>
+            {activeTab === "active" && (
+              <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs font-semibold">
+                {totalClients}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger
             value="awaiting"
