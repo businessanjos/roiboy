@@ -2331,6 +2331,30 @@ export default function ClientDetail() {
         </Card>
       )}
 
+      {formResponseSummaries.length > 0 && searchParams.get("tab") !== "fichas" && (
+        <Card className="shadow-card border-primary/30 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="rounded-md bg-primary/10 p-2 text-primary">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Ficha preenchida encontrada</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formResponseSummaries[0].title} • {formResponseSummaries[0].fieldCount} campo(s) • {format(new Date(formResponseSummaries[0].submitted_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
+              </div>
+              <Button onClick={openFichasTab} className="shrink-0">
+                <FileText className="h-4 w-4 mr-2" />
+                Abrir ficha
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Content based on active tab from sidebar */}
       {(() => {
         const activeTab = searchParams.get("tab") || "timeline";
