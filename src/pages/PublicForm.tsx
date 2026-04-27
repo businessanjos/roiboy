@@ -2131,6 +2131,38 @@ function isMetodoProprio(field: CustomField): boolean {
               </AnimatePresence>
             </div>
 
+            {/* Submission error banner */}
+            {error && (
+              <div
+                role="alert"
+                className="mx-6 sm:mx-8 mb-4 rounded-lg border p-4 flex items-start gap-3"
+                style={{
+                  borderColor: "rgba(239,68,68,0.35)",
+                  backgroundColor: "rgba(239,68,68,0.08)",
+                  color: dark.text,
+                }}
+              >
+                <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" style={{ color: dark.error }} />
+                <div className="flex-1 text-sm">
+                  <p className="font-semibold mb-0.5" style={{ color: dark.error }}>
+                    Não foi possível enviar o formulário
+                  </p>
+                  <p style={{ color: dark.textSecondary }}>{error}</p>
+                  <p className="mt-2 text-xs" style={{ color: dark.textTertiary }}>
+                    Tente novamente. Se o erro persistir, copie esta mensagem e envie ao suporte.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="shrink-0 rounded-md p-1 hover:bg-white/5"
+                  aria-label="Fechar"
+                >
+                  <X className="h-4 w-4" style={{ color: dark.textTertiary }} />
+                </button>
+              </div>
+            )}
+
             {/* Actions */}
             <div
               className="px-6 sm:px-8 py-5 flex items-center gap-3 border-t"
