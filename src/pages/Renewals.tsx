@@ -56,17 +56,17 @@ export default function Renewals() {
   const [contracts, setContracts] = useState<RenewalContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterConsultora, setFilterConsultora] = useState("all");
-  const [filterProduto, setFilterProduto] = useState("all");
-  const [filterTempo, setFilterTempo] = useState("all");
-  const [filterChance, setFilterChance] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterQuarter, setFilterQuarter] = useState("all");
+  const [filterConsultora, setFilterConsultora] = useState<string[]>([]);
+  const [filterProduto, setFilterProduto] = useState<string[]>([]);
+  const [filterTempo, setFilterTempo] = useState<string[]>([]);
+  const [filterChance, setFilterChance] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterQuarter, setFilterQuarter] = useState<string[]>([]);
   // Filtros independentes da aba "Vencidos"
-  const [expiredFilterConsultora, setExpiredFilterConsultora] = useState("all");
-  const [expiredFilterProduto, setExpiredFilterProduto] = useState("all");
-  const [expiredFilterChance, setExpiredFilterChance] = useState("all");
-  const [expiredFilterAno, setExpiredFilterAno] = useState<string>("all");
+  const [expiredFilterConsultora, setExpiredFilterConsultora] = useState<string[]>([]);
+  const [expiredFilterProduto, setExpiredFilterProduto] = useState<string[]>([]);
+  const [expiredFilterChance, setExpiredFilterChance] = useState<string[]>([]);
+  const [expiredFilterAno, setExpiredFilterAno] = useState<string[]>([]);
   const [chanceScores, setChanceScores] = useState<Record<string, number>>({});
   const [outcomeMap, setOutcomeMap] = useState<Record<string, { id: string; outcome: string }>>({});
   const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
