@@ -628,7 +628,7 @@ export default function Renewals() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Renovações</h1>
           <p className="text-sm text-muted-foreground">
-            Contratos com vencimento nos próximos 90 dias
+            Contratos a vencer até o fim de 2026
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchRenewals} disabled={loading}>
