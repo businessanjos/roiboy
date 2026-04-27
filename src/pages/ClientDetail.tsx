@@ -1132,6 +1132,14 @@ export default function ClientDetail() {
       });
 
       // Add form responses
+      const formResponseData = (formResponsesResult.data || []).map((response: any) => ({
+        id: response.id,
+        title: response.forms?.title || "Formulário",
+        submitted_at: response.submitted_at,
+        fieldCount: Object.keys(response.responses || {}).length,
+      }));
+      setFormResponseSummaries(formResponseData);
+
       (formResponsesResult.data || []).forEach((response: any) => {
         const responseCount = Object.keys(response.responses || {}).length;
         timelineItems.push({
