@@ -297,11 +297,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build main query for clients with products
-    let query = supabase
-      .from("clients")
-      .select(
-        `
+    const CLIENT_SELECT = `
         id,
         full_name,
         phone_e164,
@@ -325,60 +321,99 @@ Deno.serve(async (req) => {
             color
           )
         )
-      `,
-        { count: "exact" }
-      )
-      .eq("account_id", accountId)
-      .order(sortParam === "alphabetical" ? "full_name" : "created_at", { ascending: sortParam === "alphabetical" })
-      .range(offset, offset + limit - 1);
+      `;
 
-    // Add search filter if provided
-    if (search) {
-      const searchTerms = search
-        .trim()
-        .split(/\s+/)
-        .filter((s: string) => s.length > 0);
+    const orderColumn = sortParam === "alphabetical" ? "full_name" : "created_at";
+    const orderAscending = sortParam === "alphabetical";
 
-      if (searchTerms.length === 1) {
-        query = query.or(
-          `full_name.ilike.%${searchTerms[0]}%,phone_e164.ilike.%${searchTerms[0]}%,company_name.ilike.%${searchTerms[0]}%`
-        );
-      } else {
-        for (const term of searchTerms) {
-          query = query.ilike("full_name", `%${term}%`);
+    const applyCommonFilters = (q: any) => {
+      if (search) {
+        const searchTerms = search
+          .trim()
+          .split(/\s+/)
+          .filter((s: string) => s.length > 0);
+
+        if (searchTerms.length === 1) {
+          q = q.or(
+            `full_name.ilike.%${searchTerms[0]}%,phone_e164.ilike.%${searchTerms[0]}%,company_name.ilike.%${searchTerms[0]}%`
+          );
+        } else {
+          for (const term of searchTerms) {
+            q = q.ilike("full_name", `%${term}%`);
+          }
         }
       }
-    }
-
-    // Add status filter if provided (legacy param)
-    if (statusFilter) {
-      query = query.eq("status", statusFilter);
-    }
-
-    // Add client status filter if provided
-    if (clientStatus && clientStatus !== "all") {
-      if (clientStatus !== "no_contract") {
-        query = query.eq("status", clientStatus);
+      if (statusFilter) q = q.eq("status", statusFilter);
+      if (clientStatus && clientStatus !== "all" && clientStatus !== "no_contract") {
+        q = q.eq("status", clientStatus);
       }
-    }
+      if (responsibleUserId && responsibleUserId !== "all") {
+        if (responsibleUserId === "none") q = q.is("responsible_user_id", null);
+        else q = q.eq("responsible_user_id", responsibleUserId);
+      }
+      return q;
+    };
 
-    // Add responsible user filter
-    if (responsibleUserId && responsibleUserId !== "all") {
-      if (responsibleUserId === "none") {
-        query = query.is("responsible_user_id", null);
+    let clients: any[] = [];
+    let count: number | null = 0;
+    let clientsError: any = null;
+
+    // When preFilterIds is large, .in() URL exceeds PostgREST limits.
+    // Chunk the queries, merge, sort and paginate in memory.
+    const CHUNK_LIMIT = 200;
+    if (preFilterIds && preFilterIds.length > CHUNK_LIMIT) {
+      const chunks: string[][] = [];
+      for (let i = 0; i < preFilterIds.length; i += CHUNK_LIMIT) {
+        chunks.push(preFilterIds.slice(i, i + CHUNK_LIMIT));
+      }
+
+      const chunkResults = await Promise.all(
+        chunks.map((ids) => {
+          let q = supabase
+            .from("clients")
+            .select(CLIENT_SELECT)
+            .eq("account_id", accountId)
+            .in("id", ids);
+          q = applyCommonFilters(q);
+          return q;
+        })
+      );
+
+      const errored = chunkResults.find((r) => r.error);
+      if (errored?.error) {
+        clientsError = errored.error;
       } else {
-        query = query.eq("responsible_user_id", responsibleUserId);
+        const merged = chunkResults.flatMap((r) => r.data || []);
+        // Sort
+        merged.sort((a: any, b: any) => {
+          const av = a[orderColumn] ?? "";
+          const bv = b[orderColumn] ?? "";
+          if (av < bv) return orderAscending ? -1 : 1;
+          if (av > bv) return orderAscending ? 1 : -1;
+          return 0;
+        });
+        count = merged.length;
+        clients = merged.slice(offset, offset + limit);
       }
+    } else {
+      let query = supabase
+        .from("clients")
+        .select(CLIENT_SELECT, { count: "exact" })
+        .eq("account_id", accountId)
+        .order(orderColumn, { ascending: orderAscending })
+        .range(offset, offset + limit - 1);
+
+      query = applyCommonFilters(query);
+
+      if (preFilterIds && preFilterIds.length > 0) {
+        query = query.in("id", preFilterIds);
+      }
+
+      const result = await query;
+      clients = result.data || [];
+      count = result.count ?? 0;
+      clientsError = result.error;
     }
-
-    // Apply pre-computed ID filter (intersection of VNPS + product + contract filters)
-    if (preFilterIds && preFilterIds.length > 0) {
-      query = query.in("id", preFilterIds);
-    }
-
-
-
-    const { data: clients, error: clientsError, count } = await query;
 
     if (clientsError) {
       console.error("Error fetching clients:", clientsError.message);
