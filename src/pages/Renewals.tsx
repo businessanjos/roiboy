@@ -61,6 +61,7 @@ export default function Renewals() {
   const [filterTempo, setFilterTempo] = useState("all");
   const [filterChance, setFilterChance] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterQuarter, setFilterQuarter] = useState("all");
   // Filtros independentes da aba "Vencidos"
   const [expiredFilterConsultora, setExpiredFilterConsultora] = useState("all");
   const [expiredFilterProduto, setExpiredFilterProduto] = useState("all");
