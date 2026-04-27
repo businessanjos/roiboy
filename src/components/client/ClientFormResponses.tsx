@@ -75,6 +75,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   const [formResponses, setFormResponses] = useState<FormResponse[]>([]);
   const [diagnostic, setDiagnostic] = useState<DiagnosticData | null>(null);
   const [expandedResponses, setExpandedResponses] = useState<Set<string>>(new Set());
+  const [hasAutoExpanded, setHasAutoExpanded] = useState(false);
   const [customFieldsMap, setCustomFieldsMap] = useState<Map<string, { name: string; field_type: string | null; options: any[] | null }>>(new Map());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, any>>({});
