@@ -388,6 +388,11 @@ export default function Renewals() {
       const currentOutcome = outcomeMap[c.id]?.outcome || "pending";
       if (filterStatus !== currentOutcome) return false;
     }
+    if (filterQuarter !== "all" && c.end_date) {
+      const month = new Date(c.end_date).getUTCMonth() + 1; // 1-12
+      const q = Math.ceil(month / 3); // 1..4
+      if (`Q${q}` !== filterQuarter) return false;
+    }
     return true;
   });
 
