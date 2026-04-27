@@ -667,29 +667,126 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                           </p>
                           {(() => {
                             const fieldDef = customFieldsMap.get(fieldId);
+                            const fieldType = fieldDef?.field_type || "";
                             const hasOptions = !!(fieldDef?.options && Array.isArray(fieldDef.options) && fieldDef.options.length > 0);
+
                             if (isEditing(response.id)) {
                               return <div className="mt-1">{renderEditField(fieldId, value)}</div>;
                             }
-                            // If field has defined options, ALWAYS resolve labels (even for arrays)
-                            if (hasOptions) {
+
+                            // 1) Multi-select / select / radio with options -> chips
+                            if (hasOptions || fieldType === "multi_select" || fieldType === "select") {
                               const values = Array.isArray(value) ? value : [value];
                               return (
                                 <div className="flex flex-wrap gap-1.5 mt-1">
-                                  {values.map((v, i) => {
-                                    const label = resolveOptionLabel(fieldDef!.options!, String(v));
+                                  {values.filter(v => v !== null && v !== undefined && v !== "").map((v, i) => {
+                                    const opt = hasOptions ? fieldDef!.options!.find((o: any) => o.value === String(v)) : null;
+                                    const lbl = opt?.label || String(v);
+                                    const color = opt?.color;
                                     return (
-                                      <span key={i} className="inline-flex items-center rounded-md bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">
-                                        {label}
+                                      <span
+                                        key={i}
+                                        className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border"
+                                        style={color ? {
+                                          backgroundColor: `${color}1A`,
+                                          color: color,
+                                          borderColor: `${color}40`,
+                                        } : undefined}
+                                      >
+                                        {color && (
+                                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
+                                        )}
+                                        {lbl}
                                       </span>
                                     );
                                   })}
                                 </div>
                               );
                             }
+
+                            // 2) Currency
+                            if (fieldType === "currency") {
+                              return (
+                                <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                  {formatCurrency(value)}
+                                </p>
+                              );
+                            }
+
+                            // 3) Phone
+                            if (fieldType === "text" && isPhoneLabel(label) || fieldType === "phone" as any) {
+                              return (
+                                <a
+                                  href={`https://wa.me/${String(value ?? "").replace(/\D/g, "")}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-sm font-medium text-emerald-700 dark:text-emerald-400 hover:underline tabular-nums"
+                                >
+                                  {formatPhone(value)}
+                                </a>
+                              );
+                            }
+
+                            // 4) Email
+                            if (fieldType === "text" && /email|e-mail/i.test(label)) {
+                              return (
+                                <a href={`mailto:${value}`} className="text-sm font-medium text-blue-700 dark:text-blue-400 hover:underline break-all">
+                                  {String(value ?? "")}
+                                </a>
+                              );
+                            }
+
+                            // 5) Date
+                            if (fieldType === "date") {
+                              return (
+                                <p className="text-sm font-medium">
+                                  {formatDateValue(value)}
+                                </p>
+                              );
+                            }
+
+                            // 6) Number
+                            if (fieldType === "number") {
+                              const n = Number(value);
+                              return (
+                                <p className="text-base font-semibold tabular-nums">
+                                  {isFinite(n) ? n.toLocaleString("pt-BR") : String(value ?? "—")}
+                                </p>
+                              );
+                            }
+
+                            // 7) Boolean
+                            if (fieldType === "boolean") {
+                              const truthy = value === true || value === "true" || value === "sim" || value === 1;
+                              return (
+                                <span className={cn(
+                                  "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border",
+                                  truthy
+                                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                                    : "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30"
+                                )}>
+                                  <span className={cn("h-1.5 w-1.5 rounded-full", truthy ? "bg-emerald-500" : "bg-rose-500")} />
+                                  {truthy ? "Sim" : "Não"}
+                                </span>
+                              );
+                            }
+
+                            // 8) Location
+                            if (fieldType === "location") {
+                              return (
+                                <p className="text-sm font-medium inline-flex items-start gap-1.5">
+                                  <MapPin className="h-3.5 w-3.5 text-rose-500 mt-0.5 shrink-0" />
+                                  {formatLocation(value)}
+                                </p>
+                              );
+                            }
+
+                            // 9) Structured JSON (objects/arrays of objects)
                             if (isStructured(value)) {
                               return renderStructured(value);
                             }
+
+                            // 10) Fallback text
                             return (
                               <p className={cn(
                                 "text-sm text-foreground break-words",
