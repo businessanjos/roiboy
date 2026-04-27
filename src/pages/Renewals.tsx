@@ -795,6 +795,53 @@ export default function Renewals() {
             </Card>
           </div>
 
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+            <Select value={expiredFilterProduto} onValueChange={setExpiredFilterProduto}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Produto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos produtos</SelectItem>
+                {expiredUniqueProdutos.sort().map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={expiredFilterConsultora} onValueChange={setExpiredFilterConsultora}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Consultora" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas consultoras</SelectItem>
+                {expiredUniqueConsultoras.sort().map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={expiredFilterChance} onValueChange={setExpiredFilterChance}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="Chance" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas chances</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="media">Média</SelectItem>
+                <SelectItem value="baixa">Baixa</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={expiredFilterAno} onValueChange={setExpiredFilterAno}>
+              <SelectTrigger className="w-full sm:w-[140px]">
+                <SelectValue placeholder="Ano" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os anos</SelectItem>
+                <SelectItem value="2025">2025</SelectItem>
+                <SelectItem value="2026">2026</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {renderContractsTable(
             filteredExpired,
             "Nenhum contrato vencido pendente",
