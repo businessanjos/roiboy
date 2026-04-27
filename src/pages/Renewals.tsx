@@ -369,7 +369,12 @@ export default function Renewals() {
     if (filterTempo !== "all") {
       if (filterTempo === "urgent" && c.days_until_expiry > 30) return false;
       if (filterTempo === "warning" && (c.days_until_expiry <= 30 || c.days_until_expiry > 60)) return false;
-      if (filterTempo === "ok" && c.days_until_expiry <= 60) return false;
+      if (filterTempo === "ok" && (c.days_until_expiry <= 60 || c.days_until_expiry > 90)) return false;
+      if (filterTempo === "later" && c.days_until_expiry <= 90) return false;
+      if (filterTempo === "year2026") {
+        const y = c.end_date ? new Date(c.end_date).getUTCFullYear() : 0;
+        if (y !== 2026) return false;
+      }
     }
     if (filterChance !== "all") {
       const score = chanceScores[c.client_id];
