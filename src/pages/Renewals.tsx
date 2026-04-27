@@ -736,7 +736,7 @@ export default function Renewals() {
               </SelectContent>
             </Select>
             <Select value={filterTempo} onValueChange={setFilterTempo}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Tempo Restante" />
               </SelectTrigger>
               <SelectContent>
@@ -744,6 +744,8 @@ export default function Renewals() {
                 <SelectItem value="urgent">Até 30 dias</SelectItem>
                 <SelectItem value="warning">31 a 60 dias</SelectItem>
                 <SelectItem value="ok">61 a 90 dias</SelectItem>
+                <SelectItem value="later">Mais de 90 dias</SelectItem>
+                <SelectItem value="year2026">Vencimento em 2026</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterChance} onValueChange={setFilterChance}>
