@@ -434,6 +434,145 @@ export default function Renewals() {
       .toUpperCase();
   };
 
+  const renderContractsTable = (
+    list: RenewalContract[],
+    emptyTitle: string,
+    emptySubtitle: string,
+  ) => (
+    <Card>
+      <CardContent className="p-0">
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : list.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <CalendarDays className="h-10 w-10 mb-3 opacity-50" />
+            <p className="font-medium">{emptyTitle}</p>
+            <p className="text-sm">{emptySubtitle}</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[280px]">Cliente</TableHead>
+                <TableHead className="text-center">Consultora</TableHead>
+                <TableHead className="text-center">Produto</TableHead>
+                <TableHead className="text-center">Valor Renovação</TableHead>
+                <TableHead className="text-center">Início</TableHead>
+                <TableHead className="text-center">Vencimento</TableHead>
+                <TableHead className="text-center">Tempo Restante</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center">Chance</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {list.map((contract) => (
+                <TableRow key={contract.id} className="group">
+                  <TableCell>
+                    <Link
+                      to={`/clients/${contract.client_id}`}
+                      className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                    >
+                      <Avatar className="h-8 w-8">
+                        {contract.client_photo_url ? (
+                          <AvatarImage src={contract.client_photo_url} alt={contract.client_name} />
+                        ) : null}
+                        <AvatarFallback className="text-xs bg-muted">
+                          {getInitials(contract.client_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium break-words whitespace-normal max-w-[220px]">{contract.client_name}</p>
+                        {contract.client_email && (
+                          <p className="text-xs text-muted-foreground truncate">{contract.client_email}</p>
+                        )}
+                      </div>
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-center text-sm text-muted-foreground">
+                    {contract.responsible_name || "—"}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {contract.product_name ? (
+                      <Badge
+                        variant="outline"
+                        className="text-xs"
+                        style={{
+                          borderColor: contract.product_color || undefined,
+                          color: contract.product_color || undefined,
+                        }}
+                      >
+                        {contract.product_name}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center text-sm font-medium">
+                    {formatCurrency(contract.renewal_value, contract.currency)}
+                  </TableCell>
+                  <TableCell className="text-center text-sm text-muted-foreground">
+                    {formatLocalDate(contract.start_date)}
+                  </TableCell>
+                  <TableCell className="text-center text-sm font-medium">
+                    {formatLocalDate(contract.end_date)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {getUrgencyBadge(contract.days_until_expiry)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Select
+                      value={outcomeMap[contract.id]?.outcome || "pending"}
+                      onValueChange={(val) => handleOutcomeChange(contract, val)}
+                    >
+                      <SelectTrigger className={cn(
+                        "h-8 w-[140px] text-xs mx-auto",
+                        outcomeMap[contract.id]?.outcome === "renewed" && "border-emerald-500 text-emerald-700 dark:text-emerald-400",
+                        outcomeMap[contract.id]?.outcome === "negotiating" && "border-blue-500 text-blue-700 dark:text-blue-400",
+                        outcomeMap[contract.id]?.outcome === "lost" && "border-red-500 text-red-700 dark:text-red-400",
+                      )}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="negotiating">Em Negociação</SelectItem>
+                        <SelectItem value="renewed">Renovado</SelectItem>
+                        <SelectItem value="lost">Cancelou</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <RenewalThermometer
+                      clientId={contract.client_id}
+                      accountId={currentUser?.account_id || ""}
+                      onScoreCalculated={handleScoreCalculated}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link to={`/clients/${contract.client_id}`}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent>Ver cliente</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto">
       {/* Header */}
