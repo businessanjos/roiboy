@@ -299,6 +299,40 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+  // Detect a sensible icon + visual treatment based on field name & value
+  const getFieldVisual = (label: string, value: any, fieldId?: string) => {
+    const l = (label || "").toLowerCase();
+    const field = fieldId ? customFieldsMap.get(fieldId) : undefined;
+    const ft = field?.field_type || "";
+    const strVal = typeof value === "string" ? value : "";
+
+    if (/email|e-mail/.test(l) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(strVal))
+      return { Icon: Mail, tone: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10" };
+    if (/telefone|whats|celular|phone|contato/.test(l))
+      return { Icon: Phone, tone: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" };
+    if (/data|nasc|aniver|date/.test(l) || ft === "date")
+      return { Icon: CalendarIcon, tone: "text-violet-600 dark:text-violet-400", bg: "bg-violet-500/10" };
+    if (/endere|cidade|estado|cep|local/.test(l))
+      return { Icon: MapPin, tone: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10" };
+    if (/cnpj|cpf|documento|rg/.test(l))
+      return { Icon: Hash, tone: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" };
+    if (/fatur|receita|invest|valor|orcam|orçam|preço|preco|r\$/.test(l))
+      return { Icon: DollarSign, tone: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" };
+    if (/site|url|link|insta|face|youtube|tiktok/.test(l) || /^https?:\/\//.test(strVal))
+      return { Icon: LinkIcon, tone: "text-sky-600 dark:text-sky-400", bg: "bg-sky-500/10" };
+    if (/nome|razão|razao|empresa|companhia/.test(l))
+      return { Icon: User, tone: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-500/10" };
+    if (Array.isArray(value) || ft === "multiselect" || ft === "checkbox")
+      return { Icon: ListChecks, tone: "text-fuchsia-600 dark:text-fuchsia-400", bg: "bg-fuchsia-500/10" };
+    if (ft === "textarea" || (typeof value === "string" && value.length > 100))
+      return { Icon: Sparkles, tone: "text-primary", bg: "bg-primary/10" };
+    return { Icon: Type, tone: "text-muted-foreground", bg: "bg-muted" };
+  };
+
+  const isLongText = (value: any) =>
+    typeof value === "string" && value.length > 80;
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
