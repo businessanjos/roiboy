@@ -1341,18 +1341,20 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               ) : (
                 <SystemEventItem event={event} onDeleteClick={openDeleteDialog} />
               )}
-              
-              {/* Show "Mostrar X atualizações anteriores" after a few items */}
-              {index === 4 && hiddenCount > 0 && !showOlder && (
-                <button
-                  onClick={() => setShowOlder(true)}
-                  className="text-primary text-sm font-medium hover:underline mt-2 mb-2"
-                >
-                  Mostrar {hiddenCount} atualizações anteriores
-                </button>
-              )}
             </div>
           ))}
+
+          {/* "Mostrar X atualizações anteriores" — at the end of visible list */}
+          {hiddenCount > 0 && !showOlder && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => setShowOlder(true)}
+                className="text-primary text-sm font-medium hover:underline"
+              >
+                Mostrar {hiddenCount} atualizações anteriores
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
