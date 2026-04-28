@@ -1347,13 +1347,13 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
 
           {/* "Mostrar X atualizações anteriores" — divider with pill button */}
           {hiddenCount > 0 && !showOlder && (
-            <div className="relative flex items-center justify-center py-4">
-              <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
+            <div className="relative flex items-center justify-center py-6">
+              <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
               <button
                 onClick={() => setShowOlder(true)}
-                className="relative inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary hover:shadow-md"
+                className="group relative inline-flex items-center gap-2 rounded-full border-2 border-primary/30 bg-primary text-primary-foreground px-5 py-2.5 text-sm font-semibold shadow-lg shadow-primary/20 transition-all hover:border-primary hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0"
               >
-                <ChevronDown className="h-3.5 w-3.5" />
+                <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
                 Mostrar {hiddenCount} atualizações anteriores
               </button>
             </div>
