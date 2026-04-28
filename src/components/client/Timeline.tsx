@@ -1352,7 +1352,13 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
         {/* Events List */}
         <div className="space-y-4">
           {visibleEvents.map((event, index) => (
-            <div key={event.id} className="relative">
+            <div
+              key={event.id}
+              className={cn(
+                "relative",
+                newlyRevealedIds.has(event.id) && "animate-fade-in"
+              )}
+            >
           {event.type === "comment" ? (
                 <CommentItem 
                   event={event} 
@@ -1374,16 +1380,17 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
             </div>
           ))}
 
-          {/* "Mostrar X atualizações anteriores" — divider with pill button */}
-          {hiddenCount > 0 && !showOlder && (
+          {/* "Mostrar mais X de Y anteriores" — divider with pill button */}
+          {hiddenCount > 0 && (
             <div className="relative flex items-center justify-center py-6">
               <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
               <button
-                onClick={() => setShowOlder(true)}
+                ref={loadMoreBtnRef}
+                onClick={handleLoadMore}
                 className="group relative inline-flex items-center gap-2 rounded-full border-2 border-primary/30 bg-primary text-primary-foreground px-5 py-2.5 text-sm font-semibold shadow-lg shadow-primary/20 transition-all hover:border-primary hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0"
               >
                 <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
-                Mostrar mais {Math.min(10, hiddenCount)} de {hiddenCount} anteriores
+                Mostrar mais {nextBatch} de {hiddenCount} anteriores
               </button>
             </div>
           )}
