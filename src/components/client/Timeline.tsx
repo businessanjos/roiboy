@@ -1354,7 +1354,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                 className="group relative inline-flex items-center gap-2 rounded-full border-2 border-primary/30 bg-primary text-primary-foreground px-5 py-2.5 text-sm font-semibold shadow-lg shadow-primary/20 transition-all hover:border-primary hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0"
               >
                 <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
-                Mostrar {hiddenCount} atualizações anteriores
+                Mostrar mais {Math.min(10, hiddenCount)} de {hiddenCount} anteriores
               </button>
             </div>
           )}
