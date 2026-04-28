@@ -21,8 +21,8 @@ import {
   isBreakdownComplete,
 } from "@/components/sales/PaymentBreakdownComposer";
 import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from "@/components/operations/OperationBriefingForm";
-import { Separator } from "@/components/ui/separator";
 import { BonusSelector } from "@/components/sales/BonusSelector";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface RequiredFieldsModalProps {
   open: boolean;
@@ -249,6 +249,38 @@ export function RequiredFieldsModal({
   // Filter out the auto-managed breakdown field from the displayed list
   const displayedFields = missingFields.filter((f) => f.name !== PAYMENT_BREAKDOWN_FIELD_NAME);
 
+  const renderField = (field: CustomField) => {
+    const bonusField = isBonusField(field.name);
+    return (
+      <div key={field.id} className="space-y-2">
+        <Label className="text-sm font-medium">
+          {field.name} <span className="text-destructive">*</span>
+        </Label>
+        {bonusField ? (
+          <BonusSelector
+            dealId={dealId}
+            value={Array.isArray(values[field.id]) ? (values[field.id] as string[]) : []}
+            onChange={(newValue) => handleValueChange(field.id, newValue)}
+          />
+        ) : (
+          <InlineFieldInput
+            field={field}
+            value={values[field.id]}
+            onChange={(newValue) => handleValueChange(field.id, newValue)}
+          />
+        )}
+        {field.id === paymentMethodField?.id && needsBreakdown && (
+          <PaymentBreakdownComposer
+            paymentMethodValue={paymentMethodValue as string}
+            paymentMethodLabel={paymentMethodLabel}
+            value={breakdown}
+            onChange={setBreakdown}
+          />
+        )}
+      </div>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`${showBriefing ? "max-w-3xl" : "max-w-md"} max-h-[90vh] overflow-y-auto`}>
@@ -257,55 +289,40 @@ export function RequiredFieldsModal({
           <DialogDescription>{getDescription()}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {showBriefing && (
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-sm font-semibold">Briefing para Operação</h3>
+        <div className="py-4">
+          {showBriefing ? (
+            <Tabs defaultValue="fields" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="fields">Dados da Negociação</TabsTrigger>
+                <TabsTrigger value="briefing">Briefing para Operação</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="fields" className="space-y-4 mt-4">
+                {displayedFields.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    Nenhum campo obrigatório pendente.
+                  </p>
+                ) : (
+                  displayedFields.map((field) => renderField(field))
+                )}
+              </TabsContent>
+
+              <TabsContent value="briefing" className="space-y-3 mt-4">
                 <p className="text-xs text-muted-foreground">
                   Opcional — pode ser preenchido depois pela equipe de operações.
                 </p>
-              </div>
-              <OperationBriefingForm
-                dealId={dealId}
-                clientId={clientId ?? null}
-                onSaved={(data: OperationBriefingData) => setBriefingComplete(isBriefingComplete(data))}
-              />
-              {displayedFields.length > 0 && <Separator />}
+                <OperationBriefingForm
+                  dealId={dealId}
+                  clientId={clientId ?? null}
+                  onSaved={(data: OperationBriefingData) => setBriefingComplete(isBriefingComplete(data))}
+                />
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="space-y-4">
+              {displayedFields.map((field) => renderField(field))}
             </div>
           )}
-
-          {displayedFields.map((field) => {
-            const bonusField = isBonusField(field.name);
-            return (
-              <div key={field.id} className="space-y-2">
-                <Label className="text-sm font-medium">
-                  {field.name} <span className="text-destructive">*</span>
-                </Label>
-                {bonusField ? (
-                  <BonusSelector
-                    dealId={dealId}
-                    value={Array.isArray(values[field.id]) ? (values[field.id] as string[]) : []}
-                    onChange={(newValue) => handleValueChange(field.id, newValue)}
-                  />
-                ) : (
-                  <InlineFieldInput
-                    field={field}
-                    value={values[field.id]}
-                    onChange={(newValue) => handleValueChange(field.id, newValue)}
-                  />
-                )}
-                {field.id === paymentMethodField?.id && needsBreakdown && (
-                  <PaymentBreakdownComposer
-                    paymentMethodValue={paymentMethodValue as string}
-                    paymentMethodLabel={paymentMethodLabel}
-                    value={breakdown}
-                    onChange={setBreakdown}
-                  />
-                )}
-              </div>
-            );
-          })}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
