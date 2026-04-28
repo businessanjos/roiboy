@@ -235,3 +235,6 @@ verify_jwt = false
 
 [functions.gdrive-disconnect]
 verify_jwt = false
+
+[functions.public-digital-contract]
+verify_jwt = false
