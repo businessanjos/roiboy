@@ -753,7 +753,9 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
-  const [showOlder, setShowOlder] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const loadMoreBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [newlyRevealedIds, setNewlyRevealedIds] = useState<Set<string>>(new Set());
   const [clientName, setClientName] = useState<string>(propClientName || "");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [highlightState, setHighlightState] = useState<"glow" | "fading" | null>(null);
