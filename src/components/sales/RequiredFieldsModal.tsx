@@ -358,8 +358,21 @@ export function RequiredFieldsModal({
               </TabsContent>
             </Tabs>
           ) : (
-            <div className="space-y-4">
-              {displayedFields.map((field) => renderField(field))}
+            <div className="space-y-6">
+              {displayedFields.length > 0 && (
+                <div className="space-y-4">
+                  {displayedFields.map((field) => renderField(field))}
+                </div>
+              )}
+              {showBilling && (
+                <BillingMentoreeSection
+                  dealId={dealId}
+                  accountId={accountId}
+                  contactDefaults={dealContact}
+                  values={billingValues}
+                  onChange={setBillingValues}
+                />
+              )}
             </div>
           )}
         </div>
