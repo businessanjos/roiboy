@@ -284,7 +284,12 @@ export default function ClientDetail() {
       .eq("is_active", true)
       .order("title");
     
-    if (!error) setAvailableForms(data || []);
+    if (!error) {
+      const filtered = (data || []).filter(
+        (f) => f.title?.trim().toLowerCase() !== "diagnóstico empresarial"
+      );
+      setAvailableForms(filtered);
+    }
   };
 
   const fetchTeamUsers = async () => {
