@@ -753,7 +753,9 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
-  const [showOlder, setShowOlder] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const loadMoreBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [newlyRevealedIds, setNewlyRevealedIds] = useState<Set<string>>(new Set());
   const [clientName, setClientName] = useState<string>(propClientName || "");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [highlightState, setHighlightState] = useState<"glow" | "fading" | null>(null);
@@ -787,7 +789,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
       const commentId = hash.replace("#comment-", "");
       setHighlightedId(commentId);
       setHighlightState("glow");
-      setShowOlder(true); // Show all events to find the comment
+      setVisibleCount(Number.MAX_SAFE_INTEGER); // Show all events to find the comment
       
       // Wait for DOM to update, then scroll
       setTimeout(() => {
@@ -1303,10 +1305,37 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     );
   }
 
-  // Show limited number initially
-  const visibleLimit = showOlder ? filteredEvents.length : 10;
+  // Show limited number initially, expanded incrementally in batches of 10
+  const visibleLimit = Math.min(visibleCount, filteredEvents.length);
   const visibleEvents = filteredEvents.slice(0, visibleLimit);
   const hiddenCount = filteredEvents.length - visibleLimit;
+  const nextBatch = Math.min(10, hiddenCount);
+
+  const handleLoadMore = () => {
+    // Anchor scroll: keep the button's viewport position stable after revealing items
+    const scroller = loadMoreBtnRef.current?.closest(".overflow-y-auto") as HTMLElement | null;
+    const btnTopBefore = loadMoreBtnRef.current?.getBoundingClientRect().top ?? 0;
+    const scrollerTopBefore = scroller?.getBoundingClientRect().top ?? 0;
+    const offsetBefore = btnTopBefore - scrollerTopBefore;
+
+    const startIdx = visibleLimit;
+    const endIdx = Math.min(visibleLimit + nextBatch, filteredEvents.length);
+    const revealed = new Set(filteredEvents.slice(startIdx, endIdx).map((e) => e.id));
+    setNewlyRevealedIds(revealed);
+    setVisibleCount((c) => c + 10);
+
+    // After paint, restore the button position so it doesn't jump out of view
+    requestAnimationFrame(() => {
+      if (!scroller || !loadMoreBtnRef.current) return;
+      const btnTopAfter = loadMoreBtnRef.current.getBoundingClientRect().top;
+      const scrollerTopAfter = scroller.getBoundingClientRect().top;
+      const offsetAfter = btnTopAfter - scrollerTopAfter;
+      scroller.scrollTop += offsetAfter - offsetBefore;
+    });
+
+    // Clear highlight after fade-in completes
+    setTimeout(() => setNewlyRevealedIds(new Set()), 700);
+  };
 
   return (
     <div className={cn("flex flex-col max-h-[600px]", className)}>
@@ -1323,7 +1352,13 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
         {/* Events List */}
         <div className="space-y-4">
           {visibleEvents.map((event, index) => (
-            <div key={event.id} className="relative">
+            <div
+              key={event.id}
+              className={cn(
+                "relative",
+                newlyRevealedIds.has(event.id) && "animate-fade-in"
+              )}
+            >
           {event.type === "comment" ? (
                 <CommentItem 
                   event={event} 
@@ -1345,16 +1380,17 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
             </div>
           ))}
 
-          {/* "Mostrar X atualizações anteriores" — divider with pill button */}
-          {hiddenCount > 0 && !showOlder && (
+          {/* "Mostrar mais X de Y anteriores" — divider with pill button */}
+          {hiddenCount > 0 && (
             <div className="relative flex items-center justify-center py-6">
               <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
               <button
-                onClick={() => setShowOlder(true)}
+                ref={loadMoreBtnRef}
+                onClick={handleLoadMore}
                 className="group relative inline-flex items-center gap-2 rounded-full border-2 border-primary/30 bg-primary text-primary-foreground px-5 py-2.5 text-sm font-semibold shadow-lg shadow-primary/20 transition-all hover:border-primary hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0"
               >
                 <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
-                Mostrar mais {Math.min(10, hiddenCount)} de {hiddenCount} anteriores
+                Mostrar mais {nextBatch} de {hiddenCount} anteriores
               </button>
             </div>
           )}
