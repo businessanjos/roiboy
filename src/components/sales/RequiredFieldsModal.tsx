@@ -23,6 +23,7 @@ import {
 import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from "@/components/operations/OperationBriefingForm";
 import { BonusSelector } from "@/components/sales/BonusSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BillingMentoreeSection, BillingMentoreeValues, isBillingMentoreeComplete } from "@/components/sales/BillingMentoreeSection";
 
 interface RequiredFieldsModalProps {
   open: boolean;
