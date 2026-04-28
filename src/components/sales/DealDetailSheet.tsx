@@ -84,6 +84,7 @@ import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
 import { DealFieldValueEditor } from "@/components/custom-fields/DealFieldValueEditor";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
+import { DigitalContractTab } from "./contracts/DigitalContractTab";
 import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
@@ -1376,7 +1377,7 @@ export function DealDetailSheet({
               {/* Right Column - Tabs for History and Tasks */}
               <div className="space-y-3">
                 <Tabs defaultValue="history" className="w-full">
-                  <TabsList className="w-full grid grid-cols-3 h-8">
+                  <TabsList className="w-full grid grid-cols-4 h-8">
                     <TabsTrigger value="history" className="text-xs h-7">
                       <Clock className="h-3 w-3 mr-1" />
                       Histórico
@@ -1388,6 +1389,10 @@ export function DealDetailSheet({
                     <TabsTrigger value="briefing" className="text-xs h-7">
                       <icons.ClipboardList className="h-3 w-3 mr-1" />
                       Briefing Op.
+                    </TabsTrigger>
+                    <TabsTrigger value="contract" className="text-xs h-7">
+                      <icons.FileSignature className="h-3 w-3 mr-1" />
+                      Contrato
                     </TabsTrigger>
                   </TabsList>
 
@@ -1701,6 +1706,15 @@ export function DealDetailSheet({
                     <OperationBriefingForm
                       dealId={deal.id}
                       clientId={deal.client_id || null}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="contract" className="mt-3">
+                    <DigitalContractTab
+                      dealId={deal.id}
+                      dealValue={deal.value}
+                      clientId={deal.client_id || null}
+                      clientName={deal.lead?.full_name || deal.client?.full_name}
                     />
                   </TabsContent>
                 </Tabs>
