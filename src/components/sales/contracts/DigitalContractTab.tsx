@@ -169,18 +169,24 @@ export const DigitalContractTab = ({
           if (clientId) {
             const { data: client } = await supabase
               .from("clients")
-              .select("name, cpf_cnpj, address, emails")
+              .select("full_name, cpf, cnpj, street, street_number, neighborhood, city, state, emails")
               .eq("id", clientId)
               .maybeSingle();
             clientInfo = client;
           }
 
+          const buildAddress = (c: any) => {
+            if (!c) return null;
+            const parts = [c.street, c.street_number, c.neighborhood, c.city, c.state].filter(Boolean);
+            return parts.length ? parts.join(", ") : null;
+          };
+
           const installments = 1;
           const total = Number(dealValue ?? 0);
           const seed: DigitalContractData = {
-            client_name: clientInfo?.name ?? clientName ?? "",
-            client_cpf_cnpj: clientInfo?.cpf_cnpj ?? null,
-            client_address: clientInfo?.address ?? null,
+            client_name: clientInfo?.full_name ?? clientName ?? "",
+            client_cpf_cnpj: clientInfo?.cpf ?? clientInfo?.cnpj ?? null,
+            client_address: buildAddress(clientInfo),
             client_email: Array.isArray(clientInfo?.emails) ? clientInfo.emails[0] : null,
             object_description: "",
             service_mode: "deliverables",
