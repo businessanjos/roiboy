@@ -84,6 +84,7 @@ import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
 import { DealFieldValueEditor } from "@/components/custom-fields/DealFieldValueEditor";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
+import { DigitalContractTab } from "./contracts/DigitalContractTab";
 import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
@@ -1713,7 +1714,7 @@ export function DealDetailSheet({
                       dealId={deal.id}
                       dealValue={deal.value}
                       clientId={deal.client_id || null}
-                      clientName={deal.lead?.name || deal.client?.name}
+                      clientName={deal.lead?.full_name || deal.client?.full_name}
                     />
                   </TabsContent>
                 </Tabs>
