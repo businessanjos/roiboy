@@ -1305,10 +1305,37 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     );
   }
 
-  // Show limited number initially
-  const visibleLimit = showOlder ? filteredEvents.length : 10;
+  // Show limited number initially, expanded incrementally in batches of 10
+  const visibleLimit = Math.min(visibleCount, filteredEvents.length);
   const visibleEvents = filteredEvents.slice(0, visibleLimit);
   const hiddenCount = filteredEvents.length - visibleLimit;
+  const nextBatch = Math.min(10, hiddenCount);
+
+  const handleLoadMore = () => {
+    // Anchor scroll: keep the button's viewport position stable after revealing items
+    const scroller = loadMoreBtnRef.current?.closest(".overflow-y-auto") as HTMLElement | null;
+    const btnTopBefore = loadMoreBtnRef.current?.getBoundingClientRect().top ?? 0;
+    const scrollerTopBefore = scroller?.getBoundingClientRect().top ?? 0;
+    const offsetBefore = btnTopBefore - scrollerTopBefore;
+
+    const startIdx = visibleLimit;
+    const endIdx = Math.min(visibleLimit + nextBatch, filteredEvents.length);
+    const revealed = new Set(filteredEvents.slice(startIdx, endIdx).map((e) => e.id));
+    setNewlyRevealedIds(revealed);
+    setVisibleCount((c) => c + 10);
+
+    // After paint, restore the button position so it doesn't jump out of view
+    requestAnimationFrame(() => {
+      if (!scroller || !loadMoreBtnRef.current) return;
+      const btnTopAfter = loadMoreBtnRef.current.getBoundingClientRect().top;
+      const scrollerTopAfter = scroller.getBoundingClientRect().top;
+      const offsetAfter = btnTopAfter - scrollerTopAfter;
+      scroller.scrollTop += offsetAfter - offsetBefore;
+    });
+
+    // Clear highlight after fade-in completes
+    setTimeout(() => setNewlyRevealedIds(new Set()), 700);
+  };
 
   return (
     <div className={cn("flex flex-col max-h-[600px]", className)}>
