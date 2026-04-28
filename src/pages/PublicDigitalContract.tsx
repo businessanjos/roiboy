@@ -1,7 +1,45 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { ContractDocument, type DigitalContractData } from "@/components/sales/contracts/ContractDocument";
+import { ContractDocument, type DigitalContractData, type Deliverable } from "@/components/sales/contracts/ContractDocument";
+
+const rowToData = (row: any): DigitalContractData => ({
+  contract_number: row.contract_number,
+  client_name: row.client_name ?? "",
+  client_cpf_cnpj: row.client_cpf_cnpj,
+  client_address: row.client_address,
+  client_email: row.client_email,
+  client_marital_status: row.client_marital_status,
+  client_nationality: row.client_nationality,
+  client_representative: row.client_representative,
+  client_representative_cpf: row.client_representative_cpf,
+  object_description: row.object_description,
+  service_mode: row.service_mode ?? "deliverables",
+  monthly_hours: row.monthly_hours,
+  extra_hour_rate: row.extra_hour_rate,
+  total_value: row.total_value,
+  down_payment_percentage: row.down_payment_percentage,
+  installments: row.installments,
+  installment_value: row.installment_value,
+  first_due_date: row.first_due_date,
+  due_day: row.due_day,
+  contract_duration_months: row.contract_duration_months,
+  has_renewal: row.has_renewal,
+  include_witnesses: row.include_witnesses,
+  deliverables: (row.deliverables as Deliverable[]) ?? [],
+  late_fee_percentage: row.late_fee_percentage,
+  late_interest_percentage: row.late_interest_percentage,
+  rescission_penalty_percentage: row.rescission_penalty_percentage,
+  jurisdiction: row.jurisdiction,
+  payment_method: row.payment_method,
+  company_name: row.company_name,
+  company_cnpj: row.company_cnpj,
+  company_address: row.company_address,
+  company_representative: row.company_representative,
+  company_representative_cpf: row.company_representative_cpf,
+  company_email: row.company_email,
+  company_bank_info: row.company_bank_info,
+});
 
 export default function PublicDigitalContract() {
   const { token } = useParams<{ token: string }>();
@@ -20,7 +58,7 @@ export default function PublicDigitalContract() {
           throw new Error(j?.error ?? "Contrato não encontrado");
         }
         const json = await res.json();
-        setData(json.contract.data as DigitalContractData);
+        setData(rowToData(json.contract));
       } catch (e: any) {
         setError(e?.message ?? "Erro ao carregar");
       } finally {
