@@ -23,6 +23,7 @@ import {
 import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from "@/components/operations/OperationBriefingForm";
 import { BonusSelector } from "@/components/sales/BonusSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BillingMentoreeSection, BillingMentoreeValues, isBillingMentoreeComplete } from "@/components/sales/BillingMentoreeSection";
 
 interface RequiredFieldsModalProps {
   open: boolean;
@@ -61,15 +62,27 @@ export function RequiredFieldsModal({
   const [breakdown, setBreakdown] = useState<PaymentBreakdownItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [briefingComplete, setBriefingComplete] = useState(false);
+  const [billingValues, setBillingValues] = useState<BillingMentoreeValues>({
+    tipo_pessoa: "",
+    doc: "",
+    razao_social: "",
+    email_nf: "",
+    ment_nome: "",
+    ment_telefone: "",
+    ment_email: "",
+  });
+  const [dealContact, setDealContact] = useState<{ name?: string | null; phone?: string | null; email?: string | null } | undefined>(undefined);
 
   const showBriefing = outcomeType === "won";
+  const showBilling = outcomeType === "won";
 
-  // Reset values when modal opens; pre-check briefing status
+  // Reset values when modal opens; pre-check briefing status; load deal contact for mentorado defaults
   useEffect(() => {
     if (open) {
       setValues({});
       setBreakdown([]);
       setBriefingComplete(false);
+      setDealContact(undefined);
 
       if (showBriefing && dealId) {
         supabase
@@ -81,8 +94,25 @@ export function RequiredFieldsModal({
             if (data?.is_complete) setBriefingComplete(true);
           });
       }
+
+      if (showBilling && dealId) {
+        supabase
+          .from("deals")
+          .select("contact_name, contact_phone, contact_email")
+          .eq("id", dealId)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) {
+              setDealContact({
+                name: data.contact_name,
+                phone: data.contact_phone,
+                email: data.contact_email,
+              });
+            }
+          });
+      }
     }
-  }, [open, dealId, showBriefing]);
+  }, [open, dealId, showBriefing, showBilling]);
 
   const paymentMethodField = missingFields.find((f) => f.name === PAYMENT_METHOD_FIELD_NAME);
   const paymentMethodValue = paymentMethodField ? values[paymentMethodField.id] : undefined;
@@ -109,7 +139,8 @@ export function RequiredFieldsModal({
   const breakdownOk = !needsBreakdown || isBreakdownComplete(breakdown);
   // Briefing operacional é OPCIONAL — não bloqueia o salvamento do ganho
   const briefingOk = true;
-  const canSave = allFieldsFilled && breakdownOk && briefingOk;
+  const billingOk = !showBilling || isBillingMentoreeComplete(billingValues);
+  const canSave = allFieldsFilled && breakdownOk && briefingOk && billingOk;
 
   const handleSave = async () => {
     setSaving(true);
@@ -297,13 +328,21 @@ export function RequiredFieldsModal({
                 <TabsTrigger value="briefing">Briefing para Operação</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="fields" className="space-y-4 mt-4">
-                {displayedFields.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">
-                    Nenhum campo obrigatório pendente.
-                  </p>
-                ) : (
-                  displayedFields.map((field) => renderField(field))
+              <TabsContent value="fields" className="space-y-6 mt-4">
+                {displayedFields.length > 0 && (
+                  <div className="space-y-4">
+                    {displayedFields.map((field) => renderField(field))}
+                  </div>
+                )}
+
+                {showBilling && (
+                  <BillingMentoreeSection
+                    dealId={dealId}
+                    accountId={accountId}
+                    contactDefaults={dealContact}
+                    values={billingValues}
+                    onChange={setBillingValues}
+                  />
                 )}
               </TabsContent>
 
