@@ -3264,6 +3264,68 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_company_defaults: {
+        Row: {
+          account_id: string
+          company_address: string | null
+          company_bank_info: Json | null
+          company_cnpj: string | null
+          company_email: string | null
+          company_name: string | null
+          company_representative: string | null
+          company_representative_cpf: string | null
+          created_at: string
+          default_jurisdiction: string | null
+          default_late_fee_percentage: number | null
+          default_late_interest_percentage: number | null
+          default_rescission_penalty_percentage: number | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          company_address?: string | null
+          company_bank_info?: Json | null
+          company_cnpj?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_representative?: string | null
+          company_representative_cpf?: string | null
+          created_at?: string
+          default_jurisdiction?: string | null
+          default_late_fee_percentage?: number | null
+          default_late_interest_percentage?: number | null
+          default_rescission_penalty_percentage?: number | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          company_address?: string | null
+          company_bank_info?: Json | null
+          company_cnpj?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_representative?: string | null
+          company_representative_cpf?: string | null
+          created_at?: string
+          default_jurisdiction?: string | null
+          default_late_fee_percentage?: number | null
+          default_late_interest_percentage?: number | null
+          default_rescission_penalty_percentage?: number | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_company_defaults_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           account_id: string
@@ -4333,6 +4395,185 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "deal_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_contracts: {
+        Row: {
+          account_id: string
+          client_address: string | null
+          client_cpf_cnpj: string | null
+          client_email: string | null
+          client_id: string | null
+          client_marital_status: string | null
+          client_name: string
+          client_nationality: string | null
+          client_representative: string | null
+          client_representative_cpf: string | null
+          company_address: string | null
+          company_bank_info: Json | null
+          company_cnpj: string | null
+          company_email: string | null
+          company_name: string | null
+          company_representative: string | null
+          company_representative_cpf: string | null
+          contract_duration_months: number | null
+          contract_number: string | null
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          deliverables: Json | null
+          down_payment_percentage: number | null
+          due_day: number | null
+          extra_hour_rate: number | null
+          first_due_date: string | null
+          has_renewal: boolean | null
+          id: string
+          include_witnesses: boolean | null
+          installment_value: number | null
+          installments: number | null
+          jurisdiction: string | null
+          late_fee_percentage: number | null
+          late_interest_percentage: number | null
+          monthly_hours: number | null
+          object_description: string | null
+          payment_method: string | null
+          rescission_penalty_percentage: number | null
+          service_mode: string | null
+          share_token: string
+          signed_at: string | null
+          signed_pdf_path: string | null
+          status: string
+          total_value: number | null
+          updated_at: string
+          zapsign_document_token: string | null
+        }
+        Insert: {
+          account_id: string
+          client_address?: string | null
+          client_cpf_cnpj?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_marital_status?: string | null
+          client_name: string
+          client_nationality?: string | null
+          client_representative?: string | null
+          client_representative_cpf?: string | null
+          company_address?: string | null
+          company_bank_info?: Json | null
+          company_cnpj?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_representative?: string | null
+          company_representative_cpf?: string | null
+          contract_duration_months?: number | null
+          contract_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          deliverables?: Json | null
+          down_payment_percentage?: number | null
+          due_day?: number | null
+          extra_hour_rate?: number | null
+          first_due_date?: string | null
+          has_renewal?: boolean | null
+          id?: string
+          include_witnesses?: boolean | null
+          installment_value?: number | null
+          installments?: number | null
+          jurisdiction?: string | null
+          late_fee_percentage?: number | null
+          late_interest_percentage?: number | null
+          monthly_hours?: number | null
+          object_description?: string | null
+          payment_method?: string | null
+          rescission_penalty_percentage?: number | null
+          service_mode?: string | null
+          share_token?: string
+          signed_at?: string | null
+          signed_pdf_path?: string | null
+          status?: string
+          total_value?: number | null
+          updated_at?: string
+          zapsign_document_token?: string | null
+        }
+        Update: {
+          account_id?: string
+          client_address?: string | null
+          client_cpf_cnpj?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_marital_status?: string | null
+          client_name?: string
+          client_nationality?: string | null
+          client_representative?: string | null
+          client_representative_cpf?: string | null
+          company_address?: string | null
+          company_bank_info?: Json | null
+          company_cnpj?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_representative?: string | null
+          company_representative_cpf?: string | null
+          contract_duration_months?: number | null
+          contract_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          deliverables?: Json | null
+          down_payment_percentage?: number | null
+          due_day?: number | null
+          extra_hour_rate?: number | null
+          first_due_date?: string | null
+          has_renewal?: boolean | null
+          id?: string
+          include_witnesses?: boolean | null
+          installment_value?: number | null
+          installments?: number | null
+          jurisdiction?: string | null
+          late_fee_percentage?: number | null
+          late_interest_percentage?: number | null
+          monthly_hours?: number | null
+          object_description?: string | null
+          payment_method?: string | null
+          rescission_penalty_percentage?: number | null
+          service_mode?: string | null
+          share_token?: string
+          signed_at?: string | null
+          signed_pdf_path?: string | null
+          status?: string
+          total_value?: number | null
+          updated_at?: string
+          zapsign_document_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_contracts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "digital_contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_contracts_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
         ]
@@ -16843,6 +17084,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
+      next_digital_contract_number: {
+        Args: { p_account_id: string }
+        Returns: string
+      }
       normalize_stage_name: { Args: { p_name: string }; Returns: string }
       process_recurring_entries: { Args: never; Returns: number }
       record_login_attempt: {
