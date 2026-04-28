@@ -139,7 +139,8 @@ export function RequiredFieldsModal({
   const breakdownOk = !needsBreakdown || isBreakdownComplete(breakdown);
   // Briefing operacional é OPCIONAL — não bloqueia o salvamento do ganho
   const briefingOk = true;
-  const canSave = allFieldsFilled && breakdownOk && briefingOk;
+  const billingOk = !showBilling || isBillingMentoreeComplete(billingValues);
+  const canSave = allFieldsFilled && breakdownOk && briefingOk && billingOk;
 
   const handleSave = async () => {
     setSaving(true);
