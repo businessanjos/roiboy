@@ -30,6 +30,7 @@ import {
   X,
   Check,
   Download,
+  ChevronDown,
 } from "lucide-react";
 // extractMentions removed - now using onMentionSelect callback for accurate mention tracking
 import { MentionTextarea } from "@/components/ui/mention-textarea";
