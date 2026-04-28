@@ -328,13 +328,21 @@ export function RequiredFieldsModal({
                 <TabsTrigger value="briefing">Briefing para Operação</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="fields" className="space-y-4 mt-4">
-                {displayedFields.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">
-                    Nenhum campo obrigatório pendente.
-                  </p>
-                ) : (
-                  displayedFields.map((field) => renderField(field))
+              <TabsContent value="fields" className="space-y-6 mt-4">
+                {displayedFields.length > 0 && (
+                  <div className="space-y-4">
+                    {displayedFields.map((field) => renderField(field))}
+                  </div>
+                )}
+
+                {showBilling && (
+                  <BillingMentoreeSection
+                    dealId={dealId}
+                    accountId={accountId}
+                    contactDefaults={dealContact}
+                    values={billingValues}
+                    onChange={setBillingValues}
+                  />
                 )}
               </TabsContent>
 
