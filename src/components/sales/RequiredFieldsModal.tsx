@@ -249,6 +249,38 @@ export function RequiredFieldsModal({
   // Filter out the auto-managed breakdown field from the displayed list
   const displayedFields = missingFields.filter((f) => f.name !== PAYMENT_BREAKDOWN_FIELD_NAME);
 
+  const renderField = (field: CustomField) => {
+    const bonusField = isBonusField(field.name);
+    return (
+      <div key={field.id} className="space-y-2">
+        <Label className="text-sm font-medium">
+          {field.name} <span className="text-destructive">*</span>
+        </Label>
+        {bonusField ? (
+          <BonusSelector
+            dealId={dealId}
+            value={Array.isArray(values[field.id]) ? (values[field.id] as string[]) : []}
+            onChange={(newValue) => handleValueChange(field.id, newValue)}
+          />
+        ) : (
+          <InlineFieldInput
+            field={field}
+            value={values[field.id]}
+            onChange={(newValue) => handleValueChange(field.id, newValue)}
+          />
+        )}
+        {field.id === paymentMethodField?.id && needsBreakdown && (
+          <PaymentBreakdownComposer
+            paymentMethodValue={paymentMethodValue as string}
+            paymentMethodLabel={paymentMethodLabel}
+            value={breakdown}
+            onChange={setBreakdown}
+          />
+        )}
+      </div>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`${showBriefing ? "max-w-3xl" : "max-w-md"} max-h-[90vh] overflow-y-auto`}>
