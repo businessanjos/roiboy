@@ -62,15 +62,27 @@ export function RequiredFieldsModal({
   const [breakdown, setBreakdown] = useState<PaymentBreakdownItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [briefingComplete, setBriefingComplete] = useState(false);
+  const [billingValues, setBillingValues] = useState<BillingMentoreeValues>({
+    tipo_pessoa: "",
+    doc: "",
+    razao_social: "",
+    email_nf: "",
+    ment_nome: "",
+    ment_telefone: "",
+    ment_email: "",
+  });
+  const [dealContact, setDealContact] = useState<{ name?: string | null; phone?: string | null; email?: string | null } | undefined>(undefined);
 
   const showBriefing = outcomeType === "won";
+  const showBilling = outcomeType === "won";
 
-  // Reset values when modal opens; pre-check briefing status
+  // Reset values when modal opens; pre-check briefing status; load deal contact for mentorado defaults
   useEffect(() => {
     if (open) {
       setValues({});
       setBreakdown([]);
       setBriefingComplete(false);
+      setDealContact(undefined);
 
       if (showBriefing && dealId) {
         supabase
@@ -82,8 +94,25 @@ export function RequiredFieldsModal({
             if (data?.is_complete) setBriefingComplete(true);
           });
       }
+
+      if (showBilling && dealId) {
+        supabase
+          .from("deals")
+          .select("contact_name, contact_phone, contact_email")
+          .eq("id", dealId)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) {
+              setDealContact({
+                name: data.contact_name,
+                phone: data.contact_phone,
+                email: data.contact_email,
+              });
+            }
+          });
+      }
     }
-  }, [open, dealId, showBriefing]);
+  }, [open, dealId, showBriefing, showBilling]);
 
   const paymentMethodField = missingFields.find((f) => f.name === PAYMENT_METHOD_FIELD_NAME);
   const paymentMethodValue = paymentMethodField ? values[paymentMethodField.id] : undefined;
