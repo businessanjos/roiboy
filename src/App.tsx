@@ -73,6 +73,8 @@ const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
 
 const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
+const PublicDigitalContract = lazyRetry(() => import("./pages/PublicDigitalContract"));
+const ContractDefaultsSettings = lazyRetry(() => import("./pages/ContractDefaultsSettings"));
 
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
 const EverIA = lazyRetry(() => import("./pages/EverIA"));
@@ -170,6 +172,7 @@ const App = () => (
                           <Route path="/external/insights" element={<ExternalDashboard />} />
                           <Route path="/vagas/:id/aplicar" element={<PublicJobApplication />} />
                           <Route path="/onboarding" element={<Onboarding />} />
+                          <Route path="/contrato/:token" element={<PublicDigitalContract />} />
                           
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/privacidade" element={<PrivacyPolicy />} />
@@ -182,6 +185,7 @@ const App = () => (
                             <Route path="/clients/:id" element={<ClientDetail />} />
                             <Route path="/renewals" element={<Renewals />} />
                             <Route path="/contracts" element={<Contracts />} />
+                            <Route path="/settings/contract-defaults" element={<ContractDefaultsSettings />} />
                             <Route path="/pipeline" element={<SalesPipeline />} />
                             <Route path="/sales-team" element={<SalesTeam />} />
                             <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
