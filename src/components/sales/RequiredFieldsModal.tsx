@@ -21,8 +21,8 @@ import {
   isBreakdownComplete,
 } from "@/components/sales/PaymentBreakdownComposer";
 import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from "@/components/operations/OperationBriefingForm";
-import { Separator } from "@/components/ui/separator";
 import { BonusSelector } from "@/components/sales/BonusSelector";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface RequiredFieldsModalProps {
   open: boolean;
