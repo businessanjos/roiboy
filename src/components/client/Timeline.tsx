@@ -789,7 +789,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
       const commentId = hash.replace("#comment-", "");
       setHighlightedId(commentId);
       setHighlightState("glow");
-      setShowOlder(true); // Show all events to find the comment
+      setVisibleCount(Number.MAX_SAFE_INTEGER); // Show all events to find the comment
       
       // Wait for DOM to update, then scroll
       setTimeout(() => {
