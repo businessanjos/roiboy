@@ -627,53 +627,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         </div>
       </div>
 
-      {/* Etiquetas - chips horizontais (apenas na inbox) */}
-      {activeView === "inbox" && tags.filter(t => t.is_active).length > 0 && (
-        <div className="px-3 pb-2 bg-zapp-bg">
-          <ScrollArea className="w-full">
-            <div className="flex items-center gap-1.5 pb-1">
-              <button
-                onClick={() => setFilterTagId("all")}
-                className={cn(
-                  "shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border",
-                  filterTagId === "all"
-                    ? "bg-zapp-accent text-white border-zapp-accent"
-                    : "bg-zapp-panel text-zapp-text-muted border-zapp-border hover:text-zapp-text"
-                )}
-              >
-                Todas
-                {typeof tagCounts?.all === "number" && (
-                  <span className="ml-1 opacity-80">({tagCounts.all})</span>
-                )}
-              </button>
-              {tags.filter(t => t.is_active).map((tag) => {
-                const active = filterTagId === tag.id;
-                const count = tagCounts?.[tag.id] ?? 0;
-                return (
-                  <button
-                    key={tag.id}
-                    onClick={() => setFilterTagId(active ? "all" : tag.id)}
-                    className={cn(
-                      "shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border",
-                      active
-                        ? "text-white border-transparent"
-                        : "bg-zapp-panel text-zapp-text border-zapp-border hover:opacity-90"
-                    )}
-                    style={active ? { backgroundColor: tag.color } : undefined}
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: tag.color }}
-                    />
-                    <span className="truncate max-w-[120px]">{tag.name}</span>
-                    <span className="opacity-80">({count})</span>
-                  </button>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </div>
-      )}
+      {/* Faixa de chips de etiquetas removida — filtro continua disponível pelo seletor de etiquetas */}
 
       <ZappSidebarNav
         activeView={activeView}
