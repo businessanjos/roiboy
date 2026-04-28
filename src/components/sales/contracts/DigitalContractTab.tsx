@@ -16,7 +16,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-import { ContractDocument, type DigitalContractData } from "./ContractDocument";
+import { ContractDocument, type DigitalContractData, type Deliverable } from "./ContractDocument";
 import { ContractEditor } from "./ContractEditor";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -28,24 +28,91 @@ interface DigitalContractTabProps {
   clientName?: string;
 }
 
-interface DigitalContractRow {
+interface ContractRow {
   id: string;
-  account_id: string;
-  deal_id: string | null;
-  client_id: string | null;
   contract_number: string | null;
   status: string;
-  data: DigitalContractData;
-  pdf_url: string | null;
-  share_token: string | null;
-  zapsign_doc_token: string | null;
-  zapsign_signed_at: string | null;
+  share_token: string;
+  signed_pdf_path: string | null;
+  signed_at: string | null;
+  zapsign_document_token: string | null;
 }
 
-const newToken = () =>
-  Array.from(crypto.getRandomValues(new Uint8Array(24)))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+// Convert flat DB row -> editor data
+const rowToData = (row: any): DigitalContractData => ({
+  contract_number: row.contract_number,
+  client_name: row.client_name ?? "",
+  client_cpf_cnpj: row.client_cpf_cnpj,
+  client_address: row.client_address,
+  client_email: row.client_email,
+  client_marital_status: row.client_marital_status,
+  client_nationality: row.client_nationality,
+  client_representative: row.client_representative,
+  client_representative_cpf: row.client_representative_cpf,
+  object_description: row.object_description,
+  service_mode: row.service_mode ?? "deliverables",
+  monthly_hours: row.monthly_hours,
+  extra_hour_rate: row.extra_hour_rate,
+  total_value: row.total_value,
+  down_payment_percentage: row.down_payment_percentage,
+  installments: row.installments,
+  installment_value: row.installment_value,
+  first_due_date: row.first_due_date,
+  due_day: row.due_day,
+  contract_duration_months: row.contract_duration_months,
+  has_renewal: row.has_renewal,
+  include_witnesses: row.include_witnesses,
+  deliverables: (row.deliverables as Deliverable[]) ?? [],
+  late_fee_percentage: row.late_fee_percentage,
+  late_interest_percentage: row.late_interest_percentage,
+  rescission_penalty_percentage: row.rescission_penalty_percentage,
+  jurisdiction: row.jurisdiction,
+  payment_method: row.payment_method,
+  company_name: row.company_name,
+  company_cnpj: row.company_cnpj,
+  company_address: row.company_address,
+  company_representative: row.company_representative,
+  company_representative_cpf: row.company_representative_cpf,
+  company_email: row.company_email,
+  company_bank_info: row.company_bank_info as any,
+});
+
+const dataToRow = (d: DigitalContractData) => ({
+  client_name: d.client_name ?? "",
+  client_cpf_cnpj: d.client_cpf_cnpj ?? null,
+  client_address: d.client_address ?? null,
+  client_email: d.client_email ?? null,
+  client_marital_status: d.client_marital_status ?? null,
+  client_nationality: d.client_nationality ?? null,
+  client_representative: d.client_representative ?? null,
+  client_representative_cpf: d.client_representative_cpf ?? null,
+  object_description: d.object_description ?? null,
+  service_mode: d.service_mode ?? "deliverables",
+  monthly_hours: d.monthly_hours ?? null,
+  extra_hour_rate: d.extra_hour_rate ?? null,
+  total_value: d.total_value ?? null,
+  down_payment_percentage: d.down_payment_percentage ?? null,
+  installments: d.installments ?? null,
+  installment_value: d.installment_value ?? null,
+  first_due_date: d.first_due_date ?? null,
+  due_day: d.due_day ?? null,
+  contract_duration_months: d.contract_duration_months ?? null,
+  has_renewal: d.has_renewal ?? null,
+  include_witnesses: d.include_witnesses ?? null,
+  deliverables: (d.deliverables ?? []) as any,
+  late_fee_percentage: d.late_fee_percentage ?? null,
+  late_interest_percentage: d.late_interest_percentage ?? null,
+  rescission_penalty_percentage: d.rescission_penalty_percentage ?? null,
+  jurisdiction: d.jurisdiction ?? null,
+  payment_method: d.payment_method ?? null,
+  company_name: d.company_name ?? null,
+  company_cnpj: d.company_cnpj ?? null,
+  company_address: d.company_address ?? null,
+  company_representative: d.company_representative ?? null,
+  company_representative_cpf: d.company_representative_cpf ?? null,
+  company_email: d.company_email ?? null,
+  company_bank_info: (d.company_bank_info ?? null) as any,
+});
 
 export const DigitalContractTab = ({
   dealId,
@@ -58,13 +125,12 @@ export const DigitalContractTab = ({
   const [saving, setSaving] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [sendingZapsign, setSendingZapsign] = useState(false);
-  const [contract, setContract] = useState<DigitalContractRow | null>(null);
+  const [contract, setContract] = useState<ContractRow | null>(null);
   const [data, setData] = useState<DigitalContractData>({ client_name: clientName ?? "" });
   const docRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
 
-  // Load existing contract or seed defaults from deal + account defaults
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -82,10 +148,17 @@ export const DigitalContractTab = ({
         if (cancelled) return;
 
         if (existing) {
-          setContract(existing as unknown as DigitalContractRow);
-          setData((existing as any).data ?? { client_name: clientName ?? "" });
+          setContract({
+            id: existing.id,
+            contract_number: existing.contract_number,
+            status: existing.status,
+            share_token: existing.share_token,
+            signed_pdf_path: existing.signed_pdf_path,
+            signed_at: existing.signed_at,
+            zapsign_document_token: existing.zapsign_document_token,
+          });
+          setData(rowToData(existing));
         } else {
-          // Seed with deal values + company defaults
           const { data: defaults } = await supabase
             .from("contract_company_defaults")
             .select("*")
@@ -130,7 +203,7 @@ export const DigitalContractTab = ({
             company_representative: defaults?.company_representative ?? null,
             company_representative_cpf: defaults?.company_representative_cpf ?? null,
             company_email: defaults?.company_email ?? null,
-            company_bank_info: defaults?.company_bank_info ?? null,
+            company_bank_info: (defaults?.company_bank_info as any) ?? null,
           };
           setData(seed);
         }
@@ -154,28 +227,26 @@ export const DigitalContractTab = ({
       if (contract) {
         const { error } = await supabase
           .from("digital_contracts")
-          .update({ data: data as any })
+          .update(dataToRow(data))
           .eq("id", contract.id);
         if (error) throw error;
         toast.success("Contrato atualizado");
       } else {
-        // Generate sequential number
         const { data: numData, error: numErr } = await supabase.rpc(
-          "next_digital_contract_number",
-          { _account_id: accountId },
+          "next_digital_contract_number" as any,
+          { p_account_id: accountId } as any,
         );
         if (numErr) throw numErr;
         const contract_number = numData as unknown as string;
-        const share_token = newToken();
+
         const insertPayload = {
           account_id: accountId,
           deal_id: dealId,
           client_id: clientId ?? null,
           contract_number,
           status: "draft",
-          data: { ...data, contract_number } as any,
-          share_token,
           created_by: currentUser?.auth_user_id ?? null,
+          ...dataToRow({ ...data, contract_number }),
         };
         const { data: created, error } = await supabase
           .from("digital_contracts")
@@ -183,7 +254,15 @@ export const DigitalContractTab = ({
           .select()
           .single();
         if (error) throw error;
-        setContract(created as unknown as DigitalContractRow);
+        setContract({
+          id: created.id,
+          contract_number: created.contract_number,
+          status: created.status,
+          share_token: created.share_token,
+          signed_pdf_path: created.signed_pdf_path,
+          signed_at: created.signed_at,
+          zapsign_document_token: created.zapsign_document_token,
+        });
         setData({ ...data, contract_number });
         toast.success(`Contrato ${contract_number} criado`);
       }
@@ -237,13 +316,11 @@ export const DigitalContractTab = ({
 
       await supabase
         .from("digital_contracts")
-        .update({ pdf_url: filePath })
+        .update({ signed_pdf_path: filePath })
         .eq("id", contract.id);
 
-      setContract({ ...contract, pdf_url: filePath });
-      if (signed?.signedUrl) {
-        window.open(signed.signedUrl, "_blank");
-      }
+      setContract({ ...contract, signed_pdf_path: filePath });
+      if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
       toast.success("PDF gerado");
     } catch (e: any) {
       console.error(e);
@@ -264,18 +341,27 @@ export const DigitalContractTab = ({
     }
     setSendingZapsign(true);
     try {
-      const { data: res, error } = await supabase.functions.invoke("zapsign-send", {
+      const { error } = await supabase.functions.invoke("zapsign-send", {
         body: { contract_id: contract.id },
       });
       if (error) throw error;
       toast.success("Enviado para assinatura via ZapSign");
-      // refresh
       const { data: updated } = await supabase
         .from("digital_contracts")
         .select("*")
         .eq("id", contract.id)
         .maybeSingle();
-      if (updated) setContract(updated as unknown as DigitalContractRow);
+      if (updated) {
+        setContract({
+          id: updated.id,
+          contract_number: updated.contract_number,
+          status: updated.status,
+          share_token: updated.share_token,
+          signed_pdf_path: updated.signed_pdf_path,
+          signed_at: updated.signed_at,
+          zapsign_document_token: updated.zapsign_document_token,
+        });
+      }
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message ?? "Erro ao enviar para ZapSign");
@@ -296,7 +382,17 @@ export const DigitalContractTab = ({
         .select("*")
         .eq("id", contract.id)
         .maybeSingle();
-      if (updated) setContract(updated as unknown as DigitalContractRow);
+      if (updated) {
+        setContract({
+          id: updated.id,
+          contract_number: updated.contract_number,
+          status: updated.status,
+          share_token: updated.share_token,
+          signed_pdf_path: updated.signed_pdf_path,
+          signed_at: updated.signed_at,
+          zapsign_document_token: updated.zapsign_document_token,
+        });
+      }
       toast.success("Status atualizado");
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao consultar status");
@@ -327,7 +423,7 @@ export const DigitalContractTab = ({
           </p>
           <p className="text-[11px] text-muted-foreground">
             Status: <span className="font-medium">{contract?.status ?? "rascunho"}</span>
-            {contract?.zapsign_signed_at && " • Assinado"}
+            {contract?.signed_at && " • Assinado"}
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
@@ -346,7 +442,7 @@ export const DigitalContractTab = ({
           {sendingZapsign ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
           <span className="ml-1.5">Enviar p/ assinatura</span>
         </Button>
-        {contract?.zapsign_doc_token && (
+        {contract?.zapsign_document_token && (
           <Button size="sm" variant="ghost" onClick={handleCheckStatus}>
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
