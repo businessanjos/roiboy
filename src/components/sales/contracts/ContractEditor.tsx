@@ -410,32 +410,55 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
               </div>
             </>
           )}
+          {/* 1. Valor total */}
           <div>
             <Label className="text-xs">Valor total (R$)</Label>
             <Input
               type="number"
               step="0.01"
               value={data.total_value ?? ""}
-              onChange={(e) => update("total_value", Number(e.target.value) || 0)}
+              onChange={(e) => {
+                const total = Number(e.target.value) || 0;
+                const down = Number(data.down_payment_value ?? 0);
+                const installments = down > 0 ? 11 : 12;
+                const base = down > 0 ? Math.max(total - down, 0) : total;
+                onChange({
+                  ...data,
+                  total_value: total,
+                  installments,
+                  installment_value: installments > 0 ? base / installments : 0,
+                });
+              }}
             />
           </div>
+          {/* 2. Forma de pagamento */}
           <div>
-            <Label className="text-xs">Parcelas</Label>
-            <Input
-              type="number"
-              value={data.installments ?? ""}
-              onChange={(e) => update("installments", Number(e.target.value) || 0)}
-            />
+            <Label className="text-xs">Forma de pagamento</Label>
+            <Select
+              value={data.payment_method ?? ""}
+              onValueChange={(v) => update("payment_method", v)}
+            >
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Selecione a forma" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pix">PIX</SelectItem>
+                <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                <SelectItem value="boleto">Boleto</SelectItem>
+                <SelectItem value="transferencia">Transferência</SelectItem>
+                <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                <SelectItem value="parcelado">Parcelado</SelectItem>
+                <SelectItem value="pix_cheques">Pix + Cheques</SelectItem>
+                <SelectItem value="pix_cartao_cheques">Pix + Cartão + Cheques</SelectItem>
+                <SelectItem value="pix_boleto_parcelado">Pix + Boleto parcelado</SelectItem>
+                <SelectItem value="cartao_cheques">Cartão + Cheques</SelectItem>
+                <SelectItem value="cartao_boleto_parcelado">Cartão + Boleto parcelado</SelectItem>
+                <SelectItem value="cartao_recorrencia">Cartão recorrência</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div>
-            <Label className="text-xs">Valor da parcela (R$)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={data.installment_value ?? ""}
-              onChange={(e) => update("installment_value", Number(e.target.value) || 0)}
-            />
-          </div>
+          {/* 3. Entrada */}
           <div>
             <Label className="text-xs">Entrada (R$)</Label>
             <Input
@@ -443,12 +466,57 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
               step="0.01"
               min="0"
               value={data.down_payment_value ?? ""}
-              onChange={(e) =>
-                update("down_payment_value", e.target.value === "" ? null : Number(e.target.value))
-              }
+              onChange={(e) => {
+                const down = e.target.value === "" ? null : Number(e.target.value);
+                const total = Number(data.total_value ?? 0);
+                const downNum = Number(down ?? 0);
+                const installments = downNum > 0 ? 11 : 12;
+                const base = downNum > 0 ? Math.max(total - downNum, 0) : total;
+                onChange({
+                  ...data,
+                  down_payment_value: down,
+                  installments,
+                  installment_value: installments > 0 ? base / installments : 0,
+                });
+              }}
               placeholder="0,00"
             />
           </div>
+          {/* 4. Parcelas */}
+          <div>
+            <Label className="text-xs">Parcelas</Label>
+            <Input
+              type="number"
+              value={data.installments ?? ""}
+              onChange={(e) => {
+                const installments = Number(e.target.value) || 0;
+                const total = Number(data.total_value ?? 0);
+                const down = Number(data.down_payment_value ?? 0);
+                const base = down > 0 ? Math.max(total - down, 0) : total;
+                onChange({
+                  ...data,
+                  installments,
+                  installment_value: installments > 0 ? base / installments : 0,
+                });
+              }}
+            />
+          </div>
+          {/* 5. Valor da parcela (auto) */}
+          <div>
+            <Label className="text-xs">Valor da parcela (R$) — automático</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={
+                data.installment_value !== undefined && data.installment_value !== null
+                  ? Number(data.installment_value).toFixed(2)
+                  : ""
+              }
+              readOnly
+              className="bg-muted/50"
+            />
+          </div>
+          {/* 6. Data da entrada */}
           <div>
             <Label className="text-xs">Data da entrada</Label>
             <Input
@@ -457,6 +525,7 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
               onChange={(e) => update("down_payment_date", e.target.value || null)}
             />
           </div>
+          {/* 7. Dia dos próximos vencimentos */}
           <div>
             <Label className="text-xs">Dia dos próximos vencimentos</Label>
             <Input
