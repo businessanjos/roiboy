@@ -4,7 +4,7 @@ import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Deal, DealStage } from "@/hooks/useDeals";
 import {
@@ -212,6 +212,8 @@ export function DealDetailSheet({
   processingWonDealId,
 }: DealDetailSheetProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeDetailTab, setActiveDetailTab] = useState("history");
   const [activities, setActivities] = useState<DealActivity[]>([]);
   const [tasks, setTasks] = useState<DealTask[]>([]);
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
@@ -277,6 +279,17 @@ export function DealDetailSheet({
   useEffect(() => {
     setLocalWonAt(deal?.won_at || null);
   }, [deal?.won_at]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const tabFromUrl = searchParams.get("tab");
+    if (tabFromUrl === "contract") {
+      setActiveDetailTab("contract");
+      searchParams.delete("tab");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [open, searchParams, setSearchParams]);
 
   // Busca inteligente do Lead quando deal.lead_id é null
   useEffect(() => {
@@ -1376,7 +1389,7 @@ export function DealDetailSheet({
 
               {/* Right Column - Tabs for History and Tasks */}
               <div className="space-y-3">
-                <Tabs defaultValue="history" className="w-full">
+                <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="w-full">
                   <TabsList className="w-full grid grid-cols-4 h-8">
                     <TabsTrigger value="history" className="text-xs h-7">
                       <Clock className="h-3 w-3 mr-1" />
