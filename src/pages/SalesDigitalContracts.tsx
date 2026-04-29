@@ -85,6 +85,7 @@ const formatDate = (value?: string | null) => {
 export default function SalesDigitalContracts() {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [contracts, setContracts] = useState<DigitalContractListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -92,6 +93,7 @@ export default function SalesDigitalContracts() {
   const [dealSearch, setDealSearch] = useState("");
   const [deals, setDeals] = useState<DealOption[]>([]);
   const [loadingDeals, setLoadingDeals] = useState(false);
+  const [editorDeal, setEditorDeal] = useState<{ id: string; clientId: string | null; clientName: string; value: number | null } | null>(null);
 
   useEffect(() => {
     async function loadContracts() {
