@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { DigitalContractTab } from "@/components/sales/contracts/DigitalContractTab";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Copy, ExternalLink, FilePlus2, FileSignature, FileText, Loader2, Search, Settings2 } from "lucide-react";
@@ -84,6 +85,7 @@ const formatDate = (value?: string | null) => {
 export default function SalesDigitalContracts() {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [contracts, setContracts] = useState<DigitalContractListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -91,6 +93,7 @@ export default function SalesDigitalContracts() {
   const [dealSearch, setDealSearch] = useState("");
   const [deals, setDeals] = useState<DealOption[]>([]);
   const [loadingDeals, setLoadingDeals] = useState(false);
+  const [editorDeal, setEditorDeal] = useState<{ id: string; clientId: string | null; clientName: string; value: number | null } | null>(null);
 
   useEffect(() => {
     async function loadContracts() {
@@ -200,10 +203,49 @@ export default function SalesDigitalContracts() {
 
   const getDealClientName = (deal: DealOption) => deal.client?.full_name || deal.lead?.full_name || "Cliente não identificado";
 
-  const openDealContractWizard = (dealId: string) => {
+  const openDealContractEditor = async (dealId: string) => {
     setGenerateOpen(false);
-    navigate(`/pipeline?deal=${dealId}&tab=contract`);
+    // Tenta achar nos deals já carregados
+    const known = deals.find((d) => d.id === dealId);
+    if (known) {
+      setEditorDeal({
+        id: dealId,
+        clientId: null,
+        clientName: getDealClientName(known),
+        value: known.value ?? null,
+      });
+      return;
+    }
+    // Fallback: busca pontual
+    const { data } = await supabase
+      .from("deals")
+      .select("id, value, client_id, client:clients(full_name), lead:leads(full_name)")
+      .eq("id", dealId)
+      .maybeSingle();
+    if (data) {
+      const name = (data as any).client?.full_name || (data as any).lead?.full_name || "Cliente";
+      setEditorDeal({
+        id: dealId,
+        clientId: (data as any).client_id ?? null,
+        clientName: name,
+        value: (data as any).value ?? null,
+      });
+    } else {
+      toast.error("Negócio não encontrado");
+    }
   };
+
+  // Suporta deep link ?deal=<id>
+  useEffect(() => {
+    const dealId = searchParams.get("deal");
+    if (!dealId || !currentUser?.account_id) return;
+    openDealContractEditor(dealId).finally(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("deal");
+      setSearchParams(next, { replace: true });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.account_id]);
 
   const copyPublicLink = async (token: string) => {
     const url = `${window.location.origin}/contrato/${token}`;
@@ -345,8 +387,8 @@ export default function SalesDigitalContracts() {
                         variant="ghost"
                         size="icon"
                         disabled={!contract.deal_id}
-                        onClick={() => contract.deal_id && navigate(`/pipeline?deal=${contract.deal_id}`)}
-                        aria-label="Abrir Deal"
+                        onClick={() => contract.deal_id && openDealContractEditor(contract.deal_id)}
+                        aria-label="Abrir contrato"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
@@ -395,7 +437,7 @@ export default function SalesDigitalContracts() {
                   <button
                     key={deal.id}
                     type="button"
-                    onClick={() => openDealContractWizard(deal.id)}
+                    onClick={() => openDealContractEditor(deal.id)}
                     className="flex w-full items-center justify-between gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/60"
                   >
                     <span className="min-w-0 flex-1">
@@ -422,6 +464,27 @@ export default function SalesDigitalContracts() {
                 ))
               )}
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editorDeal} onOpenChange={(o) => !o && setEditorDeal(null)}>
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[92vh] overflow-hidden p-0 flex flex-col">
+          <DialogHeader className="border-b border-border px-5 py-3 shrink-0">
+            <DialogTitle>Contrato — {editorDeal?.clientName}</DialogTitle>
+            <DialogDescription>
+              Edite, gere o PDF e envie para assinatura sem sair da área de Contratos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto p-5">
+            {editorDeal && (
+              <DigitalContractTab
+                dealId={editorDeal.id}
+                dealValue={editorDeal.value}
+                clientId={editorDeal.clientId}
+                clientName={editorDeal.clientName}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>

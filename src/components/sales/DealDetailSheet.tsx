@@ -84,7 +84,7 @@ import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
 import { DealFieldValueEditor } from "@/components/custom-fields/DealFieldValueEditor";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
-import { DigitalContractTab } from "./contracts/DigitalContractTab";
+import { ContractSummaryPanel } from "./contracts/ContractSummaryPanel";
 import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
@@ -1723,12 +1723,7 @@ export function DealDetailSheet({
                   </TabsContent>
 
                   <TabsContent value="contract" className="mt-3">
-                    <DigitalContractTab
-                      dealId={deal.id}
-                      dealValue={deal.value}
-                      clientId={deal.client_id || null}
-                      clientName={deal.lead?.full_name || deal.client?.full_name}
-                    />
+                    <ContractSummaryPanel dealId={deal.id} />
                   </TabsContent>
                 </Tabs>
               </div>
