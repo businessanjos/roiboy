@@ -101,15 +101,15 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
         style={{ minHeight: "297mm" }}
       >
         {/* Header */}
-        <header className="text-center mb-10 pb-6 border-b-2 border-primary">
+        <header className="text-center mb-8 pb-5 border-b-2 border-primary">
           <img
             src={logoRykas}
             alt="Rykas Mentoring"
-            className="h-20 mx-auto mb-4 object-contain"
+            className="h-12 w-auto mx-auto mb-3 object-contain"
             crossOrigin="anonymous"
           />
-          <h1 className="text-2xl font-bold tracking-tight">
-            CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+          <h1 className="text-xl font-bold tracking-tight uppercase">
+            Contrato de Prestação de Serviços
           </h1>
           {data.contract_number && (
             <p className="text-xs text-muted-foreground mt-2 font-mono">
