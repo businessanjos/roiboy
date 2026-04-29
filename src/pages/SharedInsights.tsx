@@ -575,6 +575,55 @@ export default function SharedInsights() {
 
   // Approved — show dashboard with real visuals
   if (status === "approved" && dashboardData) {
+    const selfCheck = runSelfCheck({ token, status, data: dashboardData });
+    if (!selfCheck.ok) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background p-4">
+          <Card className="w-full max-w-lg">
+            <CardContent className="pt-8 pb-8 space-y-5">
+              <div className="text-center space-y-2">
+                <XCircle className="h-12 w-12 text-destructive mx-auto" />
+                <h2 className="text-xl font-semibold">Painel não pôde ser exibido</h2>
+                <p className="text-sm text-muted-foreground">
+                  Falha no self-check antes da renderização: <strong>{selfCheck.reason}</strong>.
+                </p>
+              </div>
+              <div className="rounded-md border bg-muted/30 divide-y text-sm">
+                {selfCheck.checks.map((c, i) => (
+                  <div key={i} className="flex items-start justify-between gap-3 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      {c.ok ? (
+                        <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-destructive shrink-0" />
+                      )}
+                      <span className={cn(!c.ok && "font-medium")}>{c.label}</span>
+                    </div>
+                    {c.detail && (
+                      <span className="text-xs text-muted-foreground text-right max-w-[55%] truncate">
+                        {c.detail}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-center">
+                <Button
+                  onClick={() => {
+                    setErrorMessage("");
+                    checkAccess(email);
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Recarregar painel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     const { visuals, visualsData, filterOptions } = dashboardData;
     const users = filterOptions?.users || [];
     const products = filterOptions?.products || [];
