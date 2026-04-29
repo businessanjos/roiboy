@@ -467,6 +467,27 @@ export default function SalesDigitalContracts() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!editorDeal} onOpenChange={(o) => !o && setEditorDeal(null)}>
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[92vh] overflow-hidden p-0 flex flex-col">
+          <DialogHeader className="border-b border-border px-5 py-3 shrink-0">
+            <DialogTitle>Contrato — {editorDeal?.clientName}</DialogTitle>
+            <DialogDescription>
+              Edite, gere o PDF e envie para assinatura sem sair da área de Contratos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto p-5">
+            {editorDeal && (
+              <DigitalContractTab
+                dealId={editorDeal.id}
+                dealValue={editorDeal.value}
+                clientId={editorDeal.clientId}
+                clientName={editorDeal.clientName}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
