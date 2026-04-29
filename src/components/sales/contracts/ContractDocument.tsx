@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import logoRykas from "@/assets/logo-rykas-mentoring.png";
 
 export interface Deliverable {
   title: string;
@@ -101,6 +102,12 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
       >
         {/* Header */}
         <header className="text-center mb-10 pb-6 border-b-2 border-primary">
+          <img
+            src={logoRykas}
+            alt="Rykas Mentoring"
+            className="h-20 mx-auto mb-4 object-contain"
+            crossOrigin="anonymous"
+          />
           <h1 className="text-2xl font-bold tracking-tight">
             CONTRATO DE PRESTAÇÃO DE SERVIÇOS
           </h1>
