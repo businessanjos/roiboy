@@ -141,6 +141,13 @@ const PRESETS: { value: DatePreset; label: string }[] = [
   { value: "year", label: "Este Ano" },
 ];
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function normalizeValidEmail(value: string | null | undefined) {
+  const normalized = (value || "").trim().toLowerCase();
+  return EMAIL_REGEX.test(normalized) ? normalized : null;
+}
+
 function getDateRangeFromPreset(preset: DatePreset): { start: Date; end: Date } {
   const now = new Date();
   switch (preset) {
@@ -157,7 +164,7 @@ function getDateRangeFromPreset(preset: DatePreset): { start: Date; end: Date } 
 export default function SharedInsights() {
   const { token } = useParams<{ token: string }>();
   const [status, setStatus] = useState<Status>("loading");
-  const [email, setEmail] = useState(() => localStorage.getItem("shared_insights_email") || "");
+  const [email, setEmail] = useState(() => normalizeValidEmail(localStorage.getItem("shared_insights_email")) || "");
   const [emailInput, setEmailInput] = useState("");
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -313,11 +320,13 @@ export default function SharedInsights() {
         return;
       }
 
-      const storedEmail = localStorage.getItem("shared_insights_email");
+      const storedEmail = normalizeValidEmail(localStorage.getItem("shared_insights_email"));
       if (storedEmail) {
+        localStorage.setItem("shared_insights_email", storedEmail);
         setEmail(storedEmail);
         await checkAccess(storedEmail);
       } else {
+        localStorage.removeItem("shared_insights_email");
         setStatus("email_prompt");
       }
     };
@@ -448,13 +457,12 @@ export default function SharedInsights() {
   };
 
   const requestAccess = async () => {
-    const trimmed = emailInput.trim();
-    if (!trimmed) return;
+    const normalizedEmail = normalizeValidEmail(emailInput);
+    if (!emailInput.trim()) return;
 
     // Valida formato de e-mail antes de enviar — evita criar solicitações
     // com URLs coladas, nomes ou textos arbitrários no campo.
-    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    if (!EMAIL_REGEX.test(trimmed)) {
+    if (!normalizedEmail) {
       setErrorMessage("Informe um e-mail válido (ex: nome@dominio.com).");
       return;
     }
@@ -462,7 +470,6 @@ export default function SharedInsights() {
     setErrorMessage("");
     setSubmitting(true);
 
-    const normalizedEmail = trimmed.toLowerCase();
     localStorage.setItem("shared_insights_email", normalizedEmail);
     setEmail(normalizedEmail);
 
@@ -574,7 +581,7 @@ export default function SharedInsights() {
                 onClick={requestAccess}
                 disabled={
                   submitting ||
-                  !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailInput.trim())
+                  !normalizeValidEmail(emailInput)
                 }
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
