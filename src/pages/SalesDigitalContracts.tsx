@@ -203,10 +203,49 @@ export default function SalesDigitalContracts() {
 
   const getDealClientName = (deal: DealOption) => deal.client?.full_name || deal.lead?.full_name || "Cliente não identificado";
 
-  const openDealContractWizard = (dealId: string) => {
+  const openDealContractEditor = async (dealId: string) => {
     setGenerateOpen(false);
-    navigate(`/pipeline?deal=${dealId}&tab=contract`);
+    // Tenta achar nos deals já carregados
+    const known = deals.find((d) => d.id === dealId);
+    if (known) {
+      setEditorDeal({
+        id: dealId,
+        clientId: null,
+        clientName: getDealClientName(known),
+        value: known.value ?? null,
+      });
+      return;
+    }
+    // Fallback: busca pontual
+    const { data } = await supabase
+      .from("deals")
+      .select("id, value, client_id, client:clients(full_name), lead:leads(full_name)")
+      .eq("id", dealId)
+      .maybeSingle();
+    if (data) {
+      const name = (data as any).client?.full_name || (data as any).lead?.full_name || "Cliente";
+      setEditorDeal({
+        id: dealId,
+        clientId: (data as any).client_id ?? null,
+        clientName: name,
+        value: (data as any).value ?? null,
+      });
+    } else {
+      toast.error("Negócio não encontrado");
+    }
   };
+
+  // Suporta deep link ?deal=<id>
+  useEffect(() => {
+    const dealId = searchParams.get("deal");
+    if (!dealId || !currentUser?.account_id) return;
+    openDealContractEditor(dealId).finally(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("deal");
+      setSearchParams(next, { replace: true });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.account_id]);
 
   const copyPublicLink = async (token: string) => {
     const url = `${window.location.origin}/contrato/${token}`;
