@@ -97,6 +97,8 @@ const dataToRow = (d: DigitalContractData) => ({
   extra_hour_rate: d.extra_hour_rate ?? null,
   total_value: d.total_value ?? null,
   down_payment_percentage: d.down_payment_percentage ?? null,
+  down_payment_value: d.down_payment_value ?? null,
+  down_payment_date: d.down_payment_date ?? null,
   installments: d.installments ?? null,
   installment_value: d.installment_value ?? null,
   first_due_date: d.first_due_date ?? null,
