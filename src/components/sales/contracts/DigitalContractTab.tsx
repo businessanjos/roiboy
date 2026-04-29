@@ -169,6 +169,11 @@ export const DigitalContractTab = ({
             zapsign_document_token: existing.zapsign_document_token,
           });
           setData(rowToData(existing));
+          setTemplateId((existing as any).template_id ?? null);
+          setProductId((existing as any).product_id ?? null);
+          setTemplateHtml((existing as any).template_html ?? null);
+          setTemplateVariables(((existing as any).template_variables as TemplateVariableDef[]) ?? []);
+          setPlaceholderValues(((existing as any).placeholder_values as Record<string, any>) ?? {});
         } else {
           const { data: defaults } = await supabase
             .from("contract_company_defaults")
