@@ -433,6 +433,33 @@ function getDealFilters(config: VisualConfig) {
   return config.dealFieldFilter?.fieldId ? [config.dealFieldFilter] : [];
 }
 
+async function getLeadIdsByDealConstraints(
+  supabase: any,
+  accountId: string,
+  dealFilters?: VisualConfig['dealFieldFilters'],
+  dealStatusFilter?: string[]
+): Promise<Set<string>> {
+  let query = supabase
+    .from('deals')
+    .select('id, lead_id')
+    .eq('account_id', accountId);
+
+  if (dealStatusFilter && dealStatusFilter.length > 0) {
+    query = query.in('status', dealStatusFilter);
+  }
+
+  let allDeals = await paginateQuery(query);
+  if (dealFilters && dealFilters.length > 0) {
+    allDeals = await applyDealFieldFilters(supabase, allDeals, dealFilters);
+  }
+
+  const leadIds = new Set<string>();
+  for (const deal of allDeals) {
+    if (deal.lead_id) leadIds.add(deal.lead_id);
+  }
+  return leadIds;
+}
+
 // ─── Drilldown Records for Data Tables ───────────────────────────────────────
 
 async function fetchDrilldownRecords(supabase: any, accountId: string, config: VisualConfig, filters?: SharedFilters): Promise<DrilldownRecord[]> {
