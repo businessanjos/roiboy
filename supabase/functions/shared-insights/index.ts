@@ -511,7 +511,8 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
 // ─── Deals ───────────────────────────────────────────────────────────────────
 
 async function fetchDealsAggregated(supabase: any, accountId: string, config: VisualConfig, chartType?: string, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
-  const { measure, dimension, statusFilter, dealStatusFilter, dealFieldFilters } = config;
+  const { measure, dimension, statusFilter, dealStatusFilter } = config;
+  const dealFieldFilters = getDealFilters(config);
 
   // Special: conversion rate
   if (measure.aggregation === 'conversion_rate') {
@@ -520,7 +521,7 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
 
   let query = supabase
     .from('deals')
-    .select(`id, value, entry_value, probability, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id,
+    .select(`id, lead_id, value, entry_value, probability, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id, stage_id,
       deal_stages!deals_stage_id_fkey(name, color),
       users!deals_responsible_user_id_fkey(name)`)
     .eq('account_id', accountId);
@@ -544,6 +545,9 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
   const dateField = getDealsDateField(config);
   allDeals = applyDateFilter(allDeals, filters, dateField);
   allDeals = applyUserFilter(allDeals, filters);
+  if (filters?.stageId && filters.stageId !== 'all') {
+    allDeals = allDeals.filter((d: any) => d.stage_id === filters.stageId);
+  }
 
   // Apply custom field filters
   allDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
