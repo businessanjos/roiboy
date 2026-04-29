@@ -1389,7 +1389,7 @@ export function DealDetailSheet({
 
               {/* Right Column - Tabs for History and Tasks */}
               <div className="space-y-3">
-                <Tabs defaultValue="history" className="w-full">
+                <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="w-full">
                   <TabsList className="w-full grid grid-cols-4 h-8">
                     <TabsTrigger value="history" className="text-xs h-7">
                       <Clock className="h-3 w-3 mr-1" />
