@@ -337,41 +337,12 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
     );
   } else if (isCnpjField || isCpfField) {
     input = (
-      <div className="flex gap-2">
-        <Input
-          value={value ? formatCpfCnpj(String(value)) : ""}
-          onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
-          disabled={disabled}
-          placeholder={isCnpjField ? "00.000.000/0000-00" : "000.000.000-00"}
-        />
-        {((isCnpjField && onCnpjLookup) || (isCpfField && onCpfLookup)) && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-                onClick={() =>
-                  isCnpjField
-                    ? onCnpjLookup?.(String(value ?? ""))
-                    : onCpfLookup?.(String(value ?? ""))
-                }
-                disabled={(isCnpjField ? cnpjLooking : cpfLooking) || disabled}
-              >
-                {(isCnpjField ? cnpjLooking : cpfLooking) ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {isCnpjField ? "Buscar dados do CNPJ" : "Buscar dados do CPF"}
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
+      <Input
+        value={value ? formatCpfCnpj(String(value)) : ""}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+        disabled={disabled}
+        placeholder={isCnpjField ? "00.000.000/0000-00" : "000.000.000-00"}
+      />
     );
   } else if (isPhoneField) {
     input = (
