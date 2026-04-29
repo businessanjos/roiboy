@@ -244,6 +244,35 @@ export const DigitalContractTab = ({
     };
   }, [dealId, accountId, clientId, clientName, dealValue]);
 
+  // Auto-fill total value from selected product price when empty
+  useEffect(() => {
+    if (!productId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: product } = await supabase
+        .from("products")
+        .select("price")
+        .eq("id", productId)
+        .maybeSingle();
+      if (cancelled || !product?.price) return;
+      const price = Number(product.price);
+      if (!Number.isFinite(price) || price <= 0) return;
+      setData((prev) => {
+        const current = Number(prev.total_value ?? 0);
+        if (current > 0) return prev;
+        const installments = prev.installments && prev.installments > 0 ? prev.installments : 1;
+        return {
+          ...prev,
+          total_value: price,
+          installment_value: prev.installment_value ?? price / installments,
+        };
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
+
   const handleSave = async () => {
     if (!accountId) return;
     setSaving(true);
