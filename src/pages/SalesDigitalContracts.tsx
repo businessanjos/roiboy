@@ -52,7 +52,6 @@ interface DealOption {
   lead?: { full_name: string | null } | null;
   stage?: { name: string | null } | null;
   responsible?: { name: string | null } | null;
-  sales_user?: { name: string | null } | null;
 }
 
 const statusLabels: Record<string, string> = {
