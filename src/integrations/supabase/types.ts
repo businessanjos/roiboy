@@ -3326,6 +3326,66 @@ export type Database = {
           },
         ]
       }
+      contract_templates: {
+        Row: {
+          account_id: string
+          content_html: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          product_id: string | null
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          account_id: string
+          content_html?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          product_id?: string | null
+          updated_at?: string
+          variables?: Json
+        }
+        Update: {
+          account_id?: string
+          content_html?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          product_id?: string | null
+          updated_at?: string
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_templates_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_templates_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           account_id: string
@@ -4439,12 +4499,17 @@ export type Database = {
           monthly_hours: number | null
           object_description: string | null
           payment_method: string | null
+          placeholder_values: Json | null
+          product_id: string | null
           rescission_penalty_percentage: number | null
           service_mode: string | null
           share_token: string
           signed_at: string | null
           signed_pdf_path: string | null
           status: string
+          template_html: string | null
+          template_id: string | null
+          template_variables: Json | null
           total_value: number | null
           updated_at: string
           zapsign_document_token: string | null
@@ -4488,12 +4553,17 @@ export type Database = {
           monthly_hours?: number | null
           object_description?: string | null
           payment_method?: string | null
+          placeholder_values?: Json | null
+          product_id?: string | null
           rescission_penalty_percentage?: number | null
           service_mode?: string | null
           share_token?: string
           signed_at?: string | null
           signed_pdf_path?: string | null
           status?: string
+          template_html?: string | null
+          template_id?: string | null
+          template_variables?: Json | null
           total_value?: number | null
           updated_at?: string
           zapsign_document_token?: string | null
@@ -4537,12 +4607,17 @@ export type Database = {
           monthly_hours?: number | null
           object_description?: string | null
           payment_method?: string | null
+          placeholder_values?: Json | null
+          product_id?: string | null
           rescission_penalty_percentage?: number | null
           service_mode?: string | null
           share_token?: string
           signed_at?: string | null
           signed_pdf_path?: string | null
           status?: string
+          template_html?: string | null
+          template_id?: string | null
+          template_variables?: Json | null
           total_value?: number | null
           updated_at?: string
           zapsign_document_token?: string | null
@@ -4574,6 +4649,20 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_contracts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
             referencedColumns: ["id"]
           },
         ]
