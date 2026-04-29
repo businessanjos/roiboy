@@ -549,43 +549,7 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
 
       {/* CONDIÇÕES */}
       <fieldset disabled={disabled} className="space-y-3">
-        <legend className="text-sm font-semibold text-foreground">Multas, foro e renovação</legend>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <Label className="text-xs">Multa atraso (%)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={data.late_fee_percentage ?? ""}
-              onChange={(e) => update("late_fee_percentage", Number(e.target.value) || 0)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Juros mensais (%)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={data.late_interest_percentage ?? ""}
-              onChange={(e) => update("late_interest_percentage", Number(e.target.value) || 0)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Multa rescisão (%)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={data.rescission_penalty_percentage ?? ""}
-              onChange={(e) => update("rescission_penalty_percentage", Number(e.target.value) || 0)}
-            />
-          </div>
-          <div className="col-span-3">
-            <Label className="text-xs">Foro (cidade)</Label>
-            <Input
-              value={data.jurisdiction ?? ""}
-              onChange={(e) => update("jurisdiction", e.target.value)}
-            />
-          </div>
-        </div>
+        <legend className="text-sm font-semibold text-foreground">Renovação e testemunhas</legend>
         <div className="flex items-center gap-6 pt-2">
           <label className="flex items-center gap-2 text-xs cursor-pointer">
             <Switch
