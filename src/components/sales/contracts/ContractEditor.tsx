@@ -292,6 +292,7 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
           >
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="not_applicable">Não se aplica</SelectItem>
               <SelectItem value="hours">Horas dedicadas</SelectItem>
               <SelectItem value="deliverables">Por entregas</SelectItem>
             </SelectContent>
