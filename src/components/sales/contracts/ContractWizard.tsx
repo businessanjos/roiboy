@@ -223,14 +223,40 @@ const useCnpjLookup = () => {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("cnpj-lookup", {
+      const { data, error } = await supabase.functions.invoke("hubdev-cnpj-lookup", {
         body: { cnpj: clean },
       });
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || "Erro na consulta");
-      return data.data;
+      if (data?.error) throw new Error(data.error);
+      return data;
     } catch (e: any) {
       toast.error(e.message || "Erro ao consultar CNPJ");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+  return { loading, lookup };
+};
+
+const useCpfLookup = () => {
+  const [loading, setLoading] = useState(false);
+  const lookup = async (raw: string, nascimento?: string): Promise<Record<string, any> | null> => {
+    const clean = (raw ?? "").replace(/\D/g, "");
+    if (clean.length !== 11) {
+      toast.error("CPF deve ter 11 dígitos");
+      return null;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("hubdev-cpf-lookup", {
+        body: { cpf: clean, nascimento: nascimento || undefined },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao consultar CPF");
       return null;
     } finally {
       setLoading(false);
@@ -250,9 +276,11 @@ interface FieldProps {
   disabled?: boolean;
   onCnpjLookup?: (cnpj: string) => void;
   cnpjLooking?: boolean;
+  onCpfLookup?: (cpf: string) => void;
+  cpfLooking?: boolean;
 }
 
-const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLooking }: FieldProps) => {
+const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLooking, onCpfLookup, cpfLooking }: FieldProps) => {
   const help = guessFieldHelp(v);
   const isCnpjField = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
   const isCpfField = /^cpf$|cpf_/i.test(v.key);
@@ -316,7 +344,7 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
           disabled={disabled}
           placeholder={isCnpjField ? "00.000.000/0000-00" : "000.000.000-00"}
         />
-        {isCnpjField && onCnpjLookup && (
+        {((isCnpjField && onCnpjLookup) || (isCpfField && onCpfLookup)) && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -324,17 +352,23 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
                 variant="outline"
                 size="icon"
                 className="shrink-0"
-                onClick={() => onCnpjLookup(String(value ?? ""))}
-                disabled={cnpjLooking || disabled}
+                onClick={() =>
+                  isCnpjField
+                    ? onCnpjLookup?.(String(value ?? ""))
+                    : onCpfLookup?.(String(value ?? ""))
+                }
+                disabled={(isCnpjField ? cnpjLooking : cpfLooking) || disabled}
               >
-                {cnpjLooking ? (
+                {(isCnpjField ? cnpjLooking : cpfLooking) ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Search className="h-4 w-4" />
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Buscar dados na Receita Federal</TooltipContent>
+            <TooltipContent>
+              {isCnpjField ? "Buscar dados do CNPJ" : "Buscar dados do CPF"}
+            </TooltipContent>
           </Tooltip>
         )}
       </div>
@@ -475,6 +509,9 @@ export const ContractWizard = ({
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<StepKey | "review">("client");
   const cnpj = useCnpjLookup();
+  const cpf = useCpfLookup();
+  const [docType, setDocType] = useState<"cnpj" | "cpf">("cnpj");
+  const [docInput, setDocInput] = useState("");
 
   /* ---- Load templates & products ---- */
   useEffect(() => {
@@ -644,46 +681,11 @@ export const ContractWizard = ({
     toast.success("Sincronizado com cliente e deal");
   };
 
-  const handleCnpjLookup = async (raw: string) => {
-    const data = await cnpj.lookup(raw);
-    if (!data) return;
-
-    // Try to fill known client.* placeholders
-    const updates: Record<string, any> = {};
-    const sourceMap: Record<string, any> = {
-      "client.razao_social": data.razao_social,
-      "client.full_name": data.razao_social,
-      "client.nome_fantasia": data.nome_fantasia,
-      "client.email": data.email,
-      "client.address": data.endereco,
-      "client.phone": data.telefone,
-      "client.inscricao_municipal": data.inscricao_municipal,
-      "client.inscricao_estadual": data.inscricao_estadual,
-    };
-    for (const v of templateVariables) {
-      const src = v.source ?? "";
-      if (src in sourceMap && sourceMap[src]) {
-        updates[v.key] = sourceMap[src];
-      } else {
-        // Heuristic by key
-        const k = v.key.toUpperCase();
-        if ((k.includes("RAZAO") || k.includes("NOME")) && data.razao_social && !updates[v.key]) {
-          updates[v.key] = data.razao_social;
-        }
-        if (k.includes("FANTASIA") && data.nome_fantasia) updates[v.key] = data.nome_fantasia;
-        if (k.includes("EMAIL") && data.email) updates[v.key] = data.email;
-        if (k.includes("CELULAR") || k.includes("TELEFONE")) {
-          if (data.telefone) updates[v.key] = data.telefone;
-        }
-        if (k === "RUA" && data.logradouro) updates[v.key] = data.logradouro;
-        if (k.includes("BAIRRO") && data.bairro) updates[v.key] = data.bairro;
-        if (k.includes("CEP") && data.cep) updates[v.key] = data.cep;
-        if (k.includes("CIDADE") && data.municipio) updates[v.key] = data.municipio;
-        if (k.includes("ESTADO") && data.uf) updates[v.key] = data.uf;
-        if (k === "NUMERO" && data.numero) updates[v.key] = data.numero;
-      }
-    }
-    if (Object.keys(updates).length === 0) {
+  const applyLookupUpdates = (updates: Record<string, any>) => {
+    const filtered = Object.fromEntries(
+      Object.entries(updates).filter(([_, v]) => v !== null && v !== undefined && v !== ""),
+    );
+    if (Object.keys(filtered).length === 0) {
       toast.message("Dados encontrados, mas nenhum campo correspondente.");
       return;
     }
@@ -692,10 +694,76 @@ export const ContractWizard = ({
       product_id: productId,
       template_html: templateHtml,
       template_variables: templateVariables,
-      placeholder_values: { ...placeholderValues, ...updates },
+      placeholder_values: { ...placeholderValues, ...filtered },
     });
-    toast.success(`${Object.keys(updates).length} campo(s) preenchido(s) automaticamente`);
+    toast.success(`${Object.keys(filtered).length} campo(s) preenchido(s) automaticamente`);
   };
+
+  const handleCnpjLookup = async (raw: string) => {
+    const data = await cnpj.lookup(raw);
+    if (!data) return;
+
+    const updates: Record<string, any> = {};
+    for (const v of templateVariables) {
+      const k = v.key.toUpperCase();
+      if (/CNPJ/.test(k) && !/EMPRESA|CONTRATADA|COMPANY/.test(k)) {
+        updates[v.key] = (raw ?? "").replace(/\D/g, "");
+      }
+      if ((/RAZAO|NOME(?!_FANTASIA)|FULL_NAME|CLIENT_NAME|CONTRATANTE/.test(k)) && data.razao_social) {
+        updates[v.key] = data.razao_social;
+      }
+      if (k.includes("FANTASIA") && data.nome_fantasia) updates[v.key] = data.nome_fantasia;
+      if (k.includes("EMAIL") && data.email) updates[v.key] = data.email;
+      if ((k.includes("CELULAR") || k.includes("TELEFONE") || k.includes("PHONE")) && data.telefone) {
+        updates[v.key] = data.telefone;
+      }
+      if ((k === "RUA" || k.includes("LOGRADOURO") || k === "ENDERECO") && data.logradouro) {
+        updates[v.key] = data.logradouro;
+      }
+      if (k.includes("BAIRRO") && data.bairro) updates[v.key] = data.bairro;
+      if (k.includes("CEP") && data.cep) updates[v.key] = data.cep;
+      if (k.includes("CIDADE") && data.cidade) updates[v.key] = data.cidade;
+      if ((k.includes("ESTADO") || k === "UF") && data.estado) updates[v.key] = data.estado;
+      if (k === "NUMERO" && data.numero) updates[v.key] = data.numero;
+      if (k.includes("COMPLEMENTO") && data.complemento) updates[v.key] = data.complemento;
+    }
+    applyLookupUpdates(updates);
+  };
+
+  const handleCpfLookup = async (raw: string) => {
+    const data = await cpf.lookup(raw);
+    if (!data) return;
+
+    const updates: Record<string, any> = {};
+    const isoNasc = (() => {
+      const s = data.nascimento;
+      if (!s || typeof s !== "string") return null;
+      if (s.includes("/")) {
+        const [d, m, y] = s.split("/");
+        return `${y}-${m?.padStart(2, "0")}-${d?.padStart(2, "0")}`;
+      }
+      return s;
+    })();
+    for (const v of templateVariables) {
+      const k = v.key.toUpperCase();
+      if (/^CPF$|CPF_|_CPF/.test(k)) {
+        updates[v.key] = (raw ?? "").replace(/\D/g, "");
+      }
+      if ((/NOME|FULL_NAME|CLIENT_NAME|CONTRATANTE|RAZAO/.test(k)) && data.nome) {
+        updates[v.key] = data.nome;
+      }
+      if ((k.includes("NASCIMENTO") || k.includes("BIRTH") || k === "DOB") && isoNasc) {
+        updates[v.key] = isoNasc;
+      }
+    }
+    applyLookupUpdates(updates);
+  };
+
+  const handleDocLookup = () => {
+    if (docType === "cnpj") handleCnpjLookup(docInput);
+    else handleCpfLookup(docInput);
+  };
+
 
   /* ---- Render ---- */
 
@@ -871,6 +939,75 @@ export const ContractWizard = ({
           )}
         </div>
 
+        {step === "client" && (
+          <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <Search className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-medium text-foreground">
+                Buscar dados do contratante
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                Preenche automaticamente nome, endereço e contatos.
+              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex rounded-md border border-input overflow-hidden shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setDocType("cnpj")}
+                  className={`px-3 py-1.5 text-xs font-medium transition ${
+                    docType === "cnpj"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  disabled={disabled}
+                >
+                  CNPJ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDocType("cpf")}
+                  className={`px-3 py-1.5 text-xs font-medium transition ${
+                    docType === "cpf"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  disabled={disabled}
+                >
+                  CPF
+                </button>
+              </div>
+              <Input
+                value={docInput ? formatCpfCnpj(docInput) : ""}
+                onChange={(e) => setDocInput(e.target.value.replace(/\D/g, ""))}
+                placeholder={docType === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"}
+                disabled={disabled}
+                className="h-9 flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleDocLookup();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleDocLookup}
+                disabled={disabled || cnpj.loading || cpf.loading || !docInput}
+                className="shrink-0 gap-1.5"
+              >
+                {(docType === "cnpj" ? cnpj.loading : cpf.loading) ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Search className="h-3.5 w-3.5" />
+                )}
+                Buscar
+              </Button>
+            </div>
+          </div>
+        )}
+
         {list.length === 0 ? (
           <div className="text-center py-8 text-sm text-muted-foreground">
             Nada para preencher nesta etapa.
@@ -886,6 +1023,8 @@ export const ContractWizard = ({
                 disabled={disabled}
                 onCnpjLookup={step === "client" ? handleCnpjLookup : undefined}
                 cnpjLooking={cnpj.loading}
+                onCpfLookup={step === "client" ? handleCpfLookup : undefined}
+                cpfLooking={cpf.loading}
               />
             ))}
           </div>
