@@ -223,14 +223,40 @@ const useCnpjLookup = () => {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("cnpj-lookup", {
+      const { data, error } = await supabase.functions.invoke("hubdev-cnpj-lookup", {
         body: { cnpj: clean },
       });
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || "Erro na consulta");
-      return data.data;
+      if (data?.error) throw new Error(data.error);
+      return data;
     } catch (e: any) {
       toast.error(e.message || "Erro ao consultar CNPJ");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+  return { loading, lookup };
+};
+
+const useCpfLookup = () => {
+  const [loading, setLoading] = useState(false);
+  const lookup = async (raw: string, nascimento?: string): Promise<Record<string, any> | null> => {
+    const clean = (raw ?? "").replace(/\D/g, "");
+    if (clean.length !== 11) {
+      toast.error("CPF deve ter 11 dígitos");
+      return null;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("hubdev-cpf-lookup", {
+        body: { cpf: clean, nascimento: nascimento || undefined },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao consultar CPF");
       return null;
     } finally {
       setLoading(false);
