@@ -979,13 +979,21 @@ export const ContractWizard = ({
           </div>
         )}
 
-        {list.length === 0 ? (
+        {(() => {
+          const visibleList = step === "client"
+            ? list.filter((v) => {
+                const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
+                const isContractorCpf = /^cpf$|cpf_/i.test(v.key);
+                return !isContractorCnpj && !isContractorCpf;
+              })
+            : list;
+          return visibleList.length === 0 ? (
           <div className="text-center py-8 text-sm text-muted-foreground">
             Nada para preencher nesta etapa.
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 gap-x-4 gap-y-4">
-            {list.map((v) => (
+            {visibleList.map((v) => (
               <PlaceholderField
                 key={v.key}
                 v={v}
@@ -999,7 +1007,8 @@ export const ContractWizard = ({
               />
             ))}
           </div>
-        )}
+        );
+        })()}
       </div>
     );
   };
