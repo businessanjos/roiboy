@@ -172,6 +172,16 @@ export default function SharedInsights() {
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [filtersLoading, setFiltersLoading] = useState(false);
   const [zoom, setZoom] = useState(80);
+  const [selfCheckRetry, setSelfCheckRetry] = useState(0);
+  const [selfCheckRetrying, setSelfCheckRetrying] = useState(false);
+  const MAX_SELF_CHECK_RETRIES = 4;
+
+  // Self-check: validates route + status + payload before rendering charts.
+  // Computed unconditionally so the auto-retry effect can react to it.
+  const selfCheck = useMemo(
+    () => runSelfCheck({ token, status, data: dashboardData }),
+    [token, status, dashboardData]
+  );
 
   const dateRange = useMemo(() => {
     if (preset === "custom" && customRange.from && customRange.to) {
@@ -351,6 +361,60 @@ export default function SharedInsights() {
     setErrorMessage("");
     return true;
   }, [callEdgeFunction, getDefaultDateFilters]);
+
+  // Auto-retry com backoff exponencial quando o self-check falha após o painel
+  // ter chegado ao status "approved" (payload incompleto, dados não coerentes etc.).
+  // Tenta MAX_SELF_CHECK_RETRIES vezes silenciosamente antes de exibir o diagnóstico.
+  useEffect(() => {
+    if (status !== "approved") {
+      // Reset ao sair de approved (link novo, troca de email, etc.)
+      if (selfCheckRetry !== 0) setSelfCheckRetry(0);
+      if (selfCheckRetrying) setSelfCheckRetrying(false);
+      return;
+    }
+    if (selfCheck.ok) {
+      // Sucesso → zera contador para futuras quedas
+      if (selfCheckRetry !== 0) setSelfCheckRetry(0);
+      if (selfCheckRetrying) setSelfCheckRetrying(false);
+      return;
+    }
+    if (selfCheckRetry >= MAX_SELF_CHECK_RETRIES) return;
+    if (!email) return;
+
+    // Backoff exponencial: 1s, 2s, 4s, 8s (cap 8s)
+    const delay = Math.min(1000 * 2 ** selfCheckRetry, 8000);
+    console.warn(
+      `[SharedInsights] self-check falhou (${selfCheck.reason}). Retry ${selfCheckRetry + 1}/${MAX_SELF_CHECK_RETRIES} em ${delay}ms`,
+    );
+    setSelfCheckRetrying(true);
+    const timer = setTimeout(async () => {
+      const filters = {
+        startDate: dateRange.start.toISOString(),
+        endDate: dateRange.end.toISOString(),
+        userId,
+        productId,
+      };
+      const ok = await loadDashboard(email, filters);
+      setSelfCheckRetry((n) => n + 1);
+      if (!ok) {
+        // Mantém retrying=true; próximo ciclo do effect agenda nova tentativa
+      } else {
+        setSelfCheckRetrying(false);
+      }
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [
+    status,
+    selfCheck.ok,
+    selfCheck.reason,
+    selfCheckRetry,
+    email,
+    loadDashboard,
+    dateRange,
+    userId,
+    productId,
+    selfCheckRetrying,
+  ]);
 
   const checkAccess = async (emailToCheck: string) => {
     setStatus("loading");
@@ -575,8 +639,28 @@ export default function SharedInsights() {
 
   // Approved — show dashboard with real visuals
   if (status === "approved" && dashboardData) {
-    const selfCheck = runSelfCheck({ token, status, data: dashboardData });
     if (!selfCheck.ok) {
+      const retriesExhausted = selfCheckRetry >= MAX_SELF_CHECK_RETRIES;
+
+      // Enquanto há tentativas restantes, mostramos um loader leve.
+      // O useEffect de auto-retry agenda a próxima tentativa com backoff.
+      if (!retriesExhausted) {
+        return (
+          <div className="flex min-h-screen items-center justify-center bg-background p-4">
+            <Card className="w-full max-w-sm">
+              <CardContent className="pt-8 pb-8 space-y-4 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                <h2 className="text-base font-semibold">Carregando painel...</h2>
+                <p className="text-xs text-muted-foreground">
+                  Validando dados (tentativa {selfCheckRetry + 1} de {MAX_SELF_CHECK_RETRIES})
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      }
+
+      // Esgotadas as tentativas → diagnóstico + retry manual
       return (
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
           <Card className="w-full max-w-lg">
@@ -585,7 +669,7 @@ export default function SharedInsights() {
                 <XCircle className="h-12 w-12 text-destructive mx-auto" />
                 <h2 className="text-xl font-semibold">Painel não pôde ser exibido</h2>
                 <p className="text-sm text-muted-foreground">
-                  Falha no self-check antes da renderização: <strong>{selfCheck.reason}</strong>.
+                  Falha no self-check após {MAX_SELF_CHECK_RETRIES} tentativas: <strong>{selfCheck.reason}</strong>.
                 </p>
               </div>
               <div className="rounded-md border bg-muted/30 divide-y text-sm">
@@ -611,11 +695,12 @@ export default function SharedInsights() {
                 <Button
                   onClick={() => {
                     setErrorMessage("");
+                    setSelfCheckRetry(0);
                     checkAccess(email);
                   }}
                 >
                   <RotateCcw className="h-4 w-4 mr-2" />
-                  Recarregar painel
+                  Tentar novamente
                 </Button>
               </div>
             </CardContent>
