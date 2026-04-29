@@ -167,22 +167,43 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
 
   return (
     <div className="space-y-6">
-      {/* CONTRATANTE */}
+      {/* MENTORADO */}
       <fieldset disabled={disabled} className="space-y-3">
-        <legend className="text-sm font-semibold text-foreground">Contratante (Cliente)</legend>
+        <div className="flex items-center justify-between">
+          <legend className="text-sm font-semibold text-foreground">Mentorado</legend>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={copyFromBilling}
+            disabled={copyingBilling || !dealId}
+            className="h-7 text-xs"
+          >
+            {copyingBilling ? (
+              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+            ) : (
+              <Copy className="w-3 h-3 mr-1" />
+            )}
+            Copiar do Faturamento (CPF)
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          O mentorado é sempre Pessoa Física. Se o faturamento foi feito no CPF do mentorado, use o botão acima para copiar os dados.
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <Label className="text-xs">Nome / Razão social</Label>
+            <Label className="text-xs">Nome completo</Label>
             <Input
               value={data.client_name ?? ""}
               onChange={(e) => update("client_name", e.target.value)}
             />
           </div>
           <div>
-            <Label className="text-xs">CPF / CNPJ</Label>
+            <Label className="text-xs">CPF</Label>
             <Input
               value={data.client_cpf_cnpj ?? ""}
               onChange={(e) => update("client_cpf_cnpj", e.target.value)}
+              placeholder="000.000.000-00"
             />
           </div>
           <div>
@@ -211,20 +232,6 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
             <Input
               value={data.client_marital_status ?? ""}
               onChange={(e) => update("client_marital_status", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Representante legal (PJ)</Label>
-            <Input
-              value={data.client_representative ?? ""}
-              onChange={(e) => update("client_representative", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">CPF do representante</Label>
-            <Input
-              value={data.client_representative_cpf ?? ""}
-              onChange={(e) => update("client_representative_cpf", e.target.value)}
             />
           </div>
         </div>
