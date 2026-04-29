@@ -330,6 +330,19 @@ export default function SharedInsights() {
     }
 
     if (data.status === "approved") {
+      if (data.dashboard || data.visuals || data.visualsData) {
+        setDashboardData({
+          dashboard: data.dashboard,
+          visuals: data.visuals || [],
+          visualsData: data.visualsData || {},
+          filterOptions: data.filterOptions,
+        });
+        setStatus("approved");
+        setInitialLoad(false);
+        setErrorMessage("");
+        return;
+      }
+
       const loaded = await loadDashboard(normalizedEmail, defaultFilters);
       if (!loaded) {
         setStatus("load_error");

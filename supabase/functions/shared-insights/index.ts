@@ -20,6 +20,8 @@ interface VisualConfig {
   formatting?: { type: string; decimals: number; displayScale?: string };
   statusFilter?: string;
   dealStatusFilter?: string[];
+  leadFieldFilter?: { fieldId: string; fieldName: string; selectedValues: string[] };
+  dealFieldFilter?: { fieldId: string; fieldName: string; selectedValues: string[] };
   dealFieldFilters?: Array<{ fieldId: string; fieldName: string; selectedValues: string[] }>;
   leadFieldFilters?: Array<{ fieldId: string; fieldName: string; selectedValues: string[] }>;
   appearance?: { dateDisplayFormat?: string; fillEmptyDates?: boolean; showDataLabels?: boolean; colorPalette?: string; fontScale?: string };
@@ -29,6 +31,7 @@ interface VisualConfig {
   gaugeConfig?: any;
   indicatorConfig?: any;
   stackBy?: string;
+  stackByCustomField?: { fieldId: string; fieldName: string; source: 'lead' | 'deal' | '_status' };
   tableConfig?: { columns?: string[]; cfLabels?: Record<string, string> };
 }
 
@@ -46,6 +49,7 @@ interface SharedFilters {
   endDate?: string;
   userId?: string;
   productId?: string;
+  stageId?: string;
 }
 
 Deno.serve(async (req) => {
@@ -127,7 +131,10 @@ Deno.serve(async (req) => {
 
       if (existingRequest) {
         if (existingRequest.status === "approved") {
-          return new Response(JSON.stringify({ status: "approved" }), {
+          const appliedFilters: SharedFilters = reqFilters || {};
+          const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, share.dashboard_id, share.account_id, appliedFilters);
+          const filterOptions = await fetchFilterOptions(supabaseAdmin, share.account_id);
+          return new Response(JSON.stringify({ status: "approved", ...dashboardData, filterOptions }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
@@ -416,6 +423,43 @@ function applyUserFilter(items: any[], filters?: SharedFilters, userIdField = 'r
   });
 }
 
+function getLeadFilters(config: VisualConfig) {
+  if (config.leadFieldFilters?.length) return config.leadFieldFilters;
+  return config.leadFieldFilter?.fieldId ? [config.leadFieldFilter] : [];
+}
+
+function getDealFilters(config: VisualConfig) {
+  if (config.dealFieldFilters?.length) return config.dealFieldFilters;
+  return config.dealFieldFilter?.fieldId ? [config.dealFieldFilter] : [];
+}
+
+async function getLeadIdsByDealConstraints(
+  supabase: any,
+  accountId: string,
+  dealFilters?: VisualConfig['dealFieldFilters'],
+  dealStatusFilter?: string[]
+): Promise<Set<string>> {
+  let query = supabase
+    .from('deals')
+    .select('id, lead_id')
+    .eq('account_id', accountId);
+
+  if (dealStatusFilter && dealStatusFilter.length > 0) {
+    query = query.in('status', dealStatusFilter);
+  }
+
+  let allDeals = await paginateQuery(query);
+  if (dealFilters && dealFilters.length > 0) {
+    allDeals = await applyDealFieldFilters(supabase, allDeals, dealFilters);
+  }
+
+  const leadIds = new Set<string>();
+  for (const deal of allDeals) {
+    if (deal.lead_id) leadIds.add(deal.lead_id);
+  }
+  return leadIds;
+}
+
 // ─── Drilldown Records for Data Tables ───────────────────────────────────────
 
 async function fetchDrilldownRecords(supabase: any, accountId: string, config: VisualConfig, filters?: SharedFilters): Promise<DrilldownRecord[]> {
@@ -497,7 +541,8 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
 // ─── Deals ───────────────────────────────────────────────────────────────────
 
 async function fetchDealsAggregated(supabase: any, accountId: string, config: VisualConfig, chartType?: string, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
-  const { measure, dimension, statusFilter, dealStatusFilter, dealFieldFilters } = config;
+  const { measure, dimension, statusFilter, dealStatusFilter } = config;
+  const dealFieldFilters = getDealFilters(config);
 
   // Special: conversion rate
   if (measure.aggregation === 'conversion_rate') {
@@ -506,7 +551,7 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
 
   let query = supabase
     .from('deals')
-    .select(`id, value, entry_value, probability, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id,
+    .select(`id, lead_id, value, entry_value, probability, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id, stage_id,
       deal_stages!deals_stage_id_fkey(name, color),
       users!deals_responsible_user_id_fkey(name)`)
     .eq('account_id', accountId);
@@ -530,6 +575,9 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
   const dateField = getDealsDateField(config);
   allDeals = applyDateFilter(allDeals, filters, dateField);
   allDeals = applyUserFilter(allDeals, filters);
+  if (filters?.stageId && filters.stageId !== 'all') {
+    allDeals = allDeals.filter((d: any) => d.stage_id === filters.stageId);
+  }
 
   // Apply custom field filters
   allDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
@@ -610,19 +658,18 @@ async function fetchConversionRate(supabase: any, accountId: string, dimension: 
 // ─── Leads ───────────────────────────────────────────────────────────────────
 
 async function fetchLeadsAggregated(supabase: any, accountId: string, config: VisualConfig, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
-  const { measure, dimension, leadFieldFilters } = config;
+  const { measure, dimension, dealStatusFilter } = config;
+  const leadFieldFilters = getLeadFilters(config);
+  const dealFieldFilters = getDealFilters(config);
+  const hasLeadFilter = leadFieldFilters.length > 0;
+  const hasDealFilter = dealFieldFilters.length > 0 || !!dealStatusFilter?.length;
 
-  if (dimension.field === '_total') {
+  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter) {
     let allLeads = await paginateQuery(
       supabase.from('leads').select('id, created_at, responsible_user_id').eq('account_id', accountId).is('converted_to_client_id', null)
     );
     allLeads = applyDateFilter(allLeads, filters, 'created_at');
     allLeads = applyUserFilter(allLeads, filters);
-
-    // Apply lead field filters if configured
-    if (leadFieldFilters && leadFieldFilters.length > 0) {
-      allLeads = await applyLeadFieldFilters(supabase, allLeads, leadFieldFilters);
-    }
 
     return [{ name: 'Total', value: allLeads.length }];
   }
@@ -642,9 +689,18 @@ async function fetchLeadsAggregated(supabase: any, accountId: string, config: Vi
   allLeads = applyDateFilter(allLeads, filters, 'created_at');
   allLeads = applyUserFilter(allLeads, filters);
 
-  // Apply lead field filters if configured
-  if (leadFieldFilters && leadFieldFilters.length > 0) {
+  // Apply lead field filters and deal-based filters, matching the authenticated dashboard logic
+  if (hasLeadFilter) {
     allLeads = await applyLeadFieldFilters(supabase, allLeads, leadFieldFilters);
+  }
+
+  if (hasDealFilter && allLeads.length > 0) {
+    const matchingLeadIds = await getLeadIdsByDealConstraints(supabase, accountId, dealFieldFilters, dealStatusFilter);
+    allLeads = allLeads.filter((lead: any) => matchingLeadIds.has(lead.id));
+  }
+
+  if (dimension.field === '_total') {
+    return [{ name: 'Total', value: allLeads.length }];
   }
 
   // MQL enrichment
