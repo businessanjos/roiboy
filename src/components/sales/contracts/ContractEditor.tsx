@@ -299,78 +299,82 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
           </Select>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <Label className="text-xs">Descrição do objeto</Label>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={generateObject}
-              disabled={aiObjectLoading}
-              className="h-6 text-xs"
-            >
-              {aiObjectLoading ? (
-                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-              ) : (
-                <Sparkles className="w-3 h-3 mr-1" />
-              )}
-              Gerar com IA
-            </Button>
-          </div>
-          <Textarea
-            value={data.object_description ?? ""}
-            onChange={(e) => update("object_description", e.target.value)}
-            rows={4}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs">Entregas</Label>
-            <Button type="button" variant="outline" size="sm" onClick={addDeliverable} className="h-7">
-              <Plus className="w-3 h-3 mr-1" /> Adicionar
-            </Button>
-          </div>
-          {(data.deliverables ?? []).map((d, idx) => (
-            <div key={idx} className="border border-border rounded-md p-3 space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Título da entrega"
-                  value={d.title}
-                  onChange={(e) => updateDeliverable(idx, { title: e.target.value })}
-                />
+        {data.service_mode !== "not_applicable" && (
+          <>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs">Descrição do objeto</Label>
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
-                  onClick={() => generateDeliverable(idx)}
-                  disabled={aiDeliverableIdx === idx}
+                  size="sm"
+                  onClick={generateObject}
+                  disabled={aiObjectLoading}
+                  className="h-6 text-xs"
                 >
-                  {aiDeliverableIdx === idx ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  {aiObjectLoading ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                   ) : (
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-3 h-3 mr-1" />
                   )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeDeliverable(idx)}
-                >
-                  <Trash2 className="w-4 h-4" />
+                  Gerar com IA
                 </Button>
               </div>
               <Textarea
-                placeholder="Descrição (opcional)"
-                value={d.description ?? ""}
-                onChange={(e) => updateDeliverable(idx, { description: e.target.value })}
-                rows={2}
+                value={data.object_description ?? ""}
+                onChange={(e) => update("object_description", e.target.value)}
+                rows={4}
               />
             </div>
-          ))}
-        </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Entregas</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addDeliverable} className="h-7">
+                  <Plus className="w-3 h-3 mr-1" /> Adicionar
+                </Button>
+              </div>
+              {(data.deliverables ?? []).map((d, idx) => (
+                <div key={idx} className="border border-border rounded-md p-3 space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Título da entrega"
+                      value={d.title}
+                      onChange={(e) => updateDeliverable(idx, { title: e.target.value })}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => generateDeliverable(idx)}
+                      disabled={aiDeliverableIdx === idx}
+                    >
+                      {aiDeliverableIdx === idx ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeDeliverable(idx)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <Textarea
+                    placeholder="Descrição (opcional)"
+                    value={d.description ?? ""}
+                    onChange={(e) => updateDeliverable(idx, { description: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </fieldset>
 
       {/* MODALIDADE / VALORES */}
