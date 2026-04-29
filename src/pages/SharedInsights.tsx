@@ -570,7 +570,13 @@ export default function SharedInsights() {
                 onKeyDown={(e) => e.key === "Enter" && requestAccess()}
                 disabled={submitting}
               />
-              <Button onClick={requestAccess} disabled={submitting || !emailInput.trim()}>
+              <Button
+                onClick={requestAccess}
+                disabled={
+                  submitting ||
+                  !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailInput.trim())
+                }
+              >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
               </Button>
             </div>
