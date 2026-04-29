@@ -18,10 +18,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { ContractDocument, type DigitalContractData, type Deliverable } from "./ContractDocument";
 import { ContractEditor } from "./ContractEditor";
-import {
-  TemplatedContractSection,
-  TemplatedContractPreview,
-} from "./TemplatedContractSection";
+import { TemplatedContractPreview } from "./TemplatedContractSection";
+import { ContractWizard } from "./ContractWizard";
 import type { TemplateVariableDef } from "@/lib/contractTemplates";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -479,7 +477,7 @@ export const DigitalContractTab = ({
         )}
       </Card>
 
-      <TemplatedContractSection
+      <ContractWizard
         templateId={templateId}
         productId={productId}
         templateHtml={templateHtml}
