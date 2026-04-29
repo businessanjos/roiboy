@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Copy, ExternalLink, FileSignature, FileText, Search, Settings2 } from "lucide-react";
+import { Copy, ExternalLink, FilePlus2, FileSignature, FileText, Loader2, Search, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,13 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -33,6 +40,16 @@ interface DigitalContractListItem {
   signed_at: string | null;
   updated_at: string;
   created_at: string;
+}
+
+interface DealOption {
+  id: string;
+  title: string;
+  status: string;
+  value: number | null;
+  updated_at: string;
+  client?: { full_name: string | null } | null;
+  lead?: { full_name: string | null } | null;
 }
 
 const statusLabels: Record<string, string> = {
@@ -68,6 +85,10 @@ export default function SalesDigitalContracts() {
   const [contracts, setContracts] = useState<DigitalContractListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [dealSearch, setDealSearch] = useState("");
+  const [deals, setDeals] = useState<DealOption[]>([]);
+  const [loadingDeals, setLoadingDeals] = useState(false);
 
   useEffect(() => {
     async function loadContracts() {
@@ -96,6 +117,32 @@ export default function SalesDigitalContracts() {
     loadContracts();
   }, [currentUser?.account_id]);
 
+  useEffect(() => {
+    async function loadDealsForContract() {
+      if (!generateOpen || !currentUser?.account_id) return;
+
+      setLoadingDeals(true);
+      try {
+        const { data, error } = await supabase
+          .from("deals")
+          .select("id, title, status, value, updated_at, client:clients(full_name), lead:leads(full_name)")
+          .eq("account_id", currentUser.account_id)
+          .order("updated_at", { ascending: false })
+          .limit(80);
+
+        if (error) throw error;
+        setDeals((data ?? []) as unknown as DealOption[]);
+      } catch (error: unknown) {
+        console.error("[SalesDigitalContracts] deals load error:", error);
+        toast.error(error instanceof Error ? error.message : "Erro ao carregar negócios");
+      } finally {
+        setLoadingDeals(false);
+      }
+    }
+
+    loadDealsForContract();
+  }, [currentUser?.account_id, generateOpen]);
+
   const filteredContracts = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return contracts;
@@ -118,6 +165,24 @@ export default function SalesDigitalContracts() {
       { total: 0, signed: 0, pending: 0 },
     );
   }, [contracts]);
+
+  const filteredDeals = useMemo(() => {
+    const term = dealSearch.trim().toLowerCase();
+    if (!term) return deals;
+
+    return deals.filter((deal) =>
+      [deal.title, deal.client?.full_name, deal.lead?.full_name]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term)),
+    );
+  }, [dealSearch, deals]);
+
+  const getDealClientName = (deal: DealOption) => deal.client?.full_name || deal.lead?.full_name || "Cliente não identificado";
+
+  const openDealContractWizard = (dealId: string) => {
+    setGenerateOpen(false);
+    navigate(`/pipeline?deal=${dealId}&tab=contract`);
+  };
 
   const copyPublicLink = async (token: string) => {
     const url = `${window.location.origin}/contrato/${token}`;
@@ -149,6 +214,10 @@ export default function SalesDigitalContracts() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={() => setGenerateOpen(true)}>
+            <FilePlus2 className="mr-2 h-4 w-4" />
+            Gerar contrato
+          </Button>
           <Button variant="outline" asChild>
             <Link to="/sales/contracts/templates">
               <FileText className="mr-2 h-4 w-4" />
@@ -199,9 +268,13 @@ export default function SalesDigitalContracts() {
             <div>
               <p className="font-medium text-foreground">Nenhum contrato digital encontrado</p>
               <p className="text-sm text-muted-foreground">
-                Gere o contrato direto na aba Contrato dentro de um Deal.
+                Clique em Gerar contrato, escolha o negócio e preencha o wizard.
               </p>
             </div>
+            <Button onClick={() => setGenerateOpen(true)}>
+              <FilePlus2 className="mr-2 h-4 w-4" />
+              Gerar contrato
+            </Button>
           </div>
         ) : (
           <Table>
@@ -264,6 +337,63 @@ export default function SalesDigitalContracts() {
           </Table>
         )}
       </Card>
+
+      <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden p-0">
+          <DialogHeader className="border-b border-border px-5 py-4">
+            <DialogTitle>Gerar contrato</DialogTitle>
+            <DialogDescription>
+              Escolha o negócio. O wizard do contrato abre direto na aba correta.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 p-5">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={dealSearch}
+                onChange={(event) => setDealSearch(event.target.value)}
+                placeholder="Buscar por cliente ou nome do negócio"
+                className="pl-9"
+                autoFocus
+              />
+            </div>
+
+            <div className="max-h-[52vh] overflow-y-auto rounded-md border border-border">
+              {loadingDeals ? (
+                <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Carregando negócios...
+                </div>
+              ) : filteredDeals.length === 0 ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  Nenhum negócio encontrado.
+                </div>
+              ) : (
+                filteredDeals.map((deal) => (
+                  <button
+                    key={deal.id}
+                    type="button"
+                    onClick={() => openDealContractWizard(deal.id)}
+                    className="flex w-full items-center justify-between gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/60"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-foreground">{getDealClientName(deal)}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{deal.title}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Badge variant={deal.status === "won" ? "default" : deal.status === "lost" ? "destructive" : "secondary"}>
+                        {deal.status === "won" ? "Ganho" : deal.status === "lost" ? "Perdido" : "Aberto"}
+                      </Badge>
+                      <span className="text-sm font-medium text-foreground">{formatCurrency(deal.value)}</span>
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
