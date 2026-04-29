@@ -18,6 +18,11 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { ContractDocument, type DigitalContractData, type Deliverable } from "./ContractDocument";
 import { ContractEditor } from "./ContractEditor";
+import {
+  TemplatedContractSection,
+  TemplatedContractPreview,
+} from "./TemplatedContractSection";
+import type { TemplateVariableDef } from "@/lib/contractTemplates";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -127,6 +132,12 @@ export const DigitalContractTab = ({
   const [sendingZapsign, setSendingZapsign] = useState(false);
   const [contract, setContract] = useState<ContractRow | null>(null);
   const [data, setData] = useState<DigitalContractData>({ client_name: clientName ?? "" });
+  // Template state (separate from `data`)
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const [productId, setProductId] = useState<string | null>(null);
+  const [templateHtml, setTemplateHtml] = useState<string | null>(null);
+  const [templateVariables, setTemplateVariables] = useState<TemplateVariableDef[]>([]);
+  const [placeholderValues, setPlaceholderValues] = useState<Record<string, any>>({});
   const docRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
@@ -158,6 +169,11 @@ export const DigitalContractTab = ({
             zapsign_document_token: existing.zapsign_document_token,
           });
           setData(rowToData(existing));
+          setTemplateId((existing as any).template_id ?? null);
+          setProductId((existing as any).product_id ?? null);
+          setTemplateHtml((existing as any).template_html ?? null);
+          setTemplateVariables(((existing as any).template_variables as TemplateVariableDef[]) ?? []);
+          setPlaceholderValues(((existing as any).placeholder_values as Record<string, any>) ?? {});
         } else {
           const { data: defaults } = await supabase
             .from("contract_company_defaults")
@@ -230,10 +246,17 @@ export const DigitalContractTab = ({
     if (!accountId) return;
     setSaving(true);
     try {
+      const templatePayload = {
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables as any,
+        placeholder_values: placeholderValues as any,
+      };
       if (contract) {
         const { error } = await supabase
           .from("digital_contracts")
-          .update(dataToRow(data))
+          .update({ ...dataToRow(data), ...templatePayload } as any)
           .eq("id", contract.id);
         if (error) throw error;
         toast.success("Contrato atualizado");
@@ -253,6 +276,7 @@ export const DigitalContractTab = ({
           status: "draft",
           created_by: currentUser?.auth_user_id ?? null,
           ...dataToRow({ ...data, contract_number }),
+          ...templatePayload,
         };
         const { data: created, error } = await supabase
           .from("digital_contracts")
@@ -455,6 +479,45 @@ export const DigitalContractTab = ({
         )}
       </Card>
 
+      <TemplatedContractSection
+        templateId={templateId}
+        productId={productId}
+        templateHtml={templateHtml}
+        templateVariables={templateVariables}
+        placeholderValues={placeholderValues}
+        autofill={{
+          client: {
+            full_name: data.client_name,
+            cpf: data.client_cpf_cnpj,
+            cnpj: data.client_cpf_cnpj,
+            email: data.client_email,
+            address: data.client_address,
+            razao_social: data.client_name,
+          },
+          deal: {
+            value: data.total_value ?? dealValue ?? null,
+            installments: data.installments ?? null,
+            installment_value: data.installment_value ?? null,
+          },
+          company: {
+            name: data.company_name,
+            cnpj: data.company_cnpj,
+            address: data.company_address,
+            representative: data.company_representative,
+            email: data.company_email,
+          },
+          today: new Date().toISOString().slice(0, 10),
+        }}
+        onChange={(next) => {
+          setTemplateId(next.template_id);
+          setProductId(next.product_id);
+          setTemplateHtml(next.template_html);
+          setTemplateVariables(next.template_variables);
+          setPlaceholderValues(next.placeholder_values);
+        }}
+        disabled={saving}
+      />
+
       <Tabs defaultValue="editor" className="w-full">
         <TabsList className="h-8">
           <TabsTrigger value="editor" className="text-xs h-7">
@@ -469,8 +532,16 @@ export const DigitalContractTab = ({
         </TabsContent>
         <TabsContent value="preview" className="mt-3">
           <ScrollArea className="h-[60vh] rounded-md border bg-muted/30">
-            <div className="p-4">
-              <ContractDocument ref={docRef} data={data} />
+            <div ref={docRef} className="p-4">
+              {templateHtml ? (
+                <TemplatedContractPreview
+                  templateHtml={templateHtml}
+                  templateVariables={templateVariables}
+                  placeholderValues={placeholderValues}
+                />
+              ) : (
+                <ContractDocument data={data} />
+              )}
             </div>
           </ScrollArea>
         </TabsContent>
