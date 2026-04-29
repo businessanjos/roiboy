@@ -344,7 +344,7 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
           disabled={disabled}
           placeholder={isCnpjField ? "00.000.000/0000-00" : "000.000.000-00"}
         />
-        {isCnpjField && onCnpjLookup && (
+        {((isCnpjField && onCnpjLookup) || (isCpfField && onCpfLookup)) && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -352,17 +352,23 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
                 variant="outline"
                 size="icon"
                 className="shrink-0"
-                onClick={() => onCnpjLookup(String(value ?? ""))}
-                disabled={cnpjLooking || disabled}
+                onClick={() =>
+                  isCnpjField
+                    ? onCnpjLookup?.(String(value ?? ""))
+                    : onCpfLookup?.(String(value ?? ""))
+                }
+                disabled={(isCnpjField ? cnpjLooking : cpfLooking) || disabled}
               >
-                {cnpjLooking ? (
+                {(isCnpjField ? cnpjLooking : cpfLooking) ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Search className="h-4 w-4" />
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Buscar dados na Receita Federal</TooltipContent>
+            <TooltipContent>
+              {isCnpjField ? "Buscar dados do CNPJ" : "Buscar dados do CPF"}
+            </TooltipContent>
           </Tooltip>
         )}
       </div>
