@@ -1098,14 +1098,20 @@ async function applyDealFieldFilters(
     const selectColumns = isMultiSelect ? 'deal_id, value_json' : 'deal_id, value_text';
 
     let allValues: any[] = [];
-    const batchSize = 500;
+    // URLs com 500 UUIDs no `.in()` estouram/ficam instáveis no runtime público.
+    // Quando isso acontecia, o filtro retornava vazio e vários gráficos ficavam zerados.
+    const batchSize = 100;
     for (let i = 0; i < dealIds.length; i += batchSize) {
       const batch = dealIds.slice(i, i + batchSize);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('deal_field_values')
         .select(selectColumns)
         .eq('field_id', filter.fieldId)
         .in('deal_id', batch);
+      if (error) {
+        console.error('Error fetching deal field values for shared filter:', error);
+        continue;
+      }
       allValues = allValues.concat(data || []);
     }
 
@@ -1113,7 +1119,7 @@ async function applyDealFieldFilters(
 
     if (isMultiSelect) {
       const selectedValueKeys = new Set(
-        filter.selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
+        filter.selectedValues.map(label => optionLabelToValue.get(label) || label).filter(Boolean) as string[]
       );
       for (const row of allValues) {
         if (row.value_json && Array.isArray(row.value_json)) {
@@ -1127,7 +1133,7 @@ async function applyDealFieldFilters(
       }
     } else if (isSelectField) {
       const selectedValueKeys = new Set(
-        filter.selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
+        filter.selectedValues.map(label => optionLabelToValue.get(label) || label).filter(Boolean) as string[]
       );
       for (const row of allValues) {
         if (row.value_text && selectedValueKeys.has(row.value_text)) {
@@ -1190,11 +1196,15 @@ async function applyLeadFieldFilters(
     const batchSize = 100;
     for (let i = 0; i < leadIds.length; i += batchSize) {
       const batch = leadIds.slice(i, i + batchSize);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('lead_field_values')
         .select(selectColumns)
         .eq('field_id', filter.fieldId)
         .in('lead_id', batch);
+      if (error) {
+        console.error('Error fetching lead field values for shared filter:', error);
+        continue;
+      }
       allValues = allValues.concat(data || []);
     }
 
@@ -1202,7 +1212,7 @@ async function applyLeadFieldFilters(
 
     if (isMultiSelect) {
       const selectedValueKeys = new Set(
-        filter.selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
+        filter.selectedValues.map(label => optionLabelToValue.get(label) || label).filter(Boolean) as string[]
       );
       for (const row of allValues) {
         if (row.value_json && Array.isArray(row.value_json)) {
@@ -1216,7 +1226,7 @@ async function applyLeadFieldFilters(
       }
     } else if (isSelectField) {
       const selectedValueKeys = new Set(
-        filter.selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
+        filter.selectedValues.map(label => optionLabelToValue.get(label) || label).filter(Boolean) as string[]
       );
       for (const row of allValues) {
         if (row.value_text && selectedValueKeys.has(row.value_text)) {
