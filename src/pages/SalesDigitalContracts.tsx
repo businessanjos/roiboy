@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Copy, ExternalLink, FileSignature, Search, Settings2 } from "lucide-react";
+import { Copy, ExternalLink, FileSignature, FileText, Search, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -148,12 +148,20 @@ export default function SalesDigitalContracts() {
             Contratos digitais criados pela aba Contrato dos Deals.
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link to="/sales/contracts/defaults">
-            <Settings2 className="mr-2 h-4 w-4" />
-            Padrões da contratada
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/sales/contracts/templates">
+              <FileText className="mr-2 h-4 w-4" />
+              Templates
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/sales/contracts/defaults">
+              <Settings2 className="mr-2 h-4 w-4" />
+              Padrões da contratada
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
