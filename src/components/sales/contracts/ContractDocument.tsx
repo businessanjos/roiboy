@@ -440,39 +440,62 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
         </Section>
 
         {/* Assinaturas */}
-        <section data-pdf-page="break" className="mt-12 pt-8 border-t border-border">
-          <p className="text-sm text-center mb-10">
-            E por estarem assim justas e contratadas, as partes assinam o
-            presente contrato.
+        <section data-pdf-page="break" className="mt-14 pt-8 border-t-2 border-primary">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary shrink-0">
+              <PenLine className="w-4 h-4" />
+            </div>
+            <h2 className="text-[13px] font-bold uppercase tracking-[0.15em]">
+              Assinaturas
+            </h2>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          <p className="text-[12px] text-center text-foreground/75 mb-12 italic">
+            E por estarem assim justas e contratadas, as partes assinam o presente contrato.
           </p>
-          <div className="grid grid-cols-2 gap-12 text-sm">
+
+          <div className="grid grid-cols-2 gap-10 text-sm">
             <div className="text-center">
-              <div className="border-t border-foreground pt-2 mt-16">
-                <p className="font-semibold">{data.company_representative || "CONTRATADA"}</p>
-                <p className="text-xs text-muted-foreground">{data.company_name}</p>
+              <div className="border-t-2 border-foreground pt-3 mt-20">
+                <p className="font-semibold text-[13px]">
+                  {data.company_representative || "CONTRATADA"}
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground mt-1">
+                  Contratada · {data.company_name}
+                </p>
               </div>
             </div>
             <div className="text-center">
-              <div className="border-t border-foreground pt-2 mt-16">
-                <p className="font-semibold">{data.client_representative || data.client_name}</p>
-                <p className="text-xs text-muted-foreground">CONTRATANTE</p>
+              <div className="border-t-2 border-foreground pt-3 mt-20">
+                <p className="font-semibold text-[13px]">
+                  {data.client_representative || data.client_name}
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground mt-1">
+                  Contratante
+                </p>
               </div>
             </div>
           </div>
 
           {data.include_witnesses && (
-            <div className="grid grid-cols-2 gap-12 text-sm mt-16">
-              <div className="text-center">
-                <div className="border-t border-border pt-2 mt-16">
-                  <p className="text-xs">Testemunha 1 — Nome / CPF</p>
+            <>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground text-center mt-14 mb-6">
+                Testemunhas
+              </p>
+              <div className="grid grid-cols-2 gap-10 text-sm">
+                <div className="text-center">
+                  <div className="border-t border-border pt-3 mt-16">
+                    <p className="text-[11px] text-muted-foreground">Nome · CPF</p>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="border-t border-border pt-3 mt-16">
+                    <p className="text-[11px] text-muted-foreground">Nome · CPF</p>
+                  </div>
                 </div>
               </div>
-              <div className="text-center">
-                <div className="border-t border-border pt-2 mt-16">
-                  <p className="text-xs">Testemunha 2 — Nome / CPF</p>
-                </div>
-              </div>
-            </div>
+            </>
           )}
         </section>
       </div>
