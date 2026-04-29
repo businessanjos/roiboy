@@ -1007,7 +1007,8 @@ export const ContractWizard = ({
               />
             ))}
           </div>
-        )}
+        );
+        })()}
       </div>
     );
   };
