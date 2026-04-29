@@ -448,10 +448,21 @@ export default function SharedInsights() {
   };
 
   const requestAccess = async () => {
-    if (!emailInput.trim()) return;
+    const trimmed = emailInput.trim();
+    if (!trimmed) return;
+
+    // Valida formato de e-mail antes de enviar — evita criar solicitações
+    // com URLs coladas, nomes ou textos arbitrários no campo.
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!EMAIL_REGEX.test(trimmed)) {
+      setErrorMessage("Informe um e-mail válido (ex: nome@dominio.com).");
+      return;
+    }
+
+    setErrorMessage("");
     setSubmitting(true);
-    
-    const normalizedEmail = emailInput.trim().toLowerCase();
+
+    const normalizedEmail = trimmed.toLowerCase();
     localStorage.setItem("shared_insights_email", normalizedEmail);
     setEmail(normalizedEmail);
 
@@ -559,7 +570,13 @@ export default function SharedInsights() {
                 onKeyDown={(e) => e.key === "Enter" && requestAccess()}
                 disabled={submitting}
               />
-              <Button onClick={requestAccess} disabled={submitting || !emailInput.trim()}>
+              <Button
+                onClick={requestAccess}
+                disabled={
+                  submitting ||
+                  !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailInput.trim())
+                }
+              >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
               </Button>
             </div>
