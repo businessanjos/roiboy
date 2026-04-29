@@ -246,10 +246,17 @@ export const DigitalContractTab = ({
     if (!accountId) return;
     setSaving(true);
     try {
+      const templatePayload = {
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables as any,
+        placeholder_values: placeholderValues as any,
+      };
       if (contract) {
         const { error } = await supabase
           .from("digital_contracts")
-          .update(dataToRow(data))
+          .update({ ...dataToRow(data), ...templatePayload } as any)
           .eq("id", contract.id);
         if (error) throw error;
         toast.success("Contrato atualizado");
@@ -269,6 +276,7 @@ export const DigitalContractTab = ({
           status: "draft",
           created_by: currentUser?.auth_user_id ?? null,
           ...dataToRow({ ...data, contract_number }),
+          ...templatePayload,
         };
         const { data: created, error } = await supabase
           .from("digital_contracts")
