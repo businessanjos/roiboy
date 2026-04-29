@@ -639,8 +639,28 @@ export default function SharedInsights() {
 
   // Approved — show dashboard with real visuals
   if (status === "approved" && dashboardData) {
-    const selfCheck = runSelfCheck({ token, status, data: dashboardData });
     if (!selfCheck.ok) {
+      const retriesExhausted = selfCheckRetry >= MAX_SELF_CHECK_RETRIES;
+
+      // Enquanto há tentativas restantes, mostramos um loader leve.
+      // O useEffect de auto-retry agenda a próxima tentativa com backoff.
+      if (!retriesExhausted) {
+        return (
+          <div className="flex min-h-screen items-center justify-center bg-background p-4">
+            <Card className="w-full max-w-sm">
+              <CardContent className="pt-8 pb-8 space-y-4 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                <h2 className="text-base font-semibold">Carregando painel...</h2>
+                <p className="text-xs text-muted-foreground">
+                  Validando dados (tentativa {selfCheckRetry + 1} de {MAX_SELF_CHECK_RETRIES})
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      }
+
+      // Esgotadas as tentativas → diagnóstico + retry manual
       return (
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
           <Card className="w-full max-w-lg">
@@ -649,7 +669,7 @@ export default function SharedInsights() {
                 <XCircle className="h-12 w-12 text-destructive mx-auto" />
                 <h2 className="text-xl font-semibold">Painel não pôde ser exibido</h2>
                 <p className="text-sm text-muted-foreground">
-                  Falha no self-check antes da renderização: <strong>{selfCheck.reason}</strong>.
+                  Falha no self-check após {MAX_SELF_CHECK_RETRIES} tentativas: <strong>{selfCheck.reason}</strong>.
                 </p>
               </div>
               <div className="rounded-md border bg-muted/30 divide-y text-sm">
@@ -675,11 +695,12 @@ export default function SharedInsights() {
                 <Button
                   onClick={() => {
                     setErrorMessage("");
+                    setSelfCheckRetry(0);
                     checkAccess(email);
                   }}
                 >
                   <RotateCcw className="h-4 w-4 mr-2" />
-                  Recarregar painel
+                  Tentar novamente
                 </Button>
               </div>
             </CardContent>
