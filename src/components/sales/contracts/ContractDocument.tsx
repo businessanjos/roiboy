@@ -140,12 +140,14 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
         </Section>
 
         {/* Objeto */}
-        <Section title="Cláusula 1ª — Do Objeto">
-          <p className="whitespace-pre-line">
-            {data.object_description ||
-              "A CONTRATADA se obriga a prestar à CONTRATANTE os serviços descritos abaixo, conforme escopo, prazos e condições aqui estabelecidos."}
-          </p>
-        </Section>
+        {data.service_mode !== "not_applicable" && (
+          <Section title="Cláusula 1ª — Do Objeto">
+            <p className="whitespace-pre-line">
+              {data.object_description ||
+                "A CONTRATADA se obriga a prestar à CONTRATANTE os serviços descritos abaixo, conforme escopo, prazos e condições aqui estabelecidos."}
+            </p>
+          </Section>
+        )}
 
         {/* Entregas */}
         {data.deliverables && data.deliverables.length > 0 && (
