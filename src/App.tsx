@@ -75,6 +75,7 @@ const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 const PublicDigitalContract = lazyRetry(() => import("./pages/PublicDigitalContract"));
 const ContractDefaultsSettings = lazyRetry(() => import("./pages/ContractDefaultsSettings"));
+const SalesDigitalContracts = lazyRetry(() => import("./pages/SalesDigitalContracts"));
 
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
 const EverIA = lazyRetry(() => import("./pages/EverIA"));
@@ -186,6 +187,8 @@ const App = () => (
                             <Route path="/renewals" element={<Renewals />} />
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/settings/contract-defaults" element={<ContractDefaultsSettings />} />
+                            <Route path="/sales/contracts" element={<SalesDigitalContracts />} />
+                            <Route path="/sales/contracts/defaults" element={<ContractDefaultsSettings />} />
                             <Route path="/pipeline" element={<SalesPipeline />} />
                             <Route path="/sales-team" element={<SalesTeam />} />
                             <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
