@@ -138,60 +138,145 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
     return (
       <div
         ref={ref}
-        className="bg-card text-foreground p-10 max-w-[210mm] mx-auto shadow-sm border border-border rounded-md"
+        className="bg-card text-foreground p-12 max-w-[210mm] mx-auto shadow-sm border border-border rounded-md"
         style={{ minHeight: "297mm" }}
       >
-        {/* Header */}
-        <header className="text-center mb-8 pb-5 border-b-2 border-primary">
-          <img
-            src={logoRykas}
-            alt="Rykas Mentoring"
-            className="h-12 w-auto mx-auto mb-3 object-contain"
-            crossOrigin="anonymous"
-          />
-          <h1 className="text-xl font-bold tracking-tight uppercase">
-            Contrato de Prestação de Serviços
-          </h1>
-          {data.contract_number && (
-            <p className="text-xs text-muted-foreground mt-2 font-mono">
-              Nº {data.contract_number}
-            </p>
-          )}
+        {/* Header — Visual Law */}
+        <header className="mb-10">
+          <div className="flex items-center justify-between gap-6 pb-6 border-b-2 border-primary">
+            <img
+              src={logoRykas}
+              alt="Rykas Mentoring"
+              className="h-14 w-auto object-contain"
+              crossOrigin="anonymous"
+            />
+            <div className="text-right">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-1">
+                Instrumento Particular
+              </p>
+              <h1 className="text-lg font-bold tracking-tight uppercase leading-tight">
+                Contrato de Prestação<br />de Serviços
+              </h1>
+              {data.contract_number && (
+                <p className="text-[10px] text-muted-foreground mt-2 font-mono tracking-wider">
+                  Nº {data.contract_number}
+                </p>
+              )}
+            </div>
+          </div>
+          <p className="text-center text-[11px] text-muted-foreground mt-4 italic">
+            Este documento utiliza recursos de Visual Law para facilitar a leitura e compreensão das partes.
+          </p>
         </header>
 
-        {/* Partes */}
-        <Section title="Partes">
-          <p>
-            <strong>CONTRATADA:</strong> {data.company_name || "[empresa]"},
-            {data.company_cnpj ? ` CNPJ ${data.company_cnpj},` : ""}
-            {data.company_address ? ` com sede em ${data.company_address},` : ""}
-            {" "}neste ato representada por{" "}
-            <strong>{data.company_representative || "[representante]"}</strong>
-            {data.company_representative_cpf
-              ? `, CPF ${data.company_representative_cpf}`
-              : ""}
-            .
-          </p>
-          <p>
-            <strong>CONTRATANTE:</strong> <strong>{data.client_name}</strong>
-            {data.client_nationality ? `, ${data.client_nationality}` : ""}
-            {data.client_marital_status ? `, ${data.client_marital_status}` : ""}
-            {data.client_cpf_cnpj ? `, ${data.client_cpf_cnpj}` : ""}
-            {data.client_address ? `, residente/com sede em ${data.client_address}` : ""}
-            {data.client_representative
-              ? `, neste ato representado por ${data.client_representative}${
-                  data.client_representative_cpf
-                    ? ` (CPF ${data.client_representative_cpf})`
-                    : ""
-                }`
-              : ""}
-            .
-          </p>
-        </Section>
+        {/* Partes — Cards lado a lado */}
+        <section className="mb-10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary shrink-0">
+              <User className="w-4 h-4" />
+            </div>
+            <h2 className="text-[13px] font-bold uppercase tracking-[0.15em]">
+              As Partes
+            </h2>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* CONTRATADA */}
+            <div className="rounded-lg border border-border bg-muted/20 p-5">
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border/60">
+                <Building2 className="w-3.5 h-3.5 text-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                  Contratada
+                </span>
+              </div>
+              <p className="text-sm font-semibold leading-snug mb-2">
+                {data.company_name || "[empresa]"}
+              </p>
+              <dl className="space-y-1.5 text-[11px] text-foreground/75">
+                {data.company_cnpj && (
+                  <div className="flex gap-2">
+                    <dt className="text-muted-foreground w-14 shrink-0">CNPJ</dt>
+                    <dd className="font-mono">{data.company_cnpj}</dd>
+                  </div>
+                )}
+                {data.company_address && (
+                  <div className="flex gap-2">
+                    <dt className="text-muted-foreground w-14 shrink-0">Sede</dt>
+                    <dd>{data.company_address}</dd>
+                  </div>
+                )}
+                {data.company_representative && (
+                  <div className="flex gap-2 pt-1.5 border-t border-border/40 mt-2">
+                    <dt className="text-muted-foreground w-14 shrink-0">Repr.</dt>
+                    <dd>
+                      {data.company_representative}
+                      {data.company_representative_cpf && (
+                        <span className="text-muted-foreground ml-1">
+                          · CPF {data.company_representative_cpf}
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+
+            {/* CONTRATANTE */}
+            <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-5">
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-primary/20">
+                <User className="w-3.5 h-3.5 text-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                  Contratante
+                </span>
+              </div>
+              <p className="text-sm font-semibold leading-snug mb-2">
+                {data.client_name}
+              </p>
+              <dl className="space-y-1.5 text-[11px] text-foreground/75">
+                {data.client_cpf_cnpj && (
+                  <div className="flex gap-2">
+                    <dt className="text-muted-foreground w-14 shrink-0">Doc.</dt>
+                    <dd className="font-mono">{data.client_cpf_cnpj}</dd>
+                  </div>
+                )}
+                {(data.client_nationality || data.client_marital_status) && (
+                  <div className="flex gap-2">
+                    <dt className="text-muted-foreground w-14 shrink-0">Qualif.</dt>
+                    <dd>
+                      {[data.client_nationality, data.client_marital_status]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </dd>
+                  </div>
+                )}
+                {data.client_address && (
+                  <div className="flex gap-2">
+                    <dt className="text-muted-foreground w-14 shrink-0">End.</dt>
+                    <dd>{data.client_address}</dd>
+                  </div>
+                )}
+                {data.client_representative && (
+                  <div className="flex gap-2 pt-1.5 border-t border-primary/20 mt-2">
+                    <dt className="text-muted-foreground w-14 shrink-0">Repr.</dt>
+                    <dd>
+                      {data.client_representative}
+                      {data.client_representative_cpf && (
+                        <span className="text-muted-foreground ml-1">
+                          · CPF {data.client_representative_cpf}
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          </div>
+        </section>
 
         {/* Objeto */}
         {data.service_mode !== "not_applicable" && (
-          <Section title="Cláusula 1ª — Do Objeto">
+          <Section title="Do Objeto" icon={FileText} number="1">
             <p className="whitespace-pre-line">
               {data.object_description ||
                 "A CONTRATADA se obriga a prestar à CONTRATANTE os serviços descritos abaixo, conforme escopo, prazos e condições aqui estabelecidos."}
@@ -201,12 +286,17 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
 
         {/* Entregas */}
         {data.deliverables && data.deliverables.length > 0 && (
-          <Section title="Cláusula 2ª — Das Entregas">
-            <ul className="space-y-2 list-disc pl-5">
+          <Section title="Das Entregas" icon={ListChecks} number="2">
+            <ul className="space-y-2.5">
               {data.deliverables.map((d, i) => (
-                <li key={i}>
-                  <span className="font-semibold">{d.title}</span>
-                  {d.description ? <span className="text-foreground/80"> — {d.description}</span> : null}
+                <li key={i} className="flex gap-3 items-start">
+                  <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold">{d.title}</span>
+                    {d.description && (
+                      <span className="text-foreground/70"> — {d.description}</span>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -215,15 +305,25 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
 
         {/* Modalidade */}
         {data.service_mode !== "not_applicable" && (
-          <Section title="Cláusula 3ª — Da Modalidade de Execução">
+          <Section title="Da Modalidade de Execução" icon={Settings2} number="3">
             {data.service_mode === "hours" ? (
-              <p>
-                Os serviços serão prestados em regime de{" "}
-                <strong>{data.monthly_hours ?? 0} horas mensais dedicadas</strong>.
-                Horas excedentes serão cobradas a{" "}
-                <strong>{formatCurrency(data.extra_hour_rate)}/hora</strong>,
-                mediante aprovação prévia da CONTRATANTE.
-              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-md border border-border bg-muted/20 p-4">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                    Horas mensais
+                  </p>
+                  <p className="text-xl font-bold">{data.monthly_hours ?? 0}h</p>
+                </div>
+                <div className="rounded-md border border-border bg-muted/20 p-4">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                    Hora excedente
+                  </p>
+                  <p className="text-xl font-bold">{formatCurrency(data.extra_hour_rate)}</p>
+                </div>
+                <p className="col-span-2 text-[12px] text-foreground/75">
+                  Horas excedentes serão cobradas mediante aprovação prévia da CONTRATANTE.
+                </p>
+              </div>
             ) : (
               <p>
                 Os serviços serão prestados conforme o escopo de entregas
@@ -233,78 +333,105 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
           </Section>
         )}
 
-        {/* Valores e Pagamento */}
-        <Section title="Cláusula 4ª — Do Valor e Forma de Pagamento" breakBefore>
-          <p>
-            O valor total do contrato é de{" "}
-            <strong>{formatCurrency(totalValue)}</strong>, a ser pago em{" "}
-            <strong>{data.installments ?? 1}x</strong> de{" "}
-            <strong>{formatCurrency(data.installment_value)}</strong>.
-          </p>
-          {((data.down_payment_value ?? 0) > 0 || (data.down_payment_percentage ?? 0) > 0) && (
-            <p>
-              Sinal/entrada:{" "}
-              <strong>
-                {data.down_payment_value && data.down_payment_value > 0
-                  ? formatCurrency(data.down_payment_value)
-                  : `${data.down_payment_percentage}% do valor total`}
-              </strong>
-              {data.down_payment_date
-                ? `, com pagamento em ${formatDate(data.down_payment_date)}.`
-                : " no ato da assinatura."}
+        {/* Valores e Pagamento — destaque hero */}
+        <Section title="Do Valor e Forma de Pagamento" icon={Wallet} number="4" breakBefore>
+          <div className="rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-6 mb-4 shadow-sm">
+            <p className="text-[10px] uppercase tracking-[0.2em] opacity-80 mb-1">
+              Valor total do contrato
             </p>
-          )}
-          <p>
-            Demais parcelas com vencimento todo dia <strong>{data.due_day ?? 10}</strong>.
-            {data.first_due_date
-              ? ` Primeiro vencimento em ${formatDate(data.first_due_date)}.`
-              : ""}
-          </p>
-          {data.company_bank_info && (
-            <div className="mt-3 p-3 rounded border border-border bg-muted/30 text-xs">
-              <p className="font-semibold mb-1">Dados para pagamento</p>
-              {data.company_bank_info.banco && <p>Banco: {data.company_bank_info.banco}</p>}
-              {data.company_bank_info.agencia && <p>Agência: {data.company_bank_info.agencia}</p>}
-              {data.company_bank_info.conta && <p>Conta: {data.company_bank_info.conta}</p>}
-              {data.company_bank_info.pix && <p>PIX: {data.company_bank_info.pix}</p>}
+            <p className="text-3xl font-bold tracking-tight">
+              {formatCurrency(totalValue)}
+            </p>
+            {data.payment_method && (
+              <p className="text-[11px] mt-2 opacity-90">via {data.payment_method}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {((data.down_payment_value ?? 0) > 0) && (
+              <div className="rounded-md border border-border bg-muted/20 p-3">
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">
+                  Entrada
+                </p>
+                <p className="text-base font-bold">{formatCurrency(data.down_payment_value)}</p>
+                {data.down_payment_date && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    em {formatDate(data.down_payment_date)}
+                  </p>
+                )}
+              </div>
+            )}
+            <div className="rounded-md border border-border bg-muted/20 p-3">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">
+                Parcelas
+              </p>
+              <p className="text-base font-bold">{data.installments ?? 1}x</p>
+              <p className="text-[10px] text-muted-foreground mt-1">mensais</p>
             </div>
+            <div className="rounded-md border border-border bg-muted/20 p-3">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">
+                Valor da parcela
+              </p>
+              <p className="text-base font-bold">{formatCurrency(data.installment_value)}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                venc. dia {data.due_day ?? 10}
+              </p>
+            </div>
+          </div>
+
+          {data.first_due_date && (
+            <p className="text-[12px] text-foreground/75">
+              Primeiro vencimento em <strong>{formatDate(data.first_due_date)}</strong>,
+              demais parcelas com vencimento todo dia <strong>{data.due_day ?? 10}</strong>.
+            </p>
           )}
         </Section>
 
-        {/* Multas */}
-        <Section title="Cláusula 5ª — Da Mora e Inadimplência">
-          <p>
-            Em caso de atraso no pagamento, será aplicada multa de{" "}
-            <strong>{data.late_fee_percentage ?? 2}%</strong> e juros de{" "}
-            <strong>{data.late_interest_percentage ?? 1}% ao mês</strong> sobre
-            o valor em aberto.
-          </p>
+        {/* Mora */}
+        <Section title="Da Mora e Inadimplência" icon={AlertTriangle} number="5">
+          <div className="rounded-md border-l-4 border-l-amber-500 bg-amber-500/5 p-4 flex gap-3">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-[12px]">
+              Em caso de atraso no pagamento, será aplicada{" "}
+              <strong>multa de {data.late_fee_percentage ?? 2}%</strong> e{" "}
+              <strong>juros de {data.late_interest_percentage ?? 1}% ao mês</strong>{" "}
+              sobre o valor em aberto.
+            </p>
+          </div>
         </Section>
 
         {/* Vigência */}
-        <Section title="Cláusula 6ª — Da Vigência">
-          <p>
-            O presente contrato terá vigência de{" "}
-            <strong>{data.contract_duration_months ?? 12} meses</strong>{" "}
-            contados a partir da data de assinatura,
-            {data.has_renewal
-              ? " renovando-se automaticamente por iguais períodos salvo manifestação em contrário com 30 dias de antecedência."
-              : " encerrando-se automaticamente ao final deste prazo."}
-          </p>
+        <Section title="Da Vigência" icon={CalendarClock} number="6">
+          <div className="flex items-center gap-4">
+            <div className="rounded-lg bg-primary/10 text-primary px-5 py-3 text-center shrink-0">
+              <p className="text-2xl font-bold leading-none">
+                {data.contract_duration_months ?? 12}
+              </p>
+              <p className="text-[9px] uppercase tracking-wider mt-1">meses</p>
+            </div>
+            <p className="text-[12px]">
+              Vigência contada a partir da data de assinatura,{" "}
+              {data.has_renewal
+                ? "com renovação automática por iguais períodos salvo manifestação em contrário com 30 dias de antecedência."
+                : "encerrando-se automaticamente ao final deste prazo."}
+            </p>
+          </div>
         </Section>
 
         {/* Rescisão */}
-        <Section title="Cláusula 7ª — Da Rescisão">
+        <Section title="Da Rescisão" icon={XCircle} number="7">
           <p>
             A rescisão antecipada por qualquer das partes implicará multa
             equivalente a{" "}
-            <strong>{data.rescission_penalty_percentage ?? 10}%</strong> sobre
-            o saldo remanescente do contrato.
+            <strong className="text-primary">
+              {data.rescission_penalty_percentage ?? 10}%
+            </strong>{" "}
+            sobre o saldo remanescente do contrato.
           </p>
         </Section>
 
         {/* Foro */}
-        <Section title="Cláusula 8ª — Do Foro">
+        <Section title="Do Foro" icon={Scale} number="8">
           <p>
             As partes elegem o foro da comarca de{" "}
             <strong>{data.jurisdiction || "[Cidade]"}</strong> para dirimir
