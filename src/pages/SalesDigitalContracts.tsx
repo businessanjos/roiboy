@@ -85,9 +85,9 @@ export default function SalesDigitalContracts() {
 
         if (error) throw error;
         setContracts((data ?? []) as DigitalContractListItem[]);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[SalesDigitalContracts] load error:", error);
-        toast.error(error?.message ?? "Erro ao carregar contratos digitais");
+        toast.error(error instanceof Error ? error.message : "Erro ao carregar contratos digitais");
       } finally {
         setLoading(false);
       }
