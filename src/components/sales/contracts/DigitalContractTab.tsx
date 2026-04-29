@@ -132,6 +132,12 @@ export const DigitalContractTab = ({
   const [sendingZapsign, setSendingZapsign] = useState(false);
   const [contract, setContract] = useState<ContractRow | null>(null);
   const [data, setData] = useState<DigitalContractData>({ client_name: clientName ?? "" });
+  // Template state (separate from `data`)
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const [productId, setProductId] = useState<string | null>(null);
+  const [templateHtml, setTemplateHtml] = useState<string | null>(null);
+  const [templateVariables, setTemplateVariables] = useState<TemplateVariableDef[]>([]);
+  const [placeholderValues, setPlaceholderValues] = useState<Record<string, any>>({});
   const docRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
