@@ -1,5 +1,4 @@
 import { forwardRef } from "react";
-import logoRykas from "@/assets/logo-rykas-mentoring.png";
 import {
   Building2,
   User,
@@ -142,29 +141,19 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
         style={{ minHeight: "297mm" }}
       >
         {/* Header — Visual Law */}
-        <header className="mb-10">
-          <div className="flex items-center justify-between gap-6 pb-6 border-b-2 border-primary">
-            <img
-              src={logoRykas}
-              alt="Rykas Mentoring"
-              className="h-14 w-auto object-contain"
-              crossOrigin="anonymous"
-            />
-            <div className="text-right">
-              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-1">
-                Instrumento Particular
-              </p>
-              <h1 className="text-lg font-bold tracking-tight uppercase leading-tight">
-                Contrato de Prestação<br />de Serviços
-              </h1>
-              {data.contract_number && (
-                <p className="text-[10px] text-muted-foreground mt-2 font-mono tracking-wider">
-                  Nº {data.contract_number}
-                </p>
-              )}
-            </div>
-          </div>
-          <p className="text-center text-[11px] text-muted-foreground mt-4 italic">
+        <header className="mb-10 text-center pb-6 border-b-2 border-primary">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-2">
+            Instrumento Particular
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight uppercase leading-tight">
+            Contrato de Prestação de Serviços
+          </h1>
+          {data.contract_number && (
+            <p className="text-[10px] text-muted-foreground mt-3 font-mono tracking-wider">
+              Nº {data.contract_number}
+            </p>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-4 italic">
             Este documento utiliza recursos de Visual Law para facilitar a leitura e compreensão das partes.
           </p>
         </header>
