@@ -15,14 +15,14 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
 // Retry wrapper for lazy imports to handle stale chunk errors after deploys
-function lazyRetry<T extends ComponentType<any>>(
-  factory: () => Promise<{ default: T }>,
+function lazyRetry<P extends object>(
+  factory: () => Promise<{ default: ComponentType<P> }>,
   retries = 2
-): React.LazyExoticComponent<T> {
-  const retryFactory = (attempt: number): Promise<{ default: T }> =>
+): React.LazyExoticComponent<ComponentType<P>> {
+  const retryFactory = (attempt: number): Promise<{ default: ComponentType<P> }> =>
     factory().catch((err) => {
       if (attempt > 0) {
-        return new Promise<{ default: T }>((resolve) => {
+        return new Promise<{ default: ComponentType<P> }>((resolve) => {
           setTimeout(() => resolve(retryFactory(attempt - 1)), 500);
         });
       }
@@ -75,6 +75,7 @@ const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 const PublicDigitalContract = lazyRetry(() => import("./pages/PublicDigitalContract"));
 const ContractDefaultsSettings = lazyRetry(() => import("./pages/ContractDefaultsSettings"));
+const SalesDigitalContracts = lazyRetry(() => import("./pages/SalesDigitalContracts"));
 
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
 const EverIA = lazyRetry(() => import("./pages/EverIA"));
@@ -186,6 +187,8 @@ const App = () => (
                             <Route path="/renewals" element={<Renewals />} />
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/settings/contract-defaults" element={<ContractDefaultsSettings />} />
+                            <Route path="/sales/contracts" element={<SalesDigitalContracts />} />
+                            <Route path="/sales/contracts/defaults" element={<ContractDefaultsSettings />} />
                             <Route path="/pipeline" element={<SalesPipeline />} />
                             <Route path="/sales-team" element={<SalesTeam />} />
                             <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
