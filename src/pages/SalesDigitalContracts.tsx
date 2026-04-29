@@ -387,8 +387,8 @@ export default function SalesDigitalContracts() {
                         variant="ghost"
                         size="icon"
                         disabled={!contract.deal_id}
-                        onClick={() => contract.deal_id && navigate(`/pipeline?deal=${contract.deal_id}`)}
-                        aria-label="Abrir Deal"
+                        onClick={() => contract.deal_id && openDealContractEditor(contract.deal_id)}
+                        aria-label="Abrir contrato"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
