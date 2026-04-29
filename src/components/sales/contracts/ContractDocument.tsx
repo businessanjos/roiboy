@@ -162,22 +162,24 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
         )}
 
         {/* Modalidade */}
-        <Section title="Cláusula 3ª — Da Modalidade de Execução">
-          {data.service_mode === "hours" ? (
-            <p>
-              Os serviços serão prestados em regime de{" "}
-              <strong>{data.monthly_hours ?? 0} horas mensais dedicadas</strong>.
-              Horas excedentes serão cobradas a{" "}
-              <strong>{formatCurrency(data.extra_hour_rate)}/hora</strong>,
-              mediante aprovação prévia da CONTRATANTE.
-            </p>
-          ) : (
-            <p>
-              Os serviços serão prestados conforme o escopo de entregas
-              descrito na Cláusula 2ª, sem vinculação a carga horária mensal.
-            </p>
-          )}
-        </Section>
+        {data.service_mode !== "not_applicable" && (
+          <Section title="Cláusula 3ª — Da Modalidade de Execução">
+            {data.service_mode === "hours" ? (
+              <p>
+                Os serviços serão prestados em regime de{" "}
+                <strong>{data.monthly_hours ?? 0} horas mensais dedicadas</strong>.
+                Horas excedentes serão cobradas a{" "}
+                <strong>{formatCurrency(data.extra_hour_rate)}/hora</strong>,
+                mediante aprovação prévia da CONTRATANTE.
+              </p>
+            ) : (
+              <p>
+                Os serviços serão prestados conforme o escopo de entregas
+                descrito na Cláusula 2ª, sem vinculação a carga horária mensal.
+              </p>
+            )}
+          </Section>
+        )}
 
         {/* Valores e Pagamento */}
         <Section title="Cláusula 4ª — Do Valor e Forma de Pagamento" breakBefore>
