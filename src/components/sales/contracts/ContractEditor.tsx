@@ -568,40 +568,6 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
         </div>
       </fieldset>
 
-      {/* DADOS BANCÁRIOS */}
-      <fieldset disabled={disabled} className="space-y-3">
-        <legend className="text-sm font-semibold text-foreground">Dados bancários da Contratada</legend>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs">Banco</Label>
-            <Input
-              value={data.company_bank_info?.banco ?? ""}
-              onChange={(e) => updateBank("banco", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">PIX</Label>
-            <Input
-              value={data.company_bank_info?.pix ?? ""}
-              onChange={(e) => updateBank("pix", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Agência</Label>
-            <Input
-              value={data.company_bank_info?.agencia ?? ""}
-              onChange={(e) => updateBank("agencia", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Conta</Label>
-            <Input
-              value={data.company_bank_info?.conta ?? ""}
-              onChange={(e) => updateBank("conta", e.target.value)}
-            />
-          </div>
-        </div>
-      </fieldset>
     </div>
   );
 };
