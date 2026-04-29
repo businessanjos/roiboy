@@ -285,6 +285,20 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
         </div>
 
         <div>
+          <Label className="text-xs">Modalidade</Label>
+          <Select
+            value={data.service_mode ?? "hours"}
+            onValueChange={(v) => update("service_mode", v)}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hours">Horas dedicadas</SelectItem>
+              <SelectItem value="deliverables">Por entregas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
           <div className="flex items-center justify-between mb-1">
             <Label className="text-xs">Descrição do objeto</Label>
             <Button
