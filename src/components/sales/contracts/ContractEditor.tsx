@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { DigitalContractData, Deliverable } from "./ContractDocument";
@@ -14,6 +14,7 @@ interface ContractEditorProps {
   data: DigitalContractData;
   onChange: (next: DigitalContractData) => void;
   disabled?: boolean;
+  dealId?: string;
 }
 
 export const ContractEditor = ({ data, onChange, disabled }: ContractEditorProps) => {
