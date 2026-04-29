@@ -15,14 +15,14 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
 // Retry wrapper for lazy imports to handle stale chunk errors after deploys
-function lazyRetry<T extends ComponentType<any>>(
-  factory: () => Promise<{ default: T }>,
+function lazyRetry<P extends object>(
+  factory: () => Promise<{ default: ComponentType<P> }>,
   retries = 2
-): React.LazyExoticComponent<T> {
-  const retryFactory = (attempt: number): Promise<{ default: T }> =>
+): React.LazyExoticComponent<ComponentType<P>> {
+  const retryFactory = (attempt: number): Promise<{ default: ComponentType<P> }> =>
     factory().catch((err) => {
       if (attempt > 0) {
-        return new Promise<{ default: T }>((resolve) => {
+        return new Promise<{ default: ComponentType<P> }>((resolve) => {
           setTimeout(() => resolve(retryFactory(attempt - 1)), 500);
         });
       }
