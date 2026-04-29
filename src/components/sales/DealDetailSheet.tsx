@@ -1723,12 +1723,7 @@ export function DealDetailSheet({
                   </TabsContent>
 
                   <TabsContent value="contract" className="mt-3">
-                    <DigitalContractTab
-                      dealId={deal.id}
-                      dealValue={deal.value}
-                      clientId={deal.client_id || null}
-                      clientName={deal.lead?.full_name || deal.client?.full_name}
-                    />
+                    <ContractSummaryPanel dealId={deal.id} />
                   </TabsContent>
                 </Tabs>
               </div>
