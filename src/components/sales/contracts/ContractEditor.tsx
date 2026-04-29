@@ -437,15 +437,28 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
             />
           </div>
           <div>
-            <Label className="text-xs">Entrada (%)</Label>
+            <Label className="text-xs">Entrada (R$)</Label>
             <Input
               type="number"
-              value={data.down_payment_percentage ?? ""}
-              onChange={(e) => update("down_payment_percentage", Number(e.target.value) || 0)}
+              step="0.01"
+              min="0"
+              value={data.down_payment_value ?? ""}
+              onChange={(e) =>
+                update("down_payment_value", e.target.value === "" ? null : Number(e.target.value))
+              }
+              placeholder="0,00"
             />
           </div>
           <div>
-            <Label className="text-xs">Dia de vencimento</Label>
+            <Label className="text-xs">Data da entrada</Label>
+            <Input
+              type="date"
+              value={data.down_payment_date ?? ""}
+              onChange={(e) => update("down_payment_date", e.target.value || null)}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Dia dos próximos vencimentos</Label>
             <Input
               type="number"
               min={1}
@@ -455,7 +468,7 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
             />
           </div>
           <div>
-            <Label className="text-xs">Primeiro vencimento</Label>
+            <Label className="text-xs">1º vencimento (após entrada)</Label>
             <Input
               type="date"
               value={data.first_due_date ?? ""}
