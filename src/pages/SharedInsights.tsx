@@ -176,6 +176,13 @@ export default function SharedInsights() {
   const [selfCheckRetrying, setSelfCheckRetrying] = useState(false);
   const MAX_SELF_CHECK_RETRIES = 4;
 
+  // Self-check: validates route + status + payload before rendering charts.
+  // Computed unconditionally so the auto-retry effect can react to it.
+  const selfCheck = useMemo(
+    () => runSelfCheck({ token, status, data: dashboardData }),
+    [token, status, dashboardData]
+  );
+
   const dateRange = useMemo(() => {
     if (preset === "custom" && customRange.from && customRange.to) {
       return { start: startOfDay(customRange.from), end: endOfDay(customRange.to) };
