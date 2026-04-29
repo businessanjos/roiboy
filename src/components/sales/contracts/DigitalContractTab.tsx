@@ -477,7 +477,7 @@ export const DigitalContractTab = ({
         )}
       </Card>
 
-      <TemplatedContractSection
+      <ContractWizard
         templateId={templateId}
         productId={productId}
         templateHtml={templateHtml}
