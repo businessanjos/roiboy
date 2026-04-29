@@ -939,6 +939,75 @@ export const ContractWizard = ({
           )}
         </div>
 
+        {step === "client" && (
+          <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <Search className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-medium text-foreground">
+                Buscar dados do contratante
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                Preenche automaticamente nome, endereço e contatos.
+              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex rounded-md border border-input overflow-hidden shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setDocType("cnpj")}
+                  className={`px-3 py-1.5 text-xs font-medium transition ${
+                    docType === "cnpj"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  disabled={disabled}
+                >
+                  CNPJ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDocType("cpf")}
+                  className={`px-3 py-1.5 text-xs font-medium transition ${
+                    docType === "cpf"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  disabled={disabled}
+                >
+                  CPF
+                </button>
+              </div>
+              <Input
+                value={docInput ? formatCpfCnpj(docInput) : ""}
+                onChange={(e) => setDocInput(e.target.value.replace(/\D/g, ""))}
+                placeholder={docType === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"}
+                disabled={disabled}
+                className="h-9 flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleDocLookup();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleDocLookup}
+                disabled={disabled || cnpj.loading || cpf.loading || !docInput}
+                className="shrink-0 gap-1.5"
+              >
+                {(docType === "cnpj" ? cnpj.loading : cpf.loading) ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Search className="h-3.5 w-3.5" />
+                )}
+                Buscar
+              </Button>
+            </div>
+          </div>
+        )}
+
         {list.length === 0 ? (
           <div className="text-center py-8 text-sm text-muted-foreground">
             Nada para preencher nesta etapa.
@@ -954,6 +1023,8 @@ export const ContractWizard = ({
                 disabled={disabled}
                 onCnpjLookup={step === "client" ? handleCnpjLookup : undefined}
                 cnpjLooking={cnpj.loading}
+                onCpfLookup={step === "client" ? handleCpfLookup : undefined}
+                cpfLooking={cpf.loading}
               />
             ))}
           </div>
