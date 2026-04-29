@@ -501,6 +501,9 @@ export const ContractWizard = ({
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<StepKey | "review">("client");
   const cnpj = useCnpjLookup();
+  const cpf = useCpfLookup();
+  const [docType, setDocType] = useState<"cnpj" | "cpf">("cnpj");
+  const [docInput, setDocInput] = useState("");
 
   /* ---- Load templates & products ---- */
   useEffect(() => {
