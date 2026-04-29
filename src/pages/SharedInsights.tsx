@@ -362,6 +362,60 @@ export default function SharedInsights() {
     return true;
   }, [callEdgeFunction, getDefaultDateFilters]);
 
+  // Auto-retry com backoff exponencial quando o self-check falha após o painel
+  // ter chegado ao status "approved" (payload incompleto, dados não coerentes etc.).
+  // Tenta MAX_SELF_CHECK_RETRIES vezes silenciosamente antes de exibir o diagnóstico.
+  useEffect(() => {
+    if (status !== "approved") {
+      // Reset ao sair de approved (link novo, troca de email, etc.)
+      if (selfCheckRetry !== 0) setSelfCheckRetry(0);
+      if (selfCheckRetrying) setSelfCheckRetrying(false);
+      return;
+    }
+    if (selfCheck.ok) {
+      // Sucesso → zera contador para futuras quedas
+      if (selfCheckRetry !== 0) setSelfCheckRetry(0);
+      if (selfCheckRetrying) setSelfCheckRetrying(false);
+      return;
+    }
+    if (selfCheckRetry >= MAX_SELF_CHECK_RETRIES) return;
+    if (!email) return;
+
+    // Backoff exponencial: 1s, 2s, 4s, 8s (cap 8s)
+    const delay = Math.min(1000 * 2 ** selfCheckRetry, 8000);
+    console.warn(
+      `[SharedInsights] self-check falhou (${selfCheck.reason}). Retry ${selfCheckRetry + 1}/${MAX_SELF_CHECK_RETRIES} em ${delay}ms`,
+    );
+    setSelfCheckRetrying(true);
+    const timer = setTimeout(async () => {
+      const filters = {
+        startDate: dateRange.start.toISOString(),
+        endDate: dateRange.end.toISOString(),
+        userId,
+        productId,
+      };
+      const ok = await loadDashboard(email, filters);
+      setSelfCheckRetry((n) => n + 1);
+      if (!ok) {
+        // Mantém retrying=true; próximo ciclo do effect agenda nova tentativa
+      } else {
+        setSelfCheckRetrying(false);
+      }
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [
+    status,
+    selfCheck.ok,
+    selfCheck.reason,
+    selfCheckRetry,
+    email,
+    loadDashboard,
+    dateRange,
+    userId,
+    productId,
+    selfCheckRetrying,
+  ]);
+
   const checkAccess = async (emailToCheck: string) => {
     setStatus("loading");
     const defaultFilters = getDefaultDateFilters();
