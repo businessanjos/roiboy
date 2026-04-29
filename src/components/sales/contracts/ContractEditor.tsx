@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,46 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
   const [aiObjectLoading, setAiObjectLoading] = useState(false);
   const [aiDeliverableIdx, setAiDeliverableIdx] = useState<number | null>(null);
   const [copyingBilling, setCopyingBilling] = useState(false);
+  const [billingTipo, setBillingTipo] = useState<string | null>(null);
+  const [billingChecked, setBillingChecked] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchTipo = async () => {
+      if (!dealId) {
+        setBillingTipo(null);
+        setBillingChecked(true);
+        return;
+      }
+      try {
+        const { data: cf } = await supabase
+          .from("custom_fields")
+          .select("id")
+          .eq("name", "Tipo de Pessoa (NF)")
+          .maybeSingle();
+        if (!cf?.id) {
+          if (!cancelled) { setBillingTipo(null); setBillingChecked(true); }
+          return;
+        }
+        const { data: val } = await supabase
+          .from("deal_field_values")
+          .select("value_text")
+          .eq("deal_id", dealId)
+          .eq("field_id", cf.id)
+          .maybeSingle();
+        if (!cancelled) {
+          setBillingTipo((val?.value_text || "").toLowerCase() || null);
+          setBillingChecked(true);
+        }
+      } catch {
+        if (!cancelled) { setBillingTipo(null); setBillingChecked(true); }
+      }
+    };
+    fetchTipo();
+    return () => { cancelled = true; };
+  }, [dealId]);
+
+  const isBillingCpf = billingTipo === "cpf";
 
   const copyFromBilling = async () => {
     if (!dealId) {
@@ -176,8 +216,9 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
             variant="outline"
             size="sm"
             onClick={copyFromBilling}
-            disabled={copyingBilling || !dealId}
+            disabled={copyingBilling || !dealId || !billingChecked || !isBillingCpf}
             className="h-7 text-xs"
+            title={!isBillingCpf && billingChecked ? "Disponível apenas quando o faturamento é CPF" : undefined}
           >
             {copyingBilling ? (
               <Loader2 className="w-3 h-3 mr-1 animate-spin" />
