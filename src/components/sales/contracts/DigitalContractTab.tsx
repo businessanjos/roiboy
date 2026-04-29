@@ -479,6 +479,45 @@ export const DigitalContractTab = ({
         )}
       </Card>
 
+      <TemplatedContractSection
+        templateId={templateId}
+        productId={productId}
+        templateHtml={templateHtml}
+        templateVariables={templateVariables}
+        placeholderValues={placeholderValues}
+        autofill={{
+          client: {
+            full_name: data.client_name,
+            cpf: data.client_cpf_cnpj,
+            cnpj: data.client_cpf_cnpj,
+            email: data.client_email,
+            address: data.client_address,
+            razao_social: data.client_name,
+          },
+          deal: {
+            value: data.total_value ?? dealValue ?? null,
+            installments: data.installments ?? null,
+            installment_value: data.installment_value ?? null,
+          },
+          company: {
+            name: data.company_name,
+            cnpj: data.company_cnpj,
+            address: data.company_address,
+            representative: data.company_representative,
+            email: data.company_email,
+          },
+          today: new Date().toISOString().slice(0, 10),
+        }}
+        onChange={(next) => {
+          setTemplateId(next.template_id);
+          setProductId(next.product_id);
+          setTemplateHtml(next.template_html);
+          setTemplateVariables(next.template_variables);
+          setPlaceholderValues(next.placeholder_values);
+        }}
+        disabled={saving}
+      />
+
       <Tabs defaultValue="editor" className="w-full">
         <TabsList className="h-8">
           <TabsTrigger value="editor" className="text-xs h-7">
@@ -493,8 +532,16 @@ export const DigitalContractTab = ({
         </TabsContent>
         <TabsContent value="preview" className="mt-3">
           <ScrollArea className="h-[60vh] rounded-md border bg-muted/30">
-            <div className="p-4">
-              <ContractDocument ref={docRef} data={data} />
+            <div ref={docRef} className="p-4">
+              {templateHtml ? (
+                <TemplatedContractPreview
+                  templateHtml={templateHtml}
+                  templateVariables={templateVariables}
+                  placeholderValues={placeholderValues}
+                />
+              ) : (
+                <ContractDocument data={data} />
+              )}
             </div>
           </ScrollArea>
         </TabsContent>
