@@ -628,19 +628,18 @@ async function fetchConversionRate(supabase: any, accountId: string, dimension: 
 // ─── Leads ───────────────────────────────────────────────────────────────────
 
 async function fetchLeadsAggregated(supabase: any, accountId: string, config: VisualConfig, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
-  const { measure, dimension, leadFieldFilters } = config;
+  const { measure, dimension, dealStatusFilter } = config;
+  const leadFieldFilters = getLeadFilters(config);
+  const dealFieldFilters = getDealFilters(config);
+  const hasLeadFilter = leadFieldFilters.length > 0;
+  const hasDealFilter = dealFieldFilters.length > 0 || !!dealStatusFilter?.length;
 
-  if (dimension.field === '_total') {
+  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter) {
     let allLeads = await paginateQuery(
       supabase.from('leads').select('id, created_at, responsible_user_id').eq('account_id', accountId).is('converted_to_client_id', null)
     );
     allLeads = applyDateFilter(allLeads, filters, 'created_at');
     allLeads = applyUserFilter(allLeads, filters);
-
-    // Apply lead field filters if configured
-    if (leadFieldFilters && leadFieldFilters.length > 0) {
-      allLeads = await applyLeadFieldFilters(supabase, allLeads, leadFieldFilters);
-    }
 
     return [{ name: 'Total', value: allLeads.length }];
   }
@@ -660,9 +659,18 @@ async function fetchLeadsAggregated(supabase: any, accountId: string, config: Vi
   allLeads = applyDateFilter(allLeads, filters, 'created_at');
   allLeads = applyUserFilter(allLeads, filters);
 
-  // Apply lead field filters if configured
-  if (leadFieldFilters && leadFieldFilters.length > 0) {
+  // Apply lead field filters and deal-based filters, matching the authenticated dashboard logic
+  if (hasLeadFilter) {
     allLeads = await applyLeadFieldFilters(supabase, allLeads, leadFieldFilters);
+  }
+
+  if (hasDealFilter && allLeads.length > 0) {
+    const matchingLeadIds = await getLeadIdsByDealConstraints(supabase, accountId, dealFieldFilters, dealStatusFilter);
+    allLeads = allLeads.filter((lead: any) => matchingLeadIds.has(lead.id));
+  }
+
+  if (dimension.field === '_total') {
+    return [{ name: 'Total', value: allLeads.length }];
   }
 
   // MQL enrichment
