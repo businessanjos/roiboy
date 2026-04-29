@@ -21,6 +21,8 @@ export interface DigitalContractData {
   extra_hour_rate?: number | null;
   total_value?: number | null;
   down_payment_percentage?: number | null;
+  down_payment_value?: number | null;
+  down_payment_date?: string | null;
   installments?: number | null;
   installment_value?: number | null;
   first_due_date?: string | null;
