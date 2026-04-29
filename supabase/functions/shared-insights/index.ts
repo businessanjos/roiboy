@@ -1106,7 +1106,6 @@ async function applyDealFieldFilters(
       const { data, error } = await supabase
         .from('deal_field_values')
         .select(selectColumns)
-        .eq('account_id', deals[0]?.account_id)
         .eq('field_id', filter.fieldId)
         .in('deal_id', batch);
       if (error) {
