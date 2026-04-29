@@ -20,6 +20,8 @@ interface VisualConfig {
   formatting?: { type: string; decimals: number; displayScale?: string };
   statusFilter?: string;
   dealStatusFilter?: string[];
+  leadFieldFilter?: { fieldId: string; fieldName: string; selectedValues: string[] };
+  dealFieldFilter?: { fieldId: string; fieldName: string; selectedValues: string[] };
   dealFieldFilters?: Array<{ fieldId: string; fieldName: string; selectedValues: string[] }>;
   leadFieldFilters?: Array<{ fieldId: string; fieldName: string; selectedValues: string[] }>;
   appearance?: { dateDisplayFormat?: string; fillEmptyDates?: boolean; showDataLabels?: boolean; colorPalette?: string; fontScale?: string };
@@ -29,6 +31,7 @@ interface VisualConfig {
   gaugeConfig?: any;
   indicatorConfig?: any;
   stackBy?: string;
+  stackByCustomField?: { fieldId: string; fieldName: string; source: 'lead' | 'deal' | '_status' };
   tableConfig?: { columns?: string[]; cfLabels?: Record<string, string> };
 }
 
@@ -46,6 +49,7 @@ interface SharedFilters {
   endDate?: string;
   userId?: string;
   productId?: string;
+  stageId?: string;
 }
 
 Deno.serve(async (req) => {
