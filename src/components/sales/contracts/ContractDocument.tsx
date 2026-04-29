@@ -1,5 +1,19 @@
 import { forwardRef } from "react";
 import logoRykas from "@/assets/logo-rykas-mentoring.png";
+import {
+  Building2,
+  User,
+  FileText,
+  ListChecks,
+  Settings2,
+  Wallet,
+  AlertTriangle,
+  CalendarClock,
+  XCircle,
+  Scale,
+  PenLine,
+  CheckCircle2,
+} from "lucide-react";
 
 export interface Deliverable {
   title: string;
@@ -68,15 +82,42 @@ const formatDate = (date?: string | null) => {
   });
 };
 
-const Section = ({ title, children, breakBefore }: { title: string; children: React.ReactNode; breakBefore?: boolean }) => (
+const Section = ({
+  title,
+  icon: Icon,
+  children,
+  breakBefore,
+  number,
+}: {
+  title: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  breakBefore?: boolean;
+  number?: string;
+}) => (
   <section
     {...(breakBefore ? { "data-pdf-page": "break" } : {})}
-    className="mb-8"
+    className="mb-7"
   >
-    <h2 className="text-base font-semibold uppercase tracking-wide text-foreground border-b border-border pb-2 mb-4">
-      {title}
-    </h2>
-    <div className="space-y-3 text-sm leading-relaxed text-foreground/90">{children}</div>
+    <div className="flex items-center gap-3 mb-3">
+      {number && (
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-xs font-bold tracking-wider shrink-0">
+          {number}
+        </div>
+      )}
+      {Icon && !number && (
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary shrink-0">
+          <Icon className="w-4 h-4" />
+        </div>
+      )}
+      <h2 className="text-[13px] font-bold uppercase tracking-[0.15em] text-foreground">
+        {title}
+      </h2>
+      <div className="flex-1 h-px bg-border" />
+    </div>
+    <div className="space-y-3 text-[13px] leading-relaxed text-foreground/85 pl-11">
+      {children}
+    </div>
   </section>
 );
 
