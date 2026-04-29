@@ -84,7 +84,6 @@ import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
 import { DealFieldValueEditor } from "@/components/custom-fields/DealFieldValueEditor";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
-import { DigitalContractTab } from "./contracts/DigitalContractTab";
 import { ContractSummaryPanel } from "./contracts/ContractSummaryPanel";
 import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 import { usePermissions } from "@/hooks/usePermissions";
