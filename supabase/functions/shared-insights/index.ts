@@ -420,6 +420,16 @@ function applyUserFilter(items: any[], filters?: SharedFilters, userIdField = 'r
   });
 }
 
+function getLeadFilters(config: VisualConfig) {
+  if (config.leadFieldFilters?.length) return config.leadFieldFilters;
+  return config.leadFieldFilter?.fieldId ? [config.leadFieldFilter] : [];
+}
+
+function getDealFilters(config: VisualConfig) {
+  if (config.dealFieldFilters?.length) return config.dealFieldFilters;
+  return config.dealFieldFilter?.fieldId ? [config.dealFieldFilter] : [];
+}
+
 // ─── Drilldown Records for Data Tables ───────────────────────────────────────
 
 async function fetchDrilldownRecords(supabase: any, accountId: string, config: VisualConfig, filters?: SharedFilters): Promise<DrilldownRecord[]> {
