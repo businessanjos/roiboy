@@ -673,46 +673,11 @@ export const ContractWizard = ({
     toast.success("Sincronizado com cliente e deal");
   };
 
-  const handleCnpjLookup = async (raw: string) => {
-    const data = await cnpj.lookup(raw);
-    if (!data) return;
-
-    // Try to fill known client.* placeholders
-    const updates: Record<string, any> = {};
-    const sourceMap: Record<string, any> = {
-      "client.razao_social": data.razao_social,
-      "client.full_name": data.razao_social,
-      "client.nome_fantasia": data.nome_fantasia,
-      "client.email": data.email,
-      "client.address": data.endereco,
-      "client.phone": data.telefone,
-      "client.inscricao_municipal": data.inscricao_municipal,
-      "client.inscricao_estadual": data.inscricao_estadual,
-    };
-    for (const v of templateVariables) {
-      const src = v.source ?? "";
-      if (src in sourceMap && sourceMap[src]) {
-        updates[v.key] = sourceMap[src];
-      } else {
-        // Heuristic by key
-        const k = v.key.toUpperCase();
-        if ((k.includes("RAZAO") || k.includes("NOME")) && data.razao_social && !updates[v.key]) {
-          updates[v.key] = data.razao_social;
-        }
-        if (k.includes("FANTASIA") && data.nome_fantasia) updates[v.key] = data.nome_fantasia;
-        if (k.includes("EMAIL") && data.email) updates[v.key] = data.email;
-        if (k.includes("CELULAR") || k.includes("TELEFONE")) {
-          if (data.telefone) updates[v.key] = data.telefone;
-        }
-        if (k === "RUA" && data.logradouro) updates[v.key] = data.logradouro;
-        if (k.includes("BAIRRO") && data.bairro) updates[v.key] = data.bairro;
-        if (k.includes("CEP") && data.cep) updates[v.key] = data.cep;
-        if (k.includes("CIDADE") && data.municipio) updates[v.key] = data.municipio;
-        if (k.includes("ESTADO") && data.uf) updates[v.key] = data.uf;
-        if (k === "NUMERO" && data.numero) updates[v.key] = data.numero;
-      }
-    }
-    if (Object.keys(updates).length === 0) {
+  const applyLookupUpdates = (updates: Record<string, any>) => {
+    const filtered = Object.fromEntries(
+      Object.entries(updates).filter(([_, v]) => v !== null && v !== undefined && v !== ""),
+    );
+    if (Object.keys(filtered).length === 0) {
       toast.message("Dados encontrados, mas nenhum campo correspondente.");
       return;
     }
@@ -721,10 +686,76 @@ export const ContractWizard = ({
       product_id: productId,
       template_html: templateHtml,
       template_variables: templateVariables,
-      placeholder_values: { ...placeholderValues, ...updates },
+      placeholder_values: { ...placeholderValues, ...filtered },
     });
-    toast.success(`${Object.keys(updates).length} campo(s) preenchido(s) automaticamente`);
+    toast.success(`${Object.keys(filtered).length} campo(s) preenchido(s) automaticamente`);
   };
+
+  const handleCnpjLookup = async (raw: string) => {
+    const data = await cnpj.lookup(raw);
+    if (!data) return;
+
+    const updates: Record<string, any> = {};
+    for (const v of templateVariables) {
+      const k = v.key.toUpperCase();
+      if (/CNPJ/.test(k) && !/EMPRESA|CONTRATADA|COMPANY/.test(k)) {
+        updates[v.key] = (raw ?? "").replace(/\D/g, "");
+      }
+      if ((/RAZAO|NOME(?!_FANTASIA)|FULL_NAME|CLIENT_NAME|CONTRATANTE/.test(k)) && data.razao_social) {
+        updates[v.key] = data.razao_social;
+      }
+      if (k.includes("FANTASIA") && data.nome_fantasia) updates[v.key] = data.nome_fantasia;
+      if (k.includes("EMAIL") && data.email) updates[v.key] = data.email;
+      if ((k.includes("CELULAR") || k.includes("TELEFONE") || k.includes("PHONE")) && data.telefone) {
+        updates[v.key] = data.telefone;
+      }
+      if ((k === "RUA" || k.includes("LOGRADOURO") || k === "ENDERECO") && data.logradouro) {
+        updates[v.key] = data.logradouro;
+      }
+      if (k.includes("BAIRRO") && data.bairro) updates[v.key] = data.bairro;
+      if (k.includes("CEP") && data.cep) updates[v.key] = data.cep;
+      if (k.includes("CIDADE") && data.cidade) updates[v.key] = data.cidade;
+      if ((k.includes("ESTADO") || k === "UF") && data.estado) updates[v.key] = data.estado;
+      if (k === "NUMERO" && data.numero) updates[v.key] = data.numero;
+      if (k.includes("COMPLEMENTO") && data.complemento) updates[v.key] = data.complemento;
+    }
+    applyLookupUpdates(updates);
+  };
+
+  const handleCpfLookup = async (raw: string) => {
+    const data = await cpf.lookup(raw);
+    if (!data) return;
+
+    const updates: Record<string, any> = {};
+    const isoNasc = (() => {
+      const s = data.nascimento;
+      if (!s || typeof s !== "string") return null;
+      if (s.includes("/")) {
+        const [d, m, y] = s.split("/");
+        return `${y}-${m?.padStart(2, "0")}-${d?.padStart(2, "0")}`;
+      }
+      return s;
+    })();
+    for (const v of templateVariables) {
+      const k = v.key.toUpperCase();
+      if (/^CPF$|CPF_|_CPF/.test(k)) {
+        updates[v.key] = (raw ?? "").replace(/\D/g, "");
+      }
+      if ((/NOME|FULL_NAME|CLIENT_NAME|CONTRATANTE|RAZAO/.test(k)) && data.nome) {
+        updates[v.key] = data.nome;
+      }
+      if ((k.includes("NASCIMENTO") || k.includes("BIRTH") || k === "DOB") && isoNasc) {
+        updates[v.key] = isoNasc;
+      }
+    }
+    applyLookupUpdates(updates);
+  };
+
+  const handleDocLookup = () => {
+    if (docType === "cnpj") handleCnpjLookup(docInput);
+    else handleCpfLookup(docInput);
+  };
+
 
   /* ---- Render ---- */
 
