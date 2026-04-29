@@ -17,9 +17,65 @@ interface ContractEditorProps {
   dealId?: string;
 }
 
-export const ContractEditor = ({ data, onChange, disabled }: ContractEditorProps) => {
+export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEditorProps) => {
   const [aiObjectLoading, setAiObjectLoading] = useState(false);
   const [aiDeliverableIdx, setAiDeliverableIdx] = useState<number | null>(null);
+  const [copyingBilling, setCopyingBilling] = useState(false);
+
+  const copyFromBilling = async () => {
+    if (!dealId) {
+      toast.error("Negócio não identificado.");
+      return;
+    }
+    setCopyingBilling(true);
+    try {
+      const names = ["Tipo de Pessoa (NF)", "CPF/CNPJ (NF)", "Razão Social / Nome (NF)", "E-mail para envio da NF"];
+      const { data: cf } = await supabase
+        .from("custom_fields")
+        .select("id, name")
+        .in("name", names);
+      const idByName: Record<string, string> = {};
+      (cf || []).forEach((f: any) => { idByName[f.name] = f.id; });
+      const fieldIds = Object.values(idByName);
+      if (fieldIds.length === 0) {
+        toast.error("Campos de faturamento não encontrados.");
+        return;
+      }
+      const { data: vals } = await supabase
+        .from("deal_field_values")
+        .select("field_id, value_text")
+        .eq("deal_id", dealId)
+        .in("field_id", fieldIds);
+      const valByName: Record<string, string> = {};
+      (vals || []).forEach((v: any) => {
+        const name = Object.entries(idByName).find(([, id]) => id === v.field_id)?.[0];
+        if (name) valByName[name] = v.value_text || "";
+      });
+      const tipo = (valByName["Tipo de Pessoa (NF)"] || "").toLowerCase();
+      if (tipo && tipo !== "cpf") {
+        toast.error("O faturamento é PJ. O Mentorado deve ser sempre Pessoa Física — preencha manualmente.");
+        return;
+      }
+      const cpf = valByName["CPF/CNPJ (NF)"] || "";
+      const nome = valByName["Razão Social / Nome (NF)"] || "";
+      const email = valByName["E-mail para envio da NF"] || "";
+      if (!cpf && !nome && !email) {
+        toast.error("Sem dados de faturamento preenchidos para copiar.");
+        return;
+      }
+      onChange({
+        ...data,
+        client_name: nome || data.client_name,
+        client_cpf_cnpj: cpf || data.client_cpf_cnpj,
+        client_email: email || data.client_email,
+      });
+      toast.success("Dados copiados do faturamento.");
+    } catch (e: any) {
+      toast.error("Erro ao copiar: " + (e?.message ?? "tente novamente"));
+    } finally {
+      setCopyingBilling(false);
+    }
+  };
 
   const update = <K extends keyof DigitalContractData>(field: K, value: DigitalContractData[K]) => {
     onChange({ ...data, [field]: value });
