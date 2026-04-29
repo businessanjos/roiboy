@@ -52,6 +52,14 @@ interface SharedFilters {
   stageId?: string;
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function normalizeValidEmail(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return EMAIL_REGEX.test(normalized) ? normalized : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -112,14 +120,13 @@ Deno.serve(async (req) => {
 
     // Action: request_access — create or check access request
     if (action === "request_access") {
-      if (!email) {
-        return new Response(JSON.stringify({ error: "Email obrigatório" }), {
+      const normalizedEmail = normalizeValidEmail(email);
+      if (!normalizedEmail) {
+        return new Response(JSON.stringify({ error: "invalid_email", message: "Informe um e-mail válido" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      const normalizedEmail = email.trim().toLowerCase();
 
       // Check existing request
       const { data: existingRequest } = await supabaseAdmin
@@ -183,14 +190,13 @@ Deno.serve(async (req) => {
 
     // Action: check_access — check status for given email
     if (action === "check_access") {
-      if (!email) {
-        return new Response(JSON.stringify({ error: "Email obrigatório" }), {
+      const normalizedEmail = normalizeValidEmail(email);
+      if (!normalizedEmail) {
+        return new Response(JSON.stringify({ error: "invalid_email", message: "Informe um e-mail válido" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      const normalizedEmail = email.trim().toLowerCase();
 
       const { data: request } = await supabaseAdmin
         .from("insights_share_access_requests")
@@ -214,14 +220,13 @@ Deno.serve(async (req) => {
 
     // Action: load_dashboard — fetch approved dashboard data after status check succeeds
     if (action === "load_dashboard") {
-      if (!email) {
-        return new Response(JSON.stringify({ error: "Email obrigatório" }), {
+      const normalizedEmail = normalizeValidEmail(email);
+      if (!normalizedEmail) {
+        return new Response(JSON.stringify({ error: "invalid_email", message: "Informe um e-mail válido" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      const normalizedEmail = email.trim().toLowerCase();
 
       const { data: request } = await supabaseAdmin
         .from("insights_share_access_requests")
@@ -256,14 +261,13 @@ Deno.serve(async (req) => {
 
     // Action: fetch_filtered_data — re-fetch data with filters (requires prior approval)
     if (action === "fetch_filtered_data") {
-      if (!email) {
-        return new Response(JSON.stringify({ error: "Email obrigatório" }), {
+      const normalizedEmail = normalizeValidEmail(email);
+      if (!normalizedEmail) {
+        return new Response(JSON.stringify({ error: "invalid_email", message: "Informe um e-mail válido" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      const normalizedEmail = email.trim().toLowerCase();
 
       const { data: request } = await supabaseAdmin
         .from("insights_share_access_requests")
