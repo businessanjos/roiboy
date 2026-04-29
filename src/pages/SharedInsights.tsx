@@ -29,7 +29,78 @@ import { ptBR } from "date-fns/locale";
 import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-type Status = "loading" | "invalid" | "inactive" | "expired" | "email_prompt" | "pending" | "rejected" | "approved" | "load_error";
+type Status = "loading" | "invalid" | "inactive" | "expired" | "email_prompt" | "pending" | "rejected" | "approved" | "load_error" | "payload_error";
+
+interface SelfCheckResult {
+  ok: boolean;
+  checks: { label: string; ok: boolean; detail?: string }[];
+  reason?: string;
+}
+
+function runSelfCheck(params: {
+  token: string | undefined;
+  status: Status;
+  data: DashboardData | null;
+}): SelfCheckResult {
+  const checks: SelfCheckResult["checks"] = [];
+
+  // 1. Rota: token presente e formato plausível (uuid/hash)
+  const tokenOk = !!params.token && /^[A-Za-z0-9_-]{8,}$/.test(params.token);
+  checks.push({
+    label: "Rota e token",
+    ok: tokenOk,
+    detail: tokenOk ? params.token!.slice(0, 8) + "…" : "token ausente ou inválido na URL",
+  });
+
+  // 2. Status aprovado
+  const statusOk = params.status === "approved";
+  checks.push({
+    label: "Status de acesso",
+    ok: statusOk,
+    detail: statusOk ? "approved" : `status atual: ${params.status}`,
+  });
+
+  // 3. Payload de dados
+  const d = params.data;
+  const hasDashboard = !!d?.dashboard?.id;
+  const visualsArr = Array.isArray(d?.visuals) ? d!.visuals : null;
+  const visualsDataObj = d?.visualsData && typeof d.visualsData === "object" ? d.visualsData : null;
+  const payloadOk = !!d && hasDashboard && !!visualsArr && !!visualsDataObj;
+  checks.push({
+    label: "Metadados do painel",
+    ok: hasDashboard,
+    detail: hasDashboard ? d!.dashboard!.name : "dashboard ausente no payload",
+  });
+  checks.push({
+    label: "Lista de visuais",
+    ok: !!visualsArr,
+    detail: visualsArr ? `${visualsArr.length} visuais` : "campo 'visuals' ausente ou inválido",
+  });
+  checks.push({
+    label: "Dados dos visuais",
+    ok: !!visualsDataObj,
+    detail: visualsDataObj
+      ? `${Object.keys(visualsDataObj).length} datasets`
+      : "campo 'visualsData' ausente ou inválido",
+  });
+
+  // 4. Coerência: ao menos algum visual com data quando há visuais cadastrados
+  if (visualsArr && visualsArr.length > 0 && visualsDataObj) {
+    const datasetsCount = Object.keys(visualsDataObj).length;
+    const coherent = datasetsCount > 0;
+    checks.push({
+      label: "Coerência visuais ↔ dados",
+      ok: coherent,
+      detail: coherent
+        ? `${datasetsCount}/${visualsArr.length} visuais com dados`
+        : "visuais cadastrados mas nenhum dataset retornado",
+    });
+  }
+
+  const ok = tokenOk && statusOk && payloadOk;
+  const failing = checks.find((c) => !c.ok);
+  return { ok, checks, reason: ok ? undefined : failing?.label };
+}
 
 type DatePreset = "today" | "week" | "month" | "quarter" | "year" | "last_month" | "custom";
 
