@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { DigitalContractData, Deliverable } from "./ContractDocument";
@@ -14,11 +14,68 @@ interface ContractEditorProps {
   data: DigitalContractData;
   onChange: (next: DigitalContractData) => void;
   disabled?: boolean;
+  dealId?: string;
 }
 
-export const ContractEditor = ({ data, onChange, disabled }: ContractEditorProps) => {
+export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEditorProps) => {
   const [aiObjectLoading, setAiObjectLoading] = useState(false);
   const [aiDeliverableIdx, setAiDeliverableIdx] = useState<number | null>(null);
+  const [copyingBilling, setCopyingBilling] = useState(false);
+
+  const copyFromBilling = async () => {
+    if (!dealId) {
+      toast.error("Negócio não identificado.");
+      return;
+    }
+    setCopyingBilling(true);
+    try {
+      const names = ["Tipo de Pessoa (NF)", "CPF/CNPJ (NF)", "Razão Social / Nome (NF)", "E-mail para envio da NF"];
+      const { data: cf } = await supabase
+        .from("custom_fields")
+        .select("id, name")
+        .in("name", names);
+      const idByName: Record<string, string> = {};
+      (cf || []).forEach((f: any) => { idByName[f.name] = f.id; });
+      const fieldIds = Object.values(idByName);
+      if (fieldIds.length === 0) {
+        toast.error("Campos de faturamento não encontrados.");
+        return;
+      }
+      const { data: vals } = await supabase
+        .from("deal_field_values")
+        .select("field_id, value_text")
+        .eq("deal_id", dealId)
+        .in("field_id", fieldIds);
+      const valByName: Record<string, string> = {};
+      (vals || []).forEach((v: any) => {
+        const name = Object.entries(idByName).find(([, id]) => id === v.field_id)?.[0];
+        if (name) valByName[name] = v.value_text || "";
+      });
+      const tipo = (valByName["Tipo de Pessoa (NF)"] || "").toLowerCase();
+      if (tipo && tipo !== "cpf") {
+        toast.error("O faturamento é PJ. O Mentorado deve ser sempre Pessoa Física — preencha manualmente.");
+        return;
+      }
+      const cpf = valByName["CPF/CNPJ (NF)"] || "";
+      const nome = valByName["Razão Social / Nome (NF)"] || "";
+      const email = valByName["E-mail para envio da NF"] || "";
+      if (!cpf && !nome && !email) {
+        toast.error("Sem dados de faturamento preenchidos para copiar.");
+        return;
+      }
+      onChange({
+        ...data,
+        client_name: nome || data.client_name,
+        client_cpf_cnpj: cpf || data.client_cpf_cnpj,
+        client_email: email || data.client_email,
+      });
+      toast.success("Dados copiados do faturamento.");
+    } catch (e: any) {
+      toast.error("Erro ao copiar: " + (e?.message ?? "tente novamente"));
+    } finally {
+      setCopyingBilling(false);
+    }
+  };
 
   const update = <K extends keyof DigitalContractData>(field: K, value: DigitalContractData[K]) => {
     onChange({ ...data, [field]: value });
@@ -110,22 +167,43 @@ export const ContractEditor = ({ data, onChange, disabled }: ContractEditorProps
 
   return (
     <div className="space-y-6">
-      {/* CONTRATANTE */}
+      {/* MENTORADO */}
       <fieldset disabled={disabled} className="space-y-3">
-        <legend className="text-sm font-semibold text-foreground">Contratante (Cliente)</legend>
+        <div className="flex items-center justify-between">
+          <legend className="text-sm font-semibold text-foreground">Mentorado</legend>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={copyFromBilling}
+            disabled={copyingBilling || !dealId}
+            className="h-7 text-xs"
+          >
+            {copyingBilling ? (
+              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+            ) : (
+              <Copy className="w-3 h-3 mr-1" />
+            )}
+            Copiar do Faturamento (CPF)
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          O mentorado é sempre Pessoa Física. Se o faturamento foi feito no CPF do mentorado, use o botão acima para copiar os dados.
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <Label className="text-xs">Nome / Razão social</Label>
+            <Label className="text-xs">Nome completo</Label>
             <Input
               value={data.client_name ?? ""}
               onChange={(e) => update("client_name", e.target.value)}
             />
           </div>
           <div>
-            <Label className="text-xs">CPF / CNPJ</Label>
+            <Label className="text-xs">CPF</Label>
             <Input
               value={data.client_cpf_cnpj ?? ""}
               onChange={(e) => update("client_cpf_cnpj", e.target.value)}
+              placeholder="000.000.000-00"
             />
           </div>
           <div>
@@ -154,20 +232,6 @@ export const ContractEditor = ({ data, onChange, disabled }: ContractEditorProps
             <Input
               value={data.client_marital_status ?? ""}
               onChange={(e) => update("client_marital_status", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Representante legal (PJ)</Label>
-            <Input
-              value={data.client_representative ?? ""}
-              onChange={(e) => update("client_representative", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">CPF do representante</Label>
-            <Input
-              value={data.client_representative_cpf ?? ""}
-              onChange={(e) => update("client_representative_cpf", e.target.value)}
             />
           </div>
         </div>

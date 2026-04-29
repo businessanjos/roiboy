@@ -526,7 +526,7 @@ export const DigitalContractTab = ({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="editor" className="mt-3">
-          <ContractEditor data={data} onChange={setData} disabled={saving} />
+          <ContractEditor data={data} onChange={setData} disabled={saving} dealId={dealId} />
         </TabsContent>
         <TabsContent value="preview" className="mt-3">
           <ScrollArea className="h-[60vh] rounded-md border bg-muted/30">
