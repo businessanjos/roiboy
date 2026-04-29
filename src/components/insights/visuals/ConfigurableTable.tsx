@@ -9,7 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Filter } from "lucide-react";
+import { Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatValueWithScale } from "@/lib/formula-evaluator";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -288,6 +289,20 @@ export function ConfigurableTable({ config, visualId }: ConfigurableTableProps) 
     });
   }, [records, sourceFilter, dealSourceFilter]);
 
+  // Pagination
+  const [pageSize, setPageSize] = useState<number>(25);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalItems = filteredRecords.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const pagedRecords = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredRecords.slice(start, start + pageSize);
+  }, [filteredRecords, safePage, pageSize]);
+
+  // Reset page when filters or data change
+  useMemo(() => { setCurrentPage(1); }, [sourceFilter, dealSourceFilter, pageSize, records.length]);
+
   if (isLoading) {
     return (
       <div className="space-y-2 p-2">
@@ -312,98 +327,156 @@ export function ConfigurableTable({ config, visualId }: ConfigurableTableProps) 
   };
 
   return (
-    <div className="h-full w-full overflow-auto relative">
-      <table className="w-max min-w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">
-          <tr className="bg-muted/80 backdrop-blur-sm">
-            {columns.map((col) => {
-              const isFilterable = FILTERABLE_COLUMNS.includes(col.key);
-              const uniqueValues = uniqueValuesMap[col.key] || [];
-              const filterValues = filterStateMap[col.key]?.values || [];
-              const hasActiveFilter = filterValues.length > 0;
+    <div className="h-full w-full flex flex-col relative">
+      <div className="flex-1 overflow-auto">
+        <table className="w-max min-w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-muted/80 backdrop-blur-sm">
+              {columns.map((col) => {
+                const isFilterable = FILTERABLE_COLUMNS.includes(col.key);
+                const uniqueValues = uniqueValuesMap[col.key] || [];
+                const filterValues = filterStateMap[col.key]?.values || [];
+                const hasActiveFilter = filterValues.length > 0;
 
-              return (
-                <th
-                  key={col.key}
-                  className="relative text-left font-medium text-muted-foreground px-3 py-2 border-b border-border select-none whitespace-nowrap"
-                  style={{ width: colWidths[col.key] || col.defaultWidth, minWidth: 60 }}
-                >
-                  <span className="flex items-center gap-1">
-                    {col.label}
-                    {isFilterable && uniqueValues.length > 0 && (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            className={`inline-flex items-center justify-center rounded p-0.5 transition-colors hover:bg-accent ${hasActiveFilter ? 'text-primary' : 'text-muted-foreground/60'}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Filter className="h-3.5 w-3.5" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-56 p-2" align="start" side="bottom">
-                          <div className="flex items-center justify-between mb-2 px-1">
-                            <span className="text-xs font-medium text-foreground">Filtrar por {col.label.toLowerCase()}</span>
-                            {hasActiveFilter && (
-                              <button
-                                className="text-xs text-primary hover:underline"
-                                onClick={() => clearFilter(col.key)}
-                              >
-                                Limpar
-                              </button>
-                            )}
-                          </div>
-                          <div className="max-h-48 overflow-y-auto space-y-1">
-                            {uniqueValues.map(value => (
-                              <label
-                                key={value}
-                                className="flex items-center gap-2 px-1 py-1 rounded hover:bg-accent cursor-pointer text-sm"
-                              >
-                                <Checkbox
-                                  checked={filterValues.includes(value)}
-                                  onCheckedChange={() => toggleFilterValue(col.key, value)}
-                                />
-                                <span className="truncate text-foreground">{value}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  </span>
-                  <span
-                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 transition-colors"
-                    onMouseDown={(e) => onMouseDown(col.key, e)}
-                  />
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {filteredRecords.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="text-center text-muted-foreground py-8">
-                Sem dados para exibir
-              </td>
-            </tr>
-          ) : (
-            filteredRecords.map((record) => (
-              <tr key={record.id} className="hover:bg-muted/40 transition-colors border-b border-border/50">
-                {columns.map((col) => (
-                  <td
+                return (
+                  <th
                     key={col.key}
-                    className="px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis"
-                    style={{ maxWidth: colWidths[col.key] || col.defaultWidth }}
-                    title={col.getValue(record)}
+                    className="relative text-left font-medium text-muted-foreground px-3 py-2 border-b border-border select-none whitespace-nowrap"
+                    style={{ width: colWidths[col.key] || col.defaultWidth, minWidth: 60 }}
                   >
-                    {col.render ? col.render(record) : col.getValue(record)}
-                  </td>
-                ))}
+                    <span className="flex items-center gap-1">
+                      {col.label}
+                      {isFilterable && uniqueValues.length > 0 && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              className={`inline-flex items-center justify-center rounded p-0.5 transition-colors hover:bg-accent ${hasActiveFilter ? 'text-primary' : 'text-muted-foreground/60'}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Filter className="h-3.5 w-3.5" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 p-2" align="start" side="bottom">
+                            <div className="flex items-center justify-between mb-2 px-1">
+                              <span className="text-xs font-medium text-foreground">Filtrar por {col.label.toLowerCase()}</span>
+                              {hasActiveFilter && (
+                                <button
+                                  className="text-xs text-primary hover:underline"
+                                  onClick={() => clearFilter(col.key)}
+                                >
+                                  Limpar
+                                </button>
+                              )}
+                            </div>
+                            <div className="max-h-48 overflow-y-auto space-y-1">
+                              {uniqueValues.map(value => (
+                                <label
+                                  key={value}
+                                  className="flex items-center gap-2 px-1 py-1 rounded hover:bg-accent cursor-pointer text-sm"
+                                >
+                                  <Checkbox
+                                    checked={filterValues.includes(value)}
+                                    onCheckedChange={() => toggleFilterValue(col.key, value)}
+                                  />
+                                  <span className="truncate text-foreground">{value}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                    </span>
+                    <span
+                      className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 transition-colors"
+                      onMouseDown={(e) => onMouseDown(col.key, e)}
+                    />
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {pagedRecords.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="text-center text-muted-foreground py-8">
+                  Sem dados para exibir
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              pagedRecords.map((record) => (
+                <tr key={record.id} className="hover:bg-muted/40 transition-colors border-b border-border/50">
+                  {columns.map((col) => (
+                    <td
+                      key={col.key}
+                      className="px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                      style={{ maxWidth: colWidths[col.key] || col.defaultWidth }}
+                      title={col.getValue(record)}
+                    >
+                      {col.render ? col.render(record) : col.getValue(record)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalItems > 0 && (
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-t border-border bg-muted/30 text-xs text-muted-foreground shrink-0">
+          <div className="flex items-center gap-2">
+            <span>
+              {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, totalItems)} de {totalItems}
+            </span>
+            <span className="text-muted-foreground/60">|</span>
+            <div className="flex items-center gap-1">
+              <span>Por página:</span>
+              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="h-6 w-[60px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-accent disabled:opacity-40 disabled:pointer-events-none"
+              onClick={() => setCurrentPage(1)}
+              disabled={safePage === 1}
+            >
+              <ChevronsLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-accent disabled:opacity-40 disabled:pointer-events-none"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <span className="px-1">{safePage} / {totalPages}</span>
+            <button
+              className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-accent disabled:opacity-40 disabled:pointer-events-none"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+            <button
+              className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-accent disabled:opacity-40 disabled:pointer-events-none"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={safePage === totalPages}
+            >
+              <ChevronsRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
