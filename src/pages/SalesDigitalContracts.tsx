@@ -437,7 +437,7 @@ export default function SalesDigitalContracts() {
                   <button
                     key={deal.id}
                     type="button"
-                    onClick={() => openDealContractWizard(deal.id)}
+                    onClick={() => openDealContractEditor(deal.id)}
                     className="flex w-full items-center justify-between gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/60"
                   >
                     <span className="min-w-0 flex-1">
