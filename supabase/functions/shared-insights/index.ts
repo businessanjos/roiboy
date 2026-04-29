@@ -131,7 +131,10 @@ Deno.serve(async (req) => {
 
       if (existingRequest) {
         if (existingRequest.status === "approved") {
-          return new Response(JSON.stringify({ status: "approved" }), {
+          const appliedFilters: SharedFilters = reqFilters || {};
+          const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, share.dashboard_id, share.account_id, appliedFilters);
+          const filterOptions = await fetchFilterOptions(supabaseAdmin, share.account_id);
+          return new Response(JSON.stringify({ status: "approved", ...dashboardData, filterOptions }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
