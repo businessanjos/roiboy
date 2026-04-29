@@ -172,6 +172,9 @@ export default function SharedInsights() {
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [filtersLoading, setFiltersLoading] = useState(false);
   const [zoom, setZoom] = useState(80);
+  const [selfCheckRetry, setSelfCheckRetry] = useState(0);
+  const [selfCheckRetrying, setSelfCheckRetrying] = useState(false);
+  const MAX_SELF_CHECK_RETRIES = 4;
 
   const dateRange = useMemo(() => {
     if (preset === "custom" && customRange.from && customRange.to) {
