@@ -290,7 +290,7 @@ export function ConfigurableTable({ config, visualId }: ConfigurableTableProps) 
   }, [records, sourceFilter, dealSourceFilter]);
 
   // Pagination
-  const [pageSize, setPageSize] = useState<number>(25);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState(1);
   const totalItems = filteredRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
