@@ -384,14 +384,6 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
               onChange={(e) => update("contract_duration_months", Number(e.target.value) || 0)}
             />
           </div>
-          <div>
-            <Label className="text-xs">Duração (meses)</Label>
-            <Input
-              type="number"
-              value={data.contract_duration_months ?? ""}
-              onChange={(e) => update("contract_duration_months", Number(e.target.value) || 0)}
-            />
-          </div>
           {data.service_mode === "hours" && (
             <>
               <div>
