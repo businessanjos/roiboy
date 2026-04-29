@@ -193,14 +193,21 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
             <strong>{data.installments ?? 1}x</strong> de{" "}
             <strong>{formatCurrency(data.installment_value)}</strong>.
           </p>
-          {(data.down_payment_percentage ?? 0) > 0 && (
+          {((data.down_payment_value ?? 0) > 0 || (data.down_payment_percentage ?? 0) > 0) && (
             <p>
-              Sinal/entrada: <strong>{data.down_payment_percentage}%</strong> do
-              valor total no ato da assinatura.
+              Sinal/entrada:{" "}
+              <strong>
+                {data.down_payment_value && data.down_payment_value > 0
+                  ? formatCurrency(data.down_payment_value)
+                  : `${data.down_payment_percentage}% do valor total`}
+              </strong>
+              {data.down_payment_date
+                ? `, com pagamento em ${formatDate(data.down_payment_date)}.`
+                : " no ato da assinatura."}
             </p>
           )}
           <p>
-            Vencimento mensal todo dia <strong>{data.due_day ?? 10}</strong>.
+            Demais parcelas com vencimento todo dia <strong>{data.due_day ?? 10}</strong>.
             {data.first_due_date
               ? ` Primeiro vencimento em ${formatDate(data.first_due_date)}.`
               : ""}
