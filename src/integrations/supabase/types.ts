@@ -4484,7 +4484,9 @@ export type Database = {
           created_by: string | null
           deal_id: string | null
           deliverables: Json | null
+          down_payment_date: string | null
           down_payment_percentage: number | null
+          down_payment_value: number | null
           due_day: number | null
           extra_hour_rate: number | null
           first_due_date: string | null
@@ -4538,7 +4540,9 @@ export type Database = {
           created_by?: string | null
           deal_id?: string | null
           deliverables?: Json | null
+          down_payment_date?: string | null
           down_payment_percentage?: number | null
+          down_payment_value?: number | null
           due_day?: number | null
           extra_hour_rate?: number | null
           first_due_date?: string | null
@@ -4592,7 +4596,9 @@ export type Database = {
           created_by?: string | null
           deal_id?: string | null
           deliverables?: Json | null
+          down_payment_date?: string | null
           down_payment_percentage?: number | null
+          down_payment_value?: number | null
           due_day?: number | null
           extra_hour_rate?: number | null
           first_due_date?: string | null

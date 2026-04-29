@@ -58,6 +58,8 @@ const rowToData = (row: any): DigitalContractData => ({
   extra_hour_rate: row.extra_hour_rate,
   total_value: row.total_value,
   down_payment_percentage: row.down_payment_percentage,
+  down_payment_value: row.down_payment_value,
+  down_payment_date: row.down_payment_date,
   installments: row.installments,
   installment_value: row.installment_value,
   first_due_date: row.first_due_date,
@@ -95,6 +97,8 @@ const dataToRow = (d: DigitalContractData) => ({
   extra_hour_rate: d.extra_hour_rate ?? null,
   total_value: d.total_value ?? null,
   down_payment_percentage: d.down_payment_percentage ?? null,
+  down_payment_value: d.down_payment_value ?? null,
+  down_payment_date: d.down_payment_date ?? null,
   installments: d.installments ?? null,
   installment_value: d.installment_value ?? null,
   first_due_date: d.first_due_date ?? null,
@@ -239,6 +243,35 @@ export const DigitalContractTab = ({
       cancelled = true;
     };
   }, [dealId, accountId, clientId, clientName, dealValue]);
+
+  // Auto-fill total value from selected product price when empty
+  useEffect(() => {
+    if (!productId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: product } = await supabase
+        .from("products")
+        .select("price")
+        .eq("id", productId)
+        .maybeSingle();
+      if (cancelled || !product?.price) return;
+      const price = Number(product.price);
+      if (!Number.isFinite(price) || price <= 0) return;
+      setData((prev) => {
+        const current = Number(prev.total_value ?? 0);
+        if (current > 0) return prev;
+        const installments = prev.installments && prev.installments > 0 ? prev.installments : 1;
+        return {
+          ...prev,
+          total_value: price,
+          installment_value: prev.installment_value ?? price / installments,
+        };
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   const handleSave = async () => {
     if (!accountId) return;
