@@ -58,6 +58,8 @@ const rowToData = (row: any): DigitalContractData => ({
   extra_hour_rate: row.extra_hour_rate,
   total_value: row.total_value,
   down_payment_percentage: row.down_payment_percentage,
+  down_payment_value: row.down_payment_value,
+  down_payment_date: row.down_payment_date,
   installments: row.installments,
   installment_value: row.installment_value,
   first_due_date: row.first_due_date,
