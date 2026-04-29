@@ -398,15 +398,25 @@ export default function SalesDigitalContracts() {
                     onClick={() => openDealContractWizard(deal.id)}
                     className="flex w-full items-center justify-between gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/60"
                   >
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-foreground">{getDealClientName(deal)}</span>
                       <span className="block truncate text-xs text-muted-foreground">{deal.title}</span>
+                      <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                        {deal.stage?.name && (
+                          <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-normal">
+                            {deal.stage.name}
+                          </Badge>
+                        )}
+                        <span className="text-[11px] text-muted-foreground">
+                          Vendedor: <span className="font-medium text-foreground">{deal.responsible?.name ?? "—"}</span>
+                        </span>
+                      </span>
                     </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <Badge variant={deal.status === "won" ? "default" : deal.status === "lost" ? "destructive" : "secondary"}>
+                    <span className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="text-sm font-medium text-foreground">{formatCurrency(deal.value)}</span>
+                      <Badge variant={deal.status === "won" ? "default" : deal.status === "lost" ? "destructive" : "secondary"} className="h-5 px-1.5 text-[10px]">
                         {deal.status === "won" ? "Ganho" : deal.status === "lost" ? "Perdido" : "Aberto"}
                       </Badge>
-                      <span className="text-sm font-medium text-foreground">{formatCurrency(deal.value)}</span>
                     </span>
                   </button>
                 ))
