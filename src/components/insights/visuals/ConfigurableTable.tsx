@@ -289,6 +289,20 @@ export function ConfigurableTable({ config, visualId }: ConfigurableTableProps) 
     });
   }, [records, sourceFilter, dealSourceFilter]);
 
+  // Pagination
+  const [pageSize, setPageSize] = useState<number>(25);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalItems = filteredRecords.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const pagedRecords = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredRecords.slice(start, start + pageSize);
+  }, [filteredRecords, safePage, pageSize]);
+
+  // Reset page when filters or data change
+  useMemo(() => { setCurrentPage(1); }, [sourceFilter, dealSourceFilter, pageSize, records.length]);
+
   if (isLoading) {
     return (
       <div className="space-y-2 p-2">
