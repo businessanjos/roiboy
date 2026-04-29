@@ -95,7 +95,7 @@ interface StepDef {
 const STEPS_META: Record<StepKey, StepDef> = {
   client: {
     key: "client",
-    label: "Dados do Cliente",
+    label: "Dados de Faturamento",
     shortLabel: "Cliente",
     icon: User,
     description: "Quem é o contratante (razão social, CNPJ, endereço, contato).",
