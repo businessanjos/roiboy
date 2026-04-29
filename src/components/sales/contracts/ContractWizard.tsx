@@ -276,9 +276,11 @@ interface FieldProps {
   disabled?: boolean;
   onCnpjLookup?: (cnpj: string) => void;
   cnpjLooking?: boolean;
+  onCpfLookup?: (cpf: string) => void;
+  cpfLooking?: boolean;
 }
 
-const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLooking }: FieldProps) => {
+const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLooking, onCpfLookup, cpfLooking }: FieldProps) => {
   const help = guessFieldHelp(v);
   const isCnpjField = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
   const isCpfField = /^cpf$|cpf_/i.test(v.key);
