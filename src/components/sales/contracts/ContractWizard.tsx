@@ -1001,6 +1001,17 @@ export const ContractWizard = ({
                   }
                 }}
               />
+              {docType === "cpf" && (
+                <Input
+                  type="date"
+                  value={docBirth}
+                  onChange={(e) => setDocBirth(e.target.value)}
+                  disabled={disabled}
+                  className="h-9 sm:w-[160px]"
+                  placeholder="Data de nascimento"
+                  title="Data de nascimento (obrigatória para consulta de CPF)"
+                />
+              )}
               <Button
                 type="button"
                 size="sm"
