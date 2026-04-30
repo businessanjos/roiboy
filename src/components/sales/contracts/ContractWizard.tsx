@@ -1024,13 +1024,35 @@ export const ContractWizard = ({
         )}
 
         {(() => {
-          const visibleList = step === "client"
+          let visibleList = step === "client"
             ? list.filter((v) => {
                 const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
                 const isContractorCpf = /^cpf$|cpf_/i.test(v.key);
                 return !isContractorCnpj && !isContractorCpf;
               })
             : list;
+
+          // Quando CPF (PF) está selecionado, esconde campos exclusivos de PJ
+          if (step === "client" && docType === "cpf") {
+            visibleList = visibleList.filter((v) => {
+              const k = v.key.toUpperCase();
+              const isPjOnly =
+                /RAZAO_?SOCIAL|RAZÃO_?SOCIAL/.test(k) ||
+                /FANTASIA/.test(k) ||
+                /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(k);
+              return !isPjOnly;
+            });
+            // Coloca o campo de "nome completo" como primeiro
+            visibleList = [...visibleList].sort((a, b) => {
+              const ak = a.key.toUpperCase();
+              const bk = b.key.toUpperCase();
+              const aIsName = /NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|CONTRATANTE(_NOME)?$|^NOME$/.test(ak);
+              const bIsName = /NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|CONTRATANTE(_NOME)?$|^NOME$/.test(bk);
+              if (aIsName && !bIsName) return -1;
+              if (bIsName && !aIsName) return 1;
+              return 0;
+            });
+          }
           return visibleList.length === 0 ? (
           <div className="text-center py-8 text-sm text-muted-foreground">
             Nada para preencher nesta etapa.
