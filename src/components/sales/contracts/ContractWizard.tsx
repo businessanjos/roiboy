@@ -958,7 +958,9 @@ export const ContractWizard = ({
                 Buscar dados do contratante
               </span>
               <span className="text-[11px] text-muted-foreground">
-                Preenche automaticamente nome, endereço e contatos.
+                {docType === "cnpj"
+                  ? "Preenche automaticamente nome, endereço e contatos."
+                  : "Informe o CPF e preencha os demais dados manualmente."}
               </span>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
