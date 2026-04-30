@@ -117,6 +117,24 @@ const STEPS_META: Record<StepKey, StepDef> = {
   },
 };
 
+/**
+ * Placeholders fixos da CONTRATADA (Eternum Mentoring Club Ltda).
+ * Esses dados estão hardcoded no template e NUNCA devem aparecer no wizard
+ * (nem em etapas de preenchimento, nem na revisão, nem no progresso).
+ */
+const isFixedContratadaKey = (key: string): boolean => {
+  const k = (key || "").toUpperCase();
+  return (
+    /FORO/.test(k) ||
+    /CONTRATADA/.test(k) ||
+    /ETERNUM/.test(k) ||
+    /REPRESENTANTE/.test(k) ||
+    /EMPRESA(_|$)/.test(k) ||
+    /COMPANY(_|$)/.test(k) ||
+    /BANCO|AGENCIA|AGÊNCIA|CONTA_|^CONTA$|^PIX$|PIX_/.test(k)
+  );
+};
+
 const groupForVariable = (v: TemplateVariableDef): StepKey => {
   const src = (v.source ?? "").toLowerCase();
   const key = v.key.toLowerCase();
@@ -537,15 +555,22 @@ export const ContractWizard = ({
   }, [accountId]);
 
   /* ---- Group variables ---- */
+  // Remove placeholders fixos da CONTRATADA antes de qualquer agrupamento,
+  // assim eles não aparecem em nenhuma etapa nem entram no contador de progresso.
+  const effectiveVariables = useMemo(
+    () => (templateVariables ?? []).filter((v) => !isFixedContratadaKey(v.key)),
+    [templateVariables],
+  );
+
   const groupedVars = useMemo(() => {
     const map: Record<StepKey, TemplateVariableDef[]> = {
       client: [],
       company: [],
       payment: [],
     };
-    for (const v of templateVariables) map[groupForVariable(v)].push(v);
+    for (const v of effectiveVariables) map[groupForVariable(v)].push(v);
     return map;
-  }, [templateVariables]);
+  }, [effectiveVariables]);
 
   const filledCounts = useMemo(() => {
     const counts: Record<StepKey, { filled: number; total: number }> = {
@@ -1024,28 +1049,16 @@ export const ContractWizard = ({
         )}
 
         {(() => {
-          // Placeholders fixos da CONTRATADA (Eternum) — não devem aparecer no wizard,
-          // pois já estão hardcoded no template.
-          const isFixedContratadaKey = (key: string) => {
-            const k = key.toUpperCase();
-            return (
-              /FORO/.test(k) ||
-              /CONTRATADA/.test(k) ||
-              /ETERNUM/.test(k) ||
-              /REPRESENTANTE/.test(k) ||
-              /EMPRESA_(CNPJ|NOME|RAZAO|ENDERECO|CIDADE|ESTADO|UF|CEP|BAIRRO|RUA|NUMERO)/.test(k) ||
-              /COMPANY_(CNPJ|NAME|ADDRESS|CITY|STATE|ZIP)/.test(k)
-            );
-          };
-
-          let visibleList = (step === "client"
+          // Placeholders fixos já foram removidos em `effectiveVariables`.
+          // Aqui só filtramos campos de documento do contratante (CPF/CNPJ),
+          // que são tratados pelo bloco de busca acima.
+          let visibleList = step === "client"
             ? list.filter((v) => {
                 const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
                 const isContractorCpf = /^cpf$|cpf_/i.test(v.key);
                 return !isContractorCnpj && !isContractorCpf;
               })
-            : list
-          ).filter((v) => !isFixedContratadaKey(v.key));
+            : list;
 
           // Quando CPF (PF) está selecionado, esconde Nome Fantasia / IE / IM
           // e converte "Razão Social" em "Nome completo" (mantendo o placeholder
