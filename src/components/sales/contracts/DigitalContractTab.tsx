@@ -255,17 +255,43 @@ export const DigitalContractTab = ({
     };
   }, [dealId, accountId, clientId, clientName, dealValue]);
 
-  // Auto-fill total value from selected product price when empty
+  // Fetch deal extras (entry_value, won_at) once for autofill
   useEffect(() => {
-    if (!productId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: deal } = await supabase
+        .from("deals")
+        .select("entry_value, won_at")
+        .eq("id", dealId)
+        .maybeSingle();
+      if (cancelled || !deal) return;
+      setDealExtras({ entry_value: deal.entry_value, won_at: deal.won_at });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dealId]);
+
+  // Auto-fill total value from selected product price when empty + capture extras for autofill
+  useEffect(() => {
+    if (!productId) {
+      setProductExtras({});
+      return;
+    }
     let cancelled = false;
     (async () => {
       const { data: product } = await supabase
         .from("products")
-        .select("price")
+        .select("price, payment_methods, billing_period, cash_price, installment_price")
         .eq("id", productId)
         .maybeSingle();
-      if (cancelled || !product?.price) return;
+      if (cancelled || !product) return;
+      setProductExtras({
+        payment_methods: (product.payment_methods as string[] | null) ?? null,
+        billing_period: product.billing_period ?? null,
+        cash_price: product.cash_price ?? null,
+        installment_price: product.installment_price ?? null,
+      });
       const price = Number(product.price);
       if (!Number.isFinite(price) || price <= 0) return;
       setData((prev) => {
