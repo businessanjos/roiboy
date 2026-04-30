@@ -1,5 +1,7 @@
 // Utilities for handling contract templates with placeholders.
 
+import { numberToBRLExtenso } from "@/lib/numberToWordsBRL";
+
 export type TemplateVariableType = "text" | "textarea" | "number" | "currency" | "date";
 
 export interface TemplateVariableDef {
@@ -34,6 +36,20 @@ export interface AutofillContext {
     value?: number | null;
     installments?: number | null;
     installment_value?: number | null;
+    entry_value?: number | null;
+    payment_method?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+  };
+  product?: {
+    payment_method?: string | null;
+    installments?: number | null;
+    billing_period?: string | null;
+    duration_months?: number | null;
+  };
+  user?: {
+    name?: string | null;
+    email?: string | null;
   };
   company?: {
     name?: string | null;
@@ -60,6 +76,133 @@ const formatDate = (d: string) => {
   }
 };
 
+/* ------------------------------------------------------------------ */
+/* Heuristic key-based autofill                                       */
+/* ------------------------------------------------------------------ */
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  credit_card: "Cartão de crédito",
+  debit_card: "Cartão de débito",
+  pix: "PIX",
+  boleto: "Boleto bancário",
+  cheque: "Cheque",
+  bank_transfer: "Transferência bancária",
+  cash: "Dinheiro",
+};
+
+const labelPaymentMethod = (raw: string | null | undefined): string | null => {
+  if (!raw) return null;
+  return PAYMENT_METHOD_LABELS[raw] ?? raw;
+};
+
+const billingPeriodToMonths = (bp: string | null | undefined): number | null => {
+  switch ((bp ?? "").toLowerCase()) {
+    case "monthly":
+      return 1;
+    case "quarterly":
+      return 3;
+    case "semiannual":
+    case "semi_annual":
+    case "biannual":
+      return 6;
+    case "annual":
+    case "yearly":
+      return 12;
+    default:
+      return null;
+  }
+};
+
+const addMonthsISO = (isoDate: string, months: number): string => {
+  const base = new Date(isoDate.length <= 10 ? isoDate + "T12:00:00" : isoDate);
+  if (Number.isNaN(base.getTime())) return isoDate;
+  const d = new Date(base);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0, 10);
+};
+
+/** For a given placeholder key, infer a value from the autofill context using common naming patterns. */
+const inferValueFromKey = (
+  v: TemplateVariableDef,
+  ctx: AutofillContext,
+  currentValues: Record<string, any>,
+): string | number | null => {
+  const K = v.key.toUpperCase();
+
+  // VALOR EXTENSO — derived from the total/contract value already in values
+  if (/EXTENSO/.test(K)) {
+    const totalKey = Object.keys(currentValues).find(
+      (k) =>
+        /(VALOR|TOTAL|CONTRATO|PRECO|PREÇO)/.test(k.toUpperCase()) &&
+        !/(EXTENSO|PARCELA|ENTRADA|DESCONTO|MENSAL)/.test(k.toUpperCase()),
+    );
+    if (totalKey) {
+      const raw = currentValues[totalKey];
+      const num = typeof raw === "number" ? raw : parseFloat(String(raw ?? "").replace(",", "."));
+      if (Number.isFinite(num)) return numberToBRLExtenso(num);
+    }
+    return null;
+  }
+
+  // VALOR ENTRADA / DOWN
+  if (/(ENTRADA|DOWN_PAYMENT|SINAL)/.test(K) && /(VALOR|PRECO|PREÇO|TOTAL)/.test(K)) {
+    return ctx.deal?.entry_value ?? null;
+  }
+  if (K === "VALOR_ENTRADA" || K === "ENTRADA") {
+    return ctx.deal?.entry_value ?? null;
+  }
+
+  // VALOR TOTAL / CONTRATO
+  if (
+    /(VALOR|TOTAL|CONTRATO|PRECO|PREÇO)/.test(K) &&
+    !/(EXTENSO|PARCELA|ENTRADA|DESCONTO|MENSAL|UNITARIO)/.test(K)
+  ) {
+    return ctx.deal?.value ?? null;
+  }
+
+  // VALOR DA PARCELA
+  if (/(PARCELA|INSTALLMENT|MENSAL).*VALOR|VALOR.*(PARCELA|INSTALLMENT|MENSAL)/.test(K)) {
+    if (ctx.deal?.installment_value != null) return ctx.deal.installment_value;
+    const total = ctx.deal?.value ?? null;
+    const installments = ctx.deal?.installments ?? ctx.product?.installments ?? null;
+    if (total && installments && installments > 0) return Number((total / installments).toFixed(2));
+    return null;
+  }
+
+  // NÚMERO DE PARCELAS / QTD PARCELAS
+  if (/(NUMERO|N|QTD|QUANTIDADE).*(PARCELAS?|INSTALLMENTS?)/.test(K) || K === "PARCELAS" || K === "NUM_PARCELAS") {
+    return ctx.deal?.installments ?? ctx.product?.installments ?? null;
+  }
+
+  // FORMA DE PAGAMENTO
+  if (/(FORMA|METODO|MEIO).*PAG/.test(K) || K === "PAGAMENTO" || K === "FORMA_PAGAMENTO") {
+    return labelPaymentMethod(ctx.deal?.payment_method ?? ctx.product?.payment_method ?? null);
+  }
+
+  // DATAS DE VIGÊNCIA
+  if (/(DATA|DT)?_?INICIO|VIGENCIA_INICIO|START_DATE/.test(K)) {
+    return ctx.deal?.start_date ?? ctx.today ?? null;
+  }
+  if (/(DATA|DT)?_?FIM|VIGENCIA_FIM|END_DATE|TERMINO/.test(K)) {
+    if (ctx.deal?.end_date) return ctx.deal.end_date;
+    const start = ctx.deal?.start_date ?? ctx.today ?? null;
+    const months =
+      ctx.product?.duration_months ?? billingPeriodToMonths(ctx.product?.billing_period ?? null) ?? null;
+    if (start && months) return addMonthsISO(start, months);
+    return null;
+  }
+
+  // VENDEDOR / RESPONSAVEL
+  if (/VENDEDOR.*(EMAIL|MAIL)|EMAIL.*VENDEDOR|RESPONSAVEL.*EMAIL/.test(K)) {
+    return ctx.user?.email ?? null;
+  }
+  if (/VENDEDOR|RESPONSAVEL_COMERCIAL|CLOSER|CONSULTOR/.test(K) && !/EMAIL/.test(K)) {
+    return ctx.user?.name ?? null;
+  }
+
+  return null;
+};
+
 /** Resolve "client.full_name" => ctx.client.full_name */
 export const resolveSource = (source: string | null | undefined, ctx: AutofillContext): string | number | null => {
   if (!source) return null;
@@ -77,18 +220,40 @@ export const buildPlaceholderValues = (
   existing: Record<string, any> = {},
 ): Record<string, any> => {
   const out: Record<string, any> = { ...existing };
+
+  // First pass: explicit sources + key-name heuristics for non-derived fields
   for (const v of variables) {
-    // Keep user-edited value if present and non-empty
     if (out[v.key] !== undefined && out[v.key] !== null && out[v.key] !== "") continue;
     const fromSource = resolveSource(v.source, ctx);
     if (fromSource !== null && fromSource !== undefined && fromSource !== "") {
       out[v.key] = fromSource;
-    } else if (v.default !== undefined && v.default !== null) {
+      continue;
+    }
+    // Heuristic by key name (skip extenso — needs second pass)
+    if (!/EXTENSO/i.test(v.key)) {
+      const inferred = inferValueFromKey(v, ctx, out);
+      if (inferred !== null && inferred !== undefined && inferred !== "") {
+        out[v.key] = inferred;
+        continue;
+      }
+    }
+    if (v.default !== undefined && v.default !== null) {
       out[v.key] = v.default;
-    } else {
+    } else if (out[v.key] === undefined) {
       out[v.key] = "";
     }
   }
+
+  // Second pass: derive EXTENSO fields from now-populated total values
+  for (const v of variables) {
+    if (!/EXTENSO/i.test(v.key)) continue;
+    if (out[v.key] !== undefined && out[v.key] !== null && out[v.key] !== "") continue;
+    const inferred = inferValueFromKey(v, ctx, out);
+    if (inferred !== null && inferred !== undefined && inferred !== "") {
+      out[v.key] = inferred;
+    }
+  }
+
   return out;
 };
 
@@ -141,8 +306,16 @@ export const AUTOFILL_SOURCES: { value: string; label: string }[] = [
   { value: "client.inscricao_municipal", label: "Cliente · Inscrição Municipal" },
   { value: "client.inscricao_estadual", label: "Cliente · Inscrição Estadual" },
   { value: "deal.value", label: "Deal · Valor total" },
+  { value: "deal.entry_value", label: "Deal · Valor de entrada" },
   { value: "deal.installments", label: "Deal · Nº de parcelas" },
   { value: "deal.installment_value", label: "Deal · Valor da parcela" },
+  { value: "deal.payment_method", label: "Deal · Forma de pagamento" },
+  { value: "deal.start_date", label: "Deal · Data de início" },
+  { value: "deal.end_date", label: "Deal · Data de término" },
+  { value: "product.payment_method", label: "Produto · Forma de pagamento (padrão)" },
+  { value: "product.installments", label: "Produto · Nº de parcelas (padrão)" },
+  { value: "user.name", label: "Vendedor · Nome (usuário logado)" },
+  { value: "user.email", label: "Vendedor · E-mail (usuário logado)" },
   { value: "company.name", label: "Contratada · Razão Social" },
   { value: "company.cnpj", label: "Contratada · CNPJ" },
   { value: "company.address", label: "Contratada · Endereço" },
