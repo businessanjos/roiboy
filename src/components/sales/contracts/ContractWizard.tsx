@@ -555,15 +555,22 @@ export const ContractWizard = ({
   }, [accountId]);
 
   /* ---- Group variables ---- */
+  // Remove placeholders fixos da CONTRATADA antes de qualquer agrupamento,
+  // assim eles não aparecem em nenhuma etapa nem entram no contador de progresso.
+  const effectiveVariables = useMemo(
+    () => (templateVariables ?? []).filter((v) => !isFixedContratadaKey(v.key)),
+    [templateVariables],
+  );
+
   const groupedVars = useMemo(() => {
     const map: Record<StepKey, TemplateVariableDef[]> = {
       client: [],
       company: [],
       payment: [],
     };
-    for (const v of templateVariables) map[groupForVariable(v)].push(v);
+    for (const v of effectiveVariables) map[groupForVariable(v)].push(v);
     return map;
-  }, [templateVariables]);
+  }, [effectiveVariables]);
 
   const filledCounts = useMemo(() => {
     const counts: Record<StepKey, { filled: number; total: number }> = {
