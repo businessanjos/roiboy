@@ -346,8 +346,9 @@ export const TemplatedContractPreview = ({
   }
   return (
     <div
-      className="contract-preview-wrapper mx-auto"
-      style={{ maxWidth: "210mm", minHeight: "297mm" }}
+      className="bg-card text-foreground p-10 max-w-[210mm] mx-auto shadow-sm border border-border rounded-md prose prose-sm max-w-none"
+      style={{ minHeight: "297mm", whiteSpace: "pre-wrap" }}
+      // The HTML may already contain markup; render as-is.
       dangerouslySetInnerHTML={{ __html: rendered }}
     />
   );
