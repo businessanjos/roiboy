@@ -541,7 +541,6 @@ export const ContractWizard = ({
       client: [],
       company: [],
       payment: [],
-      details: [],
     };
     for (const v of templateVariables) map[groupForVariable(v)].push(v);
     return map;
