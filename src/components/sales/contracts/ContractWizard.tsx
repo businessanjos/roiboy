@@ -1049,28 +1049,16 @@ export const ContractWizard = ({
         )}
 
         {(() => {
-          // Placeholders fixos da CONTRATADA (Eternum) — não devem aparecer no wizard,
-          // pois já estão hardcoded no template.
-          const isFixedContratadaKey = (key: string) => {
-            const k = key.toUpperCase();
-            return (
-              /FORO/.test(k) ||
-              /CONTRATADA/.test(k) ||
-              /ETERNUM/.test(k) ||
-              /REPRESENTANTE/.test(k) ||
-              /EMPRESA_(CNPJ|NOME|RAZAO|ENDERECO|CIDADE|ESTADO|UF|CEP|BAIRRO|RUA|NUMERO)/.test(k) ||
-              /COMPANY_(CNPJ|NAME|ADDRESS|CITY|STATE|ZIP)/.test(k)
-            );
-          };
-
-          let visibleList = (step === "client"
+          // Placeholders fixos já foram removidos em `effectiveVariables`.
+          // Aqui só filtramos campos de documento do contratante (CPF/CNPJ),
+          // que são tratados pelo bloco de busca acima.
+          let visibleList = step === "client"
             ? list.filter((v) => {
                 const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
                 const isContractorCpf = /^cpf$|cpf_/i.test(v.key);
                 return !isContractorCnpj && !isContractorCpf;
               })
-            : list
-          ).filter((v) => !isFixedContratadaKey(v.key));
+            : list;
 
           // Quando CPF (PF) está selecionado, esconde Nome Fantasia / IE / IM
           // e converte "Razão Social" em "Nome completo" (mantendo o placeholder
