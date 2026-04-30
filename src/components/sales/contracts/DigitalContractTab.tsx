@@ -150,6 +150,7 @@ export const DigitalContractTab = ({
     cash_price?: number | null;
     installment_price?: number | null;
   }>({});
+  const [clientFull, setClientFull] = useState<any | null>(null);
   const docRef = useRef<HTMLDivElement>(null);
   const pdfPreviewRef = useRef<HTMLDivElement>(null);
 
