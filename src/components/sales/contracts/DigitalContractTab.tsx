@@ -347,7 +347,7 @@ export const DigitalContractTab = ({
     }
     setGeneratingPdf(true);
     try {
-      const canvas = await html2canvas(docRef.current, {
+      const canvas = await html2canvas(target, {
         scale: 2,
         backgroundColor: "#ffffff",
       });
