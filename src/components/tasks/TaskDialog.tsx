@@ -431,14 +431,24 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           .single();
         if (error) throw error;
         
-        // Sync No-Show activities to Google Calendar
-        if (taskTitle.toLowerCase().includes("no-show") || taskTitle.toLowerCase().includes("no show")) {
+        // Sync No-Show activities to Google Calendar (estilizado em vermelho)
+        const isNoShow = taskTitle.toLowerCase().includes("no-show") || taskTitle.toLowerCase().includes("no show");
+        if (isNoShow) {
           try {
             await supabase.functions.invoke("sync-noshow-calendar", {
               body: { task_id: newTask.id, user_id: currentUser.id },
             });
           } catch (syncErr) {
             console.error("Error syncing no-show to calendar (non-blocking):", syncErr);
+          }
+        } else if (dueDate && formData.assigned_to) {
+          // Toda tarefa com data e responsável vira evento na agenda do responsável
+          try {
+            await supabase.functions.invoke("sync-task-calendar", {
+              body: { task_id: newTask.id, action: "upsert" },
+            });
+          } catch (syncErr) {
+            console.error("Error syncing task to calendar (non-blocking):", syncErr);
           }
         }
         
