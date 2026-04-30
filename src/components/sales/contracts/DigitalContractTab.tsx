@@ -388,6 +388,7 @@ export const DigitalContractTab = ({
       setContract({ ...contract, signed_pdf_path: filePath });
       if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
       toast.success("PDF gerado");
+      setPdfPreviewOpen(false);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message ?? "Erro ao gerar PDF");
