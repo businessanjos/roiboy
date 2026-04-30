@@ -179,9 +179,17 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
                   Contratada
                 </span>
               </div>
-              <p className="text-sm font-semibold leading-snug mb-2">
-                {data.company_name || "[empresa]"}
-              </p>
+              {data.company_name?.toLowerCase().includes("rykas") ? (
+                <img
+                  src={rykasMentoringLogo}
+                  alt={data.company_name}
+                  className="h-10 w-auto object-contain mb-2 dark:invert-0 invert"
+                />
+              ) : (
+                <p className="text-sm font-semibold leading-snug mb-2">
+                  {data.company_name || "[empresa]"}
+                </p>
+              )}
               <dl className="space-y-1.5 text-[11px] text-foreground/75">
                 {data.company_cnpj && (
                   <div className="flex gap-2">
