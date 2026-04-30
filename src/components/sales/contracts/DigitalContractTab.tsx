@@ -199,10 +199,11 @@ export const DigitalContractTab = ({
           if (clientId) {
             const { data: client } = await supabase
               .from("clients")
-              .select("full_name, cpf, cnpj, street, street_number, neighborhood, city, state, emails")
+              .select("id, full_name, cpf, cnpj, rg, birth_date, phone_e164, emails, street, street_number, complement, neighborhood, city, state, zip_code, company_name")
               .eq("id", clientId)
               .maybeSingle();
             clientInfo = client;
+            if (!cancelled) setClientFull(client ?? null);
           }
 
           const buildAddress = (c: any) => {
