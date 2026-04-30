@@ -42,7 +42,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   buildPlaceholderValues,
-  renderTemplate,
   type AutofillContext,
   type TemplateVariableDef,
 } from "@/lib/contractTemplates";
