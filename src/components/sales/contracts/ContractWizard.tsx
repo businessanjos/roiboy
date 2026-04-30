@@ -551,7 +551,6 @@ export const ContractWizard = ({
       client: { filled: 0, total: 0 },
       company: { filled: 0, total: 0 },
       payment: { filled: 0, total: 0 },
-      details: { filled: 0, total: 0 },
     };
     (Object.keys(groupedVars) as StepKey[]).forEach((k) => {
       const list = groupedVars[k];
