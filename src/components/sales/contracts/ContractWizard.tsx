@@ -806,6 +806,64 @@ export const ContractWizard = ({
     else handleCpfLookup(docInput);
   };
 
+  /* ---- Persist client fields back to clients table ---- */
+  const persistClientFromPlaceholders = async () => {
+    const clientId = autofill.client?.id;
+    if (!clientId) return;
+    const v = placeholderValues ?? {};
+    const updates: Record<string, any> = {};
+    const findVal = (regex: RegExp): any => {
+      for (const key of Object.keys(v)) {
+        if (regex.test(key.toUpperCase()) && v[key] !== "" && v[key] !== null && v[key] !== undefined) {
+          // Skip company/contratada keys
+          if (/(EMPRESA|CONTRATADA|COMPANY)/.test(key.toUpperCase())) continue;
+          return v[key];
+        }
+      }
+      return undefined;
+    };
+    const onlyDigits = (s: any) => (s == null ? null : String(s).replace(/\D/g, "") || null);
+
+    const cnpj = findVal(/^CNPJ$|CONTRATANTE_CNPJ|CLIENTE_CNPJ|CLIENT_CNPJ/);
+    if (cnpj !== undefined) updates.cnpj = onlyDigits(cnpj);
+    const cpf = findVal(/^CPF$|CONTRATANTE_CPF|CLIENTE_CPF|CLIENT_CPF/);
+    if (cpf !== undefined) updates.cpf = onlyDigits(cpf);
+    const rg = findVal(/^RG$|CONTRATANTE_RG|CLIENTE_RG/);
+    if (rg !== undefined) updates.rg = String(rg);
+    const razao = findVal(/RAZAO_?SOCIAL|RAZÃO_?SOCIAL/);
+    if (razao !== undefined) updates.company_name = String(razao);
+    const fullName = findVal(/(^|_)NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|CONTRATANTE(_NOME)?$/);
+    if (fullName !== undefined && !/^CONTRATADA/.test(String(fullName))) updates.full_name = String(fullName);
+    const email = findVal(/EMAIL|E_?MAIL/);
+    if (email !== undefined) updates.emails = [String(email)];
+    const street = findVal(/(^|_)RUA$|LOGRADOURO|^ENDERECO$|^ENDEREÇO$/);
+    if (street !== undefined) updates.street = String(street);
+    const num = findVal(/^NUMERO$|NUM_END|NUMERO_ENDERECO/);
+    if (num !== undefined) updates.street_number = String(num);
+    const compl = findVal(/COMPLEMENTO/);
+    if (compl !== undefined) updates.complement = String(compl);
+    const bairro = findVal(/BAIRRO/);
+    if (bairro !== undefined) updates.neighborhood = String(bairro);
+    const cidade = findVal(/(^|_)CIDADE$/);
+    if (cidade !== undefined) updates.city = String(cidade);
+    const estado = findVal(/(^|_)ESTADO$|^UF$/);
+    if (estado !== undefined) updates.state = String(estado);
+    const cep = findVal(/(^|_)CEP$|ZIP/);
+    if (cep !== undefined) updates.zip_code = String(cep);
+    const birth = findVal(/NASCIMENTO|BIRTH|^DOB$/);
+    if (birth !== undefined && /^\d{4}-\d{2}-\d{2}/.test(String(birth))) updates.birth_date = String(birth).slice(0, 10);
+
+    if (Object.keys(updates).length === 0) return;
+    try {
+      const { error } = await supabase.from("clients").update(updates).eq("id", clientId);
+      if (error) throw error;
+    } catch (e: any) {
+      // Não bloqueia o fluxo do contrato — só avisa.
+      console.warn("[ContractWizard] persistClientFromPlaceholders:", e?.message);
+    }
+  };
+
+
 
   /* ---- Render ---- */
 
@@ -925,18 +983,35 @@ export const ContractWizard = ({
 
   const renderStepContent = () => {
     if (step === "review") {
+      const emptyVars = effectiveVariables.filter((v) => {
+        const x = placeholderValues?.[v.key];
+        return x === null || x === undefined || x === "";
+      });
       return (
         <div className="space-y-4">
-          {totalFilled < totalAll && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium">
-                  {totalAll - totalFilled} campo(s) ainda não preenchido(s)
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Aparecerão como <code className="bg-background px-1 rounded">[ • ]</code> no contrato. Volte às etapas anteriores para preencher.
-                </p>
+          {emptyVars.length > 0 && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">
+                    {emptyVars.length} campo(s) ainda não preenchido(s)
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Preencha aqui mesmo — ou ficarão como <code className="bg-background px-1 rounded">[ • ]</code> no contrato.
+                  </p>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-x-4 gap-y-3 pt-2 border-t border-amber-500/20">
+                {emptyVars.map((v) => (
+                  <PlaceholderField
+                    key={v.key}
+                    v={v}
+                    value={placeholderValues?.[v.key]}
+                    onChange={(val) => updateField(v.key, val)}
+                    disabled={disabled}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -1240,7 +1315,13 @@ export const ContractWizard = ({
           ) : (
             <Button
               size="sm"
-              onClick={() => canNext && setStep(allKeys[currentIdx + 1])}
+              onClick={async () => {
+                if (!canNext) return;
+                if (step === "client") {
+                  await persistClientFromPlaceholders();
+                }
+                setStep(allKeys[currentIdx + 1]);
+              }}
               disabled={!canNext || disabled}
             >
               {allKeys[currentIdx + 1] === "review" ? (

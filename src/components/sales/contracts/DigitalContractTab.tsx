@@ -150,6 +150,7 @@ export const DigitalContractTab = ({
     cash_price?: number | null;
     installment_price?: number | null;
   }>({});
+  const [clientFull, setClientFull] = useState<any | null>(null);
   const docRef = useRef<HTMLDivElement>(null);
   const pdfPreviewRef = useRef<HTMLDivElement>(null);
 
@@ -198,10 +199,11 @@ export const DigitalContractTab = ({
           if (clientId) {
             const { data: client } = await supabase
               .from("clients")
-              .select("full_name, cpf, cnpj, street, street_number, neighborhood, city, state, emails")
+              .select("id, full_name, cpf, cnpj, rg, birth_date, phone_e164, emails, street, street_number, complement, neighborhood, city, state, zip_code, company_name")
               .eq("id", clientId)
               .maybeSingle();
             clientInfo = client;
+            if (!cancelled) setClientFull(client ?? null);
           }
 
           const buildAddress = (c: any) => {
@@ -568,12 +570,24 @@ export const DigitalContractTab = ({
         placeholderValues={placeholderValues}
         autofill={{
           client: {
-            full_name: data.client_name,
-            cpf: data.client_cpf_cnpj,
-            cnpj: data.client_cpf_cnpj,
-            email: data.client_email,
-            address: data.client_address,
-            razao_social: data.client_name,
+            id: clientFull?.id ?? clientId ?? null,
+            full_name: clientFull?.full_name ?? data.client_name ?? null,
+            cpf: clientFull?.cpf ?? data.client_cpf_cnpj ?? null,
+            cnpj: clientFull?.cnpj ?? null,
+            rg: clientFull?.rg ?? null,
+            email: (Array.isArray(clientFull?.emails) ? clientFull.emails[0] : null) ?? data.client_email ?? null,
+            address: data.client_address ?? null,
+            phone: clientFull?.phone_e164 ?? null,
+            razao_social: clientFull?.company_name ?? clientFull?.full_name ?? data.client_name ?? null,
+            nome_fantasia: clientFull?.company_name ?? null,
+            street: clientFull?.street ?? null,
+            street_number: clientFull?.street_number ?? null,
+            complement: clientFull?.complement ?? null,
+            neighborhood: clientFull?.neighborhood ?? null,
+            city: clientFull?.city ?? null,
+            state: clientFull?.state ?? null,
+            zip_code: clientFull?.zip_code ?? null,
+            birth_date: clientFull?.birth_date ?? null,
           },
           deal: {
             value: data.total_value ?? dealValue ?? null,
