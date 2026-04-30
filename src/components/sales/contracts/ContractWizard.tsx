@@ -863,13 +863,6 @@ export const ContractWizard = ({
     }
   };
 
-  const goNext = async () => {
-    if (!canNext) return;
-    if (step === "client") {
-      await persistClientFromPlaceholders();
-    }
-    setStep(allKeys[currentIdx + 1]);
-  };
 
 
   /* ---- Render ---- */
