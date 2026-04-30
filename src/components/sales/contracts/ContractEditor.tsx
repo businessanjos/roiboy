@@ -317,14 +317,7 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
       <fieldset disabled={disabled} className="space-y-3">
         <legend className="text-sm font-semibold text-foreground">Modalidade e valores</legend>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs">Duração (meses)</Label>
-            <Input
-              type="number"
-              value={data.contract_duration_months ?? ""}
-              onChange={(e) => update("contract_duration_months", Number(e.target.value) || 0)}
-            />
-          </div>
+          {/* Duração removida: já está fixa no template do contrato. */}
           {data.service_mode === "hours" && (
             <>
               <div>
