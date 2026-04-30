@@ -142,7 +142,9 @@ export const DigitalContractTab = ({
   const [templateHtml, setTemplateHtml] = useState<string | null>(null);
   const [templateVariables, setTemplateVariables] = useState<TemplateVariableDef[]>([]);
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, any>>({});
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
+  const pdfPreviewRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
 
