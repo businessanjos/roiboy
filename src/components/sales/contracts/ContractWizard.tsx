@@ -1096,8 +1096,8 @@ export const ContractWizard = ({
                 disabled={disabled}
                 onCnpjLookup={step === "client" ? handleCnpjLookup : undefined}
                 cnpjLooking={cnpj.loading}
-                onCpfLookup={step === "client" ? handleCpfLookup : undefined}
-                cpfLooking={cpf.loading}
+                onCpfLookup={undefined}
+                cpfLooking={false}
               />
             ))}
           </div>
