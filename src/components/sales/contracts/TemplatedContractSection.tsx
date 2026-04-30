@@ -65,6 +65,33 @@ export const TemplatedContractSection = ({
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [numericDrafts, setNumericDrafts] = useState<Record<string, string>>({});
+
+  const parseDecimalInput = (raw: string) => {
+    const cleaned = raw.replace(/[^\d,.-]/g, "");
+    if (!cleaned || cleaned === "-" || cleaned === "," || cleaned === ".") return null;
+    const lastComma = cleaned.lastIndexOf(",");
+    const lastDot = cleaned.lastIndexOf(".");
+    const decimalIndex = Math.max(lastComma, lastDot);
+    const integerPart = decimalIndex >= 0 ? cleaned.slice(0, decimalIndex).replace(/[^\d-]/g, "") : cleaned.replace(/[^\d-]/g, "");
+    const decimalPart = decimalIndex >= 0 ? cleaned.slice(decimalIndex + 1).replace(/\D/g, "") : "";
+    const normalized = decimalPart ? `${integerPart || "0"}.${decimalPart}` : integerPart;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const displayNumericValue = (key: string, value: any) => {
+    if (numericDrafts[key] !== undefined) return numericDrafts[key];
+    return value === "" || value === null || value === undefined ? "" : String(value).replace(".", ",");
+  };
+
+  const finishNumericEdit = (key: string) => {
+    setNumericDrafts((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -207,26 +234,19 @@ export const TemplatedContractSection = ({
           type="text"
           inputMode="decimal"
           placeholder={v.type === "currency" ? "0,00" : "0"}
-          value={value === "" || value === null || value === undefined ? "" : String(value).replace(".", ",")}
+          value={displayNumericValue(v.key, value)}
           onChange={(e) => {
-            const raw = e.target.value;
-            if (raw === "") {
-              updatePlaceholder(v.key, "");
-              return;
-            }
-            // Allow only digits, comma, dot and minus sign while typing
-            const cleaned = raw.replace(/[^\d,.-]/g, "");
-            // Store as string with comma so the user can type freely (e.g. "7,00")
-            updatePlaceholder(v.key, cleaned);
+            const cleaned = e.target.value.replace(/[^\d,.-]/g, "");
+            setNumericDrafts((prev) => ({ ...prev, [v.key]: cleaned }));
+            const parsed = parseDecimalInput(cleaned);
+            updatePlaceholder(v.key, cleaned === "" ? "" : parsed ?? cleaned);
           }}
           onBlur={(e) => {
             const raw = e.target.value.trim();
-            if (!raw) return;
-            const normalized = raw.replace(/\./g, "").replace(",", ".");
-            const num = parseFloat(normalized);
-            if (Number.isFinite(num)) {
-              updatePlaceholder(v.key, num);
-            }
+            const parsed = parseDecimalInput(raw);
+            if (!raw) updatePlaceholder(v.key, "");
+            if (parsed !== null) updatePlaceholder(v.key, parsed);
+            finishNumericEdit(v.key);
           }}
         />
       );
