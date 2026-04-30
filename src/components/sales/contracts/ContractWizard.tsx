@@ -117,6 +117,24 @@ const STEPS_META: Record<StepKey, StepDef> = {
   },
 };
 
+/**
+ * Placeholders fixos da CONTRATADA (Eternum Mentoring Club Ltda).
+ * Esses dados estão hardcoded no template e NUNCA devem aparecer no wizard
+ * (nem em etapas de preenchimento, nem na revisão, nem no progresso).
+ */
+const isFixedContratadaKey = (key: string): boolean => {
+  const k = (key || "").toUpperCase();
+  return (
+    /FORO/.test(k) ||
+    /CONTRATADA/.test(k) ||
+    /ETERNUM/.test(k) ||
+    /REPRESENTANTE/.test(k) ||
+    /EMPRESA(_|$)/.test(k) ||
+    /COMPANY(_|$)/.test(k) ||
+    /BANCO|AGENCIA|AGÊNCIA|CONTA_|^CONTA$|^PIX$|PIX_/.test(k)
+  );
+};
+
 const groupForVariable = (v: TemplateVariableDef): StepKey => {
   const src = (v.source ?? "").toLowerCase();
   const key = v.key.toLowerCase();
