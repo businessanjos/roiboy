@@ -23,6 +23,39 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
   const [copyingBilling, setCopyingBilling] = useState(false);
   const [billingTipo, setBillingTipo] = useState<string | null>(null);
   const [billingChecked, setBillingChecked] = useState(false);
+  const [currencyDrafts, setCurrencyDrafts] = useState<Record<string, string>>({});
+
+  const parseDecimalInput = (raw: string) => {
+    const cleaned = raw.replace(/[^\d,.-]/g, "");
+    if (!cleaned || cleaned === "-" || cleaned === "," || cleaned === ".") return null;
+    const lastComma = cleaned.lastIndexOf(",");
+    const lastDot = cleaned.lastIndexOf(".");
+    const decimalIndex = Math.max(lastComma, lastDot);
+    const integerPart = decimalIndex >= 0 ? cleaned.slice(0, decimalIndex).replace(/[^\d-]/g, "") : cleaned.replace(/[^\d-]/g, "");
+    const decimalPart = decimalIndex >= 0 ? cleaned.slice(decimalIndex + 1).replace(/\D/g, "") : "";
+    const normalized = decimalPart ? `${integerPart || "0"}.${decimalPart}` : integerPart;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const displayDecimal = (field: keyof DigitalContractData, value: number | null | undefined) => {
+    if (currencyDrafts[field as string] !== undefined) return currencyDrafts[field as string];
+    return value === undefined || value === null ? "" : Number(value).toFixed(2).replace(".", ",");
+  };
+
+  const updateCurrencyField = (field: keyof DigitalContractData, raw: string, apply: (num: number | null) => void) => {
+    const cleaned = raw.replace(/[^\d,.-]/g, "");
+    setCurrencyDrafts((prev) => ({ ...prev, [field as string]: cleaned }));
+    apply(cleaned === "" ? null : parseDecimalInput(cleaned));
+  };
+
+  const finishCurrencyEdit = (field: keyof DigitalContractData) => {
+    setCurrencyDrafts((prev) => {
+      const next = { ...prev };
+      delete next[field as string];
+      return next;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -402,10 +435,11 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
               <div>
                 <Label className="text-xs">Hora extra (R$)</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  value={data.extra_hour_rate ?? ""}
-                  onChange={(e) => update("extra_hour_rate", Number(e.target.value) || 0)}
+                  type="text"
+                  inputMode="decimal"
+                  value={displayDecimal("extra_hour_rate", data.extra_hour_rate)}
+                  onChange={(e) => updateCurrencyField("extra_hour_rate", e.target.value, (num) => update("extra_hour_rate", num))}
+                  onBlur={() => finishCurrencyEdit("extra_hour_rate")}
                 />
               </div>
             </>
@@ -414,14 +448,15 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
           <div>
             <Label className="text-xs">Valor total (R$)</Label>
             <Input
-              type="number"
-              step="0.01"
-              value={data.total_value ?? ""}
+              type="text"
+              inputMode="decimal"
+              value={displayDecimal("total_value", data.total_value)}
               onChange={(e) => {
-                const total = Number(e.target.value) || 0;
+                const total = parseDecimalInput(e.target.value) ?? 0;
                 const down = Number(data.down_payment_value ?? 0);
                 const installments = down > 0 ? 11 : 12;
                 const base = down > 0 ? Math.max(total - down, 0) : total;
+                setCurrencyDrafts((prev) => ({ ...prev, total_value: e.target.value.replace(/[^\d,.-]/g, "") }));
                 onChange({
                   ...data,
                   total_value: total,
@@ -429,6 +464,7 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
                   installment_value: installments > 0 ? base / installments : 0,
                 });
               }}
+              onBlur={() => finishCurrencyEdit("total_value")}
             />
           </div>
           {/* 2. Forma de pagamento */}
@@ -462,16 +498,18 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
           <div>
             <Label className="text-xs">Entrada (R$)</Label>
             <Input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               min="0"
-              value={data.down_payment_value ?? ""}
+              value={displayDecimal("down_payment_value", data.down_payment_value)}
               onChange={(e) => {
-                const down = e.target.value === "" ? null : Number(e.target.value);
+                const cleaned = e.target.value.replace(/[^\d,.-]/g, "");
+                const down = cleaned === "" ? null : parseDecimalInput(cleaned);
                 const total = Number(data.total_value ?? 0);
                 const downNum = Number(down ?? 0);
                 const installments = downNum > 0 ? 11 : 12;
                 const base = downNum > 0 ? Math.max(total - downNum, 0) : total;
+                setCurrencyDrafts((prev) => ({ ...prev, down_payment_value: cleaned }));
                 onChange({
                   ...data,
                   down_payment_value: down,
@@ -479,6 +517,7 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
                   installment_value: installments > 0 ? base / installments : 0,
                 });
               }}
+              onBlur={() => finishCurrencyEdit("down_payment_value")}
               placeholder="0,00"
             />
           </div>
