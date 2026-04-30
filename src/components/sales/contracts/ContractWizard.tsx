@@ -494,6 +494,7 @@ export const ContractWizard = ({
   const cpf = useCpfLookup();
   const [docType, setDocType] = useState<"cnpj" | "cpf">("cnpj");
   const [docInput, setDocInput] = useState("");
+  const [docBirth, setDocBirth] = useState("");
 
   /* ---- Load templates & products ---- */
   useEffect(() => {
@@ -737,13 +738,17 @@ export const ContractWizard = ({
   };
 
   const handleCpfLookup = async (raw: string) => {
-    const data = await cpf.lookup(raw);
+    if (!docBirth) {
+      toast.error("Informe a data de nascimento para consultar o CPF");
+      return;
+    }
+    const data = await cpf.lookup(raw, docBirth);
     if (!data) return;
 
     const updates: Record<string, any> = {};
     const isoNasc = (() => {
       const s = data.nascimento;
-      if (!s || typeof s !== "string") return null;
+      if (!s || typeof s !== "string") return docBirth || null;
       if (s.includes("/")) {
         const [d, m, y] = s.split("/");
         return `${y}-${m?.padStart(2, "0")}-${d?.padStart(2, "0")}`;
@@ -996,6 +1001,17 @@ export const ContractWizard = ({
                   }
                 }}
               />
+              {docType === "cpf" && (
+                <Input
+                  type="date"
+                  value={docBirth}
+                  onChange={(e) => setDocBirth(e.target.value)}
+                  disabled={disabled}
+                  className="h-9 sm:w-[160px]"
+                  placeholder="Data de nascimento"
+                  title="Data de nascimento (obrigatória para consulta de CPF)"
+                />
+              )}
               <Button
                 type="button"
                 size="sm"
