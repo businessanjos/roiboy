@@ -1298,7 +1298,13 @@ export const ContractWizard = ({
           ) : (
             <Button
               size="sm"
-              onClick={() => canNext && setStep(allKeys[currentIdx + 1])}
+              onClick={async () => {
+                if (!canNext) return;
+                if (step === "client") {
+                  await persistClientFromPlaceholders();
+                }
+                setStep(allKeys[currentIdx + 1]);
+              }}
               disabled={!canNext || disabled}
             >
               {allKeys[currentIdx + 1] === "review" ? (
