@@ -21,9 +21,11 @@ export interface TemplateVariableDef {
 
 export interface AutofillContext {
   client?: {
+    id?: string | null;
     full_name?: string | null;
     cpf?: string | null;
     cnpj?: string | null;
+    rg?: string | null;
     email?: string | null;
     address?: string | null;
     phone?: string | null;
@@ -31,6 +33,14 @@ export interface AutofillContext {
     nome_fantasia?: string | null;
     inscricao_municipal?: string | null;
     inscricao_estadual?: string | null;
+    street?: string | null;
+    street_number?: string | null;
+    complement?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
+    state?: string | null;
+    zip_code?: string | null;
+    birth_date?: string | null;
   };
   deal?: {
     value?: number | null;
