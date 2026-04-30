@@ -131,7 +131,12 @@ const isFixedContratadaKey = (key: string): boolean => {
     /REPRESENTANTE/.test(k) ||
     /EMPRESA(_|$)/.test(k) ||
     /COMPANY(_|$)/.test(k) ||
-    /BANCO|AGENCIA|AGÊNCIA|CONTA_|^CONTA$|^PIX$|PIX_/.test(k)
+    /BANCO|AGENCIA|AGÊNCIA|CONTA_|^CONTA$|^PIX$|PIX_/.test(k) ||
+    // Dados da mentoria/produto que já estão fixos no template do contrato
+    /DIA_?(DA_?)?SEMANA|WEEKDAY|DAY_?OF_?WEEK/.test(k) ||
+    /HORARIO|HORÁRIO|HOUR|TIME_?MENTORIA/.test(k) ||
+    /PERIODO|PERÍODO|MATUTINO|VESPERTINO|SHIFT/.test(k) ||
+    /DURACAO|DURAÇÃO|DURATION|MESES|MONTHS/.test(k)
   );
 };
 
