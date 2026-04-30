@@ -494,6 +494,7 @@ export const ContractWizard = ({
   const cpf = useCpfLookup();
   const [docType, setDocType] = useState<"cnpj" | "cpf">("cnpj");
   const [docInput, setDocInput] = useState("");
+  const [docBirth, setDocBirth] = useState("");
 
   /* ---- Load templates & products ---- */
   useEffect(() => {
