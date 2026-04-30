@@ -312,7 +312,6 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
       </fieldset>
 
       {/* Objeto e entregas removidos: já estão fixos no template do contrato. */}
-      </fieldset>
 
       {/* MODALIDADE / VALORES */}
       <fieldset disabled={disabled} className="space-y-3">
