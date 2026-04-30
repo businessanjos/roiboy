@@ -84,6 +84,7 @@ const EverIA = lazyRetry(() => import("./pages/EverIA"));
 const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
 const Contracts = lazyRetry(() => import("./pages/Contracts"));
 const SalesPipeline = lazyRetry(() => import("./pages/SalesPipeline"));
+const SalesCalendar = lazyRetry(() => import("./pages/SalesCalendar"));
 const SpiffsTracking = lazyRetry(() => import("./pages/SpiffsTracking"));
 const Leads = lazyRetry(() => import("./pages/Leads"));
 
@@ -192,6 +193,7 @@ const App = () => (
                             <Route path="/sales/contracts/templates" element={<SalesContractTemplates />} />
                             <Route path="/sales/contracts/defaults" element={<ContractDefaultsSettings />} />
                             <Route path="/pipeline" element={<SalesPipeline />} />
+                            <Route path="/sales-calendar" element={<SalesCalendar />} />
                             <Route path="/sales-team" element={<SalesTeam />} />
                             <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
                             <Route path="/leads" element={<Leads />} />
