@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {
   Loader2,
   Save,
@@ -12,6 +13,7 @@ import {
   RefreshCw,
   Eye,
   Pencil,
+  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -140,7 +142,9 @@ export const DigitalContractTab = ({
   const [templateHtml, setTemplateHtml] = useState<string | null>(null);
   const [templateVariables, setTemplateVariables] = useState<TemplateVariableDef[]>([]);
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, any>>({});
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
+  const pdfPreviewRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
 
@@ -336,13 +340,14 @@ export const DigitalContractTab = ({
   };
 
   const handleGeneratePdf = async () => {
-    if (!docRef.current || !contract) {
+    const target = pdfPreviewRef.current ?? docRef.current;
+    if (!target || !contract) {
       toast.error("Salve o contrato antes de gerar o PDF.");
       return;
     }
     setGeneratingPdf(true);
     try {
-      const canvas = await html2canvas(docRef.current, {
+      const canvas = await html2canvas(target, {
         scale: 2,
         backgroundColor: "#ffffff",
       });
@@ -383,6 +388,7 @@ export const DigitalContractTab = ({
       setContract({ ...contract, signed_pdf_path: filePath });
       if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
       toast.success("PDF gerado");
+      setPdfPreviewOpen(false);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message ?? "Erro ao gerar PDF");
@@ -491,9 +497,20 @@ export const DigitalContractTab = ({
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           <span className="ml-1.5">Salvar</span>
         </Button>
-        <Button size="sm" variant="outline" onClick={handleGeneratePdf} disabled={!contract || generatingPdf}>
-          {generatingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
-          <span className="ml-1.5">PDF</span>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            if (!contract) {
+              toast.error("Salve o contrato antes de gerar o PDF.");
+              return;
+            }
+            setPdfPreviewOpen(true);
+          }}
+          disabled={!contract || generatingPdf}
+        >
+          <Eye className="h-3.5 w-3.5" />
+          <span className="ml-1.5">Pré-visualizar PDF</span>
         </Button>
         <Button size="sm" variant="outline" onClick={handleCopyPublicLink} disabled={!contract?.share_token}>
           <LinkIcon className="h-3.5 w-3.5" />
@@ -577,6 +594,58 @@ export const DigitalContractTab = ({
           </ScrollArea>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={pdfPreviewOpen} onOpenChange={(o) => !generatingPdf && setPdfPreviewOpen(o)}>
+        <DialogContent className="max-w-5xl w-[95vw] h-[92vh] p-0 flex flex-col gap-0">
+          <DialogHeader className="px-5 py-3 border-b shrink-0">
+            <DialogTitle className="text-base">Pré-visualização do contrato</DialogTitle>
+            <DialogDescription className="text-xs">
+              Revise o layout exatamente como aparecerá no PDF antes de gerar o arquivo final.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 bg-muted/30">
+            <div className="mx-auto my-4 max-w-[210mm] bg-background shadow-md">
+              <div ref={pdfPreviewRef} className="p-6">
+                {templateHtml ? (
+                  <TemplatedContractPreview
+                    templateHtml={templateHtml}
+                    templateVariables={templateVariables}
+                    placeholderValues={placeholderValues}
+                  />
+                ) : (
+                  <ContractDocument data={data} />
+                )}
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="px-5 py-3 border-t shrink-0 flex-row sm:justify-between gap-2">
+            <p className="text-[11px] text-muted-foreground self-center">
+              Formato A4 · Renderização final usada na geração do PDF
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPdfPreviewOpen(false)}
+                disabled={generatingPdf}
+              >
+                <X className="h-3.5 w-3.5 mr-1.5" />
+                Fechar
+              </Button>
+              <Button size="sm" onClick={handleGeneratePdf} disabled={generatingPdf}>
+                {generatingPdf ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                ) : (
+                  <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                {generatingPdf ? "Gerando..." : "Confirmar e gerar PDF"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
