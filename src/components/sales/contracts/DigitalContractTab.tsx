@@ -143,6 +143,13 @@ export const DigitalContractTab = ({
   const [templateVariables, setTemplateVariables] = useState<TemplateVariableDef[]>([]);
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, any>>({});
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [dealExtras, setDealExtras] = useState<{ entry_value?: number | null; won_at?: string | null }>({});
+  const [productExtras, setProductExtras] = useState<{
+    payment_methods?: string[] | null;
+    billing_period?: string | null;
+    cash_price?: number | null;
+    installment_price?: number | null;
+  }>({});
   const docRef = useRef<HTMLDivElement>(null);
   const pdfPreviewRef = useRef<HTMLDivElement>(null);
 
