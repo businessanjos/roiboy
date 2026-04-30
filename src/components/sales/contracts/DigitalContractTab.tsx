@@ -340,7 +340,8 @@ export const DigitalContractTab = ({
   };
 
   const handleGeneratePdf = async () => {
-    if (!docRef.current || !contract) {
+    const target = pdfPreviewRef.current ?? docRef.current;
+    if (!target || !contract) {
       toast.error("Salve o contrato antes de gerar o PDF.");
       return;
     }
