@@ -958,7 +958,9 @@ export const ContractWizard = ({
                 Buscar dados do contratante
               </span>
               <span className="text-[11px] text-muted-foreground">
-                Preenche automaticamente nome, endereço e contatos.
+                {docType === "cnpj"
+                  ? "Preenche automaticamente nome, endereço e contatos."
+                  : "Informe o CPF e preencha os demais dados manualmente."}
               </span>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -995,37 +997,28 @@ export const ContractWizard = ({
                 disabled={disabled}
                 className="h-9 flex-1"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && docType === "cnpj") {
                     e.preventDefault();
                     handleDocLookup();
                   }
                 }}
               />
-              {docType === "cpf" && (
-                <Input
-                  type="date"
-                  value={docBirth}
-                  onChange={(e) => setDocBirth(e.target.value)}
-                  disabled={disabled}
-                  className="h-9 sm:w-[160px]"
-                  placeholder="Data de nascimento"
-                  title="Data de nascimento (obrigatória para consulta de CPF)"
-                />
+              {docType === "cnpj" && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleDocLookup}
+                  disabled={disabled || cnpj.loading || !docInput}
+                  className="shrink-0 gap-1.5"
+                >
+                  {cnpj.loading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Search className="h-3.5 w-3.5" />
+                  )}
+                  Buscar
+                </Button>
               )}
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleDocLookup}
-                disabled={disabled || cnpj.loading || cpf.loading || !docInput}
-                className="shrink-0 gap-1.5"
-              >
-                {(docType === "cnpj" ? cnpj.loading : cpf.loading) ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Search className="h-3.5 w-3.5" />
-                )}
-                Buscar
-              </Button>
             </div>
           </div>
         )}
@@ -1103,8 +1096,8 @@ export const ContractWizard = ({
                 disabled={disabled}
                 onCnpjLookup={step === "client" ? handleCnpjLookup : undefined}
                 cnpjLooking={cnpj.loading}
-                onCpfLookup={step === "client" ? handleCpfLookup : undefined}
-                cpfLooking={cpf.loading}
+                onCpfLookup={undefined}
+                cpfLooking={false}
               />
             ))}
           </div>
