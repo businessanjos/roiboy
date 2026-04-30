@@ -210,6 +210,32 @@ const inferValueFromKey = (
     return ctx.user?.name ?? null;
   }
 
+  // ============== CONTRATANTE (Cliente) — heurísticas por nome ==============
+  const c = ctx.client ?? {};
+  const isContratada = /(EMPRESA|CONTRATADA|COMPANY)/.test(K);
+  if (!isContratada) {
+    if (/^CNPJ$|CONTRATANTE_CNPJ|CLIENTE_CNPJ|CLIENT_CNPJ/.test(K)) return c.cnpj ?? null;
+    if (/^CPF$|CONTRATANTE_CPF|CLIENTE_CPF|CLIENT_CPF/.test(K)) return c.cpf ?? null;
+    if (/^RG$|CONTRATANTE_RG|CLIENTE_RG/.test(K)) return c.rg ?? null;
+    if (/RAZAO_?SOCIAL|RAZÃO_?SOCIAL/.test(K)) return c.razao_social ?? c.full_name ?? null;
+    if (/NOME_?FANTASIA|FANTASIA/.test(K)) return c.nome_fantasia ?? null;
+    if (/INSCRICAO_?MUNICIPAL|INSCRIÇÃO_?MUNICIPAL|^IM$|_IM$/.test(K)) return c.inscricao_municipal ?? null;
+    if (/INSCRICAO_?ESTADUAL|INSCRIÇÃO_?ESTADUAL|^IE$|_IE$/.test(K)) return c.inscricao_estadual ?? null;
+    if (/(^|_)NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|CONTRATANTE(_NOME)?$/.test(K)) {
+      return c.full_name ?? c.razao_social ?? null;
+    }
+    if (/EMAIL|E_?MAIL/.test(K)) return c.email ?? null;
+    if (/CELULAR|TELEFONE|WHATSAPP|PHONE/.test(K)) return c.phone ?? null;
+    if (/(^|_)CEP$|ZIP/.test(K)) return c.zip_code ?? null;
+    if (/(^|_)RUA$|LOGRADOURO|^ENDERECO$|^ENDEREÇO$/.test(K)) return c.street ?? c.address ?? null;
+    if (/^NUMERO$|NUM_END|NUMERO_ENDERECO/.test(K)) return c.street_number ?? null;
+    if (/COMPLEMENTO/.test(K)) return c.complement ?? null;
+    if (/BAIRRO/.test(K)) return c.neighborhood ?? null;
+    if (/(^|_)CIDADE$/.test(K) && !/FORO/.test(K)) return c.city ?? null;
+    if (/(^|_)ESTADO$|^UF$/.test(K)) return c.state ?? null;
+    if (/NASCIMENTO|BIRTH|^DOB$/.test(K)) return c.birth_date ?? null;
+  }
+
   return null;
 };
 
