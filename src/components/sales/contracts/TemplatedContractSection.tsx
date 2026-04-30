@@ -22,6 +22,7 @@ import {
   type AutofillContext,
   type TemplateVariableDef,
 } from "@/lib/contractTemplates";
+import rykasMentoringLogo from "@/assets/rykas-mentoring-logo.png";
 
 interface TemplatedContractSectionProps {
   templateId: string | null;
