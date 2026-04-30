@@ -83,7 +83,7 @@ interface TemplateOption {
 /* Heuristics — group variables into friendly steps                    */
 /* ================================================================== */
 
-type StepKey = "client" | "company" | "payment" | "details";
+type StepKey = "client" | "company" | "payment";
 
 interface StepDef {
   key: StepKey;
@@ -113,14 +113,7 @@ const STEPS_META: Record<StepKey, StepDef> = {
     label: "Valores & Pagamento",
     shortLabel: "Pagamento",
     icon: CreditCard,
-    description: "Valor total, parcelas e forma de cobrança.",
-  },
-  details: {
-    key: "details",
-    label: "Detalhes Finais",
-    shortLabel: "Detalhes",
-    icon: Settings2,
-    description: "Datas, foro, vigência e outras particularidades.",
+    description: "Valor total, parcelas, datas e forma de cobrança.",
   },
 };
 
@@ -142,17 +135,17 @@ const groupForVariable = (v: TemplateVariableDef): StepKey => {
     return "client";
   }
   if (/(empresa|contratada|company|banco|agencia|conta|pix)/i.test(key)) return "company";
-  if (/(valor|preco|parcela|installment|pagto|pagamento|desconto|entrada|down|extenso|moeda)/i.test(key)) {
+  if (
+    /(valor|preco|parcela|installment|pagto|pagamento|desconto|entrada|down|extenso|moeda|data|dt_|dia_|horario|periodo|duracao|meses|vigencia|foro|cidade_foro|orgao)/i.test(
+      key,
+    )
+  ) {
     return "payment";
-  }
-  if (/(data|dt_|dia_|horario|periodo|duracao|meses|vigencia|foro|cidade_foro|orgao)/i.test(key)) {
-    return "details";
   }
 
   // Currency/date types fallback
-  if (v.type === "currency" || v.type === "number") return "payment";
-  if (v.type === "date") return "details";
-  return "details";
+  if (v.type === "currency" || v.type === "number" || v.type === "date") return "payment";
+  return "client";
 };
 
 /* ================================================================== */
