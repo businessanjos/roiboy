@@ -46,6 +46,7 @@ import {
   type AutofillContext,
   type TemplateVariableDef,
 } from "@/lib/contractTemplates";
+import { numberToBRLExtenso } from "@/lib/numberToWordsBRL";
 
 /* ================================================================== */
 /* Public types                                                        */
