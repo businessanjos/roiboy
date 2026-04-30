@@ -594,6 +594,58 @@ export const DigitalContractTab = ({
           </ScrollArea>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={pdfPreviewOpen} onOpenChange={(o) => !generatingPdf && setPdfPreviewOpen(o)}>
+        <DialogContent className="max-w-5xl w-[95vw] h-[92vh] p-0 flex flex-col gap-0">
+          <DialogHeader className="px-5 py-3 border-b shrink-0">
+            <DialogTitle className="text-base">Pré-visualização do contrato</DialogTitle>
+            <DialogDescription className="text-xs">
+              Revise o layout exatamente como aparecerá no PDF antes de gerar o arquivo final.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 bg-muted/30">
+            <div className="mx-auto my-4 max-w-[210mm] bg-background shadow-md">
+              <div ref={pdfPreviewRef} className="p-6">
+                {templateHtml ? (
+                  <TemplatedContractPreview
+                    templateHtml={templateHtml}
+                    templateVariables={templateVariables}
+                    placeholderValues={placeholderValues}
+                  />
+                ) : (
+                  <ContractDocument data={data} />
+                )}
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="px-5 py-3 border-t shrink-0 flex-row sm:justify-between gap-2">
+            <p className="text-[11px] text-muted-foreground self-center">
+              Formato A4 · Renderização final usada na geração do PDF
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPdfPreviewOpen(false)}
+                disabled={generatingPdf}
+              >
+                <X className="h-3.5 w-3.5 mr-1.5" />
+                Fechar
+              </Button>
+              <Button size="sm" onClick={handleGeneratePdf} disabled={generatingPdf}>
+                {generatingPdf ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                ) : (
+                  <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                {generatingPdf ? "Gerando..." : "Confirmar e gerar PDF"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
