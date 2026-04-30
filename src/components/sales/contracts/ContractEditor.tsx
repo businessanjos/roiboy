@@ -23,6 +23,39 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
   const [copyingBilling, setCopyingBilling] = useState(false);
   const [billingTipo, setBillingTipo] = useState<string | null>(null);
   const [billingChecked, setBillingChecked] = useState(false);
+  const [currencyDrafts, setCurrencyDrafts] = useState<Record<string, string>>({});
+
+  const parseDecimalInput = (raw: string) => {
+    const cleaned = raw.replace(/[^\d,.-]/g, "");
+    if (!cleaned || cleaned === "-" || cleaned === "," || cleaned === ".") return null;
+    const lastComma = cleaned.lastIndexOf(",");
+    const lastDot = cleaned.lastIndexOf(".");
+    const decimalIndex = Math.max(lastComma, lastDot);
+    const integerPart = decimalIndex >= 0 ? cleaned.slice(0, decimalIndex).replace(/[^\d-]/g, "") : cleaned.replace(/[^\d-]/g, "");
+    const decimalPart = decimalIndex >= 0 ? cleaned.slice(decimalIndex + 1).replace(/\D/g, "") : "";
+    const normalized = decimalPart ? `${integerPart || "0"}.${decimalPart}` : integerPart;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const displayDecimal = (field: keyof DigitalContractData, value: number | null | undefined) => {
+    if (currencyDrafts[field as string] !== undefined) return currencyDrafts[field as string];
+    return value === undefined || value === null ? "" : String(value).replace(".", ",");
+  };
+
+  const updateCurrencyField = (field: keyof DigitalContractData, raw: string, apply: (num: number | null) => void) => {
+    const cleaned = raw.replace(/[^\d,.-]/g, "");
+    setCurrencyDrafts((prev) => ({ ...prev, [field as string]: cleaned }));
+    apply(cleaned === "" ? null : parseDecimalInput(cleaned));
+  };
+
+  const finishCurrencyEdit = (field: keyof DigitalContractData) => {
+    setCurrencyDrafts((prev) => {
+      const next = { ...prev };
+      delete next[field as string];
+      return next;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
