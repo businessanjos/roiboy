@@ -598,12 +598,38 @@ export const ContractWizard = ({
   /* ---- Mutations ---- */
 
   const updateField = (key: string, value: any) => {
+    const nextValues: Record<string, any> = { ...placeholderValues, [key]: value };
+
+    // Auto-fill any "extenso" placeholders when a total/contract value changes.
+    // Heuristic: triggering field is currency-typed AND its key matches valor/total/contrato/preco
+    // (and is NOT itself an extenso/parcela/entrada field).
+    const triggerVar = templateVariables.find((tv) => tv.key === key);
+    const isCurrencyTrigger = triggerVar?.type === "currency";
+    const triggerKeyUpper = key.toUpperCase();
+    const isTotalValueKey =
+      isCurrencyTrigger &&
+      /(VALOR|TOTAL|CONTRATO|PRECO|PREÇO)/.test(triggerKeyUpper) &&
+      !/(EXTENSO|PARCELA|ENTRADA|DESCONTO|MENSAL)/.test(triggerKeyUpper);
+
+    if (isTotalValueKey) {
+      const numeric = typeof value === "number" ? value : parseBRLInput(String(value ?? ""));
+      const extenso = numeric !== null && numeric !== undefined && Number.isFinite(numeric as number)
+        ? numberToBRLExtenso(numeric as number)
+        : "";
+      for (const tv of templateVariables) {
+        if (/EXTENSO/.test(tv.key.toUpperCase())) {
+          // Always overwrite so the extenso stays in sync with the value.
+          nextValues[tv.key] = extenso;
+        }
+      }
+    }
+
     onChange({
       template_id: templateId,
       product_id: productId,
       template_html: templateHtml,
       template_variables: templateVariables,
-      placeholder_values: { ...placeholderValues, [key]: value },
+      placeholder_values: nextValues,
     });
   };
 
