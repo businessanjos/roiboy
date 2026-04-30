@@ -82,7 +82,9 @@ export const TemplatedContractSection = ({
 
   const displayNumericValue = (key: string, value: any) => {
     if (numericDrafts[key] !== undefined) return numericDrafts[key];
-    return value === "" || value === null || value === undefined ? "" : String(value).replace(".", ",");
+    if (value === "" || value === null || value === undefined) return "";
+    const numeric = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(numeric) ? numeric.toFixed(2).replace(".", ",") : String(value).replace(".", ",");
   };
 
   const finishNumericEdit = (key: string) => {
