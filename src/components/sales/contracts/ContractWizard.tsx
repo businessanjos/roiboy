@@ -189,10 +189,17 @@ const formatBRLInput = (n: number | string) => {
   return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const parseBRLInput = (s: string): number => {
-  const cleaned = s.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-  const n = parseFloat(cleaned);
-  return Number.isFinite(n) ? n : 0;
+const cleanBRLInput = (s: string) => s.replace(/[^\d,.-]/g, "");
+
+const parseBRLInput = (s: string): number | null => {
+  const cleaned = cleanBRLInput(s);
+  if (!cleaned || cleaned === "," || cleaned === "." || cleaned === "-") return null;
+  const decimalSeparator = Math.max(cleaned.lastIndexOf(","), cleaned.lastIndexOf("."));
+  const integerPart = decimalSeparator >= 0 ? cleaned.slice(0, decimalSeparator).replace(/[^\d-]/g, "") : cleaned.replace(/[^\d-]/g, "");
+  const decimalPart = decimalSeparator >= 0 ? cleaned.slice(decimalSeparator + 1).replace(/\D/g, "") : "";
+  const normalized = decimalPart ? `${integerPart || "0"}.${decimalPart}` : integerPart;
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : null;
 };
 
 const guessFieldHelp = (v: TemplateVariableDef): string | null => {
