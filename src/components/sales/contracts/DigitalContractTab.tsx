@@ -579,6 +579,28 @@ export const DigitalContractTab = ({
             value: data.total_value ?? dealValue ?? null,
             installments: data.installments ?? null,
             installment_value: data.installment_value ?? null,
+            entry_value: data.down_payment_value ?? dealExtras.entry_value ?? null,
+            payment_method: data.payment_method ?? null,
+            start_date:
+              data.first_due_date ??
+              (dealExtras.won_at ? dealExtras.won_at.slice(0, 10) : null) ??
+              new Date().toISOString().slice(0, 10),
+            end_date: null,
+          },
+          product: {
+            payment_method: Array.isArray(productExtras.payment_methods) && productExtras.payment_methods.length > 0
+              ? productExtras.payment_methods[0]
+              : null,
+            installments:
+              productExtras.installment_price && productExtras.installment_price > 0 && data.total_value
+                ? Math.max(1, Math.round(Number(data.total_value) / Number(productExtras.installment_price)))
+                : null,
+            billing_period: productExtras.billing_period ?? null,
+            duration_months: null,
+          },
+          user: {
+            name: currentUser?.name ?? null,
+            email: currentUser?.email ?? null,
           },
           company: {
             name: data.company_name,
