@@ -204,10 +204,30 @@ export const TemplatedContractSection = ({
     if (v.type === "number" || v.type === "currency") {
       return (
         <Input
-          type="number"
-          step="0.01"
-          value={value}
-          onChange={(e) => updatePlaceholder(v.key, e.target.value === "" ? "" : Number(e.target.value))}
+          type="text"
+          inputMode="decimal"
+          placeholder={v.type === "currency" ? "0,00" : "0"}
+          value={value === "" || value === null || value === undefined ? "" : String(value).replace(".", ",")}
+          onChange={(e) => {
+            const raw = e.target.value;
+            if (raw === "") {
+              updatePlaceholder(v.key, "");
+              return;
+            }
+            // Allow only digits, comma, dot and minus sign while typing
+            const cleaned = raw.replace(/[^\d,.-]/g, "");
+            // Store as string with comma so the user can type freely (e.g. "7,00")
+            updatePlaceholder(v.key, cleaned);
+          }}
+          onBlur={(e) => {
+            const raw = e.target.value.trim();
+            if (!raw) return;
+            const normalized = raw.replace(/\./g, "").replace(",", ".");
+            const num = parseFloat(normalized);
+            if (Number.isFinite(num)) {
+              updatePlaceholder(v.key, num);
+            }
+          }}
         />
       );
     }
