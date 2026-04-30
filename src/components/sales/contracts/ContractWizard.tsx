@@ -926,7 +926,6 @@ export const ContractWizard = ({
 
   const renderStepContent = () => {
     if (step === "review") {
-      const rendered = renderTemplate(templateHtml ?? "", templateVariables, placeholderValues);
       return (
         <div className="space-y-4">
           {totalFilled < totalAll && (
@@ -942,11 +941,11 @@ export const ContractWizard = ({
               </div>
             </div>
           )}
-          <div className="rounded-xl border border-border bg-muted/30 p-4 max-h-[60vh] overflow-auto">
-            <div
-              className="bg-background rounded-md shadow-sm border border-border mx-auto contract-doc-preview prose prose-sm dark:prose-invert max-w-none"
-              style={{ maxWidth: 780, padding: "48px 64px" }}
-              dangerouslySetInnerHTML={{ __html: rendered }}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 max-h-[70vh] overflow-auto">
+            <TemplatedContractPreview
+              templateHtml={templateHtml}
+              templateVariables={templateVariables}
+              placeholderValues={placeholderValues}
             />
           </div>
         </div>
