@@ -47,6 +47,7 @@ import {
   type TemplateVariableDef,
 } from "@/lib/contractTemplates";
 import { numberToBRLExtenso } from "@/lib/numberToWordsBRL";
+import { TemplatedContractPreview } from "./TemplatedContractSection";
 
 /* ================================================================== */
 /* Public types                                                        */
