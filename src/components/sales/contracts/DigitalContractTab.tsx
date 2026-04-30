@@ -497,9 +497,20 @@ export const DigitalContractTab = ({
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           <span className="ml-1.5">Salvar</span>
         </Button>
-        <Button size="sm" variant="outline" onClick={handleGeneratePdf} disabled={!contract || generatingPdf}>
-          {generatingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
-          <span className="ml-1.5">PDF</span>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            if (!contract) {
+              toast.error("Salve o contrato antes de gerar o PDF.");
+              return;
+            }
+            setPdfPreviewOpen(true);
+          }}
+          disabled={!contract || generatingPdf}
+        >
+          <Eye className="h-3.5 w-3.5" />
+          <span className="ml-1.5">Pré-visualizar PDF</span>
         </Button>
         <Button size="sm" variant="outline" onClick={handleCopyPublicLink} disabled={!contract?.share_token}>
           <LinkIcon className="h-3.5 w-3.5" />
