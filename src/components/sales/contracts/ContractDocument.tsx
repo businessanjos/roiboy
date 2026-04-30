@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import rykasMentoringLogo from "@/assets/rykas-mentoring-logo.png";
 import {
   Building2,
   User,
