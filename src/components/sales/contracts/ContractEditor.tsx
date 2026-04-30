@@ -40,7 +40,7 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
 
   const displayDecimal = (field: keyof DigitalContractData, value: number | null | undefined) => {
     if (currencyDrafts[field as string] !== undefined) return currencyDrafts[field as string];
-    return value === undefined || value === null ? "" : String(value).replace(".", ",");
+    return value === undefined || value === null ? "" : Number(value).toFixed(2).replace(".", ",");
   };
 
   const updateCurrencyField = (field: keyof DigitalContractData, raw: string, apply: (num: number | null) => void) => {
