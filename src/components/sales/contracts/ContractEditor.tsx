@@ -313,174 +313,34 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
 
       {/* Objeto e entregas removidos: já estão fixos no template do contrato. */}
 
-      {/* MODALIDADE / VALORES */}
-      <fieldset disabled={disabled} className="space-y-3">
-        <legend className="text-sm font-semibold text-foreground">Modalidade e valores</legend>
-        <div className="grid grid-cols-2 gap-3">
-          {/* Duração removida: já está fixa no template do contrato. */}
-          {data.service_mode === "hours" && (
-            <>
-              <div>
-                <Label className="text-xs">Horas mensais</Label>
-                <Input
-                  type="number"
-                  value={data.monthly_hours ?? ""}
-                  onChange={(e) => update("monthly_hours", Number(e.target.value) || 0)}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Hora extra (R$)</Label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={displayDecimal("extra_hour_rate", data.extra_hour_rate)}
-                  onChange={(e) => updateCurrencyField("extra_hour_rate", e.target.value, (num) => update("extra_hour_rate", num))}
-                  onBlur={() => finishCurrencyEdit("extra_hour_rate")}
-                />
-              </div>
-            </>
-          )}
-          {/* 1. Valor total */}
-          <div>
-            <Label className="text-xs">Valor total (R$)</Label>
-            <Input
-              type="text"
-              inputMode="decimal"
-              value={displayDecimal("total_value", data.total_value)}
-              onChange={(e) => {
-                const total = parseDecimalInput(e.target.value) ?? 0;
-                const down = Number(data.down_payment_value ?? 0);
-                const installments = down > 0 ? 11 : 12;
-                const base = down > 0 ? Math.max(total - down, 0) : total;
-                setCurrencyDrafts((prev) => ({ ...prev, total_value: e.target.value.replace(/[^\d,.-]/g, "") }));
-                onChange({
-                  ...data,
-                  total_value: total,
-                  installments,
-                  installment_value: installments > 0 ? base / installments : 0,
-                });
-              }}
-              onBlur={() => finishCurrencyEdit("total_value")}
-            />
+      {/* MODALIDADE / VALORES — campos de valor, forma de pagamento, parcelas e datas
+          foram removidos pois já são preenchidos no Wizard de contrato.
+          Mantemos apenas os campos específicos do modo "horas" quando aplicável. */}
+      {data.service_mode === "hours" && (
+        <fieldset disabled={disabled} className="space-y-3">
+          <legend className="text-sm font-semibold text-foreground">Horas contratadas</legend>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Horas mensais</Label>
+              <Input
+                type="number"
+                value={data.monthly_hours ?? ""}
+                onChange={(e) => update("monthly_hours", Number(e.target.value) || 0)}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Hora extra (R$)</Label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={displayDecimal("extra_hour_rate", data.extra_hour_rate)}
+                onChange={(e) => updateCurrencyField("extra_hour_rate", e.target.value, (num) => update("extra_hour_rate", num))}
+                onBlur={() => finishCurrencyEdit("extra_hour_rate")}
+              />
+            </div>
           </div>
-          {/* 2. Forma de pagamento */}
-          <div>
-            <Label className="text-xs">Forma de pagamento</Label>
-            <Select
-              value={data.payment_method ?? ""}
-              onValueChange={(v) => update("payment_method", v)}
-            >
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Selecione a forma" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pix">PIX</SelectItem>
-                <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
-                <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
-                <SelectItem value="boleto">Boleto</SelectItem>
-                <SelectItem value="transferencia">Transferência</SelectItem>
-                <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                <SelectItem value="parcelado">Parcelado</SelectItem>
-                <SelectItem value="pix_cheques">Pix + Cheques</SelectItem>
-                <SelectItem value="pix_cartao_cheques">Pix + Cartão + Cheques</SelectItem>
-                <SelectItem value="pix_boleto_parcelado">Pix + Boleto parcelado</SelectItem>
-                <SelectItem value="cartao_cheques">Cartão + Cheques</SelectItem>
-                <SelectItem value="cartao_boleto_parcelado">Cartão + Boleto parcelado</SelectItem>
-                <SelectItem value="cartao_recorrencia">Cartão recorrência</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {/* 3. Entrada */}
-          <div>
-            <Label className="text-xs">Entrada (R$)</Label>
-            <Input
-              type="text"
-              inputMode="decimal"
-              min="0"
-              value={displayDecimal("down_payment_value", data.down_payment_value)}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/[^\d,.-]/g, "");
-                const down = cleaned === "" ? null : parseDecimalInput(cleaned);
-                const total = Number(data.total_value ?? 0);
-                const downNum = Number(down ?? 0);
-                const installments = downNum > 0 ? 11 : 12;
-                const base = downNum > 0 ? Math.max(total - downNum, 0) : total;
-                setCurrencyDrafts((prev) => ({ ...prev, down_payment_value: cleaned }));
-                onChange({
-                  ...data,
-                  down_payment_value: down,
-                  installments,
-                  installment_value: installments > 0 ? base / installments : 0,
-                });
-              }}
-              onBlur={() => finishCurrencyEdit("down_payment_value")}
-              placeholder="0,00"
-            />
-          </div>
-          {/* 4. Parcelas */}
-          <div>
-            <Label className="text-xs">Parcelas</Label>
-            <Input
-              type="number"
-              value={data.installments ?? ""}
-              onChange={(e) => {
-                const installments = Number(e.target.value) || 0;
-                const total = Number(data.total_value ?? 0);
-                const down = Number(data.down_payment_value ?? 0);
-                const base = down > 0 ? Math.max(total - down, 0) : total;
-                onChange({
-                  ...data,
-                  installments,
-                  installment_value: installments > 0 ? base / installments : 0,
-                });
-              }}
-            />
-          </div>
-          {/* 5. Valor da parcela (auto) */}
-          <div>
-            <Label className="text-xs">Valor da parcela (R$) — automático</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={
-                data.installment_value !== undefined && data.installment_value !== null
-                  ? Number(data.installment_value).toFixed(2)
-                  : ""
-              }
-              readOnly
-              className="bg-muted/50"
-            />
-          </div>
-          {/* 6. Data da entrada */}
-          <div>
-            <Label className="text-xs">Data da entrada</Label>
-            <Input
-              type="date"
-              value={data.down_payment_date ?? ""}
-              onChange={(e) => update("down_payment_date", e.target.value || null)}
-            />
-          </div>
-          {/* 7. Dia dos próximos vencimentos */}
-          <div>
-            <Label className="text-xs">Dia dos próximos vencimentos</Label>
-            <Input
-              type="number"
-              min={1}
-              max={31}
-              value={data.due_day ?? ""}
-              onChange={(e) => update("due_day", Number(e.target.value) || 0)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">1º vencimento (após entrada)</Label>
-            <Input
-              type="date"
-              value={data.first_due_date ?? ""}
-              onChange={(e) => update("first_due_date", e.target.value)}
-            />
-          </div>
-        </div>
-      </fieldset>
+        </fieldset>
+      )}
 
       {/* CONDIÇÕES */}
       <fieldset disabled={disabled} className="space-y-3">
