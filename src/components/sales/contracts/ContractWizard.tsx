@@ -1032,22 +1032,50 @@ export const ContractWizard = ({
               })
             : list;
 
-          // Quando CPF (PF) está selecionado, esconde campos exclusivos de PJ
+          // Quando CPF (PF) está selecionado, esconde Nome Fantasia / IE / IM
+          // e converte "Razão Social" em "Nome completo" (mantendo o placeholder
+          // do template para que o conteúdo continue sendo preenchido).
           if (step === "client" && docType === "cpf") {
             visibleList = visibleList.filter((v) => {
               const k = v.key.toUpperCase();
-              const isPjOnly =
-                /RAZAO_?SOCIAL|RAZÃO_?SOCIAL/.test(k) ||
+              const isHidden =
                 /FANTASIA/.test(k) ||
                 /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(k);
-              return !isPjOnly;
+              return !isHidden;
             });
+
+            const isNameKey = (k: string) =>
+              /NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|CONTRATANTE(_NOME)?$|^NOME$|RAZAO_?SOCIAL|RAZÃO_?SOCIAL/.test(
+                k.toUpperCase(),
+              );
+
+            // Renomeia "Razão Social" -> "Nome completo" no modo PF
+            visibleList = visibleList.map((v) => {
+              if (/RAZAO_?SOCIAL|RAZÃO_?SOCIAL/.test(v.key.toUpperCase())) {
+                return { ...v, label: "Nome completo" };
+              }
+              return v;
+            });
+
+            // Garante que exista pelo menos um campo de nome; se não houver,
+            // injeta um campo virtual "Nome completo" no topo.
+            const hasName = visibleList.some((v) => isNameKey(v.key));
+            if (!hasName) {
+              visibleList = [
+                {
+                  key: "NOME_COMPLETO",
+                  label: "Nome completo",
+                  type: "text",
+                  required: true,
+                } as TemplateVariableDef,
+                ...visibleList,
+              ];
+            }
+
             // Coloca o campo de "nome completo" como primeiro
             visibleList = [...visibleList].sort((a, b) => {
-              const ak = a.key.toUpperCase();
-              const bk = b.key.toUpperCase();
-              const aIsName = /NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|CONTRATANTE(_NOME)?$|^NOME$/.test(ak);
-              const bIsName = /NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|CONTRATANTE(_NOME)?$|^NOME$/.test(bk);
+              const aIsName = isNameKey(a.key);
+              const bIsName = isNameKey(b.key);
               if (aIsName && !bIsName) return -1;
               if (bIsName && !aIsName) return 1;
               return 0;
