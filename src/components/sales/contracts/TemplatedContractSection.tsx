@@ -336,11 +336,16 @@ export const TemplatedContractPreview = ({
   const rendered = useMemo(() => {
     const html = renderTemplate(templateHtml ?? "", templateVariables, placeholderValues);
     if (!html) return "";
-    // If the template references Rykas Mentoring, replace the first textual occurrence
-    // with the official logo image so the cover shows the brand instead of plain text.
-    if (/rykas\s*mentoring/i.test(html)) {
-      const logoImg = `<img src="${rykasMentoringLogo}" alt="Rykas Mentoring" style="height:56px;width:auto;object-fit:contain;display:block;margin:0 0 12px 0;" />`;
-      return html.replace(/Rykas\s*Mentoring/i, logoImg);
+    // Replace the visible cover brand mark only. The template also mentions
+    // "Rykas Mentoring" inside CSS comments, so replacing the first text match
+    // can miss the visible label entirely.
+    const logoImg = `<img src="${rykasMentoringLogo}" alt="Rykas Mentoring" style="height:48px;width:auto;object-fit:contain;display:block;" />`;
+    const coverMarkPattern = /<div class="rk-cover-mark">\s*<span class="dot"><\/span>\s*<span class="label">\s*Rykas\s*Mentoring\s*<\/span>\s*<\/div>/i;
+    if (coverMarkPattern.test(html)) {
+      return html.replace(coverMarkPattern, `<div class="rk-cover-mark">${logoImg}</div>`);
+    }
+    if (/<span class="label">\s*Rykas\s*Mentoring\s*<\/span>/i.test(html)) {
+      return html.replace(/<span class="label">\s*Rykas\s*Mentoring\s*<\/span>/i, logoImg);
     }
     return html;
   }, [templateHtml, templateVariables, placeholderValues]);
