@@ -22,6 +22,7 @@ import {
   type AutofillContext,
   type TemplateVariableDef,
 } from "@/lib/contractTemplates";
+import rykasMentoringLogo from "@/assets/rykas-mentoring-logo.png";
 
 interface TemplatedContractSectionProps {
   templateId: string | null;
@@ -332,10 +333,17 @@ export const TemplatedContractPreview = ({
   templateVariables,
   placeholderValues,
 }: TemplatedContractPreviewProps) => {
-  const rendered = useMemo(
-    () => renderTemplate(templateHtml ?? "", templateVariables, placeholderValues),
-    [templateHtml, templateVariables, placeholderValues],
-  );
+  const rendered = useMemo(() => {
+    const html = renderTemplate(templateHtml ?? "", templateVariables, placeholderValues);
+    if (!html) return "";
+    // If the template references Rykas Mentoring, replace the first textual occurrence
+    // with the official logo image so the cover shows the brand instead of plain text.
+    if (/rykas\s*mentoring/i.test(html)) {
+      const logoImg = `<img src="${rykasMentoringLogo}" alt="Rykas Mentoring" style="height:56px;width:auto;object-fit:contain;display:block;margin:0 0 12px 0;" />`;
+      return html.replace(/Rykas\s*Mentoring/i, logoImg);
+    }
+    return html;
+  }, [templateHtml, templateVariables, placeholderValues]);
 
   if (!templateHtml) {
     return (
