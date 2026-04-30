@@ -388,6 +388,15 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
               console.error("Error syncing meeting (non-blocking):", syncErr);
             }
           }
+        } else if (dueDate && formData.assigned_to) {
+          // Tarefas comuns (sem Zoom/Meet): sincronizar com Google Calendar do responsável
+          try {
+            await supabase.functions.invoke("sync-task-calendar", {
+              body: { task_id: task.id, action: "upsert" },
+            });
+          } catch (syncErr) {
+            console.error("Error syncing task to calendar (non-blocking):", syncErr);
+          }
         }
         
         logAudit({
