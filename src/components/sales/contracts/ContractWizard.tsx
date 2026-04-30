@@ -133,6 +133,7 @@ const isFixedContratadaKey = (key: string): boolean => {
     /COMPANY(_|$)/.test(k) ||
     /BANCO|AGENCIA|AGÊNCIA|CONTA_|^CONTA$|^PIX$|PIX_/.test(k) ||
     // Dados da mentoria/produto que já estão fixos no template do contrato
+    /MENTORIA/.test(k) ||
     /DIA_?(DA_?)?SEMANA|WEEKDAY|DAY_?OF_?WEEK/.test(k) ||
     /HORARIO|HORÁRIO|HOUR|TIME_?MENTORIA/.test(k) ||
     /PERIODO|PERÍODO|MATUTINO|VESPERTINO|SHIFT/.test(k) ||
