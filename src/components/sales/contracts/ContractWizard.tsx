@@ -288,6 +288,7 @@ interface FieldProps {
 }
 
 const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLooking, onCpfLookup, cpfLooking }: FieldProps) => {
+  const [currencyDraft, setCurrencyDraft] = useState<string | null>(null);
   const help = guessFieldHelp(v);
   const isCnpjField = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
   const isCpfField = /^cpf$|cpf_/i.test(v.key);
@@ -326,8 +327,17 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
         <Input
           inputMode="decimal"
           className="pl-9"
-          value={value === "" || value === null || value === undefined ? "" : formatBRLInput(value)}
-          onChange={(e) => onChange(parseBRLInput(e.target.value))}
+          value={currencyDraft ?? (value === "" || value === null || value === undefined ? "" : formatBRLInput(value))}
+          onChange={(e) => {
+            const cleaned = cleanBRLInput(e.target.value);
+            setCurrencyDraft(cleaned);
+            onChange(cleaned === "" ? "" : parseBRLInput(cleaned) ?? cleaned);
+          }}
+          onBlur={(e) => {
+            const cleaned = cleanBRLInput(e.target.value);
+            onChange(cleaned === "" ? "" : parseBRLInput(cleaned) ?? "");
+            setCurrencyDraft(null);
+          }}
           disabled={disabled}
           placeholder="0,00"
         />
