@@ -79,7 +79,11 @@ export const numberToBRLExtenso = (input: number | string | null | undefined): s
 
   const parts: string[] = [];
   if (reais > 0) {
-    parts.push(`${intToWords(reais)} ${reais === 1 ? "real" : "reais"}`);
+    // Use "de reais/real" when value is an exact multiple of milhão/bilhão (e.g. "um milhão de reais")
+    const isExactBigUnit = reais >= 1_000_000 && reais % 1_000_000 === 0;
+    const moeda = reais === 1 ? "real" : "reais";
+    const conector = isExactBigUnit ? " de " : " ";
+    parts.push(`${intToWords(reais)}${conector}${moeda}`);
   }
   if (centavos > 0) {
     parts.push(`${intToWords(centavos)} ${centavos === 1 ? "centavo" : "centavos"}`);
