@@ -983,18 +983,35 @@ export const ContractWizard = ({
 
   const renderStepContent = () => {
     if (step === "review") {
+      const emptyVars = effectiveVariables.filter((v) => {
+        const x = placeholderValues?.[v.key];
+        return x === null || x === undefined || x === "";
+      });
       return (
         <div className="space-y-4">
-          {totalFilled < totalAll && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium">
-                  {totalAll - totalFilled} campo(s) ainda não preenchido(s)
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Aparecerão como <code className="bg-background px-1 rounded">[ • ]</code> no contrato. Volte às etapas anteriores para preencher.
-                </p>
+          {emptyVars.length > 0 && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">
+                    {emptyVars.length} campo(s) ainda não preenchido(s)
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Preencha aqui mesmo — ou ficarão como <code className="bg-background px-1 rounded">[ • ]</code> no contrato.
+                  </p>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-x-4 gap-y-3 pt-2 border-t border-amber-500/20">
+                {emptyVars.map((v) => (
+                  <PlaceholderField
+                    key={v.key}
+                    v={v}
+                    value={placeholderValues?.[v.key]}
+                    onChange={(val) => updateField(v.key, val)}
+                    disabled={disabled}
+                  />
+                ))}
               </div>
             </div>
           )}
