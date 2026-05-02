@@ -642,19 +642,19 @@ export const ContractWizard = ({
     (async () => {
       const { data, error } = await supabase
         .from("payment_methods" as any)
-        .select("name,contract_label,has_entrada,has_parcelas,display_order,is_active")
+        .select("id,name,contract_label,category,display_order,is_active")
         .eq("account_id", accountId)
         .eq("is_active", true)
+        .order("category", { ascending: true })
         .order("display_order", { ascending: true })
         .order("name", { ascending: true });
       if (cancelled) return;
       if (error || !data || data.length === 0) return;
       const opts: PaymentOption[] = (data as any[]).map((r) => ({
-        value: String(r.name).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""),
+        value: r.id as string,
         label: r.name,
         contractLabel: r.contract_label || r.name,
-        hasEntrada: !!r.has_entrada,
-        hasParcelas: !!r.has_parcelas,
+        category: (r.category === "parcelado" ? "parcelado" : "a_vista") as PaymentCategory,
       }));
       setPaymentOptions(opts);
     })();
