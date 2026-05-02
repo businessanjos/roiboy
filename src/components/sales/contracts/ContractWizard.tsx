@@ -494,6 +494,31 @@ const classifyPaymentVar = (key: string): PaymentRole => {
   return "outros";
 };
 
+const LEGACY_PARCELA_VALOR_KEYS = [
+  "VALOR_PARCELA", "VALOR_DA_PARCELA", "PARCELA_VALOR",
+  "INSTALLMENT_VALUE", "MONTHLY_PAYMENT", "MENSALIDADE",
+];
+
+const applyParcelaValorPlaceholders = (
+  next: Record<string, any>,
+  variables: TemplateVariableDef[],
+  parcelaValorVars: TemplateVariableDef[],
+  valorParcela: number | "",
+) => {
+  const formatted =
+    valorParcela === ""
+      ? ""
+      : Number.isFinite(valorParcela)
+        ? valorParcela.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+        : "";
+
+  for (const pv of parcelaValorVars) next[pv.key] = valorParcela;
+  for (const k of LEGACY_PARCELA_VALOR_KEYS) {
+    const declared = variables.some((tv) => tv.key === k);
+    if (!declared) next[k] = formatted;
+  }
+};
+
 /* ================================================================== */
 /* Stepper UI                                                          */
 /* ================================================================== */
