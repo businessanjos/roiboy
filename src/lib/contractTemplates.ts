@@ -54,6 +54,7 @@ export interface AutofillContext {
     end_date?: string | null;
   };
   product?: {
+    name?: string | null;
     payment_method?: string | null;
     installments?: number | null;
     billing_period?: string | null;
