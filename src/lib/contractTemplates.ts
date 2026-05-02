@@ -344,7 +344,8 @@ export const mergeContractorPlaceholders = (
     const allowLegacyGenericKey = !hasExplicitContractorKeys;
 
     if (/^CNPJ$|CONTRATANTE_CNPJ|CLIENTE_CNPJ|CLIENT_CNPJ/.test(K)) {
-      if (explicitContractorKey || allowLegacyGenericKey) out[key] = "";
+      if (explicitContractorKey) out[key] = "";
+      else if (allowLegacyGenericKey) out[key] = cpf;
     } else if (/^CPF$|CONTRATANTE_CPF|CLIENTE_CPF|CLIENT_CPF|CLIENT_DOCUMENT|^DOCUMENTO$|CPF_CNPJ|CNPJ_CPF/.test(K)) {
       if (explicitContractorKey || allowLegacyGenericKey || /^CPF$|^DOCUMENTO$/.test(K)) out[key] = cpf;
     } else if (/CLIENT_?NAME|FULL_?NAME|^CONTRATANTE$|CONTRATANTE_NOME|CLIENTE_NOME/.test(K)) {
