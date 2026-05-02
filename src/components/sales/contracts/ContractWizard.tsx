@@ -1240,7 +1240,7 @@ export const ContractWizard = ({
           </div>
         )}
 
-        {!selectedOption && formaVar && (
+        {!selectedOption && (
           <p className="text-xs text-muted-foreground italic">
             Selecione uma forma de pagamento para liberar os campos de valor, parcelas e vencimento.
           </p>
