@@ -1069,7 +1069,19 @@ export const ContractWizard = ({
       );
     }
 
-    const list = groupedVars[step];
+    if (step === "mentee" && onMenteeChange && menteeData) {
+      return (
+        <MenteeContractFields
+          data={menteeData}
+          onChange={onMenteeChange}
+          disabled={disabled}
+          dealId={dealId}
+          withStepHeader
+        />
+      );
+    }
+
+    const list = groupedVars[step] ?? [];
     const meta = STEPS_META[step];
     const Icon = meta.icon;
 
