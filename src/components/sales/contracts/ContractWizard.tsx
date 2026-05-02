@@ -1204,12 +1204,25 @@ export const ContractWizard = ({
       "";
 
     const temEntrada = !!placeholderValues?.[TEM_ENTRADA_UI_KEY];
+    const entradaValor = placeholderValues?.[ENTRADA_VALOR_UI_KEY] ?? "";
+    const entradaFormaValue = placeholderValues?.[ENTRADA_FORMA_UI_KEY] ?? "";
+    const entradaFormaOption = PAYMENT_OPTIONS.find((o) => o.value === entradaFormaValue) ?? null;
 
     const optionsForCategory = PAYMENT_OPTIONS.filter((o) => o.category === selectedCategory);
+    const entradaOptions = PAYMENT_OPTIONS.filter((o) => o.category === "a_vista");
+
+    const formatBRL = (n: number) =>
+      n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
     const buildContractLabel = (opt: PaymentOption, withEntrada: boolean) => {
       if (opt.category === "parcelado" && withEntrada) {
-        return `${opt.contractLabel} com entrada`;
+        const valorNum = typeof entradaValor === "number" ? entradaValor : parseFloat(String(entradaValor));
+        const valorStr = !isNaN(valorNum) && valorNum > 0 ? ` de ${formatBRL(valorNum)}` : "";
+        // entradaFormaOption.contractLabel = "À vista via Pix" → extrai " via Pix"
+        const formaStr = entradaFormaOption
+          ? ` ${entradaFormaOption.contractLabel.replace(/^À vista\s*/i, "").trim()}`.replace(/\s+/g, " ")
+          : "";
+        return `${opt.contractLabel} com entrada${valorStr}${formaStr}`.trim();
       }
       return opt.contractLabel;
     };
