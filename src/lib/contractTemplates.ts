@@ -472,7 +472,8 @@ const parseMoneyLike = (raw: any): number | null => {
 
 const withDerivedPaymentValues = (values: Record<string, any>): Record<string, any> => {
   const out = { ...(values ?? {}) };
-  if (resolveValueByKey("INSTALLMENT_VALUE", out).value !== undefined && resolveValueByKey("INSTALLMENT_VALUE", out).value !== "") return out;
+  const currentInstallment = resolveValueByKey("INSTALLMENT_VALUE", out).value;
+  if (currentInstallment !== undefined && currentInstallment !== null && currentInstallment !== "") return out;
   const total = parseMoneyLike(resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value);
   const installmentsRaw = resolveValueByKey("INSTALLMENTS", out).value ?? resolveValueByKey("PARCELAS", out).value;
   const installments = typeof installmentsRaw === "number" ? installmentsRaw : parseInt(String(installmentsRaw ?? ""), 10);
