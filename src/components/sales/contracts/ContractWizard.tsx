@@ -1186,6 +1186,8 @@ export const ContractWizard = ({
     const FORMA_UI_KEY = "__FORMA_PAGAMENTO_UI__";
     const CATEGORY_UI_KEY = "__MODALIDADE_PAGAMENTO_UI__";
     const TEM_ENTRADA_UI_KEY = "__TEM_ENTRADA__";
+    const ENTRADA_VALOR_UI_KEY = "__ENTRADA_VALOR__";
+    const ENTRADA_FORMA_UI_KEY = "__ENTRADA_FORMA__";
     const formaVarKeys = byRole.forma.map((v) => v.key);
     const formaCurrent =
       placeholderValues?.[FORMA_UI_KEY] ??
