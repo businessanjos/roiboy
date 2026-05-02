@@ -1448,14 +1448,17 @@ export const ContractWizard = ({
     const showEntrada = isParcelado && temEntrada;
     const showParcelas = isParcelado;
 
-    const visibleVars: TemplateVariableDef[] = [
+    // Campos exibidos antes da modalidade: valor total e valor por extenso.
+    const preVars: TemplateVariableDef[] = [
       ...byRole.total,
       ...byRole.extenso,
-      ...(showParcelas ? byRole.parcelas_num : []),
-      ...(showParcelas ? byRole.parcela_valor : []),
-      ...(showParcelas ? byRole.vencimento : []),
-      ...byRole.outros,
     ];
+    // Campos exibidos depois da entrada: quantidade de parcelas e data da 1ª parcela.
+    const parcelasVars: TemplateVariableDef[] = showParcelas
+      ? [...byRole.parcelas_num, ...byRole.vencimento]
+      : [];
+    // Demais campos (ex.: data de assinatura) ficam por último.
+    const tailVars: TemplateVariableDef[] = [...byRole.outros];
 
     const finalContractLabel = selectedOption
       ? buildContractLabel(selectedOption, temEntrada)
