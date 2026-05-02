@@ -236,6 +236,8 @@ const inferValueFromKey = (
     if (/(^|_)CIDADE$/.test(K) && !/FORO/.test(K)) return c.city ?? null;
     if (/(^|_)ESTADO$|^UF$/.test(K)) return c.state ?? null;
     if (/NASCIMENTO|BIRTH|^DOB$/.test(K)) return c.birth_date ?? null;
+    if (/NACIONALIDADE|NATIONALITY/.test(K)) return c.nationality ?? null;
+    if (/ESTADO_?CIVIL|MARITAL/.test(K)) return c.marital_status ?? null;
   }
 
   return null;
