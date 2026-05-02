@@ -1414,6 +1414,18 @@ export const ContractWizard = ({
       };
       // Propaga para placeholders semânticos de entrada
       for (const v of byRole.entrada) next[v.key] = num === "" ? "" : num;
+      // Também grava em chaves canônicas legadas para que templates com
+      // {{ENTRADA}}, {{VALOR_ENTRADA}}, {{SINAL}}, {{DOWN_PAYMENT}} sejam preenchidos
+      // mesmo quando esses placeholders não estão declarados em template_variables.
+      const legacyEntradaKeys = ["ENTRADA", "VALOR_ENTRADA", "SINAL", "VALOR_SINAL", "DOWN_PAYMENT"];
+      const legacyVal =
+        num === "" ? "" : (typeof num === "number" && Number.isFinite(num) ? formatBRL(num) : "");
+      for (const k of legacyEntradaKeys) {
+        // Não sobrescreve se já existe uma variável declarada com esse mesmo key
+        // (pois a variável declarada terá type currency e formata sozinha).
+        const declared = templateVariables.some((tv) => tv.key === k);
+        if (!declared) next[k] = legacyVal;
+      }
       if (selectedOption) {
         next = propagateFormaToTemplate(buildContractLabel(selectedOption, true), next);
       }
