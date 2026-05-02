@@ -661,6 +661,101 @@ export const ContractWizard = ({
     }
   }, [visibleSteps, step, templateHtml]);
 
+  /* ---- Mentorado é o CONTRATANTE: sobrescreve placeholders do Contratante ---- */
+  // Sempre que o usuário edita os dados do mentorado (que é sempre PF), os
+  // placeholders do contratante no template são sobrescritos. Isso impede que
+  // dados de faturamento (PJ) capturados na etapa "Cliente" via CNPJ vazem
+  // para o Contratante do contrato.
+  useEffect(() => {
+    if (!onMenteeChange || !menteeData) return;
+    if (!templateVariables || templateVariables.length === 0) return;
+
+    const onlyDigits = (s: any) => (s == null ? "" : String(s).replace(/\D/g, ""));
+    const m = menteeData;
+    const next: Record<string, any> = { ...placeholderValues };
+    let changed = false;
+
+    const setIfDifferent = (key: string, value: any) => {
+      if (value === undefined || value === null) return;
+      // Permite limpar (string vazia) caso o usuário apague o campo do mentorado.
+      if (next[key] !== value) {
+        next[key] = value;
+        changed = true;
+      }
+    };
+
+    for (const v of templateVariables) {
+      const K = v.key.toUpperCase();
+      // Pula placeholders da CONTRATADA / EMPRESA
+      if (/(EMPRESA|CONTRATADA|COMPANY)/.test(K)) continue;
+
+      // CPF / CNPJ / Documento — Mentorado é PF, sempre CPF
+      if (/^CPF$|CONTRATANTE_CPF|CLIENTE_CPF|CLIENT_CPF|CLIENT_DOCUMENT|^DOCUMENTO$/.test(K)) {
+        setIfDifferent(v.key, onlyDigits(m.client_cpf_cnpj));
+        continue;
+      }
+      if (/^CNPJ$|CONTRATANTE_CNPJ|CLIENTE_CNPJ|CLIENT_CNPJ/.test(K)) {
+        // Mentorado nunca tem CNPJ — limpa para evitar PJ legado
+        setIfDifferent(v.key, "");
+        continue;
+      }
+      // Razão Social / Nome Fantasia — Mentorado é PF: nome do mentorado
+      if (/RAZAO_?SOCIAL|RAZÃO_?SOCIAL|NOME_?FANTASIA|FANTASIA/.test(K)) {
+        setIfDifferent(v.key, m.client_name ?? "");
+        continue;
+      }
+      // Inscrições Municipal/Estadual — PF não tem
+      if (/INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(K)) {
+        setIfDifferent(v.key, "");
+        continue;
+      }
+      // Nome / Contratante
+      if (/(^|_)NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|^CONTRATANTE$|CONTRATANTE_NOME/.test(K)) {
+        setIfDifferent(v.key, m.client_name ?? "");
+        continue;
+      }
+      // Email
+      if (/^EMAIL$|^E_?MAIL$|CLIENT_EMAIL|CONTRATANTE_EMAIL|EMAIL_CONTRATANTE/.test(K)) {
+        setIfDifferent(v.key, m.client_email ?? "");
+        continue;
+      }
+      // Endereço
+      if (/^ENDERECO$|^ENDEREÇO$|CLIENT_ADDRESS|CONTRATANTE_ENDERECO|ENDERECO_CONTRATANTE/.test(K)) {
+        setIfDifferent(v.key, m.client_address ?? "");
+        continue;
+      }
+      // Nacionalidade / Estado civil
+      if (/NACIONALIDADE|NATIONALITY/.test(K)) {
+        setIfDifferent(v.key, m.client_nationality ?? "");
+        continue;
+      }
+      if (/ESTADO_?CIVIL|MARITAL/.test(K)) {
+        setIfDifferent(v.key, m.client_marital_status ?? "");
+        continue;
+      }
+    }
+
+    if (changed) {
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    menteeData?.client_name,
+    menteeData?.client_cpf_cnpj,
+    menteeData?.client_email,
+    menteeData?.client_address,
+    menteeData?.client_nationality,
+    menteeData?.client_marital_status,
+    templateVariables,
+  ]);
+
+
   /* ---- Mutations ---- */
 
   const updateField = (key: string, value: any) => {
