@@ -1239,7 +1239,11 @@ export const ContractWizard = ({
         [CATEGORY_UI_KEY]: cat,
         [FORMA_UI_KEY]: "",
       };
-      if (cat === "a_vista") next[TEM_ENTRADA_UI_KEY] = false;
+      if (cat === "a_vista") {
+        next[TEM_ENTRADA_UI_KEY] = false;
+        next[ENTRADA_VALOR_UI_KEY] = "";
+        next[ENTRADA_FORMA_UI_KEY] = "";
+      }
       // Clear conditional fields when switching modalidade
       for (const v of byRole.forma) next[v.key] = "";
       for (const v of byRole.entrada) next[v.key] = "";
@@ -1267,6 +1271,8 @@ export const ContractWizard = ({
       // Clear conditional fields not applicable
       if (opt.category !== "parcelado") {
         next[TEM_ENTRADA_UI_KEY] = false;
+        next[ENTRADA_VALOR_UI_KEY] = "";
+        next[ENTRADA_FORMA_UI_KEY] = "";
         for (const v of byRole.entrada) next[v.key] = "";
         for (const v of byRole.parcelas_num) next[v.key] = "";
         for (const v of byRole.parcela_valor) next[v.key] = "";
@@ -1286,7 +1292,48 @@ export const ContractWizard = ({
       if (selectedOption) {
         next = propagateFormaToTemplate(buildContractLabel(selectedOption, val), next);
       }
-      if (!val) for (const v of byRole.entrada) next[v.key] = "";
+      if (!val) {
+        next[ENTRADA_VALOR_UI_KEY] = "";
+        next[ENTRADA_FORMA_UI_KEY] = "";
+        for (const v of byRole.entrada) next[v.key] = "";
+      }
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    };
+
+    const handleEntradaValorChange = (raw: string) => {
+      const num = raw === "" ? "" : parseFloat(raw);
+      let next: Record<string, any> = {
+        ...placeholderValues,
+        [ENTRADA_VALOR_UI_KEY]: num === "" ? "" : num,
+      };
+      // Propaga para placeholders semânticos de entrada
+      for (const v of byRole.entrada) next[v.key] = num === "" ? "" : num;
+      if (selectedOption) {
+        next = propagateFormaToTemplate(buildContractLabel(selectedOption, true), next);
+      }
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    };
+
+    const handleEntradaFormaChange = (optionValue: string) => {
+      let next: Record<string, any> = {
+        ...placeholderValues,
+        [ENTRADA_FORMA_UI_KEY]: optionValue,
+      };
+      if (selectedOption) {
+        next = propagateFormaToTemplate(buildContractLabel(selectedOption, true), next);
+      }
       onChange({
         template_id: templateId,
         product_id: productId,
@@ -1303,7 +1350,6 @@ export const ContractWizard = ({
     const visibleVars: TemplateVariableDef[] = [
       ...byRole.total,
       ...byRole.extenso,
-      ...(showEntrada ? byRole.entrada : []),
       ...(showParcelas ? byRole.parcelas_num : []),
       ...(showParcelas ? byRole.parcela_valor : []),
       ...(showParcelas ? byRole.vencimento : []),
