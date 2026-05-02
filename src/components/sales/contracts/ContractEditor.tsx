@@ -240,78 +240,7 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
 
   return (
     <div className="space-y-6">
-      {/* MENTORADO */}
-      <fieldset disabled={disabled} className="space-y-3">
-        <div className="flex items-center justify-between">
-          <legend className="text-sm font-semibold text-foreground">Mentorado</legend>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={copyFromBilling}
-            disabled={copyingBilling || !dealId || !billingChecked || !isBillingCpf}
-            className="h-7 text-xs"
-            title={!isBillingCpf && billingChecked ? "Disponível apenas quando o faturamento é CPF" : undefined}
-          >
-            {copyingBilling ? (
-              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-            ) : (
-              <Copy className="w-3 h-3 mr-1" />
-            )}
-            Copiar do Faturamento (CPF)
-          </Button>
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          O mentorado é sempre Pessoa Física. Se o faturamento foi feito no CPF do mentorado, use o botão acima para copiar os dados.
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <Label className="text-xs">Nome completo</Label>
-            <Input
-              value={data.client_name ?? ""}
-              onChange={(e) => update("client_name", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">CPF</Label>
-            <Input
-              value={data.client_cpf_cnpj ?? ""}
-              onChange={(e) => update("client_cpf_cnpj", e.target.value)}
-              placeholder="000.000.000-00"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">E-mail</Label>
-            <Input
-              value={data.client_email ?? ""}
-              onChange={(e) => update("client_email", e.target.value)}
-            />
-          </div>
-          <div className="col-span-2">
-            <Label className="text-xs">Endereço completo</Label>
-            <Input
-              value={data.client_address ?? ""}
-              onChange={(e) => update("client_address", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Nacionalidade</Label>
-            <Input
-              value={data.client_nationality ?? ""}
-              onChange={(e) => update("client_nationality", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Estado civil</Label>
-            <Input
-              value={data.client_marital_status ?? ""}
-              onChange={(e) => update("client_marital_status", e.target.value)}
-            />
-          </div>
-        </div>
-      </fieldset>
-
-      {/* Objeto e entregas removidos: já estão fixos no template do contrato. */}
+      {/* Mentorado e Renovação/testemunhas migraram para o Wizard de contrato (etapa "Mentorado"). */}
 
       {/* MODALIDADE / VALORES — campos de valor, forma de pagamento, parcelas e datas
           foram removidos pois já são preenchidos no Wizard de contrato.
@@ -342,27 +271,11 @@ export const ContractEditor = ({ data, onChange, disabled, dealId }: ContractEdi
         </fieldset>
       )}
 
-      {/* CONDIÇÕES */}
-      <fieldset disabled={disabled} className="space-y-3">
-        <legend className="text-sm font-semibold text-foreground">Renovação e testemunhas</legend>
-        <div className="flex items-center gap-6 pt-2">
-          <label className="flex items-center gap-2 text-xs cursor-pointer">
-            <Switch
-              checked={!!data.has_renewal}
-              onCheckedChange={(v) => update("has_renewal", v)}
-            />
-            Renovação automática
-          </label>
-          <label className="flex items-center gap-2 text-xs cursor-pointer">
-            <Switch
-              checked={!!data.include_witnesses}
-              onCheckedChange={(v) => update("include_witnesses", v)}
-            />
-            Incluir testemunhas
-          </label>
-        </div>
-      </fieldset>
-
+      {data.service_mode !== "hours" && (
+        <p className="text-sm text-muted-foreground italic px-1">
+          Os dados do mentorado, renovação e testemunhas agora são preenchidos no Wizard acima.
+        </p>
+      )}
     </div>
   );
 };
