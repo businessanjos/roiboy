@@ -11199,6 +11199,45 @@ export type Database = {
           },
         ]
       }
+      payment_methods: {
+        Row: {
+          account_id: string
+          contract_label: string
+          created_at: string
+          display_order: number
+          has_entrada: boolean
+          has_parcelas: boolean
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          contract_label: string
+          created_at?: string
+          display_order?: number
+          has_entrada?: boolean
+          has_parcelas?: boolean
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          contract_label?: string
+          created_at?: string
+          display_order?: number
+          has_entrada?: boolean
+          has_parcelas?: boolean
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pipeline_filters: {
         Row: {
           account_id: string

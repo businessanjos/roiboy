@@ -125,6 +125,7 @@ export const sectors: Sector[] = [
       { to: "/financial/suppliers", icon: Users, label: "Fornecedores", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/recurring", icon: Repeat, label: "Recorrências", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/budget", icon: FileText, label: "Orçamentos", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/financial/payment-methods", icon: CreditCard, label: "Formas de Pagamento", permission: PERMISSIONS.CLIENTS_VIEW },
       // Operações
       { to: "/financial/reconciliation", icon: Landmark, label: "Conciliação", permission: PERMISSIONS.CLIENTS_VIEW, group: "Operações" },
       { to: "/financial/sales-reconciliation", icon: FileSignature, label: "Conc. Vendas", permission: PERMISSIONS.CLIENTS_VIEW },
