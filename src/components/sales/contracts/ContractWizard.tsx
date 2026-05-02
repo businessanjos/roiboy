@@ -729,6 +729,7 @@ export const ContractWizard = ({
         .map((k) => STEPS_META[k])
         .filter((s) => {
           if (s.key === "mentee") return !!onMenteeChange;
+          if (s.key === "payment") return true; // sempre disponível
           return groupedVars[s.key].length > 0;
         }),
     [groupedVars, onMenteeChange],
