@@ -47,6 +47,8 @@ import {
 } from "@/lib/contractTemplates";
 import { numberToBRLExtenso } from "@/lib/numberToWordsBRL";
 import { TemplatedContractPreview } from "./TemplatedContractSection";
+import { MenteeContractFields } from "./MenteeContractFields";
+import type { DigitalContractData } from "./ContractDocument";
 
 /* ================================================================== */
 /* Public types                                                        */
@@ -67,6 +69,11 @@ export interface ContractWizardProps {
   }) => void;
   autofill: AutofillContext;
   disabled?: boolean;
+  /** Mentorado data (DigitalContractData). When provided, a "Mentorado" step
+   *  is added between Cliente and Pagamento. */
+  menteeData?: DigitalContractData;
+  onMenteeChange?: (next: DigitalContractData) => void;
+  dealId?: string;
 }
 
 interface TemplateOption {
