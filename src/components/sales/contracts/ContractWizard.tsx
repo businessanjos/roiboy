@@ -683,6 +683,19 @@ export const ContractWizard = ({
         const x = placeholderValues?.[v.key];
         return x !== null && x !== undefined && x !== "";
       }).length;
+      // Adiciona "Forma de pagamento" (virtual) como campo obrigatório do step.
+      if (k === "payment") {
+        const hasFormaVarFilled = list.some(
+          (v) => classifyPaymentVar(v.key) === "forma" &&
+            placeholderValues?.[v.key] !== null &&
+            placeholderValues?.[v.key] !== undefined &&
+            placeholderValues?.[v.key] !== "",
+        );
+        const formaUi = placeholderValues?.["__FORMA_PAGAMENTO_UI__"];
+        const formaFilled = !!formaUi || hasFormaVarFilled;
+        counts[k].total += 1;
+        if (formaFilled) counts[k].filled += 1;
+      }
     });
     // Mentee step is data-driven (not template-variable-driven). Compute its
     // own progress from menteeData when it is wired in.
