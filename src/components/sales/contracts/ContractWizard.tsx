@@ -913,13 +913,9 @@ export const ContractWizard = ({
       ) {
         const saldo = Math.max(0, (totalNum as number) - entradaNum);
         const valorParcela = Math.round((saldo / parcelasNum) * 100) / 100;
-        for (const pv of parcelaValorVars) {
-          nextValues[pv.key] = valorParcela;
-        }
+        applyParcelaValorPlaceholders(nextValues, templateVariables, parcelaValorVars, valorParcela);
       } else {
-        for (const pv of parcelaValorVars) {
-          nextValues[pv.key] = "";
-        }
+        applyParcelaValorPlaceholders(nextValues, templateVariables, parcelaValorVars, "");
       }
     }
 
