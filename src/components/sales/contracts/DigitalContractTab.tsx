@@ -289,11 +289,12 @@ export const DigitalContractTab = ({
     (async () => {
       const { data: product } = await supabase
         .from("products")
-        .select("price, payment_methods, billing_period, cash_price, installment_price")
+        .select("name, price, payment_methods, billing_period, cash_price, installment_price")
         .eq("id", productId)
         .maybeSingle();
       if (cancelled || !product) return;
       setProductExtras({
+        name: product.name ?? null,
         payment_methods: (product.payment_methods as string[] | null) ?? null,
         billing_period: product.billing_period ?? null,
         cash_price: product.cash_price ?? null,
