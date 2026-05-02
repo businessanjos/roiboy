@@ -1183,6 +1183,8 @@ export const ContractWizard = ({
     // Forma de pagamento — sempre visível. Persiste em chave virtual e propaga
     // para qualquer placeholder "forma" do template (se houver).
     const FORMA_UI_KEY = "__FORMA_PAGAMENTO_UI__";
+    const CATEGORY_UI_KEY = "__MODALIDADE_PAGAMENTO_UI__";
+    const TEM_ENTRADA_UI_KEY = "__TEM_ENTRADA__";
     const formaVarKeys = byRole.forma.map((v) => v.key);
     const formaCurrent =
       placeholderValues?.[FORMA_UI_KEY] ??
@@ -1193,15 +1195,63 @@ export const ContractWizard = ({
     );
     const selectedOption = matchedOption ?? null;
 
+    const selectedCategory: PaymentCategory | "" =
+      (placeholderValues?.[CATEGORY_UI_KEY] as PaymentCategory | undefined) ??
+      selectedOption?.category ??
+      "";
+
+    const temEntrada = !!placeholderValues?.[TEM_ENTRADA_UI_KEY];
+
+    const optionsForCategory = PAYMENT_OPTIONS.filter((o) => o.category === selectedCategory);
+
+    const buildContractLabel = (opt: PaymentOption, withEntrada: boolean) => {
+      if (opt.category === "parcelado" && withEntrada) {
+        return `${opt.contractLabel} com entrada`;
+      }
+      return opt.contractLabel;
+    };
+
+    const propagateFormaToTemplate = (label: string, base: Record<string, any>) => {
+      const next = { ...base };
+      for (const v of byRole.forma) next[v.key] = label;
+      return next;
+    };
+
+    const handleCategoryChange = (cat: PaymentCategory) => {
+      let next: Record<string, any> = {
+        ...placeholderValues,
+        [CATEGORY_UI_KEY]: cat,
+        [FORMA_UI_KEY]: "",
+      };
+      if (cat === "a_vista") next[TEM_ENTRADA_UI_KEY] = false;
+      // Clear conditional fields when switching modalidade
+      for (const v of byRole.forma) next[v.key] = "";
+      for (const v of byRole.entrada) next[v.key] = "";
+      for (const v of byRole.parcelas_num) next[v.key] = "";
+      for (const v of byRole.parcela_valor) next[v.key] = "";
+      for (const v of byRole.vencimento) next[v.key] = "";
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    };
+
     const handleFormaChange = (optionValue: string) => {
       const opt = PAYMENT_OPTIONS.find((o) => o.value === optionValue);
       if (!opt) return;
-      const next: Record<string, any> = { ...placeholderValues, [FORMA_UI_KEY]: opt.value };
-      // Write friendly label into every "forma" placeholder do template (se existir).
-      for (const v of byRole.forma) next[v.key] = opt.contractLabel;
-      // Limpa campos não aplicáveis à opção selecionada.
-      if (!opt.hasEntrada) for (const v of byRole.entrada) next[v.key] = "";
-      if (!opt.hasParcelas) {
+      let next: Record<string, any> = {
+        ...placeholderValues,
+        [FORMA_UI_KEY]: opt.value,
+        [CATEGORY_UI_KEY]: opt.category,
+      };
+      next = propagateFormaToTemplate(buildContractLabel(opt, !!next[TEM_ENTRADA_UI_KEY]), next);
+      // Clear conditional fields not applicable
+      if (opt.category !== "parcelado") {
+        next[TEM_ENTRADA_UI_KEY] = false;
+        for (const v of byRole.entrada) next[v.key] = "";
         for (const v of byRole.parcelas_num) next[v.key] = "";
         for (const v of byRole.parcela_valor) next[v.key] = "";
         for (const v of byRole.vencimento) next[v.key] = "";
@@ -1215,9 +1265,24 @@ export const ContractWizard = ({
       });
     };
 
-    // Determine which roles to show
-    const showEntrada = !!selectedOption?.hasEntrada;
-    const showParcelas = !!selectedOption?.hasParcelas;
+    const handleEntradaToggle = (val: boolean) => {
+      let next: Record<string, any> = { ...placeholderValues, [TEM_ENTRADA_UI_KEY]: val };
+      if (selectedOption) {
+        next = propagateFormaToTemplate(buildContractLabel(selectedOption, val), next);
+      }
+      if (!val) for (const v of byRole.entrada) next[v.key] = "";
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    };
+
+    const isParcelado = selectedCategory === "parcelado";
+    const showEntrada = isParcelado && temEntrada;
+    const showParcelas = isParcelado;
 
     const visibleVars: TemplateVariableDef[] = [
       ...byRole.total,
@@ -1229,6 +1294,10 @@ export const ContractWizard = ({
       ...byRole.outros,
     ];
 
+    const finalContractLabel = selectedOption
+      ? buildContractLabel(selectedOption, temEntrada)
+      : "";
+
     return (
       <div className="space-y-4">
         <div className="flex items-start gap-3">
@@ -1238,36 +1307,89 @@ export const ContractWizard = ({
           <div>
             <h3 className="text-base font-semibold">{meta.label}</h3>
             <p className="text-xs text-muted-foreground">
-              Escolha a forma de pagamento — os demais campos aparecem conforme a opção.
+              1) Modalidade · 2) Método · 3) Detalhes do parcelamento (se aplicável).
             </p>
           </div>
         </div>
 
-        {/* Primary: Forma de pagamento (sempre visível) */}
+        {/* Step 1: Modalidade */}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">
-            Forma de pagamento<span className="text-destructive ml-0.5">*</span>
+            Modalidade<span className="text-destructive ml-0.5">*</span>
           </Label>
-          <Select
-            value={selectedOption?.value ?? ""}
-            onValueChange={handleFormaChange}
-            disabled={disabled}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione a forma de pagamento" />
-            </SelectTrigger>
-            <SelectContent>
-              {PAYMENT_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedOption && (
-            <p className="text-[11px] text-muted-foreground">
-              No contrato será impresso: <span className="font-medium text-foreground">{selectedOption.contractLabel}</span>
-            </p>
-          )}
+          <div className="grid grid-cols-2 gap-2">
+            {(["a_vista", "parcelado"] as PaymentCategory[]).map((cat) => {
+              const active = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => handleCategoryChange(cat)}
+                  className={cn(
+                    "rounded-lg border px-4 py-3 text-sm font-medium transition-all text-left",
+                    active
+                      ? "border-primary bg-primary/10 text-foreground shadow-sm"
+                      : "border-border bg-card hover:bg-muted text-foreground",
+                  )}
+                >
+                  <div className="font-semibold">{cat === "a_vista" ? "À vista" : "Parcelado"}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {cat === "a_vista"
+                      ? "Pix, Boleto, 1x no cartão, transferência…"
+                      : "Cartão, cheque, boleto, pix, transferência…"}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Step 2: Método */}
+        {selectedCategory && (
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">
+              Método<span className="text-destructive ml-0.5">*</span>
+            </Label>
+            <Select
+              value={selectedOption?.value ?? ""}
+              onValueChange={handleFormaChange}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o método" />
+              </SelectTrigger>
+              <SelectContent>
+                {optionsForCategory.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Step 3: Toggle Entrada (apenas Parcelado) */}
+        {isParcelado && selectedOption && (
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <div>
+              <Label className="text-sm font-medium">Houve entrada / sinal?</Label>
+              <p className="text-[11px] text-muted-foreground">
+                Marque para incluir um valor de entrada antes das parcelas.
+              </p>
+            </div>
+            <Switch
+              checked={temEntrada}
+              onCheckedChange={handleEntradaToggle}
+              disabled={disabled}
+            />
+          </div>
+        )}
+
+        {selectedOption && (
+          <p className="text-[11px] text-muted-foreground">
+            No contrato será impresso: <span className="font-medium text-foreground">{finalContractLabel}</span>
+          </p>
+        )}
 
         {/* Conditional fields */}
         {visibleVars.length > 0 && (
@@ -1284,9 +1406,9 @@ export const ContractWizard = ({
           </div>
         )}
 
-        {!selectedOption && (
+        {!selectedOption && selectedCategory && (
           <p className="text-xs text-muted-foreground italic">
-            Selecione uma forma de pagamento para liberar os campos de valor, parcelas e vencimento.
+            Selecione um método para liberar os campos de valor{isParcelado ? ", parcelas e vencimento" : ""}.
           </p>
         )}
       </div>
