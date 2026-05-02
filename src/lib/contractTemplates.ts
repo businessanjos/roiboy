@@ -41,6 +41,8 @@ export interface AutofillContext {
     state?: string | null;
     zip_code?: string | null;
     birth_date?: string | null;
+    nationality?: string | null;
+    marital_status?: string | null;
   };
   deal?: {
     value?: number | null;
