@@ -726,6 +726,23 @@ export const ContractWizard = ({
         const formaFilled = !!formaUi || hasFormaVarFilled;
         counts[k].total += 1;
         if (formaFilled) counts[k].filled += 1;
+
+        // Se houve entrada, exigir valor e forma da entrada.
+        const formaCurrent = placeholderValues?.["__FORMA_PAGAMENTO_UI__"];
+        const opt = PAYMENT_OPTIONS.find(
+          (o) => o.value === formaCurrent || o.contractLabel === formaCurrent || o.label === formaCurrent,
+        );
+        const isParcelado = opt?.category === "parcelado";
+        const temEntrada = !!placeholderValues?.["__TEM_ENTRADA__"];
+        if (isParcelado && temEntrada) {
+          const entradaValor = placeholderValues?.["__ENTRADA_VALOR__"];
+          const entradaForma = placeholderValues?.["__ENTRADA_FORMA__"];
+          counts[k].total += 2;
+          if (entradaValor !== null && entradaValor !== undefined && entradaValor !== "" && Number(entradaValor) > 0) {
+            counts[k].filled += 1;
+          }
+          if (entradaForma) counts[k].filled += 1;
+        }
       }
     });
     // Mentee step is data-driven (not template-variable-driven). Compute its
