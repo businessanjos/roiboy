@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -155,11 +155,9 @@ export const DigitalContractTab = ({
   const pdfPreviewRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
-  const resolvedPlaceholderValues = mergeContractorPlaceholders(
-    templateHtml,
-    templateVariables,
-    placeholderValues,
-    data,
+  const resolvedPlaceholderValues = useMemo(
+    () => mergeContractorPlaceholders(templateHtml, templateVariables, placeholderValues, data),
+    [templateHtml, templateVariables, placeholderValues, data],
   );
 
   useEffect(() => {
@@ -573,7 +571,7 @@ export const DigitalContractTab = ({
         productId={productId}
         templateHtml={templateHtml}
         templateVariables={templateVariables}
-        placeholderValues={placeholderValues}
+        placeholderValues={resolvedPlaceholderValues}
         autofill={{
           client: {
             // CONTRATANTE = Mentorado (sempre PF). Os dados do mentorado preenchidos
