@@ -90,7 +90,7 @@ interface TemplateOption {
 /* Heuristics — group variables into friendly steps                    */
 /* ================================================================== */
 
-type StepKey = "client" | "company" | "payment";
+type StepKey = "client" | "mentee" | "company" | "payment";
 
 interface StepDef {
   key: StepKey;
@@ -107,6 +107,13 @@ const STEPS_META: Record<StepKey, StepDef> = {
     shortLabel: "Cliente",
     icon: User,
     description: "Quem é o contratante (razão social, CNPJ, endereço, contato).",
+  },
+  mentee: {
+    key: "mentee",
+    label: "Mentorado",
+    shortLabel: "Mentorado",
+    icon: User,
+    description: "Pessoa física que será mentorada e cláusulas de renovação/testemunhas.",
   },
   company: {
     key: "company",
