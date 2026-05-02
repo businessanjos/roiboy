@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -442,23 +443,26 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
 /* Payment step — forma de pagamento + campos condicionais             */
 /* ================================================================== */
 
+type PaymentCategory = "a_vista" | "parcelado";
+
 interface PaymentOption {
   value: string;
   label: string;
   /** Friendly label written into the FORMA_PAGAMENTO placeholder */
   contractLabel: string;
-  hasEntrada: boolean;
-  hasParcelas: boolean;
+  category: PaymentCategory;
 }
 
 const DEFAULT_PAYMENT_OPTIONS: PaymentOption[] = [
-  { value: "a_vista_pix", label: "À vista (PIX)", contractLabel: "À vista via PIX", hasEntrada: false, hasParcelas: false },
-  { value: "a_vista_boleto", label: "À vista (Boleto)", contractLabel: "À vista via boleto bancário", hasEntrada: false, hasParcelas: false },
-  { value: "a_vista_transferencia", label: "À vista (Transferência)", contractLabel: "À vista via transferência bancária", hasEntrada: false, hasParcelas: false },
-  { value: "parcelado_cartao", label: "Parcelado no Cartão de Crédito", contractLabel: "Parcelado no cartão de crédito", hasEntrada: false, hasParcelas: true },
-  { value: "parcelado_boleto", label: "Parcelado em Boletos", contractLabel: "Parcelado em boletos bancários", hasEntrada: false, hasParcelas: true },
-  { value: "entrada_parcelado_cartao", label: "Entrada + Parcelas no Cartão", contractLabel: "Entrada via PIX + parcelas no cartão de crédito", hasEntrada: true, hasParcelas: true },
-  { value: "entrada_parcelado_boleto", label: "Entrada + Boletos", contractLabel: "Entrada via PIX + parcelas em boletos bancários", hasEntrada: true, hasParcelas: true },
+  { value: "a_vista_pix", label: "Pix", contractLabel: "À vista via Pix", category: "a_vista" },
+  { value: "a_vista_boleto", label: "Boleto", contractLabel: "À vista via boleto bancário", category: "a_vista" },
+  { value: "a_vista_cartao_1x", label: "Cartão de Crédito (1x)", contractLabel: "À vista em 1x no cartão de crédito", category: "a_vista" },
+  { value: "a_vista_transferencia_internacional", label: "Transferência Internacional", contractLabel: "À vista via transferência internacional", category: "a_vista" },
+  { value: "parcelado_cartao", label: "Cartão de Crédito", contractLabel: "Parcelado no cartão de crédito", category: "parcelado" },
+  { value: "parcelado_cheque", label: "Cheque", contractLabel: "Parcelado em cheques", category: "parcelado" },
+  { value: "parcelado_boleto", label: "Boleto", contractLabel: "Parcelado em boletos bancários", category: "parcelado" },
+  { value: "parcelado_pix", label: "Pix", contractLabel: "Parcelado via Pix", category: "parcelado" },
+  { value: "parcelado_transferencia_internacional", label: "Transferência Internacional", contractLabel: "Parcelado via transferência internacional", category: "parcelado" },
 ];
 
 /** Classify a payment-step placeholder by its semantic role. */
@@ -639,19 +643,19 @@ export const ContractWizard = ({
     (async () => {
       const { data, error } = await supabase
         .from("payment_methods" as any)
-        .select("name,contract_label,has_entrada,has_parcelas,display_order,is_active")
+        .select("id,name,contract_label,category,display_order,is_active")
         .eq("account_id", accountId)
         .eq("is_active", true)
+        .order("category", { ascending: true })
         .order("display_order", { ascending: true })
         .order("name", { ascending: true });
       if (cancelled) return;
       if (error || !data || data.length === 0) return;
       const opts: PaymentOption[] = (data as any[]).map((r) => ({
-        value: String(r.name).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""),
+        value: r.id as string,
         label: r.name,
         contractLabel: r.contract_label || r.name,
-        hasEntrada: !!r.has_entrada,
-        hasParcelas: !!r.has_parcelas,
+        category: (r.category === "parcelado" ? "parcelado" : "a_vista") as PaymentCategory,
       }));
       setPaymentOptions(opts);
     })();
@@ -696,10 +700,12 @@ export const ContractWizard = ({
         const opt = PAYMENT_OPTIONS.find(
           (o) => o.value === formaCurrent || o.contractLabel === formaCurrent || o.label === formaCurrent,
         );
+        const isParcelado = opt?.category === "parcelado";
+        const temEntrada = !!placeholderValues?.["__TEM_ENTRADA__"];
         effectiveList = list.filter((v) => {
           const role = classifyPaymentVar(v.key);
-          if (role === "entrada") return !!opt?.hasEntrada;
-          if (role === "parcelas_num" || role === "parcela_valor" || role === "vencimento") return !!opt?.hasParcelas;
+          if (role === "entrada") return isParcelado && temEntrada;
+          if (role === "parcelas_num" || role === "parcela_valor" || role === "vencimento") return isParcelado;
           return true;
         });
       }
@@ -1178,6 +1184,8 @@ export const ContractWizard = ({
     // Forma de pagamento — sempre visível. Persiste em chave virtual e propaga
     // para qualquer placeholder "forma" do template (se houver).
     const FORMA_UI_KEY = "__FORMA_PAGAMENTO_UI__";
+    const CATEGORY_UI_KEY = "__MODALIDADE_PAGAMENTO_UI__";
+    const TEM_ENTRADA_UI_KEY = "__TEM_ENTRADA__";
     const formaVarKeys = byRole.forma.map((v) => v.key);
     const formaCurrent =
       placeholderValues?.[FORMA_UI_KEY] ??
@@ -1188,15 +1196,63 @@ export const ContractWizard = ({
     );
     const selectedOption = matchedOption ?? null;
 
+    const selectedCategory: PaymentCategory | "" =
+      (placeholderValues?.[CATEGORY_UI_KEY] as PaymentCategory | undefined) ??
+      selectedOption?.category ??
+      "";
+
+    const temEntrada = !!placeholderValues?.[TEM_ENTRADA_UI_KEY];
+
+    const optionsForCategory = PAYMENT_OPTIONS.filter((o) => o.category === selectedCategory);
+
+    const buildContractLabel = (opt: PaymentOption, withEntrada: boolean) => {
+      if (opt.category === "parcelado" && withEntrada) {
+        return `${opt.contractLabel} com entrada`;
+      }
+      return opt.contractLabel;
+    };
+
+    const propagateFormaToTemplate = (label: string, base: Record<string, any>) => {
+      const next = { ...base };
+      for (const v of byRole.forma) next[v.key] = label;
+      return next;
+    };
+
+    const handleCategoryChange = (cat: PaymentCategory) => {
+      let next: Record<string, any> = {
+        ...placeholderValues,
+        [CATEGORY_UI_KEY]: cat,
+        [FORMA_UI_KEY]: "",
+      };
+      if (cat === "a_vista") next[TEM_ENTRADA_UI_KEY] = false;
+      // Clear conditional fields when switching modalidade
+      for (const v of byRole.forma) next[v.key] = "";
+      for (const v of byRole.entrada) next[v.key] = "";
+      for (const v of byRole.parcelas_num) next[v.key] = "";
+      for (const v of byRole.parcela_valor) next[v.key] = "";
+      for (const v of byRole.vencimento) next[v.key] = "";
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    };
+
     const handleFormaChange = (optionValue: string) => {
       const opt = PAYMENT_OPTIONS.find((o) => o.value === optionValue);
       if (!opt) return;
-      const next: Record<string, any> = { ...placeholderValues, [FORMA_UI_KEY]: opt.value };
-      // Write friendly label into every "forma" placeholder do template (se existir).
-      for (const v of byRole.forma) next[v.key] = opt.contractLabel;
-      // Limpa campos não aplicáveis à opção selecionada.
-      if (!opt.hasEntrada) for (const v of byRole.entrada) next[v.key] = "";
-      if (!opt.hasParcelas) {
+      let next: Record<string, any> = {
+        ...placeholderValues,
+        [FORMA_UI_KEY]: opt.value,
+        [CATEGORY_UI_KEY]: opt.category,
+      };
+      next = propagateFormaToTemplate(buildContractLabel(opt, !!next[TEM_ENTRADA_UI_KEY]), next);
+      // Clear conditional fields not applicable
+      if (opt.category !== "parcelado") {
+        next[TEM_ENTRADA_UI_KEY] = false;
+        for (const v of byRole.entrada) next[v.key] = "";
         for (const v of byRole.parcelas_num) next[v.key] = "";
         for (const v of byRole.parcela_valor) next[v.key] = "";
         for (const v of byRole.vencimento) next[v.key] = "";
@@ -1210,9 +1266,24 @@ export const ContractWizard = ({
       });
     };
 
-    // Determine which roles to show
-    const showEntrada = !!selectedOption?.hasEntrada;
-    const showParcelas = !!selectedOption?.hasParcelas;
+    const handleEntradaToggle = (val: boolean) => {
+      let next: Record<string, any> = { ...placeholderValues, [TEM_ENTRADA_UI_KEY]: val };
+      if (selectedOption) {
+        next = propagateFormaToTemplate(buildContractLabel(selectedOption, val), next);
+      }
+      if (!val) for (const v of byRole.entrada) next[v.key] = "";
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    };
+
+    const isParcelado = selectedCategory === "parcelado";
+    const showEntrada = isParcelado && temEntrada;
+    const showParcelas = isParcelado;
 
     const visibleVars: TemplateVariableDef[] = [
       ...byRole.total,
@@ -1224,6 +1295,10 @@ export const ContractWizard = ({
       ...byRole.outros,
     ];
 
+    const finalContractLabel = selectedOption
+      ? buildContractLabel(selectedOption, temEntrada)
+      : "";
+
     return (
       <div className="space-y-4">
         <div className="flex items-start gap-3">
@@ -1233,36 +1308,89 @@ export const ContractWizard = ({
           <div>
             <h3 className="text-base font-semibold">{meta.label}</h3>
             <p className="text-xs text-muted-foreground">
-              Escolha a forma de pagamento — os demais campos aparecem conforme a opção.
+              1) Modalidade · 2) Método · 3) Detalhes do parcelamento (se aplicável).
             </p>
           </div>
         </div>
 
-        {/* Primary: Forma de pagamento (sempre visível) */}
+        {/* Step 1: Modalidade */}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">
-            Forma de pagamento<span className="text-destructive ml-0.5">*</span>
+            Modalidade<span className="text-destructive ml-0.5">*</span>
           </Label>
-          <Select
-            value={selectedOption?.value ?? ""}
-            onValueChange={handleFormaChange}
-            disabled={disabled}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione a forma de pagamento" />
-            </SelectTrigger>
-            <SelectContent>
-              {PAYMENT_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedOption && (
-            <p className="text-[11px] text-muted-foreground">
-              No contrato será impresso: <span className="font-medium text-foreground">{selectedOption.contractLabel}</span>
-            </p>
-          )}
+          <div className="grid grid-cols-2 gap-2">
+            {(["a_vista", "parcelado"] as PaymentCategory[]).map((cat) => {
+              const active = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => handleCategoryChange(cat)}
+                  className={cn(
+                    "rounded-lg border px-4 py-3 text-sm font-medium transition-all text-left",
+                    active
+                      ? "border-primary bg-primary/10 text-foreground shadow-sm"
+                      : "border-border bg-card hover:bg-muted text-foreground",
+                  )}
+                >
+                  <div className="font-semibold">{cat === "a_vista" ? "À vista" : "Parcelado"}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {cat === "a_vista"
+                      ? "Pix, Boleto, 1x no cartão, transferência…"
+                      : "Cartão, cheque, boleto, pix, transferência…"}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Step 2: Método */}
+        {selectedCategory && (
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">
+              Método<span className="text-destructive ml-0.5">*</span>
+            </Label>
+            <Select
+              value={selectedOption?.value ?? ""}
+              onValueChange={handleFormaChange}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o método" />
+              </SelectTrigger>
+              <SelectContent>
+                {optionsForCategory.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Step 3: Toggle Entrada (apenas Parcelado) */}
+        {isParcelado && selectedOption && (
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <div>
+              <Label className="text-sm font-medium">Houve entrada / sinal?</Label>
+              <p className="text-[11px] text-muted-foreground">
+                Marque para incluir um valor de entrada antes das parcelas.
+              </p>
+            </div>
+            <Switch
+              checked={temEntrada}
+              onCheckedChange={handleEntradaToggle}
+              disabled={disabled}
+            />
+          </div>
+        )}
+
+        {selectedOption && (
+          <p className="text-[11px] text-muted-foreground">
+            No contrato será impresso: <span className="font-medium text-foreground">{finalContractLabel}</span>
+          </p>
+        )}
 
         {/* Conditional fields */}
         {visibleVars.length > 0 && (
@@ -1279,9 +1407,9 @@ export const ContractWizard = ({
           </div>
         )}
 
-        {!selectedOption && (
+        {!selectedOption && selectedCategory && (
           <p className="text-xs text-muted-foreground italic">
-            Selecione uma forma de pagamento para liberar os campos de valor, parcelas e vencimento.
+            Selecione um método para liberar os campos de valor{isParcelado ? ", parcelas e vencimento" : ""}.
           </p>
         )}
       </div>

@@ -30,16 +30,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+
+type Category = "a_vista" | "parcelado";
 
 interface PaymentMethod {
   id: string;
   name: string;
   contract_label: string;
-  has_entrada: boolean;
-  has_parcelas: boolean;
+  category: Category;
   is_active: boolean;
   display_order: number;
 }
@@ -47,10 +55,14 @@ interface PaymentMethod {
 const emptyForm = {
   name: "",
   contract_label: "",
-  has_entrada: false,
-  has_parcelas: false,
+  category: "a_vista" as Category,
   is_active: true,
   display_order: 0,
+};
+
+const CATEGORY_LABEL: Record<Category, string> = {
+  a_vista: "À vista",
+  parcelado: "Parcelado",
 };
 
 export default function FinancialPaymentMethodsPage() {
@@ -71,6 +83,7 @@ export default function FinancialPaymentMethodsPage() {
         .from("payment_methods")
         .select("*")
         .eq("account_id", accountId)
+        .order("category", { ascending: true })
         .order("display_order", { ascending: true })
         .order("name", { ascending: true });
       if (error) throw error;
@@ -85,8 +98,9 @@ export default function FinancialPaymentMethodsPage() {
         account_id: accountId,
         name: data.name.trim(),
         contract_label: (data.contract_label || data.name).trim(),
-        has_entrada: data.has_entrada,
-        has_parcelas: data.has_parcelas,
+        category: data.category,
+        has_entrada: false,
+        has_parcelas: data.category === "parcelado",
         is_active: data.is_active,
         display_order: Number(data.display_order) || 0,
       };
@@ -144,8 +158,7 @@ export default function FinancialPaymentMethodsPage() {
     setFormData({
       name: m.name,
       contract_label: m.contract_label,
-      has_entrada: m.has_entrada,
-      has_parcelas: m.has_parcelas,
+      category: m.category,
       is_active: m.is_active,
       display_order: m.display_order ?? 0,
     });
@@ -161,7 +174,7 @@ export default function FinancialPaymentMethodsPage() {
             Formas de Pagamento
           </h1>
           <p className="text-muted-foreground">
-            Configure as formas de pagamento aceitas. Aparecem no Wizard de contratos e nos lançamentos financeiros.
+            Cada forma é classificada como <strong>À vista</strong> ou <strong>Parcelado</strong>. No Wizard de contratos, primeiro escolhe-se a modalidade e depois o método.
           </p>
         </div>
         <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm">
@@ -188,10 +201,9 @@ export default function FinancialPaymentMethodsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[60px]">Ordem</TableHead>
+                  <TableHead>Modalidade</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Texto no contrato</TableHead>
-                  <TableHead>Entrada</TableHead>
-                  <TableHead>Parcelas</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
@@ -200,18 +212,13 @@ export default function FinancialPaymentMethodsPage() {
                 {methods.map((m) => (
                   <TableRow key={m.id}>
                     <TableCell className="text-muted-foreground">{m.display_order}</TableCell>
+                    <TableCell>
+                      <Badge variant={m.category === "parcelado" ? "default" : "secondary"}>
+                        {CATEGORY_LABEL[m.category]}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="font-medium">{m.name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{m.contract_label}</TableCell>
-                    <TableCell>
-                      <Badge variant={m.has_entrada ? "default" : "outline"}>
-                        {m.has_entrada ? "Sim" : "Não"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={m.has_parcelas ? "default" : "outline"}>
-                        {m.has_parcelas ? "Sim" : "Não"}
-                      </Badge>
-                    </TableCell>
                     <TableCell>
                       <Badge variant={m.is_active ? "default" : "secondary"}>
                         {m.is_active ? "Ativo" : "Inativo"}
@@ -256,7 +263,7 @@ export default function FinancialPaymentMethodsPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Forma de Pagamento" : "Nova Forma de Pagamento"}</DialogTitle>
             <DialogDescription>
-              Configure como o pagamento aparece para o time e no contrato.
+              Configure como o pagamento aparece no Wizard e no contrato.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -267,16 +274,30 @@ export default function FinancialPaymentMethodsPage() {
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label>Nome interno *</Label>
+              <Label>Modalidade *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(v: Category) => setFormData({ ...formData, category: v })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="a_vista">À vista</SelectItem>
+                  <SelectItem value="parcelado">Parcelado</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                "Parcelado" libera campos de nº de parcelas, valor e vencimento (com opção de entrada) no Wizard.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nome *</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: PIX à vista"
+                placeholder="Ex: Pix, Boleto, Cartão de Crédito"
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                Nome mostrado no dropdown do Wizard e nos lançamentos.
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -284,34 +305,11 @@ export default function FinancialPaymentMethodsPage() {
               <Input
                 value={formData.contract_label}
                 onChange={(e) => setFormData({ ...formData, contract_label: e.target.value })}
-                placeholder="Ex: Pagamento via PIX à vista"
+                placeholder="Ex: À vista via Pix"
               />
               <p className="text-xs text-muted-foreground">
-                Frase que será inserida no contrato. Se vazio, usa o nome interno.
+                Frase usada como base no contrato. Se vazio, usa o nome.
               </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <Label className="text-sm">Tem entrada?</Label>
-                  <p className="text-xs text-muted-foreground">Mostra campo de valor de entrada</p>
-                </div>
-                <Switch
-                  checked={formData.has_entrada}
-                  onCheckedChange={(v) => setFormData({ ...formData, has_entrada: v })}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <Label className="text-sm">Tem parcelas?</Label>
-                  <p className="text-xs text-muted-foreground">Mostra campos de parcelamento</p>
-                </div>
-                <Switch
-                  checked={formData.has_parcelas}
-                  onCheckedChange={(v) => setFormData({ ...formData, has_parcelas: v })}
-                />
-              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
