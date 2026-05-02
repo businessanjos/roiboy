@@ -1390,7 +1390,6 @@ export const ContractWizard = ({
       const next = { ...base };
       const totalVar = templateVariables.find((tv) => classifyPaymentVar(tv.key) === "total");
       const parcelasNumVar = templateVariables.find((tv) => classifyPaymentVar(tv.key) === "parcelas_num");
-      const parcelaValorVars = templateVariables.filter((tv) => classifyPaymentVar(tv.key) === "parcela_valor");
       const totalRaw = totalVar ? next[totalVar.key] : null;
       const parcelasRaw = parcelasNumVar ? next[parcelasNumVar.key] : null;
       const totalNum =
