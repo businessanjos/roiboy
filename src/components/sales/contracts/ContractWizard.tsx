@@ -1166,6 +1166,10 @@ export const ContractWizard = ({
       );
     }
 
+    if (step === "payment") {
+      return renderPaymentStep();
+    }
+
     const list = groupedVars[step] ?? [];
     const meta = STEPS_META[step];
     const Icon = meta.icon;
