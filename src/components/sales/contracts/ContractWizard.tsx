@@ -632,6 +632,34 @@ export const ContractWizard = ({
     };
   }, [accountId]);
 
+  /* ---- Load payment methods from DB (with fallback to defaults) ---- */
+  useEffect(() => {
+    if (!accountId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("payment_methods" as any)
+        .select("name,contract_label,has_entrada,has_parcelas,display_order,is_active")
+        .eq("account_id", accountId)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true })
+        .order("name", { ascending: true });
+      if (cancelled) return;
+      if (error || !data || data.length === 0) return;
+      const opts: PaymentOption[] = (data as any[]).map((r) => ({
+        value: String(r.name).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""),
+        label: r.name,
+        contractLabel: r.contract_label || r.name,
+        hasEntrada: !!r.has_entrada,
+        hasParcelas: !!r.has_parcelas,
+      }));
+      setPaymentOptions(opts);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId]);
+
   /* ---- Group variables ---- */
   // Remove placeholders fixos da CONTRATADA antes de qualquer agrupamento,
   // assim eles não aparecem em nenhuma etapa nem entram no contador de progresso.
