@@ -726,6 +726,23 @@ export const ContractWizard = ({
         const formaFilled = !!formaUi || hasFormaVarFilled;
         counts[k].total += 1;
         if (formaFilled) counts[k].filled += 1;
+
+        // Se houve entrada, exigir valor e forma da entrada.
+        const formaCurrent = placeholderValues?.["__FORMA_PAGAMENTO_UI__"];
+        const opt = PAYMENT_OPTIONS.find(
+          (o) => o.value === formaCurrent || o.contractLabel === formaCurrent || o.label === formaCurrent,
+        );
+        const isParcelado = opt?.category === "parcelado";
+        const temEntrada = !!placeholderValues?.["__TEM_ENTRADA__"];
+        if (isParcelado && temEntrada) {
+          const entradaValor = placeholderValues?.["__ENTRADA_VALOR__"];
+          const entradaForma = placeholderValues?.["__ENTRADA_FORMA__"];
+          counts[k].total += 2;
+          if (entradaValor !== null && entradaValor !== undefined && entradaValor !== "" && Number(entradaValor) > 0) {
+            counts[k].filled += 1;
+          }
+          if (entradaForma) counts[k].filled += 1;
+        }
       }
     });
     // Mentee step is data-driven (not template-variable-driven). Compute its
@@ -1186,6 +1203,8 @@ export const ContractWizard = ({
     const FORMA_UI_KEY = "__FORMA_PAGAMENTO_UI__";
     const CATEGORY_UI_KEY = "__MODALIDADE_PAGAMENTO_UI__";
     const TEM_ENTRADA_UI_KEY = "__TEM_ENTRADA__";
+    const ENTRADA_VALOR_UI_KEY = "__ENTRADA_VALOR__";
+    const ENTRADA_FORMA_UI_KEY = "__ENTRADA_FORMA__";
     const formaVarKeys = byRole.forma.map((v) => v.key);
     const formaCurrent =
       placeholderValues?.[FORMA_UI_KEY] ??
@@ -1202,12 +1221,25 @@ export const ContractWizard = ({
       "";
 
     const temEntrada = !!placeholderValues?.[TEM_ENTRADA_UI_KEY];
+    const entradaValor = placeholderValues?.[ENTRADA_VALOR_UI_KEY] ?? "";
+    const entradaFormaValue = placeholderValues?.[ENTRADA_FORMA_UI_KEY] ?? "";
+    const entradaFormaOption = PAYMENT_OPTIONS.find((o) => o.value === entradaFormaValue) ?? null;
 
     const optionsForCategory = PAYMENT_OPTIONS.filter((o) => o.category === selectedCategory);
+    const entradaOptions = PAYMENT_OPTIONS.filter((o) => o.category === "a_vista");
+
+    const formatBRL = (n: number) =>
+      n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
     const buildContractLabel = (opt: PaymentOption, withEntrada: boolean) => {
       if (opt.category === "parcelado" && withEntrada) {
-        return `${opt.contractLabel} com entrada`;
+        const valorNum = typeof entradaValor === "number" ? entradaValor : parseFloat(String(entradaValor));
+        const valorStr = !isNaN(valorNum) && valorNum > 0 ? ` de ${formatBRL(valorNum)}` : "";
+        // entradaFormaOption.contractLabel = "À vista via Pix" → extrai " via Pix"
+        const formaStr = entradaFormaOption
+          ? ` ${entradaFormaOption.contractLabel.replace(/^À vista\s*/i, "").trim()}`.replace(/\s+/g, " ")
+          : "";
+        return `${opt.contractLabel} com entrada${valorStr}${formaStr}`.trim();
       }
       return opt.contractLabel;
     };
@@ -1224,7 +1256,11 @@ export const ContractWizard = ({
         [CATEGORY_UI_KEY]: cat,
         [FORMA_UI_KEY]: "",
       };
-      if (cat === "a_vista") next[TEM_ENTRADA_UI_KEY] = false;
+      if (cat === "a_vista") {
+        next[TEM_ENTRADA_UI_KEY] = false;
+        next[ENTRADA_VALOR_UI_KEY] = "";
+        next[ENTRADA_FORMA_UI_KEY] = "";
+      }
       // Clear conditional fields when switching modalidade
       for (const v of byRole.forma) next[v.key] = "";
       for (const v of byRole.entrada) next[v.key] = "";
@@ -1252,6 +1288,8 @@ export const ContractWizard = ({
       // Clear conditional fields not applicable
       if (opt.category !== "parcelado") {
         next[TEM_ENTRADA_UI_KEY] = false;
+        next[ENTRADA_VALOR_UI_KEY] = "";
+        next[ENTRADA_FORMA_UI_KEY] = "";
         for (const v of byRole.entrada) next[v.key] = "";
         for (const v of byRole.parcelas_num) next[v.key] = "";
         for (const v of byRole.parcela_valor) next[v.key] = "";
@@ -1271,7 +1309,48 @@ export const ContractWizard = ({
       if (selectedOption) {
         next = propagateFormaToTemplate(buildContractLabel(selectedOption, val), next);
       }
-      if (!val) for (const v of byRole.entrada) next[v.key] = "";
+      if (!val) {
+        next[ENTRADA_VALOR_UI_KEY] = "";
+        next[ENTRADA_FORMA_UI_KEY] = "";
+        for (const v of byRole.entrada) next[v.key] = "";
+      }
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    };
+
+    const handleEntradaValorChange = (raw: string) => {
+      const num = raw === "" ? "" : parseFloat(raw);
+      let next: Record<string, any> = {
+        ...placeholderValues,
+        [ENTRADA_VALOR_UI_KEY]: num === "" ? "" : num,
+      };
+      // Propaga para placeholders semânticos de entrada
+      for (const v of byRole.entrada) next[v.key] = num === "" ? "" : num;
+      if (selectedOption) {
+        next = propagateFormaToTemplate(buildContractLabel(selectedOption, true), next);
+      }
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    };
+
+    const handleEntradaFormaChange = (optionValue: string) => {
+      let next: Record<string, any> = {
+        ...placeholderValues,
+        [ENTRADA_FORMA_UI_KEY]: optionValue,
+      };
+      if (selectedOption) {
+        next = propagateFormaToTemplate(buildContractLabel(selectedOption, true), next);
+      }
       onChange({
         template_id: templateId,
         product_id: productId,
@@ -1288,7 +1367,6 @@ export const ContractWizard = ({
     const visibleVars: TemplateVariableDef[] = [
       ...byRole.total,
       ...byRole.extenso,
-      ...(showEntrada ? byRole.entrada : []),
       ...(showParcelas ? byRole.parcelas_num : []),
       ...(showParcelas ? byRole.parcela_valor : []),
       ...(showParcelas ? byRole.vencimento : []),
@@ -1383,6 +1461,50 @@ export const ContractWizard = ({
               onCheckedChange={handleEntradaToggle}
               disabled={disabled}
             />
+          </div>
+        )}
+
+        {/* Detalhes da entrada (quando aplicável) */}
+        {showEntrada && (
+          <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Detalhes da entrada
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">
+                  Valor da entrada (R$)<span className="text-destructive ml-0.5">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={entradaValor === "" || entradaValor == null ? "" : entradaValor}
+                  onChange={(e) => handleEntradaValorChange(e.target.value)}
+                  placeholder="0,00"
+                  disabled={disabled}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">
+                  Forma de pagamento da entrada<span className="text-destructive ml-0.5">*</span>
+                </Label>
+                <Select
+                  value={entradaFormaOption?.value ?? ""}
+                  onValueChange={handleEntradaFormaChange}
+                  disabled={disabled}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a forma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {entradaOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         )}
 
