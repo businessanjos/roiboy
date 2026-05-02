@@ -1448,14 +1448,17 @@ export const ContractWizard = ({
     const showEntrada = isParcelado && temEntrada;
     const showParcelas = isParcelado;
 
-    const visibleVars: TemplateVariableDef[] = [
+    // Campos exibidos antes da modalidade: valor total e valor por extenso.
+    const preVars: TemplateVariableDef[] = [
       ...byRole.total,
       ...byRole.extenso,
-      ...(showParcelas ? byRole.parcelas_num : []),
-      ...(showParcelas ? byRole.parcela_valor : []),
-      ...(showParcelas ? byRole.vencimento : []),
-      ...byRole.outros,
     ];
+    // Campos exibidos depois da entrada: quantidade de parcelas e data da 1ª parcela.
+    const parcelasVars: TemplateVariableDef[] = showParcelas
+      ? [...byRole.parcelas_num, ...byRole.vencimento]
+      : [];
+    // Demais campos (ex.: data de assinatura) ficam por último.
+    const tailVars: TemplateVariableDef[] = [...byRole.outros];
 
     const finalContractLabel = selectedOption
       ? buildContractLabel(selectedOption, temEntrada)
@@ -1470,12 +1473,27 @@ export const ContractWizard = ({
           <div>
             <h3 className="text-base font-semibold">{meta.label}</h3>
             <p className="text-xs text-muted-foreground">
-              1) Modalidade · 2) Método · 3) Detalhes do parcelamento (se aplicável).
+              Preencha os campos na ordem indicada abaixo.
             </p>
           </div>
         </div>
 
-        {/* Step 1: Modalidade */}
+        {/* 1 e 2: Valor total e valor por extenso */}
+        {preVars.length > 0 && (
+          <div className="grid sm:grid-cols-2 gap-x-4 gap-y-4">
+            {preVars.map((v) => (
+              <PlaceholderField
+                key={v.key}
+                v={v}
+                value={placeholderValues?.[v.key]}
+                onChange={(val) => updateField(v.key, val)}
+                disabled={disabled}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* 3: Modalidade */}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">
             Modalidade<span className="text-destructive ml-0.5">*</span>
@@ -1508,7 +1526,7 @@ export const ContractWizard = ({
           </div>
         </div>
 
-        {/* Step 2: Método */}
+        {/* 4: Método */}
         {selectedCategory && (
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">
@@ -1531,7 +1549,7 @@ export const ContractWizard = ({
           </div>
         )}
 
-        {/* Step 3: Toggle Entrada (apenas Parcelado) */}
+        {/* 5: Houve entrada? (apenas Parcelado) */}
         {isParcelado && selectedOption && (
           <div className="flex items-center justify-between rounded-lg border border-border p-3">
             <div>
@@ -1548,7 +1566,7 @@ export const ContractWizard = ({
           </div>
         )}
 
-        {/* Detalhes da entrada (quando aplicável) */}
+        {/* 6 e 7: Valor da entrada e forma de pagamento da entrada */}
         {showEntrada && (
           <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -1598,7 +1616,22 @@ export const ContractWizard = ({
           </p>
         )}
 
-        {/* Computed parcela value (always shown when Parcelado) */}
+        {/* 8 e 9: Quantidade de parcelas e data da 1ª parcela */}
+        {parcelasVars.length > 0 && (
+          <div className="grid sm:grid-cols-2 gap-x-4 gap-y-4">
+            {parcelasVars.map((v) => (
+              <PlaceholderField
+                key={v.key}
+                v={v}
+                value={placeholderValues?.[v.key]}
+                onChange={(val) => updateField(v.key, val)}
+                disabled={disabled}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* 10: Valor das parcelas (calculado) */}
         {(() => {
           if (!isParcelado || !selectedOption) return null;
           const totalVar = byRole.total[0];
@@ -1657,10 +1690,10 @@ export const ContractWizard = ({
           );
         })()}
 
-        {/* Conditional fields */}
-        {visibleVars.length > 0 && (
+        {/* 11: Data de assinatura e demais campos */}
+        {tailVars.length > 0 && (
           <div className="grid sm:grid-cols-2 gap-x-4 gap-y-4 pt-2 border-t border-border">
-            {visibleVars.map((v) => (
+            {tailVars.map((v) => (
               <PlaceholderField
                 key={v.key}
                 v={v}
