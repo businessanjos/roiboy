@@ -2,6 +2,47 @@ import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const NATIONALITY_OPTIONS = [
+  "Brasileiro(a)",
+  "Argentino(a)",
+  "Boliviano(a)",
+  "Chileno(a)",
+  "Colombiano(a)",
+  "Equatoriano(a)",
+  "Paraguaio(a)",
+  "Peruano(a)",
+  "Uruguaio(a)",
+  "Venezuelano(a)",
+  "Americano(a)",
+  "Canadense",
+  "Mexicano(a)",
+  "Português(a)",
+  "Espanhol(a)",
+  "Italiano(a)",
+  "Francês(a)",
+  "Alemão(ã)",
+  "Inglês(a)",
+  "Japonês(a)",
+  "Chinês(a)",
+  "Outra",
+];
+
+const MARITAL_STATUS_OPTIONS = [
+  "Solteiro(a)",
+  "Casado(a)",
+  "União estável",
+  "Divorciado(a)",
+  "Separado(a)",
+  "Viúvo(a)",
+];
 import { Button } from "@/components/ui/button";
 import { Loader2, Copy, GraduationCap, Sparkles, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
