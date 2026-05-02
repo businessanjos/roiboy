@@ -1,12 +1,47 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Loader2, Copy, GraduationCap, Sparkles } from "lucide-react";
+import { Loader2, Copy, GraduationCap, Sparkles, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { DigitalContractData } from "./ContractDocument";
+
+type AddressParts = {
+  cep: string;
+  logradouro: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  numero: string;
+  complemento: string;
+};
+
+const EMPTY_PARTS: AddressParts = {
+  cep: "",
+  logradouro: "",
+  bairro: "",
+  cidade: "",
+  uf: "",
+  numero: "",
+  complemento: "",
+};
+
+const formatCep = (v: string) => {
+  const d = (v || "").replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 5) return d;
+  return `${d.slice(0, 5)}-${d.slice(5)}`;
+};
+
+const composeAddress = (p: AddressParts): string => {
+  const street = [p.logradouro, p.numero].filter(Boolean).join(", ");
+  const tail = [p.complemento, p.bairro].filter(Boolean).join(" - ");
+  const cityUf = [p.cidade, p.uf].filter(Boolean).join("/");
+  return [street, tail, cityUf, p.cep ? `CEP ${p.cep}` : ""]
+    .filter(Boolean)
+    .join(", ");
+};
 
 export interface MenteeContractFieldsProps {
   data: DigitalContractData;
