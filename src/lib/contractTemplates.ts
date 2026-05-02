@@ -304,6 +304,60 @@ const formatValueForRender = (v: any, type?: TemplateVariableType) => {
   return String(v);
 };
 
+/**
+ * Aliases between common English-style placeholders used in legacy templates
+ * and the Portuguese variable keys actually managed by the wizard.
+ * When a {{KEY}} in the HTML has no value, we try its aliases to find one.
+ */
+const PLACEHOLDER_ALIASES: Record<string, string[]> = {
+  // Cliente / Contratante
+  CLIENT_NAME: ["RAZAO_SOCIAL", "NOME_COMPLETO", "NOME", "CONTRATANTE", "FULL_NAME"],
+  CLIENT_DOCUMENT: ["CNPJ", "CPF", "DOCUMENTO"],
+  CLIENT_EMAIL: ["EMAIL", "E_MAIL"],
+  CLIENT_PHONE: ["CELULAR", "TELEFONE", "WHATSAPP", "PHONE"],
+  CLIENT_ADDRESS: ["ENDERECO", "ENDEREÇO", "RUA", "LOGRADOURO"],
+  RAZAO_SOCIAL: ["CLIENT_NAME", "NOME_COMPLETO", "CONTRATANTE"],
+  CNPJ: ["CLIENT_DOCUMENT"],
+  CPF: ["CLIENT_DOCUMENT"],
+  EMAIL: ["CLIENT_EMAIL"],
+  CELULAR: ["CLIENT_PHONE", "TELEFONE"],
+  TELEFONE: ["CLIENT_PHONE", "CELULAR"],
+  // Produto
+  PRODUCT_NAME: ["PRODUTO", "PROGRAMA", "MENTORIA"],
+  // Valores
+  TOTAL_VALUE: ["VALOR_TOTAL", "VALOR", "INVESTIMENTO", "INVESTIMENTO_TOTAL"],
+  TOTAL_VALUE_WORDS: ["VALOR_TOTAL_EXTENSO", "VALOR_EXTENSO", "EXTENSO"],
+  VALOR_TOTAL: ["TOTAL_VALUE"],
+  VALOR_TOTAL_EXTENSO: ["TOTAL_VALUE_WORDS"],
+  DOWN_PAYMENT: ["VALOR_ENTRADA", "ENTRADA"],
+  INSTALLMENTS: ["PARCELAS", "NUM_PARCELAS", "NUMERO_PARCELAS"],
+  PARCELAS: ["INSTALLMENTS"],
+  PAYMENT_METHOD: ["FORMA_PAGAMENTO", "PAGAMENTO", "FORMA_DE_PAGAMENTO"],
+  DUE_DATE: ["DATA_VENCIMENTO", "VENCIMENTO", "DATA_PRIMEIRA_PARCELA"],
+  // Vigência / datas
+  CONTRACT_DURATION: ["DURACAO_MESES", "DURACAO", "VIGENCIA"],
+  CONTRACT_DATE: ["DATA_ASSINATURA", "DATA_CELEBRACAO", "DATA_CONTRATO"],
+  START_DATE: ["DATA_INICIO", "VIGENCIA_INICIO", "DATA_PRIMEIRA_PARCELA"],
+  END_DATE: ["DATA_FIM", "VIGENCIA_FIM", "DATA_TERMINO"],
+  SIGNATURE_DATE: ["DATA_ASSINATURA", "DATA_CONTRATO"],
+  SIGNATURE_CITY: ["CIDADE_ASSINATURA", "CIDADE", "CIDADE_FORO"],
+  JURISDICTION: ["FORO", "CIDADE_FORO", "COMARCA"],
+};
+
+const resolveValueByKey = (
+  key: string,
+  values: Record<string, any>,
+): { value: any; aliasedFrom?: string } => {
+  const direct = values?.[key];
+  if (direct !== undefined && direct !== null && direct !== "") return { value: direct };
+  const aliases = PLACEHOLDER_ALIASES[key] ?? [];
+  for (const alias of aliases) {
+    const v = values?.[alias];
+    if (v !== undefined && v !== null && v !== "") return { value: v, aliasedFrom: alias };
+  }
+  return { value: direct };
+};
+
 /** Replace {{KEY}} in the template HTML with values, applying type-aware formatting. */
 export const renderTemplate = (
   templateHtml: string,
@@ -313,8 +367,10 @@ export const renderTemplate = (
   if (!templateHtml) return "";
   const typeMap = new Map(variables.map((v) => [v.key, v.type]));
   return templateHtml.replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (_match, key: string) => {
-    const t = typeMap.get(key);
-    return formatValueForRender(values?.[key], t);
+    const resolved = resolveValueByKey(key, values);
+    // Prefer the type of the actual key, else of the alias source
+    const t = typeMap.get(key) ?? (resolved.aliasedFrom ? typeMap.get(resolved.aliasedFrom) : undefined);
+    return formatValueForRender(resolved.value, t);
   });
 };
 
