@@ -1447,6 +1447,50 @@ export const ContractWizard = ({
           </div>
         )}
 
+        {/* Detalhes da entrada (quando aplicável) */}
+        {showEntrada && (
+          <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Detalhes da entrada
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">
+                  Valor da entrada (R$)<span className="text-destructive ml-0.5">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={entradaValor === "" || entradaValor == null ? "" : entradaValor}
+                  onChange={(e) => handleEntradaValorChange(e.target.value)}
+                  placeholder="0,00"
+                  disabled={disabled}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">
+                  Forma de pagamento da entrada<span className="text-destructive ml-0.5">*</span>
+                </Label>
+                <Select
+                  value={entradaFormaOption?.value ?? ""}
+                  onValueChange={handleEntradaFormaChange}
+                  disabled={disabled}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a forma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {entradaOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
+
         {selectedOption && (
           <p className="text-[11px] text-muted-foreground">
             No contrato será impresso: <span className="font-medium text-foreground">{finalContractLabel}</span>
