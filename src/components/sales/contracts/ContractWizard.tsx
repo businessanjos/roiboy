@@ -439,6 +439,63 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
 };
 
 /* ================================================================== */
+/* Payment step — forma de pagamento + campos condicionais             */
+/* ================================================================== */
+
+interface PaymentOption {
+  value: string;
+  label: string;
+  /** Friendly label written into the FORMA_PAGAMENTO placeholder */
+  contractLabel: string;
+  hasEntrada: boolean;
+  hasParcelas: boolean;
+}
+
+const PAYMENT_OPTIONS: PaymentOption[] = [
+  { value: "a_vista_pix", label: "À vista (PIX)", contractLabel: "À vista via PIX", hasEntrada: false, hasParcelas: false },
+  { value: "a_vista_boleto", label: "À vista (Boleto)", contractLabel: "À vista via boleto bancário", hasEntrada: false, hasParcelas: false },
+  { value: "a_vista_transferencia", label: "À vista (Transferência)", contractLabel: "À vista via transferência bancária", hasEntrada: false, hasParcelas: false },
+  { value: "parcelado_cartao", label: "Parcelado no Cartão de Crédito", contractLabel: "Parcelado no cartão de crédito", hasEntrada: false, hasParcelas: true },
+  { value: "parcelado_boleto", label: "Parcelado em Boletos", contractLabel: "Parcelado em boletos bancários", hasEntrada: false, hasParcelas: true },
+  { value: "entrada_parcelado_cartao", label: "Entrada + Parcelas no Cartão", contractLabel: "Entrada via PIX + parcelas no cartão de crédito", hasEntrada: true, hasParcelas: true },
+  { value: "entrada_parcelado_boleto", label: "Entrada + Boletos", contractLabel: "Entrada via PIX + parcelas em boletos bancários", hasEntrada: true, hasParcelas: true },
+  { value: "pix_cartao", label: "PIX + Cartão de Crédito", contractLabel: "Pagamento via PIX e cartão de crédito", hasEntrada: true, hasParcelas: true },
+  { value: "pix_cheques", label: "PIX + Cheques", contractLabel: "Pagamento via PIX e cheques", hasEntrada: true, hasParcelas: true },
+  { value: "cartao_cheques", label: "Cartão + Cheques", contractLabel: "Pagamento via cartão de crédito e cheques", hasEntrada: false, hasParcelas: true },
+  { value: "cheques", label: "Cheques", contractLabel: "Pagamento em cheques", hasEntrada: false, hasParcelas: true },
+  { value: "cartao_recorrencia", label: "Cartão Recorrência", contractLabel: "Cobrança recorrente no cartão de crédito", hasEntrada: false, hasParcelas: true },
+];
+
+/** Classify a payment-step placeholder by its semantic role. */
+type PaymentRole = "forma" | "entrada" | "parcelas_num" | "parcela_valor" | "total" | "extenso" | "vencimento" | "outros";
+
+const classifyPaymentVar = (key: string): PaymentRole => {
+  const K = key.toUpperCase();
+  if (/EXTENSO/.test(K)) return "extenso";
+  if (/(FORMA|METODO|MEIO).*PAG/.test(K) || K === "PAGAMENTO" || K === "FORMA_PAGAMENTO" || /PAYMENT_METHOD/.test(K)) {
+    return "forma";
+  }
+  if (/(ENTRADA|DOWN_PAYMENT|SINAL)/.test(K)) return "entrada";
+  if (/VENCIMENTO|DUE_DATE|PRIMEIRA_PARCELA|DATA_VENC|DATA_PRIMEIRA/.test(K)) return "vencimento";
+  if (
+    /(NUMERO|N_|QTD|QUANTIDADE).*(PARCELAS?|INSTALLMENTS?)/.test(K) ||
+    K === "PARCELAS" ||
+    K === "NUM_PARCELAS" ||
+    K === "INSTALLMENTS" ||
+    K === "NUMERO_PARCELAS"
+  ) {
+    return "parcelas_num";
+  }
+  if (/(PARCELA|INSTALLMENT|MENSAL).*VALOR|VALOR.*(PARCELA|INSTALLMENT|MENSAL)|MENSALIDADE/.test(K)) {
+    return "parcela_valor";
+  }
+  if (/(VALOR|TOTAL|CONTRATO|PRECO|PREÇO|INVESTIMENTO)/.test(K) && !/UNITARIO/.test(K)) {
+    return "total";
+  }
+  return "outros";
+};
+
+/* ================================================================== */
 /* Stepper UI                                                          */
 /* ================================================================== */
 
@@ -606,8 +663,23 @@ export const ContractWizard = ({
     };
     (Object.keys(groupedVars) as StepKey[]).forEach((k) => {
       const list = groupedVars[k];
-      counts[k].total = list.length;
-      counts[k].filled = list.filter((v) => {
+      // For payment, only count fields relevant to the selected forma.
+      let effectiveList = list;
+      if (k === "payment") {
+        const formaVar = list.find((v) => classifyPaymentVar(v.key) === "forma");
+        const formaCurrent = formaVar ? (placeholderValues?.[formaVar.key] ?? "") : "";
+        const opt = PAYMENT_OPTIONS.find(
+          (o) => o.value === formaCurrent || o.contractLabel === formaCurrent || o.label === formaCurrent,
+        );
+        effectiveList = list.filter((v) => {
+          const role = classifyPaymentVar(v.key);
+          if (role === "entrada") return !!opt?.hasEntrada;
+          if (role === "parcelas_num" || role === "parcela_valor" || role === "vencimento") return !!opt?.hasParcelas;
+          return true;
+        });
+      }
+      counts[k].total = effectiveList.length;
+      counts[k].filled = effectiveList.filter((v) => {
         const x = placeholderValues?.[v.key];
         return x !== null && x !== undefined && x !== "";
       }).length;
@@ -1052,6 +1124,132 @@ export const ContractWizard = ({
   const currentTemplateName =
     templates.find((t) => t.id === templateId)?.name ?? "Modelo carregado";
 
+  /* ---- Payment step renderer ---- */
+  const renderPaymentStep = () => {
+    const list = groupedVars.payment ?? [];
+    const meta = STEPS_META.payment;
+    const Icon = meta.icon;
+
+    // Group payment placeholders by role so we can sequence them logically.
+    const byRole: Record<PaymentRole, TemplateVariableDef[]> = {
+      forma: [], entrada: [], parcelas_num: [], parcela_valor: [], total: [], extenso: [], vencimento: [], outros: [],
+    };
+    for (const v of list) byRole[classifyPaymentVar(v.key)].push(v);
+
+    // Forma de pagamento — derive selection from any available "forma" value.
+    const formaVar = byRole.forma[0] ?? null;
+    const formaCurrent = formaVar ? (placeholderValues?.[formaVar.key] ?? "") : "";
+    const matchedOption = PAYMENT_OPTIONS.find(
+      (o) => o.value === formaCurrent || o.contractLabel === formaCurrent || o.label === formaCurrent,
+    );
+    const selectedOption = matchedOption ?? null;
+
+    const handleFormaChange = (optionValue: string) => {
+      const opt = PAYMENT_OPTIONS.find((o) => o.value === optionValue);
+      if (!opt) return;
+      const next: Record<string, any> = { ...placeholderValues };
+      // Write friendly label into every "forma" placeholder so the contract reads naturally.
+      for (const v of byRole.forma) next[v.key] = opt.contractLabel;
+      // Clear breakdown-specific fields when option doesn't need them.
+      if (!opt.hasEntrada) for (const v of byRole.entrada) next[v.key] = "";
+      if (!opt.hasParcelas) {
+        for (const v of byRole.parcelas_num) next[v.key] = "";
+        for (const v of byRole.parcela_valor) next[v.key] = "";
+        for (const v of byRole.vencimento) next[v.key] = "";
+      }
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    };
+
+    // Determine which roles to show
+    const showEntrada = !!selectedOption?.hasEntrada;
+    const showParcelas = !!selectedOption?.hasParcelas;
+
+    const visibleVars: TemplateVariableDef[] = [
+      ...byRole.total,
+      ...byRole.extenso,
+      ...(showEntrada ? byRole.entrada : []),
+      ...(showParcelas ? byRole.parcelas_num : []),
+      ...(showParcelas ? byRole.parcela_valor : []),
+      ...(showParcelas ? byRole.vencimento : []),
+      ...byRole.outros,
+    ];
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Icon className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold">{meta.label}</h3>
+            <p className="text-xs text-muted-foreground">
+              Escolha a forma de pagamento — os demais campos aparecem conforme a opção.
+            </p>
+          </div>
+        </div>
+
+        {/* Primary: Forma de pagamento */}
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">
+            Forma de pagamento<span className="text-destructive ml-0.5">*</span>
+          </Label>
+          {formaVar ? (
+            <Select
+              value={selectedOption?.value ?? ""}
+              onValueChange={handleFormaChange}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a forma de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 p-3 text-xs text-muted-foreground">
+              Este modelo de contrato não possui um placeholder de Forma de Pagamento (ex.: <code>{`{{FORMA_PAGAMENTO}}`}</code>). Adicione-o ao modelo para escolher por aqui.
+            </div>
+          )}
+          {selectedOption && (
+            <p className="text-[11px] text-muted-foreground">
+              No contrato será impresso: <span className="font-medium text-foreground">{selectedOption.contractLabel}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Conditional fields */}
+        {visibleVars.length > 0 && (
+          <div className="grid sm:grid-cols-2 gap-x-4 gap-y-4 pt-2 border-t border-border">
+            {visibleVars.map((v) => (
+              <PlaceholderField
+                key={v.key}
+                v={v}
+                value={placeholderValues?.[v.key]}
+                onChange={(val) => updateField(v.key, val)}
+                disabled={disabled}
+              />
+            ))}
+          </div>
+        )}
+
+        {!selectedOption && formaVar && (
+          <p className="text-xs text-muted-foreground italic">
+            Selecione uma forma de pagamento para liberar os campos de valor, parcelas e vencimento.
+          </p>
+        )}
+      </div>
+    );
+  };
+
   const renderStepContent = () => {
     if (step === "review") {
       const emptyVars = effectiveVariables.filter((v) => {
@@ -1107,6 +1305,10 @@ export const ContractWizard = ({
           withStepHeader
         />
       );
+    }
+
+    if (step === "payment") {
+      return renderPaymentStep();
     }
 
     const list = groupedVars[step] ?? [];
