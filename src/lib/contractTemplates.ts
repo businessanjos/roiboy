@@ -222,6 +222,21 @@ const inferValueFromKey = (
     return ctx.user?.name ?? null;
   }
 
+  // PRODUTO / PROGRAMA
+  if (/^(PRODUCT_NAME|PRODUTO|PROGRAMA|MENTORIA|NOME_PRODUTO|NOME_PROGRAMA)$/.test(K)) {
+    return ctx.product?.name ?? null;
+  }
+
+  // ANO DO CONTRATO
+  if (/^(CONTRACT_YEAR|ANO|ANO_CONTRATO|ANO_ASSINATURA|YEAR)$/.test(K)) {
+    const base = ctx.deal?.start_date ?? ctx.today ?? null;
+    if (base) {
+      const d = new Date(base.length <= 10 ? base + "T12:00:00" : base);
+      if (!Number.isNaN(d.getTime())) return String(d.getFullYear());
+    }
+    return String(new Date().getFullYear());
+  }
+
   // ============== CONTRATANTE (Cliente) — heurísticas por nome ==============
   const c = ctx.client ?? {};
   const isContratada = /(EMPRESA|CONTRATADA|COMPANY)/.test(K);
