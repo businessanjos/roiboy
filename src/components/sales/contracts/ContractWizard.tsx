@@ -699,10 +699,12 @@ export const ContractWizard = ({
         const opt = PAYMENT_OPTIONS.find(
           (o) => o.value === formaCurrent || o.contractLabel === formaCurrent || o.label === formaCurrent,
         );
+        const isParcelado = opt?.category === "parcelado";
+        const temEntrada = !!placeholderValues?.["__TEM_ENTRADA__"];
         effectiveList = list.filter((v) => {
           const role = classifyPaymentVar(v.key);
-          if (role === "entrada") return !!opt?.hasEntrada;
-          if (role === "parcelas_num" || role === "parcela_valor" || role === "vencimento") return !!opt?.hasParcelas;
+          if (role === "entrada") return isParcelado && temEntrada;
+          if (role === "parcelas_num" || role === "parcela_valor" || role === "vencimento") return isParcelado;
           return true;
         });
       }
