@@ -145,6 +145,7 @@ export const DigitalContractTab = ({
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [dealExtras, setDealExtras] = useState<{ entry_value?: number | null; won_at?: string | null }>({});
   const [productExtras, setProductExtras] = useState<{
+    name?: string | null;
     payment_methods?: string[] | null;
     billing_period?: string | null;
     cash_price?: number | null;
