@@ -633,6 +633,9 @@ export const DigitalContractTab = ({
           setPlaceholderValues(next.placeholder_values);
         }}
         disabled={saving}
+        menteeData={data}
+        onMenteeChange={setData}
+        dealId={dealId}
       />
 
       <Tabs defaultValue="editor" className="w-full">
