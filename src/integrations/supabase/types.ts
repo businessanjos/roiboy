@@ -11202,6 +11202,7 @@ export type Database = {
       payment_methods: {
         Row: {
           account_id: string
+          category: string
           contract_label: string
           created_at: string
           display_order: number
@@ -11214,6 +11215,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          category?: string
           contract_label: string
           created_at?: string
           display_order?: number
@@ -11226,6 +11228,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          category?: string
           contract_label?: string
           created_at?: string
           display_order?: number
