@@ -852,6 +852,45 @@ export const ContractWizard = ({
       }
     }
 
+    // Auto-calc parcela_valor = (total - entrada) / parcelas_num
+    // Triggered when parcelas_num, total, or trigger is itself a relevant field.
+    const triggerRole = classifyPaymentVar(key);
+    const shouldRecalcParcela =
+      triggerRole === "parcelas_num" || triggerRole === "total" || isTotalValueKey;
+
+    if (shouldRecalcParcela) {
+      const totalVar = templateVariables.find((tv) => classifyPaymentVar(tv.key) === "total");
+      const parcelasNumVar = templateVariables.find((tv) => classifyPaymentVar(tv.key) === "parcelas_num");
+      const parcelaValorVars = templateVariables.filter((tv) => classifyPaymentVar(tv.key) === "parcela_valor");
+
+      const totalRaw = totalVar ? nextValues[totalVar.key] : null;
+      const parcelasRaw = parcelasNumVar ? nextValues[parcelasNumVar.key] : null;
+      const totalNum =
+        typeof totalRaw === "number" ? totalRaw : parseBRLInput(String(totalRaw ?? ""));
+      const parcelasNum =
+        typeof parcelasRaw === "number" ? parcelasRaw : parseInt(String(parcelasRaw ?? ""), 10);
+
+      const entradaRaw = nextValues["__ENTRADA_VALOR__"];
+      const temEntrada = !!nextValues["__TEM_ENTRADA__"];
+      const entradaNum = temEntrada
+        ? (typeof entradaRaw === "number" ? entradaRaw : parseFloat(String(entradaRaw ?? "0")) || 0)
+        : 0;
+
+      if (
+        totalNum !== null &&
+        totalNum !== undefined &&
+        Number.isFinite(totalNum as number) &&
+        Number.isFinite(parcelasNum) &&
+        parcelasNum > 0
+      ) {
+        const saldo = Math.max(0, (totalNum as number) - entradaNum);
+        const valorParcela = Math.round((saldo / parcelasNum) * 100) / 100;
+        for (const pv of parcelaValorVars) {
+          nextValues[pv.key] = valorParcela;
+        }
+      }
+    }
+
     onChange({
       template_id: templateId,
       product_id: productId,
