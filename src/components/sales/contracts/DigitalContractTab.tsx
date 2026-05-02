@@ -156,10 +156,24 @@ export const DigitalContractTab = ({
   const pdfPreviewRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
-  const resolvedPlaceholderValues = useMemo(
-    () => mergeContractorPlaceholders(templateHtml, templateVariables, placeholderValues, data),
-    [templateHtml, templateVariables, placeholderValues, data],
-  );
+  const resolvedPlaceholderValues = useMemo(() => {
+    const merged = mergeContractorPlaceholders(templateHtml, templateVariables, placeholderValues, data);
+    // Garante PRODUCT_NAME e CONTRACT_YEAR mesmo quando o template não declara essas variáveis.
+    const productName = productExtras.name ?? null;
+    const baseDate = (data as any)?.first_due_date ?? dealExtras.won_at ?? new Date().toISOString();
+    const year = (() => {
+      const d = new Date(typeof baseDate === "string" && baseDate.length <= 10 ? baseDate + "T12:00:00" : baseDate);
+      return Number.isNaN(d.getTime()) ? String(new Date().getFullYear()) : String(d.getFullYear());
+    })();
+    return {
+      ...merged,
+      PRODUCT_NAME: merged.PRODUCT_NAME || productName || merged.PRODUCT_NAME || "",
+      PRODUTO: merged.PRODUTO || productName || "",
+      PROGRAMA: merged.PROGRAMA || productName || "",
+      CONTRACT_YEAR: merged.CONTRACT_YEAR || year,
+      ANO: merged.ANO || year,
+    };
+  }, [templateHtml, templateVariables, placeholderValues, data, productExtras.name, dealExtras.won_at]);
 
   useEffect(() => {
     let cancelled = false;
