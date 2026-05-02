@@ -73,6 +73,15 @@ export interface AutofillContext {
   today?: string;
 }
 
+export interface ContractorIdentity {
+  client_name?: string | null;
+  client_cpf_cnpj?: string | null;
+  client_email?: string | null;
+  client_address?: string | null;
+  client_nationality?: string | null;
+  client_marital_status?: string | null;
+}
+
 const formatBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -291,6 +300,58 @@ export const buildPlaceholderValues = (
     const inferred = inferValueFromKey(v, ctx, out);
     if (inferred !== null && inferred !== undefined && inferred !== "") {
       out[v.key] = inferred;
+    }
+  }
+
+  return out;
+};
+
+/**
+ * Force every contractor/cliente placeholder to use the Mentorado identity.
+ * Some legacy templates contain placeholders that are not listed in
+ * `template_variables`, so this scans variables, saved values and raw HTML.
+ */
+export const mergeContractorPlaceholders = (
+  templateHtml: string | null | undefined,
+  variables: TemplateVariableDef[],
+  values: Record<string, any>,
+  contractor?: ContractorIdentity | null,
+): Record<string, any> => {
+  if (!contractor) return values ?? {};
+  const out: Record<string, any> = { ...(values ?? {}) };
+  const keys = new Set<string>([
+    ...Object.keys(out),
+    ...(variables ?? []).map((v) => v.key),
+  ]);
+  const re = /\{\{\s*([A-Z0-9_]+)\s*\}\}/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(templateHtml ?? ""))) keys.add(match[1]);
+
+  const name = contractor.client_name ?? "";
+  const cpf = contractor.client_cpf_cnpj == null ? "" : String(contractor.client_cpf_cnpj).replace(/\D/g, "");
+  const email = contractor.client_email ?? "";
+  const address = contractor.client_address ?? "";
+
+  for (const key of keys) {
+    const K = key.toUpperCase();
+    if (/(EMPRESA|CONTRATADA|COMPANY)/.test(K)) continue;
+
+    if (/^CNPJ$|CONTRATANTE_CNPJ|CLIENTE_CNPJ|CLIENT_CNPJ/.test(K)) {
+      out[key] = "";
+    } else if (/^CPF$|CONTRATANTE_CPF|CLIENTE_CPF|CLIENT_CPF|CLIENT_DOCUMENT|^DOCUMENTO$|CPF_CNPJ|CNPJ_CPF/.test(K)) {
+      out[key] = cpf;
+    } else if (/RAZAO_?SOCIAL|RAZÃO_?SOCIAL|NOME_?FANTASIA|FANTASIA|CLIENT_?NAME|FULL_?NAME|^CONTRATANTE$|CONTRATANTE_NOME|(^|_)NOME(_COMPLETO)?$|NOME_PLACEHOLDER/.test(K)) {
+      out[key] = name;
+    } else if (/INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(K)) {
+      out[key] = "";
+    } else if (/^EMAIL$|^E_?MAIL$|CLIENT_EMAIL|CONTRATANTE_EMAIL|EMAIL_CONTRATANTE/.test(K)) {
+      out[key] = email;
+    } else if (/^ENDERECO$|^ENDEREÇO$|CLIENT_ADDRESS|CONTRATANTE_ENDERECO|ENDERECO_CONTRATANTE|^RUA$|LOGRADOURO/.test(K)) {
+      out[key] = address;
+    } else if (/NACIONALIDADE|NATIONALITY/.test(K)) {
+      out[key] = contractor.client_nationality ?? "";
+    } else if (/ESTADO_?CIVIL|MARITAL/.test(K)) {
+      out[key] = contractor.client_marital_status ?? "";
     }
   }
 
