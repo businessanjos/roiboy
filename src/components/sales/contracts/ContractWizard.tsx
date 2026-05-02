@@ -1293,6 +1293,17 @@ export const ContractWizard = ({
     const propagateFormaToTemplate = (label: string, base: Record<string, any>) => {
       const next = { ...base };
       for (const v of byRole.forma) next[v.key] = label;
+      // Também grava em chaves canônicas legadas para que templates com
+      // {{FORMA_PAGAMENTO}}, {{PAGAMENTO}}, {{METODO_PAGAMENTO}}, {{PAYMENT_METHOD}}
+      // sejam preenchidos mesmo quando esses placeholders não estão declarados.
+      const legacyFormaKeys = [
+        "FORMA_PAGAMENTO", "FORMA_DE_PAGAMENTO", "PAGAMENTO",
+        "METODO_PAGAMENTO", "MEIO_PAGAMENTO", "PAYMENT_METHOD",
+      ];
+      for (const k of legacyFormaKeys) {
+        const declared = templateVariables.some((tv) => tv.key === k);
+        if (!declared) next[k] = label;
+      }
       return next;
     };
 
