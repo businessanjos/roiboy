@@ -47,6 +47,8 @@ import {
 } from "@/lib/contractTemplates";
 import { numberToBRLExtenso } from "@/lib/numberToWordsBRL";
 import { TemplatedContractPreview } from "./TemplatedContractSection";
+import { MenteeContractFields } from "./MenteeContractFields";
+import type { DigitalContractData } from "./ContractDocument";
 
 /* ================================================================== */
 /* Public types                                                        */
@@ -67,6 +69,11 @@ export interface ContractWizardProps {
   }) => void;
   autofill: AutofillContext;
   disabled?: boolean;
+  /** Mentorado data (DigitalContractData). When provided, a "Mentorado" step
+   *  is added between Cliente and Pagamento. */
+  menteeData?: DigitalContractData;
+  onMenteeChange?: (next: DigitalContractData) => void;
+  dealId?: string;
 }
 
 interface TemplateOption {
@@ -83,7 +90,7 @@ interface TemplateOption {
 /* Heuristics — group variables into friendly steps                    */
 /* ================================================================== */
 
-type StepKey = "client" | "company" | "payment";
+type StepKey = "client" | "mentee" | "company" | "payment";
 
 interface StepDef {
   key: StepKey;
@@ -100,6 +107,13 @@ const STEPS_META: Record<StepKey, StepDef> = {
     shortLabel: "Cliente",
     icon: User,
     description: "Quem é o contratante (razão social, CNPJ, endereço, contato).",
+  },
+  mentee: {
+    key: "mentee",
+    label: "Mentorado",
+    shortLabel: "Mentorado",
+    icon: User,
+    description: "Pessoa física que será mentorada e cláusulas de renovação/testemunhas.",
   },
   company: {
     key: "company",
@@ -507,6 +521,9 @@ export const ContractWizard = ({
   onChange,
   autofill,
   disabled,
+  menteeData,
+  onMenteeChange,
+  dealId,
 }: ContractWizardProps) => {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
@@ -571,6 +588,7 @@ export const ContractWizard = ({
   const groupedVars = useMemo(() => {
     const map: Record<StepKey, TemplateVariableDef[]> = {
       client: [],
+      mentee: [],
       company: [],
       payment: [],
     };
@@ -581,6 +599,7 @@ export const ContractWizard = ({
   const filledCounts = useMemo(() => {
     const counts: Record<StepKey, { filled: number; total: number }> = {
       client: { filled: 0, total: 0 },
+      mentee: { filled: 0, total: 0 },
       company: { filled: 0, total: 0 },
       payment: { filled: 0, total: 0 },
     };
@@ -592,17 +611,41 @@ export const ContractWizard = ({
         return x !== null && x !== undefined && x !== "";
       }).length;
     });
+    // Mentee step is data-driven (not template-variable-driven). Compute its
+    // own progress from menteeData when it is wired in.
+    if (onMenteeChange && menteeData) {
+      const fields: (keyof DigitalContractData)[] = [
+        "client_name",
+        "client_cpf_cnpj",
+        "client_email",
+        "client_address",
+        "client_nationality",
+        "client_marital_status",
+      ];
+      counts.mentee.total = fields.length;
+      counts.mentee.filled = fields.filter((f) => {
+        const v = (menteeData as any)?.[f];
+        return v !== null && v !== undefined && v !== "";
+      }).length;
+    }
     return counts;
-  }, [groupedVars, placeholderValues]);
+  }, [groupedVars, placeholderValues, menteeData, onMenteeChange]);
 
   const totalFilled = Object.values(filledCounts).reduce((a, b) => a + b.filled, 0);
   const totalAll = Object.values(filledCounts).reduce((a, b) => a + b.total, 0);
   const progress = totalAll === 0 ? 0 : Math.round((totalFilled / totalAll) * 100);
 
-  // Visible steps (skip empty groups)
+  // Visible steps (skip empty groups). The mentee step is shown whenever
+  // an onMenteeChange callback is provided (data-driven step, not template-driven).
   const visibleSteps = useMemo(
-    () => (Object.keys(STEPS_META) as StepKey[]).map((k) => STEPS_META[k]).filter((s) => groupedVars[s.key].length > 0),
-    [groupedVars],
+    () =>
+      (Object.keys(STEPS_META) as StepKey[])
+        .map((k) => STEPS_META[k])
+        .filter((s) => {
+          if (s.key === "mentee") return !!onMenteeChange;
+          return groupedVars[s.key].length > 0;
+        }),
+    [groupedVars, onMenteeChange],
   );
 
   // If current step has no vars, jump to first available
@@ -1026,7 +1069,19 @@ export const ContractWizard = ({
       );
     }
 
-    const list = groupedVars[step];
+    if (step === "mentee" && onMenteeChange && menteeData) {
+      return (
+        <MenteeContractFields
+          data={menteeData}
+          onChange={onMenteeChange}
+          disabled={disabled}
+          dealId={dealId}
+          withStepHeader
+        />
+      );
+    }
+
+    const list = groupedVars[step] ?? [];
     const meta = STEPS_META[step];
     const Icon = meta.icon;
 
