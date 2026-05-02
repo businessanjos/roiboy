@@ -439,6 +439,63 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
 };
 
 /* ================================================================== */
+/* Payment step — forma de pagamento + campos condicionais             */
+/* ================================================================== */
+
+interface PaymentOption {
+  value: string;
+  label: string;
+  /** Friendly label written into the FORMA_PAGAMENTO placeholder */
+  contractLabel: string;
+  hasEntrada: boolean;
+  hasParcelas: boolean;
+}
+
+const PAYMENT_OPTIONS: PaymentOption[] = [
+  { value: "a_vista_pix", label: "À vista (PIX)", contractLabel: "À vista via PIX", hasEntrada: false, hasParcelas: false },
+  { value: "a_vista_boleto", label: "À vista (Boleto)", contractLabel: "À vista via boleto bancário", hasEntrada: false, hasParcelas: false },
+  { value: "a_vista_transferencia", label: "À vista (Transferência)", contractLabel: "À vista via transferência bancária", hasEntrada: false, hasParcelas: false },
+  { value: "parcelado_cartao", label: "Parcelado no Cartão de Crédito", contractLabel: "Parcelado no cartão de crédito", hasEntrada: false, hasParcelas: true },
+  { value: "parcelado_boleto", label: "Parcelado em Boletos", contractLabel: "Parcelado em boletos bancários", hasEntrada: false, hasParcelas: true },
+  { value: "entrada_parcelado_cartao", label: "Entrada + Parcelas no Cartão", contractLabel: "Entrada via PIX + parcelas no cartão de crédito", hasEntrada: true, hasParcelas: true },
+  { value: "entrada_parcelado_boleto", label: "Entrada + Boletos", contractLabel: "Entrada via PIX + parcelas em boletos bancários", hasEntrada: true, hasParcelas: true },
+  { value: "pix_cartao", label: "PIX + Cartão de Crédito", contractLabel: "Pagamento via PIX e cartão de crédito", hasEntrada: true, hasParcelas: true },
+  { value: "pix_cheques", label: "PIX + Cheques", contractLabel: "Pagamento via PIX e cheques", hasEntrada: true, hasParcelas: true },
+  { value: "cartao_cheques", label: "Cartão + Cheques", contractLabel: "Pagamento via cartão de crédito e cheques", hasEntrada: false, hasParcelas: true },
+  { value: "cheques", label: "Cheques", contractLabel: "Pagamento em cheques", hasEntrada: false, hasParcelas: true },
+  { value: "cartao_recorrencia", label: "Cartão Recorrência", contractLabel: "Cobrança recorrente no cartão de crédito", hasEntrada: false, hasParcelas: true },
+];
+
+/** Classify a payment-step placeholder by its semantic role. */
+type PaymentRole = "forma" | "entrada" | "parcelas_num" | "parcela_valor" | "total" | "extenso" | "vencimento" | "outros";
+
+const classifyPaymentVar = (key: string): PaymentRole => {
+  const K = key.toUpperCase();
+  if (/EXTENSO/.test(K)) return "extenso";
+  if (/(FORMA|METODO|MEIO).*PAG/.test(K) || K === "PAGAMENTO" || K === "FORMA_PAGAMENTO" || /PAYMENT_METHOD/.test(K)) {
+    return "forma";
+  }
+  if (/(ENTRADA|DOWN_PAYMENT|SINAL)/.test(K)) return "entrada";
+  if (/VENCIMENTO|DUE_DATE|PRIMEIRA_PARCELA|DATA_VENC|DATA_PRIMEIRA/.test(K)) return "vencimento";
+  if (
+    /(NUMERO|N_|QTD|QUANTIDADE).*(PARCELAS?|INSTALLMENTS?)/.test(K) ||
+    K === "PARCELAS" ||
+    K === "NUM_PARCELAS" ||
+    K === "INSTALLMENTS" ||
+    K === "NUMERO_PARCELAS"
+  ) {
+    return "parcelas_num";
+  }
+  if (/(PARCELA|INSTALLMENT|MENSAL).*VALOR|VALOR.*(PARCELA|INSTALLMENT|MENSAL)|MENSALIDADE/.test(K)) {
+    return "parcela_valor";
+  }
+  if (/(VALOR|TOTAL|CONTRATO|PRECO|PREÇO|INVESTIMENTO)/.test(K) && !/UNITARIO/.test(K)) {
+    return "total";
+  }
+  return "outros";
+};
+
+/* ================================================================== */
 /* Stepper UI                                                          */
 /* ================================================================== */
 
