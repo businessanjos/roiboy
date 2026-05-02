@@ -521,6 +521,9 @@ export const ContractWizard = ({
   onChange,
   autofill,
   disabled,
+  menteeData,
+  onMenteeChange,
+  dealId,
 }: ContractWizardProps) => {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
