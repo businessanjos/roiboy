@@ -67,6 +67,66 @@ export const MenteeContractFields = ({
   const [copyingBilling, setCopyingBilling] = useState(false);
   const [billingTipo, setBillingTipo] = useState<string | null>(null);
   const [billingChecked, setBillingChecked] = useState(false);
+  const [addr, setAddr] = useState<AddressParts>(EMPTY_PARTS);
+  const [cepLoading, setCepLoading] = useState(false);
+  const lastCepRef = useRef<string>("");
+  const userEditedRef = useRef(false);
+
+  // Initialize from existing client_address only once on mount.
+  useEffect(() => {
+    if (data.client_address && !addr.logradouro && !addr.numero && !addr.cep) {
+      // Best-effort parse: try extract CEP from existing string.
+      const cepMatch = (data.client_address || "").match(/(\d{5})-?(\d{3})/);
+      if (cepMatch) {
+        setAddr((p) => ({ ...p, cep: `${cepMatch[1]}-${cepMatch[2]}` }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Compose and persist the address string when parts change (after user edits).
+  useEffect(() => {
+    if (!userEditedRef.current) return;
+    const composed = composeAddress(addr);
+    if (composed !== (data.client_address ?? "")) {
+      onChange({ ...data, client_address: composed });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addr]);
+
+  const updateAddr = (patch: Partial<AddressParts>) => {
+    userEditedRef.current = true;
+    setAddr((prev) => ({ ...prev, ...patch }));
+  };
+
+  const lookupCep = async (raw: string) => {
+    const digits = (raw || "").replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    if (lastCepRef.current === digits) return;
+    lastCepRef.current = digits;
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const json = await res.json();
+      if (json?.erro) {
+        toast.error("CEP não encontrado.");
+        return;
+      }
+      userEditedRef.current = true;
+      setAddr((prev) => ({
+        ...prev,
+        cep: formatCep(digits),
+        logradouro: json.logradouro || "",
+        bairro: json.bairro || "",
+        cidade: json.localidade || "",
+        uf: json.uf || "",
+      }));
+    } catch {
+      toast.error("Falha ao buscar CEP.");
+    } finally {
+      setCepLoading(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
