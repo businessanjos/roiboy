@@ -485,13 +485,38 @@ const classifyPaymentVar = (key: string): PaymentRole => {
   ) {
     return "parcelas_num";
   }
-  if (/(PARCELA|INSTALLMENT|MENSAL).*VALOR|VALOR.*(PARCELA|INSTALLMENT|MENSAL)|MENSALIDADE/.test(K)) {
+  if (/(PARCELA|INSTALLMENT|MENSAL).*(VALOR|VALUE)|(VALOR|VALUE).*(PARCELA|INSTALLMENT|MENSAL)|MENSALIDADE|MONTHLY_PAYMENT/.test(K)) {
     return "parcela_valor";
   }
   if (/(VALOR|TOTAL|CONTRATO|PRECO|PREÇO|INVESTIMENTO)/.test(K) && !/UNITARIO/.test(K)) {
     return "total";
   }
   return "outros";
+};
+
+const LEGACY_PARCELA_VALOR_KEYS = [
+  "VALOR_PARCELA", "VALOR_DA_PARCELA", "PARCELA_VALOR",
+  "INSTALLMENT_VALUE", "MONTHLY_PAYMENT", "MENSALIDADE",
+];
+
+const applyParcelaValorPlaceholders = (
+  next: Record<string, any>,
+  variables: TemplateVariableDef[],
+  parcelaValorVars: TemplateVariableDef[],
+  valorParcela: number | "",
+) => {
+  const formatted =
+    valorParcela === ""
+      ? ""
+      : Number.isFinite(valorParcela)
+        ? valorParcela.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+        : "";
+
+  for (const pv of parcelaValorVars) next[pv.key] = valorParcela;
+  for (const k of LEGACY_PARCELA_VALOR_KEYS) {
+    const declared = variables.some((tv) => tv.key === k);
+    if (!declared) next[k] = formatted;
+  }
 };
 
 /* ================================================================== */
@@ -888,13 +913,9 @@ export const ContractWizard = ({
       ) {
         const saldo = Math.max(0, (totalNum as number) - entradaNum);
         const valorParcela = Math.round((saldo / parcelasNum) * 100) / 100;
-        for (const pv of parcelaValorVars) {
-          nextValues[pv.key] = valorParcela;
-        }
+        applyParcelaValorPlaceholders(nextValues, templateVariables, parcelaValorVars, valorParcela);
       } else {
-        for (const pv of parcelaValorVars) {
-          nextValues[pv.key] = "";
-        }
+        applyParcelaValorPlaceholders(nextValues, templateVariables, parcelaValorVars, "");
       }
     }
 
@@ -1307,6 +1328,10 @@ export const ContractWizard = ({
       return next;
     };
 
+    const propagateParcelaValorToTemplate = (next: Record<string, any>, valorParcela: number | "") => {
+      applyParcelaValorPlaceholders(next, templateVariables, byRole.parcela_valor, valorParcela);
+    };
+
     const handleCategoryChange = (cat: PaymentCategory) => {
       let next: Record<string, any> = {
         ...placeholderValues,
@@ -1365,7 +1390,6 @@ export const ContractWizard = ({
       const next = { ...base };
       const totalVar = templateVariables.find((tv) => classifyPaymentVar(tv.key) === "total");
       const parcelasNumVar = templateVariables.find((tv) => classifyPaymentVar(tv.key) === "parcelas_num");
-      const parcelaValorVars = templateVariables.filter((tv) => classifyPaymentVar(tv.key) === "parcela_valor");
       const totalRaw = totalVar ? next[totalVar.key] : null;
       const parcelasRaw = parcelasNumVar ? next[parcelasNumVar.key] : null;
       const totalNum =
@@ -1389,10 +1413,10 @@ export const ContractWizard = ({
       ) {
         const saldo = Math.max(0, (totalNum as number) - entradaNum);
         const valorParcela = Math.round((saldo / parcelasNum) * 100) / 100;
-        for (const pv of parcelaValorVars) next[pv.key] = valorParcela;
+        propagateParcelaValorToTemplate(next, valorParcela);
       } else {
         // Limpa placeholders de parcela quando dados inválidos
-        for (const pv of parcelaValorVars) next[pv.key] = "";
+        propagateParcelaValorToTemplate(next, "");
       }
       return next;
     };

@@ -183,7 +183,7 @@ const inferValueFromKey = (
   }
 
   // VALOR DA PARCELA
-  if (/(PARCELA|INSTALLMENT|MENSAL).*VALOR|VALOR.*(PARCELA|INSTALLMENT|MENSAL)/.test(K)) {
+  if (/(PARCELA|INSTALLMENT|MENSAL).*(VALOR|VALUE)|(VALOR|VALUE).*(PARCELA|INSTALLMENT|MENSAL)|MONTHLY_PAYMENT/.test(K)) {
     if (ctx.deal?.installment_value != null) return ctx.deal.installment_value;
     const total = ctx.deal?.value ?? null;
     const installments = ctx.deal?.installments ?? ctx.product?.installments ?? null;
@@ -427,6 +427,11 @@ const PLACEHOLDER_ALIASES: Record<string, string[]> = {
   VALOR_SINAL: ["VALOR_ENTRADA", "ENTRADA", "DOWN_PAYMENT"],
   INSTALLMENTS: ["PARCELAS", "NUM_PARCELAS", "NUMERO_PARCELAS"],
   PARCELAS: ["INSTALLMENTS"],
+  INSTALLMENT_VALUE: ["VALOR_PARCELA", "VALOR_DA_PARCELA", "PARCELA_VALOR", "MENSALIDADE", "MONTHLY_PAYMENT"],
+  VALOR_PARCELA: ["INSTALLMENT_VALUE", "VALOR_DA_PARCELA", "PARCELA_VALOR", "MENSALIDADE", "MONTHLY_PAYMENT"],
+  VALOR_DA_PARCELA: ["INSTALLMENT_VALUE", "VALOR_PARCELA", "PARCELA_VALOR", "MENSALIDADE", "MONTHLY_PAYMENT"],
+  PARCELA_VALOR: ["INSTALLMENT_VALUE", "VALOR_PARCELA", "VALOR_DA_PARCELA", "MENSALIDADE", "MONTHLY_PAYMENT"],
+  MENSALIDADE: ["INSTALLMENT_VALUE", "VALOR_PARCELA", "VALOR_DA_PARCELA", "PARCELA_VALOR"],
   PAYMENT_METHOD: ["FORMA_PAGAMENTO", "PAGAMENTO", "FORMA_DE_PAGAMENTO"],
   DUE_DATE: ["DATA_VENCIMENTO", "VENCIMENTO", "DATA_PRIMEIRA_PARCELA"],
   // Vigência / datas
@@ -453,6 +458,31 @@ const resolveValueByKey = (
   return { value: direct };
 };
 
+const parseMoneyLike = (raw: any): number | null => {
+  if (raw === null || raw === undefined || raw === "") return null;
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+  const cleaned = String(raw).replace(/[^\d,.-]/g, "");
+  if (!cleaned) return null;
+  const decimalIndex = Math.max(cleaned.lastIndexOf(","), cleaned.lastIndexOf("."));
+  const integerPart = decimalIndex >= 0 ? cleaned.slice(0, decimalIndex).replace(/[^\d-]/g, "") : cleaned.replace(/[^\d-]/g, "");
+  const decimalPart = decimalIndex >= 0 ? cleaned.slice(decimalIndex + 1).replace(/\D/g, "") : "";
+  const n = Number(decimalPart ? `${integerPart || "0"}.${decimalPart}` : integerPart);
+  return Number.isFinite(n) ? n : null;
+};
+
+const withDerivedPaymentValues = (values: Record<string, any>): Record<string, any> => {
+  const out = { ...(values ?? {}) };
+  const currentInstallment = resolveValueByKey("INSTALLMENT_VALUE", out).value;
+  if (currentInstallment !== undefined && currentInstallment !== null && currentInstallment !== "") return out;
+  const total = parseMoneyLike(resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value);
+  const installmentsRaw = resolveValueByKey("INSTALLMENTS", out).value ?? resolveValueByKey("PARCELAS", out).value;
+  const installments = typeof installmentsRaw === "number" ? installmentsRaw : parseInt(String(installmentsRaw ?? ""), 10);
+  const down = parseMoneyLike(resolveValueByKey("DOWN_PAYMENT", out).value ?? resolveValueByKey("VALOR_ENTRADA", out).value) ?? 0;
+  if (total === null || !Number.isFinite(installments) || installments <= 0 || down > total) return out;
+  out.INSTALLMENT_VALUE = formatBRL(Math.round(((total - down) / installments) * 100) / 100);
+  return out;
+};
+
 /** Replace {{KEY}} in the template HTML with values, applying type-aware formatting. */
 export const renderTemplate = (
   templateHtml: string,
@@ -460,9 +490,18 @@ export const renderTemplate = (
   values: Record<string, any>,
 ): string => {
   if (!templateHtml) return "";
+  const renderValues = withDerivedPaymentValues(values);
   const typeMap = new Map(variables.map((v) => [v.key, v.type]));
-  return templateHtml.replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (_match, key: string) => {
-    const resolved = resolveValueByKey(key, values);
+  const htmlWithInstallmentValue = templateHtml.includes("{{INSTALLMENT_VALUE}}") || templateHtml.includes("{{VALOR_PARCELA}}")
+    ? templateHtml
+    : templateHtml
+        .replace(/grid-template-columns:repeat\(3,1fr\)/g, "grid-template-columns:repeat(4,1fr)")
+        .replace(
+          /(<div><div class="k">Parcelas<\/div><div class="v">\{\{INSTALLMENTS\}\}<\/div><\/div>)/,
+          '$1\n        <div><div class="k">Valor parcela</div><div class="v">{{INSTALLMENT_VALUE}}</div></div>',
+        );
+  return htmlWithInstallmentValue.replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (_match, key: string) => {
+    const resolved = resolveValueByKey(key, renderValues);
     // Prefer the type of the actual key, else of the alias source
     const t = typeMap.get(key) ?? (resolved.aliasedFrom ? typeMap.get(resolved.aliasedFrom) : undefined);
     return formatValueForRender(resolved.value, t);
