@@ -1303,6 +1303,10 @@ export const ContractWizard = ({
   const currentIdx = allKeys.indexOf(step);
   const canPrev = currentIdx > 0;
   const canNext = currentIdx < allKeys.length - 1;
+  const currentStepCounts = step !== "review" ? filledCounts[step as StepKey] : null;
+  const currentStepComplete =
+    !currentStepCounts || currentStepCounts.total === 0 || currentStepCounts.filled >= currentStepCounts.total;
+  const missingInStep = currentStepCounts ? currentStepCounts.total - currentStepCounts.filled : 0;
 
   return (
     <TooltipProvider delayDuration={150}>
