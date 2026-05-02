@@ -1329,18 +1329,7 @@ export const ContractWizard = ({
     };
 
     const propagateParcelaValorToTemplate = (next: Record<string, any>, valorParcela: number | "") => {
-      const legacyParcelaKeys = [
-        "VALOR_PARCELA", "VALOR_DA_PARCELA", "PARCELA_VALOR",
-        "INSTALLMENT_VALUE", "MONTHLY_PAYMENT", "MENSALIDADE",
-      ];
-      const formatted =
-        valorParcela === "" ? "" : (Number.isFinite(valorParcela) ? formatBRL(valorParcela) : "");
-
-      for (const pv of byRole.parcela_valor) next[pv.key] = valorParcela;
-      for (const k of legacyParcelaKeys) {
-        const declared = templateVariables.some((tv) => tv.key === k);
-        if (!declared) next[k] = formatted;
-      }
+      applyParcelaValorPlaceholders(next, templateVariables, byRole.parcela_valor, valorParcela);
     };
 
     const handleCategoryChange = (cat: PaymentCategory) => {
