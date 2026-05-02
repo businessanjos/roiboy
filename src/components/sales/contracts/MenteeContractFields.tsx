@@ -422,17 +422,39 @@ export const MenteeContractFields = ({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Nacionalidade</Label>
-            <Input
+            <Select
               value={data.client_nationality ?? ""}
-              onChange={(e) => update("client_nationality", e.target.value)}
-            />
+              onValueChange={(v) => update("client_nationality", v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                {NATIONALITY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Estado civil</Label>
-            <Input
+            <Select
               value={data.client_marital_status ?? ""}
-              onChange={(e) => update("client_marital_status", e.target.value)}
-            />
+              onValueChange={(v) => update("client_marital_status", v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                {MARITAL_STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
