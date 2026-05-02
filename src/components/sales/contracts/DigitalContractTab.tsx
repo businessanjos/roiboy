@@ -614,6 +614,7 @@ export const DigitalContractTab = ({
             end_date: null,
           },
           product: {
+            name: productExtras.name ?? null,
             payment_method: Array.isArray(productExtras.payment_methods) && productExtras.payment_methods.length > 0
               ? productExtras.payment_methods[0]
               : null,
