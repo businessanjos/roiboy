@@ -683,6 +683,8 @@ export const ContractWizard = ({
     menteeData?.client_address,
     menteeData?.client_nationality,
     menteeData?.client_marital_status,
+    placeholderValues,
+    templateHtml,
     templateVariables,
   ]);
 
