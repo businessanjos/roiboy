@@ -54,6 +54,7 @@ export interface AutofillContext {
     end_date?: string | null;
   };
   product?: {
+    name?: string | null;
     payment_method?: string | null;
     installments?: number | null;
     billing_period?: string | null;
@@ -219,6 +220,21 @@ const inferValueFromKey = (
   }
   if (/VENDEDOR|RESPONSAVEL_COMERCIAL|CLOSER|CONSULTOR/.test(K) && !/EMAIL/.test(K)) {
     return ctx.user?.name ?? null;
+  }
+
+  // PRODUTO / PROGRAMA
+  if (/^(PRODUCT_NAME|PRODUTO|PROGRAMA|MENTORIA|NOME_PRODUTO|NOME_PROGRAMA)$/.test(K)) {
+    return ctx.product?.name ?? null;
+  }
+
+  // ANO DO CONTRATO
+  if (/^(CONTRACT_YEAR|ANO|ANO_CONTRATO|ANO_ASSINATURA|YEAR)$/.test(K)) {
+    const base = ctx.deal?.start_date ?? ctx.today ?? null;
+    if (base) {
+      const d = new Date(base.length <= 10 ? base + "T12:00:00" : base);
+      if (!Number.isNaN(d.getTime())) return String(d.getFullYear());
+    }
+    return String(new Date().getFullYear());
   }
 
   // ============== CONTRATANTE (Cliente) — heurísticas por nome ==============

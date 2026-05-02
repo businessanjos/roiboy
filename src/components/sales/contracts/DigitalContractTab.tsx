@@ -145,6 +145,7 @@ export const DigitalContractTab = ({
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [dealExtras, setDealExtras] = useState<{ entry_value?: number | null; won_at?: string | null }>({});
   const [productExtras, setProductExtras] = useState<{
+    name?: string | null;
     payment_methods?: string[] | null;
     billing_period?: string | null;
     cash_price?: number | null;
@@ -155,10 +156,24 @@ export const DigitalContractTab = ({
   const pdfPreviewRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
-  const resolvedPlaceholderValues = useMemo(
-    () => mergeContractorPlaceholders(templateHtml, templateVariables, placeholderValues, data),
-    [templateHtml, templateVariables, placeholderValues, data],
-  );
+  const resolvedPlaceholderValues = useMemo(() => {
+    const merged = mergeContractorPlaceholders(templateHtml, templateVariables, placeholderValues, data);
+    // Garante PRODUCT_NAME e CONTRACT_YEAR mesmo quando o template não declara essas variáveis.
+    const productName = productExtras.name ?? null;
+    const baseDate = (data as any)?.first_due_date ?? dealExtras.won_at ?? new Date().toISOString();
+    const year = (() => {
+      const d = new Date(typeof baseDate === "string" && baseDate.length <= 10 ? baseDate + "T12:00:00" : baseDate);
+      return Number.isNaN(d.getTime()) ? String(new Date().getFullYear()) : String(d.getFullYear());
+    })();
+    return {
+      ...merged,
+      PRODUCT_NAME: merged.PRODUCT_NAME || productName || merged.PRODUCT_NAME || "",
+      PRODUTO: merged.PRODUTO || productName || "",
+      PROGRAMA: merged.PROGRAMA || productName || "",
+      CONTRACT_YEAR: merged.CONTRACT_YEAR || year,
+      ANO: merged.ANO || year,
+    };
+  }, [templateHtml, templateVariables, placeholderValues, data, productExtras.name, dealExtras.won_at]);
 
   useEffect(() => {
     let cancelled = false;
@@ -288,11 +303,12 @@ export const DigitalContractTab = ({
     (async () => {
       const { data: product } = await supabase
         .from("products")
-        .select("price, payment_methods, billing_period, cash_price, installment_price")
+        .select("name, price, payment_methods, billing_period, cash_price, installment_price")
         .eq("id", productId)
         .maybeSingle();
       if (cancelled || !product) return;
       setProductExtras({
+        name: product.name ?? null,
         payment_methods: (product.payment_methods as string[] | null) ?? null,
         billing_period: product.billing_period ?? null,
         cash_price: product.cash_price ?? null,
@@ -612,6 +628,7 @@ export const DigitalContractTab = ({
             end_date: null,
           },
           product: {
+            name: productExtras.name ?? null,
             payment_method: Array.isArray(productExtras.payment_methods) && productExtras.payment_methods.length > 0
               ? productExtras.payment_methods[0]
               : null,
