@@ -1359,16 +1359,22 @@ export const ContractWizard = ({
       const entradaNum = temEnt
         ? (typeof entradaRaw === "number" ? entradaRaw : parseFloat(String(entradaRaw ?? "0")) || 0)
         : 0;
+      const entradaExcedeTotal =
+        Number.isFinite(totalNum as number) && entradaNum > (totalNum as number);
       if (
         totalNum !== null &&
         totalNum !== undefined &&
         Number.isFinite(totalNum as number) &&
         Number.isFinite(parcelasNum) &&
-        parcelasNum > 0
+        parcelasNum > 0 &&
+        !entradaExcedeTotal
       ) {
         const saldo = Math.max(0, (totalNum as number) - entradaNum);
         const valorParcela = Math.round((saldo / parcelasNum) * 100) / 100;
         for (const pv of parcelaValorVars) next[pv.key] = valorParcela;
+      } else {
+        // Limpa placeholders de parcela quando dados inválidos
+        for (const pv of parcelaValorVars) next[pv.key] = "";
       }
       return next;
     };
