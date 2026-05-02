@@ -570,16 +570,20 @@ export const DigitalContractTab = ({
         placeholderValues={placeholderValues}
         autofill={{
           client: {
+            // CONTRATANTE = Mentorado (sempre PF). Os dados do mentorado preenchidos
+            // no wizard têm prioridade sobre o registro do cliente no CRM, que pode
+            // refletir dados de faturamento (PJ).
             id: clientFull?.id ?? clientId ?? null,
-            full_name: clientFull?.full_name ?? data.client_name ?? null,
-            cpf: clientFull?.cpf ?? data.client_cpf_cnpj ?? null,
-            cnpj: clientFull?.cnpj ?? null,
+            full_name: data.client_name || clientFull?.full_name || null,
+            cpf: data.client_cpf_cnpj || clientFull?.cpf || null,
+            cnpj: null,
             rg: clientFull?.rg ?? null,
-            email: (Array.isArray(clientFull?.emails) ? clientFull.emails[0] : null) ?? data.client_email ?? null,
-            address: data.client_address ?? null,
+            email: data.client_email || (Array.isArray(clientFull?.emails) ? clientFull.emails[0] : null) || null,
+            address: data.client_address || [clientFull?.street, clientFull?.street_number, clientFull?.neighborhood, clientFull?.city, clientFull?.state].filter(Boolean).join(", ") || null,
             phone: clientFull?.phone_e164 ?? null,
-            razao_social: clientFull?.company_name ?? clientFull?.full_name ?? data.client_name ?? null,
-            nome_fantasia: clientFull?.company_name ?? null,
+            // Contratante é PF: razão social = nome do mentorado
+            razao_social: data.client_name || clientFull?.full_name || null,
+            nome_fantasia: null,
             street: clientFull?.street ?? null,
             street_number: clientFull?.street_number ?? null,
             complement: clientFull?.complement ?? null,
