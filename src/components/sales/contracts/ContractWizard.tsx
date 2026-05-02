@@ -1375,6 +1375,28 @@ export const ContractWizard = ({
                 if (step === "client") {
                   await persistClientFromPlaceholders();
                 }
+                if (step === "mentee") {
+                  // Mentorado é o CONTRATANTE: re-sincroniza placeholders do
+                  // contratante (NOME, CPF, EMAIL, ENDERECO, etc.) com os dados
+                  // que o usuário acabou de preencher na etapa Mentorado.
+                  const contratanteKeys = templateVariables.filter((v) => {
+                    const K = v.key.toUpperCase();
+                    if (/(EMPRESA|CONTRATADA|COMPANY)/.test(K)) return false;
+                    return /CONTRATANTE|CLIENT|CLIENTE|RAZAO_?SOCIAL|^CPF$|^CNPJ$|^RG$|^NOME|FULL_?NAME|EMAIL|E_?MAIL|ENDERECO|ENDEREÇO|^RUA$|LOGRADOURO|NACIONALIDADE|ESTADO_?CIVIL/.test(K);
+                  });
+                  if (contratanteKeys.length > 0) {
+                    const cleared = { ...placeholderValues };
+                    contratanteKeys.forEach((v) => { delete cleared[v.key]; });
+                    const refreshed = buildPlaceholderValues(templateVariables, autofill, cleared);
+                    onChange({
+                      template_id: templateId,
+                      product_id: productId,
+                      template_html: templateHtml,
+                      template_variables: templateVariables,
+                      placeholder_values: refreshed,
+                    });
+                  }
+                }
                 setStep(allKeys[currentIdx + 1]);
               }}
               disabled={!canNext || disabled}
