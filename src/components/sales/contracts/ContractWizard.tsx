@@ -663,8 +663,23 @@ export const ContractWizard = ({
     };
     (Object.keys(groupedVars) as StepKey[]).forEach((k) => {
       const list = groupedVars[k];
-      counts[k].total = list.length;
-      counts[k].filled = list.filter((v) => {
+      // For payment, only count fields relevant to the selected forma.
+      let effectiveList = list;
+      if (k === "payment") {
+        const formaVar = list.find((v) => classifyPaymentVar(v.key) === "forma");
+        const formaCurrent = formaVar ? (placeholderValues?.[formaVar.key] ?? "") : "";
+        const opt = PAYMENT_OPTIONS.find(
+          (o) => o.value === formaCurrent || o.contractLabel === formaCurrent || o.label === formaCurrent,
+        );
+        effectiveList = list.filter((v) => {
+          const role = classifyPaymentVar(v.key);
+          if (role === "entrada") return !!opt?.hasEntrada;
+          if (role === "parcelas_num" || role === "parcela_valor" || role === "vencimento") return !!opt?.hasParcelas;
+          return true;
+        });
+      }
+      counts[k].total = effectiveList.length;
+      counts[k].filled = effectiveList.filter((v) => {
         const x = placeholderValues?.[v.key];
         return x !== null && x !== undefined && x !== "";
       }).length;
