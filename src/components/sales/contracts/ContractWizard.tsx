@@ -876,17 +876,24 @@ export const ContractWizard = ({
         ? (typeof entradaRaw === "number" ? entradaRaw : parseFloat(String(entradaRaw ?? "0")) || 0)
         : 0;
 
+      const entradaExcedeTotal =
+        Number.isFinite(totalNum as number) && entradaNum > (totalNum as number);
       if (
         totalNum !== null &&
         totalNum !== undefined &&
         Number.isFinite(totalNum as number) &&
         Number.isFinite(parcelasNum) &&
-        parcelasNum > 0
+        parcelasNum > 0 &&
+        !entradaExcedeTotal
       ) {
         const saldo = Math.max(0, (totalNum as number) - entradaNum);
         const valorParcela = Math.round((saldo / parcelasNum) * 100) / 100;
         for (const pv of parcelaValorVars) {
           nextValues[pv.key] = valorParcela;
+        }
+      } else {
+        for (const pv of parcelaValorVars) {
+          nextValues[pv.key] = "";
         }
       }
     }
@@ -1359,16 +1366,22 @@ export const ContractWizard = ({
       const entradaNum = temEnt
         ? (typeof entradaRaw === "number" ? entradaRaw : parseFloat(String(entradaRaw ?? "0")) || 0)
         : 0;
+      const entradaExcedeTotal =
+        Number.isFinite(totalNum as number) && entradaNum > (totalNum as number);
       if (
         totalNum !== null &&
         totalNum !== undefined &&
         Number.isFinite(totalNum as number) &&
         Number.isFinite(parcelasNum) &&
-        parcelasNum > 0
+        parcelasNum > 0 &&
+        !entradaExcedeTotal
       ) {
         const saldo = Math.max(0, (totalNum as number) - entradaNum);
         const valorParcela = Math.round((saldo / parcelasNum) * 100) / 100;
         for (const pv of parcelaValorVars) next[pv.key] = valorParcela;
+      } else {
+        // Limpa placeholders de parcela quando dados inválidos
+        for (const pv of parcelaValorVars) next[pv.key] = "";
       }
       return next;
     };
@@ -1600,11 +1613,35 @@ export const ContractWizard = ({
           const totalNum = parseNum(placeholderValues?.[totalVar.key]);
           const parcelasNum = parseInt(String(placeholderValues?.[parcelasVar.key] ?? ""), 10);
           const entradaNum = temEntrada ? parseNum(entradaValor) : 0;
-          const saldo = Number.isFinite(totalNum) ? Math.max(0, totalNum - (Number.isFinite(entradaNum) ? entradaNum : 0)) : NaN;
+          const parcelasInvalido = !Number.isFinite(parcelasNum) || parcelasNum <= 0;
+          const entradaExcede =
+            Number.isFinite(totalNum) &&
+            Number.isFinite(entradaNum) &&
+            entradaNum > totalNum;
+          const saldo =
+            Number.isFinite(totalNum) && !entradaExcede
+              ? Math.max(0, totalNum - (Number.isFinite(entradaNum) ? entradaNum : 0))
+              : NaN;
           const valorParcela =
-            Number.isFinite(saldo) && Number.isFinite(parcelasNum) && parcelasNum > 0
+            Number.isFinite(saldo) && !parcelasInvalido
               ? Math.round((saldo / parcelasNum) * 100) / 100
               : NaN;
+
+          if (entradaExcede) {
+            return (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
+                O valor da entrada ({formatBRL(entradaNum)}) não pode ser maior que o valor total do contrato ({formatBRL(totalNum)}).
+              </div>
+            );
+          }
+          if (parcelasInvalido) {
+            return (
+              <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+                Informe uma quantidade de parcelas maior que zero para calcular o valor de cada parcela.
+              </div>
+            );
+          }
+
           return (
             <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
               Valor de cada parcela:{" "}
@@ -1613,7 +1650,7 @@ export const ContractWizard = ({
               </span>
               {Number.isFinite(saldo) && (
                 <span className="ml-2">
-                  (saldo {formatBRL(saldo)} ÷ {Number.isFinite(parcelasNum) && parcelasNum > 0 ? parcelasNum : "?"}x)
+                  (saldo {formatBRL(saldo)} ÷ {parcelasNum}x)
                 </span>
               )}
             </div>
