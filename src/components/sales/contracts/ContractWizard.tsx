@@ -451,7 +451,7 @@ interface PaymentOption {
   hasParcelas: boolean;
 }
 
-const PAYMENT_OPTIONS: PaymentOption[] = [
+const DEFAULT_PAYMENT_OPTIONS: PaymentOption[] = [
   { value: "a_vista_pix", label: "À vista (PIX)", contractLabel: "À vista via PIX", hasEntrada: false, hasParcelas: false },
   { value: "a_vista_boleto", label: "À vista (Boleto)", contractLabel: "À vista via boleto bancário", hasEntrada: false, hasParcelas: false },
   { value: "a_vista_transferencia", label: "À vista (Transferência)", contractLabel: "À vista via transferência bancária", hasEntrada: false, hasParcelas: false },
@@ -459,11 +459,6 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
   { value: "parcelado_boleto", label: "Parcelado em Boletos", contractLabel: "Parcelado em boletos bancários", hasEntrada: false, hasParcelas: true },
   { value: "entrada_parcelado_cartao", label: "Entrada + Parcelas no Cartão", contractLabel: "Entrada via PIX + parcelas no cartão de crédito", hasEntrada: true, hasParcelas: true },
   { value: "entrada_parcelado_boleto", label: "Entrada + Boletos", contractLabel: "Entrada via PIX + parcelas em boletos bancários", hasEntrada: true, hasParcelas: true },
-  { value: "pix_cartao", label: "PIX + Cartão de Crédito", contractLabel: "Pagamento via PIX e cartão de crédito", hasEntrada: true, hasParcelas: true },
-  { value: "pix_cheques", label: "PIX + Cheques", contractLabel: "Pagamento via PIX e cheques", hasEntrada: true, hasParcelas: true },
-  { value: "cartao_cheques", label: "Cartão + Cheques", contractLabel: "Pagamento via cartão de crédito e cheques", hasEntrada: false, hasParcelas: true },
-  { value: "cheques", label: "Cheques", contractLabel: "Pagamento em cheques", hasEntrada: false, hasParcelas: true },
-  { value: "cartao_recorrencia", label: "Cartão Recorrência", contractLabel: "Cobrança recorrente no cartão de crédito", hasEntrada: false, hasParcelas: true },
 ];
 
 /** Classify a payment-step placeholder by its semantic role. */
