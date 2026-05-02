@@ -1343,6 +1343,36 @@ export const ContractWizard = ({
       });
     };
 
+    const recalcParcelaValor = (base: Record<string, any>): Record<string, any> => {
+      const next = { ...base };
+      const totalVar = templateVariables.find((tv) => classifyPaymentVar(tv.key) === "total");
+      const parcelasNumVar = templateVariables.find((tv) => classifyPaymentVar(tv.key) === "parcelas_num");
+      const parcelaValorVars = templateVariables.filter((tv) => classifyPaymentVar(tv.key) === "parcela_valor");
+      const totalRaw = totalVar ? next[totalVar.key] : null;
+      const parcelasRaw = parcelasNumVar ? next[parcelasNumVar.key] : null;
+      const totalNum =
+        typeof totalRaw === "number" ? totalRaw : parseBRLInput(String(totalRaw ?? ""));
+      const parcelasNum =
+        typeof parcelasRaw === "number" ? parcelasRaw : parseInt(String(parcelasRaw ?? ""), 10);
+      const entradaRaw = next[ENTRADA_VALOR_UI_KEY];
+      const temEnt = !!next[TEM_ENTRADA_UI_KEY];
+      const entradaNum = temEnt
+        ? (typeof entradaRaw === "number" ? entradaRaw : parseFloat(String(entradaRaw ?? "0")) || 0)
+        : 0;
+      if (
+        totalNum !== null &&
+        totalNum !== undefined &&
+        Number.isFinite(totalNum as number) &&
+        Number.isFinite(parcelasNum) &&
+        parcelasNum > 0
+      ) {
+        const saldo = Math.max(0, (totalNum as number) - entradaNum);
+        const valorParcela = Math.round((saldo / parcelasNum) * 100) / 100;
+        for (const pv of parcelaValorVars) next[pv.key] = valorParcela;
+      }
+      return next;
+    };
+
     const handleEntradaToggle = (val: boolean) => {
       let next: Record<string, any> = { ...placeholderValues, [TEM_ENTRADA_UI_KEY]: val };
       if (selectedOption) {
@@ -1353,6 +1383,7 @@ export const ContractWizard = ({
         next[ENTRADA_FORMA_UI_KEY] = "";
         for (const v of byRole.entrada) next[v.key] = "";
       }
+      next = recalcParcelaValor(next);
       onChange({
         template_id: templateId,
         product_id: productId,
@@ -1373,6 +1404,7 @@ export const ContractWizard = ({
       if (selectedOption) {
         next = propagateFormaToTemplate(buildContractLabel(selectedOption, true), next);
       }
+      next = recalcParcelaValor(next);
       onChange({
         template_id: templateId,
         product_id: productId,
