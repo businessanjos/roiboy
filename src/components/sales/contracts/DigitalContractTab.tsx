@@ -22,7 +22,7 @@ import { ContractDocument, type DigitalContractData, type Deliverable } from "./
 import { ContractEditor } from "./ContractEditor";
 import { TemplatedContractPreview } from "./TemplatedContractSection";
 import { ContractWizard } from "./ContractWizard";
-import type { TemplateVariableDef } from "@/lib/contractTemplates";
+import { mergeContractorPlaceholders, type TemplateVariableDef } from "@/lib/contractTemplates";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -155,6 +155,12 @@ export const DigitalContractTab = ({
   const pdfPreviewRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
+  const resolvedPlaceholderValues = mergeContractorPlaceholders(
+    templateHtml,
+    templateVariables,
+    placeholderValues,
+    data,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -321,7 +327,7 @@ export const DigitalContractTab = ({
         product_id: productId,
         template_html: templateHtml,
         template_variables: templateVariables as any,
-        placeholder_values: placeholderValues as any,
+        placeholder_values: resolvedPlaceholderValues as any,
       };
       if (contract) {
         const { error } = await supabase
@@ -636,7 +642,7 @@ export const DigitalContractTab = ({
           setProductId(next.product_id);
           setTemplateHtml(next.template_html);
           setTemplateVariables(next.template_variables);
-          setPlaceholderValues(next.placeholder_values);
+          setPlaceholderValues(mergeContractorPlaceholders(next.template_html, next.template_variables, next.placeholder_values, data));
         }}
         disabled={saving}
         menteeData={data}
@@ -663,7 +669,7 @@ export const DigitalContractTab = ({
                 <TemplatedContractPreview
                   templateHtml={templateHtml}
                   templateVariables={templateVariables}
-                  placeholderValues={placeholderValues}
+                  placeholderValues={resolvedPlaceholderValues}
                 />
               ) : (
                 <ContractDocument data={data} />
@@ -689,7 +695,7 @@ export const DigitalContractTab = ({
                   <TemplatedContractPreview
                     templateHtml={templateHtml}
                     templateVariables={templateVariables}
-                    placeholderValues={placeholderValues}
+                    placeholderValues={resolvedPlaceholderValues}
                   />
                 ) : (
                   <ContractDocument data={data} />
