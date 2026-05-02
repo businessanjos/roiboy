@@ -1585,6 +1585,41 @@ export const ContractWizard = ({
           </p>
         )}
 
+        {/* Computed parcela value (always shown when Parcelado) */}
+        {(() => {
+          if (!isParcelado || !selectedOption) return null;
+          const totalVar = byRole.total[0];
+          const parcelasVar = byRole.parcelas_num[0];
+          if (!totalVar || !parcelasVar) return null;
+          const parseNum = (raw: any) => {
+            if (raw == null || raw === "") return NaN;
+            if (typeof raw === "number") return raw;
+            const s = String(raw).replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
+            return parseFloat(s);
+          };
+          const totalNum = parseNum(placeholderValues?.[totalVar.key]);
+          const parcelasNum = parseInt(String(placeholderValues?.[parcelasVar.key] ?? ""), 10);
+          const entradaNum = temEntrada ? parseNum(entradaValor) : 0;
+          const saldo = Number.isFinite(totalNum) ? Math.max(0, totalNum - (Number.isFinite(entradaNum) ? entradaNum : 0)) : NaN;
+          const valorParcela =
+            Number.isFinite(saldo) && Number.isFinite(parcelasNum) && parcelasNum > 0
+              ? Math.round((saldo / parcelasNum) * 100) / 100
+              : NaN;
+          return (
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+              Valor de cada parcela:{" "}
+              <span className="font-semibold text-foreground">
+                {Number.isFinite(valorParcela) ? formatBRL(valorParcela) : "—"}
+              </span>
+              {Number.isFinite(saldo) && (
+                <span className="ml-2">
+                  (saldo {formatBRL(saldo)} ÷ {Number.isFinite(parcelasNum) && parcelasNum > 0 ? parcelasNum : "?"}x)
+                </span>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Conditional fields */}
         {visibleVars.length > 0 && (
           <div className="grid sm:grid-cols-2 gap-x-4 gap-y-4 pt-2 border-t border-border">
