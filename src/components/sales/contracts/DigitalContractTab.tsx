@@ -592,6 +592,8 @@ export const DigitalContractTab = ({
             state: clientFull?.state ?? null,
             zip_code: clientFull?.zip_code ?? null,
             birth_date: clientFull?.birth_date ?? null,
+            nationality: data.client_nationality ?? null,
+            marital_status: data.client_marital_status ?? null,
           },
           deal: {
             value: data.total_value ?? dealValue ?? null,
