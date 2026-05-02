@@ -1136,9 +1136,14 @@ export const ContractWizard = ({
     };
     for (const v of list) byRole[classifyPaymentVar(v.key)].push(v);
 
-    // Forma de pagamento — derive selection from any available "forma" value.
-    const formaVar = byRole.forma[0] ?? null;
-    const formaCurrent = formaVar ? (placeholderValues?.[formaVar.key] ?? "") : "";
+    // Forma de pagamento — sempre visível. Persiste em chave virtual e propaga
+    // para qualquer placeholder "forma" do template (se houver).
+    const FORMA_UI_KEY = "__FORMA_PAGAMENTO_UI__";
+    const formaVarKeys = byRole.forma.map((v) => v.key);
+    const formaCurrent =
+      placeholderValues?.[FORMA_UI_KEY] ??
+      (formaVarKeys.length > 0 ? placeholderValues?.[formaVarKeys[0]] : "") ??
+      "";
     const matchedOption = PAYMENT_OPTIONS.find(
       (o) => o.value === formaCurrent || o.contractLabel === formaCurrent || o.label === formaCurrent,
     );
@@ -1147,10 +1152,10 @@ export const ContractWizard = ({
     const handleFormaChange = (optionValue: string) => {
       const opt = PAYMENT_OPTIONS.find((o) => o.value === optionValue);
       if (!opt) return;
-      const next: Record<string, any> = { ...placeholderValues };
-      // Write friendly label into every "forma" placeholder so the contract reads naturally.
+      const next: Record<string, any> = { ...placeholderValues, [FORMA_UI_KEY]: opt.value };
+      // Write friendly label into every "forma" placeholder do template (se existir).
       for (const v of byRole.forma) next[v.key] = opt.contractLabel;
-      // Clear breakdown-specific fields when option doesn't need them.
+      // Limpa campos não aplicáveis à opção selecionada.
       if (!opt.hasEntrada) for (const v of byRole.entrada) next[v.key] = "";
       if (!opt.hasParcelas) {
         for (const v of byRole.parcelas_num) next[v.key] = "";
@@ -1194,31 +1199,25 @@ export const ContractWizard = ({
           </div>
         </div>
 
-        {/* Primary: Forma de pagamento */}
+        {/* Primary: Forma de pagamento (sempre visível) */}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">
             Forma de pagamento<span className="text-destructive ml-0.5">*</span>
           </Label>
-          {formaVar ? (
-            <Select
-              value={selectedOption?.value ?? ""}
-              onValueChange={handleFormaChange}
-              disabled={disabled}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a forma de pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <div className="rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 p-3 text-xs text-muted-foreground">
-              Este modelo de contrato não possui um placeholder de Forma de Pagamento (ex.: <code>{`{{FORMA_PAGAMENTO}}`}</code>). Adicione-o ao modelo para escolher por aqui.
-            </div>
-          )}
+          <Select
+            value={selectedOption?.value ?? ""}
+            onValueChange={handleFormaChange}
+            disabled={disabled}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione a forma de pagamento" />
+            </SelectTrigger>
+            <SelectContent>
+              {PAYMENT_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {selectedOption && (
             <p className="text-[11px] text-muted-foreground">
               No contrato será impresso: <span className="font-medium text-foreground">{selectedOption.contractLabel}</span>
