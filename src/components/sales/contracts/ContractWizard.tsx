@@ -42,6 +42,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   buildPlaceholderValues,
+  mergeContractorPlaceholders,
   type AutofillContext,
   type TemplateVariableDef,
 } from "@/lib/contractTemplates";
@@ -662,80 +663,10 @@ export const ContractWizard = ({
   }, [visibleSteps, step, templateHtml]);
 
   /* ---- Mentorado é o CONTRATANTE: sobrescreve placeholders do Contratante ---- */
-  // Sempre que o usuário edita os dados do mentorado (que é sempre PF), os
-  // placeholders do contratante no template são sobrescritos. Isso impede que
-  // dados de faturamento (PJ) capturados na etapa "Cliente" via CNPJ vazem
-  // para o Contratante do contrato.
   useEffect(() => {
     if (!onMenteeChange || !menteeData) return;
-    if (!templateVariables || templateVariables.length === 0) return;
-
-    const onlyDigits = (s: any) => (s == null ? "" : String(s).replace(/\D/g, ""));
-    const m = menteeData;
-    const next: Record<string, any> = { ...placeholderValues };
-    let changed = false;
-
-    const setIfDifferent = (key: string, value: any) => {
-      if (value === undefined || value === null) return;
-      // Permite limpar (string vazia) caso o usuário apague o campo do mentorado.
-      if (next[key] !== value) {
-        next[key] = value;
-        changed = true;
-      }
-    };
-
-    for (const v of templateVariables) {
-      const K = v.key.toUpperCase();
-      // Pula placeholders da CONTRATADA / EMPRESA
-      if (/(EMPRESA|CONTRATADA|COMPANY)/.test(K)) continue;
-
-      // CPF / CNPJ / Documento — Mentorado é PF, sempre CPF
-      if (/^CPF$|CONTRATANTE_CPF|CLIENTE_CPF|CLIENT_CPF|CLIENT_DOCUMENT|^DOCUMENTO$/.test(K)) {
-        setIfDifferent(v.key, onlyDigits(m.client_cpf_cnpj));
-        continue;
-      }
-      if (/^CNPJ$|CONTRATANTE_CNPJ|CLIENTE_CNPJ|CLIENT_CNPJ/.test(K)) {
-        // Mentorado nunca tem CNPJ — limpa para evitar PJ legado
-        setIfDifferent(v.key, "");
-        continue;
-      }
-      // Razão Social / Nome Fantasia — Mentorado é PF: nome do mentorado
-      if (/RAZAO_?SOCIAL|RAZÃO_?SOCIAL|NOME_?FANTASIA|FANTASIA/.test(K)) {
-        setIfDifferent(v.key, m.client_name ?? "");
-        continue;
-      }
-      // Inscrições Municipal/Estadual — PF não tem
-      if (/INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(K)) {
-        setIfDifferent(v.key, "");
-        continue;
-      }
-      // Nome / Contratante
-      if (/(^|_)NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|^CONTRATANTE$|CONTRATANTE_NOME/.test(K)) {
-        setIfDifferent(v.key, m.client_name ?? "");
-        continue;
-      }
-      // Email
-      if (/^EMAIL$|^E_?MAIL$|CLIENT_EMAIL|CONTRATANTE_EMAIL|EMAIL_CONTRATANTE/.test(K)) {
-        setIfDifferent(v.key, m.client_email ?? "");
-        continue;
-      }
-      // Endereço
-      if (/^ENDERECO$|^ENDEREÇO$|CLIENT_ADDRESS|CONTRATANTE_ENDERECO|ENDERECO_CONTRATANTE/.test(K)) {
-        setIfDifferent(v.key, m.client_address ?? "");
-        continue;
-      }
-      // Nacionalidade / Estado civil
-      if (/NACIONALIDADE|NATIONALITY/.test(K)) {
-        setIfDifferent(v.key, m.client_nationality ?? "");
-        continue;
-      }
-      if (/ESTADO_?CIVIL|MARITAL/.test(K)) {
-        setIfDifferent(v.key, m.client_marital_status ?? "");
-        continue;
-      }
-    }
-
-    if (changed) {
+    const next = mergeContractorPlaceholders(templateHtml, templateVariables, placeholderValues, menteeData);
+    if (JSON.stringify(next) !== JSON.stringify(placeholderValues)) {
       onChange({
         template_id: templateId,
         product_id: productId,
@@ -1471,26 +1402,14 @@ export const ContractWizard = ({
                   await persistClientFromPlaceholders();
                 }
                 if (step === "mentee") {
-                  // Mentorado é o CONTRATANTE: re-sincroniza placeholders do
-                  // contratante (NOME, CPF, EMAIL, ENDERECO, etc.) com os dados
-                  // que o usuário acabou de preencher na etapa Mentorado.
-                  const contratanteKeys = templateVariables.filter((v) => {
-                    const K = v.key.toUpperCase();
-                    if (/(EMPRESA|CONTRATADA|COMPANY)/.test(K)) return false;
-                    return /CONTRATANTE|CLIENT|CLIENTE|RAZAO_?SOCIAL|^CPF$|^CNPJ$|^RG$|^NOME|FULL_?NAME|EMAIL|E_?MAIL|ENDERECO|ENDEREÇO|^RUA$|LOGRADOURO|NACIONALIDADE|ESTADO_?CIVIL/.test(K);
+                  const refreshed = mergeContractorPlaceholders(templateHtml, templateVariables, placeholderValues, menteeData);
+                  onChange({
+                    template_id: templateId,
+                    product_id: productId,
+                    template_html: templateHtml,
+                    template_variables: templateVariables,
+                    placeholder_values: refreshed,
                   });
-                  if (contratanteKeys.length > 0) {
-                    const cleared = { ...placeholderValues };
-                    contratanteKeys.forEach((v) => { delete cleared[v.key]; });
-                    const refreshed = buildPlaceholderValues(templateVariables, autofill, cleared);
-                    onChange({
-                      template_id: templateId,
-                      product_id: productId,
-                      template_html: templateHtml,
-                      template_variables: templateVariables,
-                      placeholder_values: refreshed,
-                    });
-                  }
                 }
                 setStep(allKeys[currentIdx + 1]);
               }}
