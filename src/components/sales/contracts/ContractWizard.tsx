@@ -1404,6 +1404,14 @@ export const ContractWizard = ({
               size="sm"
               onClick={async () => {
                 if (!canNext) return;
+                if (!currentStepComplete) {
+                  toast.error(
+                    `Preencha todos os campos obrigatórios antes de avançar${
+                      missingInStep > 0 ? ` (${missingInStep} pendente${missingInStep > 1 ? "s" : ""})` : ""
+                    }.`,
+                  );
+                  return;
+                }
                 if (step === "client") {
                   await persistClientFromPlaceholders();
                 }
@@ -1419,7 +1427,8 @@ export const ContractWizard = ({
                 }
                 setStep(allKeys[currentIdx + 1]);
               }}
-              disabled={!canNext || disabled}
+              disabled={!canNext || disabled || !currentStepComplete}
+              title={!currentStepComplete ? "Preencha todos os campos da etapa para continuar" : undefined}
             >
               {allKeys[currentIdx + 1] === "review" ? (
                 <>
