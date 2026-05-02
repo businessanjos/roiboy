@@ -1109,6 +1109,132 @@ export const ContractWizard = ({
   const currentTemplateName =
     templates.find((t) => t.id === templateId)?.name ?? "Modelo carregado";
 
+  /* ---- Payment step renderer ---- */
+  const renderPaymentStep = () => {
+    const list = groupedVars.payment ?? [];
+    const meta = STEPS_META.payment;
+    const Icon = meta.icon;
+
+    // Group payment placeholders by role so we can sequence them logically.
+    const byRole: Record<PaymentRole, TemplateVariableDef[]> = {
+      forma: [], entrada: [], parcelas_num: [], parcela_valor: [], total: [], extenso: [], vencimento: [], outros: [],
+    };
+    for (const v of list) byRole[classifyPaymentVar(v.key)].push(v);
+
+    // Forma de pagamento — derive selection from any available "forma" value.
+    const formaVar = byRole.forma[0] ?? null;
+    const formaCurrent = formaVar ? (placeholderValues?.[formaVar.key] ?? "") : "";
+    const matchedOption = PAYMENT_OPTIONS.find(
+      (o) => o.value === formaCurrent || o.contractLabel === formaCurrent || o.label === formaCurrent,
+    );
+    const selectedOption = matchedOption ?? null;
+
+    const handleFormaChange = (optionValue: string) => {
+      const opt = PAYMENT_OPTIONS.find((o) => o.value === optionValue);
+      if (!opt) return;
+      const next: Record<string, any> = { ...placeholderValues };
+      // Write friendly label into every "forma" placeholder so the contract reads naturally.
+      for (const v of byRole.forma) next[v.key] = opt.contractLabel;
+      // Clear breakdown-specific fields when option doesn't need them.
+      if (!opt.hasEntrada) for (const v of byRole.entrada) next[v.key] = "";
+      if (!opt.hasParcelas) {
+        for (const v of byRole.parcelas_num) next[v.key] = "";
+        for (const v of byRole.parcela_valor) next[v.key] = "";
+        for (const v of byRole.vencimento) next[v.key] = "";
+      }
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: next,
+      });
+    };
+
+    // Determine which roles to show
+    const showEntrada = !!selectedOption?.hasEntrada;
+    const showParcelas = !!selectedOption?.hasParcelas;
+
+    const visibleVars: TemplateVariableDef[] = [
+      ...byRole.total,
+      ...byRole.extenso,
+      ...(showEntrada ? byRole.entrada : []),
+      ...(showParcelas ? byRole.parcelas_num : []),
+      ...(showParcelas ? byRole.parcela_valor : []),
+      ...(showParcelas ? byRole.vencimento : []),
+      ...byRole.outros,
+    ];
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Icon className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold">{meta.label}</h3>
+            <p className="text-xs text-muted-foreground">
+              Escolha a forma de pagamento — os demais campos aparecem conforme a opção.
+            </p>
+          </div>
+        </div>
+
+        {/* Primary: Forma de pagamento */}
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">
+            Forma de pagamento<span className="text-destructive ml-0.5">*</span>
+          </Label>
+          {formaVar ? (
+            <Select
+              value={selectedOption?.value ?? ""}
+              onValueChange={handleFormaChange}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a forma de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 p-3 text-xs text-muted-foreground">
+              Este modelo de contrato não possui um placeholder de Forma de Pagamento (ex.: <code>{`{{FORMA_PAGAMENTO}}`}</code>). Adicione-o ao modelo para escolher por aqui.
+            </div>
+          )}
+          {selectedOption && (
+            <p className="text-[11px] text-muted-foreground">
+              No contrato será impresso: <span className="font-medium text-foreground">{selectedOption.contractLabel}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Conditional fields */}
+        {visibleVars.length > 0 && (
+          <div className="grid sm:grid-cols-2 gap-x-4 gap-y-4 pt-2 border-t border-border">
+            {visibleVars.map((v) => (
+              <PlaceholderField
+                key={v.key}
+                v={v}
+                value={placeholderValues?.[v.key]}
+                onChange={(val) => updateField(v.key, val)}
+                disabled={disabled}
+              />
+            ))}
+          </div>
+        )}
+
+        {!selectedOption && formaVar && (
+          <p className="text-xs text-muted-foreground italic">
+            Selecione uma forma de pagamento para liberar os campos de valor, parcelas e vencimento.
+          </p>
+        )}
+      </div>
+    );
+  };
+
   const renderStepContent = () => {
     if (step === "review") {
       const emptyVars = effectiveVariables.filter((v) => {
