@@ -442,23 +442,26 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
 /* Payment step — forma de pagamento + campos condicionais             */
 /* ================================================================== */
 
+type PaymentCategory = "a_vista" | "parcelado";
+
 interface PaymentOption {
   value: string;
   label: string;
   /** Friendly label written into the FORMA_PAGAMENTO placeholder */
   contractLabel: string;
-  hasEntrada: boolean;
-  hasParcelas: boolean;
+  category: PaymentCategory;
 }
 
 const DEFAULT_PAYMENT_OPTIONS: PaymentOption[] = [
-  { value: "a_vista_pix", label: "À vista (PIX)", contractLabel: "À vista via PIX", hasEntrada: false, hasParcelas: false },
-  { value: "a_vista_boleto", label: "À vista (Boleto)", contractLabel: "À vista via boleto bancário", hasEntrada: false, hasParcelas: false },
-  { value: "a_vista_transferencia", label: "À vista (Transferência)", contractLabel: "À vista via transferência bancária", hasEntrada: false, hasParcelas: false },
-  { value: "parcelado_cartao", label: "Parcelado no Cartão de Crédito", contractLabel: "Parcelado no cartão de crédito", hasEntrada: false, hasParcelas: true },
-  { value: "parcelado_boleto", label: "Parcelado em Boletos", contractLabel: "Parcelado em boletos bancários", hasEntrada: false, hasParcelas: true },
-  { value: "entrada_parcelado_cartao", label: "Entrada + Parcelas no Cartão", contractLabel: "Entrada via PIX + parcelas no cartão de crédito", hasEntrada: true, hasParcelas: true },
-  { value: "entrada_parcelado_boleto", label: "Entrada + Boletos", contractLabel: "Entrada via PIX + parcelas em boletos bancários", hasEntrada: true, hasParcelas: true },
+  { value: "a_vista_pix", label: "Pix", contractLabel: "À vista via Pix", category: "a_vista" },
+  { value: "a_vista_boleto", label: "Boleto", contractLabel: "À vista via boleto bancário", category: "a_vista" },
+  { value: "a_vista_cartao_1x", label: "Cartão de Crédito (1x)", contractLabel: "À vista em 1x no cartão de crédito", category: "a_vista" },
+  { value: "a_vista_transferencia_internacional", label: "Transferência Internacional", contractLabel: "À vista via transferência internacional", category: "a_vista" },
+  { value: "parcelado_cartao", label: "Cartão de Crédito", contractLabel: "Parcelado no cartão de crédito", category: "parcelado" },
+  { value: "parcelado_cheque", label: "Cheque", contractLabel: "Parcelado em cheques", category: "parcelado" },
+  { value: "parcelado_boleto", label: "Boleto", contractLabel: "Parcelado em boletos bancários", category: "parcelado" },
+  { value: "parcelado_pix", label: "Pix", contractLabel: "Parcelado via Pix", category: "parcelado" },
+  { value: "parcelado_transferencia_internacional", label: "Transferência Internacional", contractLabel: "Parcelado via transferência internacional", category: "parcelado" },
 ];
 
 /** Classify a payment-step placeholder by its semantic role. */
