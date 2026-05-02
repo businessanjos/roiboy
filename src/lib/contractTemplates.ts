@@ -327,6 +327,11 @@ export const mergeContractorPlaceholders = (
   let match: RegExpExecArray | null;
   while ((match = re.exec(templateHtml ?? ""))) keys.add(match[1]);
 
+  const hasExplicitContractorKeys = Array.from(keys).some((key) => {
+    const K = key.toUpperCase();
+    return /CLIENT_|CLIENTE_|CONTRATANTE/.test(K);
+  });
+
   const name = contractor.client_name ?? "";
   const cpf = contractor.client_cpf_cnpj == null ? "" : String(contractor.client_cpf_cnpj).replace(/\D/g, "");
   const email = contractor.client_email ?? "";
@@ -335,19 +340,23 @@ export const mergeContractorPlaceholders = (
   for (const key of keys) {
     const K = key.toUpperCase();
     if (/(EMPRESA|CONTRATADA|COMPANY)/.test(K)) continue;
+    const explicitContractorKey = /CLIENT_|CLIENTE_|CONTRATANTE/.test(K);
+    const allowLegacyGenericKey = !hasExplicitContractorKeys;
 
     if (/^CNPJ$|CONTRATANTE_CNPJ|CLIENTE_CNPJ|CLIENT_CNPJ/.test(K)) {
-      out[key] = "";
+      if (explicitContractorKey || allowLegacyGenericKey) out[key] = "";
     } else if (/^CPF$|CONTRATANTE_CPF|CLIENTE_CPF|CLIENT_CPF|CLIENT_DOCUMENT|^DOCUMENTO$|CPF_CNPJ|CNPJ_CPF/.test(K)) {
+      if (explicitContractorKey || allowLegacyGenericKey || /^CPF$|^DOCUMENTO$/.test(K)) out[key] = cpf;
+    } else if (/CLIENT_?NAME|FULL_?NAME|^CONTRATANTE$|CONTRATANTE_NOME|CLIENTE_NOME/.test(K)) {
       out[key] = cpf;
-    } else if (/RAZAO_?SOCIAL|RAZÃO_?SOCIAL|NOME_?FANTASIA|FANTASIA|CLIENT_?NAME|FULL_?NAME|^CONTRATANTE$|CONTRATANTE_NOME|(^|_)NOME(_COMPLETO)?$|NOME_PLACEHOLDER/.test(K)) {
-      out[key] = name;
+    } else if (/RAZAO_?SOCIAL|RAZÃO_?SOCIAL|NOME_?FANTASIA|FANTASIA|(^|_)NOME(_COMPLETO)?$|NOME_PLACEHOLDER/.test(K)) {
+      if (allowLegacyGenericKey) out[key] = name;
     } else if (/INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(K)) {
-      out[key] = "";
+      if (allowLegacyGenericKey) out[key] = "";
     } else if (/^EMAIL$|^E_?MAIL$|CLIENT_EMAIL|CONTRATANTE_EMAIL|EMAIL_CONTRATANTE/.test(K)) {
-      out[key] = email;
+      if (explicitContractorKey || allowLegacyGenericKey || /CONTRATANTE/.test(K)) out[key] = email;
     } else if (/^ENDERECO$|^ENDEREÇO$|CLIENT_ADDRESS|CONTRATANTE_ENDERECO|ENDERECO_CONTRATANTE|^RUA$|LOGRADOURO/.test(K)) {
-      out[key] = address;
+      if (explicitContractorKey || allowLegacyGenericKey || /CONTRATANTE/.test(K)) out[key] = address;
     } else if (/NACIONALIDADE|NATIONALITY/.test(K)) {
       out[key] = contractor.client_nationality ?? "";
     } else if (/ESTADO_?CIVIL|MARITAL/.test(K)) {
