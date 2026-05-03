@@ -399,28 +399,6 @@ export function RenewalLosses() {
             <SelectItem value="365">Último ano</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterConsultora} onValueChange={setFilterConsultora}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Consultora" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas consultoras</SelectItem>
-            {uniqueConsultoras.sort().map(name => (
-              <SelectItem key={name} value={name}>{name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterOutcome} onValueChange={setFilterOutcome}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="renewed">Renovados</SelectItem>
-            <SelectItem value="lost">Perdidos</SelectItem>
-            <SelectItem value="pending">Pendentes</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Summary Cards */}
