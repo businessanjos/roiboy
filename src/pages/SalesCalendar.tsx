@@ -138,7 +138,7 @@ export default function SalesCalendar() {
         },
       });
       if (error) throw error;
-      return data as { events: any[]; connected: boolean; message?: string };
+      return data as { events: any[]; connected: boolean; needsReconnect?: boolean; message?: string; error?: string };
     },
     staleTime: 60_000,
   });
@@ -251,6 +251,12 @@ export default function SalesCalendar() {
           title: "Calendário recarregado",
           description: `${result.data.events?.length ?? 0} evento(s) do Google Agenda carregado(s).`,
         });
+      } else if (result.data?.needsReconnect) {
+        toast({
+          title: "Reconecte o Google Agenda",
+          description: result.data.message || "A autorização do Google expirou. Clique em Conectar Google Agenda novamente.",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Google Agenda não conectado",
@@ -283,7 +289,10 @@ export default function SalesCalendar() {
           {googleConnected === false && (
             <Badge
               variant="outline"
-              className="gap-1.5 cursor-pointer hover:bg-accent"
+              className={cn(
+                "gap-1.5 cursor-pointer hover:bg-accent",
+                googleQuery.data?.needsReconnect && "border-destructive/50 text-destructive"
+              )}
               onClick={async () => {
                 try {
                   const { data, error } = await supabase.functions.invoke("oauth-init", {
@@ -305,7 +314,7 @@ export default function SalesCalendar() {
               }}
             >
               <AlertCircle className="h-3 w-3" />
-              Conectar Google Agenda
+              {googleQuery.data?.needsReconnect ? "Reconectar Google Agenda" : "Conectar Google Agenda"}
             </Badge>
           )}
           {googleConnected === true && (

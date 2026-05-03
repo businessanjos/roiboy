@@ -23,14 +23,23 @@ async function refreshGoogleToken(refreshToken: string) {
         grant_type: "refresh_token",
       }),
     });
-    if (!r.ok) return null;
+    if (!r.ok) {
+      const errText = await r.text();
+      console.error("Google token refresh failed:", r.status, errText);
+      return null;
+    }
     return await r.json();
   } catch {
     return null;
   }
 }
 
-async function getGoogleAccessToken(supabase: any, authUserId: string, internalUserId: string | null): Promise<string | null> {
+async function getGoogleAccessToken(
+  supabase: any,
+  authUserId: string,
+  internalUserId: string | null,
+  forceRefresh = false,
+): Promise<{ accessToken: string | null; refreshToken: string | null; userId: string | null; refreshFailed: boolean }> {
   // Tenta primeiro pelo internal users.id (formato salvo pelo oauth-init),
   // depois pelo auth_user_id como fallback.
   const ids = [internalUserId, authUserId].filter(Boolean) as string[];
@@ -48,14 +57,17 @@ async function getGoogleAccessToken(supabase: any, authUserId: string, internalU
     }
   }
 
-  if (!integration?.access_token) return null;
+  if (!integration?.access_token) {
+    return { accessToken: null, refreshToken: null, userId: null, refreshFailed: false };
+  }
 
   let accessToken = integration.access_token;
   const now = Math.floor(Date.now() / 1000);
+  let refreshFailed = false;
 
-  if (integration.expires_at && integration.expires_at < now + 300 && integration.refresh_token) {
+  if ((forceRefresh || (integration.expires_at && integration.expires_at < now + 300)) && integration.refresh_token) {
     const newTokens = await refreshGoogleToken(integration.refresh_token);
-    if (newTokens) {
+    if (newTokens?.access_token) {
       accessToken = newTokens.access_token;
       await supabase
         .from("user_integrations")
@@ -66,9 +78,11 @@ async function getGoogleAccessToken(supabase: any, authUserId: string, internalU
         })
         .eq("user_id", integration.user_id)
         .eq("provider", "google");
+    } else {
+      refreshFailed = true;
     }
   }
-  return accessToken;
+  return { accessToken, refreshToken: integration.refresh_token, userId: integration.user_id, refreshFailed };
 }
 
 Deno.serve(async (req) => {
@@ -114,7 +128,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const accessToken = await getGoogleAccessToken(supabase, authUserId, internalUserId);
+    let tokenInfo = await getGoogleAccessToken(supabase, authUserId, internalUserId);
+    let accessToken = tokenInfo.accessToken;
     if (!accessToken) {
       return new Response(
         JSON.stringify({ events: [], connected: false, message: "Google Calendar não conectado" }),
@@ -129,15 +144,36 @@ Deno.serve(async (req) => {
     url.searchParams.set("orderBy", "startTime");
     url.searchParams.set("maxResults", "250");
 
-    const r = await fetch(url.toString(), {
+    let r = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
+    let googleErrorText: string | null = null;
+
+    if (r.status === 401 && tokenInfo.refreshToken) {
+      googleErrorText = await r.text();
+      tokenInfo = await getGoogleAccessToken(supabase, authUserId, internalUserId, true);
+      accessToken = tokenInfo.accessToken;
+      if (accessToken && !tokenInfo.refreshFailed) {
+        googleErrorText = null;
+        r = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+      }
+    }
+
     if (!r.ok) {
-      const errText = await r.text();
+      const errText = googleErrorText ?? await r.text();
       console.error("Google Calendar API error:", r.status, errText);
+      const needsReconnect = r.status === 401;
       return new Response(
-        JSON.stringify({ events: [], connected: true, error: `Google API ${r.status}` }),
+        JSON.stringify({
+          events: [],
+          connected: !needsReconnect,
+          needsReconnect,
+          error: needsReconnect ? "GOOGLE_RECONNECT_REQUIRED" : `Google API ${r.status}`,
+          message: needsReconnect ? "A conexão com o Google expirou. Reconecte sua agenda." : undefined,
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
