@@ -254,11 +254,13 @@ Deno.serve(async (req) => {
     
     // Try finding by phone first (if valid phone provided)
     if (hasValidPhone && clientPhone) {
+      const variants = buildPhoneVariants(clientPhone);
       const result = await supabase
         .from("clients")
         .select("id, account_id, full_name, phone_e164")
-        .eq("phone_e164", clientPhone)
+        .in("phone_e164", variants)
         .eq("account_id", authResult.accountId)
+        .limit(1)
         .maybeSingle();
       
       client = result.data;
