@@ -74,6 +74,9 @@ export default function Renewals() {
   const [renewalDialog, setRenewalDialog] = useState<{ open: boolean; contract: RenewalContract | null }>({ open: false, contract: null });
   const [renewalForm, setRenewalForm] = useState({ product_id: "", payment_method: "", value: "" });
   const [savingRenewal, setSavingRenewal] = useState(false);
+  const PAGE_SIZE = 20;
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const [expiredPage, setExpiredPage] = useState(1);
 
   const handleScoreCalculated = useCallback((clientId: string, score: number) => {
     setChanceScores(prev => {
