@@ -447,109 +447,6 @@ export function CommissionSimulator() {
 
         {simulation && !simulation.noPlan && (
           <>
-            {/* Contexto da simulação */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-              <div className="p-2 rounded border bg-muted/20">
-                <p className="text-muted-foreground">Meta total</p>
-                <p className="font-semibold">{fmt(simulation.totalTargetValue)}</p>
-                <p className="text-[10px] text-muted-foreground">= {Math.round(simulation.totalTargetQty)} vendas (ticket {fmt(simulation.avgTicket)})</p>
-              </div>
-              <div className="p-2 rounded border bg-muted/20">
-                <p className="text-muted-foreground">Simulado ({Math.round(simulation.effectiveAchievementPct)}%)</p>
-                <p className="font-semibold">{fmt(simulation.simulatedValue)}</p>
-                <p className="text-[10px] text-muted-foreground">= {Math.floor(simulation.simulatedQty)} vendas</p>
-              </div>
-              <div className="p-2 rounded border bg-muted/20">
-                <p className="text-muted-foreground">Ticket médio</p>
-                <p className="font-semibold">{fmt(simulation.avgTicket)}</p>
-              </div>
-              <div className="p-2 rounded border bg-muted/20">
-                <p className="text-muted-foreground">Plano</p>
-                <p className="font-semibold truncate">{simulation.plan.name}</p>
-              </div>
-            </div>
-
-            {/* Componentes do ganho */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-              <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Wallet className="h-3.5 w-3.5" />
-                  Salário Base
-                </div>
-                <p className="font-bold text-sm">{simulation.monthlyBase > 0 ? fmt(simulation.monthlyBase) : "—"}</p>
-              </div>
-              <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  Bônus Faixa
-                </div>
-                <p className="font-bold text-sm flex items-center gap-1.5">
-                  {fmt(simulation.bonusValue)}
-                  {simulation.activeTier && (
-                    <Badge variant="outline" className="text-[9px]">
-                      {simulation.activeTier.label || `${simulation.multiplier}x`}
-                    </Badge>
-                  )}
-                </p>
-              </div>
-              <div className="p-3 rounded-lg border bg-amber-500/10 border-amber-500/30 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
-                  <Zap className="h-3.5 w-3.5" />
-                  Bônus sem teto
-                </div>
-                <p className="font-bold text-sm">{fmt(simulation.uncappedBonus)}</p>
-                {simulation.uncappedEnabled && simulation.extraSales > 0 && (
-                  <p className="text-[10px] text-muted-foreground">
-                    +{simulation.extraSales} venda(s) acima de {simulation.salesAtThreshold}
-                  </p>
-                )}
-              </div>
-              <div className="p-3 rounded-lg border bg-pink-500/10 border-pink-500/30 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-pink-700 dark:text-pink-400">
-                  <Gift className="h-3.5 w-3.5" />
-                  Spiffs (estimado)
-                </div>
-                <p className="font-bold text-sm">{fmt(simulation.spiffTotal)}</p>
-                {simulation.spiffBreakdown.length > 0 ? (
-                  <p className="text-[10px] text-muted-foreground">
-                    {simulation.spiffBreakdown.length} campanha(s) ativa(s)
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-muted-foreground">Nenhum SPIFF aplicável</p>
-                )}
-              </div>
-              <div className="p-3 rounded-lg border bg-primary/10 border-primary/30 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  <Trophy className="h-3.5 w-3.5 text-primary" />
-                  Ganho Mensal Bruto
-                </div>
-                <p className="font-bold text-lg text-primary">{fmt(simulation.totalEarnings)}</p>
-              </div>
-            </div>
-
-            {/* Explicação do bônus sem teto */}
-            {simulation.uncappedEnabled && (
-              <div className="text-xs p-3 rounded-lg border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 space-y-1">
-                <p className="font-medium flex items-center gap-1.5">
-                  <Target className="h-3.5 w-3.5" />
-                  Bônus sem teto: ativo a partir de {simulation.uncappedThreshold}% de atingimento
-                </p>
-                {simulation.extraSales > 0 ? (
-                  <p className="text-muted-foreground">
-                    Limite = {simulation.salesAtThreshold} vendas. Cada venda inteira acima paga{" "}
-                    {simulation.uncappedType === "fixed"
-                      ? <strong>{fmt(simulation.uncappedPerSale)}</strong>
-                      : <strong>{simulation.uncappedPerSale}% do valor</strong>}
-                    . {simulation.extraSales} × {simulation.uncappedType === "fixed" ? fmt(simulation.uncappedPerSale) : `${simulation.uncappedPerSale}%`} = <strong>{fmt(simulation.uncappedBonus)}</strong>
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground">
-                    Aumente o atingimento acima de {simulation.uncappedThreshold}% para ativar este bônus.
-                  </p>
-                )}
-              </div>
-            )}
-
             {/* Mix de Pagamento — composição das vendas simuladas */}
             <div className="text-xs p-3 rounded-lg border bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900 space-y-2">
               <div className="flex items-center justify-between gap-2">
@@ -736,6 +633,109 @@ export function CommissionSimulator() {
                 <p className="text-[10px] italic text-muted-foreground pt-1">
                   Edite o valor ou desmarque para excluir do total. Roleta usa média entre prêmio mín. e máx.; prêmios não monetários ficam zerados (ajuste manualmente se quiser somar).
                 </p>
+              </div>
+            )}
+
+            {/* Contexto da simulação */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="p-2 rounded border bg-muted/20">
+                <p className="text-muted-foreground">Meta total</p>
+                <p className="font-semibold">{fmt(simulation.totalTargetValue)}</p>
+                <p className="text-[10px] text-muted-foreground">= {Math.round(simulation.totalTargetQty)} vendas (ticket {fmt(simulation.avgTicket)})</p>
+              </div>
+              <div className="p-2 rounded border bg-muted/20">
+                <p className="text-muted-foreground">Simulado ({Math.round(simulation.effectiveAchievementPct)}%)</p>
+                <p className="font-semibold">{fmt(simulation.simulatedValue)}</p>
+                <p className="text-[10px] text-muted-foreground">= {Math.floor(simulation.simulatedQty)} vendas</p>
+              </div>
+              <div className="p-2 rounded border bg-muted/20">
+                <p className="text-muted-foreground">Ticket médio</p>
+                <p className="font-semibold">{fmt(simulation.avgTicket)}</p>
+              </div>
+              <div className="p-2 rounded border bg-muted/20">
+                <p className="text-muted-foreground">Plano</p>
+                <p className="font-semibold truncate">{simulation.plan.name}</p>
+              </div>
+            </div>
+
+            {/* Componentes do ganho */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Wallet className="h-3.5 w-3.5" />
+                  Salário Base
+                </div>
+                <p className="font-bold text-sm">{simulation.monthlyBase > 0 ? fmt(simulation.monthlyBase) : "—"}</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  Bônus Faixa
+                </div>
+                <p className="font-bold text-sm flex items-center gap-1.5">
+                  {fmt(simulation.bonusValue)}
+                  {simulation.activeTier && (
+                    <Badge variant="outline" className="text-[9px]">
+                      {simulation.activeTier.label || `${simulation.multiplier}x`}
+                    </Badge>
+                  )}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg border bg-amber-500/10 border-amber-500/30 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                  <Zap className="h-3.5 w-3.5" />
+                  Bônus sem teto
+                </div>
+                <p className="font-bold text-sm">{fmt(simulation.uncappedBonus)}</p>
+                {simulation.uncappedEnabled && simulation.extraSales > 0 && (
+                  <p className="text-[10px] text-muted-foreground">
+                    +{simulation.extraSales} venda(s) acima de {simulation.salesAtThreshold}
+                  </p>
+                )}
+              </div>
+              <div className="p-3 rounded-lg border bg-pink-500/10 border-pink-500/30 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-pink-700 dark:text-pink-400">
+                  <Gift className="h-3.5 w-3.5" />
+                  Spiffs (estimado)
+                </div>
+                <p className="font-bold text-sm">{fmt(simulation.spiffTotal)}</p>
+                {simulation.spiffBreakdown.length > 0 ? (
+                  <p className="text-[10px] text-muted-foreground">
+                    {simulation.spiffBreakdown.length} campanha(s) ativa(s)
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">Nenhum SPIFF aplicável</p>
+                )}
+              </div>
+              <div className="p-3 rounded-lg border bg-primary/10 border-primary/30 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-medium">
+                  <Trophy className="h-3.5 w-3.5 text-primary" />
+                  Ganho Mensal Bruto
+                </div>
+                <p className="font-bold text-lg text-primary">{fmt(simulation.totalEarnings)}</p>
+              </div>
+            </div>
+
+            {/* Explicação do bônus sem teto */}
+            {simulation.uncappedEnabled && (
+              <div className="text-xs p-3 rounded-lg border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 space-y-1">
+                <p className="font-medium flex items-center gap-1.5">
+                  <Target className="h-3.5 w-3.5" />
+                  Bônus sem teto: ativo a partir de {simulation.uncappedThreshold}% de atingimento
+                </p>
+                {simulation.extraSales > 0 ? (
+                  <p className="text-muted-foreground">
+                    Limite = {simulation.salesAtThreshold} vendas. Cada venda inteira acima paga{" "}
+                    {simulation.uncappedType === "fixed"
+                      ? <strong>{fmt(simulation.uncappedPerSale)}</strong>
+                      : <strong>{simulation.uncappedPerSale}% do valor</strong>}
+                    . {simulation.extraSales} × {simulation.uncappedType === "fixed" ? fmt(simulation.uncappedPerSale) : `${simulation.uncappedPerSale}%`} = <strong>{fmt(simulation.uncappedBonus)}</strong>
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Aumente o atingimento acima de {simulation.uncappedThreshold}% para ativar este bônus.
+                  </p>
+                )}
               </div>
             )}
 
