@@ -246,6 +246,10 @@ export default function Dashboard() {
         periodStart = startOfMonth(now);
         periodEnd = endOfMonth(now);
         break;
+      case "year":
+        periodStart = startOfYear(now);
+        periodEnd = endOfYear(now);
+        break;
       case "7":
         periodStart = subDays(now, 7);
         break;
@@ -254,7 +258,7 @@ export default function Dashboard() {
           periodStart = gestaoCustomDateRange.from;
           periodEnd = gestaoCustomDateRange.to || gestaoCustomDateRange.from;
         } else {
-          periodStart = subMonths(now, 6);
+          periodStart = startOfYear(now);
         }
         break;
       default:
