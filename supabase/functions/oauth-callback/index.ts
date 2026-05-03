@@ -3,6 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const serve = (handler: (req: Request) => Response | Promise<Response>) =>
   Deno.serve(handler);
 
+const appendStatusParams = (frontendUrl: string, redirectPath: string, provider: string) => {
+  const separator = redirectPath.includes("?") ? "&" : "?";
+  return `${frontendUrl}${redirectPath}${separator}status=connected&provider=${provider}`;
+};
+
 serve(async (req) => {
   try {
     const url = new URL(req.url);
@@ -128,7 +133,7 @@ serve(async (req) => {
       }
 
       console.log("Google integration saved successfully");
-      return Response.redirect(`${frontendUrl}${redirect_path}&status=connected&provider=google`);
+      return Response.redirect(appendStatusParams(frontendUrl, redirect_path, "google"));
     }
 
     if (provider === "zoom") {
@@ -204,7 +209,7 @@ serve(async (req) => {
       }
 
       console.log("Zoom integration saved successfully");
-      return Response.redirect(`${frontendUrl}${redirect_path}&status=connected&provider=zoom`);
+      return Response.redirect(appendStatusParams(frontendUrl, redirect_path, "zoom"));
     }
 
     return Response.redirect(`${frontendUrl}/settings?tab=integrations&status=error&message=unknown_provider`);
