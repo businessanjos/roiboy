@@ -23,14 +23,23 @@ async function refreshGoogleToken(refreshToken: string) {
         grant_type: "refresh_token",
       }),
     });
-    if (!r.ok) return null;
+    if (!r.ok) {
+      const errText = await r.text();
+      console.error("Google token refresh failed:", r.status, errText);
+      return null;
+    }
     return await r.json();
   } catch {
     return null;
   }
 }
 
-async function getGoogleAccessToken(supabase: any, authUserId: string, internalUserId: string | null): Promise<string | null> {
+async function getGoogleAccessToken(
+  supabase: any,
+  authUserId: string,
+  internalUserId: string | null,
+  forceRefresh = false,
+): Promise<{ accessToken: string | null; refreshToken: string | null; userId: string | null; refreshFailed: boolean }> {
   // Tenta primeiro pelo internal users.id (formato salvo pelo oauth-init),
   // depois pelo auth_user_id como fallback.
   const ids = [internalUserId, authUserId].filter(Boolean) as string[];
@@ -48,14 +57,17 @@ async function getGoogleAccessToken(supabase: any, authUserId: string, internalU
     }
   }
 
-  if (!integration?.access_token) return null;
+  if (!integration?.access_token) {
+    return { accessToken: null, refreshToken: null, userId: null, refreshFailed: false };
+  }
 
   let accessToken = integration.access_token;
   const now = Math.floor(Date.now() / 1000);
+  let refreshFailed = false;
 
-  if (integration.expires_at && integration.expires_at < now + 300 && integration.refresh_token) {
+  if ((forceRefresh || (integration.expires_at && integration.expires_at < now + 300)) && integration.refresh_token) {
     const newTokens = await refreshGoogleToken(integration.refresh_token);
-    if (newTokens) {
+    if (newTokens?.access_token) {
       accessToken = newTokens.access_token;
       await supabase
         .from("user_integrations")
@@ -66,9 +78,11 @@ async function getGoogleAccessToken(supabase: any, authUserId: string, internalU
         })
         .eq("user_id", integration.user_id)
         .eq("provider", "google");
+    } else {
+      refreshFailed = true;
     }
   }
-  return accessToken;
+  return { accessToken, refreshToken: integration.refresh_token, userId: integration.user_id, refreshFailed };
 }
 
 Deno.serve(async (req) => {
