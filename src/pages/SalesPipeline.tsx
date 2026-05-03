@@ -73,7 +73,7 @@ import {
   Package,
   User,
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
@@ -429,16 +429,18 @@ export default function SalesPipeline() {
     [lostDeals, searchTerm, openDealProductMap]
   );
 
-  // Available months for won deals filter
+  // Available months for won deals filter (always include current month)
   const availableWonMonths = useMemo(() => {
     const monthsSet = new Map<string, string>();
+    const addMonth = (date: Date) => {
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
+      monthsSet.set(key, label.charAt(0).toUpperCase() + label.slice(1));
+    };
+    // Always include current month so it can be selected even with no deals yet
+    addMonth(new Date());
     wonDeals.forEach(deal => {
-      if (deal.won_at) {
-        const date = new Date(deal.won_at);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
-        monthsSet.set(key, label.charAt(0).toUpperCase() + label.slice(1));
-      }
+      if (deal.won_at) addMonth(new Date(deal.won_at));
     });
     return Array.from(monthsSet.entries())
       .sort((a, b) => b[0].localeCompare(a[0]));
@@ -1311,7 +1313,7 @@ export default function SalesPipeline() {
                 {/* Contextual filters for won/lost tabs */}
                 {activeTab === 'won' && (
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Date filter: months + custom range */}
+                    {/* Date filter: presets + months + custom range */}
                     <Popover open={wonDatePopoverOpen} onOpenChange={setWonDatePopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className={cn(
@@ -1331,31 +1333,49 @@ export default function SalesPipeline() {
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <div className="flex flex-col sm:flex-row">
-                          {/* Presets */}
-                          <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-0.5 min-w-[150px]">
-                            <Button
-                              variant={wonMonthFilter === 'all' ? 'secondary' : 'ghost'}
-                              size="sm"
-                              className="w-full justify-start text-xs h-7"
-                              onClick={() => { setWonMonthFilter('all'); setWonDateStart(''); setWonDateEnd(''); setWonDatePopoverOpen(false); }}
-                            >
-                              Todas as datas
-                            </Button>
-                            {availableWonMonths.map(([key, label]) => (
+                          {/* Quick presets */}
+                          <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-0.5 min-w-[160px]">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 pt-1 pb-1">Atalhos</p>
+                            {([
+                              { label: 'Todas as datas', run: () => { setWonMonthFilter('all'); setWonDateStart(''); setWonDateEnd(''); } },
+                              { label: 'Hoje', run: () => { const d = new Date(); setWonMonthFilter('custom'); setWonDateStart(startOfDay(d).toISOString()); setWonDateEnd(endOfDay(d).toISOString()); } },
+                              { label: 'Esta semana', run: () => { const d = new Date(); setWonMonthFilter('custom'); setWonDateStart(startOfWeek(d, { weekStartsOn: 1 }).toISOString()); setWonDateEnd(endOfWeek(d, { weekStartsOn: 1 }).toISOString()); } },
+                              { label: 'Este mês', run: () => { const d = new Date(); const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; setWonMonthFilter(k); setWonDateStart(''); setWonDateEnd(''); } },
+                              { label: 'Mês passado', run: () => { const d = subMonths(new Date(), 1); const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; setWonMonthFilter(k); setWonDateStart(''); setWonDateEnd(''); } },
+                              { label: 'Este trimestre', run: () => { const d = new Date(); setWonMonthFilter('custom'); setWonDateStart(startOfQuarter(d).toISOString()); setWonDateEnd(endOfQuarter(d).toISOString()); } },
+                              { label: 'Este ano', run: () => { const d = new Date(); setWonMonthFilter('custom'); setWonDateStart(startOfYear(d).toISOString()); setWonDateEnd(endOfYear(d).toISOString()); } },
+                            ] as const).map(p => (
                               <Button
-                                key={key}
-                                variant={wonMonthFilter === key ? 'secondary' : 'ghost'}
+                                key={p.label}
+                                variant="ghost"
                                 size="sm"
                                 className="w-full justify-start text-xs h-7"
-                                onClick={() => { setWonMonthFilter(key); setWonDateStart(''); setWonDateEnd(''); setWonDatePopoverOpen(false); }}
+                                onClick={() => { p.run(); setWonDatePopoverOpen(false); }}
                               >
-                                {label}
+                                {p.label}
                               </Button>
                             ))}
                           </div>
+                          {/* Months list (scrollable) */}
+                          <div className="border-b sm:border-b-0 sm:border-r p-2 min-w-[170px]">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 pt-1 pb-1">Meses</p>
+                            <div className="max-h-[260px] overflow-y-auto space-y-0.5 pr-1">
+                              {availableWonMonths.map(([key, label]) => (
+                                <Button
+                                  key={key}
+                                  variant={wonMonthFilter === key ? 'secondary' : 'ghost'}
+                                  size="sm"
+                                  className="w-full justify-start text-xs h-7"
+                                  onClick={() => { setWonMonthFilter(key); setWonDateStart(''); setWonDateEnd(''); setWonDatePopoverOpen(false); }}
+                                >
+                                  {label}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
                           {/* Custom range calendar */}
                           <div className="p-2">
-                            <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Período personalizado</p>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-1 pb-1">Período personalizado</p>
                             <CalendarComponent
                               mode="range"
                               selected={wonDateStart && wonDateEnd ? { from: new Date(wonDateStart), to: new Date(wonDateEnd) } : undefined}
