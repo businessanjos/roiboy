@@ -255,6 +255,7 @@ export default function Clients() {
   const [clients, setClients] = useState<any[]>([]);
   const [contractMap, setContractMap] = useState<Record<string, { status: string; start_date: string | null; end_date: string | null }>>({});
   const [whatsappMap, setWhatsappMap] = useState<Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }>>({});
+  const [linksMap, setLinksMap] = useState<Record<string, { id: string; full_name: string }[]>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   
