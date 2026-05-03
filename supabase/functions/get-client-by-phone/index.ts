@@ -4,6 +4,7 @@ import {
   unauthorizedResponse,
   logApiKeyUsage,
 } from "../_shared/api-key-auth.ts";
+import { canonicalE164, phoneVariants as buildPhoneVariants } from "../_shared/phone-normalize.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
