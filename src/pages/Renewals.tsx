@@ -858,7 +858,7 @@ export default function Renewals() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                       Por Produto ({produtos.length})
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 auto-rows-fr justify-items-stretch">
                       {produtos.map(([name, count]) => {
                         const active = filterProduto.includes(name);
                         return (
@@ -870,11 +870,11 @@ export default function Renewals() {
                               )
                             }
                             className={cn(
-                              "cursor-pointer transition-colors hover:border-primary/50",
+                              "cursor-pointer transition-colors hover:border-primary/50 h-full",
                               active && "border-primary bg-primary/5 ring-1 ring-primary",
                             )}
                           >
-                            <CardContent className="p-3">
+                            <CardContent className="p-3 h-full flex flex-col justify-center">
                               <p className="text-xs text-muted-foreground truncate" title={name}>{name}</p>
                               <p className="text-xl font-bold">{count} <span className="text-xs font-normal text-muted-foreground">renovaç{count === 1 ? "ão" : "ões"}</span></p>
                             </CardContent>
