@@ -423,8 +423,14 @@ export default function Renewals() {
         !c.product_name?.toLowerCase().includes(q)
       ) return false;
     }
-    if (filterConsultora.length > 0 && (!c.responsible_name || !filterConsultora.includes(c.responsible_name))) return false;
-    if (filterProduto.length > 0 && (!c.product_name || !filterProduto.includes(c.product_name))) return false;
+    if (filterConsultora.length > 0) {
+      const cn = c.responsible_name || "Sem consultor";
+      if (!filterConsultora.includes(cn)) return false;
+    }
+    if (filterProduto.length > 0) {
+      const pn = c.product_name || "Sem produto";
+      if (!filterProduto.includes(pn)) return false;
+    }
     if (filterTempo.length > 0) {
       const cat = tempoCategory(c.days_until_expiry);
       const year = c.end_date ? new Date(c.end_date).getUTCFullYear() : 0;
