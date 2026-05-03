@@ -480,8 +480,17 @@ export default function VipClients() {
                           <span className="text-muted-foreground">—</span>
                         ) : (
                           r.products.map((p) => (
-                            <Badge key={p} variant="secondary" className="text-xs">
-                              {p}
+                            <Badge
+                              key={p.name}
+                              variant="outline"
+                              className="text-xs font-medium"
+                              style={{
+                                backgroundColor: p.color ? `${p.color}20` : undefined,
+                                borderColor: p.color || undefined,
+                                color: p.color || undefined,
+                              }}
+                            >
+                              {p.name}
                             </Badge>
                           ))
                         )}
