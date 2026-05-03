@@ -128,7 +128,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const accessToken = await getGoogleAccessToken(supabase, authUserId, internalUserId);
+    let tokenInfo = await getGoogleAccessToken(supabase, authUserId, internalUserId);
+    let accessToken = tokenInfo.accessToken;
     if (!accessToken) {
       return new Response(
         JSON.stringify({ events: [], connected: false, message: "Google Calendar não conectado" }),
@@ -143,15 +144,33 @@ Deno.serve(async (req) => {
     url.searchParams.set("orderBy", "startTime");
     url.searchParams.set("maxResults", "250");
 
-    const r = await fetch(url.toString(), {
+    let r = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+
+    if (r.status === 401 && tokenInfo.refreshToken) {
+      await r.text();
+      tokenInfo = await getGoogleAccessToken(supabase, authUserId, internalUserId, true);
+      accessToken = tokenInfo.accessToken;
+      if (accessToken && !tokenInfo.refreshFailed) {
+        r = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+      }
+    }
 
     if (!r.ok) {
       const errText = await r.text();
       console.error("Google Calendar API error:", r.status, errText);
+      const needsReconnect = r.status === 401;
       return new Response(
-        JSON.stringify({ events: [], connected: true, error: `Google API ${r.status}` }),
+        JSON.stringify({
+          events: [],
+          connected: !needsReconnect,
+          needsReconnect,
+          error: needsReconnect ? "GOOGLE_RECONNECT_REQUIRED" : `Google API ${r.status}`,
+          message: needsReconnect ? "A conexão com o Google expirou. Reconecte sua agenda." : undefined,
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
