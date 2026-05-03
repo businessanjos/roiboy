@@ -619,7 +619,7 @@ export default function Renewals() {
                   <TableCell className="hidden xl:table-cell text-center text-sm text-muted-foreground">
                     {contract.responsible_name || "—"}
                   </TableCell>
-                  <TableCell className="text-center min-w-0">
+                  <TableCell className="hidden xl:table-cell text-center min-w-0">
                     {contract.product_name ? (
                       <Badge
                         variant="outline"
@@ -635,25 +635,25 @@ export default function Renewals() {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-center text-sm font-medium whitespace-nowrap">
+                  <TableCell className="text-center text-sm font-medium whitespace-nowrap px-2">
                     {formatCurrency(contract.renewal_value, contract.currency)}
                   </TableCell>
                   <TableCell className="hidden 2xl:table-cell text-center text-sm text-muted-foreground">
                     {formatLocalDate(contract.start_date)}
                   </TableCell>
-                  <TableCell className="text-center text-sm font-medium whitespace-nowrap">
+                  <TableCell className="text-center text-sm font-medium whitespace-nowrap px-2">
                     {formatLocalDate(contract.end_date)}
                   </TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
+                  <TableCell className="hidden xl:table-cell text-center whitespace-nowrap">
                     {getUrgencyBadge(contract.days_until_expiry)}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center px-2">
                     <Select
                       value={outcomeMap[contract.id]?.outcome || "pending"}
                       onValueChange={(val) => handleOutcomeChange(contract, val)}
                     >
                       <SelectTrigger className={cn(
-                        "h-8 w-[128px] text-xs mx-auto",
+                        "h-8 w-[116px] lg:w-[128px] text-xs mx-auto",
                         outcomeMap[contract.id]?.outcome === "renewed" && "border-emerald-500 text-emerald-700 dark:text-emerald-400",
                         outcomeMap[contract.id]?.outcome === "negotiating" && "border-blue-500 text-blue-700 dark:text-blue-400",
                         outcomeMap[contract.id]?.outcome === "lost" && "border-red-500 text-red-700 dark:text-red-400",
