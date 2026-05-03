@@ -402,7 +402,12 @@ export const TemplatedContractPreview = ({
   return (
     <div
       className="contract-document bg-white text-black mx-auto"
-      style={{ width: "100%", maxWidth: "210mm", minHeight: "297mm" }}
+      style={{
+        width: "210mm",
+        minWidth: "210mm",
+        maxWidth: "210mm",
+        minHeight: "297mm",
+      }}
       // The template HTML brings its own <style> + layout. Render as-is, no prose, no pre-wrap.
       dangerouslySetInnerHTML={{ __html: rendered }}
     />
