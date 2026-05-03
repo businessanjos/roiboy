@@ -337,6 +337,11 @@ export function DealDetailSheet({
   const [dealCustomFields, setDealCustomFields] = useState<CustomField[]>([]);
   const [dealFieldValues, setDealFieldValues] = useState<Record<string, any>>({});
   const [itemVendaProductName, setItemVendaProductName] = useState<string | null>(null);
+  const [itemVendaProductPrice, setItemVendaProductPrice] = useState<number | null>(null);
+  const [itemVendaAllowsSecondSeat, setItemVendaAllowsSecondSeat] = useState<boolean>(false);
+  const [hasSecondSeat, setHasSecondSeat] = useState<boolean>(false);
+  const [secondSeatName, setSecondSeatName] = useState<string>("");
+  const [updatingSecondSeat, setUpdatingSecondSeat] = useState(false);
   
   const { isAdmin } = usePermissions();
 
@@ -484,12 +489,14 @@ export function DealDetailSheet({
           if (uuidRegex.test(itemVendaValue)) {
             const { data: productData } = await supabase
               .from('products')
-              .select('name')
+              .select('name, price, allows_second_seat')
               .eq('id', itemVendaValue)
               .maybeSingle();
             
             if (productData) {
               setItemVendaProductName(productData.name);
+              setItemVendaProductPrice(Number((productData as any).price) || 0);
+              setItemVendaAllowsSecondSeat(!!(productData as any).allows_second_seat);
             }
           } else {
             // Legacy format - get label from custom field options
@@ -500,9 +507,13 @@ export function DealDetailSheet({
                 setItemVendaProductName(option.label);
               }
             }
+            setItemVendaProductPrice(null);
+            setItemVendaAllowsSecondSeat(false);
           }
         } else {
           setItemVendaProductName(null);
+          setItemVendaProductPrice(null);
+          setItemVendaAllowsSecondSeat(false);
         }
       }
     } catch (error) {
