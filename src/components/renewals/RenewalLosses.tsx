@@ -158,7 +158,7 @@ export function RenewalLosses() {
       }
 
       // No more auto-detection: only use explicit outcomes from renewal_outcomes table
-      const mapped: ExpiredContract[] = (expiredContracts || []).map((c: any) => {
+      const mapped: ExpiredContract[] = allContracts.map((c: any) => {
         const endDate = parseLocalDate(c.end_date);
         const diffMs = endDate ? today.getTime() - endDate.getTime() : 0;
         const daysExpired = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
