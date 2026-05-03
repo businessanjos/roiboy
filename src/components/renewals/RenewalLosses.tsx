@@ -712,11 +712,6 @@ export function RenewalLosses() {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <TrendingDown className="h-10 w-10 mb-3 opacity-50" />
-              <p className="font-medium">Nenhum contrato vencido no período</p>
-            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -783,7 +778,16 @@ export function RenewalLosses() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedItems.map(item => (
+                {paginatedItems.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-16">
+                      <div className="flex flex-col items-center justify-center text-muted-foreground">
+                        <TrendingDown className="h-10 w-10 mb-3 opacity-50" />
+                        <p className="font-medium">Nenhum contrato vencido no período</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedItems.map(item => (
                   <TableRow key={item.id}>
                     <TableCell>
                       <Link to={`/clients/${item.client_id}`} className="flex items-center gap-3 hover:opacity-80">
