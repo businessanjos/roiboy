@@ -2185,6 +2185,7 @@ export default function Clients() {
                   <TableRow className="bg-muted/50">
                     <TableHead className="font-medium sticky left-0 bg-muted z-20 w-[240px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
                     <TableHead className="font-medium text-center w-[160px]">Produto</TableHead>
+                    <TableHead className="font-medium text-center min-w-[160px]">Vínculo</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px]">Contrato</TableHead>
                     
                     <TableHead className="font-medium text-center min-w-[120px]">Responsável</TableHead>
