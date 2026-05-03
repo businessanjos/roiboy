@@ -2298,6 +2298,29 @@ export default function Clients() {
                           </button>
                         </TableCell>
                         <TableCell className="text-center">
+                          {linksMap[client.id]?.length ? (
+                            <div className="flex flex-col gap-1 items-center">
+                              {linksMap[client.id].slice(0, 2).map((l) => (
+                                <Link
+                                  key={l.id}
+                                  to={`/clients/${l.id}`}
+                                  className="text-xs text-primary hover:underline truncate max-w-[160px]"
+                                  title={l.full_name}
+                                >
+                                  {l.full_name}
+                                </Link>
+                              ))}
+                              {linksMap[client.id].length > 2 && (
+                                <span className="text-xs text-muted-foreground">
+                                  +{linksMap[client.id].length - 2}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
                           <button
                             onClick={() => {
                               setContractClientData({ id: client.id, name: client.full_name });
