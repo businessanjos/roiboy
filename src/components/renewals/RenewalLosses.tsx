@@ -65,6 +65,140 @@ interface ExpiredContract {
 
 const PIE_COLORS = ["#ef4444", "#f97316", "#eab308", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6", "#6b7280"];
 
+interface MultiHeaderProps {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  align?: "start" | "center";
+  formatLabel?: (v: string) => string;
+}
+
+function MultiSelectHeader({ label, options, selected, onChange, align = "center", formatLabel }: MultiHeaderProps) {
+  const active = selected.length > 0;
+  const toggle = (v: string) => {
+    onChange(selected.includes(v) ? selected.filter(s => s !== v) : [...selected, v]);
+  };
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors",
+            align === "center" ? "justify-center w-full" : "justify-start",
+            active ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          <span>{label}</span>
+          <Filter className={cn("h-3 w-3", active ? "opacity-100" : "opacity-50")} />
+          {active && <span className="ml-0.5 rounded-full bg-primary text-primary-foreground text-[10px] px-1.5 leading-tight">{selected.length}</span>}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[240px]" align="start">
+        <div className="max-h-[280px] overflow-y-auto py-1">
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left"
+          >
+            <Checkbox checked={selected.length === 0} className="pointer-events-none" />
+            <span>Todos</span>
+          </button>
+          <div className="h-px bg-border my-1" />
+          {options.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-muted-foreground">Sem opções</div>
+          ) : options.map(opt => {
+            const checked = selected.includes(opt);
+            return (
+              <button
+                type="button"
+                key={opt}
+                onClick={() => toggle(opt)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left"
+              >
+                <Checkbox checked={checked} className="pointer-events-none" />
+                <span className="truncate">{formatLabel ? formatLabel(opt) : opt}</span>
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+interface SearchHeaderProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  align?: "start" | "center";
+}
+
+function SearchHeader({ label, value, onChange, align = "start" }: SearchHeaderProps) {
+  const active = value.trim().length > 0;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors",
+            align === "center" ? "justify-center w-full" : "justify-start",
+            active ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          <span>{label}</span>
+          <Search className={cn("h-3 w-3", active ? "opacity-100" : "opacity-50")} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="p-2 w-[260px]" align="start">
+        <Input
+          autoFocus
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={`Buscar ${label.toLowerCase()}...`}
+          className="h-8 text-sm"
+        />
+        {active && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            Limpar busca
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+interface SortHeaderProps {
+  label: string;
+  active: boolean;
+  dir: "asc" | "desc";
+  onClick: () => void;
+}
+
+function SortHeader({ label, active, dir, onClick }: SortHeaderProps) {
+  const Icon = !active ? ArrowUpDown : dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1 justify-center w-full text-xs font-medium hover:text-foreground transition-colors",
+        active ? "text-primary" : "text-muted-foreground"
+      )}
+    >
+      <span>{label}</span>
+      <Icon className={cn("h-3 w-3", active ? "opacity-100" : "opacity-50")} />
+    </button>
+  );
+}
+
+
 export function RenewalLosses() {
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
