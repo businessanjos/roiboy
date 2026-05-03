@@ -379,6 +379,7 @@ export default function Clients() {
       
       if (filterContract !== "all") baseParams["contract_filter"] = filterContract;
       if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
+      if (filterLinks === "with") baseParams["with_links"] = "true";
       baseParams["sort"] = sortOrder;
 
       const pageSize = 200;
