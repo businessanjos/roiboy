@@ -210,6 +210,13 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
           </div>
         )}
 
+        {/* 2ª Cadeira badge */}
+        {(deal as any).has_second_seat && (
+          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-amber-500/10 text-amber-700 border-amber-500/30 self-start">
+            2ª cadeira{(deal as any).second_seat_name ? `: ${(deal as any).second_seat_name}` : ''}
+          </Badge>
+        )}
+
         {/* Row 3: Meta info line - time + contact hints */}
         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
           <Badge 
