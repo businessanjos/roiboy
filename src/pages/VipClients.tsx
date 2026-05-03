@@ -179,15 +179,54 @@ export default function VipClients() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let base = rows.filter((r) => {
-      if (r.received < criteria.min_received) return false;
-      if (r.ltv_months < criteria.min_ltv_months) return false;
-      if (criteria.product_ids.length > 0) {
-        const match = r.product_ids.some((pid) => criteria.product_ids.includes(pid));
-        if (!match) return false;
+    const target = criteria.top_n > 0 ? criteria.top_n : rows.length;
+
+    const matchesProductFilter = (r: VipRow) => {
+      if (criteria.product_ids.length === 0) return true;
+      return r.product_ids.some((pid) => criteria.product_ids.includes(pid));
+    };
+
+    // Tier 1: meet min_received (+ LTV + product filter)
+    const tier1 = rows.filter(
+      (r) =>
+        r.received >= criteria.min_received &&
+        r.ltv_months >= criteria.min_ltv_months &&
+        matchesProductFilter(r)
+    );
+
+    const selected = new Map<string, VipRow>();
+    tier1.forEach((r) => selected.set(r.client_id, r));
+
+    // Tier 2: fallback by elite products (Conselho / Private) — only if not enough
+    if (selected.size < target) {
+      const eliteRegex = /(conselho|private)/i;
+      const tier2 = rows
+        .filter(
+          (r) =>
+            !selected.has(r.client_id) &&
+            r.products.some((p) => eliteRegex.test(p))
+        )
+        .sort((a, b) => b.received - a.received || b.total - a.total);
+      for (const r of tier2) {
+        if (selected.size >= target) break;
+        selected.set(r.client_id, r);
       }
-      return true;
-    });
+    }
+
+    // Tier 3: fallback by LTV (longest first) — only if still not enough
+    if (selected.size < target) {
+      const tier3 = rows
+        .filter((r) => !selected.has(r.client_id))
+        .sort((a, b) => b.ltv_months - a.ltv_months || b.received - a.received);
+      for (const r of tier3) {
+        if (selected.size >= target) break;
+        selected.set(r.client_id, r);
+      }
+    }
+
+    let base = Array.from(selected.values()).sort(
+      (a, b) => b.received - a.received || b.total - a.total
+    );
     if (q) base = base.filter((r) => r.full_name.toLowerCase().includes(q));
     if (criteria.top_n > 0) base = base.slice(0, criteria.top_n);
     return base;
