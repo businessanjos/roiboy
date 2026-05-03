@@ -2508,7 +2508,7 @@ export default function Clients() {
                     ))
                   )}
                 </TableBody>
-              </Table>
+              </table>
           </ScrollArea>
         </Card>
       ) : viewMode === "cards" ? (
