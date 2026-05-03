@@ -12,6 +12,7 @@ import { Mail, Phone, Calendar, RefreshCw, AlertTriangle, ListTodo, MessageCircl
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DealActivitiesDialog } from "./DealActivitiesDialog";
+import { VipBadge } from "@/components/client/VipBadge";
 import type { ActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 
 interface DealCardProps {
