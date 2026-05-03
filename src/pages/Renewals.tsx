@@ -761,7 +761,7 @@ export default function Renewals() {
 
         <TabsContent value="pending" className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[325px_195px_195px_195px] gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
@@ -858,7 +858,7 @@ export default function Renewals() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                       Por Produto ({produtos.length})
                     </p>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,260px))] gap-3 auto-rows-fr justify-items-stretch">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 auto-rows-fr">
                       {produtos.map(([name, count]) => {
                         const active = filterProduto.includes(name);
                         return (
