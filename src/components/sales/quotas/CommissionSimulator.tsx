@@ -327,6 +327,9 @@ export function CommissionSimulator() {
       monthlyBase,
       spiffTotal,
       spiffBreakdown,
+      mixRows,
+      mixTotalQty,
+      mixEntryCaptured,
       totalEarnings,
       effectiveAchievementPct,
     };
