@@ -345,21 +345,38 @@ export function RenewalLosses() {
   const consultantRanking = Object.values(consultantStats).sort((a, b) => b.lostValue - a.lostValue);
 
   const uniqueConsultoras = [...new Set(items.map(c => c.responsible_name).filter(Boolean))] as string[];
+  const uniqueProdutos = [...new Set(items.map(c => c.product_name).filter(Boolean))] as string[];
+  const uniqueMotivos = [...new Set(items.map(c => c.loss_reason).filter(Boolean))] as string[];
 
   const filteredItems = items.filter(i => {
-    if (filterConsultora !== "all" && i.responsible_name !== filterConsultora) return false;
-    if (filterOutcome !== "all") {
-      if (filterOutcome !== i.outcome) return false;
+    if (searchClient.trim() && !i.client_name.toLowerCase().includes(searchClient.trim().toLowerCase())) return false;
+    if (filterConsultora.length > 0 && (!i.responsible_name || !filterConsultora.includes(i.responsible_name))) return false;
+    if (filterProduto.length > 0 && (!i.product_name || !filterProduto.includes(i.product_name))) return false;
+    if (filterStatus.length > 0) {
+      const outcome = i.outcome || "pending";
+      if (!filterStatus.includes(outcome)) return false;
     }
+    if (filterMotivo.length > 0 && (!i.loss_reason || !filterMotivo.includes(i.loss_reason))) return false;
     return true;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    if (!sortKey) return 0;
+    let av: number = 0, bv: number = 0;
+    if (sortKey === "value") { av = a.renewal_value; bv = b.renewal_value; }
+    else if (sortKey === "date") {
+      av = parseLocalDate(a.end_date).getTime();
+      bv = parseLocalDate(b.end_date).getTime();
+    }
+    return sortDir === "asc" ? av - bv : bv - av;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(sortedItems.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const paginatedItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginatedItems = sortedItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Reset to page 1 when filters change
-  useEffect(() => { setPage(1); }, [filterConsultora, filterOutcome, filterPeriod]);
+  useEffect(() => { setPage(1); }, [filterConsultora, filterProduto, filterStatus, filterMotivo, filterPeriod, searchClient, sortKey, sortDir]);
 
   const getInitials = (name: string) =>
     name.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
