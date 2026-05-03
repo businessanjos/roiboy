@@ -345,6 +345,8 @@ export function DealDetailSheet({
   const [hasSecondSeat, setHasSecondSeat] = useState<boolean>(false);
   const [secondSeatName, setSecondSeatName] = useState<string>("");
   const [updatingSecondSeat, setUpdatingSecondSeat] = useState(false);
+  const [valueEditOpen, setValueEditOpen] = useState(false);
+  const [valueDraft, setValueDraft] = useState<string>("");
   
   const { isAdmin } = usePermissions();
 
