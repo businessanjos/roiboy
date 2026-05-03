@@ -458,16 +458,22 @@ export default function SalesPipeline() {
       .sort((a, b) => a[1].localeCompare(b[1]));
   }, [wonDeals]);
 
-  // Available products for won deals filter (keeps "Ren." products as separate entries)
+  // Available products for won deals filter — dedupe by full name (keeps "Ren." separate from regular)
   const availableWonProducts = useMemo(() => {
-    const productsMap = new Map<string, string>();
+    const byName = new Map<string, string>(); // nameKey -> displayName (uses first productId seen)
+    const nameToId = new Map<string, string>();
     wonDeals.forEach(deal => {
       const product = dealProductMap[deal.id];
-      if (product && !productsMap.has(product.productId)) {
-        productsMap.set(product.productId, product.productName);
+      if (product) {
+        const nameKey = product.productName.trim().toLowerCase();
+        if (!byName.has(nameKey)) {
+          byName.set(nameKey, product.productName.trim());
+          nameToId.set(nameKey, product.productId);
+        }
       }
     });
-    return Array.from(productsMap.entries())
+    return Array.from(byName.entries())
+      .map(([nameKey, displayName]) => [nameToId.get(nameKey)!, displayName] as [string, string])
       .sort((a, b) => a[1].localeCompare(b[1]));
   }, [wonDeals, dealProductMap]);
 
@@ -496,9 +502,15 @@ export default function SalesPipeline() {
     }
 
     if (wonProductFilter !== 'all') {
+      const selectedEntry = availableWonProducts.find(([id]) => id === wonProductFilter);
+      const selectedName = selectedEntry?.[1]?.trim().toLowerCase() ?? '';
       result = result.filter(deal => {
         const product = dealProductMap[deal.id];
-        return product?.productId === wonProductFilter;
+        if (!product) return false;
+        return (
+          product.productId === wonProductFilter ||
+          product.productName.trim().toLowerCase() === selectedName
+        );
       });
     }
     
