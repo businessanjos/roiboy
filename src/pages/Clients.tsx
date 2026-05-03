@@ -255,6 +255,7 @@ export default function Clients() {
   const [clients, setClients] = useState<any[]>([]);
   const [contractMap, setContractMap] = useState<Record<string, { status: string; start_date: string | null; end_date: string | null }>>({});
   const [whatsappMap, setWhatsappMap] = useState<Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }>>({});
+  const [linksMap, setLinksMap] = useState<Record<string, { id: string; full_name: string }[]>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -597,7 +598,35 @@ export default function Clients() {
       setContractMap(contractsGrouped);
       setWhatsappMap(whatsappGrouped);
       setPendingFormSends(pendingFormsGrouped);
-      
+
+      // Fetch relationship links for the visible clients
+      const visibleIds = transformedClients.map((c: any) => c.id);
+      if (visibleIds.length > 0) {
+        const { data: rels } = await supabase
+          .from("client_relationships")
+          .select(`
+            primary_client_id,
+            related_client_id,
+            primary_client:clients!client_relationships_primary_client_id_fkey(id, full_name),
+            related_client:clients!client_relationships_related_client_id_fkey(id, full_name)
+          `)
+          .eq("is_active", true)
+          .or(`primary_client_id.in.(${visibleIds.join(",")}),related_client_id.in.(${visibleIds.join(",")})`);
+
+        const lm: Record<string, { id: string; full_name: string }[]> = {};
+        (rels || []).forEach((r: any) => {
+          if (visibleIds.includes(r.primary_client_id) && r.related_client) {
+            (lm[r.primary_client_id] ||= []).push({ id: r.related_client.id, full_name: r.related_client.full_name });
+          }
+          if (visibleIds.includes(r.related_client_id) && r.primary_client) {
+            (lm[r.related_client_id] ||= []).push({ id: r.primary_client.id, full_name: r.primary_client.full_name });
+          }
+        });
+        setLinksMap(lm);
+      } else {
+        setLinksMap({});
+      }
+
     } catch (error) {
       console.error("Error fetching clients:", error);
     }
@@ -2156,6 +2185,7 @@ export default function Clients() {
                   <TableRow className="bg-muted/50">
                     <TableHead className="font-medium sticky left-0 bg-muted z-20 w-[240px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
                     <TableHead className="font-medium text-center w-[160px]">Produto</TableHead>
+                    <TableHead className="font-medium text-center min-w-[160px]">Vínculo</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px]">Contrato</TableHead>
                     
                     <TableHead className="font-medium text-center min-w-[120px]">Responsável</TableHead>
@@ -2266,6 +2296,29 @@ export default function Clients() {
                               </TooltipProvider>
                             )}
                           </button>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {linksMap[client.id]?.length ? (
+                            <div className="flex flex-col gap-1 items-center">
+                              {linksMap[client.id].slice(0, 2).map((l) => (
+                                <Link
+                                  key={l.id}
+                                  to={`/clients/${l.id}`}
+                                  className="text-xs text-primary hover:underline truncate max-w-[160px]"
+                                  title={l.full_name}
+                                >
+                                  {l.full_name}
+                                </Link>
+                              ))}
+                              {linksMap[client.id].length > 2 && (
+                                <span className="text-xs text-muted-foreground">
+                                  +{linksMap[client.id].length - 2}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           <button
