@@ -500,20 +500,21 @@ export default function SalesPipeline() {
       });
     }
 
-    if (wonSellerFilter !== 'all') {
-      result = result.filter(deal => deal.responsible_user_id === wonSellerFilter);
+    if (wonSellerFilter.length > 0) {
+      result = result.filter(deal => deal.responsible_user_id && wonSellerFilter.includes(deal.responsible_user_id));
     }
 
-    if (wonProductFilter !== 'all') {
-      const selectedEntry = availableWonProducts.find(([id]) => id === wonProductFilter);
-      const selectedName = selectedEntry?.[1]?.trim().toLowerCase() ?? '';
+    if (wonProductFilter.length > 0) {
+      const selectedNames = new Set(
+        wonProductFilter
+          .map(id => availableWonProducts.find(([pid]) => pid === id)?.[1]?.trim().toLowerCase())
+          .filter(Boolean) as string[]
+      );
+      const selectedIds = new Set(wonProductFilter);
       result = result.filter(deal => {
         const product = dealProductMap[deal.id];
         if (!product) return false;
-        return (
-          product.productId === wonProductFilter ||
-          product.productName.trim().toLowerCase() === selectedName
-        );
+        return selectedIds.has(product.productId) || selectedNames.has(product.productName.trim().toLowerCase());
       });
     }
     
