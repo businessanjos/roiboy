@@ -675,7 +675,7 @@ export default function Renewals() {
                       onScoreCalculated={handleScoreCalculated}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-2">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
