@@ -64,7 +64,7 @@ async function getGoogleAccessToken(supabase: any, authUserId: string, internalU
           expires_at: Math.floor(Date.now() / 1000) + newTokens.expires_in,
           updated_at: new Date().toISOString(),
         })
-        .eq("user_id", userId)
+        .eq("user_id", integration.user_id)
         .eq("provider", "google");
     }
   }
