@@ -1391,18 +1391,16 @@ Deno.serve(async (req) => {
           // Also search with phone variant (with/without 9th digit) for Brazilian numbers
           let clientId = null;
           if (!isGroupMessage && phone) {
-            // Build the OR condition with phone variants for Brazilian numbers
-            // NEW FORMAT: additional_phones.cs.[{"number":"phone"}] - matches objects with number field
-            // LEGACY FORMAT: additional_phones.cs.["phone"] - matches string arrays
-            let orCondition = `phone_e164.eq.${phone},additional_phones.cs.["${phone}"],additional_phones.cs.[{"number":"${phone}"}]`;
-            
-            // Add Brazilian phone variant (12 vs 13 digits)
-            if (phone.startsWith("+55") && phone.length === 14) {
-              // phone is 13 digits, also search for 12-digit version
-              const phoneWithout9 = phone.substring(0, 5) + phone.substring(6);
-              orCondition += `,phone_e164.eq.${phoneWithout9},additional_phones.cs.["${phoneWithout9}"],additional_phones.cs.[{"number":"${phoneWithout9}"}]`;
+            // Build OR with TODAS as variantes (com/sem +, com/sem 9º dígito, com/sem DDI)
+            const allVariants = buildPhoneVariants(phone);
+            const orParts: string[] = [];
+            for (const v of allVariants) {
+              orParts.push(`phone_e164.eq.${v}`);
+              orParts.push(`additional_phones.cs.["${v}"]`);
+              orParts.push(`additional_phones.cs.[{"number":"${v}"}]`);
             }
-            
+            const orCondition = orParts.join(",");
+
             const { data: existingClient } = await supabase
               .from("clients")
               .select("id, phone_e164")
