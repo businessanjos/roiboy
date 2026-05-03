@@ -252,21 +252,66 @@ export function CommissionSimulator() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Atingimento da Meta: <span className="font-bold text-primary">{achievementPct}%</span></Label>
-            <Slider
-              value={[achievementPct]}
-              onValueChange={([v]) => setAchievementPct(v)}
-              min={0}
-              max={300}
-              step={5}
-              className="mt-2"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>0%</span>
-              <span>100%</span>
-              <span>200%</span>
-              <span>300%</span>
+            <div className="flex items-center justify-between">
+              <Label>
+                {simMode === "percent" ? (
+                  <>Atingimento da Meta: <span className="font-bold text-primary">{achievementPct}%</span></>
+                ) : (
+                  <>Nº de Vendas: <span className="font-bold text-primary">{salesCount}</span>
+                    {simulation && !simulation.noPlan && (
+                      <span className="text-muted-foreground font-normal"> ({Math.round(simulation.effectiveAchievementPct)}% da meta)</span>
+                    )}
+                  </>
+                )}
+              </Label>
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={simMode === "percent" ? "default" : "outline"}
+                  className="h-6 px-2 text-[10px]"
+                  onClick={() => setSimMode("percent")}
+                >
+                  % Meta
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={simMode === "sales" ? "default" : "outline"}
+                  className="h-6 px-2 text-[10px]"
+                  onClick={() => setSimMode("sales")}
+                >
+                  Nº Vendas
+                </Button>
+              </div>
             </div>
+            {simMode === "percent" ? (
+              <>
+                <Slider
+                  value={[achievementPct]}
+                  onValueChange={([v]) => setAchievementPct(v)}
+                  min={0}
+                  max={300}
+                  step={5}
+                  className="mt-2"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>0%</span>
+                  <span>100%</span>
+                  <span>200%</span>
+                  <span>300%</span>
+                </div>
+              </>
+            ) : (
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={salesCount}
+                onChange={(e) => setSalesCount(Math.max(0, Number(e.target.value) || 0))}
+                placeholder="Ex: 7"
+              />
+            )}
           </div>
         </div>
 
