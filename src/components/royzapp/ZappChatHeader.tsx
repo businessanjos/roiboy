@@ -32,6 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ConversationAssignment, ContactInfo, getInitials, STATUS_CONFIG } from "./types";
 import { ZappClientSuggestionBanner } from "./ZappClientSuggestionBanner";
+import { VipBadge } from "@/components/client/VipBadge";
 
 interface ZappChatHeaderProps {
   assignment: ConversationAssignment;
