@@ -577,18 +577,18 @@ export default function Renewals() {
             <p className="text-sm">{emptySubtitle}</p>
           </div>
         ) : (
-          <Table>
+          <Table className="table-fixed lg:table-auto">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[280px]">Cliente</TableHead>
-                <TableHead className="text-center">Consultora</TableHead>
+                <TableHead className="w-[220px] lg:w-[260px]">Cliente</TableHead>
+                <TableHead className="hidden xl:table-cell text-center">Consultora</TableHead>
                 <TableHead className="text-center">Produto</TableHead>
                 <TableHead className="text-center">Valor Renovação</TableHead>
-                <TableHead className="text-center">Início</TableHead>
+                <TableHead className="hidden 2xl:table-cell text-center">Início</TableHead>
                 <TableHead className="text-center">Vencimento</TableHead>
                 <TableHead className="text-center">Tempo Restante</TableHead>
                 <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-center">Chance</TableHead>
+                <TableHead className="hidden xl:table-cell text-center">Chance</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -616,7 +616,7 @@ export default function Renewals() {
                       </div>
                     </Link>
                   </TableCell>
-                  <TableCell className="text-center text-sm text-muted-foreground">
+                  <TableCell className="hidden xl:table-cell text-center text-sm text-muted-foreground">
                     {contract.responsible_name || "—"}
                   </TableCell>
                   <TableCell className="text-center">
@@ -638,7 +638,7 @@ export default function Renewals() {
                   <TableCell className="text-center text-sm font-medium">
                     {formatCurrency(contract.renewal_value, contract.currency)}
                   </TableCell>
-                  <TableCell className="text-center text-sm text-muted-foreground">
+                  <TableCell className="hidden 2xl:table-cell text-center text-sm text-muted-foreground">
                     {formatLocalDate(contract.start_date)}
                   </TableCell>
                   <TableCell className="text-center text-sm font-medium">
@@ -668,7 +668,7 @@ export default function Renewals() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="hidden xl:table-cell text-center">
                     <RenewalThermometer
                       clientId={contract.client_id}
                       accountId={currentUser?.account_id || ""}
