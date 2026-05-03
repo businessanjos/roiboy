@@ -1262,6 +1262,7 @@ export default function Clients() {
     filterProduct !== "all",
     filterContract !== "all",
     filterResponsible !== "all",
+    filterLinks !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -1269,6 +1270,7 @@ export default function Clients() {
     setFilterProduct("all");
     setFilterContract("all");
     setFilterResponsible("all");
+    setFilterLinks("all");
   };
 
   // Sorting is now handled server-side via the sort param
