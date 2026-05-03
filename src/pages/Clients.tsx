@@ -2304,7 +2304,7 @@ export default function Clients() {
                                 <Link
                                   key={l.id}
                                   to={`/clients/${l.id}`}
-                                  className="text-xs text-primary hover:underline truncate max-w-[160px]"
+                                  className="text-xs text-foreground hover:underline truncate max-w-[160px]"
                                   title={l.full_name}
                                 >
                                   {l.full_name}
