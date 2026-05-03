@@ -98,6 +98,7 @@ import { ContractTriageQueue } from "@/components/contracts/ContractTriageQueue"
 import { ConciliateButton } from "@/components/contracts/ConciliateButton";
 import { useBatchConciliationValidation } from "@/hooks/useConciliationValidation";
 import { BarChart3, UserCheck } from "lucide-react";
+import { VipBadge } from "@/components/client/VipBadge";
 
 interface Contract {
   id: string;
@@ -258,7 +259,10 @@ const ContractTableRow = memo(function ContractTableRow({
             )}
           </div>
           <div>
-            <p className="font-medium text-sm hover:underline">{contract.client?.full_name || "Cliente"}</p>
+            <p className="font-medium text-sm hover:underline flex items-center gap-1.5">
+              <span className="truncate">{contract.client?.full_name || "Cliente"}</span>
+              <VipBadge clientId={contract.client?.id} />
+            </p>
             {contract.product && (
               <Badge 
                 className="text-xs font-medium whitespace-nowrap shadow-sm mt-1"

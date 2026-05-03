@@ -32,6 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ConversationAssignment, ContactInfo, getInitials, STATUS_CONFIG } from "./types";
 import { ZappClientSuggestionBanner } from "./ZappClientSuggestionBanner";
+import { VipBadge } from "@/components/client/VipBadge";
 
 interface ZappChatHeaderProps {
   assignment: ConversationAssignment;
@@ -135,8 +136,9 @@ export const ZappChatHeader = memo(function ZappChatHeader({
           </Avatar>
           <div className="flex-1 min-w-0 flex items-center gap-1 sm:gap-2">
             {contactInfo.isGroup && <Users2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-zapp-accent flex-shrink-0" />}
-            <h3 className="text-zapp-text font-medium truncate text-sm sm:text-base">
-              {contactInfo.name}
+            <h3 className="text-zapp-text font-medium truncate text-sm sm:text-base flex items-center gap-1.5 min-w-0">
+              <span className="truncate">{contactInfo.name}</span>
+              <VipBadge clientId={clientId} />
             </h3>
             {clientId && <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-zapp-text-muted flex-shrink-0" />}
             {clientProducts && clientProducts.length > 0 && (

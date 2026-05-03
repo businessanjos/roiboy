@@ -12,6 +12,7 @@ import { Mail, Phone, Calendar, RefreshCw, AlertTriangle, ListTodo, MessageCircl
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DealActivitiesDialog } from "./DealActivitiesDialog";
+import { VipBadge } from "@/components/client/VipBadge";
 import type { ActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 
 interface DealCardProps {
@@ -194,7 +195,10 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-xs leading-tight truncate">{deal.title}</h4>
+            <h4 className="font-semibold text-xs leading-tight truncate flex items-center gap-1">
+              <span className="truncate">{deal.title}</span>
+              <VipBadge clientId={deal.client_id} />
+            </h4>
             <p className="text-[10px] text-muted-foreground truncate">{contactName}</p>
           </div>
           <span className="text-xs font-bold text-primary whitespace-nowrap flex-shrink-0">

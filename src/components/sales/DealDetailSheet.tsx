@@ -96,6 +96,7 @@ import { MergeDealDialog } from "./MergeDealDialog";
 import { ThreeCPlusCallButton } from "./ThreeCPlusCallButton";
 import { useDealMerge } from "@/hooks/useDealMerge";
 import { DEAL_FIELD_IDS } from "@/utils/dealToClientContractMapping";
+import { VipBadge } from "@/components/client/VipBadge";
 
 interface DealActivity {
   id: string;
@@ -954,7 +955,10 @@ export function DealDetailSheet({
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <SheetTitle className="text-base font-semibold truncate">{deal.title}</SheetTitle>
+                  <SheetTitle className="text-base font-semibold truncate flex items-center gap-1.5">
+                    <span className="truncate">{deal.title}</span>
+                    <VipBadge clientId={deal.client_id} size="md" />
+                  </SheetTitle>
                   {deal.status === 'won' && (
                     <Badge className="bg-emerald-500/90 text-white text-[10px] h-5 px-1.5">
                       <Trophy className="h-3 w-3 mr-0.5" />
