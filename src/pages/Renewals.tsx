@@ -584,7 +584,7 @@ export default function Renewals() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {list.map((contract) => (
+              {paginated.map((contract) => (
                 <TableRow key={contract.id} className="group">
                   <TableCell>
                     <Link
