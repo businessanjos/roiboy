@@ -548,7 +548,13 @@ export default function Renewals() {
     list: RenewalContract[],
     emptyTitle: string,
     emptySubtitle: string,
-  ) => (
+    page: number,
+    setPage: (p: number) => void,
+  ) => {
+    const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    const safePage = Math.min(page, totalPages);
+    const paginated = list.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+    return (
     <Card>
       <CardContent className="p-0">
         {loading ? (
