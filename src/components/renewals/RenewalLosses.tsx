@@ -765,10 +765,10 @@ export function RenewalLosses() {
                   <TableHead className="text-center">
                     <MultiSelectHeader
                       label="Status"
-                      options={["renewed", "lost", "pending"]}
+                      options={["renewed", "lost"]}
                       selected={filterStatus}
                       onChange={setFilterStatus}
-                      formatLabel={(v) => v === "renewed" ? "Renovados" : v === "lost" ? "Perdidos" : "Pendentes"}
+                      formatLabel={(v) => v === "renewed" ? "Renovados" : "Perdidos"}
                     />
                   </TableHead>
                   <TableHead className="text-center">
