@@ -23,17 +23,9 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const searchType = url.searchParams.get("type");
-    let phone = url.searchParams.get("phone_e164");
+    const rawPhone = url.searchParams.get("phone_e164");
 
-    // Normalizar: URL decode transforma + em espaço
-    if (phone) {
-      phone = phone.trim();
-      if (!phone.startsWith("+")) {
-        phone = "+" + phone;
-      }
-    }
-
-    if (!phone) {
+    if (!rawPhone) {
       return new Response(
         JSON.stringify({ error: "Missing phone parameter" }),
         {
@@ -43,23 +35,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate phone format (relaxed: min 8 digits after +)
-    if (phone.length > 20 || !phone.match(/^\+[1-9]\d{7,}$/)) {
+    // Canonical E.164 (corrige 9º dígito BR e adiciona +55 quando faltar)
+    const phone = canonicalE164(rawPhone);
+    if (!phone || phone.length > 20 || !phone.match(/^\+[1-9]\d{7,}$/)) {
       return new Response(JSON.stringify({ error: "Invalid phone format" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Generate phone variants for flexible matching
-    const phoneVariants: string[] = [phone];
-    if (phone.startsWith("+55")) {
-      // Has country code -> also try without it
-      phoneVariants.push("+" + phone.slice(3));
-    } else {
-      // Missing country code -> also try with +55
-      phoneVariants.push("+55" + phone.slice(1));
-    }
+    // Generate ALL plausible variants (com/sem +, com/sem 9º dígito, com/sem DDI)
+    const phoneVariants = buildPhoneVariants(rawPhone);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
