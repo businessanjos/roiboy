@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardContractStats } from "@/hooks/useDashboardContractStats";
+import { useDoubleChairCount } from "@/hooks/useDoubleChairCount";
 import { useQuery } from "@tanstack/react-query";
 import { ContractsDashboard } from "@/components/contracts/ContractsDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -124,6 +125,7 @@ export default function Dashboard() {
 
   // Contract stats from RPC for accurate Gestão metrics
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
+  const { data: doubleChairCount } = useDoubleChairCount(currentUser?.account_id);
 
   // Contracts data for the Contratos tab (exclude renewals to avoid duplicates)
   // Optimized: limit to 500 most recent + paginated fetch for full data
@@ -754,7 +756,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Status Cards - Single Row */}
-          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-6" : "md:grid-cols-3"}`}>
+          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"}`}>
             {/* Total de Clientes (oculto no modo operações) */}
             {gestaoViewMode !== "operacoes" && (
             <Card className="shadow-card border-l-4 border-l-primary">
@@ -769,6 +771,20 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             )}
+
+            {/* Cadeira Dupla — vínculos com sync_data ativos (cada par conta como 1) */}
+            <Card className="shadow-card border-l-4 border-l-pink-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Cadeira Dupla</p>
+                    <p className="text-2xl font-bold text-pink-600">{doubleChairCount ?? 0}</p>
+                  </div>
+                  <Heart className="h-5 w-5 text-pink-500" />
+                </div>
+              </CardContent>
+            </Card>
+
 
             {/* Ativos */}
             <Card className="shadow-card border-l-4 border-l-success">
@@ -1099,7 +1115,7 @@ export default function Dashboard() {
             </div>
 
             {/* Status Cards */}
-            <div className={`grid grid-cols-2 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-6" : "md:grid-cols-3"} gap-6 mb-8`}>
+            <div className={`grid grid-cols-2 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"} gap-6 mb-8`}>
               {gestaoViewMode !== "operacoes" && (
               <Card className="border-l-4 border-l-primary">
                 <CardContent className="p-6">
@@ -1113,6 +1129,19 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
               )}
+
+              <Card className="border-l-4 border-l-pink-500">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Cadeira Dupla</p>
+                      <p className="text-4xl font-bold text-pink-600">{doubleChairCount ?? 0}</p>
+                    </div>
+                    <Heart className="h-8 w-8 text-pink-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
 
               <Card className="border-l-4 border-l-success">
                 <CardContent className="p-6">
