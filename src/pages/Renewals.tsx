@@ -885,20 +885,6 @@ export default function Renewals() {
           {/* Search & Filters */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">
             <MultiSelectFilter
-              label="Consultor"
-              width="w-full sm:w-[180px]"
-              selected={filterConsultora}
-              onChange={setFilterConsultora}
-              options={uniqueConsultoras.sort().map((n) => ({ value: n, label: n }))}
-            />
-            <MultiSelectFilter
-              label="Produto"
-              width="w-full sm:w-[180px]"
-              selected={filterProduto}
-              onChange={setFilterProduto}
-              options={uniqueProdutos.sort().map((n) => ({ value: n, label: n }))}
-            />
-            <MultiSelectFilter
               label="Prazo"
               width="w-full sm:w-[200px]"
               selected={filterTempo}
