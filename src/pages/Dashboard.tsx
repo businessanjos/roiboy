@@ -56,7 +56,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, subMonths, subDays, parseISO } from "date-fns";
+import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { ZoomControls } from "@/components/ui/zoom-controls";
