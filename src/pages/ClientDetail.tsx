@@ -72,6 +72,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { VipBadge } from "@/components/client/VipBadge";
 
 interface Client {
   id: string;
