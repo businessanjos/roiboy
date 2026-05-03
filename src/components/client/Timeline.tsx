@@ -316,8 +316,11 @@ function CommentItem({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-foreground">{userName}</span>
           <span className="text-muted-foreground">·</span>
-          <span className="text-sm text-muted-foreground">
-            {formatDistanceToNow(new Date(event.timestamp), { locale: ptBR, addSuffix: false })}
+          <span
+            className="text-sm text-muted-foreground"
+            title={format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+          >
+            {format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
           </span>
           {wasEdited && (
             <span className="text-xs text-muted-foreground">(editado)</span>
@@ -574,8 +577,11 @@ function SystemEventItem({
               </Button>
             )}
             {getImpactBadge(event.metadata?.impact || event.metadata?.level)}
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {formatDistanceToNow(new Date(event.timestamp), { locale: ptBR, addSuffix: false })}
+            <span
+              className="text-xs text-muted-foreground whitespace-nowrap"
+              title={format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            >
+              {format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
             </span>
           </div>
         </div>
