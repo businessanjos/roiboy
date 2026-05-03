@@ -754,8 +754,9 @@ export default function Dashboard() {
           </Card>
 
           {/* Status Cards - Single Row */}
-          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"}`}>
-            {/* Total de Clientes */}
+          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-6" : "md:grid-cols-3"}`}>
+            {/* Total de Clientes (oculto no modo operações) */}
+            {gestaoViewMode !== "operacoes" && (
             <Card className="shadow-card border-l-4 border-l-primary">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -767,6 +768,7 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+            )}
 
             {/* Ativos */}
             <Card className="shadow-card border-l-4 border-l-success">
@@ -1097,7 +1099,8 @@ export default function Dashboard() {
             </div>
 
             {/* Status Cards */}
-            <div className={`grid grid-cols-2 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"} gap-6 mb-8`}>
+            <div className={`grid grid-cols-2 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-6" : "md:grid-cols-3"} gap-6 mb-8`}>
+              {gestaoViewMode !== "operacoes" && (
               <Card className="border-l-4 border-l-primary">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -1109,6 +1112,7 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+              )}
 
               <Card className="border-l-4 border-l-success">
                 <CardContent className="p-6">
