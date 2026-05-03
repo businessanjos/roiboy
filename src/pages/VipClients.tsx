@@ -352,7 +352,9 @@ export default function VipClients() {
               <Button variant="outline" onClick={() => setSettingsOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={saveCriteria}>Salvar</Button>
+              <Button onClick={saveCriteria} disabled={savingCriteria}>
+                {savingCriteria ? "Salvando..." : "Salvar"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
