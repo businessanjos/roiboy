@@ -125,7 +125,11 @@ export default function SalesPipeline() {
     reorderStages,
   } = useDeals(activePipelineId);
   
-  const { users: salesUsers } = useSectorUsers({ sectorId: "vendas" });
+  const { users: salesUsersRaw } = useSectorUsers({ sectorId: "vendas" });
+  const salesUsers = useMemo(
+    () => salesUsersRaw.filter(u => !["Bruna Pieri", "Arthur Mudri"].includes(u.name?.trim() ?? "")),
+    [salesUsersRaw],
+  );
   const { isAdmin } = usePermissions();
   const { validateDealOutcome } = useRequiredFieldsValidation();
 
