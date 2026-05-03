@@ -1032,6 +1032,8 @@ export default function Renewals() {
             filteredExpired,
             "Nenhum contrato vencido pendente",
             "Todos os contratos vencidos já foram resolvidos.",
+            expiredPage,
+            setExpiredPage,
           )}
         </TabsContent>
 
