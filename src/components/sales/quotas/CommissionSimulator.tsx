@@ -295,7 +295,7 @@ export function CommissionSimulator() {
       totalEarnings,
       effectiveAchievementPct,
     };
-  }, [selectedUserId, simMode, achievementPct, salesCount, quotas, productRates, tiers, plans, spiffs, collaborators, products, salesPositionIds]);
+  }, [selectedUserId, simMode, achievementPct, salesCount, spiffOverrides, quotas, productRates, tiers, plans, spiffs, collaborators, products, salesPositionIds]);
 
   return (
     <Card>
