@@ -304,7 +304,9 @@ export default function VipClients() {
             <DialogHeader>
               <DialogTitle>Critérios para cliente VIP</DialogTitle>
               <DialogDescription>
-                Defina quem entra na lista. Os filtros são combinados (E).
+                Prioridade: <strong>Valor recebido</strong>. Se não houver clientes
+                suficientes para o Top N, completa por <strong>produto Conselho/Private</strong>
+                e, em seguida, por <strong>maior LTV</strong>.
               </DialogDescription>
             </DialogHeader>
 
