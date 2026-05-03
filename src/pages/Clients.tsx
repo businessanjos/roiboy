@@ -2106,6 +2106,14 @@ export default function Clients() {
                     </button>
                   </Badge>
                 )}
+                {filterLinks !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Vínculos: Com vínculos
+                    <button onClick={() => setFilterLinks("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
               </div>
             )}
           </Card>
