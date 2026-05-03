@@ -86,6 +86,7 @@ Deno.serve(async (req) => {
     const vnpsClass = url.searchParams.get("vnps_class") || "";
     const contractFilter = url.searchParams.get("contract_filter") || "";
     const clientStatus = url.searchParams.get("client_status") || "";
+    const withLinks = url.searchParams.get("with_links") === "true";
     const sortParam = url.searchParams.get("sort") || "recent";
 
     console.log(
