@@ -595,7 +595,7 @@ export function RenewalLosses() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredItems.map(item => (
+                {paginatedItems.map(item => (
                   <TableRow key={item.id}>
                     <TableCell>
                       <Link to={`/clients/${item.client_id}`} className="flex items-center gap-3 hover:opacity-80">
