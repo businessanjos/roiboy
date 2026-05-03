@@ -696,11 +696,11 @@ export default function Renewals() {
         )}
       </CardContent>
       {!loading && list.length > PAGE_SIZE && (
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t">
           <p className="text-xs text-muted-foreground">
             Mostrando {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, list.length)} de {list.length}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -728,7 +728,7 @@ export default function Renewals() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6 space-y-6 mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -743,8 +743,8 @@ export default function Renewals() {
         </Button>
       </div>
 
-      <Tabs defaultValue="pending" className="space-y-6">
-        <TabsList>
+      <Tabs defaultValue="pending" className="space-y-6 min-w-0">
+        <TabsList className="w-full max-w-full justify-start overflow-x-auto">
           <TabsTrigger value="pending" className="gap-2">
             <CalendarDays className="h-4 w-4" />
             A Vencer ({filteredUpcoming.length})
