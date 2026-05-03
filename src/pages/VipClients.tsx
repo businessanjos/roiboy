@@ -204,7 +204,7 @@ export default function VipClients() {
         .filter(
           (r) =>
             !selected.has(r.client_id) &&
-            r.products.some((p) => eliteRegex.test(p))
+            r.products.some((p) => eliteRegex.test(p.name))
         )
         .sort((a, b) => b.received - a.received || b.total - a.total);
       for (const r of tier2) {
