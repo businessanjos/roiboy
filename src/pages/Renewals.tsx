@@ -577,25 +577,25 @@ export default function Renewals() {
             <p className="text-sm">{emptySubtitle}</p>
           </div>
         ) : (
-          <Table>
+          <Table className="table-fixed lg:table-auto">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[280px]">Cliente</TableHead>
-                <TableHead className="text-center">Consultora</TableHead>
-                <TableHead className="text-center">Produto</TableHead>
-                <TableHead className="text-center">Valor Renovação</TableHead>
-                <TableHead className="text-center">Início</TableHead>
-                <TableHead className="text-center">Vencimento</TableHead>
-                <TableHead className="text-center">Tempo Restante</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-center">Chance</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[190px] px-2 lg:w-[220px]">Cliente</TableHead>
+                <TableHead className="hidden xl:table-cell text-center">Consultora</TableHead>
+                <TableHead className="hidden xl:table-cell text-center">Produto</TableHead>
+                <TableHead className="text-center px-2">Valor Renovação</TableHead>
+                <TableHead className="hidden 2xl:table-cell text-center">Início</TableHead>
+                <TableHead className="text-center px-2">Vencimento</TableHead>
+                <TableHead className="hidden xl:table-cell text-center">Tempo Restante</TableHead>
+                <TableHead className="text-center px-2">Status</TableHead>
+                <TableHead className="hidden xl:table-cell text-center">Chance</TableHead>
+                <TableHead className="w-[40px] px-2"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginated.map((contract) => (
                 <TableRow key={contract.id} className="group">
-                  <TableCell>
+                  <TableCell className="px-2">
                     <Link
                       to={`/clients/${contract.client_id}`}
                       className="flex items-center gap-3 hover:opacity-80 transition-opacity"
@@ -609,21 +609,21 @@ export default function Renewals() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium break-words whitespace-normal max-w-[220px]">{contract.client_name}</p>
+                        <p className="text-sm font-medium break-words whitespace-normal max-w-[180px] lg:max-w-[210px]">{contract.client_name}</p>
                         {contract.client_email && (
                           <p className="text-xs text-muted-foreground truncate">{contract.client_email}</p>
                         )}
                       </div>
                     </Link>
                   </TableCell>
-                  <TableCell className="text-center text-sm text-muted-foreground">
+                  <TableCell className="hidden xl:table-cell text-center text-sm text-muted-foreground">
                     {contract.responsible_name || "—"}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="hidden xl:table-cell text-center min-w-0">
                     {contract.product_name ? (
                       <Badge
                         variant="outline"
-                        className="text-xs"
+                        className="max-w-[130px] truncate text-xs"
                         style={{
                           borderColor: contract.product_color || undefined,
                           color: contract.product_color || undefined,
@@ -635,25 +635,25 @@ export default function Renewals() {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-center text-sm font-medium">
+                  <TableCell className="text-center text-sm font-medium whitespace-nowrap px-2">
                     {formatCurrency(contract.renewal_value, contract.currency)}
                   </TableCell>
-                  <TableCell className="text-center text-sm text-muted-foreground">
+                  <TableCell className="hidden 2xl:table-cell text-center text-sm text-muted-foreground">
                     {formatLocalDate(contract.start_date)}
                   </TableCell>
-                  <TableCell className="text-center text-sm font-medium">
+                  <TableCell className="text-center text-sm font-medium whitespace-nowrap px-2">
                     {formatLocalDate(contract.end_date)}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="hidden xl:table-cell text-center whitespace-nowrap">
                     {getUrgencyBadge(contract.days_until_expiry)}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center px-2">
                     <Select
                       value={outcomeMap[contract.id]?.outcome || "pending"}
                       onValueChange={(val) => handleOutcomeChange(contract, val)}
                     >
                       <SelectTrigger className={cn(
-                        "h-8 w-[140px] text-xs mx-auto",
+                        "h-8 w-[116px] lg:w-[128px] text-xs mx-auto",
                         outcomeMap[contract.id]?.outcome === "renewed" && "border-emerald-500 text-emerald-700 dark:text-emerald-400",
                         outcomeMap[contract.id]?.outcome === "negotiating" && "border-blue-500 text-blue-700 dark:text-blue-400",
                         outcomeMap[contract.id]?.outcome === "lost" && "border-red-500 text-red-700 dark:text-red-400",
@@ -668,14 +668,14 @@ export default function Renewals() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="hidden xl:table-cell text-center">
                     <RenewalThermometer
                       clientId={contract.client_id}
                       accountId={currentUser?.account_id || ""}
                       onScoreCalculated={handleScoreCalculated}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-2">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -696,11 +696,11 @@ export default function Renewals() {
         )}
       </CardContent>
       {!loading && list.length > PAGE_SIZE && (
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t">
           <p className="text-xs text-muted-foreground">
             Mostrando {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, list.length)} de {list.length}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -728,7 +728,7 @@ export default function Renewals() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6 space-y-6 mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -743,8 +743,8 @@ export default function Renewals() {
         </Button>
       </div>
 
-      <Tabs defaultValue="pending" className="space-y-6">
-        <TabsList>
+      <Tabs defaultValue="pending" className="space-y-6 min-w-0">
+        <TabsList className="w-full max-w-full justify-start overflow-x-auto">
           <TabsTrigger value="pending" className="gap-2">
             <CalendarDays className="h-4 w-4" />
             A Vencer ({filteredUpcoming.length})
@@ -761,14 +761,14 @@ export default function Renewals() {
 
         <TabsContent value="pending" className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
                   <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{formatCurrency(totalRenewalValue, "BRL")}</p>
+                <div className="min-w-0">
+                  <p className="text-2xl font-bold truncate">{formatCurrency(totalRenewalValue, "BRL")}</p>
                   <p className="text-xs text-muted-foreground">Valor total de renovação</p>
                 </div>
               </CardContent>
@@ -858,7 +858,7 @@ export default function Renewals() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                       Por Produto ({produtos.length})
                     </p>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 auto-rows-fr">
+                    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(260px,100%),260px))] justify-center gap-3 auto-rows-fr">
                       {produtos.map(([name, count]) => {
                         const active = filterProduto.includes(name);
                         return (
