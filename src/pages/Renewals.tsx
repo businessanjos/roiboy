@@ -858,7 +858,7 @@ export default function Renewals() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                       Por Produto ({produtos.length})
                     </p>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 auto-rows-fr">
+                    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(260px,100%),260px))] justify-center gap-3 auto-rows-fr">
                       {produtos.map(([name, count]) => {
                         const active = filterProduto.includes(name);
                         return (
