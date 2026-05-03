@@ -375,8 +375,23 @@ export const TemplatedContractPreview = ({
   templateVariables,
   placeholderValues,
 }: TemplatedContractPreviewProps) => {
+  const forceReadablePillarsLayout = (html: string) => {
+    if (!html.includes("rk-pillars")) return html;
+    const override = `<style>
+.contract-document .rk-pillars{display:block!important;margin:30px 0!important;border:1px solid var(--ink,#000)!important;background:#fff!important;border-radius:0!important;overflow:hidden!important;}
+.contract-document .rk-pillars::before{content:"MÉTODO 3P1R · JORNADA DE IMPLEMENTAÇÃO";display:block!important;padding:12px 22px!important;background:var(--ink,#000)!important;color:#fff!important;font-size:7.5pt!important;font-weight:800!important;letter-spacing:.22em!important;text-transform:uppercase!important;}
+.contract-document .rk-pillar{position:relative!important;display:grid!important;grid-template-columns:88px 150px minmax(0,1fr)!important;gap:20px!important;align-items:start!important;padding:22px 24px!important;border-right:none!important;border-bottom:1px solid var(--line,#e5e5e5)!important;background:#fff!important;}
+.contract-document .rk-pillar:last-child{border-bottom:none!important;}
+.contract-document .rk-pillar::before{content:""!important;position:absolute!important;left:0!important;top:0!important;bottom:0!important;width:5px!important;background:var(--ink,#000)!important;}
+.contract-document .rk-pillar .num{font-family:'Geist','Inter',sans-serif!important;font-size:34pt!important;font-weight:850!important;color:var(--ink,#000)!important;line-height:.88!important;letter-spacing:-.04em!important;margin:0!important;text-align:right!important;}
+.contract-document .rk-pillar .name{font-size:8pt!important;font-weight:800!important;letter-spacing:.16em!important;text-transform:uppercase!important;color:var(--ink,#000)!important;line-height:1.45!important;margin:5px 0 0!important;padding:0!important;border-bottom:none!important;}
+.contract-document .rk-pillar .desc{font-size:10pt!important;color:var(--muted,#6b6b70)!important;line-height:1.62!important;text-align:left!important;hyphens:none!important;word-break:normal!important;overflow-wrap:normal!important;margin:2px 0 0!important;max-width:none!important;}
+</style>`;
+    return html.includes("</style>") ? html.replace(/<\/style>/i, `</style>${override}`) : `${override}${html}`;
+  };
+
   const rendered = useMemo(() => {
-    const html = renderTemplate(templateHtml ?? "", templateVariables, placeholderValues);
+    const html = forceReadablePillarsLayout(renderTemplate(templateHtml ?? "", templateVariables, placeholderValues));
     if (!html) return "";
     // Replace the visible cover brand mark only. The template also mentions
     // "Rykas Mentoring" inside CSS comments, so replacing the first text match
