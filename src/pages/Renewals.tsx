@@ -884,15 +884,6 @@ export default function Renewals() {
 
           {/* Search & Filters */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, email ou produto..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
             <MultiSelectFilter
               label="Consultor"
               width="w-full sm:w-[180px]"
