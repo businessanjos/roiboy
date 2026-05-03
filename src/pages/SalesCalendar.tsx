@@ -289,7 +289,10 @@ export default function SalesCalendar() {
           {googleConnected === false && (
             <Badge
               variant="outline"
-              className="gap-1.5 cursor-pointer hover:bg-accent"
+              className={cn(
+                "gap-1.5 cursor-pointer hover:bg-accent",
+                googleQuery.data?.needsReconnect && "border-destructive/50 text-destructive"
+              )}
               onClick={async () => {
                 try {
                   const { data, error } = await supabase.functions.invoke("oauth-init", {
@@ -311,7 +314,7 @@ export default function SalesCalendar() {
               }}
             >
               <AlertCircle className="h-3 w-3" />
-              Conectar Google Agenda
+              {googleQuery.data?.needsReconnect ? "Reconectar Google Agenda" : "Conectar Google Agenda"}
             </Badge>
           )}
           {googleConnected === true && (
