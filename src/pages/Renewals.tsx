@@ -936,6 +936,31 @@ export default function Renewals() {
                 { value: "negotiating", label: "Em Negociação" },
               ]}
             />
+            {(filterConsultora.length > 0 ||
+              filterProduto.length > 0 ||
+              filterTempo.length > 0 ||
+              filterChance.length > 0 ||
+              filterStatus.length > 0 ||
+              filterQuarter.length > 0 ||
+              searchQuery.length > 0) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFilterConsultora([]);
+                  setFilterProduto([]);
+                  setFilterTempo([]);
+                  setFilterChance([]);
+                  setFilterStatus([]);
+                  setFilterQuarter([]);
+                  setSearchQuery("");
+                }}
+                className="self-end h-10"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Limpar filtros
+              </Button>
+            )}
           </div>
 
           {/* Table */}
