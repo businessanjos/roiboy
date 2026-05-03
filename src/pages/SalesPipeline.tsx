@@ -163,8 +163,8 @@ export default function SalesPipeline() {
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
   const [wonDateEnd, setWonDateEnd] = usePersistedFilter<string>("salesPipeline", "wonDateEnd", "");
   const [wonDatePopoverOpen, setWonDatePopoverOpen] = useState(false);
-  const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string>("salesPipeline", "wonSellerFilter", "all");
-  const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string>("salesPipeline", "wonProductFilter", "all");
+  const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string[]>("salesPipeline", "wonSellerFilterMulti", []);
+  const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string[]>("salesPipeline", "wonProductFilterMulti", []);
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
   const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
   const [lostSellerFilter, setLostSellerFilter] = usePersistedFilter<string>("salesPipeline", "lostSellerFilter", "all");
