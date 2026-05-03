@@ -125,6 +125,7 @@ export default function Dashboard() {
 
   // Contract stats from RPC for accurate Gestão metrics
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
+  const { data: doubleChairCount } = useDoubleChairCount(currentUser?.account_id);
 
   // Contracts data for the Contratos tab (exclude renewals to avoid duplicates)
   // Optimized: limit to 500 most recent + paginated fetch for full data
