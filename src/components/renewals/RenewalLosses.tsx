@@ -352,6 +352,43 @@ export function RenewalLosses() {
 
   return (
     <div className="space-y-6">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="30">Últimos 30 dias</SelectItem>
+            <SelectItem value="90">Últimos 90 dias</SelectItem>
+            <SelectItem value="180">Últimos 6 meses</SelectItem>
+            <SelectItem value="365">Último ano</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterConsultora} onValueChange={setFilterConsultora}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Consultora" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas consultoras</SelectItem>
+            {uniqueConsultoras.sort().map(name => (
+              <SelectItem key={name} value={name}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterOutcome} onValueChange={setFilterOutcome}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="renewed">Renovados</SelectItem>
+            <SelectItem value="lost">Perdidos</SelectItem>
+            <SelectItem value="pending">Pendentes</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
