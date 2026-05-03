@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 import { MultiSelectFilter } from "@/components/renewals/MultiSelectFilter";
+import { VipBadge } from "@/components/client/VipBadge";
 
 interface RenewalContract {
   id: string;
