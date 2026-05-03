@@ -331,7 +331,7 @@ export function CommissionSimulator() {
                 <p className="text-[10px] text-muted-foreground">= {Math.round(simulation.totalTargetQty)} vendas (ticket {fmt(simulation.avgTicket)})</p>
               </div>
               <div className="p-2 rounded border bg-muted/20">
-                <p className="text-muted-foreground">Simulado ({achievementPct}%)</p>
+                <p className="text-muted-foreground">Simulado ({Math.round(simulation.effectiveAchievementPct)}%)</p>
                 <p className="font-semibold">{fmt(simulation.simulatedValue)}</p>
                 <p className="text-[10px] text-muted-foreground">= {Math.floor(simulation.simulatedQty)} vendas</p>
               </div>
