@@ -128,8 +128,14 @@ export function CommissionSimulator() {
     const avgTicket = isAfterMay2026 ? 80000 : 70800;
 
     const totalTargetQty = totalTargetValue / avgTicket;
-    const simulatedValue = (totalTargetValue * achievementPct) / 100;
-    const simulatedQty = simulatedValue / avgTicket;
+
+    // Em modo "sales", o atingimento é derivado do nº de vendas informado
+    const effectiveAchievementPct = simMode === "sales" && totalTargetQty > 0
+      ? (salesCount / totalTargetQty) * 100
+      : achievementPct;
+
+    const simulatedValue = (totalTargetValue * effectiveAchievementPct) / 100;
+    const simulatedQty = simMode === "sales" ? salesCount : simulatedValue / avgTicket;
     const wholeSalesCount = Math.floor(simulatedQty);
     const commissionableValue = wholeSalesCount * avgTicket;
 
