@@ -598,7 +598,35 @@ export default function Clients() {
       setContractMap(contractsGrouped);
       setWhatsappMap(whatsappGrouped);
       setPendingFormSends(pendingFormsGrouped);
-      
+
+      // Fetch relationship links for the visible clients
+      const visibleIds = transformedClients.map((c: any) => c.id);
+      if (visibleIds.length > 0) {
+        const { data: rels } = await supabase
+          .from("client_relationships")
+          .select(`
+            primary_client_id,
+            related_client_id,
+            primary_client:clients!client_relationships_primary_client_id_fkey(id, full_name),
+            related_client:clients!client_relationships_related_client_id_fkey(id, full_name)
+          `)
+          .eq("is_active", true)
+          .or(`primary_client_id.in.(${visibleIds.join(",")}),related_client_id.in.(${visibleIds.join(",")})`);
+
+        const lm: Record<string, { id: string; full_name: string }[]> = {};
+        (rels || []).forEach((r: any) => {
+          if (visibleIds.includes(r.primary_client_id) && r.related_client) {
+            (lm[r.primary_client_id] ||= []).push({ id: r.related_client.id, full_name: r.related_client.full_name });
+          }
+          if (visibleIds.includes(r.related_client_id) && r.primary_client) {
+            (lm[r.related_client_id] ||= []).push({ id: r.primary_client.id, full_name: r.primary_client.full_name });
+          }
+        });
+        setLinksMap(lm);
+      } else {
+        setLinksMap({});
+      }
+
     } catch (error) {
       console.error("Error fetching clients:", error);
     }
