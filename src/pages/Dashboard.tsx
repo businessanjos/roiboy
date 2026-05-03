@@ -804,6 +804,79 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
+
+          {/* ⭐ Métricas Estrela de Operações: Churn & NPS */}
+          {gestaoViewMode === "operacoes" && (() => {
+            const churnRate = churnMetrics.rate;
+            const churnTone = churnRate <= 3 ? "success" : churnRate <= 7 ? "warning" : "danger";
+            const churnColor = churnTone === "success" ? "text-success" : churnTone === "warning" ? "text-warning" : "text-danger";
+            const churnBorder = churnTone === "success" ? "border-l-success" : churnTone === "warning" ? "border-l-warning" : "border-l-danger";
+            const churnBg = churnTone === "success" ? "bg-success/10" : churnTone === "warning" ? "bg-warning/10" : "bg-danger/10";
+
+            const nps = npsData?.nps ?? 0;
+            const npsTone = nps >= 50 ? "success" : nps >= 0 ? "warning" : "danger";
+            const npsColor = npsTone === "success" ? "text-success" : npsTone === "warning" ? "text-warning" : "text-danger";
+            const npsBorder = npsTone === "success" ? "border-l-success" : npsTone === "warning" ? "border-l-warning" : "border-l-danger";
+            const npsBg = npsTone === "success" ? "bg-success/10" : npsTone === "warning" ? "bg-warning/10" : "bg-danger/10";
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className={`shadow-card border-l-4 ${churnBorder} relative overflow-hidden`}>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        <p className="text-sm font-medium text-muted-foreground">Churn (período)</p>
+                      </div>
+                      <div className={`h-12 w-12 rounded-full ${churnBg} flex items-center justify-center`}>
+                        <TrendingDown className={`h-6 w-6 ${churnColor}`} />
+                      </div>
+                    </div>
+                    <p className={`text-4xl font-bold mt-2 ${churnColor}`}>{churnRate.toFixed(1)}%</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {churnMetrics.cancelamentos} cancelamentos · {churnMetrics.novos} novos no período
+                    </p>
+                    <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          churnTone === "success" ? "bg-success" : churnTone === "warning" ? "bg-warning" : "bg-danger"
+                        }`}
+                        style={{ width: `${Math.min(100, churnRate * 5)}%` }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={`shadow-card border-l-4 ${npsBorder} relative overflow-hidden`}>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        <p className="text-sm font-medium text-muted-foreground">NPS</p>
+                      </div>
+                      <div className={`h-12 w-12 rounded-full ${npsBg} flex items-center justify-center`}>
+                        <Heart className={`h-6 w-6 ${npsColor}`} />
+                      </div>
+                    </div>
+                    <p className={`text-4xl font-bold mt-2 ${npsColor}`}>{nps}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {npsData?.promoters ?? 0} promotores · {npsData?.neutrals ?? 0} neutros · {npsData?.detractors ?? 0} detratores
+                      {npsData?.total ? ` · base ${npsData.total} clientes` : ""}
+                    </p>
+                    <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          npsTone === "success" ? "bg-success" : npsTone === "warning" ? "bg-warning" : "bg-danger"
+                        }`}
+                        style={{ width: `${Math.max(0, Math.min(100, (nps + 100) / 2))}%` }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+
           {/* Status Cards - Single Row */}
           <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"}`}>
             {/* Total de Clientes (oculto no modo operações) */}
