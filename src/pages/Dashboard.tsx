@@ -399,6 +399,49 @@ export default function Dashboard() {
     return { totalLost, cancelledValue, endedValue, count: lostContracts.length };
   }, [contractData]);
 
+  // Churn rate within filtered period: cancellations / (active + cancellations)
+  const churnMetrics = useMemo(() => {
+    const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
+    const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
+    const activeBase = (contractStats?.active ?? gestaoClientStats.active) + cancelamentos;
+    const rate = activeBase > 0 ? (cancelamentos / activeBase) * 100 : 0;
+    return { rate, cancelamentos, novos };
+  }, [monthlyChartData, contractStats, gestaoClientStats]);
+
+  // NPS from latest vNPS snapshot per client (within current account)
+  const { data: npsData } = useQuery({
+    queryKey: ["dashboard-nps-snapshots", currentUser?.account_id],
+    enabled: !!currentUser?.account_id,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vnps_snapshots")
+        .select("client_id, vnps_class, vnps_score, computed_at")
+        .eq("account_id", currentUser!.account_id!)
+        .order("computed_at", { ascending: false })
+        .limit(5000);
+      if (error) throw error;
+      const latestByClient = new Map<string, { vnps_class: string; vnps_score: number }>();
+      for (const row of (data ?? []) as any[]) {
+        if (!latestByClient.has(row.client_id)) {
+          latestByClient.set(row.client_id, { vnps_class: row.vnps_class, vnps_score: row.vnps_score });
+        }
+      }
+      let promoters = 0, detractors = 0, neutrals = 0;
+      let scoreSum = 0;
+      latestByClient.forEach((v) => {
+        if (v.vnps_class === "promoter") promoters++;
+        else if (v.vnps_class === "detractor") detractors++;
+        else neutrals++;
+        scoreSum += Number(v.vnps_score || 0);
+      });
+      const total = latestByClient.size;
+      const nps = total > 0 ? Math.round(((promoters - detractors) / total) * 100) : 0;
+      const avgScore = total > 0 ? scoreSum / total : 0;
+      return { nps, total, promoters, detractors, neutrals, avgScore };
+    },
+  });
+
   const chartConfig = {
     novos: {
       label: "Novos",
