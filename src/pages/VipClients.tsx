@@ -104,7 +104,7 @@ export default function VipClients() {
         supabase
           .from("client_contracts")
           .select(
-            "client_id, value, start_date, status, product_id, products(name), clients!inner(id, full_name, logo_url)"
+            "client_id, value, start_date, status, product_id, products(name, color), clients!inner(id, full_name, logo_url)"
           )
           .eq("account_id", currentUser.account_id)
           .not("status", "in", "(cancelled,dismissed,dropout_7d)"),
