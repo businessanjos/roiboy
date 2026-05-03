@@ -87,7 +87,25 @@ Deno.serve(async (req) => {
     const contractFilter = url.searchParams.get("contract_filter") || "";
     const clientStatus = url.searchParams.get("client_status") || "";
     const withLinks = url.searchParams.get("with_links") === "true";
+    const countryCode = (url.searchParams.get("country") || "").toUpperCase();
     const sortParam = url.searchParams.get("sort") || "recent";
+
+    // Map ISO country code -> list of DDI prefixes (digits only).
+    // Multiple codes can share a DDI (US/CA on +1) and one country can have multiple (rare).
+    const COUNTRY_DDI: Record<string, string[]> = {
+      BR: ["55"], US: ["1"], CA: ["1"], PT: ["351"], ES: ["34"], FR: ["33"],
+      GB: ["44"], DE: ["49"], IT: ["39"], NL: ["31"], CH: ["41"], BE: ["32"],
+      AT: ["43"], DK: ["45"], SE: ["46"], NO: ["47"], FI: ["358"], IE: ["353"],
+      PL: ["48"], CZ: ["420"], GR: ["30"], RO: ["40"], HU: ["36"], RU: ["7"],
+      UA: ["380"], TR: ["90"], IL: ["972"], AE: ["971"], SA: ["966"], QA: ["974"],
+      ZA: ["27"], EG: ["20"], MX: ["52"], AR: ["54"], CL: ["56"], CO: ["57"],
+      VE: ["58"], PE: ["51"], UY: ["598"], PY: ["595"], BO: ["591"], EC: ["593"],
+      CR: ["506"], PA: ["507"], CU: ["53"], DO: ["1"], GT: ["502"], HN: ["504"],
+      SV: ["503"], NI: ["505"], BZ: ["501"], HT: ["509"], JP: ["81"], KR: ["82"],
+      CN: ["86"], TW: ["886"], HK: ["852"], SG: ["65"], MY: ["60"], ID: ["62"],
+      PH: ["63"], TH: ["66"], VN: ["84"], IN: ["91"], PK: ["92"], BD: ["880"],
+      LK: ["94"], NP: ["977"], NZ: ["64"], AU: ["61"], MD: ["373"],
+    };
 
     console.log(
       `Listing clients for account ${accountId}, auth_method: ${auth.method}, search: "${search}", limit: ${limit}, offset: ${offset}, contractFilter: "${contractFilter}"`
@@ -379,6 +397,21 @@ Deno.serve(async (req) => {
       if (responsibleUserId && responsibleUserId !== "all") {
         if (responsibleUserId === "none") q = q.is("responsible_user_id", null);
         else q = q.eq("responsible_user_id", responsibleUserId);
+      }
+      // Country (DDI) filter: matches phone_e164 by DDI prefix
+      if (countryCode && countryCode !== "ALL") {
+        if (countryCode === "UNKNOWN") {
+          // Não classificável: vazio ou sem '+' (não conseguimos inferir DDI)
+          q = q.or("phone_e164.is.null,phone_e164.eq.,phone_e164.not.ilike.+%");
+        } else {
+          const ddis = COUNTRY_DDI[countryCode];
+          if (ddis && ddis.length > 0) {
+            // Caso especial: +1 é compartilhado por US/CA/DO. Filtramos só por +1*
+            // (sem distinguir entre eles no servidor — UI mostra os dois separados via área-código se necessário).
+            const orExpr = ddis.map((d) => `phone_e164.like.+${d}%`).join(",");
+            q = q.or(orExpr);
+          }
+        }
       }
       return q;
     };

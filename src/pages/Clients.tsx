@@ -384,6 +384,7 @@ export default function Clients() {
       if (filterContract !== "all") baseParams["contract_filter"] = filterContract;
       if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
       if (filterLinks === "with") baseParams["with_links"] = "true";
+      if (filterCountry !== "all") baseParams["country"] = filterCountry;
       baseParams["sort"] = sortOrder;
 
       const pageSize = 200;
@@ -534,6 +535,7 @@ export default function Clients() {
       if (effectiveContractFilter) params.set("contract_filter", effectiveContractFilter);
       if (filterClientStatus !== "all" && activeTab === "all") params.set("client_status", filterClientStatus);
       if (filterLinks === "with") params.set("with_links", "true");
+      if (filterCountry !== "all") params.set("country", filterCountry);
       params.set("sort", sortOrder);
       
       const response = await fetch(
@@ -784,7 +786,7 @@ export default function Clients() {
       fetchClients();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, sortOrder, activeTab]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, sortOrder, activeTab]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -1307,32 +1309,40 @@ export default function Clients() {
     setFilterCountry("all");
   };
 
-  // Compute country options from loaded clients (DDI inferred from phone_e164)
-  const countryOptions = (() => {
-    const map = new Map<string, { code: string; name: string; flag: string; count: number }>();
-    for (const c of clients as any[]) {
-      const info = getCountryFromPhone(c.phone_e164);
-      const key = info?.code || "UNKNOWN";
-      const entry = map.get(key);
-      if (entry) entry.count++;
-      else map.set(key, {
-        code: key,
-        name: info?.name || "Sem país",
-        flag: info?.flag || "🏳️",
-        count: 1,
-      });
-    }
-    return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  })();
+  // Country options for the filter dropdown.
+  // Static list (server filters globally by DDI). Counts are not shown to
+  // avoid misleading numbers based on the current page only.
+  const countryOptions = [
+    { code: "BR", name: "Brasil", flag: "🇧🇷" },
+    { code: "US", name: "EUA / Canadá", flag: "🇺🇸" },
+    { code: "PT", name: "Portugal", flag: "🇵🇹" },
+    { code: "ES", name: "Espanha", flag: "🇪🇸" },
+    { code: "AR", name: "Argentina", flag: "🇦🇷" },
+    { code: "PY", name: "Paraguai", flag: "🇵🇾" },
+    { code: "UY", name: "Uruguai", flag: "🇺🇾" },
+    { code: "CL", name: "Chile", flag: "🇨🇱" },
+    { code: "CO", name: "Colômbia", flag: "🇨🇴" },
+    { code: "MX", name: "México", flag: "🇲🇽" },
+    { code: "PE", name: "Peru", flag: "🇵🇪" },
+    { code: "FR", name: "França", flag: "🇫🇷" },
+    { code: "DE", name: "Alemanha", flag: "🇩🇪" },
+    { code: "IT", name: "Itália", flag: "🇮🇹" },
+    { code: "GB", name: "Reino Unido", flag: "🇬🇧" },
+    { code: "CH", name: "Suíça", flag: "🇨🇭" },
+    { code: "NL", name: "Holanda", flag: "🇳🇱" },
+    { code: "AU", name: "Austrália", flag: "🇦🇺" },
+    { code: "NZ", name: "Nova Zelândia", flag: "🇳🇿" },
+    { code: "JP", name: "Japão", flag: "🇯🇵" },
+    { code: "CN", name: "China", flag: "🇨🇳" },
+    { code: "IN", name: "Índia", flag: "🇮🇳" },
+    { code: "AE", name: "Emirados Árabes", flag: "🇦🇪" },
+    { code: "IL", name: "Israel", flag: "🇮🇱" },
+    { code: "MD", name: "Moldávia", flag: "🇲🇩" },
+    { code: "UNKNOWN", name: "Sem DDI / inválido", flag: "🏳️" },
+  ];
 
-  // Client-side country filter (DDI is encoded in phone_e164, no server param)
-  const filtered = filterCountry === "all"
-    ? clients
-    : (clients as any[]).filter((c) => {
-        const info = getCountryFromPhone(c.phone_e164);
-        const code = info?.code || "UNKNOWN";
-        return code === filterCountry;
-      });
+  // Server-side filter handles country now; just use clients as-is
+  const filtered = clients;
 
   const handleFieldValueChange = (clientId: string, fieldId: string, newValue: any) => {
     setFieldValues(prev => ({
@@ -2126,7 +2136,6 @@ export default function Clients() {
                         <span className="inline-flex items-center gap-2">
                           <span>{opt.flag}</span>
                           <span>{opt.name}</span>
-                          <span className="text-muted-foreground text-xs">({opt.count})</span>
                         </span>
                       </SelectItem>
                     ))}
