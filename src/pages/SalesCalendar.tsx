@@ -138,7 +138,7 @@ export default function SalesCalendar() {
         },
       });
       if (error) throw error;
-      return data as { events: any[]; connected: boolean; message?: string };
+      return data as { events: any[]; connected: boolean; needsReconnect?: boolean; message?: string; error?: string };
     },
     staleTime: 60_000,
   });
@@ -250,6 +250,12 @@ export default function SalesCalendar() {
         toast({
           title: "Calendário recarregado",
           description: `${result.data.events?.length ?? 0} evento(s) do Google Agenda carregado(s).`,
+        });
+      } else if (result.data?.needsReconnect) {
+        toast({
+          title: "Reconecte o Google Agenda",
+          description: result.data.message || "A autorização do Google expirou. Clique em Conectar Google Agenda novamente.",
+          variant: "destructive",
         });
       } else {
         toast({
