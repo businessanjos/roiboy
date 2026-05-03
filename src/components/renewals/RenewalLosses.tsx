@@ -70,6 +70,8 @@ export function RenewalLosses() {
   const [filterPeriod, setFilterPeriod] = useState("90");
   const [filterConsultora, setFilterConsultora] = useState("all");
   const [filterOutcome, setFilterOutcome] = useState("all");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [editItem, setEditItem] = useState<ExpiredContract | null>(null);
   const [editReason, setEditReason] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -344,6 +346,13 @@ export function RenewalLosses() {
     return true;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [filterConsultora, filterOutcome, filterPeriod]);
+
   const getInitials = (name: string) =>
     name.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
 
@@ -586,7 +595,7 @@ export function RenewalLosses() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredItems.map(item => (
+                {paginatedItems.map(item => (
                   <TableRow key={item.id}>
                     <TableCell>
                       <Link to={`/clients/${item.client_id}`} className="flex items-center gap-3 hover:opacity-80">
@@ -648,6 +657,26 @@ export function RenewalLosses() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {!loading && filteredItems.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between px-1">
+          <span className="text-sm text-muted-foreground">
+            Mostrando {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredItems.length)} de {filteredItems.length}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+              Anterior
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages}
+            </span>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Edit Outcome Dialog */}
       <Dialog open={!!editItem} onOpenChange={(open) => !open && setEditItem(null)}>
