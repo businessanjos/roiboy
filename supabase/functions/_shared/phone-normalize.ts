@@ -30,22 +30,28 @@ export function digitsOnly(input: string): string {
  */
 export function canonicalE164(input: string | null | undefined): string | null {
   if (!input) return null;
-  const d = digitsOnly(input);
+  const raw = String(input).trim();
+  const d = digitsOnly(raw);
   if (d.length < 8) return null;
 
-  // BR: DDI 55
+  // Se o input começa com '+' e o DDI NÃO é 55, é estrangeiro: nunca injetar +55.
+  const hasPlus = raw.startsWith("+");
+  if (hasPlus && !d.startsWith(BR_DDI)) {
+    return `+${d}`;
+  }
+
+  // BR: DDI 55 explícito
   if (d.startsWith(BR_DDI) && (d.length === 12 || d.length === 13)) {
     const ddd = d.slice(2, 4);
     const rest = d.slice(4);
-    // Celular BR moderno: DDD + 9 + 8 dígitos. Se faltar o 9º dígito, injeta.
     if (rest.length === 8 && /^[6-9]/.test(rest)) {
       return `+${BR_DDI}${ddd}9${rest}`;
     }
     return `+${d}`;
   }
 
-  // BR sem DDI: DDD + número (10 ou 11 dígitos). Adiciona +55 e 9º dígito se necessário.
-  if (!d.startsWith(BR_DDI) && (d.length === 10 || d.length === 11)) {
+  // BR sem DDI nem '+': DDD + número (10 ou 11 dígitos). Só assume BR se NÃO houver '+'.
+  if (!hasPlus && !d.startsWith(BR_DDI) && (d.length === 10 || d.length === 11)) {
     const ddd = d.slice(0, 2);
     const rest = d.slice(2);
     if (rest.length === 8 && /^[6-9]/.test(rest)) {
@@ -54,7 +60,7 @@ export function canonicalE164(input: string | null | undefined): string | null {
     return `+${BR_DDI}${d}`;
   }
 
-  // Estrangeiro (DDI ≠ 55) ou outro formato — só prefixa +
+  // Estrangeiro com '+' e DDI 55 (já tratado), ou qualquer outro caso — preserva apenas o '+'.
   return `+${d}`;
 }
 
