@@ -761,14 +761,14 @@ export default function Renewals() {
 
         <TabsContent value="pending" className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
                   <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{formatCurrency(totalRenewalValue, "BRL")}</p>
+                <div className="min-w-0">
+                  <p className="text-2xl font-bold truncate">{formatCurrency(totalRenewalValue, "BRL")}</p>
                   <p className="text-xs text-muted-foreground">Valor total de renovação</p>
                 </div>
               </CardContent>
