@@ -393,23 +393,28 @@ export const TemplatedContractPreview = ({
   }, [templateHtml, templateVariables, placeholderValues]);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [innerHeight, setInnerHeight] = useState<number>(0);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
-    if (!wrapper) return;
+    const inner = innerRef.current;
+    if (!wrapper || !inner) return;
     const A4_WIDTH_PX = 794; // 210mm @ 96dpi
     const update = () => {
       const w = wrapper.clientWidth;
       if (!w) return;
       const next = Math.min(1, w / A4_WIDTH_PX);
       setScale(next);
+      setInnerHeight(inner.offsetHeight);
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(wrapper);
+    ro.observe(inner);
     return () => ro.disconnect();
-  }, []);
+  }, [rendered]);
 
   if (!templateHtml) {
     return (
@@ -419,16 +424,20 @@ export const TemplatedContractPreview = ({
     );
   }
   return (
-    <div ref={wrapperRef} className="w-full overflow-hidden">
+    <div
+      ref={wrapperRef}
+      className="w-full overflow-hidden"
+      style={{ height: innerHeight ? innerHeight * scale : undefined }}
+    >
       <div
         style={{
           width: "210mm",
           transform: `scale(${scale})`,
           transformOrigin: "top left",
-          height: scale < 1 ? `calc(297mm * ${scale})` : undefined,
         }}
       >
         <div
+          ref={innerRef}
           className="contract-document bg-white text-black"
           style={{ width: "210mm", minHeight: "297mm" }}
           dangerouslySetInnerHTML={{ __html: rendered }}
