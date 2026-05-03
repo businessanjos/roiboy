@@ -35,7 +35,6 @@ export default function DoubleChairList() {
           related_client:clients!client_relationships_related_client_id_fkey(id, full_name)
         `)
         .eq("account_id", accountId)
-        .eq("sync_data", true)
         .eq("is_active", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
