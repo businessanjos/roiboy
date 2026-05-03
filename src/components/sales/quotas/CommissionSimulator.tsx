@@ -653,9 +653,14 @@ export function CommissionSimulator() {
                   Captação de entrada: <strong className="text-purple-700 dark:text-purple-400">{fmt(simulation.mixEntryCaptured)}</strong>
                   <span className="text-muted-foreground"> {" "}· Volume total: {fmt(simulation.mixTotalQty * simulation.avgTicket)}</span>
                 </p>
-                {simulation.mixTotalQty !== simulation.wholeSalesCount && (
+                {simulation.mixTotalQty > simulation.wholeSalesCount && (
                   <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                    ⚠ A soma do mix ({simulation.mixTotalQty}) é diferente do nº de vendas simuladas ({simulation.wholeSalesCount}). Ajuste para refletir o cenário.
+                    ⚠ A soma do mix ({simulation.mixTotalQty}) excede o nº de vendas simuladas ({simulation.wholeSalesCount}).
+                  </p>
+                )}
+                {simulation.mixTotalQty < simulation.wholeSalesCount && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {simulation.wholeSalesCount - simulation.mixTotalQty} venda(s) em formas sem spiff (cheque, transferência mensal, etc.) — não geram bônus de forma de pagamento.
                   </p>
                 )}
               </div>
