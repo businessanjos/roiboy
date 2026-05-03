@@ -91,7 +91,7 @@ export function RenewalLosses() {
       cutoff.setDate(today.getDate() - daysBack);
       const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
-      // Fetch expired contracts (end_date < today)
+      // Fetch expired contracts (end_date < today) within period
       const { data: expiredContracts, error } = await supabase
         .from("client_contracts")
         .select(`
@@ -113,8 +113,39 @@ export function RenewalLosses() {
         return;
       }
 
-      // Fetch outcomes for these contracts
-      const contractIds = (expiredContracts || []).map((c: any) => c.id);
+      // ALSO fetch contracts resolved early (renewed/lost before expiry) within the period
+      // window, based on renewal_outcomes.resolved_at — ensures Renovados antecipados aparecem.
+      const { data: earlyOutcomes } = await supabase
+        .from("renewal_outcomes")
+        .select("contract_id")
+        .eq("account_id", currentUser.account_id)
+        .in("outcome", ["renewed", "lost"])
+        .gte("resolved_at", cutoff.toISOString());
+
+      const expiredIdSet = new Set((expiredContracts || []).map((c: any) => c.id));
+      const earlyContractIds = (earlyOutcomes || [])
+        .map((o: any) => o.contract_id)
+        .filter((id: string) => id && !expiredIdSet.has(id));
+
+      let earlyContracts: any[] = [];
+      if (earlyContractIds.length > 0) {
+        const { data } = await supabase
+          .from("client_contracts")
+          .select(`
+            id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
+            clients!inner(full_name, logo_url, responsible_user_id, users:responsible_user_id(name)),
+            products(name, color, price, cash_price, installment_price, renewal_discount_percent)
+          `)
+          .eq("account_id", currentUser.account_id)
+          .in("id", earlyContractIds)
+          .is("parent_contract_id", null);
+        earlyContracts = data || [];
+      }
+
+      const allContracts = [...(expiredContracts || []), ...earlyContracts];
+
+      // Fetch outcomes for all contracts
+      const contractIds = allContracts.map((c: any) => c.id);
       let outcomesMap: Record<string, any> = {};
       if (contractIds.length > 0) {
         const { data: outcomes } = await supabase
