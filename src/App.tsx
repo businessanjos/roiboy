@@ -185,6 +185,7 @@ const App = () => (
                           <Route element={<AppLayout />}>
                             <Route path="/setores" element={<Sectors />} />
                             <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/dashboard/cadeira-dupla" element={<DoubleChairList />} />
                             <Route path="/clients" element={<Clients />} />
                             <Route path="/clients/new" element={<Clients />} />
                             <Route path="/clients/:id" element={<ClientDetail />} />
