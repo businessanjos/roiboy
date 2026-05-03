@@ -30,13 +30,23 @@ async function refreshGoogleToken(refreshToken: string) {
   }
 }
 
-async function getGoogleAccessToken(supabase: any, userId: string): Promise<string | null> {
-  const { data: integration } = await supabase
-    .from("user_integrations")
-    .select("access_token, refresh_token, expires_at")
-    .eq("user_id", userId)
-    .eq("provider", "google")
-    .maybeSingle();
+async function getGoogleAccessToken(supabase: any, authUserId: string, internalUserId: string | null): Promise<string | null> {
+  // Tenta primeiro pelo internal users.id (formato salvo pelo oauth-init),
+  // depois pelo auth_user_id como fallback.
+  const ids = [internalUserId, authUserId].filter(Boolean) as string[];
+  let integration: any = null;
+  for (const uid of ids) {
+    const { data } = await supabase
+      .from("user_integrations")
+      .select("user_id, access_token, refresh_token, expires_at")
+      .eq("user_id", uid)
+      .eq("provider", "google")
+      .maybeSingle();
+    if (data?.access_token) {
+      integration = data;
+      break;
+    }
+  }
 
   if (!integration?.access_token) return null;
 
@@ -54,7 +64,7 @@ async function getGoogleAccessToken(supabase: any, userId: string): Promise<stri
           expires_at: Math.floor(Date.now() / 1000) + newTokens.expires_in,
           updated_at: new Date().toISOString(),
         })
-        .eq("user_id", userId)
+        .eq("user_id", integration.user_id)
         .eq("provider", "google");
     }
   }
@@ -86,7 +96,15 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = userData.user.id;
+    const authUserId = userData.user.id;
+
+    // Resolve internal users.id (oauth-init pode ter salvo com esse id)
+    const { data: internalUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle();
+    const internalUserId = internalUser?.id ?? null;
 
     const { timeMin, timeMax } = await req.json();
     if (!timeMin || !timeMax) {
@@ -96,7 +114,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const accessToken = await getGoogleAccessToken(supabase, userId);
+    const accessToken = await getGoogleAccessToken(supabase, authUserId, internalUserId);
     if (!accessToken) {
       return new Response(
         JSON.stringify({ events: [], connected: false, message: "Google Calendar não conectado" }),
