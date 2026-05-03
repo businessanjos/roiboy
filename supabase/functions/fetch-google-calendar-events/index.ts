@@ -96,7 +96,15 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = userData.user.id;
+    const authUserId = userData.user.id;
+
+    // Resolve internal users.id (oauth-init pode ter salvo com esse id)
+    const { data: internalUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle();
+    const internalUserId = internalUser?.id ?? null;
 
     const { timeMin, timeMax } = await req.json();
     if (!timeMin || !timeMax) {
@@ -106,7 +114,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const accessToken = await getGoogleAccessToken(supabase, userId);
+    const accessToken = await getGoogleAccessToken(supabase, authUserId, internalUserId);
     if (!accessToken) {
       return new Response(
         JSON.stringify({ events: [], connected: false, message: "Google Calendar não conectado" }),
