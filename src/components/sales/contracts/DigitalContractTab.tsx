@@ -207,10 +207,11 @@ export const DigitalContractTab = ({
               .select("content_html,variables,product_id")
               .eq("id", (existing as any).template_id)
               .maybeSingle();
-            if (!tplError && latestTemplate?.content_html) {
-              loadedTemplateHtml = latestTemplate.content_html;
-              loadedTemplateVariables = ((latestTemplate.variables as TemplateVariableDef[]) ?? loadedTemplateVariables);
-              loadedProductId = loadedProductId ?? latestTemplate.product_id ?? null;
+            const tpl = latestTemplate as any;
+            if (!tplError && tpl?.content_html) {
+              loadedTemplateHtml = tpl.content_html;
+              loadedTemplateVariables = ((tpl.variables as TemplateVariableDef[]) ?? loadedTemplateVariables);
+              loadedProductId = loadedProductId ?? tpl.product_id ?? null;
             }
           }
 
