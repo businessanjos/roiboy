@@ -504,6 +504,31 @@ export function CommissionSimulator() {
               </div>
             )}
 
+            {/* Detalhamento de Spiffs */}
+            {simulation.spiffBreakdown.length > 0 && (
+              <div className="text-xs p-3 rounded-lg border bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-900 space-y-1.5">
+                <p className="font-medium flex items-center gap-1.5">
+                  <Gift className="h-3.5 w-3.5 text-pink-600" />
+                  Spiffs estimados ({fmt(simulation.spiffTotal)})
+                </p>
+                <ul className="space-y-1">
+                  {simulation.spiffBreakdown.map((s, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
+                      <span className="truncate">
+                        <strong className="text-foreground">{s.name}</strong> — {s.detail}
+                      </span>
+                      <span className="font-semibold text-foreground whitespace-nowrap">
+                        {s.estimate > 0 ? fmt(s.estimate) : "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[10px] italic text-muted-foreground pt-1">
+                  Roleta usa valor médio entre prêmio mín. e máx. Prêmios não monetários (custom / forma de pagamento) não são somados ao total.
+                </p>
+              </div>
+            )}
+
             {/* Bônus trimestral/anual (informativo) */}
             {(simulation.plan.quarterly_bonus_enabled || (simulation.plan as any).annual_bonus_enabled) && (
               <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded border space-y-1">
