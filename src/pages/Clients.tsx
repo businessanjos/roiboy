@@ -2040,6 +2040,20 @@ export default function Clients() {
                 </div>
               )}
 
+              {/* Vínculos Filter */}
+              <div className="space-y-1.5 min-w-[160px]">
+                <Label className="text-xs text-muted-foreground">Vínculos</Label>
+                <Select value={filterLinks} onValueChange={setFilterLinks}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="with">Com vínculos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Clear Filters Button */}
               {activeFilterCount > 0 && (
                 <div className="flex items-end">
