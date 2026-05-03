@@ -148,7 +148,8 @@ interface UazapiWebhookPayload {
 function extractPhoneFromJid(jid: string): string {
   if (!jid) return "";
   const match = jid.match(/^(\d+)@/);
-  return match ? `+${match[1]}` : "";
+  if (!match) return "";
+  return canonicalE164(match[1]) || `+${match[1]}`;
 }
 
 function isGroupJid(jid: string): boolean {
@@ -156,40 +157,12 @@ function isGroupJid(jid: string): boolean {
 }
 
 /**
- * Normalizes phone numbers to E.164 format.
- * CRITICAL FOR BRAZIL: Adds the 9th digit prefix for mobile numbers if missing.
- * 
- * Brazilian mobile numbers transitioned to 9-digit format (after DDD):
- * - Old format: 55 + DDD(2) + number(8) = 12 digits (e.g., +557197398455)
- * - New format: 55 + DDD(2) + 9 + number(8) = 13 digits (e.g., +5571997398455)
- * 
- * This normalization prevents duplicate contacts when WhatsApp/UAZAPI sends
- * the same number in different formats.
+ * Normaliza para E.164 canônico usando o utilitário compartilhado.
+ * Corrige 9º dígito BR e adiciona +55 quando faltar.
  */
 function normalizePhone(phone: string | undefined): string {
   if (!phone) return "";
-  
-  // Remove all non-digit characters
-  let digits = phone.replace(/\D/g, "");
-  if (!digits) return "";
-  
-  // BRAZILIAN PHONE NORMALIZATION
-  // If we receive a 12-digit BR number (missing 9th digit), add it
-  if (digits.length === 12 && digits.startsWith("55")) {
-    const ddd = digits.substring(2, 4);
-    const dddNumber = parseInt(ddd, 10);
-    
-    // Valid Brazilian DDDs range from 11 to 99
-    // Mobile numbers in Brazil all start with 9 after the DDD
-    if (dddNumber >= 11 && dddNumber <= 99) {
-      // Insert '9' after the DDD (position 4) to make it 13 digits
-      const normalizedDigits = digits.substring(0, 4) + "9" + digits.substring(4);
-      console.log(`[PHONE] Normalized BR phone: +${digits} → +${normalizedDigits} (added 9th digit)`);
-      digits = normalizedDigits;
-    }
-  }
-  
-  return `+${digits}`;
+  return canonicalE164(phone) || "";
 }
 
 // ============================================
