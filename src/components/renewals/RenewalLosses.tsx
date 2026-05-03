@@ -9,8 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
-import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
@@ -62,14 +65,153 @@ interface ExpiredContract {
 
 const PIE_COLORS = ["#ef4444", "#f97316", "#eab308", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6", "#6b7280"];
 
+interface MultiHeaderProps {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  align?: "start" | "center";
+  formatLabel?: (v: string) => string;
+}
+
+function MultiSelectHeader({ label, options, selected, onChange, align = "center", formatLabel }: MultiHeaderProps) {
+  const active = selected.length > 0;
+  const toggle = (v: string) => {
+    onChange(selected.includes(v) ? selected.filter(s => s !== v) : [...selected, v]);
+  };
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors",
+            align === "center" ? "justify-center w-full" : "justify-start",
+            active ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          <span>{label}</span>
+          <Filter className={cn("h-3 w-3", active ? "opacity-100" : "opacity-50")} />
+          {active && <span className="ml-0.5 rounded-full bg-primary text-primary-foreground text-[10px] px-1.5 leading-tight">{selected.length}</span>}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[240px]" align="start">
+        <div className="max-h-[280px] overflow-y-auto py-1">
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left"
+          >
+            <Checkbox checked={selected.length === 0} className="pointer-events-none" />
+            <span>Todos</span>
+          </button>
+          <div className="h-px bg-border my-1" />
+          {options.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-muted-foreground">Sem opções</div>
+          ) : options.map(opt => {
+            const checked = selected.includes(opt);
+            return (
+              <button
+                type="button"
+                key={opt}
+                onClick={() => toggle(opt)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left"
+              >
+                <Checkbox checked={checked} className="pointer-events-none" />
+                <span className="truncate">{formatLabel ? formatLabel(opt) : opt}</span>
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+interface SearchHeaderProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  align?: "start" | "center";
+}
+
+function SearchHeader({ label, value, onChange, align = "start" }: SearchHeaderProps) {
+  const active = value.trim().length > 0;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors",
+            align === "center" ? "justify-center w-full" : "justify-start",
+            active ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          <span>{label}</span>
+          <Search className={cn("h-3 w-3", active ? "opacity-100" : "opacity-50")} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="p-2 w-[260px]" align="start">
+        <Input
+          autoFocus
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={`Buscar ${label.toLowerCase()}...`}
+          className="h-8 text-sm"
+        />
+        {active && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            Limpar busca
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+interface SortHeaderProps {
+  label: string;
+  active: boolean;
+  dir: "asc" | "desc";
+  onClick: () => void;
+}
+
+function SortHeader({ label, active, dir, onClick }: SortHeaderProps) {
+  const Icon = !active ? ArrowUpDown : dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1 justify-center w-full text-xs font-medium hover:text-foreground transition-colors",
+        active ? "text-primary" : "text-muted-foreground"
+      )}
+    >
+      <span>{label}</span>
+      <Icon className={cn("h-3 w-3", active ? "opacity-100" : "opacity-50")} />
+    </button>
+  );
+}
+
+
 export function RenewalLosses() {
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [items, setItems] = useState<ExpiredContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterPeriod, setFilterPeriod] = useState("90");
-  const [filterConsultora, setFilterConsultora] = useState("all");
-  const [filterOutcome, setFilterOutcome] = useState("all");
+  const [filterConsultora, setFilterConsultora] = useState<string[]>([]);
+  const [filterProduto, setFilterProduto] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterMotivo, setFilterMotivo] = useState<string[]>([]);
+  const [searchClient, setSearchClient] = useState("");
+  const [sortKey, setSortKey] = useState<"value" | "date" | null>("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
   const [editItem, setEditItem] = useState<ExpiredContract | null>(null);
@@ -337,21 +479,38 @@ export function RenewalLosses() {
   const consultantRanking = Object.values(consultantStats).sort((a, b) => b.lostValue - a.lostValue);
 
   const uniqueConsultoras = [...new Set(items.map(c => c.responsible_name).filter(Boolean))] as string[];
+  const uniqueProdutos = [...new Set(items.map(c => c.product_name).filter(Boolean))] as string[];
+  const uniqueMotivos = [...new Set(items.map(c => c.loss_reason).filter(Boolean))] as string[];
 
   const filteredItems = items.filter(i => {
-    if (filterConsultora !== "all" && i.responsible_name !== filterConsultora) return false;
-    if (filterOutcome !== "all") {
-      if (filterOutcome !== i.outcome) return false;
+    if (searchClient.trim() && !i.client_name.toLowerCase().includes(searchClient.trim().toLowerCase())) return false;
+    if (filterConsultora.length > 0 && (!i.responsible_name || !filterConsultora.includes(i.responsible_name))) return false;
+    if (filterProduto.length > 0 && (!i.product_name || !filterProduto.includes(i.product_name))) return false;
+    if (filterStatus.length > 0) {
+      const outcome = i.outcome || "pending";
+      if (!filterStatus.includes(outcome)) return false;
     }
+    if (filterMotivo.length > 0 && (!i.loss_reason || !filterMotivo.includes(i.loss_reason))) return false;
     return true;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    if (!sortKey) return 0;
+    let av: number = 0, bv: number = 0;
+    if (sortKey === "value") { av = a.renewal_value; bv = b.renewal_value; }
+    else if (sortKey === "date") {
+      av = parseLocalDate(a.end_date).getTime();
+      bv = parseLocalDate(b.end_date).getTime();
+    }
+    return sortDir === "asc" ? av - bv : bv - av;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(sortedItems.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const paginatedItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginatedItems = sortedItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Reset to page 1 when filters change
-  useEffect(() => { setPage(1); }, [filterConsultora, filterOutcome, filterPeriod]);
+  useEffect(() => { setPage(1); }, [filterConsultora, filterProduto, filterStatus, filterMotivo, filterPeriod, searchClient, sortKey, sortDir]);
 
   const getInitials = (name: string) =>
     name.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
@@ -372,28 +531,6 @@ export function RenewalLosses() {
             <SelectItem value="90">Últimos 90 dias</SelectItem>
             <SelectItem value="180">Últimos 6 meses</SelectItem>
             <SelectItem value="365">Último ano</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterConsultora} onValueChange={setFilterConsultora}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Consultora" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas consultoras</SelectItem>
-            {uniqueConsultoras.sort().map(name => (
-              <SelectItem key={name} value={name}>{name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterOutcome} onValueChange={setFilterOutcome}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="renewed">Renovados</SelectItem>
-            <SelectItem value="lost">Perdidos</SelectItem>
-            <SelectItem value="pending">Pendentes</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -584,13 +721,64 @@ export function RenewalLosses() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[240px]">Cliente</TableHead>
-                  <TableHead className="text-center">Consultora</TableHead>
-                  <TableHead className="text-center">Produto</TableHead>
-                  <TableHead className="text-center">Valor Renovação</TableHead>
-                  <TableHead className="text-center">Venceu em</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Motivo</TableHead>
+                  <TableHead className="w-[240px]">
+                    <SearchHeader label="Cliente" value={searchClient} onChange={setSearchClient} align="start" />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <MultiSelectHeader
+                      label="Consultora"
+                      options={uniqueConsultoras.sort()}
+                      selected={filterConsultora}
+                      onChange={setFilterConsultora}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <MultiSelectHeader
+                      label="Produto"
+                      options={uniqueProdutos.sort()}
+                      selected={filterProduto}
+                      onChange={setFilterProduto}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <SortHeader
+                      label="Valor Renovação"
+                      active={sortKey === "value"}
+                      dir={sortDir}
+                      onClick={() => {
+                        if (sortKey === "value") setSortDir(d => d === "asc" ? "desc" : "asc");
+                        else { setSortKey("value"); setSortDir("desc"); }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <SortHeader
+                      label="Venceu em"
+                      active={sortKey === "date"}
+                      dir={sortDir}
+                      onClick={() => {
+                        if (sortKey === "date") setSortDir(d => d === "asc" ? "desc" : "asc");
+                        else { setSortKey("date"); setSortDir("desc"); }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <MultiSelectHeader
+                      label="Status"
+                      options={["renewed", "lost", "pending"]}
+                      selected={filterStatus}
+                      onChange={setFilterStatus}
+                      formatLabel={(v) => v === "renewed" ? "Renovados" : v === "lost" ? "Perdidos" : "Pendentes"}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <MultiSelectHeader
+                      label="Motivo"
+                      options={uniqueMotivos.sort()}
+                      selected={filterMotivo}
+                      onChange={setFilterMotivo}
+                    />
+                  </TableHead>
                   <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
