@@ -15,7 +15,6 @@ export function useDoubleChairCount(accountId: string | undefined) {
         .from("client_relationships")
         .select("*", { count: "exact", head: true })
         .eq("account_id", accountId)
-        .eq("sync_data", true)
         .eq("is_active", true);
       if (error) throw error;
       return count ?? 0;
