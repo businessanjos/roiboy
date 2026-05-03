@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { ConversationAssignment, getContactInfo, getInitials } from "./types";
+import { VipBadge } from "@/components/client/VipBadge";
 
 interface ZappConversationItemProps {
   assignment: ConversationAssignment;
