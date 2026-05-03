@@ -1407,7 +1407,7 @@ export function DealDetailSheet({
                   )}
 
                   {/* 2ª Cadeira */}
-                  {itemVendaAllowsSecondSeat && (
+                  {(itemVendaAllowsSecondSeat || hasSecondSeat) && (
                     <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
