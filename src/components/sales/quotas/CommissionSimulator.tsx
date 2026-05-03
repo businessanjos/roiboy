@@ -35,6 +35,8 @@ export function CommissionSimulator() {
   const [simMode, setSimMode] = useState<"percent" | "sales">("percent");
   const [achievementPct, setAchievementPct] = useState(100);
   const [salesCount, setSalesCount] = useState(7);
+  // Overrides por SPIFF: { [spiffId]: { included, estimate } }
+  const [spiffOverrides, setSpiffOverrides] = useState<Record<string, { included: boolean; estimate: number | null }>>({});
 
   const usersQuery = useQuery({
     queryKey: ["sales-team-users", accountId],
