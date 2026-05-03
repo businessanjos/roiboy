@@ -761,7 +761,7 @@ export default function Renewals() {
 
         <TabsContent value="pending" className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[325px_195px_195px_195px] gap-4">
+          <div className="flex flex-wrap gap-4 [&>*]:basis-[195px] [&>*]:flex-1 [&>*:first-child]:basis-[325px] [&>*:first-child]:min-w-[260px]">
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
