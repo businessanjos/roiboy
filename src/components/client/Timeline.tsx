@@ -577,8 +577,11 @@ function SystemEventItem({
               </Button>
             )}
             {getImpactBadge(event.metadata?.impact || event.metadata?.level)}
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {formatDistanceToNow(new Date(event.timestamp), { locale: ptBR, addSuffix: false })}
+            <span
+              className="text-xs text-muted-foreground whitespace-nowrap"
+              title={format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            >
+              {format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
             </span>
           </div>
         </div>
