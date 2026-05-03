@@ -71,8 +71,13 @@ export function RenewalLosses() {
   const [items, setItems] = useState<ExpiredContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterPeriod, setFilterPeriod] = useState("90");
-  const [filterConsultora, setFilterConsultora] = useState("all");
-  const [filterOutcome, setFilterOutcome] = useState("all");
+  const [filterConsultora, setFilterConsultora] = useState<string[]>([]);
+  const [filterProduto, setFilterProduto] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterMotivo, setFilterMotivo] = useState<string[]>([]);
+  const [searchClient, setSearchClient] = useState("");
+  const [sortKey, setSortKey] = useState<"value" | "date" | null>("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
   const [editItem, setEditItem] = useState<ExpiredContract | null>(null);
