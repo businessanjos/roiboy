@@ -580,22 +580,22 @@ export default function Renewals() {
           <Table className="table-fixed lg:table-auto">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[220px] lg:w-[260px]">Cliente</TableHead>
+                <TableHead className="w-[190px] px-2 lg:w-[220px]">Cliente</TableHead>
                 <TableHead className="hidden xl:table-cell text-center">Consultora</TableHead>
-                <TableHead className="text-center">Produto</TableHead>
-                <TableHead className="text-center">Valor Renovação</TableHead>
+                <TableHead className="hidden xl:table-cell text-center">Produto</TableHead>
+                <TableHead className="text-center px-2">Valor Renovação</TableHead>
                 <TableHead className="hidden 2xl:table-cell text-center">Início</TableHead>
-                <TableHead className="text-center">Vencimento</TableHead>
-                <TableHead className="text-center">Tempo Restante</TableHead>
-                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center px-2">Vencimento</TableHead>
+                <TableHead className="hidden xl:table-cell text-center">Tempo Restante</TableHead>
+                <TableHead className="text-center px-2">Status</TableHead>
                 <TableHead className="hidden xl:table-cell text-center">Chance</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[40px] px-2"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginated.map((contract) => (
                 <TableRow key={contract.id} className="group">
-                  <TableCell>
+                  <TableCell className="px-2">
                     <Link
                       to={`/clients/${contract.client_id}`}
                       className="flex items-center gap-3 hover:opacity-80 transition-opacity"
@@ -609,7 +609,7 @@ export default function Renewals() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium break-words whitespace-normal max-w-[220px]">{contract.client_name}</p>
+                        <p className="text-sm font-medium break-words whitespace-normal max-w-[180px] lg:max-w-[210px]">{contract.client_name}</p>
                         {contract.client_email && (
                           <p className="text-xs text-muted-foreground truncate">{contract.client_email}</p>
                         )}
