@@ -147,6 +147,16 @@ export function CommissionSimulator() {
     const wholeSalesCount = Math.floor(simulatedQty);
     const commissionableValue = wholeSalesCount * avgTicket;
 
+    // ── Mix de Pagamento (à vista / cartão Nx) ──
+    // Normaliza: usa o que o usuário configurou, mas se a soma != wholeSalesCount,
+    // ainda assim calcula com o que foi declarado (não força).
+    const mixRows = paymentMix.filter((r) => r.qty > 0);
+    const mixTotalQty = mixRows.reduce((s, r) => s + r.qty, 0);
+    const mixEntryCaptured = mixRows.reduce((s, r) => {
+      const pct = r.parcelas === 1 ? 100 : Math.max(0, Math.min(100, r.entryPercent));
+      return s + r.qty * avgTicket * (pct / 100);
+    }, 0);
+
     // Comissão percentual por produto NÃO faz mais parte do plano.
     // O plano vigente remunera via Bônus de Faixa + Bônus sem teto (por venda acima do limite).
     const appliedRate = null as any;
