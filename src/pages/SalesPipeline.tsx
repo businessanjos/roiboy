@@ -429,16 +429,18 @@ export default function SalesPipeline() {
     [lostDeals, searchTerm, openDealProductMap]
   );
 
-  // Available months for won deals filter
+  // Available months for won deals filter (always include current month)
   const availableWonMonths = useMemo(() => {
     const monthsSet = new Map<string, string>();
+    const addMonth = (date: Date) => {
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
+      monthsSet.set(key, label.charAt(0).toUpperCase() + label.slice(1));
+    };
+    // Always include current month so it can be selected even with no deals yet
+    addMonth(new Date());
     wonDeals.forEach(deal => {
-      if (deal.won_at) {
-        const date = new Date(deal.won_at);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
-        monthsSet.set(key, label.charAt(0).toUpperCase() + label.slice(1));
-      }
+      if (deal.won_at) addMonth(new Date(deal.won_at));
     });
     return Array.from(monthsSet.entries())
       .sort((a, b) => b[0].localeCompare(a[0]));
