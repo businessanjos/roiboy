@@ -661,6 +661,20 @@ export const ContractWizard = ({
     };
   }, [accountId]);
 
+  useEffect(() => {
+    if (!templateId || loading || templates.length === 0) return;
+    const latest = templates.find((t) => t.id === templateId);
+    if (!latest || latest.content_html === templateHtml) return;
+
+    onChange({
+      template_id: latest.id,
+      product_id: productId ?? latest.product_id ?? null,
+      template_html: latest.content_html,
+      template_variables: latest.variables ?? [],
+      placeholder_values: buildPlaceholderValues(latest.variables ?? [], autofill, placeholderValues),
+    });
+  }, [templateId, templateHtml, templates, loading]);
+
   /* ---- Load payment methods from DB (with fallback to defaults) ---- */
   useEffect(() => {
     if (!accountId) return;
