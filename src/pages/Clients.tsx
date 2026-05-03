@@ -529,6 +529,7 @@ export default function Clients() {
       
       if (effectiveContractFilter) params.set("contract_filter", effectiveContractFilter);
       if (filterClientStatus !== "all" && activeTab === "all") params.set("client_status", filterClientStatus);
+      if (filterLinks === "with") params.set("with_links", "true");
       params.set("sort", sortOrder);
       
       const response = await fetch(
