@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { VipBadge } from "@/components/client/VipBadge";
+import { getCountryFromPhone } from "@/lib/phoneCountry";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -274,6 +275,7 @@ export default function Clients() {
   const [filterContract, setFilterContract] = usePersistedFilter<string>("clients", "contract", "all");
   const [filterResponsible, setFilterResponsible] = usePersistedFilter<string>("clients", "responsible", "all");
   const [filterLinks, setFilterLinks] = usePersistedFilter<string>("clients", "links", "all");
+  const [filterCountry, setFilterCountry] = usePersistedFilter<string>("clients", "country", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
 
@@ -1293,6 +1295,7 @@ export default function Clients() {
     filterContract !== "all",
     filterResponsible !== "all",
     filterLinks !== "all",
+    filterCountry !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -1301,10 +1304,35 @@ export default function Clients() {
     setFilterContract("all");
     setFilterResponsible("all");
     setFilterLinks("all");
+    setFilterCountry("all");
   };
 
-  // Sorting is now handled server-side via the sort param
-  const filtered = clients;
+  // Compute country options from loaded clients (DDI inferred from phone_e164)
+  const countryOptions = (() => {
+    const map = new Map<string, { code: string; name: string; flag: string; count: number }>();
+    for (const c of clients as any[]) {
+      const info = getCountryFromPhone(c.phone_e164);
+      const key = info?.code || "UNKNOWN";
+      const entry = map.get(key);
+      if (entry) entry.count++;
+      else map.set(key, {
+        code: key,
+        name: info?.name || "Sem país",
+        flag: info?.flag || "🏳️",
+        count: 1,
+      });
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  })();
+
+  // Client-side country filter (DDI is encoded in phone_e164, no server param)
+  const filtered = filterCountry === "all"
+    ? clients
+    : (clients as any[]).filter((c) => {
+        const info = getCountryFromPhone(c.phone_e164);
+        const code = info?.code || "UNKNOWN";
+        return code === filterCountry;
+      });
 
   const handleFieldValueChange = (clientId: string, fieldId: string, newValue: any) => {
     setFieldValues(prev => ({
@@ -2084,6 +2112,28 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* País (DDI) Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">País (DDI)</Label>
+                <Select value={filterCountry} onValueChange={setFilterCountry}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todos os países</SelectItem>
+                    {countryOptions.map((opt) => (
+                      <SelectItem key={opt.code} value={opt.code}>
+                        <span className="inline-flex items-center gap-2">
+                          <span>{opt.flag}</span>
+                          <span>{opt.name}</span>
+                          <span className="text-muted-foreground text-xs">({opt.count})</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Clear Filters Button */}
               {activeFilterCount > 0 && (
                 <div className="flex items-end">
@@ -2140,6 +2190,14 @@ export default function Clients() {
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
                     Vínculos: Com vínculos
                     <button onClick={() => setFilterLinks("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filterCountry !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    País: {countryOptions.find(o => o.code === filterCountry)?.flag} {countryOptions.find(o => o.code === filterCountry)?.name || filterCountry}
+                    <button onClick={() => setFilterCountry("all")} className="hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
