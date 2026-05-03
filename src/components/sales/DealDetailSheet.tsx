@@ -1083,7 +1083,41 @@ export function DealDetailSheet({
                       <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
                       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Valor</span>
                     </div>
-                    <p className="text-lg font-bold text-emerald-500">{formatCurrency(deal.value)}</p>
+                    <Popover open={valueEditOpen} onOpenChange={setValueEditOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-lg font-bold text-emerald-500 hover:underline text-left"
+                          title="Editar valor"
+                        >
+                          {formatCurrency(deal.value)}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-3" align="start">
+                        <Label className="text-xs">Valor do negócio (R$)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={valueDraft}
+                          onChange={(e) => setValueDraft(e.target.value)}
+                          className="h-8 mt-1"
+                          autoFocus
+                        />
+                        <div className="flex justify-end gap-2 mt-2">
+                          <Button size="sm" variant="ghost" onClick={() => setValueEditOpen(false)}>Cancelar</Button>
+                          <Button size="sm" onClick={async () => {
+                            const v = Number(valueDraft);
+                            if (isNaN(v) || v < 0) { toast.error("Valor inválido"); return; }
+                            const { error } = await supabase.from("deals").update({ value: v }).eq("id", deal.id);
+                            if (error) { toast.error("Erro ao atualizar"); return; }
+                            toast.success("Valor atualizado");
+                            setValueEditOpen(false);
+                            onDealUpdated?.();
+                          }}>Salvar</Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="rounded-lg border p-3 bg-muted/30">
                     <div className="flex items-center gap-1.5 mb-1">
