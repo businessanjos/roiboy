@@ -756,7 +756,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Status Cards - Single Row */}
-          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-6" : "md:grid-cols-3"}`}>
+          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"}`}>
             {/* Total de Clientes (oculto no modo operações) */}
             {gestaoViewMode !== "operacoes" && (
             <Card className="shadow-card border-l-4 border-l-primary">
@@ -771,6 +771,20 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             )}
+
+            {/* Cadeira Dupla — vínculos com sync_data ativos (cada par conta como 1) */}
+            <Card className="shadow-card border-l-4 border-l-pink-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Cadeira Dupla</p>
+                    <p className="text-2xl font-bold text-pink-600">{doubleChairCount ?? 0}</p>
+                  </div>
+                  <Heart className="h-5 w-5 text-pink-500" />
+                </div>
+              </CardContent>
+            </Card>
+
 
             {/* Ativos */}
             <Card className="shadow-card border-l-4 border-l-success">
