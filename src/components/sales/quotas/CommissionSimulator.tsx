@@ -6,7 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calculator, TrendingUp, DollarSign, Wallet, Trophy, Zap, Target } from "lucide-react";
+import { Calculator, TrendingUp, DollarSign, Wallet, Trophy, Zap, Target, Gift } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
