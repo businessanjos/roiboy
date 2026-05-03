@@ -73,7 +73,10 @@ export const ClientsTableRow = memo(function ClientsTableRow({
             >
               {client.full_name}
             </Link>
-            <p className="text-xs text-muted-foreground">{client.phone_e164}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <CountryFlag phone={client.phone_e164} className="text-sm leading-none" />
+              <span className="truncate">{client.phone_e164}</span>
+            </p>
           </div>
         </div>
       </TableCell>
