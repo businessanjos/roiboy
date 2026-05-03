@@ -78,6 +78,9 @@ export default function Renewals() {
   const [upcomingPage, setUpcomingPage] = useState(1);
   const [expiredPage, setExpiredPage] = useState(1);
 
+  useEffect(() => { setUpcomingPage(1); }, [searchQuery, filterConsultora, filterProduto, filterTempo, filterChance, filterStatus, filterQuarter]);
+  useEffect(() => { setExpiredPage(1); }, [expiredFilterConsultora, expiredFilterProduto, expiredFilterChance, expiredFilterAno]);
+
   const handleScoreCalculated = useCallback((clientId: string, score: number) => {
     setChanceScores(prev => {
       if (prev[clientId] === score) return prev;
