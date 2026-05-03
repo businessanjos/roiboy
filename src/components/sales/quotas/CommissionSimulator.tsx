@@ -30,7 +30,7 @@ export function CommissionSimulator() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const { plans, productRates, tiers, quotas } = useQuotasIncentives(year, month);
+  const { plans, productRates, tiers, quotas, spiffs } = useQuotasIncentives(year, month);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [simMode, setSimMode] = useState<"percent" | "sales">("percent");
   const [achievementPct, setAchievementPct] = useState(100);
