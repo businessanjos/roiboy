@@ -143,7 +143,8 @@ export function DealDialog({
   const [sendNotification, setSendNotification] = useState(false);
 
   const isEditing = !!deal;
-  const isClosed = deal?.status !== 'open';
+  // Quando criando um novo deal, `deal` é undefined — não deve ser tratado como "fechado"
+  const isClosed = isEditing && deal?.status !== 'open';
 
   // Users who can always change the responsible, regardless of deal status
   const RESPONSIBLE_OVERRIDE_USER_IDS = [
