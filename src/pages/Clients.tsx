@@ -2194,6 +2194,14 @@ export default function Clients() {
                     </button>
                   </Badge>
                 )}
+                {filterCountry !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    País: {countryOptions.find(o => o.code === filterCountry)?.flag} {countryOptions.find(o => o.code === filterCountry)?.name || filterCountry}
+                    <button onClick={() => setFilterCountry("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
               </div>
             )}
           </Card>
