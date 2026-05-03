@@ -6,8 +6,21 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Crown, Search, Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Crown, Search, Loader2, Settings } from "lucide-react";
 import { differenceInMonths } from "date-fns";
+import { toast } from "sonner";
 
 interface VipRow {
   client_id: string;
@@ -17,8 +30,26 @@ interface VipRow {
   received: number;
   pending: number;
   products: string[];
+  product_ids: string[];
   start_date: string | null;
+  ltv_months: number;
 }
+
+interface VipCriteria {
+  min_received: number;
+  min_ltv_months: number;
+  product_ids: string[]; // empty = all
+  top_n: number; // 0 = no cap
+}
+
+const DEFAULT_CRITERIA: VipCriteria = {
+  min_received: 150000,
+  min_ltv_months: 0,
+  product_ids: [],
+  top_n: 30,
+};
+
+const STORAGE_KEY = "vip_criteria_v1";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -35,20 +66,29 @@ export default function VipClients() {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const [rows, setRows] = useState<VipRow[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [topN, setTopN] = useState<30 | 50 | 100>(30);
+  const [criteria, setCriteria] = useState<VipCriteria>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) return { ...DEFAULT_CRITERIA, ...JSON.parse(stored) };
+    } catch {}
+    return DEFAULT_CRITERIA;
+  });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [draft, setDraft] = useState<VipCriteria>(criteria);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!currentUser?.account_id) return;
       setLoading(true);
 
-      const [{ data: contracts }, { data: entries }] = await Promise.all([
+      const [{ data: contracts }, { data: entries }, { data: prods }] = await Promise.all([
         supabase
           .from("client_contracts")
           .select(
-            "client_id, value, start_date, status, products(name), clients!inner(id, full_name, logo_url)"
+            "client_id, value, start_date, status, product_id, products(name), clients!inner(id, full_name, logo_url)"
           )
           .eq("account_id", currentUser.account_id)
           .not("status", "in", "(cancelled,dismissed,dropout_7d)"),
@@ -58,6 +98,12 @@ export default function VipClients() {
           .eq("account_id", currentUser.account_id)
           .eq("entry_type", "receivable")
           .not("client_id", "is", null),
+        supabase
+          .from("products")
+          .select("id, name")
+          .eq("account_id", currentUser.account_id)
+          .eq("is_active", true)
+          .order("name"),
       ]);
 
       const map = new Map<string, VipRow>();
@@ -72,13 +118,18 @@ export default function VipClients() {
             received: 0,
             pending: 0,
             products: [],
+            product_ids: [],
             start_date: c.start_date,
+            ltv_months: 0,
           });
         }
         const row = map.get(cid)!;
         row.total += Number(c.value || 0);
         if (c.products?.name && !row.products.includes(c.products.name)) {
           row.products.push(c.products.name);
+        }
+        if (c.product_id && !row.product_ids.includes(c.product_id)) {
+          row.product_ids.push(c.product_id);
         }
         if (c.start_date && (!row.start_date || c.start_date < row.start_date)) {
           row.start_date = c.start_date;
@@ -95,9 +146,16 @@ export default function VipClients() {
 
       const list = Array.from(map.values())
         .filter((r) => r.total > 0)
+        .map((r) => ({
+          ...r,
+          ltv_months: r.start_date
+            ? Math.max(differenceInMonths(new Date(), new Date(r.start_date)), 0)
+            : 0,
+        }))
         .sort((a, b) => b.received - a.received || b.total - a.total);
 
       setRows(list);
+      setProducts(prods || []);
       setLoading(false);
     };
     fetchData();
@@ -105,14 +163,40 @@ export default function VipClients() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const base = q
-      ? rows.filter((r) => r.full_name.toLowerCase().includes(q))
-      : rows;
-    return base.slice(0, topN);
-  }, [rows, search, topN]);
+    let base = rows.filter((r) => {
+      if (r.received < criteria.min_received) return false;
+      if (r.ltv_months < criteria.min_ltv_months) return false;
+      if (criteria.product_ids.length > 0) {
+        const match = r.product_ids.some((pid) => criteria.product_ids.includes(pid));
+        if (!match) return false;
+      }
+      return true;
+    });
+    if (q) base = base.filter((r) => r.full_name.toLowerCase().includes(q));
+    if (criteria.top_n > 0) base = base.slice(0, criteria.top_n);
+    return base;
+  }, [rows, search, criteria]);
 
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+
+  const saveCriteria = () => {
+    setCriteria(draft);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+    setSettingsOpen(false);
+    toast.success("Critérios atualizados");
+  };
+
+  const resetCriteria = () => setDraft(DEFAULT_CRITERIA);
+
+  const toggleProduct = (id: string) => {
+    setDraft((d) => ({
+      ...d,
+      product_ids: d.product_ids.includes(id)
+        ? d.product_ids.filter((p) => p !== id)
+        : [...d.product_ids, id],
+    }));
+  };
 
   return (
     <div className="container mx-auto py-6 max-w-7xl">
@@ -128,31 +212,135 @@ export default function VipClients() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {[30, 50, 100].map((n) => (
-            <button
-              key={n}
-              onClick={() => setTopN(n as any)}
-              className={`px-3 py-1.5 text-sm rounded-lg border transition ${
-                topN === n
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card hover:bg-muted"
-              }`}
-            >
-              Top {n}
-            </button>
-          ))}
-        </div>
+
+        <Dialog
+          open={settingsOpen}
+          onOpenChange={(o) => {
+            setSettingsOpen(o);
+            if (o) setDraft(criteria);
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Critérios VIP
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Critérios para cliente VIP</DialogTitle>
+              <DialogDescription>
+                Defina quem entra na lista. Os filtros são combinados (E).
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-5 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="min_received">Valor mínimo recebido (R$)</Label>
+                <Input
+                  id="min_received"
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={draft.min_received}
+                  onChange={(e) =>
+                    setDraft({ ...draft, min_received: Number(e.target.value) || 0 })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Soma dos recebíveis pagos do cliente.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="min_ltv">LTV mínimo (meses)</Label>
+                <Input
+                  id="min_ltv"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={draft.min_ltv_months}
+                  onChange={(e) =>
+                    setDraft({ ...draft, min_ltv_months: Number(e.target.value) || 0 })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tempo desde o primeiro contrato. Ex: 12 = pelo menos 1 ano.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Produtos elegíveis</Label>
+                <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                  {products.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum produto.</p>
+                  ) : (
+                    products.map((p) => (
+                      <label
+                        key={p.id}
+                        className="flex items-center gap-2 text-sm cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={draft.product_ids.includes(p.id)}
+                          onCheckedChange={() => toggleProduct(p.id)}
+                        />
+                        <span>{p.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Vazio = considera todos os produtos.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="top_n">Limite (Top N)</Label>
+                <Input
+                  id="top_n"
+                  type="number"
+                  min={0}
+                  step={5}
+                  value={draft.top_n}
+                  onChange={(e) =>
+                    setDraft({ ...draft, top_n: Number(e.target.value) || 0 })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">0 = sem limite.</p>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button variant="ghost" onClick={resetCriteria}>
+                Restaurar padrão
+              </Button>
+              <Button variant="outline" onClick={() => setSettingsOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={saveCriteria}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="relative mb-4 max-w-md">
-        <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar cliente..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="relative max-w-md flex-1 min-w-[240px]">
+          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar cliente..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{filtered.length}</span>{" "}
+          {filtered.length === 1 ? "cliente VIP" : "clientes VIP"}
+          {criteria.min_received > 0 && (
+            <> · ≥ {formatBRL(criteria.min_received)} recebido</>
+          )}
+          {criteria.min_ltv_months > 0 && <> · ≥ {criteria.min_ltv_months} meses</>}
+        </div>
       </div>
 
       <Card className="overflow-hidden">
@@ -162,7 +350,7 @@ export default function VipClients() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-muted-foreground">
-            Nenhum cliente encontrado.
+            Nenhum cliente atende aos critérios.
           </div>
         ) : (
           <div className="overflow-x-auto">
