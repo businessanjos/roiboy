@@ -32,7 +32,9 @@ export function CommissionSimulator() {
 
   const { plans, productRates, tiers, quotas } = useQuotasIncentives(year, month);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [simMode, setSimMode] = useState<"percent" | "sales">("percent");
   const [achievementPct, setAchievementPct] = useState(100);
+  const [salesCount, setSalesCount] = useState(7);
 
   const usersQuery = useQuery({
     queryKey: ["sales-team-users", accountId],
