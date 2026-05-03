@@ -243,6 +243,30 @@ export default function SalesCalendar() {
     googleQuery.refetch();
   };
 
+  const reloadGoogleCalendar = async () => {
+    try {
+      const result = await googleQuery.refetch();
+      if (result.data?.connected) {
+        toast({
+          title: "Calendário recarregado",
+          description: `${result.data.events?.length ?? 0} evento(s) do Google Agenda carregado(s).`,
+        });
+      } else {
+        toast({
+          title: "Google Agenda não conectado",
+          description: "Conecte sua conta do Google para ver os eventos.",
+          variant: "destructive",
+        });
+      }
+    } catch (e: any) {
+      toast({
+        title: "Erro ao recarregar",
+        description: e?.message || "Não foi possível recarregar os eventos.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const isLoading = tasksQuery.isLoading || meetingsQuery.isLoading || googleQuery.isLoading;
   const googleConnected = googleQuery.data?.connected;
 
