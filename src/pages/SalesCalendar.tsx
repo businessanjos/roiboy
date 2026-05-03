@@ -17,6 +17,7 @@ import {
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
 type CalEvent = {
   id: string;
