@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calculator, TrendingUp, DollarSign, Wallet, Trophy, Zap, Target, Gift } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
@@ -35,6 +36,8 @@ export function CommissionSimulator() {
   const [simMode, setSimMode] = useState<"percent" | "sales">("percent");
   const [achievementPct, setAchievementPct] = useState(100);
   const [salesCount, setSalesCount] = useState(7);
+  // Overrides por SPIFF: { [spiffId]: { included, estimate } }
+  const [spiffOverrides, setSpiffOverrides] = useState<Record<string, { included: boolean; estimate: number | null }>>({});
 
   const usersQuery = useQuery({
     queryKey: ["sales-team-users", accountId],
@@ -212,11 +215,11 @@ export function CommissionSimulator() {
       return true;
     });
 
-    const spiffBreakdown: Array<{ name: string; estimate: number; detail: string }> = [];
+    const spiffBreakdown: Array<{ id: string; name: string; estimate: number; computed: number; detail: string; included: boolean; overridden: boolean }> = [];
     let spiffTotal = 0;
     for (const s of applicableSpiffs as any[]) {
       const prizeType = s.prize_type || "fixed";
-      let estimate = 0;
+      let computed = 0;
       let detail = "";
 
       if (prizeType === "roulette") {
@@ -225,36 +228,38 @@ export function CommissionSimulator() {
         const maxP = Number(s.roulette_max_prize || 0);
         const avgPrize = (minP + maxP) / 2;
         const spins = trigger > 0 ? Math.floor(commissionableValue / trigger) : 0;
-        estimate = spins * avgPrize;
+        computed = spins * avgPrize;
         detail = `${spins} giro(s) × ~${fmt(avgPrize)} (média)`;
       } else if (prizeType === "custom") {
         const target = Number(s.trigger_sales_count || 0);
         const times = target > 0 ? Math.floor(wholeSalesCount / target) : 0;
-        // Custom prize não tem valor monetário — pulamos do total mas mostramos
-        estimate = 0;
+        computed = 0;
         detail = times > 0
           ? `${times}× — ${s.custom_prize_description || "prêmio personalizado"}`
           : `Precisa de ${target} venda(s)`;
       } else if (prizeType === "payment_method") {
-        // Sem dados de forma de pagamento simulada — exibimos como informativo
         const tiers = Array.isArray(s.payment_tiers) ? s.payment_tiers.length : 0;
-        estimate = 0;
+        computed = 0;
         detail = `${tiers} faixa(s) por forma de pagamento`;
       } else {
-        // Bônus fixo: paga por target_quantity unidades
         const target = Number(s.target_quantity || 0);
         const times = target > 0 ? Math.floor(wholeSalesCount / target) : 0;
         if (s.bonus_type === "fixed") {
-          estimate = times * Number(s.bonus_amount || 0);
+          computed = times * Number(s.bonus_amount || 0);
           detail = `${times}× ${fmt(Number(s.bonus_amount || 0))} (cada ${target} unid.)`;
         } else {
-          estimate = (times * target * avgTicket * Number(s.bonus_amount || 0)) / 100;
+          computed = (times * target * avgTicket * Number(s.bonus_amount || 0)) / 100;
           detail = `${times}× ${s.bonus_amount}% sobre ${target} unid.`;
         }
       }
 
-      spiffTotal += estimate;
-      spiffBreakdown.push({ name: s.name, estimate, detail });
+      const ov = spiffOverrides[s.id];
+      const included = ov?.included ?? true;
+      const overridden = ov?.estimate != null;
+      const estimate = overridden ? Number(ov!.estimate) : computed;
+
+      if (included) spiffTotal += estimate;
+      spiffBreakdown.push({ id: s.id, name: s.name, estimate, computed, detail, included, overridden });
     }
 
     const totalEarnings = monthlyBase + totalCommission + bonusValue + uncappedBonus + spiffTotal;
@@ -291,7 +296,7 @@ export function CommissionSimulator() {
       totalEarnings,
       effectiveAchievementPct,
     };
-  }, [selectedUserId, simMode, achievementPct, salesCount, quotas, productRates, tiers, plans, spiffs, collaborators, products, salesPositionIds]);
+  }, [selectedUserId, simMode, achievementPct, salesCount, spiffOverrides, quotas, productRates, tiers, plans, spiffs, collaborators, products, salesPositionIds]);
 
   return (
     <Card>
@@ -511,20 +516,64 @@ export function CommissionSimulator() {
                   <Gift className="h-3.5 w-3.5 text-pink-600" />
                   Spiffs estimados ({fmt(simulation.spiffTotal)})
                 </p>
-                <ul className="space-y-1">
-                  {simulation.spiffBreakdown.map((s, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
-                      <span className="truncate">
-                        <strong className="text-foreground">{s.name}</strong> — {s.detail}
-                      </span>
-                      <span className="font-semibold text-foreground whitespace-nowrap">
-                        {s.estimate > 0 ? fmt(s.estimate) : "—"}
-                      </span>
+                <ul className="space-y-1.5">
+                  {simulation.spiffBreakdown.map((s) => (
+                    <li key={s.id} className="flex items-center gap-2 text-muted-foreground">
+                      <Checkbox
+                        checked={s.included}
+                        onCheckedChange={(checked) =>
+                          setSpiffOverrides((prev) => ({
+                            ...prev,
+                            [s.id]: { included: !!checked, estimate: prev[s.id]?.estimate ?? null },
+                          }))
+                        }
+                        className="h-3.5 w-3.5"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate">
+                          <strong className="text-foreground">{s.name}</strong>
+                          {" "}<span className="text-[10px]">— {s.detail}</span>
+                        </p>
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={s.estimate || ""}
+                        placeholder={fmt(s.computed)}
+                        disabled={!s.included}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setSpiffOverrides((prev) => ({
+                            ...prev,
+                            [s.id]: {
+                              included: prev[s.id]?.included ?? true,
+                              estimate: v === "" ? null : Math.max(0, Number(v) || 0),
+                            },
+                          }));
+                        }}
+                        className="h-7 w-28 text-xs text-right"
+                      />
+                      {s.overridden && (
+                        <button
+                          type="button"
+                          className="text-[10px] text-primary hover:underline"
+                          onClick={() =>
+                            setSpiffOverrides((prev) => ({
+                              ...prev,
+                              [s.id]: { included: prev[s.id]?.included ?? true, estimate: null },
+                            }))
+                          }
+                          title="Restaurar valor calculado"
+                        >
+                          ↺
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
                 <p className="text-[10px] italic text-muted-foreground pt-1">
-                  Roleta usa valor médio entre prêmio mín. e máx. Prêmios não monetários (custom / forma de pagamento) não são somados ao total.
+                  Edite o valor ou desmarque para excluir do total. Roleta usa média entre prêmio mín. e máx.; prêmios não monetários ficam zerados (ajuste manualmente se quiser somar).
                 </p>
               </div>
             )}
