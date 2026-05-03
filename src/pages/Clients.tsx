@@ -271,6 +271,7 @@ export default function Clients() {
   
   const [filterContract, setFilterContract] = usePersistedFilter<string>("clients", "contract", "all");
   const [filterResponsible, setFilterResponsible] = usePersistedFilter<string>("clients", "responsible", "all");
+  const [filterLinks, setFilterLinks] = usePersistedFilter<string>("clients", "links", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
 
@@ -378,6 +379,7 @@ export default function Clients() {
       
       if (filterContract !== "all") baseParams["contract_filter"] = filterContract;
       if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
+      if (filterLinks === "with") baseParams["with_links"] = "true";
       baseParams["sort"] = sortOrder;
 
       const pageSize = 200;
@@ -527,6 +529,7 @@ export default function Clients() {
       
       if (effectiveContractFilter) params.set("contract_filter", effectiveContractFilter);
       if (filterClientStatus !== "all" && activeTab === "all") params.set("client_status", filterClientStatus);
+      if (filterLinks === "with") params.set("with_links", "true");
       params.set("sort", sortOrder);
       
       const response = await fetch(
@@ -749,7 +752,7 @@ export default function Clients() {
       fetchClients();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, sortOrder, activeTab]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, sortOrder, activeTab]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -1259,6 +1262,7 @@ export default function Clients() {
     filterProduct !== "all",
     filterContract !== "all",
     filterResponsible !== "all",
+    filterLinks !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -1266,6 +1270,7 @@ export default function Clients() {
     setFilterProduct("all");
     setFilterContract("all");
     setFilterResponsible("all");
+    setFilterLinks("all");
   };
 
   // Sorting is now handled server-side via the sort param
@@ -2035,6 +2040,20 @@ export default function Clients() {
                 </div>
               )}
 
+              {/* Vínculos Filter */}
+              <div className="space-y-1.5 min-w-[160px]">
+                <Label className="text-xs text-muted-foreground">Vínculos</Label>
+                <Select value={filterLinks} onValueChange={setFilterLinks}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="with">Com vínculos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Clear Filters Button */}
               {activeFilterCount > 0 && (
                 <div className="flex items-end">
@@ -2083,6 +2102,14 @@ export default function Clients() {
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
                     Responsável: {filterResponsible === "none" ? "Sem responsável" : teamUsers.find(u => u.id === filterResponsible)?.name || "..."}
                     <button onClick={() => setFilterResponsible("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filterLinks !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Vínculos: Com vínculos
+                    <button onClick={() => setFilterLinks("all")} className="hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>

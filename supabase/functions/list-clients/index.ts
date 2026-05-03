@@ -86,6 +86,7 @@ Deno.serve(async (req) => {
     const vnpsClass = url.searchParams.get("vnps_class") || "";
     const contractFilter = url.searchParams.get("contract_filter") || "";
     const clientStatus = url.searchParams.get("client_status") || "";
+    const withLinks = url.searchParams.get("with_links") === "true";
     const sortParam = url.searchParams.get("sort") || "recent";
 
     console.log(
@@ -274,9 +275,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Pre-filter by relationship links (clients that have at least one active relationship)
+    let linkedClientIds: string[] | null = null;
+    if (withLinks) {
+      const { data: rels } = await supabase
+        .from("client_relationships")
+        .select("primary_client_id, related_client_id")
+        .eq("account_id", accountId)
+        .eq("is_active", true);
+
+      const ids = new Set<string>();
+      (rels || []).forEach((r: any) => {
+        if (r.primary_client_id) ids.add(r.primary_client_id);
+        if (r.related_client_id) ids.add(r.related_client_id);
+      });
+      linkedClientIds = [...ids];
+
+      if (linkedClientIds.length === 0) {
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
+        }
+        return emptyResponse();
+      }
+    }
+
     // Intersect all pre-filter ID sets to build a single .in() filter
     let preFilterIds: string[] | null = null;
-    const idSets = [vnpsFilterClientIds, productFilterClientIds, statusContractClientIds].filter(
+    const idSets = [vnpsFilterClientIds, productFilterClientIds, statusContractClientIds, linkedClientIds].filter(
       (s): s is string[] => s !== null
     );
 
