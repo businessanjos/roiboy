@@ -141,8 +141,8 @@ export default function VipClients() {
         }
         const row = map.get(cid)!;
         row.total += Number(c.value || 0);
-        if (c.products?.name && !row.products.includes(c.products.name)) {
-          row.products.push(c.products.name);
+        if (c.products?.name && !row.products.some((p) => p.name === c.products.name)) {
+          row.products.push({ name: c.products.name, color: c.products.color || null });
         }
         if (c.product_id && !row.product_ids.includes(c.product_id)) {
           row.product_ids.push(c.product_id);
