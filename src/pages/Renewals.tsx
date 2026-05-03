@@ -313,7 +313,7 @@ export default function Renewals() {
       }
 
       // Filter out contracts already marked as renewed or lost
-      const pendingContracts = deduped.filter((c: any) => {
+      const pendingContracts = dedupedFiltered.filter((c: any) => {
         const outcome = allOutcomesMap[c.id]?.outcome;
         return !outcome || outcome === "pending" || outcome === "negotiating";
       });
