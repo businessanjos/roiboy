@@ -424,7 +424,7 @@ export function CommissionSimulator() {
             </div>
 
             {/* Componentes do ganho */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Wallet className="h-3.5 w-3.5" />
