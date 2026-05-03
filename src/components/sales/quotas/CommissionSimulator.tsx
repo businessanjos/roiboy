@@ -319,8 +319,12 @@ export function CommissionSimulator() {
                 type="number"
                 min={0}
                 step={1}
-                value={salesCount}
-                onChange={(e) => setSalesCount(Math.max(0, Number(e.target.value) || 0))}
+                value={salesCount === 0 ? "" : salesCount}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "") { setSalesCount(0); return; }
+                  setSalesCount(Math.max(0, Number(v) || 0));
+                }}
                 placeholder="Ex: 7"
               />
             )}
