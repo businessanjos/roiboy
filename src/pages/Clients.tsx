@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { VipBadge } from "@/components/client/VipBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -2223,9 +2224,10 @@ export default function Clients() {
                             <div className="min-w-0 flex-1">
                               <Link 
                                 to={`/clients/${client.id}`}
-                                className="font-medium truncate hover:text-primary hover:underline transition-colors block"
+                                className="font-medium truncate hover:text-primary hover:underline transition-colors flex items-center gap-1.5"
                               >
-                                {client.full_name}
+                                <span className="truncate">{client.full_name}</span>
+                                <VipBadge clientId={client.id} />
                               </Link>
                               <p className="text-xs text-muted-foreground">{client.phone_e164}</p>
                             </div>
