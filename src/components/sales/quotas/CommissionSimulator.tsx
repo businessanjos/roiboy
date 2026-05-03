@@ -515,20 +515,64 @@ export function CommissionSimulator() {
                   <Gift className="h-3.5 w-3.5 text-pink-600" />
                   Spiffs estimados ({fmt(simulation.spiffTotal)})
                 </p>
-                <ul className="space-y-1">
-                  {simulation.spiffBreakdown.map((s, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
-                      <span className="truncate">
-                        <strong className="text-foreground">{s.name}</strong> — {s.detail}
-                      </span>
-                      <span className="font-semibold text-foreground whitespace-nowrap">
-                        {s.estimate > 0 ? fmt(s.estimate) : "—"}
-                      </span>
+                <ul className="space-y-1.5">
+                  {simulation.spiffBreakdown.map((s) => (
+                    <li key={s.id} className="flex items-center gap-2 text-muted-foreground">
+                      <Checkbox
+                        checked={s.included}
+                        onCheckedChange={(checked) =>
+                          setSpiffOverrides((prev) => ({
+                            ...prev,
+                            [s.id]: { included: !!checked, estimate: prev[s.id]?.estimate ?? null },
+                          }))
+                        }
+                        className="h-3.5 w-3.5"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate">
+                          <strong className="text-foreground">{s.name}</strong>
+                          {" "}<span className="text-[10px]">— {s.detail}</span>
+                        </p>
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={s.estimate || ""}
+                        placeholder={fmt(s.computed)}
+                        disabled={!s.included}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setSpiffOverrides((prev) => ({
+                            ...prev,
+                            [s.id]: {
+                              included: prev[s.id]?.included ?? true,
+                              estimate: v === "" ? null : Math.max(0, Number(v) || 0),
+                            },
+                          }));
+                        }}
+                        className="h-7 w-28 text-xs text-right"
+                      />
+                      {s.overridden && (
+                        <button
+                          type="button"
+                          className="text-[10px] text-primary hover:underline"
+                          onClick={() =>
+                            setSpiffOverrides((prev) => ({
+                              ...prev,
+                              [s.id]: { included: prev[s.id]?.included ?? true, estimate: null },
+                            }))
+                          }
+                          title="Restaurar valor calculado"
+                        >
+                          ↺
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
                 <p className="text-[10px] italic text-muted-foreground pt-1">
-                  Roleta usa valor médio entre prêmio mín. e máx. Prêmios não monetários (custom / forma de pagamento) não são somados ao total.
+                  Edite o valor ou desmarque para excluir do total. Roleta usa média entre prêmio mín. e máx.; prêmios não monetários ficam zerados (ajuste manualmente se quiser somar).
                 </p>
               </div>
             )}
