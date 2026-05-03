@@ -31,6 +31,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -337,6 +340,11 @@ export function DealDetailSheet({
   const [dealCustomFields, setDealCustomFields] = useState<CustomField[]>([]);
   const [dealFieldValues, setDealFieldValues] = useState<Record<string, any>>({});
   const [itemVendaProductName, setItemVendaProductName] = useState<string | null>(null);
+  const [itemVendaProductPrice, setItemVendaProductPrice] = useState<number | null>(null);
+  const [itemVendaAllowsSecondSeat, setItemVendaAllowsSecondSeat] = useState<boolean>(false);
+  const [hasSecondSeat, setHasSecondSeat] = useState<boolean>(false);
+  const [secondSeatName, setSecondSeatName] = useState<string>("");
+  const [updatingSecondSeat, setUpdatingSecondSeat] = useState(false);
   
   const { isAdmin } = usePermissions();
 
@@ -347,8 +355,47 @@ export function DealDetailSheet({
       fetchDealCustomFields();
       fetchTeamMembers();
       fetchSalesMembers();
+      setHasSecondSeat(!!(deal as any)?.has_second_seat);
+      setSecondSeatName((deal as any)?.second_seat_name || "");
     }
   }, [deal?.id, open]);
+
+  const handleToggleSecondSeat = async (checked: boolean) => {
+    if (!deal) return;
+    setUpdatingSecondSeat(true);
+    try {
+      const basePrice = itemVendaProductPrice ?? deal.value ?? 0;
+      const newValue = checked ? Number((basePrice * 1.5).toFixed(2)) : basePrice;
+      const { error } = await supabase
+        .from("deals")
+        .update({
+          has_second_seat: checked,
+          second_seat_name: checked ? (secondSeatName || null) : null,
+          value: newValue,
+        })
+        .eq("id", deal.id);
+      if (error) throw error;
+      setHasSecondSeat(checked);
+      if (!checked) setSecondSeatName("");
+      toast.success(checked ? "2ª cadeira adicionada" : "2ª cadeira removida");
+      onDealUpdated?.();
+    } catch (e: any) {
+      toast.error("Erro ao atualizar 2ª cadeira");
+    } finally {
+      setUpdatingSecondSeat(false);
+    }
+  };
+
+  const handleSaveSecondSeatName = async (name: string) => {
+    if (!deal) return;
+    try {
+      await supabase
+        .from("deals")
+        .update({ second_seat_name: name || null })
+        .eq("id", deal.id);
+      onDealUpdated?.();
+    } catch {}
+  };
 
   const fetchTeamMembers = async () => {
     try {
@@ -484,12 +531,14 @@ export function DealDetailSheet({
           if (uuidRegex.test(itemVendaValue)) {
             const { data: productData } = await supabase
               .from('products')
-              .select('name')
+              .select('name, price, allows_second_seat')
               .eq('id', itemVendaValue)
               .maybeSingle();
             
             if (productData) {
               setItemVendaProductName(productData.name);
+              setItemVendaProductPrice(Number((productData as any).price) || 0);
+              setItemVendaAllowsSecondSeat(!!(productData as any).allows_second_seat);
             }
           } else {
             // Legacy format - get label from custom field options
@@ -500,9 +549,13 @@ export function DealDetailSheet({
                 setItemVendaProductName(option.label);
               }
             }
+            setItemVendaProductPrice(null);
+            setItemVendaAllowsSecondSeat(false);
           }
         } else {
           setItemVendaProductName(null);
+          setItemVendaProductPrice(null);
+          setItemVendaAllowsSecondSeat(false);
         }
       }
     } catch (error) {
@@ -1313,6 +1366,35 @@ export function DealDetailSheet({
                       <Package className="h-4 w-4 text-primary flex-shrink-0" />
                       <span className="text-xs text-muted-foreground min-w-[50px]">Item</span>
                       <span className="text-sm font-medium text-primary flex-1">{itemVendaProductName}</span>
+                    </div>
+                  )}
+
+                  {/* 2ª Cadeira */}
+                  {itemVendaAllowsSecondSeat && (
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-amber-600" />
+                          <Label htmlFor="has-second-seat" className="text-xs font-medium mb-0 cursor-pointer">
+                            2ª cadeira (+50%)
+                          </Label>
+                        </div>
+                        <Switch
+                          id="has-second-seat"
+                          checked={hasSecondSeat}
+                          disabled={updatingSecondSeat}
+                          onCheckedChange={handleToggleSecondSeat}
+                        />
+                      </div>
+                      {hasSecondSeat && (
+                        <Input
+                          value={secondSeatName}
+                          onChange={(e) => setSecondSeatName(e.target.value)}
+                          onBlur={(e) => handleSaveSecondSeatName(e.target.value)}
+                          placeholder="Nome da pessoa da 2ª cadeira"
+                          className="h-8 text-xs"
+                        />
+                      )}
                     </div>
                   )}
 

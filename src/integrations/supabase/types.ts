@@ -4290,6 +4290,7 @@ export type Database = {
           currency: string | null
           entry_value: number | null
           expected_close_date: string | null
+          has_second_seat: boolean
           id: string
           lead_id: string | null
           loss_notes: string | null
@@ -4302,6 +4303,7 @@ export type Database = {
           probability: number | null
           responsible_user_id: string | null
           sdr_user_id: string | null
+          second_seat_name: string | null
           source: string | null
           source_contract_id: string | null
           stage_changed_at: string | null
@@ -4323,6 +4325,7 @@ export type Database = {
           currency?: string | null
           entry_value?: number | null
           expected_close_date?: string | null
+          has_second_seat?: boolean
           id?: string
           lead_id?: string | null
           loss_notes?: string | null
@@ -4335,6 +4338,7 @@ export type Database = {
           probability?: number | null
           responsible_user_id?: string | null
           sdr_user_id?: string | null
+          second_seat_name?: string | null
           source?: string | null
           source_contract_id?: string | null
           stage_changed_at?: string | null
@@ -4356,6 +4360,7 @@ export type Database = {
           currency?: string | null
           entry_value?: number | null
           expected_close_date?: string | null
+          has_second_seat?: boolean
           id?: string
           lead_id?: string | null
           loss_notes?: string | null
@@ -4368,6 +4373,7 @@ export type Database = {
           probability?: number | null
           responsible_user_id?: string | null
           sdr_user_id?: string | null
+          second_seat_name?: string | null
           source?: string | null
           source_contract_id?: string | null
           stage_changed_at?: string | null
@@ -11559,6 +11565,7 @@ export type Database = {
       products: {
         Row: {
           account_id: string
+          allows_second_seat: boolean
           billing_period: Database["public"]["Enums"]["billing_period"]
           cash_price: number | null
           color: string | null
@@ -11580,6 +11587,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          allows_second_seat?: boolean
           billing_period?: Database["public"]["Enums"]["billing_period"]
           cash_price?: number | null
           color?: string | null
@@ -11601,6 +11609,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          allows_second_seat?: boolean
           billing_period?: Database["public"]["Enums"]["billing_period"]
           cash_price?: number | null
           color?: string | null

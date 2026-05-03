@@ -136,6 +136,7 @@ interface Product {
   is_active: boolean;
   is_mls: boolean;
   is_renewal: boolean;
+  allows_second_seat?: boolean;
   mls_level: string | null;
   color: string | null;
   renewal_discount_percent: number | null;
@@ -189,6 +190,7 @@ export default function Products() {
   const [isActive, setIsActive] = useState(true);
   const [isMls, setIsMls] = useState(false);
   const [isRenewal, setIsRenewal] = useState(false);
+  const [allowsSecondSeat, setAllowsSecondSeat] = useState(false);
   const [mlsLevel, setMlsLevel] = useState<string>("");
   const [color, setColor] = useState<string>("#10b981");
   const [cashPrice, setCashPrice] = useState("");
@@ -266,6 +268,7 @@ export default function Products() {
     setIsActive(true);
     setIsMls(false);
     setIsRenewal(false);
+    setAllowsSecondSeat(false);
     setMlsLevel("");
     setColor("#10b981");
     setEditingId(null);
@@ -284,6 +287,7 @@ export default function Products() {
     setIsActive(product.is_active);
     setIsMls(product.is_mls);
     setIsRenewal(product.is_renewal ?? false);
+    setAllowsSecondSeat(product.allows_second_seat ?? false);
     setMlsLevel(product.mls_level || "");
     setColor(product.color || "#10b981");
     const rawDeliverables = product.deliverables ? { ...DEFAULT_DELIVERABLES, ...product.deliverables } : { ...DEFAULT_DELIVERABLES };
@@ -331,6 +335,7 @@ export default function Products() {
         is_active: isActive,
         is_mls: isMls,
         is_renewal: isRenewal,
+        allows_second_seat: allowsSecondSeat,
         mls_level: isMls ? (mlsLevel || null) : null,
         color: color,
         deliverables: JSON.parse(JSON.stringify(deliverables)),
@@ -604,6 +609,14 @@ export default function Products() {
                       onCheckedChange={setIsRenewal}
                     />
                     <Label htmlFor="is-renewal" className="mb-0">Renovação</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="allows-second-seat"
+                      checked={allowsSecondSeat}
+                      onCheckedChange={setAllowsSecondSeat}
+                    />
+                    <Label htmlFor="allows-second-seat" className="mb-0">Aceita 2ª cadeira</Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
