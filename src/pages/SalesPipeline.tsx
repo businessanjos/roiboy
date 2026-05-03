@@ -43,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MultiSelectFilter } from "@/components/renewals/MultiSelectFilter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -163,12 +164,12 @@ export default function SalesPipeline() {
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
   const [wonDateEnd, setWonDateEnd] = usePersistedFilter<string>("salesPipeline", "wonDateEnd", "");
   const [wonDatePopoverOpen, setWonDatePopoverOpen] = useState(false);
-  const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string>("salesPipeline", "wonSellerFilter", "all");
-  const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string>("salesPipeline", "wonProductFilter", "all");
+  const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string[]>("salesPipeline", "wonSellerFilterMulti", []);
+  const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string[]>("salesPipeline", "wonProductFilterMulti", []);
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
   const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
-  const [lostSellerFilter, setLostSellerFilter] = usePersistedFilter<string>("salesPipeline", "lostSellerFilter", "all");
-  const [lostProductFilter, setLostProductFilter] = usePersistedFilter<string>("salesPipeline", "lostProductFilter", "all");
+  const [lostSellerFilter, setLostSellerFilter] = usePersistedFilter<string[]>("salesPipeline", "lostSellerFilterMulti", []);
+  const [lostProductFilter, setLostProductFilter] = usePersistedFilter<string[]>("salesPipeline", "lostProductFilterMulti", []);
   
   // Fetch deal→product mapping from contracts for won AND lost deals
   const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string; isUpsell?: boolean }>>({});
@@ -500,20 +501,21 @@ export default function SalesPipeline() {
       });
     }
 
-    if (wonSellerFilter !== 'all') {
-      result = result.filter(deal => deal.responsible_user_id === wonSellerFilter);
+    if (wonSellerFilter.length > 0) {
+      result = result.filter(deal => deal.responsible_user_id && wonSellerFilter.includes(deal.responsible_user_id));
     }
 
-    if (wonProductFilter !== 'all') {
-      const selectedEntry = availableWonProducts.find(([id]) => id === wonProductFilter);
-      const selectedName = selectedEntry?.[1]?.trim().toLowerCase() ?? '';
+    if (wonProductFilter.length > 0) {
+      const selectedNames = new Set(
+        wonProductFilter
+          .map(id => availableWonProducts.find(([pid]) => pid === id)?.[1]?.trim().toLowerCase())
+          .filter(Boolean) as string[]
+      );
+      const selectedIds = new Set(wonProductFilter);
       result = result.filter(deal => {
         const product = dealProductMap[deal.id];
         if (!product) return false;
-        return (
-          product.productId === wonProductFilter ||
-          product.productName.trim().toLowerCase() === selectedName
-        );
+        return selectedIds.has(product.productId) || selectedNames.has(product.productName.trim().toLowerCase());
       });
     }
     
@@ -596,17 +598,20 @@ export default function SalesPipeline() {
         return false;
       });
     }
-    if (lostSellerFilter !== 'all') {
-      result = result.filter(deal => deal.responsible_user_id === lostSellerFilter);
+    if (lostSellerFilter.length > 0) {
+      result = result.filter(deal => deal.responsible_user_id && lostSellerFilter.includes(deal.responsible_user_id));
     }
-    if (lostProductFilter !== 'all') {
-      const selectedEntry = availableLostProducts.find(([id]) => id === lostProductFilter);
-      const selectedName = selectedEntry?.[1]?.trim().toLowerCase();
+    if (lostProductFilter.length > 0) {
+      const selectedNames = new Set(
+        lostProductFilter
+          .map(id => availableLostProducts.find(([pid]) => pid === id)?.[1]?.trim().toLowerCase())
+          .filter(Boolean) as string[]
+      );
+      const selectedIds = new Set(lostProductFilter);
       result = result.filter(deal => {
         const product = dealProductMap[deal.id];
         if (!product) return false;
-        return product.productId === lostProductFilter || 
-               product.productName.trim().toLowerCase() === selectedName;
+        return selectedIds.has(product.productId) || selectedNames.has(product.productName.trim().toLowerCase());
       });
     }
     return result;
@@ -1468,30 +1473,22 @@ export default function SalesPipeline() {
                         </div>
                       </PopoverContent>
                     </Popover>
-                    <Select value={wonSellerFilter} onValueChange={setWonSellerFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
-                        <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os vendedores" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os vendedores</SelectItem>
-                        {availableWonSellers.map(([id, name]) => (
-                          <SelectItem key={id} value={id}>{name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={wonProductFilter} onValueChange={setWonProductFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
-                        <Package className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os produtos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os produtos</SelectItem>
-                        {availableWonProducts.map(([id, name]) => (
-                          <SelectItem key={id} value={id}>{name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelectFilter
+                      label=""
+                      placeholder="Todos os vendedores"
+                      width="w-full sm:w-[180px]"
+                      options={availableWonSellers.map(([id, name]) => ({ value: id, label: name }))}
+                      selected={wonSellerFilter}
+                      onChange={setWonSellerFilter}
+                    />
+                    <MultiSelectFilter
+                      label=""
+                      placeholder="Todos os produtos"
+                      width="w-full sm:w-[180px]"
+                      options={availableWonProducts.map(([id, name]) => ({ value: id, label: name }))}
+                      selected={wonProductFilter}
+                      onChange={setWonProductFilter}
+                    />
                   </div>
                 )}
 
@@ -1521,30 +1518,22 @@ export default function SalesPipeline() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Select value={lostSellerFilter} onValueChange={setLostSellerFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
-                        <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os vendedores" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os vendedores</SelectItem>
-                        {availableLostSellers.map(([id, name]) => (
-                          <SelectItem key={id} value={id}>{name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={lostProductFilter} onValueChange={setLostProductFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
-                        <Package className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os produtos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os produtos</SelectItem>
-                        {availableLostProducts.map(([id, name]) => (
-                          <SelectItem key={id} value={id}>{name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelectFilter
+                      label=""
+                      placeholder="Todos os vendedores"
+                      width="w-full sm:w-[180px]"
+                      options={availableLostSellers.map(([id, name]) => ({ value: id, label: name }))}
+                      selected={lostSellerFilter}
+                      onChange={setLostSellerFilter}
+                    />
+                    <MultiSelectFilter
+                      label=""
+                      placeholder="Todos os produtos"
+                      width="w-full sm:w-[180px]"
+                      options={availableLostProducts.map(([id, name]) => ({ value: id, label: name }))}
+                      selected={lostProductFilter}
+                      onChange={setLostProductFilter}
+                    />
                   </div>
                 )}
               </div>
