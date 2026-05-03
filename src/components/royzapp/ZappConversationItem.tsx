@@ -165,6 +165,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               "truncate text-sm flex-1 inline-flex items-center gap-1",
               contact.unreadCount > 0 ? "text-zapp-text font-semibold" : "text-zapp-text font-medium"
             )}>
+              <CountryFlag phone={contact.phone} className="text-xs leading-none flex-shrink-0" />
               <span className="truncate">{contact.name}</span>
               <VipBadge clientId={clientId} />
             </span>
