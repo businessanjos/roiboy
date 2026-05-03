@@ -1076,7 +1076,7 @@ export default function Dashboard() {
             <div style={{ zoom: focusZoom / 100 }}>
             {/* Clientes por Produto */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {products.map((product) => {
+              {visibleProducts.map((product) => {
                 const clientCount = clients.filter(c => c.product_ids?.includes(product.id)).length;
                 return (
                   <Card key={product.id}>
