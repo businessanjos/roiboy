@@ -17,6 +17,7 @@ import {
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
 type CalEvent = {
   id: string;
@@ -256,12 +257,32 @@ export default function SalesCalendar() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {googleConnected === false && (
-            <Link to="/account-settings">
-              <Badge variant="outline" className="gap-1.5 cursor-pointer hover:bg-accent">
-                <AlertCircle className="h-3 w-3" />
-                Conectar Google Agenda
-              </Badge>
-            </Link>
+            <Badge
+              variant="outline"
+              className="gap-1.5 cursor-pointer hover:bg-accent"
+              onClick={async () => {
+                try {
+                  const { data, error } = await supabase.functions.invoke("oauth-init", {
+                    body: { provider: "google", redirect_path: "/sales-calendar" },
+                  });
+                  if (error) throw error;
+                  if (data?.auth_url) {
+                    window.location.href = data.auth_url;
+                  } else {
+                    throw new Error("URL de autenticação não retornada");
+                  }
+                } catch (e: any) {
+                  toast({
+                    title: "Erro ao conectar",
+                    description: e.message || "Não foi possível iniciar a conexão com o Google.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              <AlertCircle className="h-3 w-3" />
+              Conectar Google Agenda
+            </Badge>
           )}
           {googleConnected === true && (
             <Badge variant="outline" className="gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-300">
