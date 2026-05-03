@@ -70,6 +70,8 @@ export function RenewalLosses() {
   const [filterPeriod, setFilterPeriod] = useState("90");
   const [filterConsultora, setFilterConsultora] = useState("all");
   const [filterOutcome, setFilterOutcome] = useState("all");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [editItem, setEditItem] = useState<ExpiredContract | null>(null);
   const [editReason, setEditReason] = useState("");
   const [editNotes, setEditNotes] = useState("");
