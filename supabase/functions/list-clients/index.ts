@@ -353,18 +353,22 @@ Deno.serve(async (req) => {
 
     const applyCommonFilters = (q: any) => {
       if (search) {
-        const searchTerms = search
-          .trim()
+        // Normalize: strip accents + lowercase to match generated normalized columns
+        const stripAccents = (s: string) =>
+          s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const normalized = stripAccents(search.trim());
+        const searchTerms = normalized
           .split(/\s+/)
           .filter((s: string) => s.length > 0);
 
         if (searchTerms.length === 1) {
+          const term = searchTerms[0];
           q = q.or(
-            `full_name.ilike.%${searchTerms[0]}%,phone_e164.ilike.%${searchTerms[0]}%,company_name.ilike.%${searchTerms[0]}%`
+            `full_name_normalized.ilike.%${term}%,phone_e164.ilike.%${term}%,company_name_normalized.ilike.%${term}%`
           );
         } else {
           for (const term of searchTerms) {
-            q = q.ilike("full_name", `%${term}%`);
+            q = q.ilike("full_name_normalized", `%${term}%`);
           }
         }
       }
