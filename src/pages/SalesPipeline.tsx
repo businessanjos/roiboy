@@ -597,17 +597,20 @@ export default function SalesPipeline() {
         return false;
       });
     }
-    if (lostSellerFilter !== 'all') {
-      result = result.filter(deal => deal.responsible_user_id === lostSellerFilter);
+    if (lostSellerFilter.length > 0) {
+      result = result.filter(deal => deal.responsible_user_id && lostSellerFilter.includes(deal.responsible_user_id));
     }
-    if (lostProductFilter !== 'all') {
-      const selectedEntry = availableLostProducts.find(([id]) => id === lostProductFilter);
-      const selectedName = selectedEntry?.[1]?.trim().toLowerCase();
+    if (lostProductFilter.length > 0) {
+      const selectedNames = new Set(
+        lostProductFilter
+          .map(id => availableLostProducts.find(([pid]) => pid === id)?.[1]?.trim().toLowerCase())
+          .filter(Boolean) as string[]
+      );
+      const selectedIds = new Set(lostProductFilter);
       result = result.filter(deal => {
         const product = dealProductMap[deal.id];
         if (!product) return false;
-        return product.productId === lostProductFilter || 
-               product.productName.trim().toLowerCase() === selectedName;
+        return selectedIds.has(product.productId) || selectedNames.has(product.productName.trim().toLowerCase());
       });
     }
     return result;
