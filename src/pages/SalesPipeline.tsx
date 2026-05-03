@@ -278,24 +278,27 @@ export default function SalesPipeline() {
         });
       }
 
-      const mergedMap: Record<string, { productId: string; productName: string; isUpsell?: boolean }> = { ...contractMap };
+      const mergedMap: Record<string, { productId: string; productName: string; isUpsell?: boolean }> = {};
       outcomeDeals.forEach((deal) => {
-        if (mergedMap[deal.id]) {
-          // Also flag as upsell if deal title contains "upsell"
-          if (!mergedMap[deal.id].isUpsell && deal.title?.toLowerCase().includes('upsell')) {
-            mergedMap[deal.id].isUpsell = true;
-          }
+        const rawValue = fallbackRawMap[deal.id];
+        const contractProduct = contractMap[deal.id];
+        const isUpsell = contractProduct?.isUpsell || deal.title?.toLowerCase().includes('upsell');
+
+        // The deal's "Item da Venda" is the source of truth for labels/filters.
+        // The generated contract may point to the parent/base product, which would
+        // incorrectly merge renewal SKUs like "Ren. Rykas Mentoring" into "Rykas Mentoring".
+        if (rawValue) {
+          mergedMap[deal.id] = {
+            productId: rawValue,
+            productName: optionMap[rawValue] || productNameById[rawValue] || rawValue,
+            isUpsell,
+          };
           return;
         }
 
-        const rawValue = fallbackRawMap[deal.id];
-        if (!rawValue) return;
-
-        mergedMap[deal.id] = {
-          productId: rawValue,
-          productName: optionMap[rawValue] || productNameById[rawValue] || rawValue,
-          isUpsell: deal.title?.toLowerCase().includes('upsell'),
-        };
+        if (contractProduct) {
+          mergedMap[deal.id] = { ...contractProduct, isUpsell };
+        }
       });
 
       setDealProductMap(mergedMap);
