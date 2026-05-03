@@ -114,7 +114,14 @@ export default function Dashboard() {
     isLoading: loading, 
     refetchAll 
   } = useDashboardData();
-  
+
+  // Hide renewal-only / deprecated products from "Clientes por Produto" cards
+  const HIDDEN_PRODUCT_NAMES = ["Ren. Rykas Mentoring", "Ren. Eternum Club", "Ren. Eternum Private", "Rykas Pass", "Consultoria Premium"];
+  const visibleProducts = useMemo(
+    () => products.filter((p: any) => !HIDDEN_PRODUCT_NAMES.includes((p.name ?? "").trim())),
+    [products],
+  );
+
   // Contract stats from RPC for accurate Gestão metrics
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
 
