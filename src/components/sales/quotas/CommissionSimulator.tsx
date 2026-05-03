@@ -253,9 +253,28 @@ export function CommissionSimulator() {
           ? `${times}× — ${s.custom_prize_description || "prêmio personalizado"}`
           : `Precisa de ${target} venda(s)`;
       } else if (prizeType === "payment_method") {
-        const tiers = Array.isArray(s.payment_tiers) ? s.payment_tiers.length : 0;
-        computed = 0;
-        detail = `${tiers} faixa(s) por forma de pagamento`;
+        // Calcula bônus aplicando cada faixa às linhas do Mix de Pagamento
+        const tiers = Array.isArray(s.payment_tiers) ? s.payment_tiers : [];
+        let bonusSum = 0;
+        let matched = 0;
+        for (const row of mixRows) {
+          for (const t of tiers as any[]) {
+            const min = Number(t.min_parcelas || 1);
+            const max = Number(t.max_parcelas || min);
+            const isCash = row.parcelas === 1;
+            const matchesParcelas = row.parcelas >= min && row.parcelas <= max;
+            const matchesCash = isCash && t.includes_cash;
+            if (matchesParcelas || matchesCash) {
+              bonusSum += row.qty * Number(t.bonus || 0);
+              matched += row.qty;
+              break;
+            }
+          }
+        }
+        computed = bonusSum;
+        detail = matched > 0
+          ? `${matched} venda(s) elegível(eis) em ${tiers.length} faixa(s)`
+          : `${tiers.length} faixa(s) — nenhuma venda do mix se enquadrou`;
       } else {
         const target = Number(s.target_quantity || 0);
         const times = target > 0 ? Math.floor(wholeSalesCount / target) : 0;
