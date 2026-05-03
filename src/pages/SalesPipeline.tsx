@@ -1040,6 +1040,72 @@ export default function SalesPipeline() {
             toast.warning("Negócio será marcado como ganho, mas o contrato precisará ser criado manualmente.");
           } else if (newContract) {
             contractCreated = true;
+
+            // STEP 5.1: If this is a renewal deal, link to parent contract and register renewal outcome
+            try {
+              const { data: dealRenewalInfo } = await supabase
+                .from("deals")
+                .select("source, source_contract_id, tags")
+                .eq("id", dealId)
+                .maybeSingle();
+
+              const isRenewalDeal =
+                dealRenewalInfo?.source === "contract_renewal" ||
+                (Array.isArray(dealRenewalInfo?.tags) && dealRenewalInfo!.tags.includes("renovação"));
+
+              if (isRenewalDeal && dealRenewalInfo?.source_contract_id) {
+                const parentContractId = dealRenewalInfo.source_contract_id;
+
+                // Link new contract to the parent (so it's treated as a child renewal)
+                const { error: linkError } = await supabase
+                  .from("client_contracts")
+                  .update({ parent_contract_id: parentContractId })
+                  .eq("id", newContract.id);
+
+                if (linkError) {
+                  console.error("[MarkAsWon] Error linking parent_contract_id:", linkError);
+                }
+
+                // Upsert renewal_outcomes as 'renewed' so /renewals reflects the closure
+                const { data: existingOutcome } = await supabase
+                  .from("renewal_outcomes")
+                  .select("id")
+                  .eq("contract_id", parentContractId)
+                  .maybeSingle();
+
+                const outcomePayload = {
+                  account_id: currentUser.account_id,
+                  client_id: clientId,
+                  contract_id: parentContractId,
+                  outcome: "renewed",
+                  new_contract_id: newContract.id,
+                  renewal_value: deal.value || 0,
+                  resolved_at: new Date().toISOString(),
+                  resolved_by: currentUser.id,
+                  loss_reason: null,
+                  loss_notes: `Renovado automaticamente via deal ganho: ${deal.title}`,
+                };
+
+                if (existingOutcome?.id) {
+                  const { error: updErr } = await supabase
+                    .from("renewal_outcomes")
+                    .update(outcomePayload)
+                    .eq("id", existingOutcome.id);
+                  if (updErr) console.error("[MarkAsWon] Error updating renewal_outcome:", updErr);
+                } else {
+                  const { error: insErr } = await supabase
+                    .from("renewal_outcomes")
+                    .insert(outcomePayload);
+                  if (insErr) console.error("[MarkAsWon] Error inserting renewal_outcome:", insErr);
+                }
+
+                console.log("[MarkAsWon] Renewal loop closed for parent contract:", parentContractId);
+              }
+            } catch (renewalErr) {
+              console.error("[MarkAsWon] Error closing renewal loop:", renewalErr);
+              // Non-blocking
+            }
+
             // Send notifications to operations and financial teams
             await notifyContractCreated({
               contractId: newContract.id,
