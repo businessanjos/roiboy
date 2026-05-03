@@ -2488,6 +2488,7 @@ export type Database = {
           cnpj: string | null
           companies: Json | null
           company_name: string | null
+          company_name_normalized: string | null
           complement: string | null
           contract_end_date: string | null
           contract_start_date: string | null
@@ -2496,6 +2497,7 @@ export type Database = {
           created_at: string
           emails: Json | null
           full_name: string
+          full_name_normalized: string | null
           id: string
           instagram: string | null
           instagrams: Json | null
@@ -2544,6 +2546,7 @@ export type Database = {
           cnpj?: string | null
           companies?: Json | null
           company_name?: string | null
+          company_name_normalized?: string | null
           complement?: string | null
           contract_end_date?: string | null
           contract_start_date?: string | null
@@ -2552,6 +2555,7 @@ export type Database = {
           created_at?: string
           emails?: Json | null
           full_name: string
+          full_name_normalized?: string | null
           id?: string
           instagram?: string | null
           instagrams?: Json | null
@@ -2600,6 +2604,7 @@ export type Database = {
           cnpj?: string | null
           companies?: Json | null
           company_name?: string | null
+          company_name_normalized?: string | null
           complement?: string | null
           contract_end_date?: string | null
           contract_start_date?: string | null
@@ -2608,6 +2613,7 @@ export type Database = {
           created_at?: string
           emails?: Json | null
           full_name?: string
+          full_name_normalized?: string | null
           id?: string
           instagram?: string | null
           instagrams?: Json | null
@@ -17211,6 +17217,7 @@ export type Database = {
         Returns: string[]
       }
       get_user_account_id: { Args: never; Returns: string }
+      immutable_unaccent: { Args: { "": string }; Returns: string }
       increment_template_usage: {
         Args: { template_id: string }
         Returns: undefined
@@ -17261,10 +17268,13 @@ export type Database = {
         }
         Returns: Json
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       submit_rsvp_response: {
         Args: { p_status: string; p_token: string }
         Returns: Json
       }
+      unaccent: { Args: { "": string }; Returns: string }
       unaccent_immutable: { Args: { p_text: string }; Returns: string }
       use_coupon: {
         Args: {
