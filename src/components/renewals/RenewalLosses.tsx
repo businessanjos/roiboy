@@ -721,13 +721,64 @@ export function RenewalLosses() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[240px]">Cliente</TableHead>
-                  <TableHead className="text-center">Consultora</TableHead>
-                  <TableHead className="text-center">Produto</TableHead>
-                  <TableHead className="text-center">Valor Renovação</TableHead>
-                  <TableHead className="text-center">Venceu em</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Motivo</TableHead>
+                  <TableHead className="w-[240px]">
+                    <SearchHeader label="Cliente" value={searchClient} onChange={setSearchClient} align="start" />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <MultiSelectHeader
+                      label="Consultora"
+                      options={uniqueConsultoras.sort()}
+                      selected={filterConsultora}
+                      onChange={setFilterConsultora}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <MultiSelectHeader
+                      label="Produto"
+                      options={uniqueProdutos.sort()}
+                      selected={filterProduto}
+                      onChange={setFilterProduto}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <SortHeader
+                      label="Valor Renovação"
+                      active={sortKey === "value"}
+                      dir={sortDir}
+                      onClick={() => {
+                        if (sortKey === "value") setSortDir(d => d === "asc" ? "desc" : "asc");
+                        else { setSortKey("value"); setSortDir("desc"); }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <SortHeader
+                      label="Venceu em"
+                      active={sortKey === "date"}
+                      dir={sortDir}
+                      onClick={() => {
+                        if (sortKey === "date") setSortDir(d => d === "asc" ? "desc" : "asc");
+                        else { setSortKey("date"); setSortDir("desc"); }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <MultiSelectHeader
+                      label="Status"
+                      options={["renewed", "lost", "pending"]}
+                      selected={filterStatus}
+                      onChange={setFilterStatus}
+                      formatLabel={(v) => v === "renewed" ? "Renovados" : v === "lost" ? "Perdidos" : "Pendentes"}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
+                    <MultiSelectHeader
+                      label="Motivo"
+                      options={uniqueMotivos.sort()}
+                      selected={filterMotivo}
+                      onChange={setFilterMotivo}
+                    />
+                  </TableHead>
                   <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
