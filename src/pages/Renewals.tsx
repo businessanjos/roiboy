@@ -305,6 +305,29 @@ export default function Renewals() {
 
       const dedupedFiltered = deduped.filter((c: any) => !hasSuccessor(c));
 
+      // Fallback: for contracts without product_id (or without products join), look up
+      // client_products to infer the product from the client's linked products.
+      const needsProductFallback = dedupedFiltered.filter((c: any) => !c.products);
+      if (needsProductFallback.length > 0) {
+        const fallbackClientIds = [...new Set(needsProductFallback.map((c: any) => c.client_id))];
+        const { data: cp } = await supabase
+          .from("client_products")
+          .select("client_id, product_id, created_at, products(name, color, price, cash_price, installment_price, renewal_discount_percent)")
+          .eq("account_id", currentUser.account_id)
+          .in("client_id", fallbackClientIds)
+          .order("created_at", { ascending: false });
+        const productByClient: Record<string, any> = {};
+        (cp || []).forEach((row: any) => {
+          if (!productByClient[row.client_id] && row.products) {
+            productByClient[row.client_id] = row.products;
+          }
+        });
+        needsProductFallback.forEach((c: any) => {
+          const fallback = productByClient[c.client_id];
+          if (fallback) c.products = fallback;
+        });
+      }
+
       // Fetch all outcomes for these contracts to know which are already resolved
       const allContractIds = dedupedFiltered.map((c: any) => c.id);
       let allOutcomesMap: Record<string, { id: string; outcome: string }> = {};
