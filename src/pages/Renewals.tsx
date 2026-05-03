@@ -701,6 +701,8 @@ export default function Renewals() {
               ))}
             </TableBody>
           </Table>
+            )}
+          </>
         )}
       </CardContent>
       {!loading && list.length > PAGE_SIZE && (
