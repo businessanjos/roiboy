@@ -161,10 +161,11 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               </span>
             )}
             <span className={cn(
-              "truncate text-sm flex-1",
+              "truncate text-sm flex-1 inline-flex items-center gap-1",
               contact.unreadCount > 0 ? "text-zapp-text font-semibold" : "text-zapp-text font-medium"
             )}>
-              {contact.name}
+              <span className="truncate">{contact.name}</span>
+              <VipBadge clientId={clientId} />
             </span>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
