@@ -2112,6 +2112,28 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* País (DDI) Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">País (DDI)</Label>
+                <Select value={filterCountry} onValueChange={setFilterCountry}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todos os países</SelectItem>
+                    {countryOptions.map((opt) => (
+                      <SelectItem key={opt.code} value={opt.code}>
+                        <span className="inline-flex items-center gap-2">
+                          <span>{opt.flag}</span>
+                          <span>{opt.name}</span>
+                          <span className="text-muted-foreground text-xs">({opt.count})</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Clear Filters Button */}
               {activeFilterCount > 0 && (
                 <div className="flex items-end">
