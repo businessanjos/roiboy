@@ -582,13 +582,13 @@ export default function Dashboard() {
                 </PopoverContent>
               </Popover>
             )}
-            {(gestaoProductFilter !== "all" || gestaoPeriodFilter !== "6" || gestaoCustomDateRange) && (
+            {(gestaoProductFilter !== "all" || gestaoPeriodFilter !== "year" || gestaoCustomDateRange) && (
               <Button 
                 variant="ghost" 
                 size="sm"
                 onClick={() => {
                   setGestaoProductFilter("all");
-                  setGestaoPeriodFilter("6");
+                  setGestaoPeriodFilter("year");
                   setGestaoCustomDateRange(undefined);
                 }}
                 className="h-9 text-muted-foreground hover:text-foreground"
