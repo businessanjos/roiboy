@@ -243,6 +243,30 @@ export default function SalesCalendar() {
     googleQuery.refetch();
   };
 
+  const reloadGoogleCalendar = async () => {
+    try {
+      const result = await googleQuery.refetch();
+      if (result.data?.connected) {
+        toast({
+          title: "Calendário recarregado",
+          description: `${result.data.events?.length ?? 0} evento(s) do Google Agenda carregado(s).`,
+        });
+      } else {
+        toast({
+          title: "Google Agenda não conectado",
+          description: "Conecte sua conta do Google para ver os eventos.",
+          variant: "destructive",
+        });
+      }
+    } catch (e: any) {
+      toast({
+        title: "Erro ao recarregar",
+        description: e?.message || "Não foi possível recarregar os eventos.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const isLoading = tasksQuery.isLoading || meetingsQuery.isLoading || googleQuery.isLoading;
   const googleConnected = googleQuery.data?.connected;
 
@@ -285,10 +309,22 @@ export default function SalesCalendar() {
             </Badge>
           )}
           {googleConnected === true && (
-            <Badge variant="outline" className="gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-300">
-              <CheckCircle2 className="h-3 w-3" />
-              Google Agenda conectado
-            </Badge>
+            <>
+              <Badge variant="outline" className="gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-300">
+                <CheckCircle2 className="h-3 w-3" />
+                Google Agenda conectado
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={reloadGoogleCalendar}
+                className="h-8 gap-1.5"
+                disabled={googleQuery.isFetching}
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", googleQuery.isFetching && "animate-spin")} />
+                Recarregar calendário
+              </Button>
+            </>
           )}
           <Button
             variant={filterMine ? "default" : "outline"}
