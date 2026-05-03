@@ -1880,9 +1880,12 @@ function DealListView({
                       if (product) {
                         const productColorMap: Record<string, string> = {
                           'Eternum Club': '#0f172a',
+                          'Ren. Eternum Club': '#0f172a',
                           'Eternum MVP': '#d4a937',
                           'Rykas Mentoring': '#6A5ACD',
+                          'Ren. Rykas Mentoring': '#6A5ACD',
                           'Eternum Private': '#1C1C1C',
+                          'Ren. Eternum Private': '#1C1C1C',
                           'Conselho': '#2F4F4F',
                         };
                         const color = productColorMap[product.productName] || '#059669';
