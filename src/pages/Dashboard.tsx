@@ -399,13 +399,13 @@ export default function Dashboard() {
     return { totalLost, cancelledValue, endedValue, count: lostContracts.length };
   }, [contractData]);
 
-  // Churn rate within filtered period: cancellations / (active + cancellations)
+  // Churn rate within filtered period: cancellations / active contracts base
   const churnMetrics = useMemo(() => {
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
-    const activeBase = (contractStats?.active ?? gestaoClientStats.active) + cancelamentos;
+    const activeBase = contractStats?.active ?? gestaoClientStats.active;
     const rate = activeBase > 0 ? (cancelamentos / activeBase) * 100 : 0;
-    return { rate, cancelamentos, novos };
+    return { rate, cancelamentos, novos, activeBase };
   }, [monthlyChartData, contractStats, gestaoClientStats]);
 
   // NPS from latest vNPS snapshot per client (within current account)
