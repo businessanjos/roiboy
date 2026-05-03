@@ -376,16 +376,34 @@ export const TemplatedContractPreview = ({
   placeholderValues,
 }: TemplatedContractPreviewProps) => {
   const forceReadablePillarsLayout = (html: string) => {
-    if (!html.includes("rk-pillars")) return html;
+    if (!html.includes("rk-pillars") && !html.includes("rk-clause")) return html;
     const override = `<style>
+/* === Cláusulas: nunca espremer conteúdo na coluna do número === */
+.contract-document .rk-clause{display:grid!important;grid-template-columns:42px minmax(0,1fr)!important;column-gap:14px!important;align-items:start!important;}
+.contract-document .rk-clause > *:not(.rk-clause-num){grid-column:2!important;min-width:0!important;max-width:100%!important;overflow-wrap:break-word!important;}
+.contract-document .rk-clause .rk-clause-num{grid-column:1!important;grid-row:1!important;}
+.contract-document .rk-clause p,.contract-document .rk-clause li,.contract-document .rk-clause ul,.contract-document .rk-clause ol{min-width:0!important;max-width:100%!important;}
+.contract-document .rk-clause ul,.contract-document .rk-clause ol{padding-left:22px!important;margin:6px 0 10px!important;}
+.contract-document .rk-clause li{margin:3px 0!important;line-height:1.55!important;}
+
+/* === Quadro 3P1R: layout em linhas largas, à prova de A4 === */
 .contract-document .rk-pillars{display:block!important;margin:30px 0!important;border:1px solid var(--ink,#000)!important;background:#fff!important;border-radius:0!important;overflow:hidden!important;}
 .contract-document .rk-pillars::before{content:"MÉTODO 3P1R · JORNADA DE IMPLEMENTAÇÃO";display:block!important;padding:12px 22px!important;background:var(--ink,#000)!important;color:#fff!important;font-size:7.5pt!important;font-weight:800!important;letter-spacing:.22em!important;text-transform:uppercase!important;}
-.contract-document .rk-pillar{position:relative!important;display:grid!important;grid-template-columns:88px 150px minmax(0,1fr)!important;gap:20px!important;align-items:start!important;padding:22px 24px!important;border-right:none!important;border-bottom:1px solid var(--line,#e5e5e5)!important;background:#fff!important;}
+.contract-document .rk-pillar{position:relative!important;display:grid!important;grid-template-columns:72px 130px minmax(0,1fr)!important;gap:18px!important;align-items:start!important;padding:22px 24px 22px 28px!important;border-right:none!important;border-bottom:1px solid var(--line,#e5e5e5)!important;background:#fff!important;}
 .contract-document .rk-pillar:last-child{border-bottom:none!important;}
 .contract-document .rk-pillar::before{content:""!important;position:absolute!important;left:0!important;top:0!important;bottom:0!important;width:5px!important;background:var(--ink,#000)!important;}
-.contract-document .rk-pillar .num{font-family:'Geist','Inter',sans-serif!important;font-size:34pt!important;font-weight:850!important;color:var(--ink,#000)!important;line-height:.88!important;letter-spacing:-.04em!important;margin:0!important;text-align:right!important;}
+.contract-document .rk-pillar > *{min-width:0!important;}
+.contract-document .rk-pillar .num{font-family:'Geist','Inter',sans-serif!important;font-size:32pt!important;font-weight:850!important;color:var(--ink,#000)!important;line-height:.88!important;letter-spacing:-.04em!important;margin:0!important;text-align:right!important;}
 .contract-document .rk-pillar .name{font-size:8pt!important;font-weight:800!important;letter-spacing:.16em!important;text-transform:uppercase!important;color:var(--ink,#000)!important;line-height:1.45!important;margin:5px 0 0!important;padding:0!important;border-bottom:none!important;}
-.contract-document .rk-pillar .desc{font-size:10pt!important;color:var(--muted,#6b6b70)!important;line-height:1.62!important;text-align:left!important;hyphens:none!important;word-break:normal!important;overflow-wrap:normal!important;margin:2px 0 0!important;max-width:none!important;}
+.contract-document .rk-pillar .desc{font-size:10pt!important;color:var(--muted,#6b6b70)!important;line-height:1.62!important;text-align:left!important;hyphens:none!important;word-break:normal!important;overflow-wrap:break-word!important;margin:2px 0 0!important;max-width:100%!important;}
+
+/* === Responsividade: em telas estreitas (< 720px) empilha === */
+@media (max-width: 720px){
+  .contract-document .rk-pillar{grid-template-columns:64px minmax(0,1fr)!important;}
+  .contract-document .rk-pillar .num{grid-row:1;grid-column:1;text-align:left!important;font-size:26pt!important;}
+  .contract-document .rk-pillar .name{grid-row:1;grid-column:2;align-self:center!important;}
+  .contract-document .rk-pillar .desc{grid-column:1 / -1;margin-top:8px!important;}
+}
 </style>`;
     return html.includes("</style>") ? html.replace(/<\/style>/i, `</style>${override}`) : `${override}${html}`;
   };
