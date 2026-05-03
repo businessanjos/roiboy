@@ -192,6 +192,29 @@ export const DigitalContractTab = ({
         if (cancelled) return;
 
         if (existing) {
+          let loadedTemplateHtml = (existing as any).template_html ?? null;
+          let loadedTemplateVariables = ((existing as any).template_variables as TemplateVariableDef[]) ?? [];
+          let loadedProductId = (existing as any).product_id ?? null;
+          const canUseLatestTemplate =
+            existing.status === "draft" &&
+            !!(existing as any).template_id &&
+            !existing.zapsign_document_token &&
+            !existing.signed_at;
+
+          if (canUseLatestTemplate) {
+            const { data: latestTemplate, error: tplError } = await supabase
+              .from("contract_templates" as any)
+              .select("content_html,variables,product_id")
+              .eq("id", (existing as any).template_id)
+              .maybeSingle();
+            const tpl = latestTemplate as any;
+            if (!tplError && tpl?.content_html) {
+              loadedTemplateHtml = tpl.content_html;
+              loadedTemplateVariables = ((tpl.variables as TemplateVariableDef[]) ?? loadedTemplateVariables);
+              loadedProductId = loadedProductId ?? tpl.product_id ?? null;
+            }
+          }
+
           setContract({
             id: existing.id,
             contract_number: existing.contract_number,
@@ -203,9 +226,9 @@ export const DigitalContractTab = ({
           });
           setData(rowToData(existing));
           setTemplateId((existing as any).template_id ?? null);
-          setProductId((existing as any).product_id ?? null);
-          setTemplateHtml((existing as any).template_html ?? null);
-          setTemplateVariables(((existing as any).template_variables as TemplateVariableDef[]) ?? []);
+          setProductId(loadedProductId);
+          setTemplateHtml(loadedTemplateHtml);
+          setTemplateVariables(loadedTemplateVariables);
           setPlaceholderValues(((existing as any).placeholder_values as Record<string, any>) ?? {});
         } else {
           const { data: defaults } = await supabase
