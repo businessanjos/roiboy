@@ -227,8 +227,9 @@ export function CommissionSimulator() {
       annualBonus,
       monthlyBase,
       totalEarnings,
+      effectiveAchievementPct,
     };
-  }, [selectedUserId, achievementPct, quotas, productRates, tiers, plans, collaborators, products, salesPositionIds]);
+  }, [selectedUserId, simMode, achievementPct, salesCount, quotas, productRates, tiers, plans, collaborators, products, salesPositionIds]);
 
   return (
     <Card>
