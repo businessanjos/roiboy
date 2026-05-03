@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Heart, Users } from "lucide-react";
+import { ArrowLeft, Link2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,7 +57,7 @@ export default function DoubleChairList() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-pink-500" />
+            <Link2 className="h-5 w-5 text-pink-500" />
             Cadeira Dupla
             <Badge variant="secondary" className="ml-2">{pairs.length}</Badge>
           </CardTitle>
@@ -88,7 +88,7 @@ export default function DoubleChairList() {
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
-                    <Heart className="h-4 w-4 text-pink-500" />
+                    <Link2 className="h-4 w-4 text-pink-500" />
                     {p.related_client ? (
                       <Link
                         to={`/clients/${p.related_client.id}`}

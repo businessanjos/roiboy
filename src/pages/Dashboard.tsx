@@ -31,6 +31,7 @@ import {
   RefreshCw,
   Target,
   Heart,
+  Link2,
   Settings2,
   Cake,
   Baby,
@@ -781,7 +782,7 @@ export default function Dashboard() {
                       <p className="text-xs font-medium text-muted-foreground">Cadeira Dupla</p>
                       <p className="text-2xl font-bold text-pink-600">{doubleChairCount ?? 0}</p>
                     </div>
-                    <Heart className="h-5 w-5 text-pink-500" />
+                    <Link2 className="h-5 w-5 text-pink-500" />
                   </div>
                 </CardContent>
               </Card>
@@ -1140,7 +1141,7 @@ export default function Dashboard() {
                         <p className="text-sm font-medium text-muted-foreground">Cadeira Dupla</p>
                         <p className="text-4xl font-bold text-pink-600">{doubleChairCount ?? 0}</p>
                       </div>
-                      <Heart className="h-8 w-8 text-pink-500" />
+                      <Link2 className="h-8 w-8 text-pink-500" />
                     </div>
                   </CardContent>
                 </Card>
