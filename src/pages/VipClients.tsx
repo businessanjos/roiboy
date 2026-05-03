@@ -196,11 +196,30 @@ export default function VipClients() {
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 
-  const saveCriteria = () => {
+  const saveCriteria = async () => {
+    if (!currentUser?.account_id) return;
+    setSavingCriteria(true);
+    const { error } = await supabase
+      .from("vip_criteria")
+      .upsert(
+        {
+          account_id: currentUser.account_id,
+          min_received: draft.min_received,
+          min_ltv_months: draft.min_ltv_months,
+          product_ids: draft.product_ids,
+          top_n: draft.top_n,
+          updated_by: currentUser.id,
+        },
+        { onConflict: "account_id" }
+      );
+    setSavingCriteria(false);
+    if (error) {
+      toast.error("Erro ao salvar critérios");
+      return;
+    }
     setCriteria(draft);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
     setSettingsOpen(false);
-    toast.success("Critérios atualizados");
+    toast.success("Critérios atualizados para todo o time");
   };
 
   const resetCriteria = () => setDraft(DEFAULT_CRITERIA);
