@@ -197,7 +197,67 @@ export function CommissionSimulator() {
     const collab = collaborators.find((c) => c.user_id === selectedUserId);
     const monthlyBase = collab ? Number(collab.salary) : 0;
 
-    const totalEarnings = monthlyBase + totalCommission + bonusValue + uncappedBonus;
+    // ── SPIFFs: estimativa de prêmios pagos ao vendedor pelas vendas simuladas ──
+    // Considera apenas SPIFFs ativos cujo período cobre o mês simulado e que se aplicam
+    // ao produto da simulação (Rykas Mentoring) ou a "Todos" (product_id null).
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0);
+    const applicableSpiffs = (spiffs ?? []).filter((s: any) => {
+      if (!s.is_active) return false;
+      const sd = s.start_date ? new Date(s.start_date) : null;
+      const ed = s.end_date ? new Date(s.end_date) : null;
+      if (sd && sd > monthEnd) return false;
+      if (ed && ed < monthStart) return false;
+      if (s.product_id && mentoringProduct?.id && s.product_id !== mentoringProduct.id) return false;
+      return true;
+    });
+
+    const spiffBreakdown: Array<{ name: string; estimate: number; detail: string }> = [];
+    let spiffTotal = 0;
+    for (const s of applicableSpiffs as any[]) {
+      const prizeType = s.prize_type || "fixed";
+      let estimate = 0;
+      let detail = "";
+
+      if (prizeType === "roulette") {
+        const trigger = Number(s.trigger_per_value || 0);
+        const minP = Number(s.roulette_min_prize || 0);
+        const maxP = Number(s.roulette_max_prize || 0);
+        const avgPrize = (minP + maxP) / 2;
+        const spins = trigger > 0 ? Math.floor(commissionableValue / trigger) : 0;
+        estimate = spins * avgPrize;
+        detail = `${spins} giro(s) × ~${fmt(avgPrize)} (média)`;
+      } else if (prizeType === "custom") {
+        const target = Number(s.trigger_sales_count || 0);
+        const times = target > 0 ? Math.floor(wholeSalesCount / target) : 0;
+        // Custom prize não tem valor monetário — pulamos do total mas mostramos
+        estimate = 0;
+        detail = times > 0
+          ? `${times}× — ${s.custom_prize_description || "prêmio personalizado"}`
+          : `Precisa de ${target} venda(s)`;
+      } else if (prizeType === "payment_method") {
+        // Sem dados de forma de pagamento simulada — exibimos como informativo
+        const tiers = Array.isArray(s.payment_tiers) ? s.payment_tiers.length : 0;
+        estimate = 0;
+        detail = `${tiers} faixa(s) por forma de pagamento`;
+      } else {
+        // Bônus fixo: paga por target_quantity unidades
+        const target = Number(s.target_quantity || 0);
+        const times = target > 0 ? Math.floor(wholeSalesCount / target) : 0;
+        if (s.bonus_type === "fixed") {
+          estimate = times * Number(s.bonus_amount || 0);
+          detail = `${times}× ${fmt(Number(s.bonus_amount || 0))} (cada ${target} unid.)`;
+        } else {
+          estimate = (times * target * avgTicket * Number(s.bonus_amount || 0)) / 100;
+          detail = `${times}× ${s.bonus_amount}% sobre ${target} unid.`;
+        }
+      }
+
+      spiffTotal += estimate;
+      spiffBreakdown.push({ name: s.name, estimate, detail });
+    }
+
+    const totalEarnings = monthlyBase + totalCommission + bonusValue + uncappedBonus + spiffTotal;
 
     return {
       noPlan: false,
