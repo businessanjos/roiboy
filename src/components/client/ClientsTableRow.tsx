@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CountryFlag } from "@/components/ui/CountryFlag";
 
 import { CustomField } from "@/components/custom-fields";
 import { FieldValueEditor } from "@/components/custom-fields";
