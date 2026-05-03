@@ -96,6 +96,7 @@ import { MergeDealDialog } from "./MergeDealDialog";
 import { ThreeCPlusCallButton } from "./ThreeCPlusCallButton";
 import { useDealMerge } from "@/hooks/useDealMerge";
 import { DEAL_FIELD_IDS } from "@/utils/dealToClientContractMapping";
+import { VipBadge } from "@/components/client/VipBadge";
 
 interface DealActivity {
   id: string;
