@@ -1473,30 +1473,22 @@ export default function SalesPipeline() {
                         </div>
                       </PopoverContent>
                     </Popover>
-                    <Select value={wonSellerFilter} onValueChange={setWonSellerFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
-                        <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os vendedores" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os vendedores</SelectItem>
-                        {availableWonSellers.map(([id, name]) => (
-                          <SelectItem key={id} value={id}>{name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={wonProductFilter} onValueChange={setWonProductFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
-                        <Package className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os produtos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os produtos</SelectItem>
-                        {availableWonProducts.map(([id, name]) => (
-                          <SelectItem key={id} value={id}>{name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelectFilter
+                      label=""
+                      placeholder="Todos os vendedores"
+                      width="w-full sm:w-[180px]"
+                      options={availableWonSellers.map(([id, name]) => ({ value: id, label: name }))}
+                      selected={wonSellerFilter}
+                      onChange={setWonSellerFilter}
+                    />
+                    <MultiSelectFilter
+                      label=""
+                      placeholder="Todos os produtos"
+                      width="w-full sm:w-[180px]"
+                      options={availableWonProducts.map(([id, name]) => ({ value: id, label: name }))}
+                      selected={wonProductFilter}
+                      onChange={setWonProductFilter}
+                    />
                   </div>
                 )}
 
