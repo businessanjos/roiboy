@@ -148,11 +148,14 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
+    let googleErrorText: string | null = null;
+
     if (r.status === 401 && tokenInfo.refreshToken) {
-      await r.text();
+      googleErrorText = await r.text();
       tokenInfo = await getGoogleAccessToken(supabase, authUserId, internalUserId, true);
       accessToken = tokenInfo.accessToken;
       if (accessToken && !tokenInfo.refreshFailed) {
+        googleErrorText = null;
         r = await fetch(url.toString(), {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -160,7 +163,7 @@ Deno.serve(async (req) => {
     }
 
     if (!r.ok) {
-      const errText = await r.text();
+      const errText = googleErrorText ?? await r.text();
       console.error("Google Calendar API error:", r.status, errText);
       const needsReconnect = r.status === 401;
       return new Response(
