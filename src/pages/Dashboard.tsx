@@ -399,13 +399,13 @@ export default function Dashboard() {
     return { totalLost, cancelledValue, endedValue, count: lostContracts.length };
   }, [contractData]);
 
-  // Churn rate within filtered period: cancellations / (active + cancellations)
+  // Churn rate within filtered period: cancellations / active contracts base
   const churnMetrics = useMemo(() => {
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
-    const activeBase = (contractStats?.active ?? gestaoClientStats.active) + cancelamentos;
+    const activeBase = contractStats?.active ?? gestaoClientStats.active;
     const rate = activeBase > 0 ? (cancelamentos / activeBase) * 100 : 0;
-    return { rate, cancelamentos, novos };
+    return { rate, cancelamentos, novos, activeBase };
   }, [monthlyChartData, contractStats, gestaoClientStats]);
 
   // NPS from latest vNPS snapshot per client (within current account)
@@ -834,7 +834,7 @@ export default function Dashboard() {
                     </div>
                     <p className={`text-4xl font-bold mt-2 ${churnColor}`}>{churnRate.toFixed(1)}%</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {churnMetrics.cancelamentos} cancelamentos · {churnMetrics.novos} novos no período
+                      {churnMetrics.cancelamentos} cancelamentos / {churnMetrics.activeBase} contratos ativos
                     </p>
                     <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden">
                       <div
