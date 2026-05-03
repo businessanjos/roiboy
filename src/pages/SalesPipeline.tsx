@@ -458,17 +458,20 @@ export default function SalesPipeline() {
       .sort((a, b) => a[1].localeCompare(b[1]));
   }, [wonDeals]);
 
-  // Available products for won deals filter (deduplicated by name)
+  // Available products for won deals filter (deduplicated by name, ignoring "Ren." prefix)
   const availableWonProducts = useMemo(() => {
+    const stripRen = (s: string) => s.trim().toLowerCase().replace(/^ren\.?\s+/i, '');
     const productsMap = new Map<string, string>();
-    const seenNames = new Set<string>();
+    const seenKeys = new Set<string>();
     wonDeals.forEach(deal => {
       const product = dealProductMap[deal.id];
       if (product) {
-        const normalizedName = product.productName.trim().toLowerCase();
-        if (!seenNames.has(normalizedName)) {
-          seenNames.add(normalizedName);
-          productsMap.set(product.productId, product.productName);
+        const key = stripRen(product.productName);
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          // Display the clean name (without "Ren.") so renewal+regular merge into one option
+          const cleanName = product.productName.replace(/^Ren\.?\s+/i, '').trim();
+          productsMap.set(product.productId, cleanName || product.productName);
         }
       }
     });
@@ -503,12 +506,19 @@ export default function SalesPipeline() {
     if (wonProductFilter !== 'all') {
       // Find the selected product name for cross-source matching
       const selectedEntry = availableWonProducts.find(([id]) => id === wonProductFilter);
-      const selectedName = selectedEntry?.[1]?.trim().toLowerCase();
+      const stripRen = (s: string) => s.trim().toLowerCase().replace(/^ren\.?\s+/i, '');
+      const selectedNameRaw = selectedEntry?.[1]?.trim().toLowerCase() ?? '';
+      const selectedNameClean = stripRen(selectedEntry?.[1] ?? '');
       result = result.filter(deal => {
         const product = dealProductMap[deal.id];
         if (!product) return false;
-        return product.productId === wonProductFilter || 
-               product.productName.trim().toLowerCase() === selectedName;
+        const productNameRaw = product.productName.trim().toLowerCase();
+        const productNameClean = stripRen(product.productName);
+        return (
+          product.productId === wonProductFilter ||
+          productNameRaw === selectedNameRaw ||
+          productNameClean === selectedNameClean
+        );
       });
     }
     
