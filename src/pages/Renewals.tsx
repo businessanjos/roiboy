@@ -957,6 +957,8 @@ export default function Renewals() {
             filteredUpcoming,
             "Nenhum contrato a vencer até o fim de 2026",
             "Todos os contratos estão com vencimento distante.",
+            upcomingPage,
+            setUpcomingPage,
           )}
         </TabsContent>
 
