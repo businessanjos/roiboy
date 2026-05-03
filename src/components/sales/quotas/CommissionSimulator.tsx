@@ -38,6 +38,11 @@ export function CommissionSimulator() {
   const [salesCount, setSalesCount] = useState(7);
   // Overrides por SPIFF: { [spiffId]: { included, estimate } }
   const [spiffOverrides, setSpiffOverrides] = useState<Record<string, { included: boolean; estimate: number | null }>>({});
+  // Mix de pagamento: linhas que totalizam o nº de vendas. parcelas=1 = à vista.
+  type PayMix = { id: string; qty: number; parcelas: number; entryPercent: number };
+  const [paymentMix, setPaymentMix] = useState<PayMix[]>([
+    { id: "row-1", qty: 7, parcelas: 1, entryPercent: 100 },
+  ]);
 
   const usersQuery = useQuery({
     queryKey: ["sales-team-users", accountId],
