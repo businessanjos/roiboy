@@ -44,6 +44,8 @@ export interface Deal {
   loss_sub_reason_id: string | null;
   loss_notes: string | null;
   tags: string[];
+  has_second_seat?: boolean;
+  second_seat_name?: string | null;
   created_at: string;
   updated_at: string;
   // Joined data
