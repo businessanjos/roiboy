@@ -458,6 +458,19 @@ export function CommissionSimulator() {
                   </p>
                 )}
               </div>
+              <div className="p-3 rounded-lg border bg-pink-500/10 border-pink-500/30 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-pink-700 dark:text-pink-400">
+                  <Gift className="h-3.5 w-3.5" />
+                  Spiffs (estimado)
+                </div>
+                <p className="font-bold text-sm">{fmt(simulation.spiffTotal)}</p>
+                {simulation.spiffBreakdown.length > 0 ? (
+                  <p className="text-[10px] text-muted-foreground">
+                    {simulation.spiffBreakdown.length} campanha(s) ativa(s)
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">Nenhum SPIFF aplicável</p>
+                )}
               <div className="p-3 rounded-lg border bg-primary/10 border-primary/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-medium">
                   <Trophy className="h-3.5 w-3.5 text-primary" />
