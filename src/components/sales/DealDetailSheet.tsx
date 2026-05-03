@@ -31,6 +31,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1363,6 +1366,35 @@ export function DealDetailSheet({
                       <Package className="h-4 w-4 text-primary flex-shrink-0" />
                       <span className="text-xs text-muted-foreground min-w-[50px]">Item</span>
                       <span className="text-sm font-medium text-primary flex-1">{itemVendaProductName}</span>
+                    </div>
+                  )}
+
+                  {/* 2ª Cadeira */}
+                  {itemVendaAllowsSecondSeat && (
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-amber-600" />
+                          <Label htmlFor="has-second-seat" className="text-xs font-medium mb-0 cursor-pointer">
+                            2ª cadeira (+50%)
+                          </Label>
+                        </div>
+                        <Switch
+                          id="has-second-seat"
+                          checked={hasSecondSeat}
+                          disabled={updatingSecondSeat}
+                          onCheckedChange={handleToggleSecondSeat}
+                        />
+                      </div>
+                      {hasSecondSeat && (
+                        <Input
+                          value={secondSeatName}
+                          onChange={(e) => setSecondSeatName(e.target.value)}
+                          onBlur={(e) => handleSaveSecondSeatName(e.target.value)}
+                          placeholder="Nome da pessoa da 2ª cadeira"
+                          className="h-8 text-xs"
+                        />
+                      )}
                     </div>
                   )}
 
