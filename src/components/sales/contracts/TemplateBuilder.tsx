@@ -776,17 +776,20 @@ export const TemplateBuilder = ({
             {/* PREVIEW ---------------------------------------------- */}
             <TabsContent value="preview" className="mt-3">
               <div className="rounded-xl border border-border bg-muted/40 p-6 overflow-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
-                <div className="mx-auto bg-background rounded-md shadow-sm border border-border" style={{ maxWidth: 820, padding: "56px 72px" }}>
+                <div className="mx-auto bg-background rounded-md shadow-sm border border-border" style={{ maxWidth: 860, padding: "24px" }}>
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-6 pb-3 border-b border-border">
                     <span className="font-mono">PRÉ-VISUALIZAÇÃO COM DADOS DE EXEMPLO</span>
                     <span>{name || "Template sem nome"}</span>
                   </div>
-                  <div
-                    className="contract-doc prose prose-sm max-w-none dark:prose-invert"
-                    dangerouslySetInnerHTML={{
-                      __html: previewHtml || '<p class="text-muted-foreground italic">Sem conteúdo. Volte ao editor para começar.</p>',
-                    }}
-                  />
+                  {contentHtml ? (
+                    <TemplatedContractPreview
+                      templateHtml={contentHtml}
+                      templateVariables={variables}
+                      placeholderValues={previewValues}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Sem conteúdo. Volte ao editor para começar.</p>
+                  )}
                 </div>
               </div>
             </TabsContent>
