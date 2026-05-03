@@ -546,6 +546,121 @@ export function CommissionSimulator() {
               </div>
             )}
 
+            {/* Mix de Pagamento — composição das vendas simuladas */}
+            <div className="text-xs p-3 rounded-lg border bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-medium flex items-center gap-1.5">
+                  <DollarSign className="h-3.5 w-3.5 text-purple-600" />
+                  Mix de Pagamento
+                </p>
+                <div className="flex items-center gap-2">
+                  <Badge variant={simulation.mixTotalQty === simulation.wholeSalesCount ? "default" : "secondary"} className="text-[10px]">
+                    {simulation.mixTotalQty} / {simulation.wholeSalesCount} vendas
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-[10px] gap-1"
+                    onClick={() => setPaymentMix((prev) => [...prev, { id: `row-${Date.now()}`, qty: 1, parcelas: 1, entryPercent: 100 }])}
+                  >
+                    + linha
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                {paymentMix.map((row) => (
+                  <div key={row.id} className="grid grid-cols-12 gap-1.5 items-center">
+                    <div className="col-span-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={row.qty || ""}
+                        placeholder="Qtd"
+                        onChange={(e) => {
+                          const v = Math.max(0, Number(e.target.value) || 0);
+                          setPaymentMix((prev) => prev.map((r) => r.id === row.id ? { ...r, qty: v } : r));
+                        }}
+                        className="h-7 text-xs text-center"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <Select
+                        value={String(row.parcelas)}
+                        onValueChange={(v) => setPaymentMix((prev) => prev.map((r) => r.id === row.id ? { ...r, parcelas: Number(v), entryPercent: Number(v) === 1 ? 100 : r.entryPercent } : r))}
+                      >
+                        <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">À vista / Pix</SelectItem>
+                          {[2,3,4,5,6,7,8,9,10,11,12].map((n) => (
+                            <SelectItem key={n} value={String(n)}>{n}x cartão</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-3">
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          disabled={row.parcelas === 1}
+                          value={row.parcelas === 1 ? 100 : row.entryPercent}
+                          onChange={(e) => {
+                            const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                            setPaymentMix((prev) => prev.map((r) => r.id === row.id ? { ...r, entryPercent: v } : r));
+                          }}
+                          className="h-7 text-xs text-right"
+                        />
+                        <span className="text-[10px] text-muted-foreground">% entrada</span>
+                      </div>
+                    </div>
+                    <div className="col-span-3 text-right text-muted-foreground">
+                      Entrada: <strong className="text-foreground">{fmt(row.qty * simulation.avgTicket * ((row.parcelas === 1 ? 100 : row.entryPercent) / 100))}</strong>
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setPaymentMix((prev) => prev.filter((r) => r.id !== row.id))}
+                        title="Remover"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-1.5 border-t border-purple-200/50 dark:border-purple-900/50 space-y-0.5">
+                <p className="text-foreground">
+                  <strong>{simulation.mixTotalQty} vendas</strong>
+                  {(() => {
+                    const grouped = simulation.mixRows.reduce<Record<string, number>>((acc, r) => {
+                      const key = r.parcelas === 1 ? "à vista / Pix" : `${r.parcelas}x cartão`;
+                      acc[key] = (acc[key] || 0) + r.qty;
+                      return acc;
+                    }, {});
+                    const parts = Object.entries(grouped).map(([k, v]) => `${v} ${k}`);
+                    return parts.length > 0 ? `, sendo ${parts.join(" + ")}` : "";
+                  })()}
+                </p>
+                <p className="text-foreground">
+                  Captação de entrada: <strong className="text-purple-700 dark:text-purple-400">{fmt(simulation.mixEntryCaptured)}</strong>
+                  <span className="text-muted-foreground"> {" "}· Volume total: {fmt(simulation.mixTotalQty * simulation.avgTicket)}</span>
+                </p>
+                {simulation.mixTotalQty !== simulation.wholeSalesCount && (
+                  <p className="text-[10px] text-amber-700 dark:text-amber-400">
+                    ⚠ A soma do mix ({simulation.mixTotalQty}) é diferente do nº de vendas simuladas ({simulation.wholeSalesCount}). Ajuste para refletir o cenário.
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Detalhamento de Spiffs */}
             {simulation.spiffBreakdown.length > 0 && (
               <div className="text-xs p-3 rounded-lg border bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-900 space-y-1.5">
