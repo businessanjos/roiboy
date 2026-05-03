@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search, Loader2, ArrowRight, CalendarDays, AlertTriangle, Clock, RefreshCw, DollarSign, TrendingDown, CalendarX } from "lucide-react";
+import { Search, Loader2, ArrowRight, CalendarDays, AlertTriangle, Clock, RefreshCw, DollarSign, TrendingDown, CalendarX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
@@ -936,6 +936,31 @@ export default function Renewals() {
                 { value: "negotiating", label: "Em Negociação" },
               ]}
             />
+            {(filterConsultora.length > 0 ||
+              filterProduto.length > 0 ||
+              filterTempo.length > 0 ||
+              filterChance.length > 0 ||
+              filterStatus.length > 0 ||
+              filterQuarter.length > 0 ||
+              searchQuery.length > 0) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFilterConsultora([]);
+                  setFilterProduto([]);
+                  setFilterTempo([]);
+                  setFilterChance([]);
+                  setFilterStatus([]);
+                  setFilterQuarter([]);
+                  setSearchQuery("");
+                }}
+                className="self-end h-10"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Limpar filtros
+              </Button>
+            )}
           </div>
 
           {/* Table */}
