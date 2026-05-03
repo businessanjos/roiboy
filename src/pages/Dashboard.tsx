@@ -166,7 +166,7 @@ export default function Dashboard() {
   const showCancellationAnalytics = canAccessCancellationAnalytics(currentUser?.id);
   
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
-  const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
+  const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("year");
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [gestaoDatePickerOpen, setGestaoDatePickerOpen] = useState(false);
   const [gestaoViewMode, setGestaoViewMode] = useState<"operacoes" | "comercial">("operacoes");
