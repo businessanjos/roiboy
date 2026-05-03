@@ -641,7 +641,10 @@ export default function Renewals() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium break-words whitespace-normal max-w-[180px] lg:max-w-[210px]">{contract.client_name}</p>
+                        <p className="text-sm font-medium break-words whitespace-normal max-w-[180px] lg:max-w-[210px] flex items-center gap-1.5">
+                          <span>{contract.client_name}</span>
+                          <VipBadge clientId={contract.client_id} />
+                        </p>
                         {contract.client_email && (
                           <p className="text-xs text-muted-foreground truncate">{contract.client_email}</p>
                         )}
