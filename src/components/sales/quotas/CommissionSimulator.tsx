@@ -242,9 +242,14 @@ export function CommissionSimulator() {
         const minP = Number(s.roulette_min_prize || 0);
         const maxP = Number(s.roulette_max_prize || 0);
         const avgPrize = (minP + maxP) / 2;
-        const spins = trigger > 0 ? Math.floor(commissionableValue / trigger) : 0;
+        // Roletas tipicamente são "cash collect": gatilham pela entrada captada,
+        // não pelo volume total parcelado. Usa mixEntryCaptured quando o mix
+        // estiver preenchido; caso contrário, cai para o volume total.
+        const basis = mixRows.length > 0 ? mixEntryCaptured : commissionableValue;
+        const basisLabel = mixRows.length > 0 ? "cash collect" : "volume";
+        const spins = trigger > 0 ? Math.floor(basis / trigger) : 0;
         computed = spins * avgPrize;
-        detail = `${spins} giro(s) × ~${fmt(avgPrize)} (média)`;
+        detail = `${spins} giro(s) × ~${fmt(avgPrize)} (cada ${fmt(trigger)} de ${basisLabel})`;
       } else if (prizeType === "custom") {
         const target = Number(s.trigger_sales_count || 0);
         const times = target > 0 ? Math.floor(wholeSalesCount / target) : 0;
