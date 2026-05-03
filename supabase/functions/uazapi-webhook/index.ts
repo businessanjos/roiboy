@@ -1990,14 +1990,16 @@ Deno.serve(async (req) => {
               })
               .eq("id", zappConversationId);
           } else {
-            // For direct messages, try to find client
+            // For direct messages, try to find client (tolerante a variações de formato)
             let clientId = null;
             if (!isGroupMsg && phone) {
+              const variants = buildPhoneVariants(phone);
               const { data: existingClientForZapp } = await supabase
                 .from("clients")
                 .select("id")
                 .eq("account_id", accountId)
-                .eq("phone_e164", phone)
+                .in("phone_e164", variants)
+                .limit(1)
                 .maybeSingle();
               clientId = existingClientForZapp?.id || null;
             }
