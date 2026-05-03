@@ -398,6 +398,21 @@ Deno.serve(async (req) => {
         if (responsibleUserId === "none") q = q.is("responsible_user_id", null);
         else q = q.eq("responsible_user_id", responsibleUserId);
       }
+      // Country (DDI) filter: matches phone_e164 by DDI prefix
+      if (countryCode && countryCode !== "ALL") {
+        if (countryCode === "UNKNOWN") {
+          // Não classificável: vazio ou sem '+' (não conseguimos inferir DDI)
+          q = q.or("phone_e164.is.null,phone_e164.eq.,phone_e164.not.ilike.+%");
+        } else {
+          const ddis = COUNTRY_DDI[countryCode];
+          if (ddis && ddis.length > 0) {
+            // Caso especial: +1 é compartilhado por US/CA/DO. Filtramos só por +1*
+            // (sem distinguir entre eles no servidor — UI mostra os dois separados via área-código se necessário).
+            const orExpr = ddis.map((d) => `phone_e164.like.+${d}%`).join(",");
+            q = q.or(orExpr);
+          }
+        }
+      }
       return q;
     };
 
