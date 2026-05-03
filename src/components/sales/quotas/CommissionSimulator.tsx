@@ -554,8 +554,8 @@ export function CommissionSimulator() {
                   Mix de Pagamento
                 </p>
                 <div className="flex items-center gap-2">
-                  <Badge variant={simulation.mixTotalQty === simulation.wholeSalesCount ? "default" : "secondary"} className="text-[10px]">
-                    {simulation.mixTotalQty} / {simulation.wholeSalesCount} vendas
+                  <Badge variant={simulation.mixTotalQty > simulation.wholeSalesCount ? "secondary" : "default"} className="text-[10px]">
+                    {simulation.mixTotalQty} / {simulation.wholeSalesCount} c/ spiff
                   </Badge>
                   <Button
                     type="button"
