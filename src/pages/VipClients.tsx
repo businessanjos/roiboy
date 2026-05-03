@@ -29,7 +29,7 @@ interface VipRow {
   total: number;
   received: number;
   pending: number;
-  products: string[];
+  products: { name: string; color: string | null }[];
   product_ids: string[];
   start_date: string | null;
   ltv_months: number;
@@ -104,7 +104,7 @@ export default function VipClients() {
         supabase
           .from("client_contracts")
           .select(
-            "client_id, value, start_date, status, product_id, products(name), clients!inner(id, full_name, logo_url)"
+            "client_id, value, start_date, status, product_id, products(name, color), clients!inner(id, full_name, logo_url)"
           )
           .eq("account_id", currentUser.account_id)
           .not("status", "in", "(cancelled,dismissed,dropout_7d)"),
@@ -141,8 +141,8 @@ export default function VipClients() {
         }
         const row = map.get(cid)!;
         row.total += Number(c.value || 0);
-        if (c.products?.name && !row.products.includes(c.products.name)) {
-          row.products.push(c.products.name);
+        if (c.products?.name && !row.products.some((p) => p.name === c.products.name)) {
+          row.products.push({ name: c.products.name, color: c.products.color || null });
         }
         if (c.product_id && !row.product_ids.includes(c.product_id)) {
           row.product_ids.push(c.product_id);
@@ -204,7 +204,7 @@ export default function VipClients() {
         .filter(
           (r) =>
             !selected.has(r.client_id) &&
-            r.products.some((p) => eliteRegex.test(p))
+            r.products.some((p) => eliteRegex.test(p.name))
         )
         .sort((a, b) => b.received - a.received || b.total - a.total);
       for (const r of tier2) {
@@ -480,8 +480,17 @@ export default function VipClients() {
                           <span className="text-muted-foreground">—</span>
                         ) : (
                           r.products.map((p) => (
-                            <Badge key={p} variant="secondary" className="text-xs">
-                              {p}
+                            <Badge
+                              key={p.name}
+                              variant="outline"
+                              className="text-xs font-medium"
+                              style={{
+                                backgroundColor: p.color ? `${p.color}20` : undefined,
+                                borderColor: p.color || undefined,
+                                color: p.color || undefined,
+                              }}
+                            >
+                              {p.name}
                             </Badge>
                           ))
                         )}
