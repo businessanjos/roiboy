@@ -73,7 +73,7 @@ import {
   Package,
   User,
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
