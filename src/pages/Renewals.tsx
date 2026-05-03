@@ -559,6 +559,7 @@ export default function Renewals() {
     emptySubtitle: string,
     page: number,
     setPage: (p: number) => void,
+    headerExtra?: React.ReactNode,
   ) => {
     const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
     const safePage = Math.min(page, totalPages);
@@ -570,13 +571,20 @@ export default function Renewals() {
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : list.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <CalendarDays className="h-10 w-10 mb-3 opacity-50" />
-            <p className="font-medium">{emptyTitle}</p>
-            <p className="text-sm">{emptySubtitle}</p>
-          </div>
         ) : (
+          <>
+            {headerExtra && (
+              <div className="border-b p-3">
+                {headerExtra}
+              </div>
+            )}
+            {list.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <CalendarDays className="h-10 w-10 mb-3 opacity-50" />
+                <p className="font-medium">{emptyTitle}</p>
+                <p className="text-sm">{emptySubtitle}</p>
+              </div>
+            ) : (
           <Table className="table-fixed lg:table-auto">
             <TableHeader>
               <TableRow>
