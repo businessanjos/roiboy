@@ -74,6 +74,12 @@ export default function Renewals() {
   const [renewalDialog, setRenewalDialog] = useState<{ open: boolean; contract: RenewalContract | null }>({ open: false, contract: null });
   const [renewalForm, setRenewalForm] = useState({ product_id: "", payment_method: "", value: "" });
   const [savingRenewal, setSavingRenewal] = useState(false);
+  const PAGE_SIZE = 20;
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const [expiredPage, setExpiredPage] = useState(1);
+
+  useEffect(() => { setUpcomingPage(1); }, [searchQuery, filterConsultora, filterProduto, filterTempo, filterChance, filterStatus, filterQuarter]);
+  useEffect(() => { setExpiredPage(1); }, [expiredFilterConsultora, expiredFilterProduto, expiredFilterChance, expiredFilterAno]);
 
   const handleScoreCalculated = useCallback((clientId: string, score: number) => {
     setChanceScores(prev => {
@@ -545,7 +551,13 @@ export default function Renewals() {
     list: RenewalContract[],
     emptyTitle: string,
     emptySubtitle: string,
-  ) => (
+    page: number,
+    setPage: (p: number) => void,
+  ) => {
+    const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    const safePage = Math.min(page, totalPages);
+    const paginated = list.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+    return (
     <Card>
       <CardContent className="p-0">
         {loading ? (
@@ -575,7 +587,7 @@ export default function Renewals() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {list.map((contract) => (
+              {paginated.map((contract) => (
                 <TableRow key={contract.id} className="group">
                   <TableCell>
                     <Link
@@ -677,8 +689,37 @@ export default function Renewals() {
           </Table>
         )}
       </CardContent>
+      {!loading && list.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t">
+          <p className="text-xs text-muted-foreground">
+            Mostrando {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, list.length)} de {list.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(Math.max(1, safePage - 1))}
+              disabled={safePage <= 1}
+            >
+              Anterior
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Página {safePage} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(Math.min(totalPages, safePage + 1))}
+              disabled={safePage >= totalPages}
+            >
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
-  );
+    );
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto">
@@ -919,6 +960,8 @@ export default function Renewals() {
             filteredUpcoming,
             "Nenhum contrato a vencer até o fim de 2026",
             "Todos os contratos estão com vencimento distante.",
+            upcomingPage,
+            setUpcomingPage,
           )}
         </TabsContent>
 
@@ -992,6 +1035,8 @@ export default function Renewals() {
             filteredExpired,
             "Nenhum contrato vencido pendente",
             "Todos os contratos vencidos já foram resolvidos.",
+            expiredPage,
+            setExpiredPage,
           )}
         </TabsContent>
 
