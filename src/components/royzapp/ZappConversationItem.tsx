@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ConversationAssignment, getContactInfo, getInitials } from "./types";
 import { VipBadge } from "@/components/client/VipBadge";
+import { CountryFlag } from "@/components/ui/CountryFlag";
 
 interface ZappConversationItemProps {
   assignment: ConversationAssignment;
