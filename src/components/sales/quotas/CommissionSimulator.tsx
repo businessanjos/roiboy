@@ -214,11 +214,11 @@ export function CommissionSimulator() {
       return true;
     });
 
-    const spiffBreakdown: Array<{ name: string; estimate: number; detail: string }> = [];
+    const spiffBreakdown: Array<{ id: string; name: string; estimate: number; computed: number; detail: string; included: boolean; overridden: boolean }> = [];
     let spiffTotal = 0;
     for (const s of applicableSpiffs as any[]) {
       const prizeType = s.prize_type || "fixed";
-      let estimate = 0;
+      let computed = 0;
       let detail = "";
 
       if (prizeType === "roulette") {
@@ -227,36 +227,38 @@ export function CommissionSimulator() {
         const maxP = Number(s.roulette_max_prize || 0);
         const avgPrize = (minP + maxP) / 2;
         const spins = trigger > 0 ? Math.floor(commissionableValue / trigger) : 0;
-        estimate = spins * avgPrize;
+        computed = spins * avgPrize;
         detail = `${spins} giro(s) × ~${fmt(avgPrize)} (média)`;
       } else if (prizeType === "custom") {
         const target = Number(s.trigger_sales_count || 0);
         const times = target > 0 ? Math.floor(wholeSalesCount / target) : 0;
-        // Custom prize não tem valor monetário — pulamos do total mas mostramos
-        estimate = 0;
+        computed = 0;
         detail = times > 0
           ? `${times}× — ${s.custom_prize_description || "prêmio personalizado"}`
           : `Precisa de ${target} venda(s)`;
       } else if (prizeType === "payment_method") {
-        // Sem dados de forma de pagamento simulada — exibimos como informativo
         const tiers = Array.isArray(s.payment_tiers) ? s.payment_tiers.length : 0;
-        estimate = 0;
+        computed = 0;
         detail = `${tiers} faixa(s) por forma de pagamento`;
       } else {
-        // Bônus fixo: paga por target_quantity unidades
         const target = Number(s.target_quantity || 0);
         const times = target > 0 ? Math.floor(wholeSalesCount / target) : 0;
         if (s.bonus_type === "fixed") {
-          estimate = times * Number(s.bonus_amount || 0);
+          computed = times * Number(s.bonus_amount || 0);
           detail = `${times}× ${fmt(Number(s.bonus_amount || 0))} (cada ${target} unid.)`;
         } else {
-          estimate = (times * target * avgTicket * Number(s.bonus_amount || 0)) / 100;
+          computed = (times * target * avgTicket * Number(s.bonus_amount || 0)) / 100;
           detail = `${times}× ${s.bonus_amount}% sobre ${target} unid.`;
         }
       }
 
-      spiffTotal += estimate;
-      spiffBreakdown.push({ name: s.name, estimate, detail });
+      const ov = spiffOverrides[s.id];
+      const included = ov?.included ?? true;
+      const overridden = ov?.estimate != null;
+      const estimate = overridden ? Number(ov!.estimate) : computed;
+
+      if (included) spiffTotal += estimate;
+      spiffBreakdown.push({ id: s.id, name: s.name, estimate, computed, detail, included, overridden });
     }
 
     const totalEarnings = monthlyBase + totalCommission + bonusValue + uncappedBonus + spiffTotal;
