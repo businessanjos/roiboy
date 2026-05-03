@@ -352,8 +352,47 @@ export function DealDetailSheet({
       fetchDealCustomFields();
       fetchTeamMembers();
       fetchSalesMembers();
+      setHasSecondSeat(!!(deal as any)?.has_second_seat);
+      setSecondSeatName((deal as any)?.second_seat_name || "");
     }
   }, [deal?.id, open]);
+
+  const handleToggleSecondSeat = async (checked: boolean) => {
+    if (!deal) return;
+    setUpdatingSecondSeat(true);
+    try {
+      const basePrice = itemVendaProductPrice ?? deal.value ?? 0;
+      const newValue = checked ? Number((basePrice * 1.5).toFixed(2)) : basePrice;
+      const { error } = await supabase
+        .from("deals")
+        .update({
+          has_second_seat: checked,
+          second_seat_name: checked ? (secondSeatName || null) : null,
+          value: newValue,
+        })
+        .eq("id", deal.id);
+      if (error) throw error;
+      setHasSecondSeat(checked);
+      if (!checked) setSecondSeatName("");
+      toast.success(checked ? "2ª cadeira adicionada" : "2ª cadeira removida");
+      onDealUpdated?.();
+    } catch (e: any) {
+      toast.error("Erro ao atualizar 2ª cadeira");
+    } finally {
+      setUpdatingSecondSeat(false);
+    }
+  };
+
+  const handleSaveSecondSeatName = async (name: string) => {
+    if (!deal) return;
+    try {
+      await supabase
+        .from("deals")
+        .update({ second_seat_name: name || null })
+        .eq("id", deal.id);
+      onDealUpdated?.();
+    } catch {}
+  };
 
   const fetchTeamMembers = async () => {
     try {
