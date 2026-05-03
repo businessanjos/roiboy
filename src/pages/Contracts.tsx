@@ -98,6 +98,7 @@ import { ContractTriageQueue } from "@/components/contracts/ContractTriageQueue"
 import { ConciliateButton } from "@/components/contracts/ConciliateButton";
 import { useBatchConciliationValidation } from "@/hooks/useConciliationValidation";
 import { BarChart3, UserCheck } from "lucide-react";
+import { VipBadge } from "@/components/client/VipBadge";
 
 interface Contract {
   id: string;
