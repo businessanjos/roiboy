@@ -2136,7 +2136,6 @@ export default function Clients() {
                         <span className="inline-flex items-center gap-2">
                           <span>{opt.flag}</span>
                           <span>{opt.name}</span>
-                          <span className="text-muted-foreground text-xs">({opt.count})</span>
                         </span>
                       </SelectItem>
                     ))}
