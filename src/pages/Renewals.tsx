@@ -262,8 +262,45 @@ export default function Renewals() {
         return true;
       });
 
+      // Auto-detect successor contracts (renewals already closed by sales).
+      // For each contract in the list, check if the same client has another active contract
+      // for the same product whose start_date is around (or after) this contract's end_date.
+      // If so, treat the old contract as already renewed and skip it.
+      const clientIds = [...new Set(deduped.map((c: any) => c.client_id))];
+      let successorMap: Record<string, { id: string; start_date: string; product_id: string | null }[]> = {};
+      if (clientIds.length > 0) {
+        const { data: allClientContracts } = await supabase
+          .from("client_contracts")
+          .select("id, client_id, product_id, start_date, end_date, status")
+          .eq("account_id", currentUser.account_id)
+          .in("client_id", clientIds)
+          .eq("status", "active");
+        (allClientContracts || []).forEach((cc: any) => {
+          if (!successorMap[cc.client_id]) successorMap[cc.client_id] = [];
+          successorMap[cc.client_id].push({ id: cc.id, start_date: cc.start_date, product_id: cc.product_id });
+        });
+      }
+
+      const hasSuccessor = (c: any): boolean => {
+        const peers = successorMap[c.client_id] || [];
+        const oldEnd = parseLocalDate(c.end_date);
+        if (!oldEnd) return false;
+        // window: successor starts within [oldEnd - 30d, oldEnd + 365d]
+        const windowStart = new Date(oldEnd); windowStart.setDate(windowStart.getDate() - 30);
+        const windowEnd = new Date(oldEnd); windowEnd.setDate(windowEnd.getDate() + 365);
+        return peers.some(p => {
+          if (p.id === c.id) return false;
+          if (c.product_id && p.product_id && p.product_id !== c.product_id) return false;
+          const start = parseLocalDate(p.start_date);
+          if (!start) return false;
+          return start >= windowStart && start <= windowEnd;
+        });
+      };
+
+      const dedupedFiltered = deduped.filter((c: any) => !hasSuccessor(c));
+
       // Fetch all outcomes for these contracts to know which are already resolved
-      const allContractIds = deduped.map((c: any) => c.id);
+      const allContractIds = dedupedFiltered.map((c: any) => c.id);
       let allOutcomesMap: Record<string, { id: string; outcome: string }> = {};
       if (allContractIds.length > 0) {
         const { data: outcomes } = await supabase
