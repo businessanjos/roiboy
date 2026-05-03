@@ -4,6 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Calculator, TrendingUp, DollarSign, Wallet, Trophy, Zap, Target } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
@@ -30,7 +32,9 @@ export function CommissionSimulator() {
 
   const { plans, productRates, tiers, quotas } = useQuotasIncentives(year, month);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [simMode, setSimMode] = useState<"percent" | "sales">("percent");
   const [achievementPct, setAchievementPct] = useState(100);
+  const [salesCount, setSalesCount] = useState(7);
 
   const usersQuery = useQuery({
     queryKey: ["sales-team-users", accountId],
@@ -124,8 +128,14 @@ export function CommissionSimulator() {
     const avgTicket = isAfterMay2026 ? 80000 : 70800;
 
     const totalTargetQty = totalTargetValue / avgTicket;
-    const simulatedValue = (totalTargetValue * achievementPct) / 100;
-    const simulatedQty = simulatedValue / avgTicket;
+
+    // Em modo "sales", o atingimento é derivado do nº de vendas informado
+    const effectiveAchievementPct = simMode === "sales" && totalTargetQty > 0
+      ? (salesCount / totalTargetQty) * 100
+      : achievementPct;
+
+    const simulatedValue = (totalTargetValue * effectiveAchievementPct) / 100;
+    const simulatedQty = simMode === "sales" ? salesCount : simulatedValue / avgTicket;
     const wholeSalesCount = Math.floor(simulatedQty);
     const commissionableValue = wholeSalesCount * avgTicket;
 
@@ -143,12 +153,12 @@ export function CommissionSimulator() {
     let activeTier = planTiers
       .slice()
       .reverse()
-      .find((t) => achievementPct >= Number(t.min_achievement_percent) &&
-        (t.max_achievement_percent == null || achievementPct <= Number(t.max_achievement_percent)));
+      .find((t) => effectiveAchievementPct >= Number(t.min_achievement_percent) &&
+        (t.max_achievement_percent == null || effectiveAchievementPct <= Number(t.max_achievement_percent)));
 
     // Fallback: acima do maior tier conhecido → mantém o último
     const topTier = planTiers[planTiers.length - 1];
-    if (!activeTier && topTier && achievementPct > Number(topTier.max_achievement_percent ?? topTier.min_achievement_percent)) {
+    if (!activeTier && topTier && effectiveAchievementPct > Number(topTier.max_achievement_percent ?? topTier.min_achievement_percent)) {
       activeTier = topTier;
     }
 
@@ -178,9 +188,9 @@ export function CommissionSimulator() {
     }
 
     // ── Bônus complementares ──
-    const quarterlyBonus = plan.quarterly_bonus_enabled && achievementPct >= QUARTERLY_BONUS_THRESHOLD
+    const quarterlyBonus = plan.quarterly_bonus_enabled && effectiveAchievementPct >= QUARTERLY_BONUS_THRESHOLD
       ? Number(plan.quarterly_bonus_value) : 0;
-    const annualBonus = (plan as any).annual_bonus_enabled && achievementPct >= ANNUAL_BONUS_THRESHOLD
+    const annualBonus = (plan as any).annual_bonus_enabled && effectiveAchievementPct >= ANNUAL_BONUS_THRESHOLD
       ? Number((plan as any).annual_bonus_value) : 0;
 
     // ── Salário Base: vem do RH (hr_collaborators.salary) ──
@@ -217,8 +227,9 @@ export function CommissionSimulator() {
       annualBonus,
       monthlyBase,
       totalEarnings,
+      effectiveAchievementPct,
     };
-  }, [selectedUserId, achievementPct, quotas, productRates, tiers, plans, collaborators, products, salesPositionIds]);
+  }, [selectedUserId, simMode, achievementPct, salesCount, quotas, productRates, tiers, plans, collaborators, products, salesPositionIds]);
 
   return (
     <Card>
@@ -241,21 +252,66 @@ export function CommissionSimulator() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Atingimento da Meta: <span className="font-bold text-primary">{achievementPct}%</span></Label>
-            <Slider
-              value={[achievementPct]}
-              onValueChange={([v]) => setAchievementPct(v)}
-              min={0}
-              max={300}
-              step={5}
-              className="mt-2"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>0%</span>
-              <span>100%</span>
-              <span>200%</span>
-              <span>300%</span>
+            <div className="flex items-center justify-between">
+              <Label>
+                {simMode === "percent" ? (
+                  <>Atingimento da Meta: <span className="font-bold text-primary">{achievementPct}%</span></>
+                ) : (
+                  <>Nº de Vendas: <span className="font-bold text-primary">{salesCount}</span>
+                    {simulation && !simulation.noPlan && (
+                      <span className="text-muted-foreground font-normal"> ({Math.round(simulation.effectiveAchievementPct)}% da meta)</span>
+                    )}
+                  </>
+                )}
+              </Label>
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={simMode === "percent" ? "default" : "outline"}
+                  className="h-6 px-2 text-[10px]"
+                  onClick={() => setSimMode("percent")}
+                >
+                  % Meta
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={simMode === "sales" ? "default" : "outline"}
+                  className="h-6 px-2 text-[10px]"
+                  onClick={() => setSimMode("sales")}
+                >
+                  Nº Vendas
+                </Button>
+              </div>
             </div>
+            {simMode === "percent" ? (
+              <>
+                <Slider
+                  value={[achievementPct]}
+                  onValueChange={([v]) => setAchievementPct(v)}
+                  min={0}
+                  max={300}
+                  step={5}
+                  className="mt-2"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>0%</span>
+                  <span>100%</span>
+                  <span>200%</span>
+                  <span>300%</span>
+                </div>
+              </>
+            ) : (
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={salesCount}
+                onChange={(e) => setSalesCount(Math.max(0, Number(e.target.value) || 0))}
+                placeholder="Ex: 7"
+              />
+            )}
           </div>
         </div>
 
@@ -275,7 +331,7 @@ export function CommissionSimulator() {
                 <p className="text-[10px] text-muted-foreground">= {Math.round(simulation.totalTargetQty)} vendas (ticket {fmt(simulation.avgTicket)})</p>
               </div>
               <div className="p-2 rounded border bg-muted/20">
-                <p className="text-muted-foreground">Simulado ({achievementPct}%)</p>
+                <p className="text-muted-foreground">Simulado ({Math.round(simulation.effectiveAchievementPct)}%)</p>
                 <p className="font-semibold">{fmt(simulation.simulatedValue)}</p>
                 <p className="text-[10px] text-muted-foreground">= {Math.floor(simulation.simulatedQty)} vendas</p>
               </div>
