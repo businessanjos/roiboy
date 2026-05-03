@@ -15518,6 +15518,39 @@ export type Database = {
           },
         ]
       }
+      vip_criteria: {
+        Row: {
+          account_id: string
+          created_at: string
+          min_ltv_months: number
+          min_received: number
+          product_ids: string[]
+          top_n: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          min_ltv_months?: number
+          min_received?: number
+          product_ids?: string[]
+          top_n?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          min_ltv_months?: number
+          min_received?: number
+          product_ids?: string[]
+          top_n?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       vnps_snapshots: {
         Row: {
           account_id: string

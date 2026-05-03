@@ -49,8 +49,6 @@ const DEFAULT_CRITERIA: VipCriteria = {
   top_n: 30,
 };
 
-const STORAGE_KEY = "vip_criteria_v1";
-
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -69,15 +67,33 @@ export default function VipClients() {
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [criteria, setCriteria] = useState<VipCriteria>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) return { ...DEFAULT_CRITERIA, ...JSON.parse(stored) };
-    } catch {}
-    return DEFAULT_CRITERIA;
-  });
+  const [criteria, setCriteria] = useState<VipCriteria>(DEFAULT_CRITERIA);
+  const [criteriaLoaded, setCriteriaLoaded] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [draft, setDraft] = useState<VipCriteria>(criteria);
+  const [draft, setDraft] = useState<VipCriteria>(DEFAULT_CRITERIA);
+  const [savingCriteria, setSavingCriteria] = useState(false);
+
+  // Load criteria from DB (shared across the team)
+  useEffect(() => {
+    const loadCriteria = async () => {
+      if (!currentUser?.account_id) return;
+      const { data } = await supabase
+        .from("vip_criteria")
+        .select("min_received, min_ltv_months, product_ids, top_n")
+        .eq("account_id", currentUser.account_id)
+        .maybeSingle();
+      if (data) {
+        setCriteria({
+          min_received: Number(data.min_received) || 0,
+          min_ltv_months: data.min_ltv_months || 0,
+          product_ids: data.product_ids || [],
+          top_n: data.top_n || 0,
+        });
+      }
+      setCriteriaLoaded(true);
+    };
+    loadCriteria();
+  }, [currentUser?.account_id]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -180,11 +196,30 @@ export default function VipClients() {
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 
-  const saveCriteria = () => {
+  const saveCriteria = async () => {
+    if (!currentUser?.account_id) return;
+    setSavingCriteria(true);
+    const { error } = await supabase
+      .from("vip_criteria")
+      .upsert(
+        {
+          account_id: currentUser.account_id,
+          min_received: draft.min_received,
+          min_ltv_months: draft.min_ltv_months,
+          product_ids: draft.product_ids,
+          top_n: draft.top_n,
+          updated_by: currentUser.id,
+        },
+        { onConflict: "account_id" }
+      );
+    setSavingCriteria(false);
+    if (error) {
+      toast.error("Erro ao salvar critérios");
+      return;
+    }
     setCriteria(draft);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
     setSettingsOpen(false);
-    toast.success("Critérios atualizados");
+    toast.success("Critérios atualizados para todo o time");
   };
 
   const resetCriteria = () => setDraft(DEFAULT_CRITERIA);
@@ -317,7 +352,9 @@ export default function VipClients() {
               <Button variant="outline" onClick={() => setSettingsOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={saveCriteria}>Salvar</Button>
+              <Button onClick={saveCriteria} disabled={savingCriteria}>
+                {savingCriteria ? "Salvando..." : "Salvar"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
