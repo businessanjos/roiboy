@@ -6,7 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calculator, TrendingUp, DollarSign, Wallet, Trophy, Zap, Target } from "lucide-react";
+import { Calculator, TrendingUp, DollarSign, Wallet, Trophy, Zap, Target, Gift } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,7 +30,7 @@ export function CommissionSimulator() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const { plans, productRates, tiers, quotas } = useQuotasIncentives(year, month);
+  const { plans, productRates, tiers, quotas, spiffs } = useQuotasIncentives(year, month);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [simMode, setSimMode] = useState<"percent" | "sales">("percent");
   const [achievementPct, setAchievementPct] = useState(100);
@@ -197,7 +197,67 @@ export function CommissionSimulator() {
     const collab = collaborators.find((c) => c.user_id === selectedUserId);
     const monthlyBase = collab ? Number(collab.salary) : 0;
 
-    const totalEarnings = monthlyBase + totalCommission + bonusValue + uncappedBonus;
+    // ── SPIFFs: estimativa de prêmios pagos ao vendedor pelas vendas simuladas ──
+    // Considera apenas SPIFFs ativos cujo período cobre o mês simulado e que se aplicam
+    // ao produto da simulação (Rykas Mentoring) ou a "Todos" (product_id null).
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0);
+    const applicableSpiffs = (spiffs ?? []).filter((s: any) => {
+      if (!s.is_active) return false;
+      const sd = s.start_date ? new Date(s.start_date) : null;
+      const ed = s.end_date ? new Date(s.end_date) : null;
+      if (sd && sd > monthEnd) return false;
+      if (ed && ed < monthStart) return false;
+      if (s.product_id && mentoringProduct?.id && s.product_id !== mentoringProduct.id) return false;
+      return true;
+    });
+
+    const spiffBreakdown: Array<{ name: string; estimate: number; detail: string }> = [];
+    let spiffTotal = 0;
+    for (const s of applicableSpiffs as any[]) {
+      const prizeType = s.prize_type || "fixed";
+      let estimate = 0;
+      let detail = "";
+
+      if (prizeType === "roulette") {
+        const trigger = Number(s.trigger_per_value || 0);
+        const minP = Number(s.roulette_min_prize || 0);
+        const maxP = Number(s.roulette_max_prize || 0);
+        const avgPrize = (minP + maxP) / 2;
+        const spins = trigger > 0 ? Math.floor(commissionableValue / trigger) : 0;
+        estimate = spins * avgPrize;
+        detail = `${spins} giro(s) × ~${fmt(avgPrize)} (média)`;
+      } else if (prizeType === "custom") {
+        const target = Number(s.trigger_sales_count || 0);
+        const times = target > 0 ? Math.floor(wholeSalesCount / target) : 0;
+        // Custom prize não tem valor monetário — pulamos do total mas mostramos
+        estimate = 0;
+        detail = times > 0
+          ? `${times}× — ${s.custom_prize_description || "prêmio personalizado"}`
+          : `Precisa de ${target} venda(s)`;
+      } else if (prizeType === "payment_method") {
+        // Sem dados de forma de pagamento simulada — exibimos como informativo
+        const tiers = Array.isArray(s.payment_tiers) ? s.payment_tiers.length : 0;
+        estimate = 0;
+        detail = `${tiers} faixa(s) por forma de pagamento`;
+      } else {
+        // Bônus fixo: paga por target_quantity unidades
+        const target = Number(s.target_quantity || 0);
+        const times = target > 0 ? Math.floor(wholeSalesCount / target) : 0;
+        if (s.bonus_type === "fixed") {
+          estimate = times * Number(s.bonus_amount || 0);
+          detail = `${times}× ${fmt(Number(s.bonus_amount || 0))} (cada ${target} unid.)`;
+        } else {
+          estimate = (times * target * avgTicket * Number(s.bonus_amount || 0)) / 100;
+          detail = `${times}× ${s.bonus_amount}% sobre ${target} unid.`;
+        }
+      }
+
+      spiffTotal += estimate;
+      spiffBreakdown.push({ name: s.name, estimate, detail });
+    }
+
+    const totalEarnings = monthlyBase + totalCommission + bonusValue + uncappedBonus + spiffTotal;
 
     return {
       noPlan: false,
@@ -226,10 +286,12 @@ export function CommissionSimulator() {
       quarterlyBonus,
       annualBonus,
       monthlyBase,
+      spiffTotal,
+      spiffBreakdown,
       totalEarnings,
       effectiveAchievementPct,
     };
-  }, [selectedUserId, simMode, achievementPct, salesCount, quotas, productRates, tiers, plans, collaborators, products, salesPositionIds]);
+  }, [selectedUserId, simMode, achievementPct, salesCount, quotas, productRates, tiers, plans, spiffs, collaborators, products, salesPositionIds]);
 
   return (
     <Card>
@@ -362,7 +424,7 @@ export function CommissionSimulator() {
             </div>
 
             {/* Componentes do ganho */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               <div className="p-3 rounded-lg border bg-muted/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Wallet className="h-3.5 w-3.5" />
@@ -396,6 +458,20 @@ export function CommissionSimulator() {
                   </p>
                 )}
               </div>
+              <div className="p-3 rounded-lg border bg-pink-500/10 border-pink-500/30 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-pink-700 dark:text-pink-400">
+                  <Gift className="h-3.5 w-3.5" />
+                  Spiffs (estimado)
+                </div>
+                <p className="font-bold text-sm">{fmt(simulation.spiffTotal)}</p>
+                {simulation.spiffBreakdown.length > 0 ? (
+                  <p className="text-[10px] text-muted-foreground">
+                    {simulation.spiffBreakdown.length} campanha(s) ativa(s)
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">Nenhum SPIFF aplicável</p>
+                )}
+              </div>
               <div className="p-3 rounded-lg border bg-primary/10 border-primary/30 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-medium">
                   <Trophy className="h-3.5 w-3.5 text-primary" />
@@ -425,6 +501,31 @@ export function CommissionSimulator() {
                     Aumente o atingimento acima de {simulation.uncappedThreshold}% para ativar este bônus.
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Detalhamento de Spiffs */}
+            {simulation.spiffBreakdown.length > 0 && (
+              <div className="text-xs p-3 rounded-lg border bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-900 space-y-1.5">
+                <p className="font-medium flex items-center gap-1.5">
+                  <Gift className="h-3.5 w-3.5 text-pink-600" />
+                  Spiffs estimados ({fmt(simulation.spiffTotal)})
+                </p>
+                <ul className="space-y-1">
+                  {simulation.spiffBreakdown.map((s, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
+                      <span className="truncate">
+                        <strong className="text-foreground">{s.name}</strong> — {s.detail}
+                      </span>
+                      <span className="font-semibold text-foreground whitespace-nowrap">
+                        {s.estimate > 0 ? fmt(s.estimate) : "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[10px] italic text-muted-foreground pt-1">
+                  Roleta usa valor médio entre prêmio mín. e máx. Prêmios não monetários (custom / forma de pagamento) não são somados ao total.
+                </p>
               </div>
             )}
 
