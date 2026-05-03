@@ -761,6 +761,58 @@ export default function Renewals() {
             </Card>
           </div>
 
+          {/* Breakdown by Consultora */}
+          {(() => {
+            const byConsultora = new Map<string, number>();
+            const byProduto = new Map<string, number>();
+            for (const c of filteredUpcoming) {
+              const cn = c.responsible_name || "Sem consultor";
+              byConsultora.set(cn, (byConsultora.get(cn) || 0) + 1);
+              const pn = c.product_name || "Sem produto";
+              byProduto.set(pn, (byProduto.get(pn) || 0) + 1);
+            }
+            const consultoras = Array.from(byConsultora.entries()).sort((a, b) => b[1] - a[1]);
+            const produtos = Array.from(byProduto.entries()).sort((a, b) => b[1] - a[1]);
+            return (
+              <div className="space-y-4">
+                {consultoras.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                      Por Consultor ({consultoras.length})
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                      {consultoras.map(([name, count]) => (
+                        <Card key={name}>
+                          <CardContent className="p-3">
+                            <p className="text-xs text-muted-foreground truncate" title={name}>{name}</p>
+                            <p className="text-xl font-bold">{count} <span className="text-xs font-normal text-muted-foreground">renovaç{count === 1 ? "ão" : "ões"}</span></p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {produtos.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                      Por Produto ({produtos.length})
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                      {produtos.map(([name, count]) => (
+                        <Card key={name}>
+                          <CardContent className="p-3">
+                            <p className="text-xs text-muted-foreground truncate" title={name}>{name}</p>
+                            <p className="text-xl font-bold">{count} <span className="text-xs font-normal text-muted-foreground">renovaç{count === 1 ? "ão" : "ões"}</span></p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Search & Filters */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">
             <div className="relative w-full sm:max-w-xs">
