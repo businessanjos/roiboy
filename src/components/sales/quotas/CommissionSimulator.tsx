@@ -153,12 +153,12 @@ export function CommissionSimulator() {
     let activeTier = planTiers
       .slice()
       .reverse()
-      .find((t) => achievementPct >= Number(t.min_achievement_percent) &&
-        (t.max_achievement_percent == null || achievementPct <= Number(t.max_achievement_percent)));
+      .find((t) => effectiveAchievementPct >= Number(t.min_achievement_percent) &&
+        (t.max_achievement_percent == null || effectiveAchievementPct <= Number(t.max_achievement_percent)));
 
     // Fallback: acima do maior tier conhecido → mantém o último
     const topTier = planTiers[planTiers.length - 1];
-    if (!activeTier && topTier && achievementPct > Number(topTier.max_achievement_percent ?? topTier.min_achievement_percent)) {
+    if (!activeTier && topTier && effectiveAchievementPct > Number(topTier.max_achievement_percent ?? topTier.min_achievement_percent)) {
       activeTier = topTier;
     }
 
