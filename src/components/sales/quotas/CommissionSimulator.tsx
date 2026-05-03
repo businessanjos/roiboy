@@ -640,11 +640,11 @@ export function CommissionSimulator() {
                 <p className="text-foreground">
                   <strong>{simulation.mixTotalQty} vendas</strong>
                   {(() => {
-                    const grouped = simulation.mixRows.reduce<Record<string, number>>((acc, r) => {
+                    const grouped: Record<string, number> = {};
+                    for (const r of simulation.mixRows) {
                       const key = r.parcelas === 1 ? "à vista / Pix" : `${r.parcelas}x cartão`;
-                      acc[key] = (acc[key] || 0) + r.qty;
-                      return acc;
-                    }, {});
+                      grouped[key] = (grouped[key] || 0) + r.qty;
+                    }
                     const parts = Object.entries(grouped).map(([k, v]) => `${v} ${k}`);
                     return parts.length > 0 ? `, sendo ${parts.join(" + ")}` : "";
                   })()}
