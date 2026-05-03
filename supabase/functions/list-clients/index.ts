@@ -580,19 +580,19 @@ Deno.serve(async (req) => {
     // Apply relevance-based sorting when search is active
     let sortedClients = enrichedClients;
     if (search && search.trim().length > 0) {
-      const searchLower = search.trim().toLowerCase();
+      const stripAccents = (s: string) =>
+        s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const searchLower = stripAccents(search.trim());
       const searchTerms = searchLower.split(/\s+/).filter((s: string) => s.length > 0);
 
       sortedClients = enrichedClients.map((client) => {
-        const nameLower = (client.full_name || "").toLowerCase();
+        const nameLower = stripAccents(client.full_name || "");
         let score = 0;
 
-        // +100 points: exact phrase match
         if (searchTerms.length > 1 && nameLower.includes(searchLower)) {
           score += 100;
         }
 
-        // +10 points per matching term
         for (const term of searchTerms) {
           if (nameLower.includes(term)) {
             score += 10;
