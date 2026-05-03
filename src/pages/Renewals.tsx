@@ -686,8 +686,37 @@ export default function Renewals() {
           </Table>
         )}
       </CardContent>
+      {!loading && list.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t">
+          <p className="text-xs text-muted-foreground">
+            Mostrando {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, list.length)} de {list.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(Math.max(1, safePage - 1))}
+              disabled={safePage <= 1}
+            >
+              Anterior
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Página {safePage} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(Math.min(totalPages, safePage + 1))}
+              disabled={safePage >= totalPages}
+            >
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
-  );
+    );
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto">
