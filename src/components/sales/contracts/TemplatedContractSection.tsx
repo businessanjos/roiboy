@@ -392,6 +392,25 @@ export const TemplatedContractPreview = ({
     return html;
   }, [templateHtml, templateVariables, placeholderValues]);
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const A4_WIDTH_PX = 794; // 210mm @ 96dpi
+    const update = () => {
+      const w = wrapper.clientWidth;
+      if (!w) return;
+      const next = Math.min(1, w / A4_WIDTH_PX);
+      setScale(next);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(wrapper);
+    return () => ro.disconnect();
+  }, []);
+
   if (!templateHtml) {
     return (
       <div className="text-center py-12 text-sm text-muted-foreground">
@@ -400,16 +419,21 @@ export const TemplatedContractPreview = ({
     );
   }
   return (
-    <div
-      className="contract-document bg-white text-black mx-auto"
-      style={{
-        width: "210mm",
-        minWidth: "210mm",
-        maxWidth: "210mm",
-        minHeight: "297mm",
-      }}
-      // The template HTML brings its own <style> + layout. Render as-is, no prose, no pre-wrap.
-      dangerouslySetInnerHTML={{ __html: rendered }}
-    />
+    <div ref={wrapperRef} className="w-full overflow-hidden">
+      <div
+        style={{
+          width: "210mm",
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          height: scale < 1 ? `calc(297mm * ${scale})` : undefined,
+        }}
+      >
+        <div
+          className="contract-document bg-white text-black"
+          style={{ width: "210mm", minHeight: "297mm" }}
+          dangerouslySetInnerHTML={{ __html: rendered }}
+        />
+      </div>
+    </div>
   );
 };
