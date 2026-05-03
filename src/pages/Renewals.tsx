@@ -781,14 +781,28 @@ export default function Renewals() {
                       Por Consultor ({consultoras.length})
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                      {consultoras.map(([name, count]) => (
-                        <Card key={name}>
-                          <CardContent className="p-3">
-                            <p className="text-xs text-muted-foreground truncate" title={name}>{name}</p>
-                            <p className="text-xl font-bold">{count} <span className="text-xs font-normal text-muted-foreground">renovaç{count === 1 ? "ão" : "ões"}</span></p>
-                          </CardContent>
-                        </Card>
-                      ))}
+                      {consultoras.map(([name, count]) => {
+                        const active = filterConsultora.includes(name);
+                        return (
+                          <Card
+                            key={name}
+                            onClick={() =>
+                              setFilterConsultora((prev) =>
+                                prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name],
+                              )
+                            }
+                            className={cn(
+                              "cursor-pointer transition-colors hover:border-primary/50",
+                              active && "border-primary bg-primary/5 ring-1 ring-primary",
+                            )}
+                          >
+                            <CardContent className="p-3">
+                              <p className="text-xs text-muted-foreground truncate" title={name}>{name}</p>
+                              <p className="text-xl font-bold">{count} <span className="text-xs font-normal text-muted-foreground">renovaç{count === 1 ? "ão" : "ões"}</span></p>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -798,14 +812,28 @@ export default function Renewals() {
                       Por Produto ({produtos.length})
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                      {produtos.map(([name, count]) => (
-                        <Card key={name}>
-                          <CardContent className="p-3">
-                            <p className="text-xs text-muted-foreground truncate" title={name}>{name}</p>
-                            <p className="text-xl font-bold">{count} <span className="text-xs font-normal text-muted-foreground">renovaç{count === 1 ? "ão" : "ões"}</span></p>
-                          </CardContent>
-                        </Card>
-                      ))}
+                      {produtos.map(([name, count]) => {
+                        const active = filterProduto.includes(name);
+                        return (
+                          <Card
+                            key={name}
+                            onClick={() =>
+                              setFilterProduto((prev) =>
+                                prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name],
+                              )
+                            }
+                            className={cn(
+                              "cursor-pointer transition-colors hover:border-primary/50",
+                              active && "border-primary bg-primary/5 ring-1 ring-primary",
+                            )}
+                          >
+                            <CardContent className="p-3">
+                              <p className="text-xs text-muted-foreground truncate" title={name}>{name}</p>
+                              <p className="text-xl font-bold">{count} <span className="text-xs font-normal text-muted-foreground">renovaç{count === 1 ? "ão" : "ões"}</span></p>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
