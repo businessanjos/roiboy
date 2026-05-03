@@ -270,7 +270,13 @@ export function CommissionSimulator() {
                   size="sm"
                   variant={simMode === "percent" ? "default" : "outline"}
                   className="h-6 px-2 text-[10px]"
-                  onClick={() => setSimMode("percent")}
+                  onClick={() => {
+                    // Ao voltar para %, deriva do nº de vendas atual se possível
+                    if (simulation && !simulation.noPlan && simMode === "sales") {
+                      setAchievementPct(Math.round(simulation.effectiveAchievementPct));
+                    }
+                    setSimMode("percent");
+                  }}
                 >
                   % Meta
                 </Button>
@@ -279,7 +285,13 @@ export function CommissionSimulator() {
                   size="sm"
                   variant={simMode === "sales" ? "default" : "outline"}
                   className="h-6 px-2 text-[10px]"
-                  onClick={() => setSimMode("sales")}
+                  onClick={() => {
+                    // Ao ir para Nº Vendas, deriva do % atual
+                    if (simulation && !simulation.noPlan && simMode === "percent") {
+                      setSalesCount(Math.floor(simulation.simulatedQty));
+                    }
+                    setSimMode("sales");
+                  }}
                 >
                   Nº Vendas
                 </Button>
