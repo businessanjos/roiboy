@@ -286,10 +286,12 @@ export function CommissionSimulator() {
       quarterlyBonus,
       annualBonus,
       monthlyBase,
+      spiffTotal,
+      spiffBreakdown,
       totalEarnings,
       effectiveAchievementPct,
     };
-  }, [selectedUserId, simMode, achievementPct, salesCount, quotas, productRates, tiers, plans, collaborators, products, salesPositionIds]);
+  }, [selectedUserId, simMode, achievementPct, salesCount, quotas, productRates, tiers, plans, spiffs, collaborators, products, salesPositionIds]);
 
   return (
     <Card>
