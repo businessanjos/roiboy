@@ -188,9 +188,9 @@ export function CommissionSimulator() {
     }
 
     // ── Bônus complementares ──
-    const quarterlyBonus = plan.quarterly_bonus_enabled && achievementPct >= QUARTERLY_BONUS_THRESHOLD
+    const quarterlyBonus = plan.quarterly_bonus_enabled && effectiveAchievementPct >= QUARTERLY_BONUS_THRESHOLD
       ? Number(plan.quarterly_bonus_value) : 0;
-    const annualBonus = (plan as any).annual_bonus_enabled && achievementPct >= ANNUAL_BONUS_THRESHOLD
+    const annualBonus = (plan as any).annual_bonus_enabled && effectiveAchievementPct >= ANNUAL_BONUS_THRESHOLD
       ? Number((plan as any).annual_bonus_value) : 0;
 
     // ── Salário Base: vem do RH (hr_collaborators.salary) ──
