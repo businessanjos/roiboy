@@ -1841,7 +1841,10 @@ export default function ClientDetail() {
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">{client.full_name}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate flex items-center gap-2">
+                <span className="truncate">{client.full_name}</span>
+                <VipBadge clientId={client.id} size="md" />
+              </h1>
               
               <Button 
                 variant="ghost" 
