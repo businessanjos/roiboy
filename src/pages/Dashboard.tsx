@@ -834,7 +834,7 @@ export default function Dashboard() {
                     </div>
                     <p className={`text-4xl font-bold mt-2 ${churnColor}`}>{churnRate.toFixed(1)}%</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {churnMetrics.cancelamentos} cancelamentos · {churnMetrics.novos} novos no período
+                      {churnMetrics.cancelamentos} cancelamentos / {churnMetrics.activeBase} contratos ativos
                     </p>
                     <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden">
                       <div
