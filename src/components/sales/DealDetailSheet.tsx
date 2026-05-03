@@ -359,6 +359,7 @@ export function DealDetailSheet({
       fetchSalesMembers();
       setHasSecondSeat(!!(deal as any)?.has_second_seat);
       setSecondSeatName((deal as any)?.second_seat_name || "");
+      setValueDraft(String(deal.value ?? 0));
     }
   }, [deal?.id, open]);
 
