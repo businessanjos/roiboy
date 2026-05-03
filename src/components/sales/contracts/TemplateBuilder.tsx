@@ -49,10 +49,10 @@ import {
   AUTOFILL_SOURCES,
   buildPlaceholderValues,
   extractPlaceholders,
-  renderTemplate,
   type TemplateVariableDef,
   type TemplateVariableType,
 } from "@/lib/contractTemplates";
+import { TemplatedContractPreview } from "./TemplatedContractSection";
 
 interface TemplateBuilderProps {
   initial?: {
@@ -429,10 +429,10 @@ export const TemplateBuilder = ({
 
   /* ------- live preview ------- */
 
-  const previewHtml = useMemo(() => {
-    const values = buildPlaceholderValues(variables, SAMPLE_CTX as any, {});
-    return renderTemplate(contentHtml, variables, values);
-  }, [contentHtml, variables]);
+  const previewValues = useMemo(
+    () => buildPlaceholderValues(variables, SAMPLE_CTX as any, {}),
+    [variables],
+  );
 
   const decoratedEditorPreview = useMemo(
     () => decoratePlaceholders(escapeHtml(contentHtml), knownKeys),
