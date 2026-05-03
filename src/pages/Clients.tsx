@@ -1294,6 +1294,7 @@ export default function Clients() {
     filterContract !== "all",
     filterResponsible !== "all",
     filterLinks !== "all",
+    filterCountry !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -1302,10 +1303,35 @@ export default function Clients() {
     setFilterContract("all");
     setFilterResponsible("all");
     setFilterLinks("all");
+    setFilterCountry("all");
   };
 
-  // Sorting is now handled server-side via the sort param
-  const filtered = clients;
+  // Compute country options from loaded clients (DDI inferred from phone_e164)
+  const countryOptions = (() => {
+    const map = new Map<string, { code: string; name: string; flag: string; count: number }>();
+    for (const c of clients as any[]) {
+      const info = getCountryFromPhone(c.phone_e164);
+      const key = info?.code || "UNKNOWN";
+      const entry = map.get(key);
+      if (entry) entry.count++;
+      else map.set(key, {
+        code: key,
+        name: info?.name || "Sem país",
+        flag: info?.flag || "🏳️",
+        count: 1,
+      });
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  })();
+
+  // Client-side country filter (DDI is encoded in phone_e164, no server param)
+  const filtered = filterCountry === "all"
+    ? clients
+    : (clients as any[]).filter((c) => {
+        const info = getCountryFromPhone(c.phone_e164);
+        const code = info?.code || "UNKNOWN";
+        return code === filterCountry;
+      });
 
   const handleFieldValueChange = (clientId: string, fieldId: string, newValue: any) => {
     setFieldValues(prev => ({
