@@ -1132,17 +1132,19 @@ export default function Dashboard() {
               </Card>
               )}
 
-              <Card className="border-l-4 border-l-pink-500">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Cadeira Dupla</p>
-                      <p className="text-4xl font-bold text-pink-600">{doubleChairCount ?? 0}</p>
+              <Link to="/dashboard/cadeira-dupla" className="block">
+                <Card className="border-l-4 border-l-pink-500 cursor-pointer hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Cadeira Dupla</p>
+                        <p className="text-4xl font-bold text-pink-600">{doubleChairCount ?? 0}</p>
+                      </div>
+                      <Heart className="h-8 w-8 text-pink-500" />
                     </div>
-                    <Heart className="h-8 w-8 text-pink-500" />
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
 
 
               <Card className="border-l-4 border-l-success">
