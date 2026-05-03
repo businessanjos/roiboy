@@ -30,13 +30,23 @@ async function refreshGoogleToken(refreshToken: string) {
   }
 }
 
-async function getGoogleAccessToken(supabase: any, userId: string): Promise<string | null> {
-  const { data: integration } = await supabase
-    .from("user_integrations")
-    .select("access_token, refresh_token, expires_at")
-    .eq("user_id", userId)
-    .eq("provider", "google")
-    .maybeSingle();
+async function getGoogleAccessToken(supabase: any, authUserId: string, internalUserId: string | null): Promise<string | null> {
+  // Tenta primeiro pelo internal users.id (formato salvo pelo oauth-init),
+  // depois pelo auth_user_id como fallback.
+  const ids = [internalUserId, authUserId].filter(Boolean) as string[];
+  let integration: any = null;
+  for (const uid of ids) {
+    const { data } = await supabase
+      .from("user_integrations")
+      .select("user_id, access_token, refresh_token, expires_at")
+      .eq("user_id", uid)
+      .eq("provider", "google")
+      .maybeSingle();
+    if (data?.access_token) {
+      integration = data;
+      break;
+    }
+  }
 
   if (!integration?.access_token) return null;
 
