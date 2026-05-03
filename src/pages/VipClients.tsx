@@ -49,8 +49,6 @@ const DEFAULT_CRITERIA: VipCriteria = {
   top_n: 30,
 };
 
-const STORAGE_KEY = "vip_criteria_v1";
-
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
