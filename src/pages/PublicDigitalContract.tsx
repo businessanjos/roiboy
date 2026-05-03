@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { ContractDocument, type DigitalContractData, type Deliverable } from "@/components/sales/contracts/ContractDocument";
+import { TemplatedContractPreview } from "@/components/sales/contracts/TemplatedContractSection";
+import { type TemplateVariableDef } from "@/lib/contractTemplates";
 
 const rowToData = (row: any): DigitalContractData => ({
   contract_number: row.contract_number,
@@ -45,6 +47,9 @@ export default function PublicDigitalContract() {
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DigitalContractData | null>(null);
+  const [templateHtml, setTemplateHtml] = useState<string | null>(null);
+  const [templateVariables, setTemplateVariables] = useState<TemplateVariableDef[]>([]);
+  const [placeholderValues, setPlaceholderValues] = useState<Record<string, unknown>>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,6 +64,9 @@ export default function PublicDigitalContract() {
         }
         const json = await res.json();
         setData(rowToData(json.contract));
+        setTemplateHtml(json.contract?.template_html ?? null);
+        setTemplateVariables((json.contract?.template_variables as TemplateVariableDef[]) ?? []);
+        setPlaceholderValues((json.contract?.placeholder_values as Record<string, unknown>) ?? {});
       } catch (e: any) {
         setError(e?.message ?? "Erro ao carregar");
       } finally {
@@ -84,7 +92,17 @@ export default function PublicDigitalContract() {
   }
   return (
     <div className="min-h-screen bg-background py-8">
-      <ContractDocument data={data} />
+      {templateHtml ? (
+        <div className="mx-auto max-w-[210mm] px-4">
+          <TemplatedContractPreview
+            templateHtml={templateHtml}
+            templateVariables={templateVariables}
+            placeholderValues={placeholderValues}
+          />
+        </div>
+      ) : (
+        <ContractDocument data={data} />
+      )}
     </div>
   );
 }
