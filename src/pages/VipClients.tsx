@@ -29,7 +29,7 @@ interface VipRow {
   total: number;
   received: number;
   pending: number;
-  products: string[];
+  products: { name: string; color: string | null }[];
   product_ids: string[];
   start_date: string | null;
   ltv_months: number;
