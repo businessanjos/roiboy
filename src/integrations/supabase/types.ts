@@ -3303,6 +3303,73 @@ export type Database = {
         }
         Relationships: []
       }
+      consultant_bonus_payouts: {
+        Row: {
+          account_id: string
+          achieved: boolean
+          actual_value: number
+          bonus_paid: number
+          created_at: string
+          goal_id: string
+          id: string
+          month: number
+          notes: string | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          account_id: string
+          achieved?: boolean
+          actual_value?: number
+          bonus_paid?: number
+          created_at?: string
+          goal_id: string
+          id?: string
+          month: number
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          account_id?: string
+          achieved?: boolean
+          actual_value?: number
+          bonus_paid?: number
+          created_at?: string
+          goal_id?: string
+          id?: string
+          month?: number
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultant_bonus_payouts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultant_bonus_payouts_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "consultant_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultant_bonus_payouts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consultant_goals: {
         Row: {
           account_id: string
