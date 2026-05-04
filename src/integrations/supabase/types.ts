@@ -17398,6 +17398,16 @@ export type Database = {
       generate_registration_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
       get_ai_queue_stats: { Args: never; Returns: Json }
+      get_avg_won_to_onboarding_days: {
+        Args: { p_account_id: string; p_months_back?: number }
+        Returns: {
+          avg_days: number
+          max_days: number
+          median_days: number
+          min_days: number
+          sample_count: number
+        }[]
+      }
       get_budget_vs_actual: {
         Args: { p_account_id: string; p_month?: number; p_year: number }
         Returns: {
