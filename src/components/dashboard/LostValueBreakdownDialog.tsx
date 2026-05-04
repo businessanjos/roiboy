@@ -64,6 +64,21 @@ export function LostValueBreakdownDialog({
     [contracts],
   );
 
+  const productStats = useMemo(() => {
+    const map = new Map<string, { count: number; value: number; color: string | null }>();
+    for (const c of contracts) {
+      const prod = c.product_id ? productsMap[c.product_id] : null;
+      const key = prod?.name || "Sem produto";
+      const cur = map.get(key) || { count: 0, value: 0, color: prod?.color ?? null };
+      cur.count += 1;
+      cur.value += c.value || 0;
+      map.set(key, cur);
+    }
+    return Array.from(map.entries())
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.value - a.value);
+  }, [contracts, productsMap]);
+
   const reasonStats = useMemo(() => {
     const map = new Map<string, { count: number; value: number }>();
     for (const c of contracts) {
@@ -83,7 +98,7 @@ export function LostValueBreakdownDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-danger" />
@@ -95,139 +110,180 @@ export function LostValueBreakdownDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 py-2">
-          <div className="rounded-lg border border-danger/30 bg-danger/5 p-3">
-            <p className="text-xs text-muted-foreground font-medium">Cancelamentos / Desistências</p>
-            <p className="text-xl font-bold text-danger">{fmtBRL(cancelledValue)}</p>
-          </div>
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-            <p className="text-xs text-muted-foreground font-medium">Encerramentos Naturais</p>
-            <p className="text-xl font-bold text-amber-600">{fmtBRL(endedValue)}</p>
-          </div>
-          <div className="rounded-lg border border-foreground/10 bg-muted/40 p-3">
-            <p className="text-xs text-muted-foreground font-medium">Total de Contratos</p>
-            <p className="text-xl font-bold text-foreground">{contracts.length}</p>
-          </div>
-        </div>
-
-        {reasonStats.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-semibold">Principais motivos</h4>
-            <div className="space-y-1.5">
-              {reasonStats.slice(0, 5).map((r) => {
-                const pct = totalLost > 0 ? (r.value / totalLost) * 100 : 0;
-                return (
-                  <div key={r.reason} className="flex items-center gap-3 text-sm">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between gap-2 mb-1">
-                        <span className="truncate font-medium">{r.reason}</span>
-                        <span className="text-muted-foreground whitespace-nowrap">
-                          {r.count}× · {fmtBRL(r.value)} ({pct.toFixed(0)}%)
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-danger rounded-full"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 py-2">
+            <div className="rounded-lg border border-danger/30 bg-danger/5 p-3">
+              <p className="text-xs text-muted-foreground font-medium">Cancelamentos / Desistências</p>
+              <p className="text-xl font-bold text-danger">{fmtBRL(cancelledValue)}</p>
+            </div>
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+              <p className="text-xs text-muted-foreground font-medium">Encerramentos Naturais</p>
+              <p className="text-xl font-bold text-amber-600">{fmtBRL(endedValue)}</p>
+            </div>
+            <div className="rounded-lg border border-foreground/10 bg-muted/40 p-3">
+              <p className="text-xs text-muted-foreground font-medium">Total de Contratos</p>
+              <p className="text-xl font-bold text-foreground">{contracts.length}</p>
             </div>
           </div>
-        )}
 
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <h4 className="text-sm font-semibold mt-3 mb-2">Contratos ({sorted.length})</h4>
-          <ScrollArea className="flex-1 border rounded-lg">
-            <Table>
-              <TableHeader className="sticky top-0 bg-background z-10">
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Saída</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Motivo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sorted.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Nenhum contrato perdido no período.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  sorted.map((c) => {
-                    const exitRaw = c.cancelled_at || c.status_changed_at || c.end_date;
-                    const exitDate = exitRaw ? parseISO(exitRaw) : null;
-                    const isChurn = ["cancelled", "dismissed", "dropout_7d"].includes(c.status);
-                    const product = c.product_id ? productsMap[c.product_id] : null;
-                    return (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">
-                          {clientsMap[c.client_id] || "—"}
-                        </TableCell>
-                        <TableCell>
-                          {product ? (
-                            <Badge
-                              style={{
-                                backgroundColor: `${product.color || "#6b7280"}20`,
-                                color: product.color || "#6b7280",
-                                borderColor: `${product.color || "#6b7280"}40`,
-                              }}
-                              variant="outline"
-                            >
-                              {product.name}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
+          {productStats.length > 0 && (
+            <div className="space-y-2 mt-3">
+              <h4 className="text-sm font-semibold">Por produto</h4>
+              <div className="space-y-1.5">
+                {productStats.map((p) => {
+                  const pct = totalLost > 0 ? (p.value / totalLost) * 100 : 0;
+                  const color = p.color || "#6b7280";
+                  return (
+                    <div key={p.name} className="flex items-center gap-3 text-sm">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between gap-2 mb-1 items-center">
                           <Badge
+                            style={{
+                              backgroundColor: `${color}20`,
+                              color,
+                              borderColor: `${color}40`,
+                            }}
                             variant="outline"
-                            className={
-                              isChurn
-                                ? "border-danger/40 text-danger bg-danger/5"
-                                : "border-amber-500/40 text-amber-600 bg-amber-500/5"
-                            }
                           >
-                            {isChurn ? <TrendingDown className="h-3 w-3 mr-1" /> : <CalendarX className="h-3 w-3 mr-1" />}
-                            {STATUS_LABELS[c.status] || c.status}
+                            {p.name}
                           </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {exitDate ? format(exitDate, "dd/MM/yyyy", { locale: ptBR }) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold tabular-nums">
-                          {fmtBRL(c.value || 0)}
-                        </TableCell>
-                        <TableCell className="text-xs max-w-[260px]">
-                          {isChurn ? (
-                            <div>
-                              <div className="font-medium">{c.cancellation_reason || "—"}</div>
-                              {c.cancellation_justification && (
-                                <div className="text-muted-foreground line-clamp-2">
-                                  {c.cancellation_justification}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">Encerramento natural</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </div>
+                          <span className="text-muted-foreground whitespace-nowrap">
+                            {p.count}× · {fmtBRL(p.value)} ({pct.toFixed(0)}%)
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${pct}%`, backgroundColor: color }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {reasonStats.length > 0 && (
+            <div className="space-y-2 mt-4">
+              <h4 className="text-sm font-semibold">Principais motivos</h4>
+              <div className="space-y-1.5">
+                {reasonStats.slice(0, 5).map((r) => {
+                  const pct = totalLost > 0 ? (r.value / totalLost) * 100 : 0;
+                  return (
+                    <div key={r.reason} className="flex items-center gap-3 text-sm">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between gap-2 mb-1">
+                          <span className="truncate font-medium">{r.reason}</span>
+                          <span className="text-muted-foreground whitespace-nowrap">
+                            {r.count}× · {fmtBRL(r.value)} ({pct.toFixed(0)}%)
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-danger rounded-full"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold mb-2">Contratos ({sorted.length})</h4>
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Saída</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Motivo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sorted.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Nenhum contrato perdido no período.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    sorted.map((c) => {
+                      const exitRaw = c.cancelled_at || c.status_changed_at || c.end_date;
+                      const exitDate = exitRaw ? parseISO(exitRaw) : null;
+                      const isChurn = ["cancelled", "dismissed", "dropout_7d"].includes(c.status);
+                      const product = c.product_id ? productsMap[c.product_id] : null;
+                      return (
+                        <TableRow key={c.id}>
+                          <TableCell className="font-medium">
+                            {clientsMap[c.client_id] || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {product ? (
+                              <Badge
+                                style={{
+                                  backgroundColor: `${product.color || "#6b7280"}20`,
+                                  color: product.color || "#6b7280",
+                                  borderColor: `${product.color || "#6b7280"}40`,
+                                }}
+                                variant="outline"
+                              >
+                                {product.name}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                isChurn
+                                  ? "border-danger/40 text-danger bg-danger/5"
+                                  : "border-amber-500/40 text-amber-600 bg-amber-500/5"
+                              }
+                            >
+                              {isChurn ? <TrendingDown className="h-3 w-3 mr-1" /> : <CalendarX className="h-3 w-3 mr-1" />}
+                              {STATUS_LABELS[c.status] || c.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            {exitDate ? format(exitDate, "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {fmtBRL(c.value || 0)}
+                          </TableCell>
+                          <TableCell className="text-xs max-w-[260px]">
+                            {isChurn ? (
+                              <div>
+                                <div className="font-medium">{c.cancellation_reason || "—"}</div>
+                                {c.cancellation_justification && (
+                                  <div className="text-muted-foreground line-clamp-2">
+                                    {c.cancellation_justification}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Encerramento natural</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
