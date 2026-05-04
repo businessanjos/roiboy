@@ -15,6 +15,8 @@ export interface BonusPayout {
   achieved: boolean;
   bonus_paid: number;
   notes: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**

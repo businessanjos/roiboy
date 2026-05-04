@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check, X, Loader2, Trophy, Wand2 } from "lucide-react";
+import { Check, X, Loader2, Trophy, Wand2, Database, Clock, Bot, Pencil } from "lucide-react";
 import {
   type ConsultantGoal,
   METRIC_LABELS,
@@ -27,6 +27,20 @@ interface Props {
 
 const formatBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
+
+const METRIC_SOURCE: Record<string, { label: string; tables: string }> = {
+  renewal_rate: { label: "Renovações", tables: "renewal_outcomes + client_contracts" },
+  churn_rate: { label: "Churn", tables: "client_contracts (cancelados/encerrados)" },
+  nps: { label: "NPS", tables: "vnps_snapshots" },
+};
+
+const formatDateTime = (iso?: string | null) => {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+};
 
 interface CellState {
   value: string;
@@ -73,6 +87,15 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
     const m = new Map<string, BonusPayout>();
     for (const p of payouts) m.set(`${p.goal_id}:${p.month}`, p);
     return m;
+  }, [payouts]);
+
+  const lastUpdatedAt = useMemo(() => {
+    let max: string | null = null;
+    for (const p of payouts) {
+      const t = p.updated_at || p.created_at;
+      if (t && (!max || t > max)) max = t;
+    }
+    return max;
   }, [payouts]);
 
   const cellKey = (goalId: string, month: number) => `${goalId}:${month}`;
@@ -175,6 +198,12 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
         </Card>
       </div>
 
+      <div className="flex items-center justify-end gap-1.5 text-[11px] text-muted-foreground">
+        <Clock className="h-3 w-3" />
+        Última atualização das métricas:
+        <span className="font-medium text-foreground">{formatDateTime(lastUpdatedAt)}</span>
+      </div>
+
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
@@ -218,6 +247,25 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
                         <span className="text-[10px] text-muted-foreground">
                           {formatBRL(Number(g.bonus_amount))} / gatilho
                         </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground cursor-help">
+                              <Database className="h-2.5 w-2.5" />
+                              Origem: {METRIC_SOURCE[g.metric_type]?.label}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-[260px]">
+                            <div className="text-xs space-y-1">
+                              <div className="font-semibold">{METRIC_LABELS[g.metric_type]}</div>
+                              <div className="text-muted-foreground">
+                                Tabelas: {METRIC_SOURCE[g.metric_type]?.tables}
+                              </div>
+                              <div className="text-muted-foreground">
+                                Vínculo: clients.responsible_user_id = consultora
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </td>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => {
@@ -261,8 +309,29 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
                                   }}
                                 />
                               </TooltipTrigger>
-                              <TooltipContent side="top">
-                                Meta: {target}{unit}
+                              <TooltipContent side="top" className="max-w-[260px]">
+                                <div className="text-xs space-y-1">
+                                  <div>Meta: <span className="font-semibold">{target}{unit}</span></div>
+                                  <div className="flex items-center gap-1 text-muted-foreground">
+                                    <Database className="h-2.5 w-2.5" />
+                                    Origem: {METRIC_SOURCE[g.metric_type]?.label}
+                                  </div>
+                                  {payout && (
+                                    <>
+                                      <div className="flex items-center gap-1 text-muted-foreground">
+                                        {payout.notes === "auto-calculated" ? (
+                                          <><Bot className="h-2.5 w-2.5" /> Auto-calculado</>
+                                        ) : (
+                                          <><Pencil className="h-2.5 w-2.5" /> Manual</>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1 text-muted-foreground">
+                                        <Clock className="h-2.5 w-2.5" />
+                                        Atualizado: {formatDateTime(payout.updated_at)}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               </TooltipContent>
                             </Tooltip>
                             {previewActual !== null && (
