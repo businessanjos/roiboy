@@ -279,6 +279,22 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
                                 </span>
                               </div>
                             )}
+                            {(() => {
+                              const real = computed[k];
+                              if (real === undefined || real === 0) return null;
+                              const isSame = previewActual !== null && Math.abs(real - previewActual) < 0.01;
+                              if (isSame) return null;
+                              return (
+                                <button
+                                  type="button"
+                                  className="text-[10px] text-blue-500 hover:underline"
+                                  title={`Valor real calculado: ${real}${unit}. Clique para aplicar.`}
+                                  onClick={() => setCellValue(g.id, month, String(real))}
+                                >
+                                  real: {real}{unit}
+                                </button>
+                              );
+                            })()}
                           </div>
                         </td>
                       );
