@@ -17381,6 +17381,16 @@ export type Database = {
       cleanup_ai_analysis_queue: { Args: never; Returns: undefined }
       cleanup_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
+      compute_consultant_metric: {
+        Args: {
+          p_metric: string
+          p_month: number
+          p_product_id: string
+          p_user_id: string
+          p_year: number
+        }
+        Returns: number
+      }
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
       format_call_duration: { Args: { seconds: number }; Returns: string }
