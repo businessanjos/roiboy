@@ -68,7 +68,7 @@ export function LastEventAttendanceCard() {
         if (clientIds.length > 0) {
           // Contratos dos clientes que compareceram
           const { data: contracts } = await supabase
-            .from("contracts")
+            .from("client_contracts")
             .select("client_id, product_id, start_date, end_date, status")
             .in("client_id", clientIds);
 
