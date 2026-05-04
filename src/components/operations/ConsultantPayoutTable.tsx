@@ -89,6 +89,15 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
     return m;
   }, [payouts]);
 
+  const lastUpdatedAt = useMemo(() => {
+    let max: string | null = null;
+    for (const p of payouts) {
+      const t = p.updated_at || p.created_at;
+      if (t && (!max || t > max)) max = t;
+    }
+    return max;
+  }, [payouts]);
+
   const cellKey = (goalId: string, month: number) => `${goalId}:${month}`;
 
   const getCellValue = (goalId: string, month: number) => {
