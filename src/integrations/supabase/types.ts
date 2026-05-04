@@ -17360,6 +17360,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      can_access_consultant_bonus: { Args: never; Returns: boolean }
       can_manage_spiff_payments: {
         Args: { _auth_user_id: string }
         Returns: boolean
