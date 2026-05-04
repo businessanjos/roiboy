@@ -9171,6 +9171,39 @@ export type Database = {
           },
         ]
       }
+      leadads_page_subscriptions: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          page_access_token: string
+          page_id: string
+          page_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          page_access_token: string
+          page_id: string
+          page_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          page_access_token?: string
+          page_id?: string
+          page_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           account_id: string
@@ -9498,6 +9531,54 @@ export type Database = {
           ip_address?: string | null
           success?: boolean
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      marketing_ad_sets: {
+        Row: {
+          clicks: number | null
+          conversions: number | null
+          cpl: number | null
+          created_at: string
+          id: string
+          impressions: number | null
+          meta_campaign_id: string | null
+          name: string
+          platform: string | null
+          spend: number | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clicks?: number | null
+          conversions?: number | null
+          cpl?: number | null
+          created_at?: string
+          id?: string
+          impressions?: number | null
+          meta_campaign_id?: string | null
+          name: string
+          platform?: string | null
+          spend?: number | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clicks?: number | null
+          conversions?: number | null
+          cpl?: number | null
+          created_at?: string
+          id?: string
+          impressions?: number | null
+          meta_campaign_id?: string | null
+          name?: string
+          platform?: string | null
+          spend?: number | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -15186,6 +15267,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_meta_selected_accounts: {
+        Row: {
+          ad_account_id: string
+          ad_account_name: string | null
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          ad_account_id: string
+          ad_account_name?: string | null
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          ad_account_id?: string
+          ad_account_name?: string | null
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_meta_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          meta_user_id: string | null
+          meta_user_name: string | null
+          scopes: string[] | null
+          token_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          meta_user_id?: string | null
+          meta_user_name?: string | null
+          scopes?: string[] | null
+          token_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          meta_user_id?: string | null
+          meta_user_name?: string | null
+          scopes?: string[] | null
+          token_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_sector_access: {
         Row: {
