@@ -368,7 +368,7 @@ function SlideTiers({ tiers, bonusBase }: { tiers: any[]; bonusBase: number }) {
         })}
       </div>
       <div className="text-sm text-slate-400 italic">
-        💡 Bater <strong className="text-white">100% = Platinum</strong>. A partir daí o jogo só fica melhor.
+        💡 Fechou <strong className="text-white">8 vendas = Platinum</strong>. A partir daí o jogo só fica melhor.
       </div>
     </div>
   );
