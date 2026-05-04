@@ -2406,6 +2406,8 @@ export default function ClientDetail() {
                 </CardContent>
               </Card>
             );
+          case "churn-signals":
+            return <ClientChurnSignals clientId={id!} />;
           case "deals":
             return (
               <Card className="shadow-card">
