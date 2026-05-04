@@ -1025,6 +1025,9 @@ export default function Dashboard() {
             );
           })()}
 
+          {/* Comparecimento no último evento presencial */}
+          {gestaoViewMode === "operacoes" && <LastEventAttendanceCard />}
+
           {/* Status Cards - Single Row */}
           <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"}`}>
             {/* Total de Clientes (oculto no modo operações) */}
