@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check, X, Loader2, Trophy } from "lucide-react";
+import { Check, X, Loader2, Trophy, Wand2 } from "lucide-react";
 import {
   type ConsultantGoal,
   METRIC_LABELS,
@@ -15,6 +15,8 @@ import {
   calculateBonus,
   type BonusPayout,
 } from "@/hooks/useBonusPayouts";
+import { useComputedMetrics } from "@/hooks/useComputedConsultantMetrics";
+import { toast } from "sonner";
 
 interface Props {
   goals: ConsultantGoal[];
@@ -33,7 +35,39 @@ interface CellState {
 
 export function ConsultantPayoutTable({ goals, userId, year, products }: Props) {
   const { payouts, isLoading, upsertPayout } = useBonusPayouts(year, userId);
+  const { data: computed = {}, isFetching: computing, refetch: refetchComputed } =
+    useComputedMetrics(goals, year);
   const [drafts, setDrafts] = useState<Record<string, CellState>>({});
+  const [syncing, setSyncing] = useState(false);
+
+  const syncRealValues = async (goal?: ConsultantGoal) => {
+    const target = goal ? [goal] : goals;
+    if (target.length === 0) return;
+    setSyncing(true);
+    try {
+      const fresh = await refetchComputed();
+      const data = fresh.data || {};
+      let saved = 0;
+      for (const g of target) {
+        for (let month = 1; month <= 12; month++) {
+          const v = data[`${g.id}:${month}`];
+          if (v === undefined) continue;
+          if (v === 0) continue; // skip months sem dados
+          await upsertPayout.mutateAsync({ goal: g, month, actual_value: v });
+          saved++;
+        }
+      }
+      toast.success(
+        saved > 0
+          ? `${saved} apuração(ões) atualizada(s) com dados reais.`
+          : "Nenhum dado real disponível no período."
+      );
+    } catch (e: any) {
+      toast.error("Erro ao sincronizar: " + (e?.message ?? "desconhecido"));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const payoutMap = useMemo(() => {
     const m = new Map<string, BonusPayout>();
@@ -98,6 +132,21 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          Valores reais calculados a partir de renovações, churn e NPS dos clientes da consultora (responsible_user_id).
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => syncRealValues()}
+          disabled={syncing || computing}
+          className="gap-2"
+        >
+          {syncing || computing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+          Sincronizar dados reais
+        </Button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card>
           <CardContent className="p-3">
@@ -230,6 +279,22 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
                                 </span>
                               </div>
                             )}
+                            {(() => {
+                              const real = computed[k];
+                              if (real === undefined || real === 0) return null;
+                              const isSame = previewActual !== null && Math.abs(real - previewActual) < 0.01;
+                              if (isSame) return null;
+                              return (
+                                <button
+                                  type="button"
+                                  className="text-[10px] text-blue-500 hover:underline"
+                                  title={`Valor real calculado: ${real}${unit}. Clique para aplicar.`}
+                                  onClick={() => setCellValue(g.id, month, String(real))}
+                                >
+                                  real: {real}{unit}
+                                </button>
+                              );
+                            })()}
                           </div>
                         </td>
                       );
