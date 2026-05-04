@@ -52,7 +52,7 @@ export function useProducts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name")
+        .select("id, name, color")
         .eq("is_active", true)
         .order("name");
       
