@@ -491,7 +491,7 @@ function SlideExample({ tiers, plan }: { tiers: any[]; plan: any }) {
 
   const scenarios = [
     {
-      label: "Bate 100% (Platinum)",
+      label: "Fecha 8 vendas (Platinum)",
       pct: 100,
       tier: "Platinum",
       grad: TIER_COLORS.Platinum,
@@ -501,14 +501,14 @@ function SlideExample({ tiers, plan }: { tiers: any[]; plan: any }) {
       ],
     },
     {
-      label: "Bate 142% (Elite + Sem Teto)",
+      label: "Fecha 11+ vendas (Elite + Sem Teto)",
       pct: 142,
       tier: "Elite",
       grad: TIER_COLORS.Elite,
       breakdown: [
         { name: "Salário", value: baseSalary },
         { name: "Bônus Faixa", value: eliteBonus },
-        { name: "Sem Teto (3 extras)", value: uncappedExtra },
+        { name: "Sem Teto (3 vendas extras)", value: uncappedExtra },
       ],
     },
   ];
