@@ -30,6 +30,11 @@ import { cn } from "@/lib/utils";
 const fmtBRL = (v: number) =>
   `R$ ${Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
+// Closer: 100% da meta = 8 vendas no mês. Sempre falamos em nº de vendas.
+const SALES_AT_QUOTA = 8;
+const pctToSales = (pct: number) => Math.round((Number(pct) / 100) * SALES_AT_QUOTA);
+const fmtSales = (n: number) => `${n} ${n === 1 ? "venda" : "vendas"}`;
+
 const TIER_COLORS: Record<string, string> = {
   Latão: "from-zinc-500 to-zinc-700",
   Níquel: "from-slate-400 to-slate-600",
