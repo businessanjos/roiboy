@@ -329,8 +329,6 @@ export default function ConsultantBonus() {
                   </TabsContent>
                 </Tabs>
               </TabsContent>
-                )}
-              </TabsContent>
             );
           })}
         </Tabs>
