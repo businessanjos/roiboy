@@ -28,6 +28,20 @@ interface Props {
 const formatBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
+const METRIC_SOURCE: Record<string, { label: string; tables: string }> = {
+  renewal_rate: { label: "Renovações", tables: "renewal_outcomes + client_contracts" },
+  churn_rate: { label: "Churn", tables: "client_contracts (cancelados/encerrados)" },
+  nps: { label: "NPS", tables: "vnps_snapshots" },
+};
+
+const formatDateTime = (iso?: string | null) => {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+};
+
 interface CellState {
   value: string;
   dirty: boolean;
