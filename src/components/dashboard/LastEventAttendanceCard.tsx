@@ -33,7 +33,7 @@ export function LastEventAttendanceCard() {
     (async () => {
       setLoading(true);
       try {
-        // Último evento presencial finalizado (status completed)
+        // Buscar últimos eventos presenciais finalizados e escolher o mais recente que tenha participantes
         const { data: evts } = await supabase
           .from("events")
           .select("id, title, scheduled_at, address")
@@ -41,21 +41,32 @@ export function LastEventAttendanceCard() {
           .eq("modality", "presencial")
           .eq("status", "completed")
           .order("scheduled_at", { ascending: false, nullsFirst: false })
-          .limit(1);
+          .limit(15);
 
-        const evt = evts?.[0];
+        let evt: any = null;
+        let all: any[] = [];
+        for (const candidate of evts ?? []) {
+          const { data: parts } = await supabase
+            .from("event_participants")
+            .select("client_id, rsvp_status")
+            .eq("event_id", candidate.id);
+          if ((parts?.length ?? 0) > 0) {
+            evt = candidate;
+            all = parts ?? [];
+            break;
+          }
+        }
+
         if (!evt) {
           if (!cancelled) setData(null);
           return;
         }
 
-        const { data: parts } = await supabase
-          .from("event_participants")
-          .select("client_id, rsvp_status")
-          .eq("event_id", evt.id);
-
-        const all = parts ?? [];
-        const attendedRows = all.filter((p) => p.rsvp_status === "attended");
+        // Se ninguém foi marcado como "attended" ainda, considera "confirmed" como presença
+        const hasAttended = all.some((p) => p.rsvp_status === "attended");
+        const attendedRows = hasAttended
+          ? all.filter((p) => p.rsvp_status === "attended")
+          : all.filter((p) => p.rsvp_status === "confirmed");
         const clientIds = Array.from(
           new Set(attendedRows.map((p) => p.client_id).filter(Boolean) as string[])
         );
