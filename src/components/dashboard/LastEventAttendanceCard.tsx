@@ -21,7 +21,8 @@ type LastEvent = {
 };
 
 export function LastEventAttendanceCard() {
-  const { accountId } = useCurrentUser();
+  const { user } = useCurrentUser();
+  const accountId = user?.account_id;
   const [data, setData] = useState<LastEvent | null>(null);
   const [loading, setLoading] = useState(true);
 
