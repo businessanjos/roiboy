@@ -399,11 +399,31 @@ export default function Dashboard() {
   }, [lostContracts]);
 
   // Maps for the Lost Value breakdown dialog
+  const lostClientIds = useMemo(
+    () => Array.from(new Set(lostContracts.map((c) => c.client_id).filter(Boolean))),
+    [lostContracts],
+  );
+
+  const { data: lostClientsData } = useQuery({
+    queryKey: ["dashboard-lost-clients", lostClientIds.sort().join(",")],
+    enabled: lostClientIds.length > 0,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, full_name")
+        .in("id", lostClientIds);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const clientNamesMap = useMemo(() => {
     const m: Record<string, string> = {};
     for (const c of clients) m[c.id] = c.full_name;
+    for (const c of (lostClientsData || []) as any[]) m[c.id] = c.full_name;
     return m;
-  }, [clients]);
+  }, [clients, lostClientsData]);
 
   const productsColorMap = useMemo(() => {
     const m: Record<string, { name: string; color: string | null }> = {};
