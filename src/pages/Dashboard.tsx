@@ -865,16 +865,34 @@ export default function Dashboard() {
                         <TrendingDown className={`h-6 w-6 ${churnColor}`} />
                       </div>
                     </div>
-                    <p className={`text-4xl font-bold mt-2 ${churnColor}`}>{churnRate.toFixed(1)}%</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {churnMetrics.cancelamentos} cancelamentos / {churnMetrics.activeBase} contratos ativos · Meta ≤ {CHURN_GOAL}%
-                    </p>
-                    <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden">
+                    <div className="flex items-end justify-between gap-2 mt-2">
+                      <p className={`text-5xl font-bold leading-none ${churnColor}`}>{churnRate.toFixed(1)}%</p>
+                      <div className={`text-right rounded-md px-2.5 py-1.5 ${churnBg}`}>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meta</p>
+                        <p className={`text-lg font-bold leading-none ${churnColor}`}>≤ {CHURN_GOAL}%</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 text-xs">
+                      <span className="text-muted-foreground">
+                        {churnMetrics.cancelamentos} cancel. / {churnMetrics.activeBase} ativos
+                      </span>
+                      <span className={`font-semibold ${churnColor}`}>
+                        {churnRate <= CHURN_GOAL
+                          ? `${(CHURN_GOAL - churnRate).toFixed(1)}pp abaixo da meta`
+                          : `${(churnRate - CHURN_GOAL).toFixed(1)}pp acima da meta`}
+                      </span>
+                    </div>
+                    <div className="mt-2 w-full bg-muted rounded-full h-2 overflow-hidden relative">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           churnTone === "success" ? "bg-success" : churnTone === "warning" ? "bg-warning" : "bg-danger"
                         }`}
-                        style={{ width: `${Math.min(100, (churnRate / CHURN_GOAL) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (churnRate / (CHURN_GOAL * 1.5)) * 100)}%` }}
+                      />
+                      <div
+                        className="absolute top-0 h-full w-0.5 bg-foreground/60"
+                        style={{ left: `${(CHURN_GOAL / (CHURN_GOAL * 1.5)) * 100}%` }}
+                        title={`Meta: ${CHURN_GOAL}%`}
                       />
                     </div>
                   </CardContent>
@@ -891,17 +909,68 @@ export default function Dashboard() {
                         <RefreshCw className={`h-6 w-6 ${renewalColor}`} />
                       </div>
                     </div>
-                    <p className={`text-4xl font-bold mt-2 ${renewalColor}`}>{renewalRate.toFixed(1)}%</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {renewalData?.renewed ?? 0} renovados / {renewalData?.total ?? 0} resolvidos
-                      {renewalData?.lost ? ` · ${renewalData.lost} perdidos` : ""} · Meta ≥ {RENEWAL_GOAL}%
-                    </p>
-                    <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden">
+                    <div className="flex items-end justify-between gap-2 mt-2">
+                      <p className={`text-5xl font-bold leading-none ${renewalColor}`}>{renewalRate.toFixed(1)}%</p>
+                      <div className={`text-right rounded-md px-2.5 py-1.5 ${renewalBg}`}>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meta</p>
+                        <p className={`text-lg font-bold leading-none ${renewalColor}`}>≥ {RENEWAL_GOAL}%</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 text-xs">
+                      <span className="text-muted-foreground">
+                        {renewalData?.renewed ?? 0} renov. / {renewalData?.total ?? 0} resolv.
+                        {renewalData?.lost ? ` · ${renewalData.lost} perd.` : ""}
+                      </span>
+                      <span className={`font-semibold ${renewalColor}`}>
+                        {renewalRate >= RENEWAL_GOAL
+                          ? `${(renewalRate - RENEWAL_GOAL).toFixed(1)}pp acima da meta`
+                          : `${(RENEWAL_GOAL - renewalRate).toFixed(1)}pp abaixo da meta`}
+                      </span>
+                    </div>
+                    <div className="mt-2 w-full bg-muted rounded-full h-2 overflow-hidden relative">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           renewalTone === "success" ? "bg-success" : renewalTone === "warning" ? "bg-warning" : "bg-danger"
                         }`}
                         style={{ width: `${Math.min(100, renewalRate)}%` }}
+                      />
+                      <div
+                        className="absolute top-0 h-full w-0.5 bg-foreground/60"
+                        style={{ left: `${RENEWAL_GOAL}%` }}
+                        title={`Meta: ${RENEWAL_GOAL}%`}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-card border-l-4 border-l-muted relative overflow-hidden">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        <p className="text-sm font-medium text-muted-foreground">NPS</p>
+                      </div>
+                      <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                        <Heart className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    </div>
+                    <div className="flex items-end justify-between gap-2 mt-2">
+                      <p className="text-5xl font-bold leading-none text-muted-foreground">0</p>
+                      <div className="text-right rounded-md px-2.5 py-1.5 bg-muted">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meta</p>
+                        <p className="text-lg font-bold leading-none text-foreground">≥ 80</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 text-xs">
+                      <span className="text-muted-foreground">Ainda não medido</span>
+                      <span className="font-semibold text-muted-foreground">—</span>
+                    </div>
+                    <div className="mt-2 w-full bg-muted rounded-full h-2 overflow-hidden relative">
+                      <div className="h-full rounded-full bg-muted-foreground/30" style={{ width: `0%` }} />
+                      <div
+                        className="absolute top-0 h-full w-0.5 bg-foreground/60"
+                        style={{ left: `${(80 + 100) / 2}%` }}
+                        title="Meta: 80"
                       />
                     </div>
                   </CardContent>
