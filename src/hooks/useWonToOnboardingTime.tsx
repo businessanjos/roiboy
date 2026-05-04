@@ -14,7 +14,7 @@ export function useWonToOnboardingTime(accountId?: string, monthsBack: number = 
     queryKey: ["won-to-onboarding-time", accountId, monthsBack],
     enabled: !!accountId,
     queryFn: async (): Promise<WonToOnboardingStats> => {
-      const { data, error } = await supabase.rpc("get_avg_won_to_onboarding_days", {
+      const { data, error } = await (supabase.rpc as any)("get_avg_won_to_onboarding_days", {
         p_account_id: accountId!,
         p_months_back: monthsBack,
       });
