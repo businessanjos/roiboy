@@ -247,6 +247,25 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
                         <span className="text-[10px] text-muted-foreground">
                           {formatBRL(Number(g.bonus_amount))} / gatilho
                         </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground cursor-help">
+                              <Database className="h-2.5 w-2.5" />
+                              Origem: {METRIC_SOURCE[g.metric_type]?.label}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-[260px]">
+                            <div className="text-xs space-y-1">
+                              <div className="font-semibold">{METRIC_LABELS[g.metric_type]}</div>
+                              <div className="text-muted-foreground">
+                                Tabelas: {METRIC_SOURCE[g.metric_type]?.tables}
+                              </div>
+                              <div className="text-muted-foreground">
+                                Vínculo: clients.responsible_user_id = consultora
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </td>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => {
