@@ -430,33 +430,33 @@ function SlideExtras({ plan }: { plan: any }) {
         <h2 className="text-5xl font-black">Quem mantém constância, ganha mais</h2>
       </div>
       <div className="grid md:grid-cols-2 gap-6">
-        <Card className="bg-gradient-to-br from-cyan-500/15 to-blue-600/10 border-cyan-500/30 p-8 text-slate-100 space-y-3">
+        <Card className="bg-gradient-to-br from-cyan-600 to-blue-700 border-cyan-400/50 p-8 text-white space-y-3 shadow-xl">
           <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-cyan-400" />
-            <p className="text-sm uppercase tracking-wider text-cyan-300">Trimestral</p>
+            <Trophy className="h-5 w-5 text-cyan-100" />
+            <p className="text-sm uppercase tracking-wider text-cyan-100 font-semibold">Trimestral</p>
           </div>
-          <p className="text-5xl font-black">{fmtBRL(Number(plan?.quarterly_bonus_value || 0))}</p>
-          <p className="text-slate-300">
+          <p className="text-5xl font-black text-white">{fmtBRL(Number(plan?.quarterly_bonus_value || 0))}</p>
+          <p className="text-cyan-50">
             Pago no fechamento do trimestre se você bater <strong className="text-white">100%</strong> da meta no período.
           </p>
         </Card>
-        <Card className="bg-gradient-to-br from-fuchsia-500/15 to-purple-600/10 border-fuchsia-500/30 p-8 text-slate-100 space-y-3">
+        <Card className="bg-gradient-to-br from-fuchsia-600 to-purple-700 border-fuchsia-400/50 p-8 text-white space-y-3 shadow-xl">
           <div className="flex items-center gap-2">
-            <Crown className="h-5 w-5 text-fuchsia-400" />
-            <p className="text-sm uppercase tracking-wider text-fuchsia-300">Anual</p>
+            <Crown className="h-5 w-5 text-fuchsia-100" />
+            <p className="text-sm uppercase tracking-wider text-fuchsia-100 font-semibold">Anual</p>
           </div>
-          <p className="text-5xl font-black">{fmtBRL(Number(plan?.annual_bonus_value || 0))}</p>
-          <p className="text-slate-300">
+          <p className="text-5xl font-black text-white">{fmtBRL(Number(plan?.annual_bonus_value || 0))}</p>
+          <p className="text-fuchsia-50">
             Pago no fechamento do ano se você atingir <strong className="text-white">90%+</strong> da meta anual.
           </p>
         </Card>
       </div>
-      <Card className="bg-pink-500/10 border-pink-500/30 p-6 text-slate-100">
+      <Card className="bg-gradient-to-r from-pink-600 to-rose-600 border-pink-400/50 p-6 text-white shadow-xl">
         <div className="flex items-start gap-4">
-          <Gift className="h-6 w-6 text-pink-400 flex-shrink-0 mt-1" />
+          <Gift className="h-6 w-6 text-pink-100 flex-shrink-0 mt-1" />
           <div>
-            <p className="text-sm uppercase tracking-wider text-pink-300 mb-1">SPIFFs & Roletas</p>
-            <p className="text-slate-200">
+            <p className="text-sm uppercase tracking-wider text-pink-100 font-semibold mb-1">SPIFFs & Roletas</p>
+            <p className="text-pink-50">
               Campanhas relâmpago acontecem o tempo todo — bônus por forma de pagamento,
               giros de roleta, prêmios em dinheiro ou experiências. <strong className="text-white">Tudo extra</strong>.
             </p>
