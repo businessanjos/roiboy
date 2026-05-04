@@ -22,6 +22,7 @@ const navGroups: NavGroup[] = [
     title: "Histórico",
     items: [
       { id: "timeline", label: "Timeline", icon: Clock },
+      { id: "churn-signals", label: "Sinais de Churn", icon: ShieldAlert },
       { id: "agenda", label: "Agenda", icon: Calendar },
       { id: "deals", label: "Negócios", icon: TrendingUp },
       { id: "contracts", label: "Contratos", icon: FileSignature },
