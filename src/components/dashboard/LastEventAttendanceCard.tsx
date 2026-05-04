@@ -23,6 +23,18 @@ type LastEventGroup = {
 // Janela de agrupamento (±dias) ao redor do último evento com participantes
 const GROUP_WINDOW_DAYS = 2;
 
+// Produtos elegíveis para eventos presenciais (renovações mapeiam para o produto base)
+const ELIGIBLE_PRODUCT_NAMES = [
+  "Eternum Club",
+  "Eternum Private",
+  "Conselho de Anjo",
+  "Eternum MVP",
+];
+const RENEWAL_TO_BASE: Record<string, string> = {
+  "Ren. Eternum Club": "Eternum Club",
+  "Ren. Eternum Private": "Eternum Private",
+};
+
 export function LastEventAttendanceCard() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
