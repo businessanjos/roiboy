@@ -1597,6 +1597,18 @@ export default function Dashboard() {
         document.body
       )}
 
+      <LostValueBreakdownDialog
+        open={lostValueModalOpen}
+        onOpenChange={setLostValueModalOpen}
+        contracts={lostContracts as any}
+        clientsMap={clientNamesMap}
+        productsMap={productsColorMap}
+        totalLost={lostFinancialValue.totalLost}
+        cancelledValue={lostFinancialValue.cancelledValue}
+        endedValue={lostFinancialValue.endedValue}
+        periodLabel={periodLabel}
+      />
+
       {showCancellationAnalytics && (
         <CancellationAnalyticsModal 
           open={cancellationModalOpen} 
