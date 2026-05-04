@@ -17598,6 +17598,13 @@ export type Database = {
       }
       normalize_stage_name: { Args: { p_name: string }; Returns: string }
       process_recurring_entries: { Args: never; Returns: number }
+      recalculate_consultant_bonus_payouts: {
+        Args: { p_year?: number }
+        Returns: {
+          processed: number
+          target_year: number
+        }[]
+      }
       record_login_attempt: {
         Args: {
           p_email: string
