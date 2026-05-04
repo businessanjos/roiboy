@@ -65,6 +65,7 @@ import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/components/dashboard/CancellationAnalyticsModal";
 import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
+import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttendanceCard";
 
 
 
@@ -1023,6 +1024,9 @@ export default function Dashboard() {
               </div>
             );
           })()}
+
+          {/* Comparecimento no último evento presencial */}
+          {gestaoViewMode === "operacoes" && <LastEventAttendanceCard />}
 
           {/* Status Cards - Single Row */}
           <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"}`}>
