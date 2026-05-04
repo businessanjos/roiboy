@@ -452,7 +452,7 @@ function SlideExtras({ plan }: { plan: any }) {
           </div>
           <p className="text-5xl font-black text-white">{fmtBRL(Number(plan?.annual_bonus_value || 0))}</p>
           <p className="text-fuchsia-50">
-            Pago no fechamento do ano se você atingir <strong className="text-white">pelo menos 90%</strong> do volume anual de vendas.
+            Pago no fechamento do ano se você fechar <strong className="text-white">pelo menos 86 vendas</strong> no acumulado anual.
           </p>
         </Card>
       </div>
