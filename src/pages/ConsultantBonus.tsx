@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Trophy, Plus, Trash2, Pencil, Target, TrendingDown, Star, Loader2 } from "lucide-react";
+import { Trophy, Plus, Trash2, Pencil, Target, TrendingDown, Star, Loader2, RefreshCw } from "lucide-react";
 import {
   useConsultantGoals,
   METRIC_LABELS,
