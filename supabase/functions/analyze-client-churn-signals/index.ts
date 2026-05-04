@@ -303,9 +303,20 @@ ${lines}`;
       parsed = match ? JSON.parse(match[0]) : { summary: raw, signals: [] };
     }
 
+    // Calibragem determinística — sobrescreve a IA se ela suavizar demais o risco
+    const riskOrder = { low: 0, medium: 1, high: 2, critical: 3 } as const;
+    let aiRisk = (parsed.overall_risk || "low") as keyof typeof riskOrder;
+    if (!(aiRisk in riskOrder)) aiRisk = "low";
+    let minRisk: keyof typeof riskOrder = "low";
+    if (hasCancelled) minRisk = "critical";
+    else if (noShowCount >= 2) minRisk = "high";
+    else if (noShowCount >= 1) minRisk = "medium";
+    const finalRisk =
+      riskOrder[aiRisk] >= riskOrder[minRisk] ? aiRisk : minRisk;
+
     const result = {
       summary: parsed.summary || "",
-      overall_risk: parsed.overall_risk || "low",
+      overall_risk: finalRisk,
       signals: Array.isArray(parsed.signals) ? parsed.signals : [],
       messages_analyzed: ordered.length,
     };
