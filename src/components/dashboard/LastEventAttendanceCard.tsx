@@ -117,15 +117,41 @@ export function LastEventAttendanceCard() {
         const rangeStart = dates.length ? dates[0] : null;
         const rangeEnd = dates.length ? dates[dates.length - 1] : null;
 
-        // 4) Contratos ativos por cliente — escolher contrato vigente na data da âncora
-        const productCount: Record<string, number> = {};
+        // 4) Carregar produtos elegíveis (presenciais) + renovações que mapeiam para a base
+        const eligibleNames = [
+          ...ELIGIBLE_PRODUCT_NAMES,
+          ...Object.keys(RENEWAL_TO_BASE),
+        ];
+        const { data: eligibleProds } = await supabase
+          .from("products")
+          .select("id, name, color")
+          .in("name", eligibleNames);
+
+        // Mapa: product_id -> { baseName, color } (renovações apontam para a base)
+        const productMeta = new Map<string, { name: string; color: string | null }>();
+        const baseByName = new Map<string, { name: string; color: string | null }>();
+        for (const p of eligibleProds ?? []) {
+          if (ELIGIBLE_PRODUCT_NAMES.includes(p.name)) {
+            baseByName.set(p.name, { name: p.name, color: p.color });
+          }
+        }
+        for (const p of eligibleProds ?? []) {
+          const baseName = RENEWAL_TO_BASE[p.name] ?? p.name;
+          const base = baseByName.get(baseName);
+          if (base) productMeta.set(p.id, base);
+        }
+        const eligibleProductIds = Array.from(productMeta.keys());
+
+        // 5) Contratos ativos por cliente — apenas dos produtos elegíveis
+        const productCount: Record<string, { name: string; color: string | null; count: number }> = {};
         let noProduct = 0;
 
-        if (uniqueClientIds.length > 0) {
+        if (uniqueClientIds.length > 0 && eligibleProductIds.length > 0) {
           const { data: contracts } = await supabase
             .from("client_contracts")
             .select("client_id, product_id, start_date, end_date, status")
-            .in("client_id", uniqueClientIds);
+            .in("client_id", uniqueClientIds)
+            .in("product_id", eligibleProductIds);
 
           const byClient: Record<string, any[]> = {};
           for (const c of contracts ?? []) {
@@ -148,27 +174,22 @@ export function LastEventAttendanceCard() {
               list.find((c) => activeStatuses.has((c.status || "").toLowerCase())) ||
               list[0];
 
-            if (match?.product_id) {
-              productCount[match.product_id] = (productCount[match.product_id] || 0) + 1;
+            const meta = match?.product_id ? productMeta.get(match.product_id) : null;
+            if (meta) {
+              const key = meta.name;
+              if (!productCount[key]) productCount[key] = { name: meta.name, color: meta.color, count: 0 };
+              productCount[key].count += 1;
             } else {
               noProduct += 1;
             }
           }
+        } else {
+          noProduct += uniqueClientIds.length;
         }
         noProduct += guestsNoClient;
 
-        const productIds = Object.keys(productCount);
-        let products: { id: string; name: string; color: string | null }[] = [];
-        if (productIds.length > 0) {
-          const { data: prods } = await supabase
-            .from("products")
-            .select("id, name, color")
-            .in("id", productIds);
-          products = prods ?? [];
-        }
-
-        const byProduct: ProductBreakdown[] = products
-          .map((p) => ({ ...p, count: productCount[p.id] || 0 }))
+        const byProduct: ProductBreakdown[] = Object.entries(productCount)
+          .map(([key, v]) => ({ id: key, name: v.name, color: v.color, count: v.count }))
           .sort((a, b) => b.count - a.count);
 
         if (!cancelled) {
