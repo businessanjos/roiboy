@@ -49,6 +49,7 @@ const Clients = lazyRetry(() => import("./pages/Clients"));
 const DoubleChairList = lazyRetry(() => import("./pages/DoubleChairList"));
 const VipClients = lazyRetry(() => import("./pages/VipClients"));
 const Renewals = lazyRetry(() => import("./pages/Renewals"));
+const ConsultantBonus = lazyRetry(() => import("./pages/ConsultantBonus"));
 const ClientDetail = lazyRetry(() => import("./pages/ClientDetail"));
 const Integrations = lazyRetry(() => import("./pages/Integrations"));
 const Settings = lazyRetry(() => import("./pages/Settings"));
@@ -193,6 +194,7 @@ const App = () => (
                             <Route path="/clients/new" element={<Clients />} />
                             <Route path="/clients/:id" element={<ClientDetail />} />
                             <Route path="/renewals" element={<Renewals />} />
+                            <Route path="/operations/consultant-bonus" element={<ConsultantBonus />} />
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/settings/contract-defaults" element={<ContractDefaultsSettings />} />
                             <Route path="/sales/contracts" element={<SalesDigitalContracts />} />

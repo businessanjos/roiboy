@@ -3303,6 +3303,73 @@ export type Database = {
         }
         Relationships: []
       }
+      consultant_goals: {
+        Row: {
+          account_id: string
+          annual_target: number
+          bonus_amount: number
+          created_at: string
+          id: string
+          metric_type: string
+          monthly_targets: Json
+          notes: string | null
+          product_id: string
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          account_id: string
+          annual_target?: number
+          bonus_amount?: number
+          created_at?: string
+          id?: string
+          metric_type: string
+          monthly_targets?: Json
+          notes?: string | null
+          product_id: string
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          account_id?: string
+          annual_target?: number
+          bonus_amount?: number
+          created_at?: string
+          id?: string
+          metric_type?: string
+          monthly_targets?: Json
+          notes?: string | null
+          product_id?: string
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultant_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultant_goals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultant_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_company_defaults: {
         Row: {
           account_id: string
