@@ -1511,7 +1511,7 @@ export default function Dashboard() {
                         <p className="text-sm font-medium text-muted-foreground">Taxa de Retenção</p>
                         <p className="text-4xl font-bold">{retentionMetrics.rate}%</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {retentionMetrics.novos} novos · {retentionMetrics.cancelamentos} cancel. (mês atual)
+                          {retentionMetrics.novos} novos · {retentionMetrics.cancelamentos} cancel. (período)
                         </p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-primary" />
