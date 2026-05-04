@@ -408,6 +408,35 @@ export default function Dashboard() {
     return { rate, cancelamentos, novos, activeBase };
   }, [monthlyChartData, contractStats, gestaoClientStats]);
 
+  // Renewal rate within filtered period: renewed / (renewed + lost)
+  const { data: renewalData } = useQuery({
+    queryKey: [
+      "dashboard-renewal-rate",
+      currentUser?.account_id,
+      gestaoPeriodRange.periodStart.toISOString(),
+      gestaoPeriodRange.periodEnd.toISOString(),
+    ],
+    enabled: !!currentUser?.account_id,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("renewal_outcomes")
+        .select("outcome, resolved_at")
+        .eq("account_id", currentUser!.account_id!)
+        .gte("resolved_at", gestaoPeriodRange.periodStart.toISOString())
+        .lte("resolved_at", gestaoPeriodRange.periodEnd.toISOString());
+      if (error) throw error;
+      let renewed = 0, lost = 0;
+      for (const row of (data ?? []) as any[]) {
+        if (row.outcome === "renewed") renewed++;
+        else if (row.outcome === "lost") lost++;
+      }
+      const total = renewed + lost;
+      const rate = total > 0 ? (renewed / total) * 100 : 0;
+      return { rate, renewed, lost, total };
+    },
+  });
+
   // NPS from latest vNPS snapshot per client (within current account)
   const { data: npsData } = useQuery({
     queryKey: ["dashboard-nps-snapshots", currentUser?.account_id],
