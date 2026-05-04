@@ -36,8 +36,12 @@ interface ContractData {
   status_changed_at: string | null;
   cancelled_at: string | null;
   start_date: string;
+  end_date: string | null;
   value: number;
   client_id: string;
+  product_id: string | null;
+  cancellation_reason: string | null;
+  cancellation_justification: string | null;
 }
 
 // Fetch all products
