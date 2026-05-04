@@ -363,29 +363,26 @@ export default function Dashboard() {
     paused: gestaoFilteredClients.filter(c => c.status === "paused").length,
   }), [gestaoFilteredClients]);
 
-  // Retention metrics
+  // Retention metrics (within filtered period)
   const retentionMetrics = useMemo(() => {
-    if (monthlyChartData.length === 0) return { rate: 0, novos: 0, cancelamentos: 0 };
-    const currentMonth = monthlyChartData[monthlyChartData.length - 1];
-    const novos = currentMonth?.novos || 0;
-    const cancelamentos = currentMonth?.cancelamentos || 0;
+    const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
+    const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
     const total = (contractStats?.active ?? gestaoClientStats.active) + cancelamentos;
     const rate = total > 0 ? Math.round(((total - cancelamentos) / total) * 100) : 100;
     return { rate, novos, cancelamentos };
   }, [monthlyChartData, contractStats, gestaoClientStats]);
 
-  // Lost financial value
+  // Lost financial value (within filtered period)
   const lostFinancialValue = useMemo(() => {
-    const now = new Date();
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
-    
+    const periodStart = gestaoPeriodRange.periodStart;
+    const periodEnd = gestaoPeriodRange.periodEnd;
+
     const lostContracts = contractData.filter(contract => {
       if (!["cancelled", "dismissed", "dropout_7d", "ended"].includes(contract.status)) return false;
       const exitDate = contract.cancelled_at || contract.status_changed_at;
       if (!exitDate) return false;
       const date = parseISO(exitDate);
-      return date >= monthStart && date <= monthEnd;
+      return date >= periodStart && date <= periodEnd;
     });
 
     const totalLost = lostContracts.reduce((sum, c) => sum + (c.value || 0), 0);
@@ -397,7 +394,7 @@ export default function Dashboard() {
       .reduce((sum, c) => sum + (c.value || 0), 0);
 
     return { totalLost, cancelledValue, endedValue, count: lostContracts.length };
-  }, [contractData]);
+  }, [contractData, gestaoPeriodRange]);
 
   // Churn rate within filtered period: cancellations / active contracts base
   const churnMetrics = useMemo(() => {
