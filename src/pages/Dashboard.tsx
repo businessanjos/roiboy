@@ -373,18 +373,19 @@ export default function Dashboard() {
   }, [monthlyChartData, contractStats, gestaoClientStats]);
 
   // Lost financial value (within filtered period)
-  const lostFinancialValue = useMemo(() => {
+  const lostContracts = useMemo(() => {
     const periodStart = gestaoPeriodRange.periodStart;
     const periodEnd = gestaoPeriodRange.periodEnd;
-
-    const lostContracts = contractData.filter(contract => {
+    return contractData.filter(contract => {
       if (!["cancelled", "dismissed", "dropout_7d", "ended"].includes(contract.status)) return false;
-      const exitDate = contract.cancelled_at || contract.status_changed_at;
+      const exitDate = contract.cancelled_at || contract.status_changed_at || contract.end_date;
       if (!exitDate) return false;
       const date = parseISO(exitDate);
       return date >= periodStart && date <= periodEnd;
     });
+  }, [contractData, gestaoPeriodRange]);
 
+  const lostFinancialValue = useMemo(() => {
     const totalLost = lostContracts.reduce((sum, c) => sum + (c.value || 0), 0);
     const cancelledValue = lostContracts
       .filter(c => ["cancelled", "dismissed", "dropout_7d"].includes(c.status))
@@ -392,9 +393,8 @@ export default function Dashboard() {
     const endedValue = lostContracts
       .filter(c => c.status === "ended")
       .reduce((sum, c) => sum + (c.value || 0), 0);
-
     return { totalLost, cancelledValue, endedValue, count: lostContracts.length };
-  }, [contractData, gestaoPeriodRange]);
+  }, [lostContracts]);
 
   // Churn rate within filtered period: cancellations / active contracts base
   const churnMetrics = useMemo(() => {
