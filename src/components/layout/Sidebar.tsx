@@ -124,9 +124,19 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     
     // SPIFFs: restrito apenas a Jonathan, Everton e Maikol
     const userName = (currentUser?.name || "").toLowerCase();
+    const userEmail = (currentUser?.email || "").toLowerCase();
     const canSeeSpiffs = userName.includes("jonathan") || userName.includes("everton") || userName.includes("maikol");
     if (!canSeeSpiffs) {
       sectorItems = sectorItems.filter(item => item.to !== "/sales-team/spiffs");
+    }
+
+    // Premiação & Bônus: restrito a Maikol, Jonathan, Everton e Bruna
+    const BONUS_VIEWERS = ["maikol", "jonathan", "everton", "bruna"];
+    const canSeeConsultantBonus = BONUS_VIEWERS.some(
+      (k) => userName.includes(k) || userEmail.includes(k)
+    );
+    if (!canSeeConsultantBonus) {
+      sectorItems = sectorItems.filter(item => item.to !== "/operations/consultant-bonus");
     }
 
     // Admins can see all sector items. Everyone else must pass explicit permissions.
