@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import {
   ArrowLeft, Clock, MessageSquare, TrendingUp, FileText,
   Grid3X3, Calendar, Heart, Link2, FileSignature, CreditCard,
-  Target, AlertTriangle, Lightbulb, User, ClipboardList,
+  Target, AlertTriangle, Lightbulb, User, ClipboardList, ShieldAlert,
 } from "lucide-react";
 
 interface NavItem {
