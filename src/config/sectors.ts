@@ -49,6 +49,7 @@ import {
   Clock,
   ScanFace,
   Target,
+  Trophy,
   Handshake,
   Crown,
   Gift,
