@@ -847,7 +847,7 @@ export default function Dashboard() {
             const npsBg = npsTone === "success" ? "bg-success/10" : npsTone === "warning" ? "bg-warning/10" : "bg-danger/10";
 
             const renewalRate = renewalData?.rate ?? 0;
-            const renewalTone = renewalRate >= 80 ? "success" : renewalRate >= 60 ? "warning" : "danger";
+            const renewalTone = renewalRate >= RENEWAL_GOAL ? "success" : renewalRate >= RENEWAL_GOAL * 0.75 ? "warning" : "danger";
             const renewalColor = renewalTone === "success" ? "text-success" : renewalTone === "warning" ? "text-warning" : "text-danger";
             const renewalBorder = renewalTone === "success" ? "border-l-success" : renewalTone === "warning" ? "border-l-warning" : "border-l-danger";
             const renewalBg = renewalTone === "success" ? "bg-success/10" : renewalTone === "warning" ? "bg-warning/10" : "bg-danger/10";
