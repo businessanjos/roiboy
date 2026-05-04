@@ -874,7 +874,7 @@ export default function Dashboard() {
                         className={`h-full rounded-full transition-all duration-500 ${
                           churnTone === "success" ? "bg-success" : churnTone === "warning" ? "bg-warning" : "bg-danger"
                         }`}
-                        style={{ width: `${Math.min(100, churnRate * 5)}%` }}
+                        style={{ width: `${Math.min(100, (churnRate / CHURN_GOAL) * 100)}%` }}
                       />
                     </div>
                   </CardContent>
