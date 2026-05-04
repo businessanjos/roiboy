@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     // Cliente + contrato vigente (para contexto)
     const { data: client } = await supabase
       .from("clients")
-      .select("id, full_name")
+      .select("id, full_name, phone_e164, additional_phones")
       .eq("id", client_id)
       .maybeSingle();
 
@@ -63,11 +63,60 @@ Deno.serve(async (req) => {
     }
 
     if (messages.length === 0) {
+      // Fallback: buscar threads candidatas por nome / telefone do cliente
+      const candidates: any[] = [];
+      const fullName = (client?.full_name || "").trim();
+      const tokens = fullName
+        .split(/\s+/)
+        .filter((t: string) => t.length >= 4)
+        .slice(0, 3);
+
+      // Busca por nome (cada token isoladamente, ILIKE)
+      for (const tk of tokens) {
+        const { data: byName } = await supabase
+          .from("zapp_conversations")
+          .select("id, contact_name, phone_e164, last_message_at, client_id, lead_id")
+          .ilike("contact_name", `%${tk}%`)
+          .is("client_id", null)
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(8);
+        (byName || []).forEach((r) => {
+          if (!candidates.find((c) => c.id === r.id))
+            candidates.push({ ...r, match: `nome contém "${tk}"` });
+        });
+      }
+
+      // Busca por telefone (últimos 8 dígitos)
+      const phones = [
+        client?.phone_e164,
+        ...((client?.additional_phones as string[]) || []),
+      ].filter(Boolean);
+      for (const ph of phones) {
+        const digits = String(ph).replace(/\D/g, "");
+        if (digits.length < 8) continue;
+        const tail = digits.slice(-8);
+        const { data: byPhone } = await supabase
+          .from("zapp_conversations")
+          .select("id, contact_name, phone_e164, last_message_at, client_id, lead_id")
+          .ilike("phone_e164", `%${tail}%`)
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(5);
+        (byPhone || []).forEach((r) => {
+          if (!candidates.find((c) => c.id === r.id))
+            candidates.push({ ...r, match: `telefone termina em ${tail}` });
+        });
+      }
+
       return new Response(
         JSON.stringify({
           signals: [],
-          summary: "Nenhuma mensagem de WhatsApp encontrada para este cliente.",
+          summary:
+            candidates.length > 0
+              ? "Não há conversa de WhatsApp vinculada a este cliente, mas encontramos threads candidatas que talvez devam ser associadas."
+              : "Nenhuma mensagem de WhatsApp encontrada para este cliente.",
           messages_analyzed: 0,
+          overall_risk: "low",
+          candidates,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

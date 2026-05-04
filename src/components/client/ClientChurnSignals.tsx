@@ -17,11 +17,22 @@ interface ChurnSignal {
   reasoning: string;
 }
 
+interface ChurnCandidate {
+  id: string;
+  contact_name: string | null;
+  phone_e164: string | null;
+  last_message_at: string | null;
+  client_id: string | null;
+  lead_id: string | null;
+  match: string;
+}
+
 interface ChurnAnalysis {
   summary: string;
   overall_risk: "low" | "medium" | "high" | "critical";
   signals: ChurnSignal[];
   messages_analyzed: number;
+  candidates?: ChurnCandidate[];
 }
 
 const riskColors: Record<string, string> = {
@@ -135,9 +146,51 @@ export function ClientChurnSignals({ clientId }: { clientId: string }) {
               </div>
             )}
 
+            {analysis.candidates && analysis.candidates.length > 0 && (
+              <div className="space-y-2 p-4 rounded-lg border border-warning/30 bg-warning/5">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  Threads candidatas (não vinculadas a este cliente)
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Encontramos conversas no WhatsApp que podem pertencer a este cliente. Vincule-as no RoyZapp para habilitar a análise.
+                </p>
+                <div className="space-y-2 pt-1">
+                  {analysis.candidates.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex flex-wrap items-center gap-2 text-sm p-2 rounded border bg-card"
+                    >
+                      <span className="font-medium">
+                        {c.contact_name || "(sem nome)"}
+                      </span>
+                      {c.phone_e164 && (
+                        <span className="text-muted-foreground text-xs">
+                          {c.phone_e164}
+                        </span>
+                      )}
+                      <Badge variant="secondary" className="text-xs">
+                        {c.match}
+                      </Badge>
+                      {c.last_message_at && (
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          última msg{" "}
+                          {format(new Date(c.last_message_at), "dd/MM/yyyy", {
+                            locale: ptBR,
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {analysis.signals.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
-                Nenhum sinal de risco identificado nas conversas analisadas.
+                {analysis.messages_analyzed === 0
+                  ? "Nenhuma conversa de WhatsApp vinculada a este cliente."
+                  : "Nenhum sinal de risco identificado nas conversas analisadas."}
               </div>
             ) : (
               <div className="space-y-3">
