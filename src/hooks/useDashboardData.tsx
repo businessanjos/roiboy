@@ -221,7 +221,7 @@ export function useContractData() {
       
       const { data, error } = await supabase
         .from("client_contracts")
-        .select("id, status, status_changed_at, cancelled_at, start_date, value, client_id")
+        .select("id, status, status_changed_at, cancelled_at, start_date, end_date, value, client_id, product_id, cancellation_reason, cancellation_justification")
         .or(`start_date.gte.${format(twelveMonthsAgo, "yyyy-MM-dd")},status_changed_at.gte.${twelveMonthsAgo.toISOString()},cancelled_at.gte.${twelveMonthsAgo.toISOString()}`)
         .order("start_date", { ascending: true });
 
