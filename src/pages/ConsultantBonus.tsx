@@ -162,7 +162,37 @@ export default function ConsultantBonus() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={recalculating}
+            onClick={async () => {
+              setRecalculating(true);
+              try {
+                const { data, error } = await (supabase as any).rpc(
+                  "recalculate_consultant_bonus_payouts",
+                  { p_year: year }
+                );
+                if (error) throw error;
+                const processed = data?.[0]?.processed ?? 0;
+                toast.success(`Recálculo concluído: ${processed} apuração(ões) atualizada(s).`);
+                queryClient.invalidateQueries({ queryKey: ["consultant-bonus-payouts"] });
+                queryClient.invalidateQueries({ queryKey: ["computed-consultant-metrics"] });
+              } catch (e: any) {
+                toast.error("Erro ao recalcular: " + (e?.message ?? "desconhecido"));
+              } finally {
+                setRecalculating(false);
+              }
+            }}
+            className="gap-2"
+          >
+            {recalculating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+            Recalcular agora
+          </Button>
+          <span className="text-[10px] text-muted-foreground hidden md:inline">
+            Job automático: diário 03:00 UTC
+          </span>
           <Label className="text-sm">Ano:</Label>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
             <SelectTrigger className="w-[120px]">
