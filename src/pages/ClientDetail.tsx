@@ -23,6 +23,7 @@ import { ClientAgenda } from "@/components/client/ClientAgenda";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditionalPhones } from "@/components/client/ClientInfoForm";
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
+import { ClientChurnSignals } from "@/components/client/ClientChurnSignals";
 import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
 import { ClientLogoUpload } from "@/components/client/ClientLogoUpload";
 import { ContractTimer } from "@/components/client/ContractTimer";
@@ -2405,6 +2406,8 @@ export default function ClientDetail() {
                 </CardContent>
               </Card>
             );
+          case "churn-signals":
+            return <ClientChurnSignals clientId={id!} />;
           case "deals":
             return (
               <Card className="shadow-card">
