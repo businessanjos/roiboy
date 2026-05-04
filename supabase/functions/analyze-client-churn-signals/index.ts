@@ -271,6 +271,7 @@ ${lines}`;
             { role: "user", content: userPrompt },
           ],
           response_format: { type: "json_object" },
+          max_tokens: 8192,
         }),
       }
     );
