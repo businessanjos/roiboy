@@ -832,8 +832,10 @@ export default function Dashboard() {
 
           {/* ⭐ Métricas Estrela de Operações: Churn & NPS */}
           {gestaoViewMode === "operacoes" && (() => {
+            const CHURN_GOAL = 18;
+            const RENEWAL_GOAL = 40;
             const churnRate = churnMetrics.rate;
-            const churnTone = churnRate <= 3 ? "success" : churnRate <= 7 ? "warning" : "danger";
+            const churnTone = churnRate <= CHURN_GOAL ? "success" : churnRate <= CHURN_GOAL * 1.25 ? "warning" : "danger";
             const churnColor = churnTone === "success" ? "text-success" : churnTone === "warning" ? "text-warning" : "text-danger";
             const churnBorder = churnTone === "success" ? "border-l-success" : churnTone === "warning" ? "border-l-warning" : "border-l-danger";
             const churnBg = churnTone === "success" ? "bg-success/10" : churnTone === "warning" ? "bg-warning/10" : "bg-danger/10";
