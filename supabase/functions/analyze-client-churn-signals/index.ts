@@ -295,12 +295,36 @@ ${lines}`;
     const aiData = await aiResp.json();
     const raw = aiData?.choices?.[0]?.message?.content || "{}";
 
-    let parsed: any;
+    const sanitizeJson = (s: string) => {
+      let cleaned = s.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+      const start = cleaned.search(/[\{\[]/);
+      const isArr = start !== -1 && cleaned[start] === "[";
+      const end = cleaned.lastIndexOf(isArr ? "]" : "}");
+      if (start !== -1 && end !== -1) cleaned = cleaned.substring(start, end + 1);
+      // remove control chars
+      cleaned = cleaned.replace(/[\x00-\x1F\x7F]/g, (c) => (c === "\n" || c === "\t" ? " " : ""));
+      // remove trailing commas
+      cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
+      return cleaned;
+    };
+
+    let parsed: any = { summary: "", signals: [] };
     try {
       parsed = JSON.parse(raw);
     } catch {
-      const match = raw.match(/\{[\s\S]*\}/);
-      parsed = match ? JSON.parse(match[0]) : { summary: raw, signals: [] };
+      try {
+        parsed = JSON.parse(sanitizeJson(raw));
+      } catch (e) {
+        console.error("Falha ao parsear JSON da IA:", e, "raw:", raw.slice(0, 500));
+        // tenta recuperar pelo menos summary parcial
+        const sumMatch = raw.match(/"summary"\s*:\s*"([^"]*)"/);
+        const riskMatch = raw.match(/"overall_risk"\s*:\s*"(low|medium|high|critical)"/);
+        parsed = {
+          summary: sumMatch?.[1] || "Não foi possível analisar a resposta da IA. Tente reanalisar.",
+          overall_risk: riskMatch?.[1] || "low",
+          signals: [],
+        };
+      }
     }
 
     // Calibragem determinística — sobrescreve a IA se ela suavizar demais o risco
