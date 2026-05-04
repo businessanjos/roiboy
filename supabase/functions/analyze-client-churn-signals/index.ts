@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     // Cliente + contrato vigente (para contexto)
     const { data: client } = await supabase
       .from("clients")
-      .select("id, full_name")
+      .select("id, full_name, phone_e164, additional_phones")
       .eq("id", client_id)
       .maybeSingle();
 
