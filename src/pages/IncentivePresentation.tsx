@@ -391,7 +391,7 @@ function SlideUncapped({ plan }: { plan: any }) {
         <Card className="bg-gradient-to-br from-amber-600 to-orange-700 border-amber-400/50 p-8 text-white space-y-4 shadow-xl">
           <p className="text-sm uppercase tracking-wider text-amber-100 font-semibold">A regra é simples</p>
           <p className="text-2xl leading-snug text-white">
-            A partir da <strong className="text-yellow-200 text-3xl">{pctToSales(threshold)}ª venda</strong> do mês,
+            A partir da <strong className="text-yellow-200 text-3xl">12ª venda</strong> do mês,
             <br />
             <strong className="text-white">cada venda extra</strong> paga
           </p>
