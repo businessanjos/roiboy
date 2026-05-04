@@ -25,7 +25,9 @@ const QUARTERLY_BONUS_THRESHOLD = 100; // % de atingimento para o bônus trimest
 
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function CommissionSimulator() {
+const VANESSA_USER_ID = "1ac1c97c-bff6-4174-b48c-9b524b404ce6";
+
+export function CommissionSimulator({ presentationMode = false }: { presentationMode?: boolean } = {}) {
   const now = new Date();
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
@@ -33,7 +35,7 @@ export function CommissionSimulator() {
   const month = now.getMonth() + 1;
 
   const { plans, productRates, tiers, quotas, spiffs } = useQuotasIncentives(year, month);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState(presentationMode ? VANESSA_USER_ID : "");
   const [simMode, setSimMode] = useState<"percent" | "sales">("percent");
   const [achievementPct, setAchievementPct] = useState(100);
   const [salesCount, setSalesCount] = useState(7);
@@ -349,16 +351,18 @@ export function CommissionSimulator() {
         <CardDescription>Simule os ganhos mensais de um vendedor conforme o % de atingimento da meta</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Vendedor</Label>
-            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>
-                {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className={`grid grid-cols-1 ${presentationMode ? "" : "md:grid-cols-2"} gap-4`}>
+          {!presentationMode && (
+            <div className="space-y-2">
+              <Label>Vendedor</Label>
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>
