@@ -66,6 +66,7 @@ import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementRep
 import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/components/dashboard/CancellationAnalyticsModal";
 import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
 import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttendanceCard";
+import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
 
 
 
