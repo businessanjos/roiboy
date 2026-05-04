@@ -30,6 +30,11 @@ import { cn } from "@/lib/utils";
 const fmtBRL = (v: number) =>
   `R$ ${Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
+// Closer: 100% da meta = 8 vendas no mês. Sempre falamos em nº de vendas.
+const SALES_AT_QUOTA = 8;
+const pctToSales = (pct: number) => Math.round((Number(pct) / 100) * SALES_AT_QUOTA);
+const fmtSales = (n: number) => `${n} ${n === 1 ? "venda" : "vendas"}`;
+
 const TIER_COLORS: Record<string, string> = {
   Latão: "from-zinc-500 to-zinc-700",
   Níquel: "from-slate-400 to-slate-600",
@@ -221,12 +226,12 @@ function SlideWhy() {
     {
       icon: Rocket,
       title: "Aceleradores reais",
-      text: "Bater 100% paga bem. Bater 130% paga MUITO bem.",
+      text: "Bater 8 vendas paga bem. Bater 11 paga MUITO bem.",
     },
     {
       icon: Crown,
       title: "Sem teto",
-      text: "Estourou a meta? Cada venda extra continua pagando bônus.",
+      text: "Estourou as 8 vendas? Cada venda extra continua pagando bônus.",
     },
   ];
   return (
@@ -347,7 +352,7 @@ function SlideTiers({ tiers, bonusBase }: { tiers: any[]; bonusBase: number }) {
             >
               <div>
                 <p className="text-[10px] uppercase tracking-widest opacity-80">
-                  {Math.round(Number(t.min_achievement_percent))}-{Math.round(Number(t.max_achievement_percent || 999))}%
+                  {pctToSales(Number(t.min_achievement_percent))}{t.max_achievement_percent ? `–${pctToSales(Number(t.max_achievement_percent))}` : "+"} vendas
                 </p>
                 <p className="text-base font-black mt-1 leading-tight">{t.label}</p>
               </div>
@@ -363,7 +368,7 @@ function SlideTiers({ tiers, bonusBase }: { tiers: any[]; bonusBase: number }) {
         })}
       </div>
       <div className="text-sm text-slate-400 italic">
-        💡 Bater <strong className="text-white">100% = Platinum</strong>. A partir daí o jogo só fica melhor.
+        💡 Fechou <strong className="text-white">8 vendas = Platinum</strong>. A partir daí o jogo só fica melhor.
       </div>
     </div>
   );
@@ -386,7 +391,7 @@ function SlideUncapped({ plan }: { plan: any }) {
         <Card className="bg-gradient-to-br from-amber-600 to-orange-700 border-amber-400/50 p-8 text-white space-y-4 shadow-xl">
           <p className="text-sm uppercase tracking-wider text-amber-100 font-semibold">A regra é simples</p>
           <p className="text-2xl leading-snug text-white">
-            A partir de <strong className="text-yellow-200 text-3xl">{threshold}%</strong> de atingimento,
+            A partir da <strong className="text-yellow-200 text-3xl">{pctToSales(threshold)}ª venda</strong> do mês,
             <br />
             <strong className="text-white">cada venda extra</strong> paga
           </p>
@@ -437,7 +442,7 @@ function SlideExtras({ plan }: { plan: any }) {
           </div>
           <p className="text-5xl font-black text-white">{fmtBRL(Number(plan?.quarterly_bonus_value || 0))}</p>
           <p className="text-cyan-50">
-            Pago no fechamento do trimestre se você bater <strong className="text-white">100%</strong> da meta no período.
+            Pago no fechamento do trimestre se você bater <strong className="text-white">a meta de vendas</strong> no período.
           </p>
         </Card>
         <Card className="bg-gradient-to-br from-fuchsia-600 to-purple-700 border-fuchsia-400/50 p-8 text-white space-y-3 shadow-xl">
@@ -447,7 +452,7 @@ function SlideExtras({ plan }: { plan: any }) {
           </div>
           <p className="text-5xl font-black text-white">{fmtBRL(Number(plan?.annual_bonus_value || 0))}</p>
           <p className="text-fuchsia-50">
-            Pago no fechamento do ano se você atingir <strong className="text-white">90%+</strong> da meta anual.
+            Pago no fechamento do ano se você atingir <strong className="text-white">pelo menos 90%</strong> do volume anual de vendas.
           </p>
         </Card>
       </div>
@@ -486,7 +491,7 @@ function SlideExample({ tiers, plan }: { tiers: any[]; plan: any }) {
 
   const scenarios = [
     {
-      label: "Bate 100% (Platinum)",
+      label: "Fecha 8 vendas (Platinum)",
       pct: 100,
       tier: "Platinum",
       grad: TIER_COLORS.Platinum,
@@ -496,14 +501,14 @@ function SlideExample({ tiers, plan }: { tiers: any[]; plan: any }) {
       ],
     },
     {
-      label: "Bate 142% (Elite + Sem Teto)",
+      label: "Fecha 11+ vendas (Elite + Sem Teto)",
       pct: 142,
       tier: "Elite",
       grad: TIER_COLORS.Elite,
       breakdown: [
         { name: "Salário", value: baseSalary },
         { name: "Bônus Faixa", value: eliteBonus },
-        { name: "Sem Teto (3 extras)", value: uncappedExtra },
+        { name: "Sem Teto (3 vendas extras)", value: uncappedExtra },
       ],
     },
   ];
@@ -561,7 +566,7 @@ function SlideCalculator() {
         </div>
         <h2 className="text-4xl md:text-5xl font-black">Quanto você vai ganhar?</h2>
         <p className="text-slate-400">
-          Escolha o vendedor, ajuste o atingimento e veja em tempo real.
+          Escolha o vendedor, ajuste o nº de vendas e veja em tempo real.
         </p>
       </div>
       <div className="bg-white text-slate-900 rounded-2xl p-2 shadow-2xl">
