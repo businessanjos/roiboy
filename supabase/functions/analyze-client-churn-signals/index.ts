@@ -223,15 +223,38 @@ ${lines}`;
       parsed = match ? JSON.parse(match[0]) : { summary: raw, signals: [] };
     }
 
-    return new Response(
-      JSON.stringify({
-        summary: parsed.summary || "",
-        overall_risk: parsed.overall_risk || "low",
-        signals: Array.isArray(parsed.signals) ? parsed.signals : [],
-        messages_analyzed: ordered.length,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const result = {
+      summary: parsed.summary || "",
+      overall_risk: parsed.overall_risk || "low",
+      signals: Array.isArray(parsed.signals) ? parsed.signals : [],
+      messages_analyzed: ordered.length,
+    };
+
+    // Persistir análise (best-effort)
+    try {
+      // Identificar usuário a partir do token
+      let createdBy: string | null = null;
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader) {
+        const token = authHeader.replace("Bearer ", "");
+        const { data: userData } = await supabase.auth.getUser(token);
+        createdBy = userData?.user?.id ?? null;
+      }
+      await supabase.from("client_churn_analyses").insert({
+        client_id,
+        summary: result.summary,
+        overall_risk: result.overall_risk,
+        signals: result.signals,
+        messages_analyzed: result.messages_analyzed,
+        created_by: createdBy,
+      });
+    } catch (persistErr) {
+      console.error("Falha ao persistir análise de churn:", persistErr);
+    }
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e) {
     console.error("analyze-client-churn-signals error:", e);
     return new Response(
