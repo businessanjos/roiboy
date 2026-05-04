@@ -35,7 +35,39 @@ interface CellState {
 
 export function ConsultantPayoutTable({ goals, userId, year, products }: Props) {
   const { payouts, isLoading, upsertPayout } = useBonusPayouts(year, userId);
+  const { data: computed = {}, isFetching: computing, refetch: refetchComputed } =
+    useComputedMetrics(goals, year);
   const [drafts, setDrafts] = useState<Record<string, CellState>>({});
+  const [syncing, setSyncing] = useState(false);
+
+  const syncRealValues = async (goal?: ConsultantGoal) => {
+    const target = goal ? [goal] : goals;
+    if (target.length === 0) return;
+    setSyncing(true);
+    try {
+      const fresh = await refetchComputed();
+      const data = fresh.data || {};
+      let saved = 0;
+      for (const g of target) {
+        for (let month = 1; month <= 12; month++) {
+          const v = data[`${g.id}:${month}`];
+          if (v === undefined) continue;
+          if (v === 0) continue; // skip months sem dados
+          await upsertPayout.mutateAsync({ goal: g, month, actual_value: v });
+          saved++;
+        }
+      }
+      toast.success(
+        saved > 0
+          ? `${saved} apuração(ões) atualizada(s) com dados reais.`
+          : "Nenhum dado real disponível no período."
+      );
+    } catch (e: any) {
+      toast.error("Erro ao sincronizar: " + (e?.message ?? "desconhecido"));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const payoutMap = useMemo(() => {
     const m = new Map<string, BonusPayout>();
