@@ -442,7 +442,7 @@ function SlideExtras({ plan }: { plan: any }) {
           </div>
           <p className="text-5xl font-black text-white">{fmtBRL(Number(plan?.quarterly_bonus_value || 0))}</p>
           <p className="text-cyan-50">
-            Pago no fechamento do trimestre se você bater <strong className="text-white">100%</strong> da meta no período.
+            Pago no fechamento do trimestre se você bater <strong className="text-white">a meta de vendas</strong> no período.
           </p>
         </Card>
         <Card className="bg-gradient-to-br from-fuchsia-600 to-purple-700 border-fuchsia-400/50 p-8 text-white space-y-3 shadow-xl">
