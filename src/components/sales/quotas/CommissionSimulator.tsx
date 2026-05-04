@@ -351,16 +351,18 @@ export function CommissionSimulator({ presentationMode = false }: { presentation
         <CardDescription>Simule os ganhos mensais de um vendedor conforme o % de atingimento da meta</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Vendedor</Label>
-            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>
-                {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className={`grid grid-cols-1 ${presentationMode ? "" : "md:grid-cols-2"} gap-4`}>
+          {!presentationMode && (
+            <div className="space-y-2">
+              <Label>Vendedor</Label>
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>
