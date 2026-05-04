@@ -132,6 +132,21 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          Valores reais calculados a partir de renovações, churn e NPS dos clientes da consultora (responsible_user_id).
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => syncRealValues()}
+          disabled={syncing || computing}
+          className="gap-2"
+        >
+          {syncing || computing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+          Sincronizar dados reais
+        </Button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card>
           <CardContent className="p-3">
