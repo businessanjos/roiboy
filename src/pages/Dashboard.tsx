@@ -1281,11 +1281,20 @@ export default function Dashboard() {
               </Card>
 
               {/* Valor Perdido */}
-              <Card className="shadow-card">
+              <Card
+                className="shadow-card cursor-pointer hover:shadow-lg hover:border-danger/40 transition-all group"
+                onClick={() => setLostValueModalOpen(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setLostValueModalOpen(true); } }}
+              >
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Valor Perdido (período)</p>
+                      <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                        Valor Perdido (período)
+                        <span className="text-[10px] text-danger/70 group-hover:text-danger uppercase tracking-wider font-semibold">Ver detalhes →</span>
+                      </p>
                       <p className="text-3xl font-bold text-danger">
                         {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.totalLost)}
                       </p>
@@ -1293,7 +1302,7 @@ export default function Dashboard() {
                         {lostFinancialValue.count} contratos · Cancel.: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.cancelledValue)} · Encerr.: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.endedValue)}
                       </p>
                     </div>
-                    <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center">
+                    <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center group-hover:bg-danger/20 transition-colors">
                       <DollarSign className="h-6 w-6 text-danger" />
                     </div>
                   </div>
