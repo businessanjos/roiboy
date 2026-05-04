@@ -41,6 +41,17 @@ Deno.serve(async (req) => {
       .order("start_date", { ascending: false })
       .limit(5);
 
+    // Eventos de risco (no-show, etc.) — últimos 12 meses
+    const since = new Date();
+    since.setMonth(since.getMonth() - 12);
+    const { data: riskEvents } = await supabase
+      .from("risk_events")
+      .select("source, risk_level, reason, evidence_snippet, happened_at")
+      .eq("client_id", client_id)
+      .gte("happened_at", since.toISOString())
+      .order("happened_at", { ascending: false })
+      .limit(30);
+
     // Conversas do cliente
     const { data: conversations } = await supabase
       .from("zapp_conversations")
@@ -107,15 +118,63 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Mesmo sem mensagens, calcular risco com base em contratos e eventos de risco
+      const cancelled = (contracts || []).some(
+        (c: any) => c.status === "cancelled" || c.cancelled_at
+      );
+      const noShowCount = (riskEvents || []).filter(
+        (r: any) => r.source === "event_no_show"
+      ).length;
+
+      let overall: "low" | "medium" | "high" | "critical" = "low";
+      const fallbackSignals: any[] = [];
+      if (cancelled) {
+        overall = "critical";
+        const c = (contracts || []).find(
+          (x: any) => x.status === "cancelled" || x.cancelled_at
+        );
+        fallbackSignals.push({
+          message_id: `contract:${c?.id}`,
+          date: c?.cancelled_at || c?.end_date || new Date().toISOString(),
+          risk: "critical",
+          category: "intencao_cancelar",
+          quote: `Contrato cancelado${c?.cancellation_reason ? `: ${c.cancellation_reason}` : ""}`,
+          reasoning: "Cliente já efetivou o cancelamento do contrato.",
+        });
+      } else if (noShowCount >= 2) {
+        overall = "high";
+      } else if (noShowCount === 1) {
+        overall = "medium";
+      }
+
+      (riskEvents || []).slice(0, 10).forEach((r: any) => {
+        fallbackSignals.push({
+          message_id: `risk_event:${r.happened_at}`,
+          date: r.happened_at,
+          risk: noShowCount >= 2 ? "high" : "medium",
+          category: "engajamento",
+          quote: r.reason || "Evento de risco",
+          reasoning:
+            r.source === "event_no_show"
+              ? "Não comparecimento a evento é um forte sinal de desengajamento."
+              : "Evento de risco registrado pelo sistema.",
+        });
+      });
+
+      const summaryParts: string[] = [];
+      if (cancelled) summaryParts.push("Cliente possui contrato cancelado.");
+      if (noShowCount > 0)
+        summaryParts.push(
+          `Registrou ${noShowCount} não comparecimento${noShowCount > 1 ? "s" : ""} em eventos.`
+        );
+      summaryParts.push("Nenhuma mensagem de WhatsApp foi encontrada para análise textual.");
+
       return new Response(
         JSON.stringify({
-          signals: [],
-          summary:
-            candidates.length > 0
-              ? "Não há conversa de WhatsApp vinculada a este cliente, mas encontramos threads candidatas que talvez devam ser associadas."
-              : "Nenhuma mensagem de WhatsApp encontrada para este cliente.",
+          signals: fallbackSignals,
+          summary: summaryParts.join(" "),
           messages_analyzed: 0,
-          overall_risk: "low",
+          overall_risk: overall,
           candidates,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -140,38 +199,59 @@ Deno.serve(async (req) => {
     const contractContext = (contracts || [])
       .map(
         (c: any) =>
-          `- contrato ${c.id} status=${c.status} início=${c.start_date} fim=${c.end_date} cancelado_em=${c.cancelled_at || "—"}`
+          `- contrato ${c.id} status=${c.status} início=${c.start_date} fim=${c.end_date} cancelado_em=${c.cancelled_at || "—"}${c.cancellation_reason ? ` motivo="${c.cancellation_reason}"` : ""}`
       )
       .join("\n") || "(nenhum contrato)";
 
-    const systemPrompt = `Você é um analista de retenção (Customer Success) especializado em detectar sinais precoces de churn em conversas de WhatsApp.
-Analise as mensagens do cliente e identifique trechos que indiquem risco de cancelamento, insatisfação, dificuldade financeira, intenção de pausar/sair, frustração com resultado, ou perda de engajamento.
+    const riskEventsContext = (riskEvents || [])
+      .map(
+        (r: any) =>
+          `- ${r.happened_at} [${r.source}] risco=${r.risk_level} ${r.reason || ""}`
+      )
+      .join("\n") || "(nenhum evento de risco)";
 
-Retorne APENAS JSON válido (sem markdown, sem comentários) no formato:
+    const hasCancelled = (contracts || []).some(
+      (c: any) => c.status === "cancelled" || c.cancelled_at
+    );
+    const noShowCount = (riskEvents || []).filter(
+      (r: any) => r.source === "event_no_show"
+    ).length;
+
+    const systemPrompt = `Você é um analista de retenção (Customer Success) especializado em detectar sinais de churn.
+Você recebe (1) mensagens de WhatsApp, (2) status de contratos e (3) eventos de risco (ex.: não comparecimento a eventos).
+Analise TUDO em conjunto — não olhe apenas mensagens isoladas — e identifique sinais de risco.
+
+Retorne APENAS JSON válido (sem markdown) no formato:
 {
-  "summary": "Resumo curto (2-4 frases) sobre o estado de risco do cliente.",
+  "summary": "Resumo curto (2-4 frases), mencionando contratos e eventos quando relevantes.",
   "overall_risk": "low" | "medium" | "high" | "critical",
   "signals": [
     {
-      "message_id": "<id da mensagem>",
+      "message_id": "<id da mensagem OU 'contract:<id>' OU 'risk_event:<happened_at>'>",
       "date": "<ISO date>",
       "risk": "low" | "medium" | "high" | "critical",
       "category": "financeiro" | "insatisfacao" | "engajamento" | "intencao_cancelar" | "operacional" | "outro",
-      "quote": "trecho curto (até 180 chars) da mensagem",
+      "quote": "trecho curto (até 180 chars)",
       "reasoning": "por que isso é um sinal de churn (1-2 frases)"
     }
   ]
 }
 
-Regras:
-- Liste no máximo 15 sinais, priorizando os de maior risco e mais recentes.
-- Apenas mensagens reais do CLIENTE devem virar sinais (ignore EQUIPE como sinal, mas use como contexto).
-- Se não houver sinais relevantes, devolva signals vazio e overall_risk "low".
-- A "quote" deve ser fiel ao texto original.`;
+Regras de calibragem do overall_risk (OBRIGATÓRIAS):
+- Contrato cancelado → overall_risk = "critical" e inclua sinal explícito de cancelamento.
+- 2+ não comparecimentos a eventos em 90 dias → overall_risk no mínimo "high".
+- 1 não comparecimento recente → no mínimo "medium".
+- Mensagens engajadas NÃO anulam no-shows nem cancelamentos. Combine sinais de forma conservadora (sempre o pior).
+- Inclua eventos (no-show, cancelamento) como sinais — não apenas mensagens.
+- Máximo 15 sinais; priorize maior risco e mais recentes. "quote" fiel ao texto/evento original.`;
 
     const userPrompt = `Cliente: ${client?.full_name || "—"}
+
 Contratos:
 ${contractContext}
+
+Eventos de risco (últimos 12 meses) — total de não comparecimentos: ${noShowCount}${hasCancelled ? " | CONTRATO CANCELADO" : ""}:
+${riskEventsContext}
 
 Mensagens (ordem cronológica):
 ${lines}`;
@@ -223,9 +303,20 @@ ${lines}`;
       parsed = match ? JSON.parse(match[0]) : { summary: raw, signals: [] };
     }
 
+    // Calibragem determinística — sobrescreve a IA se ela suavizar demais o risco
+    const riskOrder = { low: 0, medium: 1, high: 2, critical: 3 } as const;
+    let aiRisk = (parsed.overall_risk || "low") as keyof typeof riskOrder;
+    if (!(aiRisk in riskOrder)) aiRisk = "low";
+    let minRisk: keyof typeof riskOrder = "low";
+    if (hasCancelled) minRisk = "critical";
+    else if (noShowCount >= 2) minRisk = "high";
+    else if (noShowCount >= 1) minRisk = "medium";
+    const finalRisk =
+      riskOrder[aiRisk] >= riskOrder[minRisk] ? aiRisk : minRisk;
+
     const result = {
       summary: parsed.summary || "",
-      overall_risk: parsed.overall_risk || "low",
+      overall_risk: finalRisk,
       signals: Array.isArray(parsed.signals) ? parsed.signals : [],
       messages_analyzed: ordered.length,
     };
