@@ -66,13 +66,11 @@ export function LastEventAttendanceCard() {
         let noProduct = 0;
 
         if (clientIds.length > 0) {
-          // Contratos ativos no momento do evento
-          let cq = supabase
+          // Contratos dos clientes que compareceram
+          const { data: contracts } = await supabase
             .from("contracts")
             .select("client_id, product_id, start_date, end_date, status")
             .in("client_id", clientIds);
-          // Não filtramos status no servidor por flexibilidade; filtramos abaixo
-          const { data: contracts } = await cq;
 
           // Para cada cliente, escolher um contrato ativo na data do evento
           const byClient: Record<string, any[]> = {};
