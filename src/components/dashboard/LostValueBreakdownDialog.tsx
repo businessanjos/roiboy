@@ -64,6 +64,21 @@ export function LostValueBreakdownDialog({
     [contracts],
   );
 
+  const productStats = useMemo(() => {
+    const map = new Map<string, { count: number; value: number; color: string | null }>();
+    for (const c of contracts) {
+      const prod = c.product_id ? productsMap[c.product_id] : null;
+      const key = prod?.name || "Sem produto";
+      const cur = map.get(key) || { count: 0, value: 0, color: prod?.color ?? null };
+      cur.count += 1;
+      cur.value += c.value || 0;
+      map.set(key, cur);
+    }
+    return Array.from(map.entries())
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.value - a.value);
+  }, [contracts, productsMap]);
+
   const reasonStats = useMemo(() => {
     const map = new Map<string, { count: number; value: number }>();
     for (const c of contracts) {
