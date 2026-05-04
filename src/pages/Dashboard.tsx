@@ -894,7 +894,7 @@ export default function Dashboard() {
                     <p className={`text-4xl font-bold mt-2 ${renewalColor}`}>{renewalRate.toFixed(1)}%</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {renewalData?.renewed ?? 0} renovados / {renewalData?.total ?? 0} resolvidos
-                      {renewalData?.lost ? ` · ${renewalData.lost} perdidos` : ""}
+                      {renewalData?.lost ? ` · ${renewalData.lost} perdidos` : ""} · Meta ≥ {RENEWAL_GOAL}%
                     </p>
                     <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden">
                       <div
