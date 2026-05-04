@@ -15,6 +15,7 @@ interface ClientBasic {
 interface Product {
   id: string;
   name: string;
+  color?: string | null;
 }
 
 interface LifeEvent {
@@ -36,8 +37,12 @@ interface ContractData {
   status_changed_at: string | null;
   cancelled_at: string | null;
   start_date: string;
+  end_date: string | null;
   value: number;
   client_id: string;
+  product_id: string | null;
+  cancellation_reason: string | null;
+  cancellation_justification: string | null;
 }
 
 // Fetch all products
@@ -47,7 +52,7 @@ export function useProducts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name")
+        .select("id, name, color")
         .eq("is_active", true)
         .order("name");
       
@@ -217,7 +222,7 @@ export function useContractData() {
       
       const { data, error } = await supabase
         .from("client_contracts")
-        .select("id, status, status_changed_at, cancelled_at, start_date, value, client_id")
+        .select("id, status, status_changed_at, cancelled_at, start_date, end_date, value, client_id, product_id, cancellation_reason, cancellation_justification")
         .or(`start_date.gte.${format(twelveMonthsAgo, "yyyy-MM-dd")},status_changed_at.gte.${twelveMonthsAgo.toISOString()},cancelled_at.gte.${twelveMonthsAgo.toISOString()}`)
         .order("start_date", { ascending: true });
 

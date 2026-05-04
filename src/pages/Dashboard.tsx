@@ -64,6 +64,7 @@ import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/components/dashboard/CancellationAnalyticsModal";
+import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
 
 
 
@@ -163,6 +164,7 @@ export default function Dashboard() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
+  const [lostValueModalOpen, setLostValueModalOpen] = useState(false);
   const showCancellationAnalytics = canAccessCancellationAnalytics(currentUser?.id);
   
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
@@ -373,18 +375,19 @@ export default function Dashboard() {
   }, [monthlyChartData, contractStats, gestaoClientStats]);
 
   // Lost financial value (within filtered period)
-  const lostFinancialValue = useMemo(() => {
+  const lostContracts = useMemo(() => {
     const periodStart = gestaoPeriodRange.periodStart;
     const periodEnd = gestaoPeriodRange.periodEnd;
-
-    const lostContracts = contractData.filter(contract => {
+    return contractData.filter(contract => {
       if (!["cancelled", "dismissed", "dropout_7d", "ended"].includes(contract.status)) return false;
-      const exitDate = contract.cancelled_at || contract.status_changed_at;
+      const exitDate = contract.cancelled_at || contract.status_changed_at || contract.end_date;
       if (!exitDate) return false;
       const date = parseISO(exitDate);
       return date >= periodStart && date <= periodEnd;
     });
+  }, [contractData, gestaoPeriodRange]);
 
+  const lostFinancialValue = useMemo(() => {
     const totalLost = lostContracts.reduce((sum, c) => sum + (c.value || 0), 0);
     const cancelledValue = lostContracts
       .filter(c => ["cancelled", "dismissed", "dropout_7d"].includes(c.status))
@@ -392,9 +395,34 @@ export default function Dashboard() {
     const endedValue = lostContracts
       .filter(c => c.status === "ended")
       .reduce((sum, c) => sum + (c.value || 0), 0);
-
     return { totalLost, cancelledValue, endedValue, count: lostContracts.length };
-  }, [contractData, gestaoPeriodRange]);
+  }, [lostContracts]);
+
+  // Maps for the Lost Value breakdown dialog
+  const clientNamesMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const c of clients) m[c.id] = c.full_name;
+    return m;
+  }, [clients]);
+
+  const productsColorMap = useMemo(() => {
+    const m: Record<string, { name: string; color: string | null }> = {};
+    for (const p of products as any[]) m[p.id] = { name: p.name, color: p.color ?? null };
+    return m;
+  }, [products]);
+
+  const periodLabel = useMemo(() => {
+    const labels: Record<string, string> = {
+      "7": "Últimos 7 dias",
+      month: "Este mês",
+      "3": "Últimos 3 meses",
+      "6": "Últimos 6 meses",
+      "12": "Últimos 12 meses",
+      year: "Este ano",
+      custom: "Período personalizado",
+    };
+    return labels[gestaoPeriodFilter] || "Período";
+  }, [gestaoPeriodFilter]);
 
   // Churn rate within filtered period: cancellations / active contracts base
   const churnMetrics = useMemo(() => {
@@ -1253,11 +1281,20 @@ export default function Dashboard() {
               </Card>
 
               {/* Valor Perdido */}
-              <Card className="shadow-card">
+              <Card
+                className="shadow-card cursor-pointer hover:shadow-lg hover:border-danger/40 transition-all group"
+                onClick={() => setLostValueModalOpen(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setLostValueModalOpen(true); } }}
+              >
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Valor Perdido (período)</p>
+                      <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                        Valor Perdido (período)
+                        <span className="text-[10px] text-danger/70 group-hover:text-danger uppercase tracking-wider font-semibold">Ver detalhes →</span>
+                      </p>
                       <p className="text-3xl font-bold text-danger">
                         {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.totalLost)}
                       </p>
@@ -1265,7 +1302,7 @@ export default function Dashboard() {
                         {lostFinancialValue.count} contratos · Cancel.: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.cancelledValue)} · Encerr.: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.endedValue)}
                       </p>
                     </div>
-                    <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center">
+                    <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center group-hover:bg-danger/20 transition-colors">
                       <DollarSign className="h-6 w-6 text-danger" />
                     </div>
                   </div>
@@ -1526,11 +1563,20 @@ export default function Dashboard() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card
+                  className="cursor-pointer hover:shadow-lg hover:border-danger/40 transition-all group"
+                  onClick={() => setLostValueModalOpen(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setLostValueModalOpen(true); } }}
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Valor Perdido (período)</p>
+                        <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                          Valor Perdido (período)
+                          <span className="text-[10px] text-danger/70 group-hover:text-danger uppercase tracking-wider font-semibold">Ver detalhes →</span>
+                        </p>
                         <p className="text-4xl font-bold text-danger">
                           {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.totalLost)}
                         </p>
@@ -1550,6 +1596,18 @@ export default function Dashboard() {
         </div>,
         document.body
       )}
+
+      <LostValueBreakdownDialog
+        open={lostValueModalOpen}
+        onOpenChange={setLostValueModalOpen}
+        contracts={lostContracts as any}
+        clientsMap={clientNamesMap}
+        productsMap={productsColorMap}
+        totalLost={lostFinancialValue.totalLost}
+        cancelledValue={lostFinancialValue.cancelledValue}
+        endedValue={lostFinancialValue.endedValue}
+        periodLabel={periodLabel}
+      />
 
       {showCancellationAnalytics && (
         <CancellationAnalyticsModal 
