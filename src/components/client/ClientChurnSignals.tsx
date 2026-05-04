@@ -166,6 +166,14 @@ export function ClientChurnSignals({ clientId }: { clientId: string }) {
               <span className="text-xs text-muted-foreground">
                 {analysis.messages_analyzed} mensagens analisadas
               </span>
+              {analyzedAt && (
+                <span className="text-xs text-muted-foreground ml-auto">
+                  Analisado em{" "}
+                  {format(new Date(analyzedAt), "dd/MM/yyyy 'às' HH:mm", {
+                    locale: ptBR,
+                  })}
+                </span>
+              )}
             </div>
 
             {analysis.summary && (
