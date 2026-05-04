@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check, X, Loader2, Trophy } from "lucide-react";
+import { Check, X, Loader2, Trophy, Wand2 } from "lucide-react";
 import {
   type ConsultantGoal,
   METRIC_LABELS,
@@ -15,6 +15,8 @@ import {
   calculateBonus,
   type BonusPayout,
 } from "@/hooks/useBonusPayouts";
+import { useComputedMetrics } from "@/hooks/useComputedConsultantMetrics";
+import { toast } from "sonner";
 
 interface Props {
   goals: ConsultantGoal[];
