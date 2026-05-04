@@ -1257,7 +1257,7 @@ export default function Dashboard() {
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Valor Perdido (Mês Atual)</p>
+                      <p className="text-sm font-medium text-muted-foreground">Valor Perdido (período)</p>
                       <p className="text-3xl font-bold text-danger">
                         {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.totalLost)}
                       </p>
