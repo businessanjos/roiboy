@@ -15,6 +15,7 @@ interface ClientBasic {
 interface Product {
   id: string;
   name: string;
+  color?: string | null;
 }
 
 interface LifeEvent {
