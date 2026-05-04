@@ -35,17 +35,34 @@ export function CommissionSimulator({ presentationMode = false }: { presentation
   const month = now.getMonth() + 1;
 
   const { plans, productRates, tiers, quotas, spiffs } = useQuotasIncentives(year, month);
-  const [selectedUserId, setSelectedUserId] = useState(presentationMode ? VANESSA_USER_ID : "");
-  const [simMode, setSimMode] = useState<"percent" | "sales">("percent");
-  const [achievementPct, setAchievementPct] = useState(100);
-  const [salesCount, setSalesCount] = useState(7);
-  // Overrides por SPIFF: { [spiffId]: { included, estimate } }
-  const [spiffOverrides, setSpiffOverrides] = useState<Record<string, { included: boolean; estimate: number | null }>>({});
-  // Mix de pagamento: linhas que totalizam o nº de vendas. parcelas=1 = à vista.
+
   type PayMix = { id: string; qty: number; parcelas: number; entryPercent: number };
-  const [paymentMix, setPaymentMix] = useState<PayMix[]>([
+  const STORAGE_KEY = "commission-simulator-presentation-state";
+  const persisted = (() => {
+    if (!presentationMode) return null;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
+
+  const [selectedUserId, setSelectedUserId] = useState(persisted?.selectedUserId ?? (presentationMode ? VANESSA_USER_ID : ""));
+  const [simMode, setSimMode] = useState<"percent" | "sales">(persisted?.simMode ?? "percent");
+  const [achievementPct, setAchievementPct] = useState<number>(persisted?.achievementPct ?? 100);
+  const [salesCount, setSalesCount] = useState<number>(persisted?.salesCount ?? 7);
+  const [spiffOverrides, setSpiffOverrides] = useState<Record<string, { included: boolean; estimate: number | null }>>(persisted?.spiffOverrides ?? {});
+  const [paymentMix, setPaymentMix] = useState<PayMix[]>(persisted?.paymentMix ?? [
     { id: "row-1", qty: 7, parcelas: 1, entryPercent: 100 },
   ]);
+
+  useEffect(() => {
+    if (!presentationMode) return;
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        selectedUserId, simMode, achievementPct, salesCount, spiffOverrides, paymentMix,
+      }));
+    } catch {}
+  }, [presentationMode, selectedUserId, simMode, achievementPct, salesCount, spiffOverrides, paymentMix]);
 
   const usersQuery = useQuery({
     queryKey: ["sales-team-users", accountId],
