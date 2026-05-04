@@ -25,7 +25,9 @@ const QUARTERLY_BONUS_THRESHOLD = 100; // % de atingimento para o bônus trimest
 
 const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function CommissionSimulator() {
+const VANESSA_USER_ID = "1ac1c97c-bff6-4174-b48c-9b524b404ce6";
+
+export function CommissionSimulator({ presentationMode = false }: { presentationMode?: boolean } = {}) {
   const now = new Date();
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
@@ -33,7 +35,7 @@ export function CommissionSimulator() {
   const month = now.getMonth() + 1;
 
   const { plans, productRates, tiers, quotas, spiffs } = useQuotasIncentives(year, month);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState(presentationMode ? VANESSA_USER_ID : "");
   const [simMode, setSimMode] = useState<"percent" | "sales">("percent");
   const [achievementPct, setAchievementPct] = useState(100);
   const [salesCount, setSalesCount] = useState(7);
