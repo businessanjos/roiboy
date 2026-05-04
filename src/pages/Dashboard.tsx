@@ -398,6 +398,32 @@ export default function Dashboard() {
     return { totalLost, cancelledValue, endedValue, count: lostContracts.length };
   }, [lostContracts]);
 
+  // Maps for the Lost Value breakdown dialog
+  const clientNamesMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const c of clients) m[c.id] = c.full_name;
+    return m;
+  }, [clients]);
+
+  const productsColorMap = useMemo(() => {
+    const m: Record<string, { name: string; color: string | null }> = {};
+    for (const p of products as any[]) m[p.id] = { name: p.name, color: p.color ?? null };
+    return m;
+  }, [products]);
+
+  const periodLabel = useMemo(() => {
+    const labels: Record<string, string> = {
+      "7": "Últimos 7 dias",
+      month: "Este mês",
+      "3": "Últimos 3 meses",
+      "6": "Últimos 6 meses",
+      "12": "Últimos 12 meses",
+      year: "Este ano",
+      custom: "Período personalizado",
+    };
+    return labels[gestaoPeriodFilter] || "Período";
+  }, [gestaoPeriodFilter]);
+
   // Churn rate within filtered period: cancellations / active contracts base
   const churnMetrics = useMemo(() => {
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
