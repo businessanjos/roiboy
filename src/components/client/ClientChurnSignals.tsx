@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,32 @@ const categoryLabel: Record<string, string> = {
 export function ClientChurnSignals({ clientId }: { clientId: string }) {
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<ChurnAnalysis | null>(null);
+  const [analyzedAt, setAnalyzedAt] = useState<string | null>(null);
+
+  // Carrega última análise salva
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("client_churn_analyses")
+        .select("summary, overall_risk, signals, messages_analyzed, created_at")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setAnalysis({
+        summary: data.summary || "",
+        overall_risk: (data.overall_risk as any) || "low",
+        signals: (data.signals as any) || [],
+        messages_analyzed: data.messages_analyzed || 0,
+      });
+      setAnalyzedAt(data.created_at);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId]);
 
   const runAnalysis = async () => {
     setLoading(true);
@@ -72,6 +98,8 @@ export function ClientChurnSignals({ clientId }: { clientId: string }) {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setAnalysis(data as ChurnAnalysis);
+      setAnalyzedAt(new Date().toISOString());
+      toast.success("Análise salva");
     } catch (e: any) {
       toast.error(e.message || "Erro ao analisar conversas");
     } finally {
@@ -138,6 +166,14 @@ export function ClientChurnSignals({ clientId }: { clientId: string }) {
               <span className="text-xs text-muted-foreground">
                 {analysis.messages_analyzed} mensagens analisadas
               </span>
+              {analyzedAt && (
+                <span className="text-xs text-muted-foreground ml-auto">
+                  Analisado em{" "}
+                  {format(new Date(analyzedAt), "dd/MM/yyyy 'às' HH:mm", {
+                    locale: ptBR,
+                  })}
+                </span>
+              )}
             </div>
 
             {analysis.summary && (
