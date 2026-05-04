@@ -235,80 +235,100 @@ export default function ConsultantBonus() {
                   </Button>
                 </div>
 
-                {consultantGoals.length === 0 ? (
-                  <Card>
-                    <CardContent className="py-12 text-center text-muted-foreground">
-                      Nenhuma meta configurada para {c.name.split(" ")[0]} em {year}.
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {consultantGoals.map((g) => {
-                      const product = products.find((p: any) => p.id === g.product_id);
-                      const Icon = METRIC_ICONS[g.metric_type];
-                      const unit = g.metric_type === "nps" ? "" : "%";
-                      return (
-                        <Card key={g.id}>
-                          <CardHeader className="pb-3">
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-2">
-                                <Icon className="h-4 w-4 text-muted-foreground" />
-                                <CardTitle className="text-base">
-                                  {METRIC_LABELS[g.metric_type]}
-                                </CardTitle>
-                              </div>
-                              <div className="flex gap-1">
-                                <Button size="icon" variant="ghost" onClick={() => openEdit(g)}>
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => deleteGoal.mutate(g.id)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                            <CardDescription className="flex items-center gap-2">
-                              <Badge
-                                style={{
-                                  backgroundColor: (product as any)?.color || "#6b7280",
-                                  color: "#fff",
-                                }}
-                              >
-                                {product?.name || "—"}
-                              </Badge>
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">Meta anual</span>
-                              <span className="font-semibold">
-                                {g.annual_target}{unit}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">Bônus / gatilho</span>
-                              <span className="font-semibold text-amber-500">
-                                {formatBRL(Number(g.bonus_amount))}
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-6 gap-1 pt-2">
-                              {MONTH_LABELS.map((m, i) => (
-                                <div key={i} className="text-center">
-                                  <div className="text-[10px] text-muted-foreground">{m}</div>
-                                  <div className="text-xs font-medium">
-                                    {g.monthly_targets[String(i)] ?? 0}{unit}
+                <Tabs defaultValue="metas">
+                  <TabsList>
+                    <TabsTrigger value="metas">Metas</TabsTrigger>
+                    <TabsTrigger value="apuracao">Apuração & Bônus</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="metas" className="space-y-4 mt-4">
+                    {consultantGoals.length === 0 ? (
+                      <Card>
+                        <CardContent className="py-12 text-center text-muted-foreground">
+                          Nenhuma meta configurada para {c.name.split(" ")[0]} em {year}.
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {consultantGoals.map((g) => {
+                          const product = products.find((p: any) => p.id === g.product_id);
+                          const Icon = METRIC_ICONS[g.metric_type];
+                          const unit = g.metric_type === "nps" ? "" : "%";
+                          return (
+                            <Card key={g.id}>
+                              <CardHeader className="pb-3">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center gap-2">
+                                    <Icon className="h-4 w-4 text-muted-foreground" />
+                                    <CardTitle className="text-base">
+                                      {METRIC_LABELS[g.metric_type]}
+                                    </CardTitle>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button size="icon" variant="ghost" onClick={() => openEdit(g)}>
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => deleteGoal.mutate(g.id)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
+                                <CardDescription className="flex items-center gap-2">
+                                  <Badge
+                                    style={{
+                                      backgroundColor: (product as any)?.color || "#6b7280",
+                                      color: "#fff",
+                                    }}
+                                  >
+                                    {product?.name || "—"}
+                                  </Badge>
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Meta anual</span>
+                                  <span className="font-semibold">
+                                    {g.annual_target}{unit}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Bônus / gatilho</span>
+                                  <span className="font-semibold text-amber-500">
+                                    {formatBRL(Number(g.bonus_amount))}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-6 gap-1 pt-2">
+                                  {MONTH_LABELS.map((m, i) => (
+                                    <div key={i} className="text-center">
+                                      <div className="text-[10px] text-muted-foreground">{m}</div>
+                                      <div className="text-xs font-medium">
+                                        {g.monthly_targets[String(i)] ?? 0}{unit}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="apuracao" className="mt-4">
+                    <ConsultantPayoutTable
+                      goals={consultantGoals}
+                      userId={c.id}
+                      year={year}
+                      products={products}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </TabsContent>
                 )}
               </TabsContent>
             );
