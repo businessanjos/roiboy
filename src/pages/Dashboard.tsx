@@ -363,29 +363,26 @@ export default function Dashboard() {
     paused: gestaoFilteredClients.filter(c => c.status === "paused").length,
   }), [gestaoFilteredClients]);
 
-  // Retention metrics
+  // Retention metrics (within filtered period)
   const retentionMetrics = useMemo(() => {
-    if (monthlyChartData.length === 0) return { rate: 0, novos: 0, cancelamentos: 0 };
-    const currentMonth = monthlyChartData[monthlyChartData.length - 1];
-    const novos = currentMonth?.novos || 0;
-    const cancelamentos = currentMonth?.cancelamentos || 0;
+    const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
+    const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
     const total = (contractStats?.active ?? gestaoClientStats.active) + cancelamentos;
     const rate = total > 0 ? Math.round(((total - cancelamentos) / total) * 100) : 100;
     return { rate, novos, cancelamentos };
   }, [monthlyChartData, contractStats, gestaoClientStats]);
 
-  // Lost financial value
+  // Lost financial value (within filtered period)
   const lostFinancialValue = useMemo(() => {
-    const now = new Date();
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
-    
+    const periodStart = gestaoPeriodRange.periodStart;
+    const periodEnd = gestaoPeriodRange.periodEnd;
+
     const lostContracts = contractData.filter(contract => {
       if (!["cancelled", "dismissed", "dropout_7d", "ended"].includes(contract.status)) return false;
       const exitDate = contract.cancelled_at || contract.status_changed_at;
       if (!exitDate) return false;
       const date = parseISO(exitDate);
-      return date >= monthStart && date <= monthEnd;
+      return date >= periodStart && date <= periodEnd;
     });
 
     const totalLost = lostContracts.reduce((sum, c) => sum + (c.value || 0), 0);
@@ -397,7 +394,7 @@ export default function Dashboard() {
       .reduce((sum, c) => sum + (c.value || 0), 0);
 
     return { totalLost, cancelledValue, endedValue, count: lostContracts.length };
-  }, [contractData]);
+  }, [contractData, gestaoPeriodRange]);
 
   // Churn rate within filtered period: cancellations / active contracts base
   const churnMetrics = useMemo(() => {
@@ -1236,7 +1233,7 @@ export default function Dashboard() {
                       <p className="text-sm font-medium text-muted-foreground">Taxa de Retenção</p>
                       <p className="text-3xl font-bold text-foreground">{retentionMetrics.rate}%</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {retentionMetrics.novos} novos · {retentionMetrics.cancelamentos} cancelamentos (mês atual)
+                        {retentionMetrics.novos} novos · {retentionMetrics.cancelamentos} cancelamentos (período)
                       </p>
                     </div>
                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1260,7 +1257,7 @@ export default function Dashboard() {
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Valor Perdido (Mês Atual)</p>
+                      <p className="text-sm font-medium text-muted-foreground">Valor Perdido (período)</p>
                       <p className="text-3xl font-bold text-danger">
                         {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.totalLost)}
                       </p>
@@ -1514,7 +1511,7 @@ export default function Dashboard() {
                         <p className="text-sm font-medium text-muted-foreground">Taxa de Retenção</p>
                         <p className="text-4xl font-bold">{retentionMetrics.rate}%</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {retentionMetrics.novos} novos · {retentionMetrics.cancelamentos} cancel. (mês atual)
+                          {retentionMetrics.novos} novos · {retentionMetrics.cancelamentos} cancel. (período)
                         </p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-primary" />
@@ -1533,7 +1530,7 @@ export default function Dashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Valor Perdido (Mês Atual)</p>
+                        <p className="text-sm font-medium text-muted-foreground">Valor Perdido (período)</p>
                         <p className="text-4xl font-bold text-danger">
                           {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.totalLost)}
                         </p>
