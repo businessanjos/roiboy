@@ -383,17 +383,17 @@ function SlideUncapped({ plan }: { plan: any }) {
         </h2>
       </div>
       <div className="grid md:grid-cols-2 gap-6">
-        <Card className="bg-gradient-to-br from-amber-500/15 to-orange-600/10 border-amber-500/30 p-8 text-slate-100 space-y-4">
-          <p className="text-sm uppercase tracking-wider text-amber-300">A regra é simples</p>
-          <p className="text-2xl leading-snug">
-            A partir de <strong className="text-amber-400 text-3xl">{threshold}%</strong> de atingimento,
+        <Card className="bg-gradient-to-br from-amber-600 to-orange-700 border-amber-400/50 p-8 text-white space-y-4 shadow-xl">
+          <p className="text-sm uppercase tracking-wider text-amber-100 font-semibold">A regra é simples</p>
+          <p className="text-2xl leading-snug text-white">
+            A partir de <strong className="text-yellow-200 text-3xl">{threshold}%</strong> de atingimento,
             <br />
             <strong className="text-white">cada venda extra</strong> paga
           </p>
-          <p className="text-6xl font-black bg-gradient-to-r from-amber-300 to-orange-500 bg-clip-text text-transparent">
+          <p className="text-6xl font-black text-white drop-shadow-lg">
             {fmtBRL(perSale)}
           </p>
-          <p className="text-sm text-slate-400">por venda inteira fechada acima do limite.</p>
+          <p className="text-sm text-amber-50">por venda inteira fechada acima do limite.</p>
         </Card>
         <div className="space-y-4">
           <Card className="bg-white/5 border-white/10 p-6 text-slate-100">
