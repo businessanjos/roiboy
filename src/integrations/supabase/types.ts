@@ -1346,6 +1346,39 @@ export type Database = {
           },
         ]
       }
+      client_churn_analyses: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          messages_analyzed: number
+          overall_risk: string | null
+          signals: Json
+          summary: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          messages_analyzed?: number
+          overall_risk?: string | null
+          signals?: Json
+          summary?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          messages_analyzed?: number
+          overall_risk?: string | null
+          signals?: Json
+          summary?: string | null
+        }
+        Relationships: []
+      }
       client_contracts: {
         Row: {
           account_id: string
