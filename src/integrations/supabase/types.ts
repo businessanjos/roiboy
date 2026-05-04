@@ -17602,7 +17602,7 @@ export type Database = {
         Args: { p_year?: number }
         Returns: {
           processed: number
-          year: number
+          target_year: number
         }[]
       }
       record_login_attempt: {
