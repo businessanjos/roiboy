@@ -51,6 +51,8 @@ function initials(name: string) {
 export default function ConsultantBonus() {
   const { currentUser, loading: userLoading } = useCurrentUser();
   const [year, setYear] = useState(new Date().getFullYear());
+  const [recalculating, setRecalculating] = useState(false);
+  const queryClient = useQueryClient();
   const { goals, isLoading, upsertGoal, deleteGoal } = useConsultantGoals(year);
 
   const { data: consultants = [] } = useQuery({
