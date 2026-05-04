@@ -198,6 +198,12 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
         </Card>
       </div>
 
+      <div className="flex items-center justify-end gap-1.5 text-[11px] text-muted-foreground">
+        <Clock className="h-3 w-3" />
+        Última atualização das métricas:
+        <span className="font-medium text-foreground">{formatDateTime(lastUpdatedAt)}</span>
+      </div>
+
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
