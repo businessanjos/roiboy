@@ -309,8 +309,29 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
                                   }}
                                 />
                               </TooltipTrigger>
-                              <TooltipContent side="top">
-                                Meta: {target}{unit}
+                              <TooltipContent side="top" className="max-w-[260px]">
+                                <div className="text-xs space-y-1">
+                                  <div>Meta: <span className="font-semibold">{target}{unit}</span></div>
+                                  <div className="flex items-center gap-1 text-muted-foreground">
+                                    <Database className="h-2.5 w-2.5" />
+                                    Origem: {METRIC_SOURCE[g.metric_type]?.label}
+                                  </div>
+                                  {payout && (
+                                    <>
+                                      <div className="flex items-center gap-1 text-muted-foreground">
+                                        {payout.notes === "auto-calculated" ? (
+                                          <><Bot className="h-2.5 w-2.5" /> Auto-calculado</>
+                                        ) : (
+                                          <><Pencil className="h-2.5 w-2.5" /> Manual</>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1 text-muted-foreground">
+                                        <Clock className="h-2.5 w-2.5" />
+                                        Atualizado: {formatDateTime(payout.updated_at)}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               </TooltipContent>
                             </Tooltip>
                             {previewActual !== null && (
