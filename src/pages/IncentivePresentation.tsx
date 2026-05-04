@@ -566,7 +566,7 @@ function SlideCalculator() {
         </div>
         <h2 className="text-4xl md:text-5xl font-black">Quanto você vai ganhar?</h2>
         <p className="text-slate-400">
-          Escolha o vendedor, ajuste o nº de vendas e veja em tempo real.
+          Ajuste o nº de vendas e veja em tempo real.
         </p>
       </div>
       <div className="bg-white text-slate-900 rounded-2xl p-2 shadow-2xl">
