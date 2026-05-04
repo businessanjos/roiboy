@@ -17,11 +17,22 @@ interface ChurnSignal {
   reasoning: string;
 }
 
+interface ChurnCandidate {
+  id: string;
+  contact_name: string | null;
+  phone_e164: string | null;
+  last_message_at: string | null;
+  client_id: string | null;
+  lead_id: string | null;
+  match: string;
+}
+
 interface ChurnAnalysis {
   summary: string;
   overall_risk: "low" | "medium" | "high" | "critical";
   signals: ChurnSignal[];
   messages_analyzed: number;
+  candidates?: ChurnCandidate[];
 }
 
 const riskColors: Record<string, string> = {
