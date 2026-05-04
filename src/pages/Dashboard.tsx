@@ -975,32 +975,6 @@ export default function Dashboard() {
                     </div>
                   </CardContent>
                 </Card>
-
-                <Card className="shadow-card border-l-4 border-l-muted relative overflow-hidden">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                        <p className="text-sm font-medium text-muted-foreground">NPS</p>
-                      </div>
-                      <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                        <Heart className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                    </div>
-                    <p className="text-4xl font-bold mt-2 text-muted-foreground">0</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Ainda não medido · Meta: 80
-                    </p>
-                    <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden relative">
-                      <div className="h-full rounded-full bg-muted-foreground/30" style={{ width: `0%` }} />
-                      <div
-                        className="absolute top-0 h-full w-0.5 bg-success"
-                        style={{ left: `${(80 + 100) / 2}%` }}
-                        title="Meta: 80"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             );
           })()}
