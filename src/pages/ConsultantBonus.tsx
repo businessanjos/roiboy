@@ -21,6 +21,7 @@ import {
   type MetricType,
   type ConsultantGoal,
 } from "@/hooks/useConsultantGoals";
+import { ConsultantPayoutTable } from "@/components/operations/ConsultantPayoutTable";
 
 const ALLOWED_VIEWERS = ["maikol", "jonathan", "everton", "bruna"];
 const CONSULTANT_NAMES = ["andréia", "andreia", "dayara", "michele", "ana"];
