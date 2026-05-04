@@ -832,8 +832,10 @@ export default function Dashboard() {
 
           {/* ⭐ Métricas Estrela de Operações: Churn & NPS */}
           {gestaoViewMode === "operacoes" && (() => {
+            const CHURN_GOAL = 18;
+            const RENEWAL_GOAL = 40;
             const churnRate = churnMetrics.rate;
-            const churnTone = churnRate <= 3 ? "success" : churnRate <= 7 ? "warning" : "danger";
+            const churnTone = churnRate <= CHURN_GOAL ? "success" : churnRate <= CHURN_GOAL * 1.25 ? "warning" : "danger";
             const churnColor = churnTone === "success" ? "text-success" : churnTone === "warning" ? "text-warning" : "text-danger";
             const churnBorder = churnTone === "success" ? "border-l-success" : churnTone === "warning" ? "border-l-warning" : "border-l-danger";
             const churnBg = churnTone === "success" ? "bg-success/10" : churnTone === "warning" ? "bg-warning/10" : "bg-danger/10";
@@ -845,7 +847,7 @@ export default function Dashboard() {
             const npsBg = npsTone === "success" ? "bg-success/10" : npsTone === "warning" ? "bg-warning/10" : "bg-danger/10";
 
             const renewalRate = renewalData?.rate ?? 0;
-            const renewalTone = renewalRate >= 80 ? "success" : renewalRate >= 60 ? "warning" : "danger";
+            const renewalTone = renewalRate >= RENEWAL_GOAL ? "success" : renewalRate >= RENEWAL_GOAL * 0.75 ? "warning" : "danger";
             const renewalColor = renewalTone === "success" ? "text-success" : renewalTone === "warning" ? "text-warning" : "text-danger";
             const renewalBorder = renewalTone === "success" ? "border-l-success" : renewalTone === "warning" ? "border-l-warning" : "border-l-danger";
             const renewalBg = renewalTone === "success" ? "bg-success/10" : renewalTone === "warning" ? "bg-warning/10" : "bg-danger/10";
@@ -865,14 +867,14 @@ export default function Dashboard() {
                     </div>
                     <p className={`text-4xl font-bold mt-2 ${churnColor}`}>{churnRate.toFixed(1)}%</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {churnMetrics.cancelamentos} cancelamentos / {churnMetrics.activeBase} contratos ativos
+                      {churnMetrics.cancelamentos} cancelamentos / {churnMetrics.activeBase} contratos ativos · Meta ≤ {CHURN_GOAL}%
                     </p>
                     <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           churnTone === "success" ? "bg-success" : churnTone === "warning" ? "bg-warning" : "bg-danger"
                         }`}
-                        style={{ width: `${Math.min(100, churnRate * 5)}%` }}
+                        style={{ width: `${Math.min(100, (churnRate / CHURN_GOAL) * 100)}%` }}
                       />
                     </div>
                   </CardContent>
@@ -892,7 +894,7 @@ export default function Dashboard() {
                     <p className={`text-4xl font-bold mt-2 ${renewalColor}`}>{renewalRate.toFixed(1)}%</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {renewalData?.renewed ?? 0} renovados / {renewalData?.total ?? 0} resolvidos
-                      {renewalData?.lost ? ` · ${renewalData.lost} perdidos` : ""}
+                      {renewalData?.lost ? ` · ${renewalData.lost} perdidos` : ""} · Meta ≥ {RENEWAL_GOAL}%
                     </p>
                     <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden">
                       <div
