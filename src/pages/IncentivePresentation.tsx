@@ -226,12 +226,12 @@ function SlideWhy() {
     {
       icon: Rocket,
       title: "Aceleradores reais",
-      text: "Bater 100% paga bem. Bater 130% paga MUITO bem.",
+      text: "Bater 8 vendas paga bem. Bater 11 paga MUITO bem.",
     },
     {
       icon: Crown,
       title: "Sem teto",
-      text: "Estourou a meta? Cada venda extra continua pagando bônus.",
+      text: "Estourou as 8 vendas? Cada venda extra continua pagando bônus.",
     },
   ];
   return (
