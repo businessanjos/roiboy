@@ -41,6 +41,17 @@ Deno.serve(async (req) => {
       .order("start_date", { ascending: false })
       .limit(5);
 
+    // Eventos de risco (no-show, etc.) — últimos 12 meses
+    const since = new Date();
+    since.setMonth(since.getMonth() - 12);
+    const { data: riskEvents } = await supabase
+      .from("risk_events")
+      .select("source, risk_level, reason, evidence_snippet, happened_at")
+      .eq("client_id", client_id)
+      .gte("happened_at", since.toISOString())
+      .order("happened_at", { ascending: false })
+      .limit(30);
+
     // Conversas do cliente
     const { data: conversations } = await supabase
       .from("zapp_conversations")
