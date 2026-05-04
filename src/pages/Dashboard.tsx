@@ -408,6 +408,35 @@ export default function Dashboard() {
     return { rate, cancelamentos, novos, activeBase };
   }, [monthlyChartData, contractStats, gestaoClientStats]);
 
+  // Renewal rate within filtered period: renewed / (renewed + lost)
+  const { data: renewalData } = useQuery({
+    queryKey: [
+      "dashboard-renewal-rate",
+      currentUser?.account_id,
+      gestaoPeriodRange.periodStart.toISOString(),
+      gestaoPeriodRange.periodEnd.toISOString(),
+    ],
+    enabled: !!currentUser?.account_id,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("renewal_outcomes")
+        .select("outcome, resolved_at")
+        .eq("account_id", currentUser!.account_id!)
+        .gte("resolved_at", gestaoPeriodRange.periodStart.toISOString())
+        .lte("resolved_at", gestaoPeriodRange.periodEnd.toISOString());
+      if (error) throw error;
+      let renewed = 0, lost = 0;
+      for (const row of (data ?? []) as any[]) {
+        if (row.outcome === "renewed") renewed++;
+        else if (row.outcome === "lost") lost++;
+      }
+      const total = renewed + lost;
+      const rate = total > 0 ? (renewed / total) * 100 : 0;
+      return { rate, renewed, lost, total };
+    },
+  });
+
   // NPS from latest vNPS snapshot per client (within current account)
   const { data: npsData } = useQuery({
     queryKey: ["dashboard-nps-snapshots", currentUser?.account_id],
@@ -819,8 +848,14 @@ export default function Dashboard() {
             const npsBorder = npsTone === "success" ? "border-l-success" : npsTone === "warning" ? "border-l-warning" : "border-l-danger";
             const npsBg = npsTone === "success" ? "bg-success/10" : npsTone === "warning" ? "bg-warning/10" : "bg-danger/10";
 
+            const renewalRate = renewalData?.rate ?? 0;
+            const renewalTone = renewalRate >= 80 ? "success" : renewalRate >= 60 ? "warning" : "danger";
+            const renewalColor = renewalTone === "success" ? "text-success" : renewalTone === "warning" ? "text-warning" : "text-danger";
+            const renewalBorder = renewalTone === "success" ? "border-l-success" : renewalTone === "warning" ? "border-l-warning" : "border-l-danger";
+            const renewalBg = renewalTone === "success" ? "bg-success/10" : renewalTone === "warning" ? "bg-warning/10" : "bg-danger/10";
+
             return (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className={`shadow-card border-l-4 ${churnBorder} relative overflow-hidden`}>
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
@@ -842,6 +877,33 @@ export default function Dashboard() {
                           churnTone === "success" ? "bg-success" : churnTone === "warning" ? "bg-warning" : "bg-danger"
                         }`}
                         style={{ width: `${Math.min(100, churnRate * 5)}%` }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={`shadow-card border-l-4 ${renewalBorder} relative overflow-hidden`}>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        <p className="text-sm font-medium text-muted-foreground">Taxa de Renovação</p>
+                      </div>
+                      <div className={`h-12 w-12 rounded-full ${renewalBg} flex items-center justify-center`}>
+                        <RefreshCw className={`h-6 w-6 ${renewalColor}`} />
+                      </div>
+                    </div>
+                    <p className={`text-4xl font-bold mt-2 ${renewalColor}`}>{renewalRate.toFixed(1)}%</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {renewalData?.renewed ?? 0} renovados / {renewalData?.total ?? 0} resolvidos
+                      {renewalData?.lost ? ` · ${renewalData.lost} perdidos` : ""}
+                    </p>
+                    <div className="mt-3 w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          renewalTone === "success" ? "bg-success" : renewalTone === "warning" ? "bg-warning" : "bg-danger"
+                        }`}
+                        style={{ width: `${Math.min(100, renewalRate)}%` }}
                       />
                     </div>
                   </CardContent>
