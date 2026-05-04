@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -194,97 +196,167 @@ export function LostValueBreakdownDialog({
             </div>
           )}
 
-          <div className="mt-4">
-            <h4 className="text-sm font-semibold mb-2">Contratos ({sorted.length})</h4>
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Saída</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Motivo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sorted.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        Nenhum contrato perdido no período.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    sorted.map((c) => {
-                      const exitRaw = c.cancelled_at || c.status_changed_at || c.end_date;
-                      const exitDate = exitRaw ? parseISO(exitRaw) : null;
-                      const isChurn = ["cancelled", "dismissed", "dropout_7d"].includes(c.status);
-                      const product = c.product_id ? productsMap[c.product_id] : null;
-                      return (
-                        <TableRow key={c.id}>
-                          <TableCell className="font-medium">
-                            {clientsMap[c.client_id] || "—"}
-                          </TableCell>
-                          <TableCell>
-                            {product ? (
-                              <Badge
-                                style={{
-                                  backgroundColor: `${product.color || "#6b7280"}20`,
-                                  color: product.color || "#6b7280",
-                                  borderColor: `${product.color || "#6b7280"}40`,
-                                }}
-                                variant="outline"
-                              >
-                                {product.name}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={
-                                isChurn
-                                  ? "border-danger/40 text-danger bg-danger/5"
-                                  : "border-amber-500/40 text-amber-600 bg-amber-500/5"
-                              }
-                            >
-                              {isChurn ? <TrendingDown className="h-3 w-3 mr-1" /> : <CalendarX className="h-3 w-3 mr-1" />}
-                              {STATUS_LABELS[c.status] || c.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                            {exitDate ? format(exitDate, "dd/MM/yyyy", { locale: ptBR }) : "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold tabular-nums">
-                            {fmtBRL(c.value || 0)}
-                          </TableCell>
-                          <TableCell className="text-xs max-w-[260px]">
-                            {isChurn ? (
-                              <div>
-                                <div className="font-medium">{c.cancellation_reason || "—"}</div>
-                                {c.cancellation_justification && (
-                                  <div className="text-muted-foreground line-clamp-2">
-                                    {c.cancellation_justification}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">Encerramento natural</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+          <ContractsPaginatedTable
+            sorted={sorted}
+            clientsMap={clientsMap}
+            productsMap={productsMap}
+          />
         </ScrollArea>
       </DialogContent>
     </Dialog>
+  );
+}
+
+const PAGE_SIZE = 25;
+
+function ContractsPaginatedTable({
+  sorted,
+  clientsMap,
+  productsMap,
+}: {
+  sorted: LostContract[];
+  clientsMap: Record<string, string>;
+  productsMap: Record<string, { name: string; color: string | null }>;
+}) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+
+  useEffect(() => {
+    setPage(1);
+  }, [sorted.length]);
+
+  const pageItems = useMemo(
+    () => sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [sorted, page],
+  );
+
+  const from = sorted.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const to = Math.min(page * PAGE_SIZE, sorted.length);
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-sm font-semibold">Contratos ({sorted.length})</h4>
+        {sorted.length > PAGE_SIZE && (
+          <span className="text-xs text-muted-foreground">
+            Mostrando {from}–{to} de {sorted.length}
+          </span>
+        )}
+      </div>
+      <div className="border rounded-lg max-h-[420px] overflow-auto">
+        <Table>
+          <TableHeader className="sticky top-0 bg-background z-10">
+            <TableRow>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Produto</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Saída</TableHead>
+              <TableHead className="text-right">Valor</TableHead>
+              <TableHead>Motivo</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {pageItems.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  Nenhum contrato perdido no período.
+                </TableCell>
+              </TableRow>
+            ) : (
+              pageItems.map((c) => {
+                const exitRaw = c.cancelled_at || c.status_changed_at || c.end_date;
+                const exitDate = exitRaw ? parseISO(exitRaw) : null;
+                const isChurn = ["cancelled", "dismissed", "dropout_7d"].includes(c.status);
+                const product = c.product_id ? productsMap[c.product_id] : null;
+                return (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">
+                      {clientsMap[c.client_id] || "—"}
+                    </TableCell>
+                    <TableCell>
+                      {product ? (
+                        <Badge
+                          style={{
+                            backgroundColor: `${product.color || "#6b7280"}20`,
+                            color: product.color || "#6b7280",
+                            borderColor: `${product.color || "#6b7280"}40`,
+                          }}
+                          variant="outline"
+                        >
+                          {product.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          isChurn
+                            ? "border-danger/40 text-danger bg-danger/5"
+                            : "border-amber-500/40 text-amber-600 bg-amber-500/5"
+                        }
+                      >
+                        {isChurn ? <TrendingDown className="h-3 w-3 mr-1" /> : <CalendarX className="h-3 w-3 mr-1" />}
+                        {STATUS_LABELS[c.status] || c.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {exitDate ? format(exitDate, "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">
+                      {fmtBRL(c.value || 0)}
+                    </TableCell>
+                    <TableCell className="text-xs max-w-[260px]">
+                      {isChurn ? (
+                        <div>
+                          <div className="font-medium">{c.cancellation_reason || "—"}</div>
+                          {c.cancellation_justification && (
+                            <div className="text-muted-foreground line-clamp-2">
+                              {c.cancellation_justification}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Encerramento natural</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-3">
+          <span className="text-xs text-muted-foreground">
+            Página {page} de {totalPages}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Próxima
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
