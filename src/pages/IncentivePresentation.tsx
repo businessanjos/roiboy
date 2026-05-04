@@ -570,7 +570,7 @@ function SlideCalculator() {
         </p>
       </div>
       <div className="bg-white text-slate-900 rounded-2xl p-2 shadow-2xl">
-        <CommissionSimulator />
+        <CommissionSimulator presentationMode />
       </div>
     </div>
   );
