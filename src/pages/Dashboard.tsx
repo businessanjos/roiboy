@@ -1563,11 +1563,20 @@ export default function Dashboard() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card
+                  className="cursor-pointer hover:shadow-lg hover:border-danger/40 transition-all group"
+                  onClick={() => setLostValueModalOpen(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setLostValueModalOpen(true); } }}
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Valor Perdido (período)</p>
+                        <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                          Valor Perdido (período)
+                          <span className="text-[10px] text-danger/70 group-hover:text-danger uppercase tracking-wider font-semibold">Ver detalhes →</span>
+                        </p>
                         <p className="text-4xl font-bold text-danger">
                           {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(lostFinancialValue.totalLost)}
                         </p>
