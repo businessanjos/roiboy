@@ -213,6 +213,37 @@ export default function HRCollaborators() {
     }
   };
 
+  const handleDeactivate = async () => {
+    if (!deactivateTarget) return;
+    setDeactivating(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const ok = await updateCollaborator(deactivateTarget.id, {
+        status: "inactive",
+        termination_date: deactivateTarget.termination_date || today,
+      } as any, true);
+      if (!ok) throw new Error("Falha ao atualizar status no RH");
+
+      if (deactivateTarget.user_id) {
+        const { error } = await supabase.functions.invoke("admin-manage-user", {
+          body: { action: "set_active", auth_user_id: deactivateTarget.user_id, is_active: false },
+        });
+        if (error) {
+          toast.warning("Status RH atualizado, mas falha ao desativar acesso ao sistema: " + error.message);
+        } else {
+          toast.success("Colaborador inativado e acesso ao sistema desativado.");
+        }
+      } else {
+        toast.success("Colaborador inativado no RH (sem usuário vinculado ao sistema).");
+      }
+      setDeactivateTarget(null);
+    } catch (err: any) {
+      toast.error("Erro ao inativar: " + (err?.message || "desconhecido"));
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
   if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
     return <Navigate to="/" replace />;
   }
