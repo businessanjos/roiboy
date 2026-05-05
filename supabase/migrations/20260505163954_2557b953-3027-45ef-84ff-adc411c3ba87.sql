@@ -1,0 +1,2 @@
+ALTER TABLE public.cs_incentive_plans ADD COLUMN IF NOT EXISTS role_label text;
+CREATE INDEX IF NOT EXISTS idx_cs_incentive_plans_role_label ON public.cs_incentive_plans(account_id, role_label) WHERE role_label IS NOT NULL;

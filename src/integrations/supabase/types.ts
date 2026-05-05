@@ -3875,6 +3875,7 @@ export type Database = {
           quarterly_bonus_payment_channel: string | null
           quarterly_bonus_rules: string | null
           quarterly_bonus_value: number
+          role_label: string | null
           routines: Json
           updated_at: string
           user_id: string | null
@@ -3906,6 +3907,7 @@ export type Database = {
           quarterly_bonus_payment_channel?: string | null
           quarterly_bonus_rules?: string | null
           quarterly_bonus_value?: number
+          role_label?: string | null
           routines?: Json
           updated_at?: string
           user_id?: string | null
@@ -3937,6 +3939,7 @@ export type Database = {
           quarterly_bonus_payment_channel?: string | null
           quarterly_bonus_rules?: string | null
           quarterly_bonus_value?: number
+          role_label?: string | null
           routines?: Json
           updated_at?: string
           user_id?: string | null
