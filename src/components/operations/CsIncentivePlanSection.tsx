@@ -310,7 +310,178 @@ export function CsIncentivePlanSection() {
         </CardContent>
       </Card>
 
-      {/* Remuneração base */}
+      {/* Orçamento do Bônus */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Gift className="h-4 w-4 text-primary" /> Orçamento do Bônus
+          </CardTitle>
+          <CardDescription>
+            Defina o budget total do bônus do time de CS, periodicidade, canal e como será distribuído entre as consultoras.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label>Tipo de valor</Label>
+              <Select
+                value={form.bonus_budget_value_type || "absolute"}
+                onValueChange={(v) => setF("bonus_budget_value_type", v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="absolute">Valor absoluto (R$)</SelectItem>
+                  <SelectItem value="percent">Percentual (%)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>
+                {form.bonus_budget_value_type === "percent" ? "Percentual (%)" : "Valor (R$)"}
+              </Label>
+              <Input
+                type="number"
+                step={form.bonus_budget_value_type === "percent" ? "0.1" : "1"}
+                value={form.bonus_budget_amount ?? ""}
+                onChange={(e) => setF("bonus_budget_amount", parseNumberInput(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label>Periodicidade</Label>
+              <Select
+                value={form.bonus_budget_period || "quarterly"}
+                onValueChange={(v) => setF("bonus_budget_period", v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Mensal</SelectItem>
+                  <SelectItem value="quarterly">Trimestral</SelectItem>
+                  <SelectItem value="annual">Anual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {form.bonus_budget_value_type === "percent" && (
+            <div>
+              <Label>Base de cálculo do percentual</Label>
+              <Select
+                value={form.bonus_budget_percent_base || "renewal_revenue"}
+                onValueChange={(v) => setF("bonus_budget_percent_base", v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="renewal_revenue">Faturamento de renovações</SelectItem>
+                  <SelectItem value="total_revenue">Faturamento total da carteira</SelectItem>
+                  <SelectItem value="base_salary">Salário base</SelectItem>
+                  <SelectItem value="variable_target">Meta variável</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Por onde será pago</Label>
+              <Select
+                value={form.bonus_payment_channel || "folha"}
+                onValueChange={(v) => setF("bonus_payment_channel", v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_CHANNELS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Quando será pago</Label>
+              <Input
+                value={form.bonus_payment_when || ""}
+                onChange={(e) => setF("bonus_payment_when", e.target.value)}
+                placeholder="Ex: Até o 5º dia útil após o fechamento do trimestre"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-2 border-t">
+            <div>
+              <Label>Divisão entre as consultoras</Label>
+              <Select
+                value={form.bonus_distribution_method || "equal"}
+                onValueChange={(v) => setF("bonus_distribution_method", v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="equal">Igualitária (mesmo valor para todas)</SelectItem>
+                  <SelectItem value="by_role">Por cargo (Júnior / Pleno / Sênior / Líder)</SelectItem>
+                  <SelectItem value="custom">Customizada (peso por consultora)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {form.bonus_distribution_method === "by_role" && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {(["CS Júnior", "CS Pleno", "CS Sênior", "Líder"] as const).map((role) => (
+                  <div key={role}>
+                    <Label className="text-xs">{role} (peso)</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={(form.bonus_distribution_shares as any)?.[role] ?? ""}
+                      onChange={(e) => {
+                        const shares = { ...(form.bonus_distribution_shares || {}) };
+                        const v = parseNumberInput(e.target.value);
+                        if (v === "") delete shares[role]; else shares[role] = Number(v);
+                        setF("bonus_distribution_shares", shares);
+                      }}
+                      placeholder="ex: 1"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {form.bonus_distribution_method === "custom" && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Defina o peso de cada consultora. O bônus será dividido proporcionalmente à soma dos pesos.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {consultants.map((c: any) => (
+                    <div key={c.user_id} className="flex items-center gap-2">
+                      <Avatar className="h-7 w-7">
+                        <AvatarFallback className="text-[10px]">{initials(c.name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate">{c.name}</div>
+                        <div className="text-[10px] text-muted-foreground">{c.role_label}</div>
+                      </div>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        className="w-24 h-8"
+                        value={(form.bonus_distribution_shares as any)?.[c.user_id] ?? ""}
+                        onChange={(e) => {
+                          const shares = { ...(form.bonus_distribution_shares || {}) };
+                          const v = parseNumberInput(e.target.value);
+                          if (v === "") delete shares[c.user_id]; else shares[c.user_id] = Number(v);
+                          setF("bonus_distribution_shares", shares);
+                        }}
+                        placeholder="peso"
+                      />
+                    </div>
+                  ))}
+                  {consultants.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Nenhuma consultora ativa cadastrada.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Remuneração & Meta variável</CardTitle>
