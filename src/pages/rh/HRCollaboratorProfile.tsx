@@ -285,6 +285,9 @@ export default function HRCollaboratorProfile() {
           <TabsTrigger value="payroll" className="gap-1.5 text-xs sm:text-sm">
             <Wallet className="h-4 w-4" /> Folha & Encargos
           </TabsTrigger>
+          <TabsTrigger value="audit" className="gap-1.5 text-xs sm:text-sm">
+            <History className="h-4 w-4" /> Auditoria
+          </TabsTrigger>
         </TabsList>
 
         {/* TAB: Dados Pessoais */}
