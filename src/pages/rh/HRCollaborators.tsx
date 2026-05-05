@@ -61,7 +61,7 @@ interface TeamMember {
 export default function HRCollaborators() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
-  const { collaborators, loading, createCollaborator, importFromTeam } = useHRCollaborators();
+  const { collaborators, loading, createCollaborator, importFromTeam, updateCollaborator, refetch } = useHRCollaborators();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
