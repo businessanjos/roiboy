@@ -257,11 +257,6 @@ export function CsIncentivePlanSection() {
                 </SelectItem>
               ))}
             </SelectContent>
-                    {c.role_label}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
           </Select>
           {activePlan && (
             <Button
