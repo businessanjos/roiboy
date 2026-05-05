@@ -80,18 +80,15 @@ export function CsIncentivePlanSection() {
     queryFn: fetchActiveConsultants,
   });
 
-  // "team" = plano-modelo do time (user_id null)
+  // "team" = plano-modelo do time (sem cargo). Caso contrário, é um cargo (role_label).
+  const ROLE_OPTIONS = ["CS Júnior", "CS Pleno", "CS Sênior", "Líder"] as const;
   const [selectedScope, setSelectedScope] = useState<string>("team");
-
-  useEffect(() => {
-    // nothing
-  }, [selectedScope]);
 
   const activePlan: CsIncentivePlan | null = useMemo(() => {
     if (selectedScope === "team") {
-      return plans.find((p) => p.is_active && !p.user_id) ?? null;
+      return plans.find((p) => p.is_active && !p.user_id && !p.role_label) ?? null;
     }
-    return plans.find((p) => p.is_active && p.user_id === selectedScope) ?? null;
+    return plans.find((p) => p.is_active && p.role_label === selectedScope) ?? null;
   }, [plans, selectedScope]);
 
   // Local state
@@ -101,21 +98,18 @@ export function CsIncentivePlanSection() {
   >([]);
 
   useEffect(() => {
-    const consultant =
+    // Sugestão de salário base: menor salário entre as consultoras desse cargo
+    const roleConsultants =
       selectedScope !== "team"
-        ? consultants.find((c: any) => c.id === selectedScope)
-        : null;
-    const rhSalary = consultant?.base_salary ?? 0;
+        ? consultants.filter((c: any) => c.role_label === selectedScope)
+        : [];
+    const suggestedSalary =
+      roleConsultants.length > 0
+        ? Math.min(...roleConsultants.map((c: any) => c.base_salary || 0).filter((v) => v > 0)) || 0
+        : 0;
 
     if (activePlan) {
-      setForm({
-        ...activePlan,
-        // Sempre sincroniza salário base com RH quando há consultor selecionado
-        base_salary_monthly:
-          selectedScope !== "team" && rhSalary > 0
-            ? rhSalary
-            : activePlan.base_salary_monthly,
-      });
+      setForm({ ...activePlan });
       const planTiers = tiers.filter((t) => t.plan_id === activePlan.id);
       setDraftTiers(
         planTiers.length > 0
@@ -132,11 +126,12 @@ export function CsIncentivePlanSection() {
         name:
           selectedScope === "team"
             ? "Plano CS — Time"
-            : `Plano CS — ${consultant?.name?.split(" ")[0] || ""}`,
+            : `Plano CS — ${selectedScope}`,
         description: "",
         is_active: true,
-        user_id: selectedScope === "team" ? null : selectedScope,
-        base_salary_monthly: rhSalary,
+        user_id: null,
+        role_label: selectedScope === "team" ? null : selectedScope,
+        base_salary_monthly: suggestedSalary,
         variable_target_monthly: 0,
         minimum_achievement_percent: 70,
         weight_renewal: 50,
