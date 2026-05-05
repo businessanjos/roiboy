@@ -23,9 +23,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X,
+  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X, FileSpreadsheet, FileText, ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
+import { exportPayrollCSV, exportPayrollXLSX } from "./components/payrollExport";
 
 const RH_ALLOWED_EMAIL = "m.quintana@me.com";
 
