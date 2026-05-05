@@ -14,7 +14,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Trophy, Plus, Trash2, Pencil, Target, TrendingDown, Star, Loader2, RefreshCw } from "lucide-react";
+import { Trophy, Plus, Trash2, Pencil, Target, TrendingDown, Star, Loader2, RefreshCw, Gift } from "lucide-react";
+import { CsIncentivePlanSection } from "@/components/operations/CsIncentivePlanSection";
 import {
   useConsultantGoals,
   METRIC_LABELS,
@@ -209,6 +210,17 @@ export default function ConsultantBonus() {
         </div>
       </div>
 
+      <Tabs defaultValue="bonus" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="bonus" className="gap-1.5">
+            <Trophy className="h-4 w-4" /> Premiação & Bônus
+          </TabsTrigger>
+          <TabsTrigger value="incentive" className="gap-1.5">
+            <Gift className="h-4 w-4" /> Plano de Incentivo
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="bonus" className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -366,6 +378,12 @@ export default function ConsultantBonus() {
           })}
         </Tabs>
       )}
+        </TabsContent>
+
+        <TabsContent value="incentive">
+          <CsIncentivePlanSection />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
