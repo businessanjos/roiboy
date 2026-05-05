@@ -265,6 +265,23 @@ export default function HRCollaborators() {
         </Select>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedRows.size > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-2.5">
+          <div className="text-sm">
+            <span className="font-medium">{selectedRows.size}</span> colaborador{selectedRows.size !== 1 ? "es" : ""} selecionado{selectedRows.size !== 1 ? "s" : ""}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setBulkOpen(true)}>
+              <Pencil className="h-4 w-4 mr-2" /> Editar em lote
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedRows(new Set())}>
+              <X className="h-4 w-4 mr-1" /> Limpar
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
