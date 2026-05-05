@@ -593,6 +593,40 @@ export default function HRCollaborators() {
           await refetch();
         }}
       />
+
+      <AlertDialog open={!!deactivateTarget} onOpenChange={(o) => { if (!o && !deactivating) setDeactivateTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Inativar colaborador?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  <span className="font-medium text-foreground">{deactivateTarget?.full_name}</span> será marcado como{" "}
+                  <span className="font-medium">Inativo</span> no RH (com data de desligamento de hoje, se ainda não houver) e removido dos relatórios padrão.
+                </p>
+                {deactivateTarget?.user_id ? (
+                  <p>
+                    O acesso à plataforma também será <span className="font-medium">desativado automaticamente</span>: a sessão atual é encerrada e o login é bloqueado.
+                  </p>
+                ) : (
+                  <p className="text-xs">Este colaborador não tem usuário do sistema vinculado — apenas o status do RH será alterado.</p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deactivating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeactivate(); }}
+              disabled={deactivating}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deactivating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserX className="h-4 w-4 mr-2" />}
+              Inativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
