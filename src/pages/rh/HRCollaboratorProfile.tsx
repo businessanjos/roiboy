@@ -476,6 +476,11 @@ export default function HRCollaboratorProfile() {
         <TabsContent value="payroll" className="mt-4">
           <CollaboratorPayroll form={form} setField={setField} />
         </TabsContent>
+
+        {/* TAB: Auditoria */}
+        <TabsContent value="audit" className="mt-4">
+          <CollaboratorAuditLog collaboratorId={id!} />
+        </TabsContent>
       </Tabs>
     </div>
   );
