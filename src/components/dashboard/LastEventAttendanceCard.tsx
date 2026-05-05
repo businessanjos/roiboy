@@ -99,7 +99,7 @@ export function LastEventAttendanceCard() {
         // 3) Cluster: todos eventos dentro de ±N dias da âncora que tenham participantes
         const anchorMs = new Date(anchor.scheduled_at).getTime();
         const windowMs = GROUP_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-        const cluster = evts
+        const cluster = presenciais
           .filter((e) => {
             if (!e.scheduled_at) return false;
             if ((partsByEvent.get(e.id)?.length ?? 0) === 0) return false;
