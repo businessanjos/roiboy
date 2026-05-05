@@ -50,8 +50,68 @@ function PercentInput({ value, onChange }: { value: number | null | undefined; o
   );
 }
 
+const num = (v: any) => (typeof v === "number" && !isNaN(v) ? v : 0);
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+// Campos que disparam recálculo em cascata
+const PAYROLL_FIELDS = new Set([
+  "base_salary", "salary", "commissions", "dsr_commissions",
+  "inss_employer", "inss_third_parties", "inss_gilrat", "fgts",
+  "vacation_provision", "vacation_third", "thirteenth_provision",
+  "health_plan", "life_insurance", "meal_voucher", "transport_voucher",
+  "home_office_allowance", "other_costs",
+]);
+
+function recalc(form: Partial<HRCollaborator>, key: string, value: any): Record<string, any> {
+  const next: Record<string, any> = { ...form, [key]: value };
+  // Se base_salary mudou, recalcula encargos a partir das alíquotas padrão
+  if (key === "base_salary" || key === "salary") {
+    const base = num(value);
+    next.base_salary = base;
+    next.salary = base;
+    next.inss_employer = r2(base * 0.20);
+    next.inss_third_parties = r2(base * 0.058);
+    next.inss_gilrat = r2(base * 0.005);
+    next.fgts = r2(base * 0.08);
+    next.vacation_provision = r2(base / 12);
+    next.vacation_third = r2(base / 36);
+    next.thirteenth_provision = r2(base / 12);
+  }
+  // Total de encargos
+  const totalCharges =
+    num(next.inss_employer) + num(next.inss_third_parties) + num(next.inss_gilrat) +
+    num(next.fgts) + num(next.vacation_provision) + num(next.vacation_third) +
+    num(next.thirteenth_provision);
+  next.total_charges = r2(totalCharges);
+  // Total de benefícios
+  const totalBenefits =
+    num(next.health_plan) + num(next.life_insurance) + num(next.meal_voucher) +
+    num(next.transport_voucher) + num(next.home_office_allowance);
+  next.total_benefits = r2(totalBenefits);
+  // Salário total = base + comissões + DSR
+  const baseS = num(next.base_salary);
+  next.total_salary = r2(baseS + num(next.commissions) + num(next.dsr_commissions));
+  // Custo total mensal e anual
+  const monthly = baseS + totalCharges + totalBenefits + num(next.other_costs);
+  next.total_cost = r2(baseS + totalCharges);
+  next.monthly_total_cost = r2(monthly);
+  next.annual_total_cost = r2(monthly * 12);
+  next.cost_pct = baseS > 0 ? r2((totalCharges / baseS) * 100) : 0;
+  return next;
+}
+
 export default function CollaboratorPayroll({ form, setField }: Props) {
-  return (
+  const handleField = (key: string, value: any) => {
+    if (!PAYROLL_FIELDS.has(key)) {
+      setField(key, value);
+      return;
+    }
+    const next = recalc(form, key, value);
+    Object.keys(next).forEach((k) => {
+      if ((form as any)[k] !== next[k]) setField(k, next[k]);
+    });
+  };
+
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
