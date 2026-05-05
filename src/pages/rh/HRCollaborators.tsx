@@ -313,7 +313,19 @@ export default function HRCollaborators() {
               {filtered.map(c => {
                 const st = STATUS_MAP[c.status || "active"] || STATUS_MAP.active;
                 return (
-                  <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                  <tr key={c.id} className={`border-b last:border-0 transition-colors ${selectedRows.has(c.id) ? "bg-primary/5" : "hover:bg-muted/30"}`}>
+                    <td className="p-3">
+                      <Checkbox
+                        checked={selectedRows.has(c.id)}
+                        onCheckedChange={(v) => {
+                          setSelectedRows(prev => {
+                            const next = new Set(prev);
+                            if (v) next.add(c.id); else next.delete(c.id);
+                            return next;
+                          });
+                        }}
+                      />
+                    </td>
                     <td className="p-3">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
