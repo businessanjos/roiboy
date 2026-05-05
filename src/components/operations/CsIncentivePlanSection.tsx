@@ -54,6 +54,13 @@ function initials(name: string) {
 const formatBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
+const parseNumberInput = (value: string) => (value === "" ? "" : Number(value));
+const toNumber = (value: unknown, fallback = 0) => {
+  if (value === "" || value == null) return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const DEFAULT_ROUTINES = [
   "Reunião 1:1 quinzenal com cada cliente",
   "QBR (Quarterly Business Review) trimestral",
@@ -108,7 +115,7 @@ export function CsIncentivePlanSection() {
   // Local state
   const [form, setForm] = useState<Partial<CsIncentivePlan>>({});
   const [draftTiers, setDraftTiers] = useState<
-    { min: number; max: string; multiplier: number; label: string }[]
+    { min: number | ""; max: string; multiplier: number | ""; label: string }[]
   >([]);
 
   useEffect(() => {
@@ -185,20 +192,34 @@ export function CsIncentivePlanSection() {
   const setF = (k: keyof CsIncentivePlan, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   const totalWeight =
-    Number(form.weight_renewal || 0) +
-    Number(form.weight_churn || 0) +
-    Number(form.weight_nps || 0);
+    toNumber(form.weight_renewal) +
+    toNumber(form.weight_churn) +
+    toNumber(form.weight_nps);
 
   const handleSave = async () => {
-    const saved = await savePlan.mutateAsync(form);
+    const normalizedForm = {
+      ...form,
+      base_salary_monthly: toNumber(form.base_salary_monthly),
+      variable_target_monthly: toNumber(form.variable_target_monthly),
+      minimum_achievement_percent: toNumber(form.minimum_achievement_percent),
+      weight_renewal: toNumber(form.weight_renewal),
+      weight_churn: toNumber(form.weight_churn),
+      weight_nps: toNumber(form.weight_nps),
+      monthly_bonus_value: toNumber(form.monthly_bonus_value),
+      quarterly_bonus_value: toNumber(form.quarterly_bonus_value),
+      annual_bonus_value: toNumber(form.annual_bonus_value),
+      churn_penalty_threshold: toNumber(form.churn_penalty_threshold),
+      churn_penalty_percent: toNumber(form.churn_penalty_percent),
+    };
+    const saved = await savePlan.mutateAsync(normalizedForm);
     if (saved?.id) {
       await saveTiers.mutateAsync({
         planId: saved.id,
         tiers: draftTiers.map((t) => ({
           plan_id: saved.id,
-          min_achievement_percent: t.min,
+          min_achievement_percent: toNumber(t.min),
           max_achievement_percent: t.max ? parseFloat(t.max) : null,
-          bonus_multiplier: t.multiplier,
+          bonus_multiplier: toNumber(t.multiplier),
           label: t.label || null,
         })),
       });
@@ -207,7 +228,7 @@ export function CsIncentivePlanSection() {
 
   const addTier = () => {
     const last = draftTiers[draftTiers.length - 1];
-    const newMin = last ? (last.max ? parseFloat(last.max) : last.min + 20) : 0;
+    const newMin = last ? (last.max ? parseFloat(last.max) : toNumber(last.min) + 20) : 0;
     setDraftTiers([...draftTiers, { min: newMin, max: "", multiplier: 1, label: "" }]);
   };
 
@@ -322,24 +343,24 @@ export function CsIncentivePlanSection() {
             <Label>Salário base mensal (R$)</Label>
             <Input
               type="number"
-              value={form.base_salary_monthly ?? 0}
-              onChange={(e) => setF("base_salary_monthly", Number(e.target.value))}
+              value={form.base_salary_monthly ?? ""}
+              onChange={(e) => setF("base_salary_monthly", parseNumberInput(e.target.value))}
             />
           </div>
           <div>
             <Label>Meta variável mensal (R$)</Label>
             <Input
               type="number"
-              value={form.variable_target_monthly ?? 0}
-              onChange={(e) => setF("variable_target_monthly", Number(e.target.value))}
+              value={form.variable_target_monthly ?? ""}
+              onChange={(e) => setF("variable_target_monthly", parseNumberInput(e.target.value))}
             />
           </div>
           <div>
             <Label>Mínimo para liberar bônus (%)</Label>
             <Input
               type="number"
-              value={form.minimum_achievement_percent ?? 0}
-              onChange={(e) => setF("minimum_achievement_percent", Number(e.target.value))}
+              value={form.minimum_achievement_percent ?? ""}
+              onChange={(e) => setF("minimum_achievement_percent", parseNumberInput(e.target.value))}
             />
           </div>
         </CardContent>
@@ -395,8 +416,8 @@ export function CsIncentivePlanSection() {
             <Label>Valor base (R$)</Label>
             <Input
               type="number"
-              value={form.monthly_bonus_value ?? 0}
-              onChange={(e) => setF("monthly_bonus_value", Number(e.target.value))}
+              value={form.monthly_bonus_value ?? ""}
+              onChange={(e) => setF("monthly_bonus_value", parseNumberInput(e.target.value))}
             />
           </div>
           <div>
@@ -449,7 +470,7 @@ export function CsIncentivePlanSection() {
                       value={t.min}
                       onChange={(e) => {
                         const v = [...draftTiers];
-                        v[i].min = Number(e.target.value);
+                        v[i].min = parseNumberInput(e.target.value);
                         setDraftTiers(v);
                       }}
                       className="w-20 h-8"
@@ -475,7 +496,7 @@ export function CsIncentivePlanSection() {
                       value={t.multiplier}
                       onChange={(e) => {
                         const v = [...draftTiers];
-                        v[i].multiplier = Number(e.target.value);
+                        v[i].multiplier = parseNumberInput(e.target.value);
                         setDraftTiers(v);
                       }}
                       className="w-24 h-8"
@@ -561,16 +582,16 @@ export function CsIncentivePlanSection() {
                 <Label>Limite de churn (%)</Label>
                 <Input
                   type="number"
-                  value={form.churn_penalty_threshold ?? 0}
-                  onChange={(e) => setF("churn_penalty_threshold", Number(e.target.value))}
+                  value={form.churn_penalty_threshold ?? ""}
+                  onChange={(e) => setF("churn_penalty_threshold", parseNumberInput(e.target.value))}
                 />
               </div>
               <div>
                 <Label>Redução do bônus (%)</Label>
                 <Input
                   type="number"
-                  value={form.churn_penalty_percent ?? 0}
-                  onChange={(e) => setF("churn_penalty_percent", Number(e.target.value))}
+                  value={form.churn_penalty_percent ?? ""}
+                  onChange={(e) => setF("churn_penalty_percent", parseNumberInput(e.target.value))}
                 />
               </div>
             </div>
@@ -635,16 +656,16 @@ export function CsIncentivePlanSection() {
           <CardContent className="p-4 text-sm flex flex-wrap items-center gap-x-6 gap-y-2">
             <span>
               Variável mensal alvo:{" "}
-              <strong>{formatBRL(Number(form.variable_target_monthly || 0))}</strong>
+              <strong>{formatBRL(toNumber(form.variable_target_monthly))}</strong>
             </span>
             <span>
               Bônus mensal base:{" "}
               <strong className="text-amber-600">
-                {formatBRL(Number(form.monthly_bonus_value || 0))}
+                {formatBRL(toNumber(form.monthly_bonus_value))}
               </strong>
             </span>
             <span>
-              Mínimo: <strong>{form.minimum_achievement_percent}%</strong>
+              Mínimo: <strong>{toNumber(form.minimum_achievement_percent)}%</strong>
             </span>
           </CardContent>
         </Card>
@@ -661,15 +682,15 @@ function MetricInput({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: number;
-  onChange: (v: number) => void;
+  value: number | "";
+  onChange: (v: number | "") => void;
 }) {
   return (
     <div className="space-y-1.5">
       <Label className="flex items-center gap-1.5">
         {icon} {label} (peso %)
       </Label>
-      <Input type="number" value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      <Input type="number" value={value ?? ""} onChange={(e) => onChange(parseNumberInput(e.target.value))} />
     </div>
   );
 }
@@ -678,8 +699,8 @@ function BonusBlock(props: {
   title: string;
   enabled: boolean;
   onToggle: (v: boolean) => void;
-  value: number;
-  onValueChange: (v: number) => void;
+  value: number | "";
+  onValueChange: (v: number | "") => void;
   rules: string;
   onRulesChange: (v: string) => void;
   channel: string;
@@ -703,8 +724,8 @@ function BonusBlock(props: {
               <Label>Valor (R$)</Label>
               <Input
                 type="number"
-                value={props.value}
-                onChange={(e) => props.onValueChange(Number(e.target.value))}
+                value={props.value ?? ""}
+                onChange={(e) => props.onValueChange(parseNumberInput(e.target.value))}
               />
             </div>
             <div>
