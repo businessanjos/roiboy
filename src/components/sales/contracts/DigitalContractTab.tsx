@@ -285,6 +285,42 @@ export const DigitalContractTab = ({
             company_bank_info: (defaults?.company_bank_info as any) ?? null,
           };
           setData(seed);
+
+          // Auto-resolve product from deal's "Item da Venda" custom field and load default template
+          try {
+            const { mapItemVendaToProductId, DEAL_FIELD_IDS } = await import(
+              "@/utils/dealToClientContractMapping"
+            );
+            const { data: itemRow } = await supabase
+              .from("deal_field_values")
+              .select("value_text")
+              .eq("deal_id", dealId)
+              .eq("field_id", DEAL_FIELD_IDS.ITEM_VENDA)
+              .maybeSingle();
+            const raw = itemRow?.value_text ?? null;
+            if (raw) {
+              const resolvedProductId = await mapItemVendaToProductId(raw);
+              if (!cancelled && resolvedProductId) {
+                setProductId(resolvedProductId);
+                const { data: tpls } = await supabase
+                  .from("contract_templates" as any)
+                  .select("id, content_html, variables, product_id, is_default, is_active")
+                  .eq("account_id", accountId)
+                  .eq("product_id", resolvedProductId)
+                  .eq("is_active", true)
+                  .order("is_default", { ascending: false })
+                  .limit(1);
+                const tpl = (tpls ?? [])[0] as any;
+                if (!cancelled && tpl?.content_html) {
+                  setTemplateId(tpl.id);
+                  setTemplateHtml(tpl.content_html);
+                  setTemplateVariables((tpl.variables as TemplateVariableDef[]) ?? []);
+                }
+              }
+            }
+          } catch (err) {
+            console.warn("[DigitalContractTab] auto product/template resolve failed:", err);
+          }
         }
       } catch (e) {
         console.error("[DigitalContractTab] load error:", e);
