@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HRCollaborator } from "@/hooks/useHRCollaborators";
 import { DollarSign, Receipt, Gift, Wallet, Building2 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import PayrollValidations from "./PayrollValidations";
 
 interface Props {
@@ -101,15 +102,34 @@ function recalc(form: Partial<HRCollaborator>, key: string, value: any): Record<
 }
 
 export default function CollaboratorPayroll({ form, setField }: Props) {
+  const formRef = useRef(form);
+  formRef.current = form;
+  const setFieldRef = useRef(setField);
+  setFieldRef.current = setField;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef<{ key: string; value: any } | null>(null);
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
   const handleField = (key: string, value: any) => {
     if (!PAYROLL_FIELDS.has(key)) {
       setField(key, value);
       return;
     }
-    const next = recalc(form, key, value);
-    Object.keys(next).forEach((k) => {
-      if ((form as any)[k] !== next[k]) setField(k, next[k]);
-    });
+    // Atualiza imediatamente apenas o campo digitado (UX responsiva)
+    setField(key, value);
+    pendingRef.current = { key, value };
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const pending = pendingRef.current;
+      if (!pending) return;
+      const next = recalc(formRef.current, pending.key, pending.value);
+      Object.keys(next).forEach((k) => {
+        if (k === pending.key) return; // já aplicado
+        if ((formRef.current as any)[k] !== next[k]) setFieldRef.current(k, next[k]);
+      });
+      pendingRef.current = null;
+    }, 350);
   };
 
   return (
