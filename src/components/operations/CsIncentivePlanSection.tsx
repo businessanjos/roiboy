@@ -91,10 +91,7 @@ export function CsIncentivePlanSection() {
         .not("user_id", "is", null)
         .order("full_name");
       return (data || [])
-        .filter((c: any) => {
-          const n = (c.full_name || "").toLowerCase();
-          return CONSULTANT_NAMES.some((k) => n.includes(k));
-        })
+        .filter((c: any) => matchesConsultantName(c.full_name))
         .map((c: any) => ({
           id: c.user_id,
           name: c.full_name,
