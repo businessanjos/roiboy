@@ -58,18 +58,7 @@ export default function ConsultantBonus() {
 
   const { data: consultants = [] } = useQuery({
     queryKey: ["consultants-list", currentUser?.account_id],
-    queryFn: async () => {
-      // Apenas colaboradores ATIVOS do RH com usuário vinculado
-      const { data } = await supabase
-        .from("hr_collaborators")
-        .select("user_id, full_name, email, status")
-        .eq("status", "active")
-        .not("user_id", "is", null)
-        .order("full_name");
-      return (data || [])
-        .filter((c: any) => matchesConsultantName(c.full_name))
-        .map((c: any) => ({ id: c.user_id, name: c.full_name, email: c.email }));
-    },
+    queryFn: fetchActiveConsultants,
     enabled: !!currentUser?.account_id,
   });
 
