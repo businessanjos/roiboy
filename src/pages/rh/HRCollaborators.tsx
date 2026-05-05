@@ -218,32 +218,80 @@ export default function HRCollaborators() {
     }
   };
 
+  useEffect(() => {
+    if (deactivateTarget) {
+      const today = new Date().toISOString().slice(0, 10);
+      setLeaveType("inactive");
+      setLeaveStart(deactivateTarget.termination_date || today);
+      setLeaveEnd("");
+      setLeaveReason("");
+      setLeaveError("");
+    }
+  }, [deactivateTarget]);
+
+  const validateLeave = (): string => {
+    if (!leaveStart) return "Informe a data de início.";
+    const start = new Date(leaveStart);
+    if (isNaN(start.getTime())) return "Data de início inválida.";
+    if (leaveType === "leave" || leaveType === "vacation") {
+      if (!leaveEnd) return "Informe a data de retorno prevista.";
+      const end = new Date(leaveEnd);
+      if (isNaN(end.getTime())) return "Data de retorno inválida.";
+      if (end < start) return "A data de retorno deve ser igual ou posterior à data de início.";
+    }
+    if (leaveType === "leave" && !leaveReason.trim()) return "Informe o motivo do afastamento.";
+    if (leaveType === "inactive" && !leaveReason.trim()) return "Informe o motivo do desligamento.";
+    return "";
+  };
+
   const handleDeactivate = async () => {
     if (!deactivateTarget) return;
+    const err = validateLeave();
+    if (err) { setLeaveError(err); return; }
+    setLeaveError("");
     setDeactivating(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const ok = await updateCollaborator(deactivateTarget.id, {
-        status: "inactive",
-        termination_date: deactivateTarget.termination_date || today,
-      } as any, true);
+      const reasonNote = leaveReason.trim()
+        ? `[${new Date().toISOString().slice(0, 10)}] ${
+            leaveType === "inactive" ? "Desligamento" : leaveType === "leave" ? "Afastamento" : "Férias"
+          }${leaveEnd ? ` (até ${leaveEnd})` : ""}: ${leaveReason.trim()}`
+        : null;
+      const baseNote = (deactivateTarget.notes || "").trim();
+      const newNotes = reasonNote
+        ? (baseNote ? `${baseNote}\n${reasonNote}` : reasonNote)
+        : deactivateTarget.notes ?? null;
+
+      const patch: any = {
+        status: leaveType,
+        notes: newNotes,
+      };
+      if (leaveType === "inactive") {
+        patch.termination_date = leaveStart;
+      }
+
+      const ok = await updateCollaborator(deactivateTarget.id, patch, true);
       if (!ok) throw new Error("Falha ao atualizar status no RH");
 
-      if (deactivateTarget.user_id) {
+      // Cut system access only for definitive termination
+      if (leaveType === "inactive" && deactivateTarget.user_id) {
         const { error } = await supabase.functions.invoke("admin-manage-user", {
           body: { action: "set_active", auth_user_id: deactivateTarget.user_id, is_active: false },
         });
         if (error) {
-          toast.warning("Status RH atualizado, mas falha ao desativar acesso ao sistema: " + error.message);
+          toast.warning("Status atualizado, mas falha ao desativar acesso ao sistema: " + error.message);
         } else {
-          toast.success("Colaborador inativado e acesso ao sistema desativado.");
+          toast.success("Colaborador desligado e acesso ao sistema desativado.");
         }
       } else {
-        toast.success("Colaborador inativado no RH (sem usuário vinculado ao sistema).");
+        toast.success(
+          leaveType === "vacation" ? "Colaborador marcado como em Férias."
+          : leaveType === "leave" ? "Colaborador marcado como Afastado."
+          : "Colaborador desligado no RH (sem usuário vinculado ao sistema)."
+        );
       }
       setDeactivateTarget(null);
     } catch (err: any) {
-      toast.error("Erro ao inativar: " + (err?.message || "desconhecido"));
+      toast.error("Erro ao atualizar: " + (err?.message || "desconhecido"));
     } finally {
       setDeactivating(false);
     }
