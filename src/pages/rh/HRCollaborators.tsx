@@ -86,6 +86,11 @@ export default function HRCollaborators() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<HRCollaborator | null>(null);
   const [deactivating, setDeactivating] = useState(false);
+  const [leaveType, setLeaveType] = useState<"inactive" | "leave" | "vacation">("inactive");
+  const [leaveStart, setLeaveStart] = useState<string>("");
+  const [leaveEnd, setLeaveEnd] = useState<string>("");
+  const [leaveReason, setLeaveReason] = useState<string>("");
+  const [leaveError, setLeaveError] = useState<string>("");
 
   const [form, setForm] = useState({
     full_name: "",
