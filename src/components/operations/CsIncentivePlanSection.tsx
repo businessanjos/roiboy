@@ -656,16 +656,16 @@ export function CsIncentivePlanSection() {
           <CardContent className="p-4 text-sm flex flex-wrap items-center gap-x-6 gap-y-2">
             <span>
               Variável mensal alvo:{" "}
-              <strong>{formatBRL(Number(form.variable_target_monthly || 0))}</strong>
+              <strong>{formatBRL(toNumber(form.variable_target_monthly))}</strong>
             </span>
             <span>
               Bônus mensal base:{" "}
               <strong className="text-amber-600">
-                {formatBRL(Number(form.monthly_bonus_value || 0))}
+                {formatBRL(toNumber(form.monthly_bonus_value))}
               </strong>
             </span>
             <span>
-              Mínimo: <strong>{form.minimum_achievement_percent}%</strong>
+              Mínimo: <strong>{toNumber(form.minimum_achievement_percent)}%</strong>
             </span>
           </CardContent>
         </Card>
@@ -690,7 +690,7 @@ function MetricInput({
       <Label className="flex items-center gap-1.5">
         {icon} {label} (peso %)
       </Label>
-      <Input type="number" value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      <Input type="number" value={value ?? ""} onChange={(e) => onChange(parseNumberInput(e.target.value) as number)} />
     </div>
   );
 }
@@ -724,8 +724,8 @@ function BonusBlock(props: {
               <Label>Valor (R$)</Label>
               <Input
                 type="number"
-                value={props.value}
-                onChange={(e) => props.onValueChange(Number(e.target.value))}
+                value={props.value ?? ""}
+                onChange={(e) => props.onValueChange(parseNumberInput(e.target.value) as number)}
               />
             </div>
             <div>
