@@ -19,10 +19,11 @@ import { CsIncentivePlanSection } from "@/components/operations/CsIncentivePlanS
 import {
   useConsultantGoals,
   METRIC_LABELS,
-  MONTH_LABELS,
   type MetricType,
   type ConsultantGoal,
 } from "@/hooks/useConsultantGoals";
+
+const QUARTER_LABELS = ["Q1", "Q2", "Q3", "Q4"];
 import { ConsultantPayoutTable } from "@/components/operations/ConsultantPayoutTable";
 import { fetchActiveConsultants } from "@/lib/consultants";
 
