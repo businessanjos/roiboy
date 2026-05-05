@@ -25,7 +25,7 @@ import {
 
 const QUARTER_LABELS = ["Q1", "Q2", "Q3", "Q4"];
 import { ConsultantPayoutTable } from "@/components/operations/ConsultantPayoutTable";
-import { fetchActiveConsultants } from "@/lib/consultants";
+import { fetchActiveConsultants, getConsultantSeniorityKey } from "@/lib/consultants";
 
 const ALLOWED_VIEWERS = ["maikol", "jonathan", "everton", "bruna"];
 
@@ -68,7 +68,7 @@ export default function ConsultantBonus() {
     queryFn: async () => {
       const { data } = await supabase
         .from("products")
-        .select("id, name, color")
+        .select("id, name, color, consultant_seniority")
         .eq("is_active", true)
         .order("name");
       return data || [];
@@ -396,9 +396,25 @@ export default function ConsultantBonus() {
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {products.map((p: any) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
+                      {(() => {
+                        const consultant = consultants.find((c: any) => c.id === editing.user_id);
+                        const seniorityKey = getConsultantSeniorityKey(consultant?.position);
+                        const filteredProducts = (products as any[]).filter((p) => {
+                          const sl = Array.isArray(p.consultant_seniority) ? p.consultant_seniority : [];
+                          if (sl.length === 0) return true;
+                          return seniorityKey ? sl.includes(seniorityKey) : true;
+                        });
+                        if (filteredProducts.length === 0) {
+                          return (
+                            <div className="px-2 py-3 text-xs text-muted-foreground">
+                              Nenhum produto disponível para a senioridade desta consultora.
+                            </div>
+                          );
+                        }
+                        return filteredProducts.map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ));
+                      })()}
                     </SelectContent>
                   </Select>
                 </div>

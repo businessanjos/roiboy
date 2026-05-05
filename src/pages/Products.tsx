@@ -140,10 +140,18 @@ interface Product {
   mls_level: string | null;
   color: string | null;
   renewal_discount_percent: number | null;
+  consultant_seniority?: string[] | null;
   deliverables: ProductDeliverables | null;
   mql_criteria: MqlCriteria | null;
   created_at: string;
 }
+
+const CONSULTANT_SENIORITY_OPTIONS = [
+  { value: "junior", label: "CS Júnior" },
+  { value: "pleno", label: "CS Pleno" },
+  { value: "senior", label: "CS Sênior" },
+  { value: "lead", label: "Líder CS" },
+];
 
 const PAYMENT_METHOD_OPTIONS = [
   { value: "credit_card", label: "Cartão de crédito" },
@@ -196,6 +204,7 @@ export default function Products() {
   const [cashPrice, setCashPrice] = useState("");
   const [installmentPrice, setInstallmentPrice] = useState("");
   const [renewalDiscountPercent, setRenewalDiscountPercent] = useState("50");
+  const [consultantSeniority, setConsultantSeniority] = useState<string[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
   const [deliverables, setDeliverables] = useState<ProductDeliverables>({ ...DEFAULT_DELIVERABLES });
   const [mqlCriteria, setMqlCriteria] = useState<MqlCriteria>({ ...DEFAULT_MQL_CRITERIA });
@@ -259,6 +268,7 @@ export default function Products() {
     setCashPrice("");
     setInstallmentPrice("");
     setRenewalDiscountPercent("50");
+    setConsultantSeniority([]);
     setPaymentMethods([]);
     setDeliverables({ ...DEFAULT_DELIVERABLES });
     setMqlCriteria({ ...DEFAULT_MQL_CRITERIA });
@@ -282,6 +292,7 @@ export default function Products() {
     setCashPrice(product.cash_price ? toFormattedString(product.cash_price) : "");
     setInstallmentPrice(product.installment_price ? toFormattedString(product.installment_price) : "");
     setRenewalDiscountPercent(String(product.renewal_discount_percent ?? 100));
+    setConsultantSeniority(Array.isArray(product.consultant_seniority) ? product.consultant_seniority : []);
     setPaymentMethods(product.payment_methods || []);
     setBillingPeriod(product.billing_period);
     setIsActive(product.is_active);
@@ -330,6 +341,7 @@ export default function Products() {
         cash_price: parseFormattedNumber(cashPrice),
         installment_price: parseFormattedNumber(installmentPrice),
         renewal_discount_percent: parseFloat(renewalDiscountPercent) || 50,
+        consultant_seniority: consultantSeniority,
         payment_methods: paymentMethods,
         billing_period: billingPeriod as "monthly" | "quarterly" | "semiannual" | "annual" | "one_time",
         is_active: isActive,
@@ -629,6 +641,35 @@ export default function Products() {
                       </Select>
                     </div>
                   )}
+                </div>
+
+                {/* Senioridade do consultor que atende */}
+                <div className="space-y-2 pt-2 border-t">
+                  <Label className="mb-0">Senioridade do consultor que atende</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Define quais consultoras de CS podem atender este produto. Usado em Premiação & Bônus.
+                  </p>
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    {CONSULTANT_SENIORITY_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className="flex items-center gap-2 rounded-md border px-3 py-1.5 cursor-pointer hover:bg-accent"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={consultantSeniority.includes(opt.value)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setConsultantSeniority([...consultantSeniority, opt.value]);
+                            } else {
+                              setConsultantSeniority(consultantSeniority.filter((v) => v !== opt.value));
+                            }
+                          }}
+                        />
+                        <span className="text-sm">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </TabsContent>
 

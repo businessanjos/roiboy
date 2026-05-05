@@ -51,6 +51,22 @@ export const getConsultantRoleLabel = (position: string | null | undefined): str
 };
 
 /**
+ * Deriva a chave de senioridade (junior|pleno|senior|lead) a partir do `position`.
+ * Usada para casar com `products.consultant_seniority`.
+ */
+export const getConsultantSeniorityKey = (
+  position: string | null | undefined
+): "junior" | "pleno" | "senior" | "lead" | null => {
+  const p = (position || "").trim().toLowerCase();
+  if (!p) return null;
+  if (/(l[ií]der|coordenador|gerente|head)/i.test(p)) return "lead";
+  if (/(s[eê]nior|\bsr\b)/i.test(p)) return "senior";
+  if (/(pleno|\bpl\b)/i.test(p)) return "pleno";
+  if (/(j[uú]nior|\bjr\b)/i.test(p)) return "junior";
+  return null;
+};
+
+/**
  * Busca somente consultoras ATIVAS no RH (status='active') com user_id vinculado.
  * Fonte única de verdade para Plano de Incentivo e Premiação & Bônus.
  */
