@@ -78,7 +78,6 @@ export function CsIncentivePlanSection() {
     queryKey: ["cs-incentive-consultants", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: fetchActiveConsultants,
-    },
   });
 
   // "team" = plano-modelo do time (user_id null)

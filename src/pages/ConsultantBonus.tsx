@@ -24,13 +24,9 @@ import {
   type ConsultantGoal,
 } from "@/hooks/useConsultantGoals";
 import { ConsultantPayoutTable } from "@/components/operations/ConsultantPayoutTable";
+import { fetchActiveConsultants } from "@/lib/consultants";
 
 const ALLOWED_VIEWERS = ["maikol", "jonathan", "everton", "bruna"];
-const CONSULTANT_NAMES = ["andréia", "andreia", "dayara", "michele", "ana maria"];
-const matchesConsultantName = (fullName: string) => {
-  const n = (fullName || "").trim().toLowerCase();
-  return CONSULTANT_NAMES.some((k) => n.startsWith(k));
-};
 
 const METRIC_ICONS: Record<MetricType, any> = {
   renewal_rate: Target,
