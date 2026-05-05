@@ -837,7 +837,15 @@ export function CsIncentivePlanSection() {
               </strong>
             </span>
             <span>
-              Mínimo: <strong>{toNumber(form.minimum_achievement_percent)}%</strong>
+              Piso para começar a pagar:{" "}
+              <strong>
+                {(() => {
+                  const paying = draftTiers.filter((t) => toNumber(t.multiplier) > 0);
+                  if (paying.length === 0) return "—";
+                  const min = Math.min(...paying.map((t) => toNumber(t.min)));
+                  return `${min}%`;
+                })()}
+              </strong>
             </span>
           </CardContent>
         </Card>
