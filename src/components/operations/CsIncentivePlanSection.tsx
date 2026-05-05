@@ -682,15 +682,15 @@ function MetricInput({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: number;
-  onChange: (v: number) => void;
+  value: number | "";
+  onChange: (v: number | "") => void;
 }) {
   return (
     <div className="space-y-1.5">
       <Label className="flex items-center gap-1.5">
         {icon} {label} (peso %)
       </Label>
-      <Input type="number" value={value ?? ""} onChange={(e) => onChange(parseNumberInput(e.target.value) as number)} />
+      <Input type="number" value={value ?? ""} onChange={(e) => onChange(parseNumberInput(e.target.value))} />
     </div>
   );
 }
@@ -699,8 +699,8 @@ function BonusBlock(props: {
   title: string;
   enabled: boolean;
   onToggle: (v: boolean) => void;
-  value: number;
-  onValueChange: (v: number) => void;
+  value: number | "";
+  onValueChange: (v: number | "") => void;
   rules: string;
   onRulesChange: (v: string) => void;
   channel: string;
@@ -725,7 +725,7 @@ function BonusBlock(props: {
               <Input
                 type="number"
                 value={props.value ?? ""}
-                onChange={(e) => props.onValueChange(parseNumberInput(e.target.value) as number)}
+                onChange={(e) => props.onValueChange(parseNumberInput(e.target.value))}
               />
             </div>
             <div>
