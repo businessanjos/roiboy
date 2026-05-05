@@ -285,6 +285,19 @@ export default function HRCollaborators() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/50 border-b">
+                <th className="p-3 w-10">
+                  <Checkbox
+                    checked={filtered.length > 0 && filtered.every(c => selectedRows.has(c.id))}
+                    onCheckedChange={(v) => {
+                      setSelectedRows(prev => {
+                        const next = new Set(prev);
+                        if (v) filtered.forEach(c => next.add(c.id));
+                        else filtered.forEach(c => next.delete(c.id));
+                        return next;
+                      });
+                    }}
+                  />
+                </th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Colaborador</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Departamento</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Cargo</th>
