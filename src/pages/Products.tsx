@@ -292,6 +292,7 @@ export default function Products() {
     setCashPrice(product.cash_price ? toFormattedString(product.cash_price) : "");
     setInstallmentPrice(product.installment_price ? toFormattedString(product.installment_price) : "");
     setRenewalDiscountPercent(String(product.renewal_discount_percent ?? 100));
+    setConsultantSeniority(Array.isArray(product.consultant_seniority) ? product.consultant_seniority : []);
     setPaymentMethods(product.payment_methods || []);
     setBillingPeriod(product.billing_period);
     setIsActive(product.is_active);
