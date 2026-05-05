@@ -86,6 +86,11 @@ export default function HRCollaborators() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<HRCollaborator | null>(null);
   const [deactivating, setDeactivating] = useState(false);
+  const [leaveType, setLeaveType] = useState<"inactive" | "leave" | "vacation">("inactive");
+  const [leaveStart, setLeaveStart] = useState<string>("");
+  const [leaveEnd, setLeaveEnd] = useState<string>("");
+  const [leaveReason, setLeaveReason] = useState<string>("");
+  const [leaveError, setLeaveError] = useState<string>("");
 
   const [form, setForm] = useState({
     full_name: "",
@@ -213,32 +218,80 @@ export default function HRCollaborators() {
     }
   };
 
+  useEffect(() => {
+    if (deactivateTarget) {
+      const today = new Date().toISOString().slice(0, 10);
+      setLeaveType("inactive");
+      setLeaveStart(deactivateTarget.termination_date || today);
+      setLeaveEnd("");
+      setLeaveReason("");
+      setLeaveError("");
+    }
+  }, [deactivateTarget]);
+
+  const validateLeave = (): string => {
+    if (!leaveStart) return "Informe a data de início.";
+    const start = new Date(leaveStart);
+    if (isNaN(start.getTime())) return "Data de início inválida.";
+    if (leaveType === "leave" || leaveType === "vacation") {
+      if (!leaveEnd) return "Informe a data de retorno prevista.";
+      const end = new Date(leaveEnd);
+      if (isNaN(end.getTime())) return "Data de retorno inválida.";
+      if (end < start) return "A data de retorno deve ser igual ou posterior à data de início.";
+    }
+    if (leaveType === "leave" && !leaveReason.trim()) return "Informe o motivo do afastamento.";
+    if (leaveType === "inactive" && !leaveReason.trim()) return "Informe o motivo do desligamento.";
+    return "";
+  };
+
   const handleDeactivate = async () => {
     if (!deactivateTarget) return;
+    const err = validateLeave();
+    if (err) { setLeaveError(err); return; }
+    setLeaveError("");
     setDeactivating(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const ok = await updateCollaborator(deactivateTarget.id, {
-        status: "inactive",
-        termination_date: deactivateTarget.termination_date || today,
-      } as any, true);
+      const reasonNote = leaveReason.trim()
+        ? `[${new Date().toISOString().slice(0, 10)}] ${
+            leaveType === "inactive" ? "Desligamento" : leaveType === "leave" ? "Afastamento" : "Férias"
+          }${leaveEnd ? ` (até ${leaveEnd})` : ""}: ${leaveReason.trim()}`
+        : null;
+      const baseNote = (deactivateTarget.notes || "").trim();
+      const newNotes = reasonNote
+        ? (baseNote ? `${baseNote}\n${reasonNote}` : reasonNote)
+        : deactivateTarget.notes ?? null;
+
+      const patch: any = {
+        status: leaveType,
+        notes: newNotes,
+      };
+      if (leaveType === "inactive") {
+        patch.termination_date = leaveStart;
+      }
+
+      const ok = await updateCollaborator(deactivateTarget.id, patch, true);
       if (!ok) throw new Error("Falha ao atualizar status no RH");
 
-      if (deactivateTarget.user_id) {
+      // Cut system access only for definitive termination
+      if (leaveType === "inactive" && deactivateTarget.user_id) {
         const { error } = await supabase.functions.invoke("admin-manage-user", {
           body: { action: "set_active", auth_user_id: deactivateTarget.user_id, is_active: false },
         });
         if (error) {
-          toast.warning("Status RH atualizado, mas falha ao desativar acesso ao sistema: " + error.message);
+          toast.warning("Status atualizado, mas falha ao desativar acesso ao sistema: " + error.message);
         } else {
-          toast.success("Colaborador inativado e acesso ao sistema desativado.");
+          toast.success("Colaborador desligado e acesso ao sistema desativado.");
         }
       } else {
-        toast.success("Colaborador inativado no RH (sem usuário vinculado ao sistema).");
+        toast.success(
+          leaveType === "vacation" ? "Colaborador marcado como em Férias."
+          : leaveType === "leave" ? "Colaborador marcado como Afastado."
+          : "Colaborador desligado no RH (sem usuário vinculado ao sistema)."
+        );
       }
       setDeactivateTarget(null);
     } catch (err: any) {
-      toast.error("Erro ao inativar: " + (err?.message || "desconhecido"));
+      toast.error("Erro ao atualizar: " + (err?.message || "desconhecido"));
     } finally {
       setDeactivating(false);
     }
@@ -595,34 +648,91 @@ export default function HRCollaborators() {
       />
 
       <AlertDialog open={!!deactivateTarget} onOpenChange={(o) => { if (!o && !deactivating) setDeactivateTarget(null); }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Inativar colaborador?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>
-                  <span className="font-medium text-foreground">{deactivateTarget?.full_name}</span> será marcado como{" "}
-                  <span className="font-medium">Inativo</span> no RH (com data de desligamento de hoje, se ainda não houver) e removido dos relatórios padrão.
-                </p>
-                {deactivateTarget?.user_id ? (
-                  <p>
-                    O acesso à plataforma também será <span className="font-medium">desativado automaticamente</span>: a sessão atual é encerrada e o login é bloqueado.
-                  </p>
-                ) : (
-                  <p className="text-xs">Este colaborador não tem usuário do sistema vinculado — apenas o status do RH será alterado.</p>
-                )}
-              </div>
+            <AlertDialogTitle>
+              {leaveType === "inactive" ? "Desligar colaborador" : leaveType === "leave" ? "Marcar como afastado" : "Marcar férias"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-medium text-foreground">{deactivateTarget?.full_name}</span> — selecione o tipo de saída e preencha os campos obrigatórios.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Tipo de saída *</Label>
+              <Select value={leaveType} onValueChange={(v) => { setLeaveType(v as any); setLeaveError(""); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inactive">Desligado (corta acesso ao sistema)</SelectItem>
+                  <SelectItem value="leave">Afastado (licença/atestado)</SelectItem>
+                  <SelectItem value="vacation">Férias</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  {leaveType === "inactive" ? "Data de desligamento *" : "Início *"}
+                </Label>
+                <Input type="date" value={leaveStart} onChange={e => { setLeaveStart(e.target.value); setLeaveError(""); }} />
+              </div>
+              {(leaveType === "leave" || leaveType === "vacation") && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Retorno previsto *</Label>
+                  <Input
+                    type="date"
+                    value={leaveEnd}
+                    min={leaveStart || undefined}
+                    onChange={e => { setLeaveEnd(e.target.value); setLeaveError(""); }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                {leaveType === "vacation" ? "Observação (opcional)" : "Motivo *"}
+              </Label>
+              <Input
+                placeholder={
+                  leaveType === "inactive" ? "Ex.: Pedido de demissão, fim de contrato..."
+                  : leaveType === "leave" ? "Ex.: Atestado médico, licença maternidade..."
+                  : "Ex.: Período aquisitivo 2024/2025"
+                }
+                value={leaveReason}
+                onChange={e => { setLeaveReason(e.target.value); setLeaveError(""); }}
+                maxLength={300}
+              />
+            </div>
+
+            {leaveError && (
+              <p className="text-xs text-destructive">{leaveError}</p>
+            )}
+
+            {leaveType === "inactive" && deactivateTarget?.user_id && (
+              <p className="text-xs text-muted-foreground">
+                ⚠️ O acesso à plataforma será desativado automaticamente — sessão encerrada e login bloqueado.
+              </p>
+            )}
+            {leaveType === "inactive" && !deactivateTarget?.user_id && (
+              <p className="text-xs text-muted-foreground">Sem usuário vinculado — apenas o status do RH será alterado.</p>
+            )}
+            {leaveType !== "inactive" && (
+              <p className="text-xs text-muted-foreground">O acesso ao sistema é mantido durante {leaveType === "leave" ? "o afastamento" : "as férias"}.</p>
+            )}
+          </div>
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deactivating}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); handleDeactivate(); }}
               disabled={deactivating}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={leaveType === "inactive" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
             >
               {deactivating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserX className="h-4 w-4 mr-2" />}
-              Inativar
+              Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
