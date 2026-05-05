@@ -23,8 +23,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Search, Plus, UsersRound, ArrowLeft, Eye, Download,
+  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X,
 } from "lucide-react";
+import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
 
 const RH_ALLOWED_EMAIL = "m.quintana@me.com";
 
@@ -60,7 +61,7 @@ interface TeamMember {
 export default function HRCollaborators() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
-  const { collaborators, loading, createCollaborator, importFromTeam } = useHRCollaborators();
+  const { collaborators, loading, createCollaborator, importFromTeam, updateCollaborator, refetch } = useHRCollaborators();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -72,6 +73,8 @@ export default function HRCollaborators() {
   const [teamLoading, setTeamLoading] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const [form, setForm] = useState({
     full_name: "",
@@ -262,6 +265,23 @@ export default function HRCollaborators() {
         </Select>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedRows.size > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-2.5">
+          <div className="text-sm">
+            <span className="font-medium">{selectedRows.size}</span> colaborador{selectedRows.size !== 1 ? "es" : ""} selecionado{selectedRows.size !== 1 ? "s" : ""}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setBulkOpen(true)}>
+              <Pencil className="h-4 w-4 mr-2" /> Editar em lote
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedRows(new Set())}>
+              <X className="h-4 w-4 mr-1" /> Limpar
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
@@ -282,6 +302,19 @@ export default function HRCollaborators() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/50 border-b">
+                <th className="p-3 w-10">
+                  <Checkbox
+                    checked={filtered.length > 0 && filtered.every(c => selectedRows.has(c.id))}
+                    onCheckedChange={(v) => {
+                      setSelectedRows(prev => {
+                        const next = new Set(prev);
+                        if (v) filtered.forEach(c => next.add(c.id));
+                        else filtered.forEach(c => next.delete(c.id));
+                        return next;
+                      });
+                    }}
+                  />
+                </th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Colaborador</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Departamento</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Cargo</th>
@@ -297,7 +330,19 @@ export default function HRCollaborators() {
               {filtered.map(c => {
                 const st = STATUS_MAP[c.status || "active"] || STATUS_MAP.active;
                 return (
-                  <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                  <tr key={c.id} className={`border-b last:border-0 transition-colors ${selectedRows.has(c.id) ? "bg-primary/5" : "hover:bg-muted/30"}`}>
+                    <td className="p-3">
+                      <Checkbox
+                        checked={selectedRows.has(c.id)}
+                        onCheckedChange={(v) => {
+                          setSelectedRows(prev => {
+                            const next = new Set(prev);
+                            if (v) next.add(c.id); else next.delete(c.id);
+                            return next;
+                          });
+                        }}
+                      />
+                    </td>
                     <td className="p-3">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
@@ -464,6 +509,19 @@ export default function HRCollaborators() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CollaboratorsBulkEditDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        selected={collaborators.filter(c => selectedRows.has(c.id))}
+        onApply={async (updates) => {
+          for (const u of updates) {
+            await updateCollaborator(u.id, u.patch as any, true);
+          }
+          setSelectedRows(new Set());
+          await refetch();
+        }}
+      />
     </div>
   );
 }
