@@ -470,7 +470,7 @@ export function CsIncentivePlanSection() {
                       value={t.min}
                       onChange={(e) => {
                         const v = [...draftTiers];
-                        v[i].min = Number(e.target.value);
+                        v[i].min = parseNumberInput(e.target.value);
                         setDraftTiers(v);
                       }}
                       className="w-20 h-8"
@@ -496,7 +496,7 @@ export function CsIncentivePlanSection() {
                       value={t.multiplier}
                       onChange={(e) => {
                         const v = [...draftTiers];
-                        v[i].multiplier = Number(e.target.value);
+                        v[i].multiplier = parseNumberInput(e.target.value);
                         setDraftTiers(v);
                       }}
                       className="w-24 h-8"
@@ -582,16 +582,16 @@ export function CsIncentivePlanSection() {
                 <Label>Limite de churn (%)</Label>
                 <Input
                   type="number"
-                  value={form.churn_penalty_threshold ?? 0}
-                  onChange={(e) => setF("churn_penalty_threshold", Number(e.target.value))}
+                  value={form.churn_penalty_threshold ?? ""}
+                  onChange={(e) => setF("churn_penalty_threshold", parseNumberInput(e.target.value))}
                 />
               </div>
               <div>
                 <Label>Redução do bônus (%)</Label>
                 <Input
                   type="number"
-                  value={form.churn_penalty_percent ?? 0}
-                  onChange={(e) => setF("churn_penalty_percent", Number(e.target.value))}
+                  value={form.churn_penalty_percent ?? ""}
+                  onChange={(e) => setF("churn_penalty_percent", parseNumberInput(e.target.value))}
                 />
               </div>
             </div>
