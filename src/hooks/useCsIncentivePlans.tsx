@@ -32,6 +32,15 @@ export interface CsIncentivePlan {
   churn_penalty_percent: number;
   routines: string[];
   notes: string | null;
+  // Orçamento do bônus do time CS
+  bonus_budget_amount: number;
+  bonus_budget_value_type: "absolute" | "percent";
+  bonus_budget_period: "monthly" | "quarterly" | "annual";
+  bonus_budget_percent_base: string | null;
+  bonus_payment_channel: string | null;
+  bonus_payment_when: string | null;
+  bonus_distribution_method: "equal" | "by_role" | "custom";
+  bonus_distribution_shares: Record<string, number>;
 }
 
 export interface CsIncentiveTier {
