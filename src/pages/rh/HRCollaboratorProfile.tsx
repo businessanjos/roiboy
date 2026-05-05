@@ -29,6 +29,8 @@ import CollaboratorVacations from "./components/CollaboratorVacations";
 import CollaboratorSalaryHistory from "./components/CollaboratorSalaryHistory";
 import CollaboratorTimeRecords from "./components/CollaboratorTimeRecords";
 import CollaboratorBenefits from "./components/CollaboratorBenefits";
+import CollaboratorPayroll from "./components/CollaboratorPayroll";
+import { Wallet } from "lucide-react";
 
 const RH_ALLOWED_EMAIL = "m.quintana@me.com";
 
@@ -279,6 +281,9 @@ export default function HRCollaboratorProfile() {
           <TabsTrigger value="benefits" className="gap-1.5 text-xs sm:text-sm">
             <Gift className="h-4 w-4" /> Benefícios
           </TabsTrigger>
+          <TabsTrigger value="payroll" className="gap-1.5 text-xs sm:text-sm">
+            <Wallet className="h-4 w-4" /> Folha & Encargos
+          </TabsTrigger>
         </TabsList>
 
         {/* TAB: Dados Pessoais */}
@@ -461,6 +466,11 @@ export default function HRCollaboratorProfile() {
         {/* TAB: Benefícios */}
         <TabsContent value="benefits" className="mt-4">
           <CollaboratorBenefits collaboratorId={id!} accountId={collab.account_id} />
+        </TabsContent>
+
+        {/* TAB: Folha & Encargos */}
+        <TabsContent value="payroll" className="mt-4">
+          <CollaboratorPayroll form={form} setField={setField} />
         </TabsContent>
       </Tabs>
     </div>

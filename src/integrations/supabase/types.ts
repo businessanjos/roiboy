@@ -7323,94 +7323,190 @@ export type Database = {
         Row: {
           account_id: string
           address: string | null
+          address_complement: string | null
+          annual_total_cost: number | null
           avatar_url: string | null
+          base_salary: number | null
           birth_date: string | null
+          cbo: string | null
           city: string | null
+          commissions: number | null
+          cost_pct: number | null
           cpf: string | null
           created_at: string
           department: string | null
+          dsr_commissions: number | null
           email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           employment_type: string | null
+          fgts: number | null
           full_name: string
           gender: string | null
+          health_plan: number | null
           hire_date: string | null
+          home_office_allowance: number | null
           hr_department_id: string | null
           id: string
+          inss_employer: number | null
+          inss_gilrat: number | null
+          inss_third_parties: number | null
+          life_insurance: number | null
           marital_status: string | null
+          meal_voucher: number | null
+          monthly_total_cost: number | null
+          neighborhood: string | null
+          net_salary: number | null
           notes: string | null
+          other_costs: number | null
+          payroll_company: string | null
           phone: string | null
           position: string | null
+          registration_company: string | null
           rg: string | null
           salary: number | null
+          source_note: string | null
           state: string | null
           status: string | null
           termination_date: string | null
+          thirteenth_provision: number | null
+          total_benefits: number | null
+          total_charges: number | null
+          total_cost: number | null
+          total_salary: number | null
+          transport_voucher: number | null
+          unit: string | null
           updated_at: string
           user_id: string | null
+          vacation_provision: number | null
+          vacation_third: number | null
+          work_model: string | null
           zip_code: string | null
         }
         Insert: {
           account_id: string
           address?: string | null
+          address_complement?: string | null
+          annual_total_cost?: number | null
           avatar_url?: string | null
+          base_salary?: number | null
           birth_date?: string | null
+          cbo?: string | null
           city?: string | null
+          commissions?: number | null
+          cost_pct?: number | null
           cpf?: string | null
           created_at?: string
           department?: string | null
+          dsr_commissions?: number | null
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employment_type?: string | null
+          fgts?: number | null
           full_name: string
           gender?: string | null
+          health_plan?: number | null
           hire_date?: string | null
+          home_office_allowance?: number | null
           hr_department_id?: string | null
           id?: string
+          inss_employer?: number | null
+          inss_gilrat?: number | null
+          inss_third_parties?: number | null
+          life_insurance?: number | null
           marital_status?: string | null
+          meal_voucher?: number | null
+          monthly_total_cost?: number | null
+          neighborhood?: string | null
+          net_salary?: number | null
           notes?: string | null
+          other_costs?: number | null
+          payroll_company?: string | null
           phone?: string | null
           position?: string | null
+          registration_company?: string | null
           rg?: string | null
           salary?: number | null
+          source_note?: string | null
           state?: string | null
           status?: string | null
           termination_date?: string | null
+          thirteenth_provision?: number | null
+          total_benefits?: number | null
+          total_charges?: number | null
+          total_cost?: number | null
+          total_salary?: number | null
+          transport_voucher?: number | null
+          unit?: string | null
           updated_at?: string
           user_id?: string | null
+          vacation_provision?: number | null
+          vacation_third?: number | null
+          work_model?: string | null
           zip_code?: string | null
         }
         Update: {
           account_id?: string
           address?: string | null
+          address_complement?: string | null
+          annual_total_cost?: number | null
           avatar_url?: string | null
+          base_salary?: number | null
           birth_date?: string | null
+          cbo?: string | null
           city?: string | null
+          commissions?: number | null
+          cost_pct?: number | null
           cpf?: string | null
           created_at?: string
           department?: string | null
+          dsr_commissions?: number | null
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employment_type?: string | null
+          fgts?: number | null
           full_name?: string
           gender?: string | null
+          health_plan?: number | null
           hire_date?: string | null
+          home_office_allowance?: number | null
           hr_department_id?: string | null
           id?: string
+          inss_employer?: number | null
+          inss_gilrat?: number | null
+          inss_third_parties?: number | null
+          life_insurance?: number | null
           marital_status?: string | null
+          meal_voucher?: number | null
+          monthly_total_cost?: number | null
+          neighborhood?: string | null
+          net_salary?: number | null
           notes?: string | null
+          other_costs?: number | null
+          payroll_company?: string | null
           phone?: string | null
           position?: string | null
+          registration_company?: string | null
           rg?: string | null
           salary?: number | null
+          source_note?: string | null
           state?: string | null
           status?: string | null
           termination_date?: string | null
+          thirteenth_provision?: number | null
+          total_benefits?: number | null
+          total_charges?: number | null
+          total_cost?: number | null
+          total_salary?: number | null
+          transport_voucher?: number | null
+          unit?: string | null
           updated_at?: string
           user_id?: string | null
+          vacation_provision?: number | null
+          vacation_third?: number | null
+          work_model?: string | null
           zip_code?: string | null
         }
         Relationships: [

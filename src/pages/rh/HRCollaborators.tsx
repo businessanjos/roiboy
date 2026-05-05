@@ -92,10 +92,13 @@ export default function HRCollaborators() {
   }, [collaborators]);
 
   const filtered = useMemo(() => {
+    const q = search.toLowerCase();
     return collaborators.filter(c => {
-      if (search && !c.full_name.toLowerCase().includes(search.toLowerCase()) &&
-          !c.email?.toLowerCase().includes(search.toLowerCase()) &&
-          !c.position?.toLowerCase().includes(search.toLowerCase())) return false;
+      if (q) {
+        const hay = [c.full_name, c.email, c.position, c.cpf, c.department, c.unit, c.cbo, c.registration_company, c.payroll_company, c.city, c.neighborhood]
+          .filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (deptFilter !== "all" && c.department !== deptFilter) return false;
       if (typeFilter !== "all" && c.employment_type !== typeFilter) return false;
@@ -230,7 +233,7 @@ export default function HRCollaborators() {
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome, email ou cargo..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Buscar por nome, email, CPF, cargo, unidade..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
@@ -282,7 +285,10 @@ export default function HRCollaborators() {
                 <th className="text-left p-3 font-medium text-muted-foreground">Colaborador</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Departamento</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Cargo</th>
+                <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Unidade</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Vínculo</th>
+                <th className="text-right p-3 font-medium text-muted-foreground hidden lg:table-cell">Salário base</th>
+                <th className="text-right p-3 font-medium text-muted-foreground hidden lg:table-cell">Custo mensal</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
                 <th className="text-right p-3 font-medium text-muted-foreground">Ações</th>
               </tr>
@@ -308,10 +314,17 @@ export default function HRCollaborators() {
                     </td>
                     <td className="p-3 text-muted-foreground hidden md:table-cell">{c.department || "—"}</td>
                     <td className="p-3 text-muted-foreground hidden md:table-cell">{c.position || "—"}</td>
+                    <td className="p-3 text-muted-foreground hidden lg:table-cell">{c.unit || "—"}</td>
                     <td className="p-3 hidden lg:table-cell">
                       {c.employment_type ? (
                         <Badge variant="outline" className="text-xs">{EMPLOYMENT_TYPES[c.employment_type] || c.employment_type}</Badge>
                       ) : "—"}
+                    </td>
+                    <td className="p-3 text-right text-muted-foreground hidden lg:table-cell tabular-nums">
+                      {c.base_salary != null ? c.base_salary.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : (c.salary != null ? c.salary.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—")}
+                    </td>
+                    <td className="p-3 text-right font-medium hidden lg:table-cell tabular-nums">
+                      {c.monthly_total_cost != null ? c.monthly_total_cost.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
                     </td>
                     <td className="p-3">
                       <Badge variant={st.variant} className="text-xs">{st.label}</Badge>
