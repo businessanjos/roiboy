@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HRCollaborator } from "@/hooks/useHRCollaborators";
 import { DollarSign, Receipt, Gift, Wallet, Building2 } from "lucide-react";
+import PayrollValidations from "./PayrollValidations";
 
 interface Props {
   form: Partial<HRCollaborator>;
@@ -123,6 +124,8 @@ export default function CollaboratorPayroll({ form, setField }: Props) {
           <div className="md:col-span-3"><Label>Observação de fonte</Label><Input value={form.source_note || ""} onChange={e => setField("source_note", e.target.value)} /></div>
         </CardContent>
       </Card>
+
+      <PayrollValidations form={form} setField={setField} />
     </div>
   );
 }
