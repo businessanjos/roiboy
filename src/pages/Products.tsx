@@ -204,6 +204,7 @@ export default function Products() {
   const [cashPrice, setCashPrice] = useState("");
   const [installmentPrice, setInstallmentPrice] = useState("");
   const [renewalDiscountPercent, setRenewalDiscountPercent] = useState("50");
+  const [consultantSeniority, setConsultantSeniority] = useState<string[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
   const [deliverables, setDeliverables] = useState<ProductDeliverables>({ ...DEFAULT_DELIVERABLES });
   const [mqlCriteria, setMqlCriteria] = useState<MqlCriteria>({ ...DEFAULT_MQL_CRITERIA });
