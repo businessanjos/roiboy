@@ -44,14 +44,8 @@ import {
   ListChecks,
 } from "lucide-react";
 import { PAYMENT_CHANNELS } from "@/components/sales/quotas/paymentChannels";
+import { fetchActiveConsultants } from "@/lib/consultants";
 
-const CONSULTANT_NAMES = ["andréia", "andreia", "dayara", "michele", "ana maria"];
-
-// Match por início do nome (evita falso-positivo tipo "Fernanda Sant'Ana" casar com "ana")
-const matchesConsultantName = (fullName: string) => {
-  const n = (fullName || "").trim().toLowerCase();
-  return CONSULTANT_NAMES.some((k) => n.startsWith(k));
-};
 
 function initials(name: string) {
   return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
@@ -79,26 +73,11 @@ export function CsIncentivePlanSection() {
   const { currentUser } = useCurrentUser();
   const { plans, tiers, loading, savePlan, deletePlan, saveTiers } = useCsIncentivePlans();
 
-  // Consultoras ativas (puxando salário base do RH)
+  // Consultoras ativas (puxando salário base do RH) — fonte única em @/lib/consultants
   const { data: consultants = [] } = useQuery({
     queryKey: ["cs-incentive-consultants", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("hr_collaborators")
-        .select("id, full_name, email, user_id, status, base_salary")
-        .eq("status", "active")
-        .not("user_id", "is", null)
-        .order("full_name");
-      return (data || [])
-        .filter((c: any) => matchesConsultantName(c.full_name))
-        .map((c: any) => ({
-          id: c.user_id,
-          name: c.full_name,
-          email: c.email,
-          base_salary: Number(c.base_salary) || 0,
-        }));
-    },
+    queryFn: fetchActiveConsultants,
   });
 
   // "team" = plano-modelo do time (user_id null)
