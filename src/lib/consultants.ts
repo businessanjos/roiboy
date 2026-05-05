@@ -32,6 +32,22 @@ export type ActiveConsultant = {
   name: string;
   email: string | null;
   base_salary: number;
+  position: string | null;
+  role_label: string;
+};
+
+/**
+ * Deriva o cargo padronizado (CS Júnior / CS Pleno / CS Sênior / Líder)
+ * a partir do campo `position` do RH.
+ */
+export const getConsultantRoleLabel = (position: string | null | undefined): string => {
+  const p = (position || "").trim().toLowerCase();
+  if (!p) return "CS";
+  if (/(l[ií]der|coordenador|gerente|head)/i.test(p)) return "Líder";
+  if (/(s[eê]nior|\bsr\b)/i.test(p)) return "CS Sênior";
+  if (/(pleno|\bpl\b)/i.test(p)) return "CS Pleno";
+  if (/(j[uú]nior|\bjr\b)/i.test(p)) return "CS Júnior";
+  return "CS";
 };
 
 /**
@@ -41,7 +57,7 @@ export type ActiveConsultant = {
 export async function fetchActiveConsultants(): Promise<ActiveConsultant[]> {
   const { data } = await supabase
     .from("hr_collaborators")
-    .select("user_id, full_name, email, status, base_salary")
+    .select("user_id, full_name, email, status, base_salary, position")
     .eq("status", "active")
     .not("user_id", "is", null)
     .order("full_name");
@@ -53,5 +69,7 @@ export async function fetchActiveConsultants(): Promise<ActiveConsultant[]> {
       name: c.full_name,
       email: c.email,
       base_salary: Number(c.base_salary) || 0,
+      position: c.position ?? null,
+      role_label: getConsultantRoleLabel(c.position),
     }));
 }
