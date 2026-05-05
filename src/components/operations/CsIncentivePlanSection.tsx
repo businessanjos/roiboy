@@ -167,10 +167,9 @@ export function CsIncentivePlanSection() {
 
   function defaultTiers() {
     return [
-      { min: 0, max: "70", multiplier: 0, label: "Abaixo do mínimo" },
-      { min: 70, max: "100", multiplier: 0.5, label: "Bronze" },
-      { min: 100, max: "120", multiplier: 1, label: "Prata" },
-      { min: 120, max: "", multiplier: 1.5, label: "Ouro" },
+      { min: 0, max: "20", multiplier: 0, label: "Não atinge — zera o bônus" },
+      { min: 21, max: "39", multiplier: 0.7, label: "Parcial — 70% do bônus" },
+      { min: 40, max: "", multiplier: 1, label: "Meta atingida — 100% do bônus" },
     ];
   }
 
