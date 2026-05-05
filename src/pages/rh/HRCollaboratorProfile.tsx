@@ -30,7 +30,8 @@ import CollaboratorSalaryHistory from "./components/CollaboratorSalaryHistory";
 import CollaboratorTimeRecords from "./components/CollaboratorTimeRecords";
 import CollaboratorBenefits from "./components/CollaboratorBenefits";
 import CollaboratorPayroll from "./components/CollaboratorPayroll";
-import { Wallet } from "lucide-react";
+import CollaboratorAuditLog from "./components/CollaboratorAuditLog";
+import { Wallet, History } from "lucide-react";
 
 const RH_ALLOWED_EMAIL = "m.quintana@me.com";
 
