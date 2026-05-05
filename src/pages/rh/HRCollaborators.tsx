@@ -272,6 +272,36 @@ export default function HRCollaborators() {
       const ok = await updateCollaborator(deactivateTarget.id, patch, true);
       if (!ok) throw new Error("Falha ao atualizar status no RH");
 
+      // Audit log: who, when, what and why
+      try {
+        await supabase.from("hr_collaborator_audit_log").insert({
+          account_id: currentUser!.account_id,
+          collaborator_id: deactivateTarget.id,
+          user_id: currentUser!.id,
+          user_name: currentUser!.name,
+          user_email: currentUser!.email,
+          action:
+            leaveType === "inactive" ? "deactivate"
+            : leaveType === "leave" ? "set_on_leave"
+            : "set_on_vacation",
+          changed_fields: ["status", ...(leaveType === "inactive" ? ["termination_date"] : []), "notes"],
+          old_values: {
+            status: deactivateTarget.status,
+            termination_date: deactivateTarget.termination_date,
+          },
+          new_values: {
+            status: leaveType,
+            termination_date: leaveType === "inactive" ? leaveStart : deactivateTarget.termination_date,
+            leave_start: leaveStart,
+            leave_end: leaveEnd || null,
+            reason: leaveReason.trim() || null,
+            cut_system_access: leaveType === "inactive" && !!deactivateTarget.user_id,
+          },
+        } as any);
+      } catch (auditErr) {
+        console.error("[HR] Failed to write audit log", auditErr);
+      }
+
       // Cut system access only for definitive termination
       if (leaveType === "inactive" && deactivateTarget.user_id) {
         const { error } = await supabase.functions.invoke("admin-manage-user", {
