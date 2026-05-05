@@ -23,11 +23,16 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X, FileSpreadsheet, FileText, ChevronDown,
+  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X, FileSpreadsheet, FileText, ChevronDown, UserX, Loader2,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
 import { exportPayrollCSV, exportPayrollXLSX } from "./components/payrollExport";
 
