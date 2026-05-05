@@ -490,7 +490,7 @@ export function CsIncentivePlanSection() {
             Valores mensais de referência (informativos para apuração de bônus)
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label>Salário base mensal (R$)</Label>
             <Input
@@ -505,14 +505,6 @@ export function CsIncentivePlanSection() {
               type="number"
               value={form.variable_target_monthly ?? ""}
               onChange={(e) => setF("variable_target_monthly", parseNumberInput(e.target.value))}
-            />
-          </div>
-          <div>
-            <Label>Mínimo para liberar bônus (%)</Label>
-            <Input
-              type="number"
-              value={form.minimum_achievement_percent ?? ""}
-              onChange={(e) => setF("minimum_achievement_percent", parseNumberInput(e.target.value))}
             />
           </div>
         </CardContent>
