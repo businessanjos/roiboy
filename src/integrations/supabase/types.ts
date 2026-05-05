@@ -3859,6 +3859,14 @@ export type Database = {
           annual_bonus_rules: string | null
           annual_bonus_value: number
           base_salary_monthly: number
+          bonus_budget_amount: number
+          bonus_budget_percent_base: string | null
+          bonus_budget_period: string
+          bonus_budget_value_type: string
+          bonus_distribution_method: string
+          bonus_distribution_shares: Json
+          bonus_payment_channel: string | null
+          bonus_payment_when: string | null
           churn_penalty_enabled: boolean
           churn_penalty_percent: number
           churn_penalty_threshold: number
@@ -3891,6 +3899,14 @@ export type Database = {
           annual_bonus_rules?: string | null
           annual_bonus_value?: number
           base_salary_monthly?: number
+          bonus_budget_amount?: number
+          bonus_budget_percent_base?: string | null
+          bonus_budget_period?: string
+          bonus_budget_value_type?: string
+          bonus_distribution_method?: string
+          bonus_distribution_shares?: Json
+          bonus_payment_channel?: string | null
+          bonus_payment_when?: string | null
           churn_penalty_enabled?: boolean
           churn_penalty_percent?: number
           churn_penalty_threshold?: number
@@ -3923,6 +3939,14 @@ export type Database = {
           annual_bonus_rules?: string | null
           annual_bonus_value?: number
           base_salary_monthly?: number
+          bonus_budget_amount?: number
+          bonus_budget_percent_base?: string | null
+          bonus_budget_period?: string
+          bonus_budget_value_type?: string
+          bonus_distribution_method?: string
+          bonus_distribution_shares?: Json
+          bonus_payment_channel?: string | null
+          bonus_payment_when?: string | null
           churn_penalty_enabled?: boolean
           churn_penalty_percent?: number
           churn_penalty_threshold?: number
