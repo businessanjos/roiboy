@@ -5,6 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
  * Match por início do nome para evitar falsos positivos
  * (ex.: "Fernanda Sant'Anna" não pode casar com "ana").
  */
+// Tokens são casados como PALAVRA INTEIRA (\b...\b) para evitar falsos
+// positivos como "Fernanda Santana" casar com "ana".
+// "ana maria" é uma frase de 2 palavras (também por palavra inteira).
 export const CONSULTANT_NAMES = [
   "andréia",
   "andreia",
@@ -13,9 +16,15 @@ export const CONSULTANT_NAMES = [
   "ana maria",
 ];
 
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$1");
+
 export const matchesConsultantName = (fullName: string | null | undefined) => {
   const n = (fullName || "").trim().toLowerCase();
-  return CONSULTANT_NAMES.some((k) => n.startsWith(k));
+  if (!n) return false;
+  return CONSULTANT_NAMES.some((k) => {
+    const re = new RegExp(`\\b${escapeRegex(k)}\\b`, "i");
+    return re.test(n);
+  });
 };
 
 export type ActiveConsultant = {
