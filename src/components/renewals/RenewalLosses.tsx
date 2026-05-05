@@ -308,15 +308,11 @@ export function RenewalLosses() {
         const daysExpired = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
         const discountPercent = c.products?.renewal_discount_percent ?? 50;
-        const paymentOption = c.payment_option || '';
-        const isCash = paymentOption === 'a_vista' || paymentOption === 'parcelado_1x';
-        const installmentPrice = c.products?.installment_price;
         const cashPrice = c.products?.cash_price;
         const basePrice = c.products?.price;
 
         let priceToUse: number;
-        if (isCash && cashPrice && cashPrice > 0) priceToUse = cashPrice;
-        else if (installmentPrice && installmentPrice > 0) priceToUse = installmentPrice;
+        if (cashPrice && cashPrice > 0) priceToUse = cashPrice;
         else if (basePrice && basePrice > 0) priceToUse = basePrice;
         else priceToUse = c.value || 0;
 
