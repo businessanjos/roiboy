@@ -210,6 +210,17 @@ export default function ConsultantBonus() {
         </div>
       </div>
 
+      <Tabs defaultValue="bonus" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="bonus" className="gap-1.5">
+            <Trophy className="h-4 w-4" /> Premiação & Bônus
+          </TabsTrigger>
+          <TabsTrigger value="incentive" className="gap-1.5">
+            <Gift className="h-4 w-4" /> Plano de Incentivo
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="bonus" className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
