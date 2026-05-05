@@ -467,6 +467,11 @@ export default function HRCollaboratorProfile() {
         <TabsContent value="benefits" className="mt-4">
           <CollaboratorBenefits collaboratorId={id!} accountId={collab.account_id} />
         </TabsContent>
+
+        {/* TAB: Folha & Encargos */}
+        <TabsContent value="payroll" className="mt-4">
+          <CollaboratorPayroll form={form} setField={setField} />
+        </TabsContent>
       </Tabs>
     </div>
   );
