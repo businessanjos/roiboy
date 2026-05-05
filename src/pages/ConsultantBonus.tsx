@@ -327,7 +327,7 @@ export default function ConsultantBonus() {
                               </CardHeader>
                               <CardContent className="space-y-3">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm text-muted-foreground">Meta anual</span>
+                                  <span className="text-sm text-muted-foreground">Meta trimestral</span>
                                   <span className="font-semibold">
                                     {g.annual_target}{unit}
                                   </span>
@@ -338,8 +338,8 @@ export default function ConsultantBonus() {
                                     {formatBRL(Number(g.bonus_amount))}
                                   </span>
                                 </div>
-                                <div className="grid grid-cols-6 gap-1 pt-2">
-                                  {MONTH_LABELS.map((m, i) => (
+                                <div className="grid grid-cols-4 gap-1 pt-2">
+                                  {QUARTER_LABELS.map((m, i) => (
                                     <div key={i} className="text-center">
                                       <div className="text-[10px] text-muted-foreground">{m}</div>
                                       <div className="text-xs font-medium">
