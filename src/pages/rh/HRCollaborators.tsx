@@ -92,10 +92,13 @@ export default function HRCollaborators() {
   }, [collaborators]);
 
   const filtered = useMemo(() => {
+    const q = search.toLowerCase();
     return collaborators.filter(c => {
-      if (search && !c.full_name.toLowerCase().includes(search.toLowerCase()) &&
-          !c.email?.toLowerCase().includes(search.toLowerCase()) &&
-          !c.position?.toLowerCase().includes(search.toLowerCase())) return false;
+      if (q) {
+        const hay = [c.full_name, c.email, c.position, c.cpf, c.department, c.unit, c.cbo, c.registration_company, c.payroll_company, c.city, c.neighborhood]
+          .filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (deptFilter !== "all" && c.department !== deptFilter) return false;
       if (typeFilter !== "all" && c.employment_type !== typeFilter) return false;
