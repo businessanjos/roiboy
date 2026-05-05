@@ -23,9 +23,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X,
+  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X, FileSpreadsheet, FileText, ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
+import { exportPayrollCSV, exportPayrollXLSX } from "./components/payrollExport";
 
 const RH_ALLOWED_EMAIL = "m.quintana@me.com";
 
@@ -222,6 +226,22 @@ export default function HRCollaborators() {
             {collaborators.length} colaborador{collaborators.length !== 1 ? "es" : ""} cadastrado{collaborators.length !== 1 ? "s" : ""}
           </p>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" disabled={filtered.length === 0}>
+              <Download className="h-4 w-4 mr-2" /> Exportar
+              <ChevronDown className="h-4 w-4 ml-1 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => exportPayrollXLSX(filtered)}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" /> Folha & Encargos (.xlsx)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportPayrollCSV(filtered)}>
+              <FileText className="h-4 w-4 mr-2" /> Folha & Encargos (.csv)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button variant="outline" onClick={handleOpenImport}>
           <Download className="h-4 w-4 mr-2" />
           Importar da Equipe
