@@ -45,7 +45,13 @@ import {
 } from "lucide-react";
 import { PAYMENT_CHANNELS } from "@/components/sales/quotas/paymentChannels";
 
-const CONSULTANT_NAMES = ["andréia", "andreia", "dayara", "michele", "ana"];
+const CONSULTANT_NAMES = ["andréia", "andreia", "dayara", "michele", "ana maria"];
+
+// Match por início do nome (evita falso-positivo tipo "Fernanda Sant'Ana" casar com "ana")
+const matchesConsultantName = (fullName: string) => {
+  const n = (fullName || "").trim().toLowerCase();
+  return CONSULTANT_NAMES.some((k) => n.startsWith(k));
+};
 
 function initials(name: string) {
   return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
