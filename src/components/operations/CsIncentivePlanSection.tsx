@@ -112,8 +112,21 @@ export function CsIncentivePlanSection() {
   >([]);
 
   useEffect(() => {
+    const consultant =
+      selectedScope !== "team"
+        ? consultants.find((c: any) => c.id === selectedScope)
+        : null;
+    const rhSalary = consultant?.base_salary ?? 0;
+
     if (activePlan) {
-      setForm(activePlan);
+      setForm({
+        ...activePlan,
+        // Sempre sincroniza salário base com RH quando há consultor selecionado
+        base_salary_monthly:
+          selectedScope !== "team" && rhSalary > 0
+            ? rhSalary
+            : activePlan.base_salary_monthly,
+      });
       const planTiers = tiers.filter((t) => t.plan_id === activePlan.id);
       setDraftTiers(
         planTiers.length > 0
@@ -130,11 +143,11 @@ export function CsIncentivePlanSection() {
         name:
           selectedScope === "team"
             ? "Plano CS — Time"
-            : `Plano CS — ${consultants.find((c: any) => c.id === selectedScope)?.name?.split(" ")[0] || ""}`,
+            : `Plano CS — ${consultant?.name?.split(" ")[0] || ""}`,
         description: "",
         is_active: true,
         user_id: selectedScope === "team" ? null : selectedScope,
-        base_salary_monthly: 0,
+        base_salary_monthly: rhSalary,
         variable_target_monthly: 0,
         minimum_achievement_percent: 70,
         weight_renewal: 50,
