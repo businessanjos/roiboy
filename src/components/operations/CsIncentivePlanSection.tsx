@@ -66,19 +66,28 @@ export function CsIncentivePlanSection() {
   const { currentUser } = useCurrentUser();
   const { plans, tiers, loading, savePlan, deletePlan, saveTiers } = useCsIncentivePlans();
 
-  // Consultoras (mesma lista do bonus)
+  // Consultoras ativas (puxando salário base do RH)
   const { data: consultants = [] } = useQuery({
     queryKey: ["cs-incentive-consultants", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
       const { data } = await supabase
-        .from("users")
-        .select("id, name, email")
-        .order("name");
-      return (data || []).filter((u: any) => {
-        const n = (u.name || "").toLowerCase();
-        return CONSULTANT_NAMES.some((k) => n.includes(k));
-      });
+        .from("hr_collaborators")
+        .select("id, full_name, email, user_id, status, base_salary")
+        .eq("status", "active")
+        .not("user_id", "is", null)
+        .order("full_name");
+      return (data || [])
+        .filter((c: any) => {
+          const n = (c.full_name || "").toLowerCase();
+          return CONSULTANT_NAMES.some((k) => n.includes(k));
+        })
+        .map((c: any) => ({
+          id: c.user_id,
+          name: c.full_name,
+          email: c.email,
+          base_salary: Number(c.base_salary) || 0,
+        }));
     },
   });
 
