@@ -73,6 +73,8 @@ export default function HRCollaborators() {
   const [teamLoading, setTeamLoading] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const [form, setForm] = useState({
     full_name: "",
