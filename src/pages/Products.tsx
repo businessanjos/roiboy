@@ -281,7 +281,7 @@ export default function Products() {
     setPrice(toFormattedString(product.price));
     setCashPrice(product.cash_price ? toFormattedString(product.cash_price) : "");
     setInstallmentPrice(product.installment_price ? toFormattedString(product.installment_price) : "");
-    setRenewalDiscountPercent(String(product.renewal_discount_percent ?? 50));
+    setRenewalDiscountPercent(String(product.renewal_discount_percent ?? 100));
     setPaymentMethods(product.payment_methods || []);
     setBillingPeriod(product.billing_period);
     setIsActive(product.is_active);
@@ -575,6 +575,21 @@ export default function Products() {
                       onCheckedChange={setIsRenewal}
                     />
                     <Label htmlFor="is-renewal" className="mb-0">Renovação</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="renewal-50"
+                      checked={parseFloat(renewalDiscountPercent) === 50}
+                      onCheckedChange={(checked) => setRenewalDiscountPercent(checked ? "50" : "100")}
+                    />
+                    <Label htmlFor="renewal-50" className="mb-0">
+                      Renovação com 50% do ticket
+                      <span className="block text-xs text-muted-foreground font-normal">
+                        {parseFloat(renewalDiscountPercent) === 50
+                          ? "Cliente paga 50% do valor original na renovação"
+                          : "Cliente paga 100% do valor original na renovação"}
+                      </span>
+                    </Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
