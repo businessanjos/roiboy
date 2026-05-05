@@ -378,6 +378,12 @@ export default function ConsultantBonus() {
           })}
         </Tabs>
       )}
+        </TabsContent>
+
+        <TabsContent value="incentive">
+          <CsIncentivePlanSection />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
