@@ -436,23 +436,13 @@ export default function ConsultantBonus() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Meta trimestral {editing.metric_type === "nps" ? "(score)" : "(%)"}</Label>
-                  <Input
-                    type="number"
-                    value={editing.annual_target}
-                    onChange={(e) => setEditing({ ...editing, annual_target: Number(e.target.value) })}
-                  />
-                </div>
-                <div>
-                  <Label>Bônus / gatilho (R$)</Label>
-                  <Input
-                    type="number"
-                    value={editing.bonus_amount}
-                    onChange={(e) => setEditing({ ...editing, bonus_amount: Number(e.target.value) })}
-                  />
-                </div>
+              <div>
+                <Label>Meta trimestral {editing.metric_type === "nps" ? "(score)" : "(%)"}</Label>
+                <Input
+                  type="number"
+                  value={editing.annual_target}
+                  onChange={(e) => setEditing({ ...editing, annual_target: Number(e.target.value) })}
+                />
               </div>
 
               <div>
