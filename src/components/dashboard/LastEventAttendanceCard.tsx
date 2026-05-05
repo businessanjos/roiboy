@@ -48,10 +48,10 @@ export function LastEventAttendanceCard() {
     (async () => {
       setLoading(true);
       try {
-        // 1) Buscar eventos recentes (sem filtrar por modality/status — dados estão inconsistentes)
+        // 1) Buscar eventos recentes (modality/title pode estar inconsistente — filtramos abaixo)
         const { data: evts } = await supabase
           .from("events")
-          .select("id, title, scheduled_at")
+          .select("id, title, scheduled_at, modality")
           .eq("account_id", accountId)
           .lte("scheduled_at", new Date().toISOString())
           .order("scheduled_at", { ascending: false, nullsFirst: false })
@@ -62,8 +62,21 @@ export function LastEventAttendanceCard() {
           return;
         }
 
-        // 2) Achar o último evento (mais recente) que tenha participantes — vira a âncora
-        const eventIds = evts.map((e) => e.id);
+        // Considera presencial quando a modality OU o título indicam (dados inconsistentes)
+        const isPresencial = (e: { title: string | null; modality: string | null }) => {
+          const t = (e.title || "").toUpperCase();
+          const m = (e.modality || "").toLowerCase();
+          return m === "presencial" || m === "hibrido" || m === "híbrido" || m === "hybrid"
+            || /PRESENCIAL|HÍBRIDO|HIBRIDO/.test(t);
+        };
+        const presenciais = evts.filter(isPresencial);
+        if (presenciais.length === 0) {
+          if (!cancelled) setData(null);
+          return;
+        }
+
+        // 2) Achar o último evento PRESENCIAL com participantes — vira a âncora
+        const eventIds = presenciais.map((e) => e.id);
         const { data: allParts } = await supabase
           .from("event_participants")
           .select("event_id, client_id, rsvp_status")
@@ -77,7 +90,7 @@ export function LastEventAttendanceCard() {
           partsByEvent.set(p.event_id, arr);
         }
 
-        const anchor = evts.find((e) => (partsByEvent.get(e.id)?.length ?? 0) > 0);
+        const anchor = presenciais.find((e) => (partsByEvent.get(e.id)?.length ?? 0) > 0);
         if (!anchor || !anchor.scheduled_at) {
           if (!cancelled) setData(null);
           return;
@@ -86,7 +99,7 @@ export function LastEventAttendanceCard() {
         // 3) Cluster: todos eventos dentro de ±N dias da âncora que tenham participantes
         const anchorMs = new Date(anchor.scheduled_at).getTime();
         const windowMs = GROUP_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-        const cluster = evts
+        const cluster = presenciais
           .filter((e) => {
             if (!e.scheduled_at) return false;
             if ((partsByEvent.get(e.id)?.length ?? 0) === 0) return false;
