@@ -26,7 +26,11 @@ import {
 import { ConsultantPayoutTable } from "@/components/operations/ConsultantPayoutTable";
 
 const ALLOWED_VIEWERS = ["maikol", "jonathan", "everton", "bruna"];
-const CONSULTANT_NAMES = ["andréia", "andreia", "dayara", "michele", "ana"];
+const CONSULTANT_NAMES = ["andréia", "andreia", "dayara", "michele", "ana maria"];
+const matchesConsultantName = (fullName: string) => {
+  const n = (fullName || "").trim().toLowerCase();
+  return CONSULTANT_NAMES.some((k) => n.startsWith(k));
+};
 
 const METRIC_ICONS: Record<MetricType, any> = {
   renewal_rate: Target,
@@ -59,14 +63,16 @@ export default function ConsultantBonus() {
   const { data: consultants = [] } = useQuery({
     queryKey: ["consultants-list", currentUser?.account_id],
     queryFn: async () => {
+      // Apenas colaboradores ATIVOS do RH com usuário vinculado
       const { data } = await supabase
-        .from("users")
-        .select("id, name, email")
-        .order("name");
-      return (data || []).filter((u: any) => {
-        const n = (u.name || "").toLowerCase();
-        return CONSULTANT_NAMES.some((k) => n.includes(k));
-      });
+        .from("hr_collaborators")
+        .select("user_id, full_name, email, status")
+        .eq("status", "active")
+        .not("user_id", "is", null)
+        .order("full_name");
+      return (data || [])
+        .filter((c: any) => matchesConsultantName(c.full_name))
+        .map((c: any) => ({ id: c.user_id, name: c.full_name, email: c.email }));
     },
     enabled: !!currentUser?.account_id,
   });
