@@ -68,7 +68,7 @@ export default function ConsultantBonus() {
     queryFn: async () => {
       const { data } = await supabase
         .from("products")
-        .select("id, name, color")
+        .select("id, name, color, consultant_seniority")
         .eq("is_active", true)
         .order("name");
       return data || [];
