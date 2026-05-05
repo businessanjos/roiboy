@@ -12130,6 +12130,7 @@ export type Database = {
           billing_period: Database["public"]["Enums"]["billing_period"]
           cash_price: number | null
           color: string | null
+          consultant_seniority: string[]
           created_at: string
           deliverables: Json | null
           description: string | null
@@ -12152,6 +12153,7 @@ export type Database = {
           billing_period?: Database["public"]["Enums"]["billing_period"]
           cash_price?: number | null
           color?: string | null
+          consultant_seniority?: string[]
           created_at?: string
           deliverables?: Json | null
           description?: string | null
@@ -12174,6 +12176,7 @@ export type Database = {
           billing_period?: Database["public"]["Enums"]["billing_period"]
           cash_price?: number | null
           color?: string | null
+          consultant_seniority?: string[]
           created_at?: string
           deliverables?: Json | null
           description?: string | null
