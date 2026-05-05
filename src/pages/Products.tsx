@@ -642,6 +642,35 @@ export default function Products() {
                     </div>
                   )}
                 </div>
+
+                {/* Senioridade do consultor que atende */}
+                <div className="space-y-2 pt-2 border-t">
+                  <Label className="mb-0">Senioridade do consultor que atende</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Define quais consultoras de CS podem atender este produto. Usado em Premiação & Bônus.
+                  </p>
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    {CONSULTANT_SENIORITY_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className="flex items-center gap-2 rounded-md border px-3 py-1.5 cursor-pointer hover:bg-accent"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={consultantSeniority.includes(opt.value)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setConsultantSeniority([...consultantSeniority, opt.value]);
+                            } else {
+                              setConsultantSeniority(consultantSeniority.filter((v) => v !== opt.value));
+                            }
+                          }}
+                        />
+                        <span className="text-sm">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="deliverables" className="space-y-4 pt-2">
