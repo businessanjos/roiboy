@@ -268,6 +268,7 @@ export default function Products() {
     setCashPrice("");
     setInstallmentPrice("");
     setRenewalDiscountPercent("50");
+    setConsultantSeniority([]);
     setPaymentMethods([]);
     setDeliverables({ ...DEFAULT_DELIVERABLES });
     setMqlCriteria({ ...DEFAULT_MQL_CRITERIA });
