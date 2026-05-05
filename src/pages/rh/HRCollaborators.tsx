@@ -324,7 +324,10 @@ export default function HRCollaborators() {
               <ChevronDown className="h-4 w-4 ml-1 opacity-60" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-72">
+            <div className="px-2 py-1.5 text-[11px] text-muted-foreground border-b mb-1">
+              Colaboradores com status <span className="font-medium">Desligado</span> são sempre excluídos da folha, mesmo que apareçam no filtro atual.
+            </div>
             <DropdownMenuItem onClick={() => exportPayrollXLSX(filtered)}>
               <FileSpreadsheet className="h-4 w-4 mr-2" /> Folha & Encargos (.xlsx)
             </DropdownMenuItem>
