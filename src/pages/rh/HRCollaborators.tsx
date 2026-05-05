@@ -23,8 +23,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Search, Plus, UsersRound, ArrowLeft, Eye, Download,
+  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X,
 } from "lucide-react";
+import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
 
 const RH_ALLOWED_EMAIL = "m.quintana@me.com";
 
