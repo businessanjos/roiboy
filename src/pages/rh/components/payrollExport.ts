@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import type { HRCollaborator } from "@/hooks/useHRCollaborators";
+import { recalcDerived } from "./payrollCalc";
 
 const COLUMNS: { key: keyof HRCollaborator; label: string }[] = [
   { key: "full_name", label: "Nome" },
@@ -45,7 +46,10 @@ const COLUMNS: { key: keyof HRCollaborator; label: string }[] = [
 ];
 
 function buildRows(collabs: HRCollaborator[]) {
-  return collabs.map(c => {
+  return collabs.map(orig => {
+    // Sempre recalcula os derivados (totais, custo mensal/anual, %) na hora da exportação,
+    // ignorando valores persistidos que possam estar desatualizados.
+    const c = recalcDerived(orig);
     const r: Record<string, any> = {};
     for (const col of COLUMNS) {
       const v = (c as any)[col.key];
