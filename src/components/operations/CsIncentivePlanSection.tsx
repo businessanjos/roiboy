@@ -262,7 +262,7 @@ export function CsIncentivePlanSection() {
                     <Avatar className="h-4 w-4">
                       <AvatarFallback className="text-[8px]">{initials(c.name)}</AvatarFallback>
                     </Avatar>
-                    {c.name}
+                    {c.role_label}
                   </div>
                 </SelectItem>
               ))}
