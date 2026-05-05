@@ -285,7 +285,10 @@ export default function HRCollaborators() {
                 <th className="text-left p-3 font-medium text-muted-foreground">Colaborador</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Departamento</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Cargo</th>
+                <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Unidade</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Vínculo</th>
+                <th className="text-right p-3 font-medium text-muted-foreground hidden lg:table-cell">Salário base</th>
+                <th className="text-right p-3 font-medium text-muted-foreground hidden lg:table-cell">Custo mensal</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
                 <th className="text-right p-3 font-medium text-muted-foreground">Ações</th>
               </tr>
