@@ -140,10 +140,18 @@ interface Product {
   mls_level: string | null;
   color: string | null;
   renewal_discount_percent: number | null;
+  consultant_seniority?: string[] | null;
   deliverables: ProductDeliverables | null;
   mql_criteria: MqlCriteria | null;
   created_at: string;
 }
+
+const CONSULTANT_SENIORITY_OPTIONS = [
+  { value: "junior", label: "CS Júnior" },
+  { value: "pleno", label: "CS Pleno" },
+  { value: "senior", label: "CS Sênior" },
+  { value: "lead", label: "Líder CS" },
+];
 
 const PAYMENT_METHOD_OPTIONS = [
   { value: "credit_card", label: "Cartão de crédito" },
