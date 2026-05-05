@@ -648,34 +648,91 @@ export default function HRCollaborators() {
       />
 
       <AlertDialog open={!!deactivateTarget} onOpenChange={(o) => { if (!o && !deactivating) setDeactivateTarget(null); }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Inativar colaborador?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>
-                  <span className="font-medium text-foreground">{deactivateTarget?.full_name}</span> será marcado como{" "}
-                  <span className="font-medium">Inativo</span> no RH (com data de desligamento de hoje, se ainda não houver) e removido dos relatórios padrão.
-                </p>
-                {deactivateTarget?.user_id ? (
-                  <p>
-                    O acesso à plataforma também será <span className="font-medium">desativado automaticamente</span>: a sessão atual é encerrada e o login é bloqueado.
-                  </p>
-                ) : (
-                  <p className="text-xs">Este colaborador não tem usuário do sistema vinculado — apenas o status do RH será alterado.</p>
-                )}
-              </div>
+            <AlertDialogTitle>
+              {leaveType === "inactive" ? "Desligar colaborador" : leaveType === "leave" ? "Marcar como afastado" : "Marcar férias"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-medium text-foreground">{deactivateTarget?.full_name}</span> — selecione o tipo de saída e preencha os campos obrigatórios.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Tipo de saída *</Label>
+              <Select value={leaveType} onValueChange={(v) => { setLeaveType(v as any); setLeaveError(""); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inactive">Desligado (corta acesso ao sistema)</SelectItem>
+                  <SelectItem value="leave">Afastado (licença/atestado)</SelectItem>
+                  <SelectItem value="vacation">Férias</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  {leaveType === "inactive" ? "Data de desligamento *" : "Início *"}
+                </Label>
+                <Input type="date" value={leaveStart} onChange={e => { setLeaveStart(e.target.value); setLeaveError(""); }} />
+              </div>
+              {(leaveType === "leave" || leaveType === "vacation") && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Retorno previsto *</Label>
+                  <Input
+                    type="date"
+                    value={leaveEnd}
+                    min={leaveStart || undefined}
+                    onChange={e => { setLeaveEnd(e.target.value); setLeaveError(""); }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                {leaveType === "vacation" ? "Observação (opcional)" : "Motivo *"}
+              </Label>
+              <Input
+                placeholder={
+                  leaveType === "inactive" ? "Ex.: Pedido de demissão, fim de contrato..."
+                  : leaveType === "leave" ? "Ex.: Atestado médico, licença maternidade..."
+                  : "Ex.: Período aquisitivo 2024/2025"
+                }
+                value={leaveReason}
+                onChange={e => { setLeaveReason(e.target.value); setLeaveError(""); }}
+                maxLength={300}
+              />
+            </div>
+
+            {leaveError && (
+              <p className="text-xs text-destructive">{leaveError}</p>
+            )}
+
+            {leaveType === "inactive" && deactivateTarget?.user_id && (
+              <p className="text-xs text-muted-foreground">
+                ⚠️ O acesso à plataforma será desativado automaticamente — sessão encerrada e login bloqueado.
+              </p>
+            )}
+            {leaveType === "inactive" && !deactivateTarget?.user_id && (
+              <p className="text-xs text-muted-foreground">Sem usuário vinculado — apenas o status do RH será alterado.</p>
+            )}
+            {leaveType !== "inactive" && (
+              <p className="text-xs text-muted-foreground">O acesso ao sistema é mantido durante {leaveType === "leave" ? "o afastamento" : "as férias"}.</p>
+            )}
+          </div>
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deactivating}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); handleDeactivate(); }}
               disabled={deactivating}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={leaveType === "inactive" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
             >
               {deactivating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserX className="h-4 w-4 mr-2" />}
-              Inativar
+              Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
