@@ -45,10 +45,18 @@ const COLUMNS: { key: keyof HRCollaborator; label: string }[] = [
   { key: "cost_pct", label: "% custo / salário" },
 ];
 
+/**
+ * Filtra colaboradores que não devem entrar em cálculos de folha.
+ * - inactive (desligado): SEMPRE removido das exportações e cálculos.
+ * - active, vacation (férias), leave (afastado): mantidos (continuam custando).
+ * Aplicado independentemente dos filtros de tela.
+ */
+export function filterPayrollEligible(collabs: HRCollaborator[]): HRCollaborator[] {
+  return collabs.filter(c => (c.status || "active") !== "inactive");
+}
+
 function buildRows(collabs: HRCollaborator[]) {
-  return collabs.map(orig => {
-    // Sempre recalcula os derivados (totais, custo mensal/anual, %) na hora da exportação,
-    // ignorando valores persistidos que possam estar desatualizados.
+  return filterPayrollEligible(collabs).map(orig => {
     const c = recalcDerived(orig);
     const r: Record<string, any> = {};
     for (const col of COLUMNS) {
@@ -68,11 +76,11 @@ function fileName(ext: string) {
 export function exportPayrollXLSX(collabs: HRCollaborator[]) {
   const rows = buildRows(collabs);
   const ws = XLSX.utils.json_to_sheet(rows, { header: COLUMNS.map(c => c.label) });
-  // Largura aproximada das colunas
   ws["!cols"] = COLUMNS.map(c => ({ wch: Math.max(12, c.label.length + 2) }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Folha & Encargos");
   XLSX.writeFile(wb, fileName("xlsx"));
+  return rows.length;
 }
 
 export function exportPayrollCSV(collabs: HRCollaborator[]) {
