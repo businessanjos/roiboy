@@ -524,42 +524,8 @@ export default function Products() {
                   </div>
                 </div>
 
-                {/* Row 4: Renovação + Formas de pagamento */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Desconto renovação (%)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={renewalDiscountPercent}
-                      onChange={(e) => setRenewalDiscountPercent(e.target.value)}
-                      placeholder="50"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      % do ticket atual cobrado na renovação
-                      {price && parseFloat(renewalDiscountPercent) > 0 && (
-                        <>
-                          <br />
-                          Valor renovação: <span className="font-medium text-foreground">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                              parseFormattedNumber(price) * (parseFloat(renewalDiscountPercent) / 100)
-                            )}
-                          </span>
-                          {installmentPrice && parseFormattedNumber(installmentPrice) > 0 && (
-                            <>
-                              <br />
-                              Valor renovação parcelado: <span className="font-medium text-foreground">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                                  parseFormattedNumber(installmentPrice) * (parseFloat(renewalDiscountPercent) / 100)
-                                )}
-                              </span>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </p>
-                  </div>
+                {/* Row 4: Formas de pagamento */}
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
                     <Label>Formas de pagamento</Label>
                     <div className="grid grid-cols-2 gap-1.5">
