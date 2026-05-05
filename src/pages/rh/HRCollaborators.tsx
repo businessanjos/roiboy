@@ -314,10 +314,17 @@ export default function HRCollaborators() {
                     </td>
                     <td className="p-3 text-muted-foreground hidden md:table-cell">{c.department || "—"}</td>
                     <td className="p-3 text-muted-foreground hidden md:table-cell">{c.position || "—"}</td>
+                    <td className="p-3 text-muted-foreground hidden lg:table-cell">{c.unit || "—"}</td>
                     <td className="p-3 hidden lg:table-cell">
                       {c.employment_type ? (
                         <Badge variant="outline" className="text-xs">{EMPLOYMENT_TYPES[c.employment_type] || c.employment_type}</Badge>
                       ) : "—"}
+                    </td>
+                    <td className="p-3 text-right text-muted-foreground hidden lg:table-cell tabular-nums">
+                      {c.base_salary != null ? c.base_salary.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : (c.salary != null ? c.salary.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—")}
+                    </td>
+                    <td className="p-3 text-right font-medium hidden lg:table-cell tabular-nums">
+                      {c.monthly_total_cost != null ? c.monthly_total_cost.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
                     </td>
                     <td className="p-3">
                       <Badge variant={st.variant} className="text-xs">{st.label}</Badge>
