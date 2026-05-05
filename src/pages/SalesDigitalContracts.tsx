@@ -192,9 +192,10 @@ export default function SalesDigitalContracts() {
 
   const filteredDeals = useMemo(() => {
     const term = dealSearch.trim().toLowerCase();
-    if (!term) return deals;
+    const base = deals.filter((deal) => deal.status !== "won");
+    if (!term) return base;
 
-    return deals.filter((deal) =>
+    return base.filter((deal) =>
       [deal.title, deal.client?.full_name, deal.lead?.full_name]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term)),
