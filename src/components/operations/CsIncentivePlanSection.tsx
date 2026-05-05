@@ -251,12 +251,12 @@ export function CsIncentivePlanSection() {
                   <Users className="h-3.5 w-3.5" /> Time inteiro (modelo)
                 </div>
               </SelectItem>
-              {consultants.map((c: any) => (
-                <SelectItem key={c.id} value={c.id}>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-4 w-4">
-                      <AvatarFallback className="text-[8px]">{initials(c.name)}</AvatarFallback>
-                    </Avatar>
+              {ROLE_OPTIONS.map((role) => (
+                <SelectItem key={role} value={role}>
+                  {role}
+                </SelectItem>
+              ))}
+            </SelectContent>
                     {c.role_label}
                   </div>
                 </SelectItem>
