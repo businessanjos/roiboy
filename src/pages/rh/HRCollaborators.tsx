@@ -23,11 +23,16 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X, FileSpreadsheet, FileText, ChevronDown,
+  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X, FileSpreadsheet, FileText, ChevronDown, UserX, Loader2,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
 import { exportPayrollCSV, exportPayrollXLSX } from "./components/payrollExport";
 
@@ -79,6 +84,8 @@ export default function HRCollaborators() {
   const [importing, setImporting] = useState(false);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<HRCollaborator | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
 
   const [form, setForm] = useState({
     full_name: "",
@@ -203,6 +210,37 @@ export default function HRCollaborators() {
     if (result) {
       setDialogOpen(false);
       setForm({ full_name: "", email: "", phone: "", cpf: "", department: "", position: "", hire_date: "", employment_type: "clt", salary: "", status: "active" });
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!deactivateTarget) return;
+    setDeactivating(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const ok = await updateCollaborator(deactivateTarget.id, {
+        status: "inactive",
+        termination_date: deactivateTarget.termination_date || today,
+      } as any, true);
+      if (!ok) throw new Error("Falha ao atualizar status no RH");
+
+      if (deactivateTarget.user_id) {
+        const { error } = await supabase.functions.invoke("admin-manage-user", {
+          body: { action: "set_active", auth_user_id: deactivateTarget.user_id, is_active: false },
+        });
+        if (error) {
+          toast.warning("Status RH atualizado, mas falha ao desativar acesso ao sistema: " + error.message);
+        } else {
+          toast.success("Colaborador inativado e acesso ao sistema desativado.");
+        }
+      } else {
+        toast.success("Colaborador inativado no RH (sem usuário vinculado ao sistema).");
+      }
+      setDeactivateTarget(null);
+    } catch (err: any) {
+      toast.error("Erro ao inativar: " + (err?.message || "desconhecido"));
+    } finally {
+      setDeactivating(false);
     }
   };
 
@@ -395,9 +433,22 @@ export default function HRCollaborators() {
                       <Badge variant={st.variant} className="text-xs">{st.label}</Badge>
                     </td>
                     <td className="p-3 text-right">
-                      <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/collaborators/${c.id}`)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/collaborators/${c.id}`)} title="Ver perfil">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {c.status !== "inactive" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeactivateTarget(c)}
+                            title="Inativar colaborador"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <UserX className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -542,6 +593,40 @@ export default function HRCollaborators() {
           await refetch();
         }}
       />
+
+      <AlertDialog open={!!deactivateTarget} onOpenChange={(o) => { if (!o && !deactivating) setDeactivateTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Inativar colaborador?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  <span className="font-medium text-foreground">{deactivateTarget?.full_name}</span> será marcado como{" "}
+                  <span className="font-medium">Inativo</span> no RH (com data de desligamento de hoje, se ainda não houver) e removido dos relatórios padrão.
+                </p>
+                {deactivateTarget?.user_id ? (
+                  <p>
+                    O acesso à plataforma também será <span className="font-medium">desativado automaticamente</span>: a sessão atual é encerrada e o login é bloqueado.
+                  </p>
+                ) : (
+                  <p className="text-xs">Este colaborador não tem usuário do sistema vinculado — apenas o status do RH será alterado.</p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deactivating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeactivate(); }}
+              disabled={deactivating}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deactivating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserX className="h-4 w-4 mr-2" />}
+              Inativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
