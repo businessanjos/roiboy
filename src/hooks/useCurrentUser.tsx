@@ -136,6 +136,47 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     };
   }, [fetchUser]);
 
+  // Realtime + periodic guard: if a super admin flips users.is_active to false,
+  // force-logout the affected session within seconds — not on next refresh.
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const forceSignOutIfInactive = async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("is_active")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+      if (data && data.is_active === false) {
+        try { await supabase.auth.signOut(); } catch {}
+        window.location.replace("/auth?reason=inactive");
+      }
+    };
+
+    const channel = supabase
+      .channel(`user-active-${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "users", filter: `id=eq.${currentUser.id}` },
+        (payload: any) => {
+          if (payload?.new?.is_active === false) {
+            forceSignOutIfInactive();
+          }
+        }
+      )
+      .subscribe();
+
+    const poll = setInterval(forceSignOutIfInactive, 30000);
+    const onFocus = () => forceSignOutIfInactive();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(poll);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [currentUser?.id]);
+
   return (
     <CurrentUserContext.Provider value={{ currentUser, loading, refetchUser, updateUser }}>
       {children}
