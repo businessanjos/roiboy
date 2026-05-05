@@ -578,6 +578,21 @@ export default function Products() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
+                      id="renewal-50"
+                      checked={parseFloat(renewalDiscountPercent) === 50}
+                      onCheckedChange={(checked) => setRenewalDiscountPercent(checked ? "50" : "100")}
+                    />
+                    <Label htmlFor="renewal-50" className="mb-0">
+                      Renovação com 50% do ticket
+                      <span className="block text-xs text-muted-foreground font-normal">
+                        {parseFloat(renewalDiscountPercent) === 50
+                          ? "Cliente paga 50% do valor original na renovação"
+                          : "Cliente paga 100% do valor original na renovação"}
+                      </span>
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
                       id="allows-second-seat"
                       checked={allowsSecondSeat}
                       onCheckedChange={setAllowsSecondSeat}
