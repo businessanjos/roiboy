@@ -733,6 +733,17 @@ export const ContractWizard = ({
       const list = groupedVars[k];
       // For payment, only count fields relevant to the selected forma.
       let effectiveList = list;
+      // Para o step "client", os campos de CPF/CNPJ do contratante são
+      // ocultos do formulário (preenchidos pelo bloco de busca acima).
+      // Não devem ser contados como obrigatórios — caso contrário, o botão
+      // "Continuar" nunca habilita quando o template tem ambos CPF e CNPJ.
+      if (k === "client") {
+        effectiveList = list.filter((v) => {
+          const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
+          const isContractorCpf = /^cpf$|cpf_/i.test(v.key);
+          return !isContractorCnpj && !isContractorCpf;
+        });
+      }
       if (k === "payment") {
         const formaVar = list.find((v) => classifyPaymentVar(v.key) === "forma");
         const formaCurrent = formaVar ? (placeholderValues?.[formaVar.key] ?? "") : "";
