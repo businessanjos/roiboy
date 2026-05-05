@@ -152,6 +152,14 @@ export function CsIncentivePlanSection() {
         churn_penalty_percent: 50,
         routines: DEFAULT_ROUTINES,
         notes: "",
+        bonus_budget_amount: 0,
+        bonus_budget_value_type: "absolute",
+        bonus_budget_period: "quarterly",
+        bonus_budget_percent_base: "renewal_revenue",
+        bonus_payment_channel: "folha",
+        bonus_payment_when: "Até o 5º dia útil após o fechamento do período",
+        bonus_distribution_method: "equal",
+        bonus_distribution_shares: {},
       });
       setDraftTiers(defaultTiers());
     }
