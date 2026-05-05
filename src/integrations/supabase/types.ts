@@ -3851,6 +3851,140 @@ export type Database = {
           },
         ]
       }
+      cs_incentive_plans: {
+        Row: {
+          account_id: string
+          annual_bonus_enabled: boolean
+          annual_bonus_payment_channel: string | null
+          annual_bonus_rules: string | null
+          annual_bonus_value: number
+          base_salary_monthly: number
+          churn_penalty_enabled: boolean
+          churn_penalty_percent: number
+          churn_penalty_threshold: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          minimum_achievement_percent: number
+          monthly_bonus_payment_channel: string | null
+          monthly_bonus_value: number
+          name: string
+          notes: string | null
+          quarterly_bonus_enabled: boolean
+          quarterly_bonus_payment_channel: string | null
+          quarterly_bonus_rules: string | null
+          quarterly_bonus_value: number
+          routines: Json
+          updated_at: string
+          user_id: string | null
+          variable_target_monthly: number
+          weight_churn: number
+          weight_nps: number
+          weight_renewal: number
+        }
+        Insert: {
+          account_id: string
+          annual_bonus_enabled?: boolean
+          annual_bonus_payment_channel?: string | null
+          annual_bonus_rules?: string | null
+          annual_bonus_value?: number
+          base_salary_monthly?: number
+          churn_penalty_enabled?: boolean
+          churn_penalty_percent?: number
+          churn_penalty_threshold?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_achievement_percent?: number
+          monthly_bonus_payment_channel?: string | null
+          monthly_bonus_value?: number
+          name?: string
+          notes?: string | null
+          quarterly_bonus_enabled?: boolean
+          quarterly_bonus_payment_channel?: string | null
+          quarterly_bonus_rules?: string | null
+          quarterly_bonus_value?: number
+          routines?: Json
+          updated_at?: string
+          user_id?: string | null
+          variable_target_monthly?: number
+          weight_churn?: number
+          weight_nps?: number
+          weight_renewal?: number
+        }
+        Update: {
+          account_id?: string
+          annual_bonus_enabled?: boolean
+          annual_bonus_payment_channel?: string | null
+          annual_bonus_rules?: string | null
+          annual_bonus_value?: number
+          base_salary_monthly?: number
+          churn_penalty_enabled?: boolean
+          churn_penalty_percent?: number
+          churn_penalty_threshold?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_achievement_percent?: number
+          monthly_bonus_payment_channel?: string | null
+          monthly_bonus_value?: number
+          name?: string
+          notes?: string | null
+          quarterly_bonus_enabled?: boolean
+          quarterly_bonus_payment_channel?: string | null
+          quarterly_bonus_rules?: string | null
+          quarterly_bonus_value?: number
+          routines?: Json
+          updated_at?: string
+          user_id?: string | null
+          variable_target_monthly?: number
+          weight_churn?: number
+          weight_nps?: number
+          weight_renewal?: number
+        }
+        Relationships: []
+      }
+      cs_incentive_tiers: {
+        Row: {
+          bonus_multiplier: number
+          created_at: string
+          id: string
+          label: string | null
+          max_achievement_percent: number | null
+          min_achievement_percent: number
+          plan_id: string
+        }
+        Insert: {
+          bonus_multiplier?: number
+          created_at?: string
+          id?: string
+          label?: string | null
+          max_achievement_percent?: number | null
+          min_achievement_percent: number
+          plan_id: string
+        }
+        Update: {
+          bonus_multiplier?: number
+          created_at?: string
+          id?: string
+          label?: string | null
+          max_achievement_percent?: number | null
+          min_achievement_percent?: number
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_incentive_tiers_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "cs_incentive_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_field_folders: {
         Row: {
           account_id: string
