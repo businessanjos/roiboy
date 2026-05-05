@@ -387,6 +387,15 @@ export default function ConsultantBonus() {
           </DialogHeader>
           {editing && (
             <div className="space-y-4">
+              {(() => {
+                const consultant = consultants.find((c: any) => c.id === editing.user_id);
+                const seniorityKey = getConsultantSeniorityKey(consultant?.position);
+                const filteredProducts = (products as any[]).filter((p) => {
+                  const sl = Array.isArray(p.consultant_seniority) ? p.consultant_seniority : [];
+                  if (sl.length === 0) return true; // produto sem regra → todos atendem
+                  return seniorityKey ? sl.includes(seniorityKey) : true;
+                });
+                return (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Produto</Label>
@@ -396,7 +405,11 @@ export default function ConsultantBonus() {
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {products.map((p: any) => (
+                      {filteredProducts.length === 0 ? (
+                        <div className="px-2 py-3 text-xs text-muted-foreground">
+                          Nenhum produto disponível para a senioridade desta consultora.
+                        </div>
+                      ) : filteredProducts.map((p: any) => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
                     </SelectContent>
