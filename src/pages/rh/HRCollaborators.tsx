@@ -509,6 +509,19 @@ export default function HRCollaborators() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CollaboratorsBulkEditDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        selected={collaborators.filter(c => selectedRows.has(c.id))}
+        onApply={async (updates) => {
+          for (const u of updates) {
+            await updateCollaborator(u.id, u.patch as any, true);
+          }
+          setSelectedRows(new Set());
+          await refetch();
+        }}
+      />
     </div>
   );
 }
