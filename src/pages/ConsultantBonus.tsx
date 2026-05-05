@@ -420,7 +420,7 @@ export default function ConsultantBonus() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Meta anual {editing.metric_type === "nps" ? "(score)" : "(%)"}</Label>
+                  <Label>Meta trimestral {editing.metric_type === "nps" ? "(score)" : "(%)"}</Label>
                   <Input
                     type="number"
                     value={editing.annual_target}
@@ -438,9 +438,9 @@ export default function ConsultantBonus() {
               </div>
 
               <div>
-                <Label>Metas mensais</Label>
-                <div className="grid grid-cols-6 gap-2 mt-2">
-                  {MONTH_LABELS.map((m, i) => (
+                <Label>Metas por trimestre</Label>
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  {QUARTER_LABELS.map((m, i) => (
                     <div key={i}>
                       <div className="text-xs text-muted-foreground mb-1">{m}</div>
                       <Input
