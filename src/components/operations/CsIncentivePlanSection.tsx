@@ -582,16 +582,29 @@ export function CsIncentivePlanSection() {
 
       {/* Tiers */}
       <Card>
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base">Faixas de Atingimento</CardTitle>
+            <CardTitle className="text-base">Faixas de Atingimento do Bônus</CardTitle>
             <CardDescription>
-              Multiplicador aplicado sobre o bônus mensal conforme % de atingimento.
+              Defina, por faixa de % atingida, qual percentual do bônus é pago.
+              Use <strong>0%</strong> para zerar o bônus, <strong>70%</strong> para pagamento parcial e
+              {" "}<strong>100%</strong> (ou mais) quando a meta for batida. A faixa final pode ficar com{" "}
+              <em>Até %</em> em branco para representar "ou mais".
             </CardDescription>
           </div>
-          <Button size="sm" variant="outline" onClick={addTier} className="gap-1.5">
-            <Plus className="h-3.5 w-3.5" /> Adicionar faixa
-          </Button>
+          <div className="flex gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDraftTiers(defaultTiers())}
+              title="Aplicar template padrão (0–20: 0%, 21–39: 70%, 40+: 100%)"
+            >
+              Template padrão
+            </Button>
+            <Button size="sm" variant="outline" onClick={addTier} className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> Adicionar faixa
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -599,77 +612,93 @@ export function CsIncentivePlanSection() {
               <TableRow>
                 <TableHead>De %</TableHead>
                 <TableHead>Até %</TableHead>
-                <TableHead>Multiplicador</TableHead>
-                <TableHead>Rótulo</TableHead>
+                <TableHead>% do bônus pago</TableHead>
+                <TableHead>Descrição</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {draftTiers.map((t, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={t.min}
-                      onChange={(e) => {
-                        const v = [...draftTiers];
-                        v[i].min = parseNumberInput(e.target.value);
-                        setDraftTiers(v);
-                      }}
-                      className="w-20 h-8"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={t.max}
-                      onChange={(e) => {
-                        const v = [...draftTiers];
-                        v[i].max = e.target.value;
-                        setDraftTiers(v);
-                      }}
-                      placeholder="∞"
-                      className="w-20 h-8"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={t.multiplier}
-                      onChange={(e) => {
-                        const v = [...draftTiers];
-                        v[i].multiplier = parseNumberInput(e.target.value);
-                        setDraftTiers(v);
-                      }}
-                      className="w-24 h-8"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      value={t.label}
-                      onChange={(e) => {
-                        const v = [...draftTiers];
-                        v[i].label = e.target.value;
-                        setDraftTiers(v);
-                      }}
-                      className="h-8"
-                      placeholder="Bronze, Prata..."
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => setDraftTiers(draftTiers.filter((_, idx) => idx !== i))}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {draftTiers.map((t, i) => {
+                const pct = Math.round((toNumber(t.multiplier) || 0) * 100);
+                const tone =
+                  pct === 0
+                    ? "text-rose-600"
+                    : pct >= 100
+                    ? "text-emerald-600"
+                    : "text-amber-600";
+                return (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={t.min}
+                        onChange={(e) => {
+                          const v = [...draftTiers];
+                          v[i].min = parseNumberInput(e.target.value);
+                          setDraftTiers(v);
+                        }}
+                        className="w-20 h-8"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={t.max}
+                        onChange={(e) => {
+                          const v = [...draftTiers];
+                          v[i].max = e.target.value;
+                          setDraftTiers(v);
+                        }}
+                        placeholder="ou mais"
+                        className="w-24 h-8"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          step="1"
+                          value={pct}
+                          onChange={(e) => {
+                            const v = [...draftTiers];
+                            const num = parseFloat(e.target.value);
+                            v[i].multiplier = isNaN(num) ? 0 : num / 100;
+                            setDraftTiers(v);
+                          }}
+                          className={`w-20 h-8 font-semibold ${tone}`}
+                        />
+                        <span className="text-xs text-muted-foreground">%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        value={t.label}
+                        onChange={(e) => {
+                          const v = [...draftTiers];
+                          v[i].label = e.target.value;
+                          setDraftTiers(v);
+                        }}
+                        className="h-8"
+                        placeholder="Ex: Não atinge, Parcial, Meta batida"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setDraftTiers(draftTiers.filter((_, idx) => idx !== i))}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
+          <p className="text-xs text-muted-foreground mt-3">
+            Exemplo: meta de 40% de renovação → 0–20% paga 0% (zera), 21–39% paga 70%, a partir de 40% paga 100%.
+          </p>
         </CardContent>
       </Card>
 
