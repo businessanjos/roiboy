@@ -7319,6 +7319,56 @@ export type Database = {
           },
         ]
       }
+      hr_collaborator_audit_log: {
+        Row: {
+          account_id: string
+          action: string
+          changed_fields: Json | null
+          collaborator_id: string
+          created_at: string
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          account_id: string
+          action: string
+          changed_fields?: Json | null
+          collaborator_id: string
+          created_at?: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          account_id?: string
+          action?: string
+          changed_fields?: Json | null
+          collaborator_id?: string
+          created_at?: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_collaborator_audit_log_collaborator_id_fkey"
+            columns: ["collaborator_id"]
+            isOneToOne: false
+            referencedRelation: "hr_collaborators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_collaborators: {
         Row: {
           account_id: string
