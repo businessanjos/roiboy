@@ -281,6 +281,9 @@ export default function HRCollaboratorProfile() {
           <TabsTrigger value="benefits" className="gap-1.5 text-xs sm:text-sm">
             <Gift className="h-4 w-4" /> Benefícios
           </TabsTrigger>
+          <TabsTrigger value="payroll" className="gap-1.5 text-xs sm:text-sm">
+            <Wallet className="h-4 w-4" /> Folha & Encargos
+          </TabsTrigger>
         </TabsList>
 
         {/* TAB: Dados Pessoais */}
