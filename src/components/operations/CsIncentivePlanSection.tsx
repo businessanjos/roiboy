@@ -343,24 +343,24 @@ export function CsIncentivePlanSection() {
             <Label>Salário base mensal (R$)</Label>
             <Input
               type="number"
-              value={form.base_salary_monthly ?? 0}
-              onChange={(e) => setF("base_salary_monthly", Number(e.target.value))}
+              value={form.base_salary_monthly ?? ""}
+              onChange={(e) => setF("base_salary_monthly", parseNumberInput(e.target.value))}
             />
           </div>
           <div>
             <Label>Meta variável mensal (R$)</Label>
             <Input
               type="number"
-              value={form.variable_target_monthly ?? 0}
-              onChange={(e) => setF("variable_target_monthly", Number(e.target.value))}
+              value={form.variable_target_monthly ?? ""}
+              onChange={(e) => setF("variable_target_monthly", parseNumberInput(e.target.value))}
             />
           </div>
           <div>
             <Label>Mínimo para liberar bônus (%)</Label>
             <Input
               type="number"
-              value={form.minimum_achievement_percent ?? 0}
-              onChange={(e) => setF("minimum_achievement_percent", Number(e.target.value))}
+              value={form.minimum_achievement_percent ?? ""}
+              onChange={(e) => setF("minimum_achievement_percent", parseNumberInput(e.target.value))}
             />
           </div>
         </CardContent>
@@ -416,8 +416,8 @@ export function CsIncentivePlanSection() {
             <Label>Valor base (R$)</Label>
             <Input
               type="number"
-              value={form.monthly_bonus_value ?? 0}
-              onChange={(e) => setF("monthly_bonus_value", Number(e.target.value))}
+              value={form.monthly_bonus_value ?? ""}
+              onChange={(e) => setF("monthly_bonus_value", parseNumberInput(e.target.value))}
             />
           </div>
           <div>
