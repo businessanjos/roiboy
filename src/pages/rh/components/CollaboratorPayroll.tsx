@@ -112,6 +112,7 @@ export default function CollaboratorPayroll({ form, setField }: Props) {
     });
   };
 
+  return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
