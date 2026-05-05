@@ -228,7 +228,7 @@ export function CsIncentivePlanSection() {
 
   const addTier = () => {
     const last = draftTiers[draftTiers.length - 1];
-    const newMin = last ? (last.max ? parseFloat(last.max) : last.min + 20) : 0;
+    const newMin = last ? (last.max ? parseFloat(last.max) : toNumber(last.min) + 20) : 0;
     setDraftTiers([...draftTiers, { min: newMin, max: "", multiplier: 1, label: "" }]);
   };
 
