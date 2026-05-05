@@ -30,7 +30,8 @@ import CollaboratorSalaryHistory from "./components/CollaboratorSalaryHistory";
 import CollaboratorTimeRecords from "./components/CollaboratorTimeRecords";
 import CollaboratorBenefits from "./components/CollaboratorBenefits";
 import CollaboratorPayroll from "./components/CollaboratorPayroll";
-import { Wallet } from "lucide-react";
+import CollaboratorAuditLog from "./components/CollaboratorAuditLog";
+import { Wallet, History } from "lucide-react";
 
 const RH_ALLOWED_EMAIL = "m.quintana@me.com";
 
@@ -284,6 +285,9 @@ export default function HRCollaboratorProfile() {
           <TabsTrigger value="payroll" className="gap-1.5 text-xs sm:text-sm">
             <Wallet className="h-4 w-4" /> Folha & Encargos
           </TabsTrigger>
+          <TabsTrigger value="audit" className="gap-1.5 text-xs sm:text-sm">
+            <History className="h-4 w-4" /> Auditoria
+          </TabsTrigger>
         </TabsList>
 
         {/* TAB: Dados Pessoais */}
@@ -471,6 +475,11 @@ export default function HRCollaboratorProfile() {
         {/* TAB: Folha & Encargos */}
         <TabsContent value="payroll" className="mt-4">
           <CollaboratorPayroll form={form} setField={setField} />
+        </TabsContent>
+
+        {/* TAB: Auditoria */}
+        <TabsContent value="audit" className="mt-4">
+          <CollaboratorAuditLog collaboratorId={id!} />
         </TabsContent>
       </Tabs>
     </div>
