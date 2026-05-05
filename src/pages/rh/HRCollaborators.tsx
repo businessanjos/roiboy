@@ -433,9 +433,22 @@ export default function HRCollaborators() {
                       <Badge variant={st.variant} className="text-xs">{st.label}</Badge>
                     </td>
                     <td className="p-3 text-right">
-                      <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/collaborators/${c.id}`)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/collaborators/${c.id}`)} title="Ver perfil">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {c.status !== "inactive" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeactivateTarget(c)}
+                            title="Inativar colaborador"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <UserX className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
