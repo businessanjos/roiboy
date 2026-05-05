@@ -7,6 +7,7 @@ export interface CsIncentivePlan {
   id: string;
   account_id: string;
   user_id: string | null;
+  role_label: string | null;
   name: string;
   description: string | null;
   is_active: boolean;
