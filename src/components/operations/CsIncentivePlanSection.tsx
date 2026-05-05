@@ -54,6 +54,13 @@ function initials(name: string) {
 const formatBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
+const parseNumberInput = (value: string) => (value === "" ? "" : Number(value));
+const toNumber = (value: unknown, fallback = 0) => {
+  if (value === "" || value == null) return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const DEFAULT_ROUTINES = [
   "Reunião 1:1 quinzenal com cada cliente",
   "QBR (Quarterly Business Review) trimestral",
@@ -108,7 +115,7 @@ export function CsIncentivePlanSection() {
   // Local state
   const [form, setForm] = useState<Partial<CsIncentivePlan>>({});
   const [draftTiers, setDraftTiers] = useState<
-    { min: number; max: string; multiplier: number; label: string }[]
+    { min: number | ""; max: string; multiplier: number | ""; label: string }[]
   >([]);
 
   useEffect(() => {
@@ -185,20 +192,34 @@ export function CsIncentivePlanSection() {
   const setF = (k: keyof CsIncentivePlan, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   const totalWeight =
-    Number(form.weight_renewal || 0) +
-    Number(form.weight_churn || 0) +
-    Number(form.weight_nps || 0);
+    toNumber(form.weight_renewal) +
+    toNumber(form.weight_churn) +
+    toNumber(form.weight_nps);
 
   const handleSave = async () => {
-    const saved = await savePlan.mutateAsync(form);
+    const normalizedForm = {
+      ...form,
+      base_salary_monthly: toNumber(form.base_salary_monthly),
+      variable_target_monthly: toNumber(form.variable_target_monthly),
+      minimum_achievement_percent: toNumber(form.minimum_achievement_percent),
+      weight_renewal: toNumber(form.weight_renewal),
+      weight_churn: toNumber(form.weight_churn),
+      weight_nps: toNumber(form.weight_nps),
+      monthly_bonus_value: toNumber(form.monthly_bonus_value),
+      quarterly_bonus_value: toNumber(form.quarterly_bonus_value),
+      annual_bonus_value: toNumber(form.annual_bonus_value),
+      churn_penalty_threshold: toNumber(form.churn_penalty_threshold),
+      churn_penalty_percent: toNumber(form.churn_penalty_percent),
+    };
+    const saved = await savePlan.mutateAsync(normalizedForm);
     if (saved?.id) {
       await saveTiers.mutateAsync({
         planId: saved.id,
         tiers: draftTiers.map((t) => ({
           plan_id: saved.id,
-          min_achievement_percent: t.min,
+          min_achievement_percent: toNumber(t.min),
           max_achievement_percent: t.max ? parseFloat(t.max) : null,
-          bonus_multiplier: t.multiplier,
+          bonus_multiplier: toNumber(t.multiplier),
           label: t.label || null,
         })),
       });
