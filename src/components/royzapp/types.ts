@@ -265,6 +265,7 @@ export const getContactInfo = (assignment: ConversationAssignment): ContactInfo 
       isBlocked: zappConv.is_blocked || false,
       isArchived: zappConv.is_archived || false,
       searchableText,
+      clientTimezone: clientData?.timezone || null,
     };
   } else if (oldConv?.client) {
     const searchableText = normalizeSearchText([
