@@ -982,7 +982,14 @@ export default function Dashboard() {
                       <p className={`text-5xl font-bold leading-none ${churnColor}`}>{churnRate.toFixed(1)}%</p>
                       <div className={`text-right rounded-md px-2.5 py-1.5 ${churnBg}`}>
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meta</p>
-                        <p className={`text-lg font-bold leading-none ${churnColor}`}>≤ {CHURN_GOAL}%</p>
+                        <EditableGoal
+                          accountId={currentUser?.account_id}
+                          field="dashboard_churn_goal"
+                          value={CHURN_GOAL}
+                          prefix="≤"
+                          suffix="%"
+                          textClassName={`text-lg font-bold leading-none ${churnColor}`}
+                        />
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-3 text-xs">
