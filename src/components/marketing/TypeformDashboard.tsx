@@ -51,8 +51,9 @@ export function TypeformDashboard() {
   const [addOpen, setAddOpen] = useState(false);
   const [availableForms, setAvailableForms] = useState<any[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
-  const [pickedForm, setPickedForm] = useState<string>('');
-  const [campaignTag, setCampaignTag] = useState('');
+  const [pickedForms, setPickedForms] = useState<string[]>([]);
+  const [search, setSearch] = useState('');
+  const [adding, setAdding] = useState(false);
 
   const loadForms = useCallback(async () => {
     setLoading(true);
