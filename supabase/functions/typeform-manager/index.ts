@@ -150,8 +150,10 @@ Deno.serve(async (req) => {
 
     // ----- GET dashboard data (funnel) -----
     if (action === "get_dashboard") {
-      const { form_id, days = 30 } = body;
-      const since = new Date(Date.now() - days * 86400_000).toISOString();
+      const { form_id, days = 30, since: sinceArg, until: untilArg } = body;
+      // Support either a custom range (since/until ISO date) or a rolling window in days.
+      const since = sinceArg ? new Date(sinceArg).toISOString() : new Date(Date.now() - days * 86400_000).toISOString();
+      const untilISO = untilArg ? new Date(new Date(untilArg).setHours(23, 59, 59, 999)).toISOString() : null;
       const isAll = !form_id || form_id === "__all__";
 
       // Resolve form ids + titles in scope (title is needed to extract the [TAG] used as Origem da Venda)
