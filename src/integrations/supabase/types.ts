@@ -72,6 +72,9 @@ export type Database = {
           ai_roi_prompt: string | null
           ai_system_prompt: string | null
           created_at: string
+          dashboard_churn_goal: number
+          dashboard_nps_goal: number
+          dashboard_renewal_goal: number
           escore_live_participation: number
           escore_live_presence: number
           escore_whatsapp_engagement: number
@@ -107,6 +110,9 @@ export type Database = {
           ai_roi_prompt?: string | null
           ai_system_prompt?: string | null
           created_at?: string
+          dashboard_churn_goal?: number
+          dashboard_nps_goal?: number
+          dashboard_renewal_goal?: number
           escore_live_participation?: number
           escore_live_presence?: number
           escore_whatsapp_engagement?: number
@@ -142,6 +148,9 @@ export type Database = {
           ai_roi_prompt?: string | null
           ai_system_prompt?: string | null
           created_at?: string
+          dashboard_churn_goal?: number
+          dashboard_nps_goal?: number
+          dashboard_renewal_goal?: number
           escore_live_participation?: number
           escore_live_presence?: number
           escore_whatsapp_engagement?: number
