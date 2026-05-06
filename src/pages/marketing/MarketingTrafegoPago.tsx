@@ -177,6 +177,7 @@ export default function MarketingTrafegoPago() {
           <TabsTrigger value="leadads" className="gap-2"><Zap className="w-4 h-4" />Lead Ads</TabsTrigger>
           <TabsTrigger value="campaigns" className="gap-2"><Megaphone className="w-4 h-4" />Campanhas</TabsTrigger>
           <TabsTrigger value="links" className="gap-2"><Link2 className="w-4 h-4" />Links & UTM</TabsTrigger>
+          <TabsTrigger value="typeform" className="gap-2"><FileText className="w-4 h-4" />Typeform</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-4">
