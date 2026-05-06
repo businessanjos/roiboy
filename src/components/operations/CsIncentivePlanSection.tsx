@@ -993,7 +993,7 @@ function BonusSimulator({
             disabled
           />
           <p className="text-[10px] text-muted-foreground mt-1">
-            Base: contratos com vencimento entre Mai/2026 e Dez/2026.
+            Base: contratos ativos com vencimento entre Mai/2026 e Dez/2026.
           </p>
         </div>
       </div>
