@@ -80,6 +80,40 @@ export function CsIncentivePlanSection() {
     queryFn: fetchActiveConsultants,
   });
 
+  // Trimestre atual (1..4) e meses correspondentes
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+  const quarterMonths = [
+    currentQuarter * 3 - 2,
+    currentQuarter * 3 - 1,
+    currentQuarter * 3,
+  ];
+
+  // Soma do bônus apurado no trimestre atual, por consultora (user_id)
+  const { data: quarterPayouts = {} as Record<string, number> } = useQuery({
+    queryKey: [
+      "cs-incentive-quarter-payouts",
+      currentUser?.account_id,
+      currentYear,
+      currentQuarter,
+    ],
+    enabled: !!currentUser?.account_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("consultant_bonus_payouts")
+        .select("user_id, bonus_paid")
+        .eq("year", currentYear)
+        .in("month", quarterMonths);
+      if (error) throw error;
+      const acc: Record<string, number> = {};
+      for (const row of (data || []) as any[]) {
+        acc[row.user_id] = (acc[row.user_id] || 0) + Number(row.bonus_paid || 0);
+      }
+      return acc;
+    },
+  });
+
   // "team" = plano-modelo do time (sem cargo). Caso contrário, é um cargo (role_label).
   const ROLE_OPTIONS = ["CS Júnior", "CS Pleno", "CS Sênior", "Líder"] as const;
   const [selectedScope, setSelectedScope] = useState<string>("team");
