@@ -274,6 +274,7 @@ export function TypeformDashboard() {
             <Skeleton className="h-40" />
           ) : (
             <TooltipProvider delayDuration={150}>
+              <div className={cn('transition-opacity', loadingFunnel && 'opacity-60 pointer-events-none')}>
               {(() => {
                 const issues: string[] = [];
                 if (funnel.submissions > 0 && funnel.visits === 0) {
