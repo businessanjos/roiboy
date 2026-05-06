@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.manage-leadads-subscription]
 verify_jwt = false
+
+[functions.meta-campaigns-manager]
+verify_jwt = false
