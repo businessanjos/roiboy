@@ -320,22 +320,12 @@ function useDashboardKpis() {
     queryKey: ["cs-pres-churn", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const start = new Date(); start.setMonth(start.getMonth() - 12);
-      const [{ data: cancels }, { count: active }] = await Promise.all([
-        supabase
-          .from("contracts")
-          .select("id", { count: "exact", head: false })
-          .eq("account_id", accountId!)
-          .eq("status", "cancelled")
-          .gte("end_date", start.toISOString().slice(0, 10)),
-        supabase
-          .from("contracts")
-          .select("id", { count: "exact", head: true })
-          .eq("account_id", accountId!)
-          .eq("status", "active"),
-      ]);
-      const cancelCount = (cancels as any[] | null)?.length ?? 0;
-      const activeCount = active ?? 0;
+      const { data } = await supabase.rpc("get_dashboard_contract_counts", {
+        p_account_id: accountId!,
+      });
+      const stats = (data ?? {}) as any;
+      const activeCount = Number(stats.active ?? 0);
+      const cancelCount = Number(stats.cancelled ?? 0);
       const denom = activeCount + cancelCount;
       return { rate: denom > 0 ? (cancelCount / denom) * 100 : 0, cancelCount, activeCount };
     },
