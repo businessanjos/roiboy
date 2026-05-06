@@ -328,7 +328,7 @@ function CampaignDrilldown({ campaign, open, onOpenChange, datePreset, onMutated
           )}
         </div>
 
-        <BudgetEditor open={!!budgetEntity} onOpenChange={(o) => !o && setBudgetEntity(null)} entity={budgetEntity} onSaved={loadAdsets} />
+        <BudgetEditor open={!!budgetEntity} onOpenChange={(o) => !o && setBudgetEntity(null)} entity={budgetEntity} entityType="adset" onSaved={loadAdsets} />
       </SheetContent>
     </Sheet>
   );
