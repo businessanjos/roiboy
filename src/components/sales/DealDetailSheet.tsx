@@ -363,7 +363,8 @@ export function DealDetailSheet({
       setHasSecondSeat(!!(deal as any)?.has_second_seat);
       setSecondSeatName((deal as any)?.second_seat_name || "");
       setValueDraft(String(deal.value ?? 0));
-      setReceivedDraft(String((deal as any).received_value ?? ""));
+      const rv = (deal as any).received_value;
+      setReceivedDraft(rv == null || rv === "" ? "" : String(Math.round(Number(rv) * 100)));
     }
   }, [deal?.id, open]);
 
@@ -1242,14 +1243,13 @@ export function DealDetailSheet({
                         <Input
                           inputMode="decimal"
                           value={(() => {
-                            const raw = receivedDraft.replace(/\D/g, "");
-                            if (!raw) return "";
-                            const num = Number(raw) / 100;
+                            if (!receivedDraft) return "";
+                            const num = Number(receivedDraft) / 100;
                             return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                           })()}
                           onChange={(e) => {
                             const raw = e.target.value.replace(/\D/g, "");
-                            setReceivedDraft(raw ? String(Number(raw) / 100) : "");
+                            setReceivedDraft(raw);
                           }}
                           placeholder="0,00"
                           className="h-9 pl-9"
@@ -1263,8 +1263,7 @@ export function DealDetailSheet({
                         <Button
                           size="sm"
                           onClick={async () => {
-                            const trimmed = receivedDraft.trim();
-                            const v = trimmed === "" ? null : Number(trimmed);
+                            const v = receivedDraft === "" ? null : Number(receivedDraft) / 100;
                             if (v !== null && (isNaN(v) || v < 0)) {
                               toast.error("Valor inválido");
                               return;
