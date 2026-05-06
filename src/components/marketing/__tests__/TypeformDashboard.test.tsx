@@ -42,9 +42,13 @@ function setupSupabaseFromForms() {
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   invokeMock.mockReset();
   fromMock.mockReset();
+  const { toast } = await import('sonner');
+  (toast.warning as any).mockClear?.();
+  (toast.error as any).mockClear?.();
+  (toast.success as any).mockClear?.();
   setupSupabaseFromForms();
   invokeMock.mockResolvedValue({
     data: { funnel: FUNNEL_ALL, consistency: { ok: true, responses_in_scope: 500, scope_form_ids: ['fABC', 'fXYZ'] }, won_deals: [] },
