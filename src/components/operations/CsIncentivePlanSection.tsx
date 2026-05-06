@@ -80,6 +80,40 @@ export function CsIncentivePlanSection() {
     queryFn: fetchActiveConsultants,
   });
 
+  // Trimestre atual (1..4) e meses correspondentes
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+  const quarterMonths = [
+    currentQuarter * 3 - 2,
+    currentQuarter * 3 - 1,
+    currentQuarter * 3,
+  ];
+
+  // Soma do bônus apurado no trimestre atual, por consultora (user_id)
+  const { data: quarterPayouts = {} as Record<string, number> } = useQuery({
+    queryKey: [
+      "cs-incentive-quarter-payouts",
+      currentUser?.account_id,
+      currentYear,
+      currentQuarter,
+    ],
+    enabled: !!currentUser?.account_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("consultant_bonus_payouts")
+        .select("user_id, bonus_paid")
+        .eq("year", currentYear)
+        .in("month", quarterMonths);
+      if (error) throw error;
+      const acc: Record<string, number> = {};
+      for (const row of (data || []) as any[]) {
+        acc[row.user_id] = (acc[row.user_id] || 0) + Number(row.bonus_paid || 0);
+      }
+      return acc;
+    },
+  });
+
   // "team" = plano-modelo do time (sem cargo). Caso contrário, é um cargo (role_label).
   const ROLE_OPTIONS = ["CS Júnior", "CS Pleno", "CS Sênior", "Líder"] as const;
   const [selectedScope, setSelectedScope] = useState<string>("team");
@@ -457,6 +491,14 @@ export function CsIncentivePlanSection() {
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-medium truncate">{c.name}</div>
                         <div className="text-[10px] text-muted-foreground">{c.role_label}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-[10px] text-muted-foreground leading-none">
+                          Recebido Q{currentQuarter}
+                        </div>
+                        <div className="text-xs font-semibold text-amber-500 leading-tight">
+                          {formatBRL(quarterPayouts[c.user_id] || 0)}
+                        </div>
                       </div>
                       <Input
                         type="number"
