@@ -1575,8 +1575,8 @@ export default function Dashboard() {
                     <Bar dataKey="novos" fill="url(#focusNovosGradient)" radius={[6, 6, 0, 0]} name="Novos" />
                     {gestaoViewMode === "operacoes" && (
                       <>
-                        <Bar dataKey="cancelamentos" fill="url(#focusCancelamentosGradient)" radius={[6, 6, 0, 0]} name="Cancelamentos" />
-                        <Bar dataKey="encerramentos" fill="url(#focusEncerramentosGradient)" radius={[6, 6, 0, 0]} name="Encerramentos" />
+                        {showCancelamentos && <Bar dataKey="cancelamentos" fill="url(#focusCancelamentosGradient)" radius={[6, 6, 0, 0]} name="Cancelamentos" />}
+                        {showEncerramentos && <Bar dataKey="encerramentos" fill="url(#focusEncerramentosGradient)" radius={[6, 6, 0, 0]} name="Encerramentos" />}
                         <Bar dataKey="suspensos" fill="url(#focusSuspensosGradient)" radius={[6, 6, 0, 0]} name="Suspensos" />
                         <Bar dataKey="pausados" fill="url(#focusPausadosGradient)" radius={[6, 6, 0, 0]} name="Pausados" />
                       </>
