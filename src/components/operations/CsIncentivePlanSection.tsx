@@ -43,6 +43,7 @@ import {
   Loader2,
   Users,
   ListChecks,
+  RefreshCw,
 } from "lucide-react";
 import { PAYMENT_CHANNELS } from "@/components/sales/quotas/paymentChannels";
 import { fetchActiveConsultants } from "@/lib/consultants";
