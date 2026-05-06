@@ -122,13 +122,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     
     let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
     
-    // SPIFFs: restrito apenas a Jonathan, Everton e Maikol
     const userName = (currentUser?.name || "").toLowerCase();
     const userEmail = (currentUser?.email || "").toLowerCase();
-    const canSeeSpiffs = userName.includes("jonathan") || userName.includes("everton") || userName.includes("maikol");
-    if (!canSeeSpiffs) {
-      sectorItems = sectorItems.filter(item => item.to !== "/sales-team/spiffs");
-    }
 
     // Premiação & Bônus: restrito a Maikol, Jonathan, Everton e Bruna
     const BONUS_VIEWERS = ["maikol", "jonathan", "everton", "bruna"];
