@@ -130,6 +130,26 @@ export default function Dashboard() {
 
   // Contract stats from RPC for accurate Gestão metrics
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
+
+  // Editable dashboard goals (per account)
+  const { data: dashboardGoals } = useQuery({
+    queryKey: ["dashboard-goals", currentUser?.account_id],
+    enabled: !!currentUser?.account_id,
+    staleTime: 1000 * 60,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("account_settings")
+        .select("dashboard_churn_goal, dashboard_renewal_goal, dashboard_nps_goal")
+        .eq("account_id", currentUser!.account_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return {
+        churn: Number(data?.dashboard_churn_goal ?? 18),
+        renewal: Number(data?.dashboard_renewal_goal ?? 40),
+        nps: Number(data?.dashboard_nps_goal ?? 80),
+      };
+    },
+  });
   const { data: doubleChairCount } = useDoubleChairCount(currentUser?.account_id);
 
   // Contracts data for the Contratos tab (exclude renewals to avoid duplicates)
