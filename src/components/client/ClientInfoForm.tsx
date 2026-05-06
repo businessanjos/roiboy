@@ -1662,6 +1662,7 @@ function TimezoneField({ value, phone, onChange }: TimezoneFieldProps) {
   );
 }
 
+export const getEmptyClientFormData = (): ClientFormData => ({
   full_name: "",
   phone_e164: "",
   emails: [],
