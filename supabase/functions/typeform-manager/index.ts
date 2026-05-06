@@ -266,6 +266,7 @@ Deno.serve(async (req) => {
       }
 
       let wonByEmail = 0, wonByPhone = 0;
+      let wonByLeadLookup = 0;
       // Fetch ALL won deals for the account once and cross-match in memory.
       // Avoids case-sensitivity pitfalls of `.in("contact_email", ...)` and
       // captures phone variants robustly via phoneCoreKey.
@@ -274,7 +275,7 @@ Deno.serve(async (req) => {
         const allWonDeals = await fetchAllWonDeals(() =>
           supabase
             .from("deals")
-            .select("id, status, value, contact_email, contact_phone")
+            .select("id, status, value, contact_email, contact_phone, lead_id")
             .eq("account_id", accountId)
             .eq("status", "won")
         );
@@ -285,7 +286,61 @@ Deno.serve(async (req) => {
         }
         wonByEmail += result.wonByEmail;
         wonByPhone += result.wonByPhone;
+
+        // ---- EXTRA: many deals don't carry contact_email/contact_phone — the data
+        // lives on the lead. Find leads matching the form responses (by email/phone)
+        // and then mark their won deals as matched.
+        const leadIdSet = new Set<string>();
+        // Match leads by email (case-insensitive: emails are already canonicalEmail'd)
+        if (emailSet.size) {
+          const emailArr = Array.from(emailSet);
+          const pageSize = 500;
+          for (let i = 0; i < emailArr.length; i += pageSize) {
+            const slice = emailArr.slice(i, i + pageSize);
+            const { data: leadsByEmail } = await supabase
+              .from("leads")
+              .select("id, email")
+              .eq("account_id", accountId)
+              .in("email", slice);
+            for (const l of leadsByEmail || []) leadIdSet.add(l.id);
+          }
+          // Also try lowercase via ilike fallback (in case some leads stored mixed case)
+          // Skipped to avoid 500-element OR; canonicalization on ingestion covers new rows.
+        }
+        // Match leads by phone variants
+        if (phoneKeys.size) {
+          // Build all phone variants for any response phone we know
+          const allPhoneVariants = new Set<string>();
+          for (const r of cleanRows) {
+            for (const v of phoneVariants(r.phone)) allPhoneVariants.add(v);
+          }
+          if (allPhoneVariants.size) {
+            const phoneArr = Array.from(allPhoneVariants);
+            const pageSize = 500;
+            for (let i = 0; i < phoneArr.length; i += pageSize) {
+              const slice = phoneArr.slice(i, i + pageSize);
+              const { data: leadsByPhone } = await supabase
+                .from("leads")
+                .select("id, phone")
+                .eq("account_id", accountId)
+                .in("phone", slice);
+              for (const l of leadsByPhone || []) leadIdSet.add(l.id);
+            }
+          }
+        }
+
+        if (leadIdSet.size) {
+          for (const d of allWonDeals) {
+            if (!d.lead_id || wonDealIds.has(d.id)) continue;
+            if (leadIdSet.has(d.lead_id)) {
+              wonDealIds.add(d.id);
+              wonDealsMap.set(d.id, { value: Number(d.value || 0) });
+              wonByLeadLookup++;
+            }
+          }
+        }
       }
+      console.log(`[typeform-manager] match breakdown: byEmail=${wonByEmail}, byPhone=${wonByPhone}, byLeadLookup=${wonByLeadLookup}, total=${wonDealIds.size}`);
 
       won = wonDealIds.size;
       wonValue = Array.from(wonDealsMap.values()).reduce((s, d) => s + d.value, 0);
