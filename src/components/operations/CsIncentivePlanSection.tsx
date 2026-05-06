@@ -886,6 +886,7 @@ export function CsIncentivePlanSection() {
             monthlyBonus={toNumber(form.monthly_bonus_value)}
             baseSalary={toNumber(form.base_salary_monthly)}
             tiers={draftTiers}
+            scope={selectedScope}
           />
         </CardContent>
       </Card>
