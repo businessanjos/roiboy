@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, Target, Inbox, BarChart3, Megaphone, Loader2, ExternalLink, Link2, RefreshCw, Zap, Unlink, Settings2 } from 'lucide-react';
+import { TrendingUp, Target, Inbox, BarChart3, Megaphone, Loader2, ExternalLink, Link2, RefreshCw, Zap, Unlink, Settings2, FileText } from 'lucide-react';
+import { TypeformDashboard } from '@/components/marketing/TypeformDashboard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserMetaConnection } from '@/hooks/useUserMetaConnection';
