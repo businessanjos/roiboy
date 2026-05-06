@@ -940,7 +940,8 @@ function BonusSimulator({
         .from("client_contracts")
         .select("id", { count: "exact", head: true })
         .gte("end_date", "2026-05-01")
-        .lte("end_date", "2026-12-31");
+        .lte("end_date", "2026-12-31")
+        .in("status", ["active", "suspended", "suspended_bonus", "paused"]);
       if (productIds) q = q.in("product_id", productIds);
       const { count, error } = await q;
       if (error) throw error;
@@ -992,7 +993,7 @@ function BonusSimulator({
             disabled
           />
           <p className="text-[10px] text-muted-foreground mt-1">
-            Base: contratos com vencimento entre Mai/2026 e Dez/2026.
+            Base: contratos ativos com vencimento entre Mai/2026 e Dez/2026.
           </p>
         </div>
       </div>
