@@ -898,24 +898,51 @@ function BonusSimulator({
   monthlyBonus,
   baseSalary,
   tiers,
+  scope,
 }: {
   monthlyBonus: number;
   baseSalary: number;
   tiers: { min: number | ""; max: string; multiplier: number | ""; label: string }[];
+  scope: string;
 }) {
   const [renewalPct, setRenewalPct] = useState<number | "">(100);
   const [churnDiscount, setChurnDiscount] = useState<number | "">(0);
   const pct = toNumber(renewalPct);
 
-  // Total de contratos expirando entre Maio e Dezembro de 2026 (referência para calcular nº absoluto de renovações)
+  // Senioridade do plano selecionado, para filtrar produtos atendidos
+  const seniorityKey = useMemo(() => {
+    if (scope === "team") return null;
+    if (/j[uú]nior/i.test(scope)) return "junior";
+    if (/pleno/i.test(scope)) return "pleno";
+    if (/s[eê]nior/i.test(scope)) return "senior";
+    if (/l[ií]der/i.test(scope)) return "lead";
+    return null;
+  }, [scope]);
+
+  // Total de contratos expirando entre Maio e Dezembro de 2026, filtrado pelos
+  // produtos atendidos pela senioridade do plano (ex.: CS Júnior só atende Rykas).
   const { data: totalRenewableContracts = 0 } = useQuery({
-    queryKey: ["bonus-simulator-renewable-contracts-2026"],
+    queryKey: ["bonus-simulator-renewable-contracts-2026", seniorityKey],
     queryFn: async () => {
-      const { count, error } = await supabase
+      let productIds: string[] | null = null;
+      if (seniorityKey) {
+        const { data: prods, error: pErr } = await supabase
+          .from("products")
+          .select("id, consultant_seniority");
+        if (pErr) throw pErr;
+        productIds = (prods || [])
+          .filter((p: any) => Array.isArray(p.consultant_seniority) && p.consultant_seniority.includes(seniorityKey))
+          .map((p: any) => p.id);
+        if (productIds.length === 0) return 0;
+      }
+
+      let q = supabase
         .from("client_contracts")
         .select("id", { count: "exact", head: true })
         .gte("end_date", "2026-05-01")
         .lte("end_date", "2026-12-31");
+      if (productIds) q = q.in("product_id", productIds);
+      const { count, error } = await q;
       if (error) throw error;
       return count || 0;
     },
