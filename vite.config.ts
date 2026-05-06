@@ -63,7 +63,7 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 2000,
     minify: "esbuild",
     target: "es2020",
-    sourcemap: mode === "development",
+    sourcemap: false,
   },
   // Optimize dependencies
   optimizeDeps: {
