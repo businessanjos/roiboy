@@ -395,7 +395,12 @@ export function TypeformDashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={wonOpen} onOpenChange={setWonOpen}>
+      <Dialog open={wonOpen} onOpenChange={(o) => {
+        setWonOpen(o);
+        if (o && wonDeals.length === 0 && (funnel?.won || 0) > 0 && !loadingFunnel) {
+          loadFunnel();
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col gap-0 p-0">
           <DialogHeader className="p-6 pb-4 border-b border-border/40">
             <DialogTitle className="flex items-center gap-2">
@@ -407,7 +412,9 @@ export function TypeformDashboard() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-2">
-            {wonDeals.length === 0 ? (
+            {loadingFunnel ? (
+              <Skeleton className="h-40" />
+            ) : wonDeals.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Nenhum match encontrado.</p>
             ) : wonDeals.map((d) => (
               <div key={d.id} className="p-3 rounded-md border border-border/40 hover:bg-muted/30 transition">
