@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, Target, Inbox, BarChart3, Megaphone, Loader2, ExternalLink, Link2, RefreshCw, Zap, Unlink, Settings2 } from 'lucide-react';
@@ -50,6 +51,11 @@ export default function MarketingTrafegoPago() {
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [campaignStatusFilter, setCampaignStatusFilter] = useState<string>('active');
+  const [campaignPlatformFilter, setCampaignPlatformFilter] = useState<string>('all');
+  const [campaignSearch, setCampaignSearch] = useState('');
+  const [campaignPage, setCampaignPage] = useState(1);
+  const CAMPAIGN_PAGE_SIZE = 10;
 
   const { getVisibleKpiDetails, visibleKpis } = useMetaKpiPreferences();
   const { isConnected, isLoading: isLoadingConnection, accounts, allAccounts, connectMeta, disconnectMeta, refreshSelectedAccounts, error } = useUserMetaConnection('/marketing/trafego-pago');
@@ -254,39 +260,102 @@ export default function MarketingTrafegoPago() {
                   </Button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead><tr className="border-b border-border/40">
-                      <th className="text-left p-3 text-muted-foreground font-medium">Campanha</th>
-                      <th className="text-left p-3 text-muted-foreground font-medium">Status</th>
-                      <th className="text-right p-3 text-muted-foreground font-medium">Gasto</th>
-                      <th className="text-right p-3 text-muted-foreground font-medium">Impressões</th>
-                      <th className="text-right p-3 text-muted-foreground font-medium">Cliques</th>
-                      <th className="text-right p-3 text-muted-foreground font-medium">Conversões</th>
-                      <th className="text-right p-3 text-muted-foreground font-medium">CPL</th>
-                    </tr></thead>
-                    <tbody>
-                      {adSets.map(ad => (
-                        <tr key={ad.id} className="border-b border-border/20 hover:bg-muted/30">
-                          <td className="p-3">
-                            <p className="font-medium text-foreground">{ad.name}</p>
-                            <p className="text-xs text-muted-foreground">{ad.platform}</p>
-                          </td>
-                          <td className="p-3">
-                            <Badge variant="outline" className={ad.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'}>
-                              {ad.status === 'active' ? 'Ativo' : 'Pausado'}
-                            </Badge>
-                          </td>
-                          <td className="p-3 text-right font-medium text-foreground">R$ {(ad.spend || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-3 text-right text-muted-foreground">{(ad.impressions || 0).toLocaleString('pt-BR')}</td>
-                          <td className="p-3 text-right text-muted-foreground">{(ad.clicks || 0).toLocaleString('pt-BR')}</td>
-                          <td className="p-3 text-right font-medium text-foreground">{ad.conversions || 0}</td>
-                          <td className="p-3 text-right text-primary font-medium">{ad.cpl > 0 ? `R$ ${ad.cpl.toFixed(2)}` : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                (() => {
+                  const platforms = Array.from(new Set(adSets.map(a => a.platform).filter(Boolean)));
+                  const filtered = adSets.filter(ad => {
+                    if (campaignStatusFilter !== 'all' && ad.status !== campaignStatusFilter) return false;
+                    if (campaignPlatformFilter !== 'all' && ad.platform !== campaignPlatformFilter) return false;
+                    if (campaignSearch && !ad.name?.toLowerCase().includes(campaignSearch.toLowerCase())) return false;
+                    return true;
+                  });
+                  const totalPages = Math.max(1, Math.ceil(filtered.length / CAMPAIGN_PAGE_SIZE));
+                  const page = Math.min(campaignPage, totalPages);
+                  const start = (page - 1) * CAMPAIGN_PAGE_SIZE;
+                  const visible = filtered.slice(start, start + CAMPAIGN_PAGE_SIZE);
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          placeholder="Buscar campanha..."
+                          value={campaignSearch}
+                          onChange={(e) => { setCampaignSearch(e.target.value); setCampaignPage(1); }}
+                          className="h-9 max-w-xs"
+                        />
+                        <Select value={campaignStatusFilter} onValueChange={(v) => { setCampaignStatusFilter(v); setCampaignPage(1); }}>
+                          <SelectTrigger className="h-9 w-[160px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Apenas ativas</SelectItem>
+                            <SelectItem value="paused">Apenas pausadas</SelectItem>
+                            <SelectItem value="all">Todas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {platforms.length > 1 && (
+                          <Select value={campaignPlatformFilter} onValueChange={(v) => { setCampaignPlatformFilter(v); setCampaignPage(1); }}>
+                            <SelectTrigger className="h-9 w-[160px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todas plataformas</SelectItem>
+                              {platforms.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {adSets.length}</span>
+                      </div>
+
+                      {filtered.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                          <Inbox className="w-10 h-10 mb-2 opacity-30" />
+                          <p className="text-sm">Nenhuma campanha com esses filtros.</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead><tr className="border-b border-border/40">
+                                <th className="text-left p-3 text-muted-foreground font-medium">Campanha</th>
+                                <th className="text-left p-3 text-muted-foreground font-medium">Status</th>
+                                <th className="text-right p-3 text-muted-foreground font-medium">Gasto</th>
+                                <th className="text-right p-3 text-muted-foreground font-medium">Impressões</th>
+                                <th className="text-right p-3 text-muted-foreground font-medium">Cliques</th>
+                                <th className="text-right p-3 text-muted-foreground font-medium">Conversões</th>
+                                <th className="text-right p-3 text-muted-foreground font-medium">CPL</th>
+                              </tr></thead>
+                              <tbody>
+                                {visible.map(ad => (
+                                  <tr key={ad.id} className="border-b border-border/20 hover:bg-muted/30">
+                                    <td className="p-3">
+                                      <p className="font-medium text-foreground">{ad.name}</p>
+                                      <p className="text-xs text-muted-foreground">{ad.platform}</p>
+                                    </td>
+                                    <td className="p-3">
+                                      <Badge variant="outline" className={ad.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'}>
+                                        {ad.status === 'active' ? 'Ativo' : 'Pausado'}
+                                      </Badge>
+                                    </td>
+                                    <td className="p-3 text-right font-medium text-foreground">R$ {(ad.spend || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                    <td className="p-3 text-right text-muted-foreground">{(ad.impressions || 0).toLocaleString('pt-BR')}</td>
+                                    <td className="p-3 text-right text-muted-foreground">{(ad.clicks || 0).toLocaleString('pt-BR')}</td>
+                                    <td className="p-3 text-right font-medium text-foreground">{ad.conversions || 0}</td>
+                                    <td className="p-3 text-right text-primary font-medium">{ad.cpl > 0 ? `R$ ${ad.cpl.toFixed(2)}` : '—'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {totalPages > 1 && (
+                            <div className="flex items-center justify-between pt-2">
+                              <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
+                              <div className="flex gap-1">
+                                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setCampaignPage(page - 1)}>Anterior</Button>
+                                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setCampaignPage(page + 1)}>Próxima</Button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()
               )}
             </CardContent>
           </Card>
