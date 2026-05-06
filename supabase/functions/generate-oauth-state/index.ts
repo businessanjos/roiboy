@@ -39,9 +39,10 @@ serve(async (req) => {
     const state = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     await supabase.from('oauth_states').delete().eq('user_id', user.id);
-    const { error: insErr } = await supabase.from('oauth_states').insert({ state, user_id: user.id, redirect_path, expires_at: expiresAt });
+    const { error: insErr } = await supabase.from('oauth_states').insert({ state, user_id: user.id, redirect_path, expires_at: expiresAt, provider: 'meta' });
     if (insErr) {
-      return new Response(JSON.stringify({ error: 'Failed to generate state' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      console.error('oauth_states insert error:', insErr);
+      return new Response(JSON.stringify({ error: 'Failed to generate state', details: insErr.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const appId = (Deno.env.get('META_APP_ID') || '').trim();
