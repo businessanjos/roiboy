@@ -1132,7 +1132,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
-                    <p className="text-2xl font-bold text-danger">{contractStats?.cancelled ?? 0}</p>
+                    <p className="text-2xl font-bold text-danger">{periodExitTotals.cancelamentos}</p>
                   </div>
                   <AlertTriangle className="h-5 w-5 text-danger" />
                 </div>
@@ -1147,7 +1147,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Encerramentos</p>
-                    <p className="text-2xl font-bold text-warning">{contractStats?.ended ?? 0}</p>
+                    <p className="text-2xl font-bold text-warning">{periodExitTotals.encerramentos}</p>
                   </div>
                   <TrendingDown className="h-5 w-5 text-warning" />
                 </div>
@@ -1162,7 +1162,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Suspensos</p>
-                    <p className="text-2xl font-bold text-amber-600">{contractStats?.suspended ?? 0}</p>
+                    <p className="text-2xl font-bold text-amber-600">{periodExitTotals.suspensos}</p>
                   </div>
                   <Minus className="h-5 w-5 text-amber-500" />
                 </div>
@@ -1177,7 +1177,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Pausados</p>
-                    <p className="text-2xl font-bold text-sky-600">{contractStats?.paused ?? 0}</p>
+                    <p className="text-2xl font-bold text-sky-600">{periodExitTotals.pausados}</p>
                   </div>
                   <Minus className="h-5 w-5 text-sky-500" />
                 </div>
@@ -1499,7 +1499,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Cancelamentos</p>
-                      <p className="text-4xl font-bold text-destructive">{contractStats?.cancelled ?? 0}</p>
+                      <p className="text-4xl font-bold text-destructive">{periodExitTotals.cancelamentos}</p>
                     </div>
                     <AlertTriangle className="h-8 w-8 text-destructive" />
                   </div>
@@ -1513,7 +1513,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Encerramentos</p>
-                      <p className="text-4xl font-bold text-warning">{contractStats?.ended ?? 0}</p>
+                      <p className="text-4xl font-bold text-warning">{periodExitTotals.encerramentos}</p>
                     </div>
                     <TrendingDown className="h-8 w-8 text-warning" />
                   </div>
@@ -1527,7 +1527,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Suspensos</p>
-                      <p className="text-4xl font-bold text-amber-600">{contractStats?.suspended ?? 0}</p>
+                      <p className="text-4xl font-bold text-amber-600">{periodExitTotals.suspensos}</p>
                     </div>
                     <Minus className="h-8 w-8 text-amber-500" />
                   </div>
@@ -1541,7 +1541,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Pausados</p>
-                      <p className="text-4xl font-bold text-sky-600">{contractStats?.paused ?? 0}</p>
+                      <p className="text-4xl font-bold text-sky-600">{periodExitTotals.pausados}</p>
                     </div>
                     <Minus className="h-8 w-8 text-sky-500" />
                   </div>
