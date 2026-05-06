@@ -57,7 +57,7 @@ const TIER_SALES_OVERRIDE: Record<string, number> = {
   Platinum: 8,
   Diamond: 9,
   Black: 10,
-  Elite: 12,
+  Elite: 11,
 };
 
 export default function IncentivePresentation() {
