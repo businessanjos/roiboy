@@ -269,6 +269,17 @@ export function TypeformDashboard() {
                       sub={`recebidas nos últimos ${period}d`}
                       source="DB · typeform_responses"
                       tip={`Total de respostas (completas + parciais) salvas no nosso banco via webhook nos últimos ${period} dias. Conta linhas em typeform_responses filtradas por form_id selecionado e created_at >= hoje-${period}d.`}
+                      onDetails={() => setDetailsCard({
+                        label: 'Submissões',
+                        source: 'DB · typeform_responses',
+                        steps: [
+                          `1. Filtra typeform_responses por account_id da conta logada.`,
+                          `2. Restringe form_id ao(s) funil(is) selecionado(s) (${selectedForm === '__all__' ? `todos os ${forms.length}` : '1 funil'}).`,
+                          `3. Mantém apenas linhas com created_at >= hoje - ${period} dias.`,
+                          `4. Conta total de linhas resultantes = ${funnel.submissions.toLocaleString('pt-BR')}.`,
+                        ],
+                        sample: null,
+                      })}
                     />
                     <FunnelCard
                       scope="period" label="Completados" value={funnel.completed} icon={CheckCircle2}
@@ -276,12 +287,37 @@ export function TypeformDashboard() {
                       source="DB · typeform_responses"
                       tip={`Subset das submissões com submitted_at preenchido (respondente chegou até a thank-you screen). Taxa = completados / submissões no período.`}
                       highlight
+                      onDetails={() => setDetailsCard({
+                        label: 'Completados',
+                        source: 'DB · typeform_responses',
+                        steps: [
+                          `1. Parte do conjunto de Submissões (${funnel.submissions.toLocaleString('pt-BR')} no período).`,
+                          `2. Filtra apenas linhas com is_completed = true (chegou até a thank-you screen).`,
+                          `3. Resultado = ${funnel.completed.toLocaleString('pt-BR')} respostas completas.`,
+                          `4. Taxa de conversão = ${funnel.completed} / ${funnel.submissions} = ${funnel.completion_rate.toFixed(1)}%.`,
+                        ],
+                        sample: null,
+                      })}
                     />
                     <FunnelCard
                       scope="period" label="Lead no Roy" value={funnel.matched_responses} icon={Users}
                       sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : 'matches no período'}
                       source="DB · matching engine"
                       tip="Respostas do período que conseguimos cruzar com um lead OU deal existente no Roy (por email exato ou últimos 9 dígitos do telefone). Conta cada resposta única — se ela match com lead E deal, conta apenas 1."
+                      onDetails={() => setDetailsCard({
+                        label: 'Lead no Roy',
+                        source: 'DB · matching engine',
+                        steps: [
+                          `1. Parte das ${funnel.submissions.toLocaleString('pt-BR')} respostas do período.`,
+                          `2. Para cada resposta, normaliza email (lowercase/trim) e telefone (DDD + últimos 8 dígitos).`,
+                          `3. Cruza com leads e deals da conta procurando match por email OU phoneCoreKey.`,
+                          `4. Marca matched_lead_id / matched_deal_id na resposta quando encontra.`,
+                          `5. Conta respostas únicas com matched_lead_id OU matched_deal_id = ${funnel.matched_responses.toLocaleString('pt-BR')}.`,
+                          `   • Match por lead: ${funnel.matched_leads.toLocaleString('pt-BR')}`,
+                          `   • Match por deal: ${funnel.matched_deals.toLocaleString('pt-BR')}`,
+                        ],
+                        sample: null,
+                      })}
                     />
                     <FunnelCard
                       scope="period" label="Ganhos" value={funnel.won} icon={Trophy}
@@ -290,6 +326,28 @@ export function TypeformDashboard() {
                       tip="Quantos dos deals matched a partir das respostas do período estão atualmente com status='won' na tabela deals. Valor exibido = soma de deals.value desses deals ganhos. Deal IDs são deduplicados antes da consulta. Clique para ver a lista."
                       highlight
                       onClick={funnel.won > 0 ? () => setWonOpen(true) : undefined}
+                      onDetails={() => setDetailsCard({
+                        label: 'Ganhos',
+                        source: 'DB · deals (status=won)',
+                        steps: [
+                          `1. Parte das ${funnel.matched_responses.toLocaleString('pt-BR')} respostas com match no período.`,
+                          `2. Caminho A — matched_deal_id direto: busca deals com status='won'.`,
+                          `3. Caminho B — matched_lead_id: busca QUALQUER deal won criado depois para o mesmo lead.`,
+                          `4. Caminho C — cruzamento ao vivo por email (case-insensitive) e telefone (variantes BR) com TODOS os deals won da conta.`,
+                          `5. Caminho D — respostas → leads (por email/telefone) → deals won daqueles leads (pega casos onde o deal não tem email/telefone preenchido).`,
+                          `6. Deduplica os deal IDs encontrados nos 4 caminhos = ${funnel.won.toLocaleString('pt-BR')} deals únicos.`,
+                          `7. Valor total = soma de deals.value desses deals = ${fmtBRL(funnel.won_value)}.`,
+                        ],
+                        sample: wonDeals.length ? {
+                          columns: ['Contato', 'Valor', 'Won em', 'Vendedor'],
+                          rows: wonDeals.slice(0, 10).map((d: any) => [
+                            d.contact_name || d.contact_email || '—',
+                            fmtBRL(Number(d.value || 0)),
+                            d.won_at ? new Date(d.won_at).toLocaleDateString('pt-BR') : '—',
+                            d.responsible_user_name || '—',
+                          ]),
+                        } : null,
+                      })}
                     />
                   </div>
                 </div>
