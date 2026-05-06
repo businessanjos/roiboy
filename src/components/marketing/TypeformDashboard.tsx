@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, Plus, RefreshCw, Trash2, Users, CheckCircle2, TrendingUp, Trophy, Clock, ExternalLink, Search, Info } from 'lucide-react';
+import { FileText, Plus, RefreshCw, Trash2, Users, CheckCircle2, TrendingUp, Trophy, Clock, ExternalLink, Search, Info, AlertTriangle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -229,6 +230,48 @@ export function TypeformDashboard() {
             <Skeleton className="h-40" />
           ) : (
             <TooltipProvider delayDuration={150}>
+              {(() => {
+                const issues: string[] = [];
+                if (funnel.submissions > 0 && funnel.visits === 0) {
+                  issues.push(`Há ${funnel.submissions.toLocaleString('pt-BR')} submissões no DB, mas o Typeform Insights reporta 0 visitas — provavelmente o snapshot de Insights nunca foi sincronizado.`);
+                }
+                if (funnel.visits > 0 && funnel.submissions > funnel.visits) {
+                  issues.push(`Submissões (${funnel.submissions.toLocaleString('pt-BR')}) excedem o total de visitas lifetime (${funnel.visits.toLocaleString('pt-BR')}). O snapshot de Insights está desatualizado.`);
+                }
+                if (funnel.starts > 0 && funnel.completed > funnel.starts) {
+                  issues.push(`Completados (${funnel.completed.toLocaleString('pt-BR')}) excedem Iniciados (${funnel.starts.toLocaleString('pt-BR')}) — Insights precisa ser ressincronizado.`);
+                }
+                if (consistency && consistency.ok === false) {
+                  issues.push(`${consistency.out_of_scope_responses} resposta(s) fora do escopo do funil selecionado foram descartadas do cálculo.`);
+                }
+                if (!issues.length) return null;
+                return (
+                  <Alert className="mb-4 border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="h-4 w-4 !text-amber-500" />
+                    <AlertTitle className="flex items-center justify-between gap-3">
+                      <span>Discrepância entre Insights (Typeform) e DB (Roy)</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 border-amber-500/40 text-amber-600 hover:bg-amber-500/10"
+                        onClick={refresh}
+                        disabled={loadingFunnel}
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loadingFunnel ? 'animate-spin' : ''}`} />
+                        Sincronizar agora
+                      </Button>
+                    </AlertTitle>
+                    <AlertDescription>
+                      <ul className="list-disc pl-4 mt-1 space-y-0.5 text-xs">
+                        {issues.map((i, idx) => <li key={idx}>{i}</li>)}
+                      </ul>
+                      <p className="text-[11px] mt-2 opacity-80">
+                        Os snapshots de Insights são atualizados a cada sincronização. Clique em "Sincronizar agora" para puxar os números mais recentes do Typeform.
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+                );
+              })()}
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
