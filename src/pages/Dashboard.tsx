@@ -1467,6 +1467,7 @@ export default function Dashboard() {
               </Card>
 
               {showCancelamentos && (
+              <Card className="border-l-4 border-l-destructive">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
