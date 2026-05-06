@@ -1645,7 +1645,12 @@ function TimezoneField({ value, phone, state, onChange }: TimezoneFieldProps) {
                   <Wand2 className="h-3.5 w-3.5 text-primary" />
                   Detectar automaticamente
                   {autoTz && (
-                    <span className="text-xs text-muted-foreground">→ {autoTz}</span>
+                    <span className="text-xs text-muted-foreground">
+                      → {autoTz}
+                      {autoSource && (
+                        <span className="opacity-70"> · {SOURCE_LABEL[autoSource]}</span>
+                      )}
+                    </span>
                   )}
                 </span>
               </SelectItem>
