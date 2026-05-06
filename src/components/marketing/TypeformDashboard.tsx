@@ -48,6 +48,7 @@ export function TypeformDashboard() {
   const [selectedForm, setSelectedForm] = useState<string>('');
   const [period, setPeriod] = useState(30);
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
+  const [consistency, setConsistency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingFunnel, setLoadingFunnel] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -68,13 +69,21 @@ export function TypeformDashboard() {
   useEffect(() => { loadForms(); }, [loadForms]);
 
   const loadFunnel = useCallback(async () => {
-    if (!selectedForm) { setFunnel(null); return; }
+    if (!selectedForm) { setFunnel(null); setConsistency(null); return; }
     setLoadingFunnel(true);
     const { data, error } = await supabase.functions.invoke('typeform-manager', {
       body: { action: 'get_dashboard', form_id: selectedForm, days: period },
     });
-    if (error) toast.error('Erro ao carregar funil');
-    else setFunnel(data?.funnel || null);
+    if (error) {
+      toast.error('Erro ao carregar funil');
+      setConsistency(null);
+    } else {
+      setFunnel(data?.funnel || null);
+      setConsistency(data?.consistency || null);
+      if (data?.consistency && data.consistency.ok === false) {
+        toast.warning(`Inconsistência detectada: ${data.consistency.out_of_scope_responses} resposta(s) fora do escopo do funil selecionado.`);
+      }
+    }
     setLoadingFunnel(false);
   }, [selectedForm, period]);
 
