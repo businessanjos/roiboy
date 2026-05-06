@@ -246,6 +246,52 @@ Deno.serve(async (req) => {
           }
         }
       }
+
+      // ---- LIVE cross by email/phone (covers responses whose match_* IDs are stale or never set) ----
+      const normP = (p: string) => (p || "").replace(/\D/g, "");
+      const emails = Array.from(new Set(cleanRows.map(r => (r.email || "").toLowerCase().trim()).filter(Boolean)));
+      const phoneSuffixes = Array.from(new Set(cleanRows.map(r => normP(r.phone)).filter(p => p.length >= 9).map(p => p.slice(-9))));
+
+      let wonByEmail = 0, wonByPhone = 0;
+      if (emails.length) {
+        // chunk to avoid URL length limits
+        for (let i = 0; i < emails.length; i += 200) {
+          const chunk = emails.slice(i, i + 200);
+          const { data: deals } = await supabase
+            .from("deals")
+            .select("id, status, value, contact_email")
+            .eq("account_id", accountId)
+            .eq("status", "won")
+            .in("contact_email", chunk);
+          for (const d of deals || []) {
+            if (!wonDealIds.has(d.id)) {
+              wonDealIds.add(d.id);
+              wonDealsMap.set(d.id, { value: Number(d.value || 0) });
+              wonByEmail++;
+            }
+          }
+        }
+      }
+      if (phoneSuffixes.length) {
+        // can't IN on suffix; fetch all won deals with phone for account (small set typically)
+        const { data: phoneDeals } = await supabase
+          .from("deals")
+          .select("id, status, value, contact_phone")
+          .eq("account_id", accountId)
+          .eq("status", "won")
+          .not("contact_phone", "is", null)
+          .limit(5000);
+        const suffixSet = new Set(phoneSuffixes);
+        for (const d of phoneDeals || []) {
+          const suf = normP(d.contact_phone).slice(-9);
+          if (suf && suffixSet.has(suf) && !wonDealIds.has(d.id)) {
+            wonDealIds.add(d.id);
+            wonDealsMap.set(d.id, { value: Number(d.value || 0) });
+            wonByPhone++;
+          }
+        }
+      }
+
       won = wonDealIds.size;
       wonValue = Array.from(wonDealsMap.values()).reduce((s, d) => s + d.value, 0);
 
