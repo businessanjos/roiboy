@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { BarChart3, Plus, Pencil, Trash2 } from "lucide-react";
+import { BarChart3, Plus, Pencil, Trash2, Trophy } from "lucide-react";
 import { MarketingDateFilter } from "./MarketingDateFilter";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { useMarketingDashboards } from "@/hooks/useMarketingDashboards";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -219,6 +220,10 @@ export default function MarketingInsightsTab() {
                     onMonthChange={setSelectedMonth}
                   />
                 )}
+                <Badge variant="outline" className="gap-1 border-emerald-500/50 text-emerald-600 bg-emerald-50 text-[10px] uppercase font-bold tracking-wider py-0 px-1.5 h-5">
+                  <Trophy className="h-3 w-3" />
+                  11 VENDAS
+                </Badge>
               </div>
               {canManage && (
                 <Button variant="outline" size="sm" onClick={() => setBuilderOpen(true)}>
