@@ -48,7 +48,11 @@ function extractContact(answers: any[] = []) {
       }
     }
   }
-  return { email: normEmail(email), phone: normPhone(phone), full_name };
+  return {
+    email: normEmail(email),
+    phone: canonicalE164(phone) || "",
+    full_name,
+  };
 }
 
 Deno.serve(async (req) => {
