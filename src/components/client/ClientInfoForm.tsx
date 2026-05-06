@@ -1572,19 +1572,38 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 interface TimezoneFieldProps {
   value: string;
   phone: string;
+  state?: string;
   onChange: (value: string) => void;
 }
 
+const SOURCE_LABEL: Record<NonNullable<TimezoneSource>, string> = {
+  manual: "Manual",
+  ddd: "DDD do telefone",
+  state: "UF cadastrada",
+  ddi: "País (DDI)",
+};
+
 /**
  * Campo de fuso horário do cliente.
- * - Detecta automaticamente pelo DDI/telefone (preview).
- * - Permite override manual quando a detecção falhar (ex.: brasileiros em
- *   Manaus/Acre, expatriados, números virtuais com DDI estrangeiro).
+ * - Detecta automaticamente em cascata: DDD (BR) > UF cadastrada (BR) > DDI internacional.
+ * - Permite override manual quando a detecção falhar.
  * - Vazio = "Detectar automaticamente".
  */
-function TimezoneField({ value, phone, onChange }: TimezoneFieldProps) {
-  const country = getCountryFromPhone(phone);
-  const autoTz = country ? getTimezoneForCountry(country.code) : null;
+function TimezoneField({ value, phone, state, onChange }: TimezoneFieldProps) {
+  // Detecção sem o override (para mostrar o que o "auto" decidiria)
+  const auto = useMemo(
+    () =>
+      resolveClientTimezone({
+        manualTimezone: null,
+        phone,
+        state,
+        countryCode: null, // deixar resolver buscar via DDI internamente
+      }) ?? null,
+    [phone, state],
+  );
+  const autoTz = auto?.timezone ?? null;
+  const autoSource = auto?.source ?? null;
+
   const effectiveTz = value || autoTz;
   const [now, setNow] = useState<Date>(() => new Date());
 
