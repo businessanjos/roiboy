@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, Target, Inbox, BarChart3, Megaphone, Loader2, ExternalLink, Link2, RefreshCw, Zap, Unlink, Settings2, FileText } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import type { DateRange } from 'react-day-picker';
+import { TrendingUp, Target, Inbox, BarChart3, Megaphone, Loader2, ExternalLink, Link2, RefreshCw, Zap, Unlink, Settings2, FileText, CalendarIcon } from 'lucide-react';
 import { TypeformDashboard } from '@/components/marketing/TypeformDashboard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,6 +49,18 @@ interface Insights {
 export default function MarketingTrafegoPago() {
   const { user } = useAuth();
   const [period, setPeriod] = useState('last_30d');
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
+  const isCustom = period === 'custom';
+  const customReady = isCustom && !!customRange?.from && !!customRange?.to;
+  const periodPayload = useMemo(() => {
+    if (customReady) {
+      return {
+        since: format(customRange!.from!, 'yyyy-MM-dd'),
+        until: format(customRange!.to!, 'yyyy-MM-dd'),
+      };
+    }
+    return { datePreset: isCustom ? 'last_30d' : period };
+  }, [period, isCustom, customReady, customRange]);
   const [adSets, setAdSets] = useState<AdSet[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -78,13 +96,13 @@ export default function MarketingTrafegoPago() {
     if (!accounts.length) { toast.error('Nenhuma conta de anúncios'); return; }
     setSyncing(true);
     try {
-      const { data, error: e } = await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: accounts[0].id, datePreset: period } });
+      const { data, error: e } = await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: accounts[0].id, ...periodPayload } });
       if (e) throw e;
       if (data?.error) toast.error(data.error);
       else { toast.success(`${data?.count || 0} campanhas sincronizadas!`); await fetchAdSets(); }
     } catch (err) { console.error(err); toast.error('Erro ao sincronizar'); }
     finally { setSyncing(false); }
-  }, [accounts, period, fetchAdSets]);
+  }, [accounts, periodPayload, fetchAdSets]);
 
   useEffect(() => {
     if (accounts.length > 0 && (!selectedAccount || !accounts.find(a => a.id === selectedAccount))) {
@@ -94,16 +112,17 @@ export default function MarketingTrafegoPago() {
 
   const loadInsights = useCallback(async () => {
     if (!selectedAccount) return;
+    if (isCustom && !customReady) return;
     setLoadingInsights(true);
     try {
-      const { data, error: e } = await supabase.functions.invoke('get-audience-insights', { body: { adAccountId: selectedAccount, datePreset: period } });
+      const { data, error: e } = await supabase.functions.invoke('get-audience-insights', { body: { adAccountId: selectedAccount, ...periodPayload } });
       if (e) throw e;
       setInsights(data?.insights || null);
     } catch { setInsights(null); }
     finally { setLoadingInsights(false); }
-  }, [selectedAccount, period]);
+  }, [selectedAccount, periodPayload, isCustom, customReady]);
 
-  useEffect(() => { if (selectedAccount && isConnected) loadInsights(); }, [selectedAccount, period, isConnected, loadInsights]);
+  useEffect(() => { if (selectedAccount && isConnected) loadInsights(); }, [selectedAccount, isConnected, loadInsights]);
   useEffect(() => { if (isConnected) fetchAdSets(); }, [isConnected, fetchAdSets]);
   useEffect(() => {
     if (isConnected && !loading && adSets.length === 0 && accounts.length > 0) syncCampaigns();
@@ -199,16 +218,40 @@ export default function MarketingTrafegoPago() {
                       </SelectContent>
                     </Select>
                   )}
-                  <Select value={period} onValueChange={setPeriod}>
-                    <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                  <Select value={period} onValueChange={(v) => { setPeriod(v); if (v !== 'custom') setCustomRange(undefined); }}>
+                    <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="today">Hoje</SelectItem>
                       <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
                       <SelectItem value="last_14d">Últimos 14 dias</SelectItem>
                       <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
                       <SelectItem value="last_90d">Últimos 90 dias</SelectItem>
                       <SelectItem value="this_month">Este mês</SelectItem>
+                      <SelectItem value="custom">Personalizado</SelectItem>
                     </SelectContent>
                   </Select>
+                  {isCustom && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className={cn('gap-2', !customReady && 'text-muted-foreground')}>
+                          <CalendarIcon className="w-4 h-4" />
+                          {customReady
+                            ? `${format(customRange!.from!, 'dd/MM/yy', { locale: ptBR })} - ${format(customRange!.to!, 'dd/MM/yy', { locale: ptBR })}`
+                            : 'Selecionar período'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                          mode="range"
+                          selected={customRange}
+                          onSelect={setCustomRange}
+                          numberOfMonths={2}
+                          locale={ptBR}
+                          className={cn('p-3 pointer-events-auto')}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
                   <MetaKpiSettings />
                   <Button variant="outline" size="icon" onClick={loadInsights} disabled={loadingInsights}>
                     <RefreshCw className={`w-4 h-4 ${loadingInsights ? 'animate-spin' : ''}`} />
@@ -217,7 +260,7 @@ export default function MarketingTrafegoPago() {
               </div>
             </CardHeader>
             <CardContent>
-              {loadingInsights ? (
+              {loadingInsights && !insights ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {visibleKpis.slice(0, 8).map(i => <Skeleton key={i} className="h-24 w-full" />)}
                 </div>
@@ -228,7 +271,7 @@ export default function MarketingTrafegoPago() {
                   <p className="text-sm mt-1">Verifique se a conta possui campanhas ativas</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className={cn('grid grid-cols-2 md:grid-cols-4 gap-4 transition-opacity', loadingInsights && 'opacity-60')}>
                   {getVisibleKpiDetails().map((kpi, i) => (
                     <MetaKpiCard key={kpi.id} kpi={kpi} value={insights[kpi.id as keyof Insights] as number} index={i} />
                   ))}

@@ -26,11 +26,14 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Token expirado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const { adAccountId, datePreset = 'last_30d' } = await req.json();
+    const { adAccountId, datePreset = 'last_30d', since, until } = await req.json();
     if (!adAccountId) return new Response(JSON.stringify({ error: 'adAccountId obrigatório' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
     const accountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
-    const url = `https://graph.facebook.com/v21.0/${accountId}/campaigns?fields=id,name,status,effective_status,objective,insights.date_preset(${datePreset}){impressions,clicks,spend,actions,ctr,cpc,cpm}&limit=50&access_token=${tokenData.access_token}`;
+    const insightsParam = (since && until)
+      ? `insights.time_range({'since':'${since}','until':'${until}'})`
+      : `insights.date_preset(${datePreset})`;
+    const url = `https://graph.facebook.com/v21.0/${accountId}/campaigns?fields=id,name,status,effective_status,objective,${insightsParam}{impressions,clicks,spend,actions,ctr,cpc,cpm}&limit=50&access_token=${tokenData.access_token}`;
     const res = await (await fetch(url)).json();
     if (res.error) return new Response(JSON.stringify({ error: res.error.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
