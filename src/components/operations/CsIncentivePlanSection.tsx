@@ -1061,18 +1061,13 @@ function BonusSimulator({
           <Input value={formatBRL(baseSalary)} disabled />
         </div>
         <div>
-          <Label className="text-xs">% de churn</Label>
-          <Input
-            type="number"
-            value={churnPct ?? ""}
-            onChange={(e) => setChurnPct(parseNumberInput(e.target.value))}
-            placeholder="Ex: 12"
-            disabled={!churnPenaltyEnabled}
-          />
+          <Label className="text-xs">% de churn (auto)</Label>
+          <Input value={`${churnPct}%`} disabled />
           <p className="text-[10px] text-muted-foreground mt-1">
+            Calculado como 100% − % de renovação (mesma regra do painel de Renovações).
             {churnPenaltyEnabled
-              ? `Acima de ${churnPenaltyThreshold}% desconta ${churnPenaltyPercent}% do bônus.`
-              : "Penalidade por churn está desativada."}
+              ? ` Acima de ${churnPenaltyThreshold}% desconta ${churnPenaltyPercent}% do bônus.`
+              : " Penalidade por churn desativada."}
             {churnTriggered && (
               <span className="text-rose-600"> Desconto aplicado: −{formatBRL(churnDiscountValue)}</span>
             )}
