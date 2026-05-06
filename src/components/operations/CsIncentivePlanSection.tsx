@@ -508,37 +508,32 @@ export function CsIncentivePlanSection() {
               </div>
             )}
 
-            <div className="space-y-2">
-              {form.bonus_distribution_method === "custom" && (
+            {form.bonus_distribution_method === "custom" && (
+              <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
                   Defina o peso de cada consultora. O bônus será dividido proporcionalmente à soma dos pesos.
                 </p>
-              )}
-              <div className="rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Consultora</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      
-                      {form.bonus_distribution_method === "custom" && (
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Consultora</TableHead>
+                        <TableHead>Cargo</TableHead>
                         <TableHead className="w-28 text-right">Peso</TableHead>
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {consultants.map((c: any) => (
-                      <TableRow key={c.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-7 w-7">
-                              <AvatarFallback className="text-[10px]">{initials(c.name)}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs font-medium">{c.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{c.role_label}</TableCell>
-                        {form.bonus_distribution_method === "custom" && (
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {consultants.map((c: any) => (
+                        <TableRow key={c.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-7 w-7">
+                                <AvatarFallback className="text-[10px]">{initials(c.name)}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs font-medium">{c.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{c.role_label}</TableCell>
                           <TableCell>
                             <Input
                               type="number"
@@ -554,23 +549,20 @@ export function CsIncentivePlanSection() {
                               placeholder="peso"
                             />
                           </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                    {consultants.length === 0 && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={form.bonus_distribution_method === "custom" ? 4 : 3}
-                          className="py-6 text-center text-xs text-muted-foreground"
-                        >
-                          Nenhuma consultora ativa cadastrada.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                        </TableRow>
+                      ))}
+                      {consultants.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="py-6 text-center text-xs text-muted-foreground">
+                            Nenhuma consultora ativa cadastrada.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
