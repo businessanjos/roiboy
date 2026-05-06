@@ -157,6 +157,7 @@ export function TypeformDashboard() {
                 <Select value={selectedForm} onValueChange={setSelectedForm}>
                   <SelectTrigger className="w-[260px]"><SelectValue placeholder="Formulário" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__all__">📊 Todos os funis ({forms.length})</SelectItem>
                     {forms.map(f => <SelectItem key={f.form_id} value={f.form_id}>{f.title}</SelectItem>)}
                   </SelectContent>
                 </Select>
