@@ -61,7 +61,7 @@ export function TypeformDashboard() {
     setLoading(true);
     const { data } = await supabase.from('typeform_forms').select('*').order('created_at', { ascending: false });
     setForms((data as any) || []);
-    if (data && data.length && !selectedForm) setSelectedForm(data[0].form_id);
+    if (data && data.length && !selectedForm) setSelectedForm('__all__');
     setLoading(false);
   }, [selectedForm]);
 
