@@ -4644,6 +4644,7 @@ export type Database = {
           notes: string | null
           pipeline_id: string | null
           probability: number | null
+          received_value: number | null
           responsible_user_id: string | null
           sdr_user_id: string | null
           second_seat_name: string | null
@@ -4679,6 +4680,7 @@ export type Database = {
           notes?: string | null
           pipeline_id?: string | null
           probability?: number | null
+          received_value?: number | null
           responsible_user_id?: string | null
           sdr_user_id?: string | null
           second_seat_name?: string | null
@@ -4714,6 +4716,7 @@ export type Database = {
           notes?: string | null
           pipeline_id?: string | null
           probability?: number | null
+          received_value?: number | null
           responsible_user_id?: string | null
           sdr_user_id?: string | null
           second_seat_name?: string | null
