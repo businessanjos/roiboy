@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, Target, Inbox, BarChart3, Megaphone, Loader2, ExternalLink, Link2, RefreshCw, Zap, Unlink, Settings2 } from 'lucide-react';
+import { TrendingUp, Target, Inbox, BarChart3, Megaphone, Loader2, ExternalLink, Link2, RefreshCw, Zap, Unlink, Settings2, FileText } from 'lucide-react';
+import { TypeformDashboard } from '@/components/marketing/TypeformDashboard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserMetaConnection } from '@/hooks/useUserMetaConnection';
@@ -176,6 +177,7 @@ export default function MarketingTrafegoPago() {
           <TabsTrigger value="leadads" className="gap-2"><Zap className="w-4 h-4" />Lead Ads</TabsTrigger>
           <TabsTrigger value="campaigns" className="gap-2"><Megaphone className="w-4 h-4" />Campanhas</TabsTrigger>
           <TabsTrigger value="links" className="gap-2"><Link2 className="w-4 h-4" />Links & UTM</TabsTrigger>
+          <TabsTrigger value="typeform" className="gap-2"><FileText className="w-4 h-4" />Typeform</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-4">
@@ -386,6 +388,10 @@ export default function MarketingTrafegoPago() {
               <p className="text-xs mt-1">Geração de links de WhatsApp e atribuição UTM serão adicionados em breve.</p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="typeform" className="mt-4">
+          <TypeformDashboard />
         </TabsContent>
       </Tabs>
     </div>
