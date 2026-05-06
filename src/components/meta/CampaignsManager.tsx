@@ -56,18 +56,49 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant="outline" className={map[status] || map.paused}>{labels[status] || status}</Badge>;
 }
 
+interface BudgetHistoryEntry {
+  id: string;
+  user_name: string | null;
+  user_email: string | null;
+  previous_value: number | null;
+  new_value: number | null;
+  budget_type: string;
+  created_at: string;
+}
+
 interface BudgetEditorProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   entity: { id: string; name: string; daily_budget: number | null; lifetime_budget: number | null } | null;
+  entityType?: 'campaign' | 'adset' | 'ad';
+  adAccountId?: string;
   onSaved: () => void;
 }
-function BudgetEditor({ open, onOpenChange, entity, onSaved }: BudgetEditorProps) {
+function BudgetEditor({ open, onOpenChange, entity, entityType = 'campaign', adAccountId, onSaved }: BudgetEditorProps) {
   const [daily, setDaily] = useState('');
   const [saving, setSaving] = useState(false);
-  useEffect(() => {
-    if (entity) setDaily(entity.daily_budget != null ? String(entity.daily_budget) : '');
+  const [history, setHistory] = useState<BudgetHistoryEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const loadHistory = useCallback(async () => {
+    if (!entity) return;
+    setLoadingHistory(true);
+    try {
+      const { data } = await supabase.functions.invoke('meta-campaigns-manager', {
+        body: { action: 'budget_history', entityId: entity.id },
+      });
+      setHistory(data?.history || []);
+    } catch { /* noop */ }
+    finally { setLoadingHistory(false); }
   }, [entity]);
+
+  useEffect(() => {
+    if (entity) {
+      setDaily(entity.daily_budget != null ? String(entity.daily_budget) : '');
+      loadHistory();
+    }
+  }, [entity, loadHistory]);
+
   if (!entity) return null;
   const handleSave = async () => {
     const value = parseFloat(daily.replace(',', '.'));
@@ -75,18 +106,18 @@ function BudgetEditor({ open, onOpenChange, entity, onSaved }: BudgetEditorProps
     setSaving(true);
     try {
       const { data, error } = await supabase.functions.invoke('meta-campaigns-manager', {
-        body: { action: 'update_budget', entityId: entity.id, dailyBudget: value },
+        body: { action: 'update_budget', entityId: entity.id, entityType, entityName: entity.name, adAccountId, dailyBudget: value },
       });
       if (error || data?.error) throw new Error(data?.error || 'Erro');
       toast.success('Orçamento atualizado');
       onSaved();
-      onOpenChange(false);
+      loadHistory();
     } catch (e: any) { toast.error(e.message || 'Erro ao atualizar'); }
     finally { setSaving(false); }
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Editar Orçamento Diário</DialogTitle>
         </DialogHeader>
@@ -96,9 +127,35 @@ function BudgetEditor({ open, onOpenChange, entity, onSaved }: BudgetEditorProps
             <Label htmlFor="dailyBudget">Orçamento diário (R$)</Label>
             <Input id="dailyBudget" type="number" step="0.01" min="1" value={daily} onChange={e => setDaily(e.target.value)} placeholder="50.00" />
           </div>
+
+          <div className="pt-3 border-t border-border/40">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Histórico de alterações</p>
+            {loadingHistory ? (
+              <Skeleton className="h-16 w-full" />
+            ) : history.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">Nenhuma alteração registrada ainda.</p>
+            ) : (
+              <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                {history.map(h => (
+                  <div key={h.id} className="text-xs flex items-start justify-between gap-2 p-2 rounded-md bg-muted/30 border border-border/30">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{h.user_name || h.user_email || 'Sistema'}</p>
+                      <p className="text-muted-foreground">{new Date(h.created_at).toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div className="text-right whitespace-nowrap">
+                      <span className="text-muted-foreground">{fmtBRL(h.previous_value)}</span>
+                      <span className="mx-1">→</span>
+                      <span className="font-semibold text-primary">{fmtBRL(h.new_value)}</span>
+                      {h.budget_type !== 'daily' && <p className="text-[10px] text-muted-foreground">{h.budget_type}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar
           </Button>
@@ -271,7 +328,7 @@ function CampaignDrilldown({ campaign, open, onOpenChange, datePreset, onMutated
           )}
         </div>
 
-        <BudgetEditor open={!!budgetEntity} onOpenChange={(o) => !o && setBudgetEntity(null)} entity={budgetEntity} onSaved={loadAdsets} />
+        <BudgetEditor open={!!budgetEntity} onOpenChange={(o) => !o && setBudgetEntity(null)} entity={budgetEntity} entityType="adset" onSaved={loadAdsets} />
       </SheetContent>
     </Sheet>
   );
@@ -523,7 +580,7 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
       </Card>
 
       <CampaignDrilldown campaign={drillCampaign} open={!!drillCampaign} onOpenChange={(o) => !o && setDrillCampaign(null)} datePreset={datePreset} onMutated={load} />
-      <BudgetEditor open={!!budgetEntity} onOpenChange={(o) => !o && setBudgetEntity(null)} entity={budgetEntity} onSaved={load} />
+      <BudgetEditor open={!!budgetEntity} onOpenChange={(o) => !o && setBudgetEntity(null)} entity={budgetEntity} entityType="campaign" adAccountId={adAccountId} onSaved={load} />
     </div>
   );
 }
