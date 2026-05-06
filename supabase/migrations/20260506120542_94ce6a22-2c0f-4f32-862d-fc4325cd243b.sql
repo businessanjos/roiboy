@@ -1,0 +1,2 @@
+ALTER TABLE public.oauth_states DROP CONSTRAINT IF EXISTS oauth_states_user_id_fkey;
+ALTER TABLE public.oauth_states ADD CONSTRAINT oauth_states_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;

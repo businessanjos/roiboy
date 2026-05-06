@@ -11655,15 +11655,7 @@ export type Database = {
           state?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "oauth_states_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       omie_integration_logs: {
         Row: {
