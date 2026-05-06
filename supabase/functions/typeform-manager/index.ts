@@ -209,9 +209,16 @@ Deno.serve(async (req) => {
       const matchedLeads = cleanRows.filter(r => r.matched_lead_id).length;
       const matchedDeals = cleanRows.filter(r => r.matched_deal_id).length;
 
+      // Won deals = matched_deal_id directly OR any deal whose lead_id matches a response's matched_lead_id.
+      // The second branch covers cases where the response was originally matched to an old/open deal,
+      // and a NEW deal was later created+won for the same lead.
       const dealIds = Array.from(new Set(cleanRows.map(r => r.matched_deal_id).filter(Boolean)));
+      const leadIds = Array.from(new Set(cleanRows.map(r => r.matched_lead_id).filter(Boolean)));
       let won = 0, wonValue = 0;
       let outOfScopeDeals = 0;
+      const wonDealIds = new Set<string>();
+      const wonDealsMap = new Map<string, { value: number }>();
+
       if (dealIds.length) {
         const { data: deals } = await supabase
           .from("deals")
@@ -220,10 +227,27 @@ Deno.serve(async (req) => {
           .in("id", dealIds);
         const validDeals = (deals || []).filter(d => d.account_id === accountId);
         outOfScopeDeals = dealIds.length - validDeals.length;
-        const wonDeals = validDeals.filter(d => d.status === "won");
-        won = wonDeals.length;
-        wonValue = wonDeals.reduce((s, d) => s + Number(d.value || 0), 0);
+        for (const d of validDeals.filter(d => d.status === "won")) {
+          wonDealIds.add(d.id);
+          wonDealsMap.set(d.id, { value: Number(d.value || 0) });
+        }
       }
+      if (leadIds.length) {
+        const { data: leadDeals } = await supabase
+          .from("deals")
+          .select("id, status, value, lead_id")
+          .eq("account_id", accountId)
+          .eq("status", "won")
+          .in("lead_id", leadIds);
+        for (const d of leadDeals || []) {
+          if (!wonDealIds.has(d.id)) {
+            wonDealIds.add(d.id);
+            wonDealsMap.set(d.id, { value: Number(d.value || 0) });
+          }
+        }
+      }
+      won = wonDealIds.size;
+      wonValue = Array.from(wonDealsMap.values()).reduce((s, d) => s + d.value, 0);
 
       const periodCompletionRate = submissions ? (completed / submissions) * 100 : 0;
       const avgTime = aggAvgWeight ? Math.round(aggAvgWeighted / aggAvgWeight) : 0;
