@@ -49,6 +49,8 @@ export function TypeformDashboard() {
   const [selectedForm, setSelectedForm] = useState<string>('');
   const [period, setPeriod] = useState(30);
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
+  const [wonDeals, setWonDeals] = useState<any[]>([]);
+  const [wonOpen, setWonOpen] = useState(false);
   const [consistency, setConsistency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingFunnel, setLoadingFunnel] = useState(false);
