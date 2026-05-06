@@ -174,6 +174,9 @@ export default function Dashboard() {
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [gestaoDatePickerOpen, setGestaoDatePickerOpen] = useState(false);
   const [gestaoViewMode, setGestaoViewMode] = useState<"operacoes" | "comercial">("operacoes");
+  const [gestaoExitTypeFilter, setGestaoExitTypeFilter] = useState<"all" | "cancelled" | "ended">("all");
+  const showCancelamentos = gestaoViewMode === "operacoes" && gestaoExitTypeFilter !== "ended";
+  const showEncerramentos = gestaoViewMode === "operacoes" && gestaoExitTypeFilter !== "cancelled";
 
   // Focus mode states
   const [isFocusMode, setIsFocusMode] = useState(false);
@@ -367,27 +370,41 @@ export default function Dashboard() {
     paused: gestaoFilteredClients.filter(c => c.status === "paused").length,
   }), [gestaoFilteredClients]);
 
+  // Helper to sum exit counts based on the active filter (cancel only / ended only / both)
+  const sumExits = (m: { cancelamentos: number; encerramentos: number }) => {
+    if (gestaoExitTypeFilter === "cancelled") return m.cancelamentos;
+    if (gestaoExitTypeFilter === "ended") return m.encerramentos;
+    return m.cancelamentos + m.encerramentos;
+  };
+
   // Retention metrics (within filtered period)
   const retentionMetrics = useMemo(() => {
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
-    const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
+    const cancelamentos = monthlyChartData.reduce((sum, m) => sum + sumExits(m), 0);
     const total = (contractStats?.active ?? gestaoClientStats.active) + cancelamentos;
     const rate = total > 0 ? Math.round(((total - cancelamentos) / total) * 100) : 100;
     return { rate, novos, cancelamentos };
-  }, [monthlyChartData, contractStats, gestaoClientStats]);
+  }, [monthlyChartData, contractStats, gestaoClientStats, gestaoExitTypeFilter]);
 
   // Lost financial value (within filtered period)
   const lostContracts = useMemo(() => {
     const periodStart = gestaoPeriodRange.periodStart;
     const periodEnd = gestaoPeriodRange.periodEnd;
+    const cancelStatuses = ["cancelled", "dismissed", "dropout_7d"];
+    const allowed =
+      gestaoExitTypeFilter === "cancelled"
+        ? cancelStatuses
+        : gestaoExitTypeFilter === "ended"
+        ? ["ended"]
+        : [...cancelStatuses, "ended"];
     return contractData.filter(contract => {
-      if (!["cancelled", "dismissed", "dropout_7d", "ended"].includes(contract.status)) return false;
+      if (!allowed.includes(contract.status)) return false;
       const exitDate = contract.cancelled_at || contract.status_changed_at || contract.end_date;
       if (!exitDate) return false;
       const date = parseISO(exitDate);
       return date >= periodStart && date <= periodEnd;
     });
-  }, [contractData, gestaoPeriodRange]);
+  }, [contractData, gestaoPeriodRange, gestaoExitTypeFilter]);
 
   const lostFinancialValue = useMemo(() => {
     const totalLost = lostContracts.reduce((sum, c) => sum + (c.value || 0), 0);
@@ -448,12 +465,12 @@ export default function Dashboard() {
 
   // Churn rate within filtered period: cancellations / active contracts base
   const churnMetrics = useMemo(() => {
-    const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
+    const cancelamentos = monthlyChartData.reduce((sum, m) => sum + sumExits(m), 0);
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
     const activeBase = contractStats?.active ?? gestaoClientStats.active;
     const rate = activeBase > 0 ? (cancelamentos / activeBase) * 100 : 0;
     return { rate, cancelamentos, novos, activeBase };
-  }, [monthlyChartData, contractStats, gestaoClientStats]);
+  }, [monthlyChartData, contractStats, gestaoClientStats, gestaoExitTypeFilter]);
 
   // Renewal rate within filtered period: renewed / (renewed + lost)
   const { data: renewalData } = useQuery({
@@ -660,6 +677,18 @@ export default function Dashboard() {
                 <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
+            {gestaoViewMode === "operacoes" && (
+              <Select value={gestaoExitTypeFilter} onValueChange={(v) => setGestaoExitTypeFilter(v as any)}>
+                <SelectTrigger className="w-[140px] sm:w-[170px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
+                  <SelectValue placeholder="Tipo de saída" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Cancel. + Encerr.</SelectItem>
+                  <SelectItem value="cancelled">Só cancelamentos</SelectItem>
+                  <SelectItem value="ended">Só encerramentos</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             {gestaoPeriodFilter === "custom" && (
               <Popover open={gestaoDatePickerOpen} onOpenChange={setGestaoDatePickerOpen}>
                 <PopoverTrigger asChild>
@@ -1081,7 +1110,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Cancelamentos */}
-            {gestaoViewMode === "operacoes" && (
+            {showCancelamentos && (
             <Card 
               className={`shadow-card border-l-4 border-l-danger ${showCancellationAnalytics ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
               onClick={showCancellationAnalytics ? () => setCancellationModalOpen(true) : undefined}
@@ -1099,7 +1128,7 @@ export default function Dashboard() {
             )}
 
             {/* Encerramentos */}
-            {gestaoViewMode === "operacoes" && (
+            {showEncerramentos && (
             <Card className="shadow-card border-l-4 border-l-warning">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -1235,6 +1264,7 @@ export default function Dashboard() {
                   />
                   {gestaoViewMode === "operacoes" && (
                     <>
+                      {showCancelamentos && (
                       <Bar 
                         dataKey="cancelamentos" 
                         fill="url(#cancelamentosGradient)" 
@@ -1243,6 +1273,8 @@ export default function Dashboard() {
                         animationDuration={800}
                         animationEasing="ease-out"
                       />
+                      )}
+                      {showEncerramentos && (
                       <Bar 
                         dataKey="encerramentos" 
                         fill="url(#encerramentosGradient)" 
@@ -1251,6 +1283,7 @@ export default function Dashboard() {
                         animationDuration={800}
                         animationEasing="ease-out"
                       />
+                      )}
                       <Bar 
                         dataKey="suspensos" 
                         fill="url(#suspensosGradient)" 
@@ -1447,7 +1480,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {gestaoViewMode === "operacoes" && (
+              {showCancelamentos && (
               <Card className="border-l-4 border-l-destructive">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -1461,7 +1494,7 @@ export default function Dashboard() {
               </Card>
               )}
 
-              {gestaoViewMode === "operacoes" && (
+              {showEncerramentos && (
               <Card className="border-l-4 border-l-warning">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -1556,8 +1589,8 @@ export default function Dashboard() {
                     <Bar dataKey="novos" fill="url(#focusNovosGradient)" radius={[6, 6, 0, 0]} name="Novos" />
                     {gestaoViewMode === "operacoes" && (
                       <>
-                        <Bar dataKey="cancelamentos" fill="url(#focusCancelamentosGradient)" radius={[6, 6, 0, 0]} name="Cancelamentos" />
-                        <Bar dataKey="encerramentos" fill="url(#focusEncerramentosGradient)" radius={[6, 6, 0, 0]} name="Encerramentos" />
+                        {showCancelamentos && <Bar dataKey="cancelamentos" fill="url(#focusCancelamentosGradient)" radius={[6, 6, 0, 0]} name="Cancelamentos" />}
+                        {showEncerramentos && <Bar dataKey="encerramentos" fill="url(#focusEncerramentosGradient)" radius={[6, 6, 0, 0]} name="Encerramentos" />}
                         <Bar dataKey="suspensos" fill="url(#focusSuspensosGradient)" radius={[6, 6, 0, 0]} name="Suspensos" />
                         <Bar dataKey="pausados" fill="url(#focusPausadosGradient)" radius={[6, 6, 0, 0]} name="Pausados" />
                       </>
