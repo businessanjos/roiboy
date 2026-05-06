@@ -1,13 +1,12 @@
 // @ts-nocheck
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { canonicalEmail } from "../_shared/email-normalize.ts";
+import { canonicalE164, phoneVariants, phoneCoreKey } from "../_shared/phone-normalize.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, typeform-signature",
 };
-
-function normPhone(p?: string | null) { return (p || "").replace(/\D/g, "").replace(/^0+/, ""); }
-function normEmail(e?: string | null) { return (e || "").trim().toLowerCase(); }
 
 function extractContact(answers: any[] = []) {
   let email = "", phone = "", full_name = "";
@@ -23,7 +22,11 @@ function extractContact(answers: any[] = []) {
       }
     }
   }
-  return { email: normEmail(email), phone: normPhone(phone), full_name };
+  return {
+    email: canonicalEmail(email) || "",
+    phone: canonicalE164(phone) || "",
+    full_name,
+  };
 }
 
 async function verifySig(req: Request, raw: string, secret: string) {
@@ -74,7 +77,7 @@ Deno.serve(async (req) => {
 
   await supabase.from("typeform_responses").upsert(row, { onConflict: "form_id,response_id" });
 
-  // Match
+  // Match — uses canonical email (case-insensitive) + phone variants (BR 9-digit / DDI tolerant).
   let leadId = null, dealId = null, method = null;
   if (email) {
     const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).ilike("email", email).limit(1).maybeSingle();
@@ -84,15 +87,32 @@ Deno.serve(async (req) => {
       if (d) { dealId = d.id; method = "email"; }
     }
   }
-  if ((!leadId && !dealId) && phone) {
-    const suffix = phone.slice(-9);
-    const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(50);
-    const m = (l || []).find((x: any) => normPhone(x.phone).endsWith(suffix));
-    if (m) { leadId = m.id; method = "phone"; }
-    if (!leadId) {
-      const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(50);
-      const dm = (d || []).find((x: any) => normPhone(x.contact_phone).endsWith(suffix));
-      if (dm) { dealId = dm.id; method = "phone"; }
+  if (!leadId && !dealId && phone) {
+    const variants = phoneVariants(phone);
+    const coreKey = phoneCoreKey(phone);
+    if (variants.length) {
+      // Try exact-variant match first (cheap).
+      const { data: l } = await supabase
+        .from("leads").select("id, phone")
+        .eq("account_id", accountId).in("phone", variants).limit(1).maybeSingle();
+      if (l) { leadId = l.id; method = "phone"; }
+      if (!leadId) {
+        const { data: d } = await supabase
+          .from("deals").select("id, contact_phone")
+          .eq("account_id", accountId).in("contact_phone", variants).limit(1).maybeSingle();
+        if (d) { dealId = d.id; method = "phone"; }
+      }
+    }
+    // Fallback fuzzy by core key (DDD + last 8 digits).
+    if (!leadId && !dealId && coreKey) {
+      const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(200);
+      const m = (l || []).find((x: any) => phoneCoreKey(x.phone) === coreKey);
+      if (m) { leadId = m.id; method = "phone"; }
+      if (!leadId) {
+        const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(200);
+        const dm = (d || []).find((x: any) => phoneCoreKey(x.contact_phone) === coreKey);
+        if (dm) { dealId = dm.id; method = "phone"; }
+      }
     }
   }
 

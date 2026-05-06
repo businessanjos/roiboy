@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { canonicalEmail } from "../_shared/email-normalize.ts";
+import { canonicalE164, phoneVariants, phoneCoreKey } from "../_shared/phone-normalize.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,10 +11,12 @@ const corsHeaders = {
 const TF_API = "https://api.typeform.com";
 
 function normPhone(p?: string | null) {
+  // Legacy: digits-only fallback used only inside fuzzy comparisons that already
+  // also use phoneCoreKey/canonicalE164 for the canonical path.
   return (p || "").replace(/\D/g, "").replace(/^0+/, "");
 }
 function normEmail(e?: string | null) {
-  return (e || "").trim().toLowerCase();
+  return canonicalEmail(e) || "";
 }
 
 async function tfFetch(path: string, token: string, init: RequestInit = {}) {
@@ -44,7 +48,11 @@ function extractContact(answers: any[] = []) {
       }
     }
   }
-  return { email: normEmail(email), phone: normPhone(phone), full_name };
+  return {
+    email: normEmail(email),
+    phone: canonicalE164(phone) || "",
+    full_name,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -248,9 +256,13 @@ Deno.serve(async (req) => {
       }
 
       // ---- LIVE cross by email/phone (covers responses whose match_* IDs are stale or never set) ----
-      const normP = (p: string) => (p || "").replace(/\D/g, "");
-      const emails = Array.from(new Set(cleanRows.map(r => (r.email || "").toLowerCase().trim()).filter(Boolean)));
-      const phoneSuffixes = Array.from(new Set(cleanRows.map(r => normP(r.phone)).filter(p => p.length >= 9).map(p => p.slice(-9))));
+      const emails = Array.from(new Set(cleanRows.map(r => normEmail(r.email)).filter(Boolean)));
+      // For phones we use core key (DDD + last 8) to be tolerant to BR 9th digit / DDI variations.
+      const phoneKeys = new Set<string>();
+      for (const r of cleanRows) {
+        const k = phoneCoreKey(r.phone);
+        if (k) phoneKeys.add(k);
+      }
 
       let wonByEmail = 0, wonByPhone = 0;
       if (emails.length) {
@@ -272,8 +284,8 @@ Deno.serve(async (req) => {
           }
         }
       }
-      if (phoneSuffixes.length) {
-        // can't IN on suffix; fetch all won deals with phone for account (small set typically)
+      if (phoneKeys.size) {
+        // can't IN on derived key; fetch all won deals with phone for account (small set typically)
         const { data: phoneDeals } = await supabase
           .from("deals")
           .select("id, status, value, contact_phone")
@@ -281,10 +293,9 @@ Deno.serve(async (req) => {
           .eq("status", "won")
           .not("contact_phone", "is", null)
           .limit(5000);
-        const suffixSet = new Set(phoneSuffixes);
         for (const d of phoneDeals || []) {
-          const suf = normP(d.contact_phone).slice(-9);
-          if (suf && suffixSet.has(suf) && !wonDealIds.has(d.id)) {
+          const key = phoneCoreKey(d.contact_phone);
+          if (key && phoneKeys.has(key) && !wonDealIds.has(d.id)) {
             wonDealIds.add(d.id);
             wonDealsMap.set(d.id, { value: Number(d.value || 0) });
             wonByPhone++;
@@ -429,13 +440,25 @@ async function processResponses(supabase: any, accountId: string, formId: string
       }
     }
     if (!leadId && !dealId && row.phone) {
-      const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(50);
-      const match = (l || []).find((x: any) => normPhone(x.phone).endsWith(row.phone.slice(-9)) || row.phone.endsWith(normPhone(x.phone).slice(-9)));
-      if (match) { leadId = match.id; method = "phone"; }
-      if (!leadId) {
-        const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(50);
-        const dm = (d || []).find((x: any) => normPhone(x.contact_phone).endsWith(row.phone.slice(-9)) || row.phone.endsWith(normPhone(x.contact_phone).slice(-9)));
-        if (dm) { dealId = dm.id; method = "phone"; }
+      const variants = phoneVariants(row.phone);
+      const coreKey = phoneCoreKey(row.phone);
+      if (variants.length) {
+        const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).in("phone", variants).limit(1).maybeSingle();
+        if (l) { leadId = l.id; method = "phone"; }
+        if (!leadId) {
+          const { data: d } = await supabase.from("deals").select("id").eq("account_id", accountId).in("contact_phone", variants).limit(1).maybeSingle();
+          if (d) { dealId = d.id; method = "phone"; }
+        }
+      }
+      if (!leadId && !dealId && coreKey) {
+        const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(200);
+        const m = (l || []).find((x: any) => phoneCoreKey(x.phone) === coreKey);
+        if (m) { leadId = m.id; method = "phone"; }
+        if (!leadId) {
+          const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(200);
+          const dm = (d || []).find((x: any) => phoneCoreKey(x.contact_phone) === coreKey);
+          if (dm) { dealId = dm.id; method = "phone"; }
+        }
       }
     }
     if (leadId || dealId) {
