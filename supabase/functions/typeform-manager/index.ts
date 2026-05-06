@@ -228,119 +228,86 @@ Deno.serve(async (req) => {
       const wonDealIds = new Set<string>();
       const wonDealsMap = new Map<string, { value: number }>();
 
-      if (dealIds.length) {
-        const { data: deals } = await supabase
-          .from("deals")
-          .select("id, status, value, account_id")
-          .eq("account_id", accountId)
-          .in("id", dealIds);
-        const validDeals = (deals || []).filter(d => d.account_id === accountId);
-        outOfScopeDeals = dealIds.length - validDeals.length;
-        for (const d of validDeals.filter(d => d.status === "won")) {
-          wonDealIds.add(d.id);
-          wonDealsMap.set(d.id, { value: Number(d.value || 0) });
-        }
-      }
-      if (leadIds.length) {
-        const { data: leadDeals } = await supabase
-          .from("deals")
-          .select("id, status, value, lead_id")
-          .eq("account_id", accountId)
-          .eq("status", "won")
-          .in("lead_id", leadIds);
-        for (const d of leadDeals || []) {
-          if (!wonDealIds.has(d.id)) {
-            wonDealIds.add(d.id);
-            wonDealsMap.set(d.id, { value: Number(d.value || 0) });
-          }
-        }
-      }
-
-      // ---- LIVE cross by email/phone (covers responses whose match_* IDs are stale or never set) ----
+      // Build the universal lookup sets from the responses in scope.
       const emails = Array.from(new Set(cleanRows.map(r => normEmail(r.email)).filter(Boolean)));
-      // For phones we use core key (DDD + last 8) to be tolerant to BR 9th digit / DDI variations.
+      const emailSet = new Set(emails);
       const phoneKeys = new Set<string>();
       for (const r of cleanRows) {
         const k = phoneCoreKey(r.phone);
         if (k) phoneKeys.add(k);
       }
+      const dealIdSet = new Set(dealIds);
+      const leadIdSet = new Set(leadIds);
 
-      let wonByEmail = 0, wonByPhone = 0;
-      let wonByLeadLookup = 0;
-      // Fetch ALL won deals for the account once and cross-match in memory.
-      // Avoids case-sensitivity pitfalls of `.in("contact_email", ...)` and
-      // captures phone variants robustly via phoneCoreKey.
-      const emailSet = new Set(emails);
-      if (emailSet.size || phoneKeys.size) {
-        const allWonDeals = await fetchAllWonDeals(() =>
-          supabase
-            .from("deals")
-            .select("id, status, value, contact_email, contact_phone, lead_id")
+      // Fetch ALL won deals for the account ONCE (paginated) and cross-match
+      // entirely in memory. This avoids URL-length blowups on `.in(lead_id, [...])`
+      // (which silently truncate above ~30 IDs on PostgREST) and case-sensitivity
+      // issues on `.in(contact_email, [...])`.
+      let wonByDirectDeal = 0, wonByLead = 0, wonByEmail = 0, wonByPhone = 0, wonByLeadEmailPhone = 0;
+      const allWonDeals = await fetchAllWonDeals(() =>
+        supabase
+          .from("deals")
+          .select("id, status, value, contact_email, contact_phone, lead_id")
+          .eq("account_id", accountId)
+          .eq("status", "won")
+      );
+
+      // Pre-load leads attached to won deals so we can fall back to lead.email / lead.phone
+      // (many older deals have NULL contact_email / contact_phone).
+      const wonLeadIds = Array.from(new Set(allWonDeals.map(d => d.lead_id).filter(Boolean)));
+      const leadInfoById = new Map<string, { email: string; phoneKey: string | null }>();
+      if (wonLeadIds.length) {
+        const PAGE = 200;
+        for (let i = 0; i < wonLeadIds.length; i += PAGE) {
+          const slice = wonLeadIds.slice(i, i + PAGE);
+          const { data: leads } = await supabase
+            .from("leads")
+            .select("id, email, phone")
             .eq("account_id", accountId)
-            .eq("status", "won")
-        );
-        const result = crossMatchWonDeals(allWonDeals, emailSet, phoneKeys, wonDealIds);
-        for (const id of result.matchedIds) wonDealIds.add(id);
-        for (const [id, value] of result.matchedValueById) {
-          if (!wonDealsMap.has(id)) wonDealsMap.set(id, { value });
-        }
-        wonByEmail += result.wonByEmail;
-        wonByPhone += result.wonByPhone;
-
-        // ---- EXTRA: many deals don't carry contact_email/contact_phone — the data
-        // lives on the lead. Find leads matching the form responses (by email/phone)
-        // and then mark their won deals as matched.
-        const leadIdSet = new Set<string>();
-        // Match leads by email (case-insensitive: emails are already canonicalEmail'd)
-        if (emailSet.size) {
-          const emailArr = Array.from(emailSet);
-          const pageSize = 500;
-          for (let i = 0; i < emailArr.length; i += pageSize) {
-            const slice = emailArr.slice(i, i + pageSize);
-            const { data: leadsByEmail } = await supabase
-              .from("leads")
-              .select("id, email")
-              .eq("account_id", accountId)
-              .in("email", slice);
-            for (const l of leadsByEmail || []) leadIdSet.add(l.id);
-          }
-          // Also try lowercase via ilike fallback (in case some leads stored mixed case)
-          // Skipped to avoid 500-element OR; canonicalization on ingestion covers new rows.
-        }
-        // Match leads by phone variants
-        if (phoneKeys.size) {
-          // Build all phone variants for any response phone we know
-          const allPhoneVariants = new Set<string>();
-          for (const r of cleanRows) {
-            for (const v of phoneVariants(r.phone)) allPhoneVariants.add(v);
-          }
-          if (allPhoneVariants.size) {
-            const phoneArr = Array.from(allPhoneVariants);
-            const pageSize = 500;
-            for (let i = 0; i < phoneArr.length; i += pageSize) {
-              const slice = phoneArr.slice(i, i + pageSize);
-              const { data: leadsByPhone } = await supabase
-                .from("leads")
-                .select("id, phone")
-                .eq("account_id", accountId)
-                .in("phone", slice);
-              for (const l of leadsByPhone || []) leadIdSet.add(l.id);
-            }
-          }
-        }
-
-        if (leadIdSet.size) {
-          for (const d of allWonDeals) {
-            if (!d.lead_id || wonDealIds.has(d.id)) continue;
-            if (leadIdSet.has(d.lead_id)) {
-              wonDealIds.add(d.id);
-              wonDealsMap.set(d.id, { value: Number(d.value || 0) });
-              wonByLeadLookup++;
-            }
+            .in("id", slice);
+          for (const l of leads || []) {
+            leadInfoById.set(l.id, {
+              email: normEmail(l.email),
+              phoneKey: phoneCoreKey(l.phone) || null,
+            });
           }
         }
       }
-      console.log(`[typeform-manager] match breakdown: byEmail=${wonByEmail}, byPhone=${wonByPhone}, byLeadLookup=${wonByLeadLookup}, total=${wonDealIds.size}`);
+
+      for (const d of allWonDeals) {
+        if (wonDealIds.has(d.id)) continue;
+        const reasons: string[] = [];
+        if (dealIdSet.has(d.id)) reasons.push("direct");
+        if (d.lead_id && leadIdSet.has(d.lead_id)) reasons.push("lead");
+        const dealEmail = normEmail(d.contact_email);
+        if (dealEmail && emailSet.has(dealEmail)) reasons.push("email");
+        const dealPhoneKey = phoneCoreKey(d.contact_phone || "");
+        if (dealPhoneKey && phoneKeys.has(dealPhoneKey)) reasons.push("phone");
+        if (!reasons.length && d.lead_id) {
+          const li = leadInfoById.get(d.lead_id);
+          if (li) {
+            if (li.email && emailSet.has(li.email)) reasons.push("lead_email");
+            else if (li.phoneKey && phoneKeys.has(li.phoneKey)) reasons.push("lead_phone");
+          }
+        }
+        if (reasons.length) {
+          wonDealIds.add(d.id);
+          wonDealsMap.set(d.id, { value: Number(d.value || 0) });
+          if (reasons[0] === "direct") wonByDirectDeal++;
+          else if (reasons[0] === "lead") wonByLead++;
+          else if (reasons[0] === "email") wonByEmail++;
+          else if (reasons[0] === "phone") wonByPhone++;
+          else wonByLeadEmailPhone++;
+        }
+      }
+
+      // outOfScopeDeals: number of matched_deal_id values that don't belong to this account.
+      if (dealIds.length) {
+        const knownIds = new Set(allWonDeals.map(d => d.id));
+        outOfScopeDeals = dealIds.filter(id => !knownIds.has(id) && !wonDealIds.has(id)).length;
+      }
+
+      console.log(`[typeform-manager] match breakdown: direct=${wonByDirectDeal}, viaLead=${wonByLead}, viaDealEmail=${wonByEmail}, viaDealPhone=${wonByPhone}, viaLeadContact=${wonByLeadEmailPhone}, total=${wonDealIds.size}, allWonInAccount=${allWonDeals.length}`);
 
       won = wonDealIds.size;
       wonValue = Array.from(wonDealsMap.values()).reduce((s, d) => s + d.value, 0);
