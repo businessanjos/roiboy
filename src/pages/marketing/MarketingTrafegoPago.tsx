@@ -96,13 +96,13 @@ export default function MarketingTrafegoPago() {
     if (!accounts.length) { toast.error('Nenhuma conta de anúncios'); return; }
     setSyncing(true);
     try {
-      const { data, error: e } = await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: accounts[0].id, datePreset: period } });
+      const { data, error: e } = await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: accounts[0].id, ...periodPayload } });
       if (e) throw e;
       if (data?.error) toast.error(data.error);
       else { toast.success(`${data?.count || 0} campanhas sincronizadas!`); await fetchAdSets(); }
     } catch (err) { console.error(err); toast.error('Erro ao sincronizar'); }
     finally { setSyncing(false); }
-  }, [accounts, period, fetchAdSets]);
+  }, [accounts, periodPayload, fetchAdSets]);
 
   useEffect(() => {
     if (accounts.length > 0 && (!selectedAccount || !accounts.find(a => a.id === selectedAccount))) {
@@ -112,16 +112,17 @@ export default function MarketingTrafegoPago() {
 
   const loadInsights = useCallback(async () => {
     if (!selectedAccount) return;
+    if (isCustom && !customReady) return;
     setLoadingInsights(true);
     try {
-      const { data, error: e } = await supabase.functions.invoke('get-audience-insights', { body: { adAccountId: selectedAccount, datePreset: period } });
+      const { data, error: e } = await supabase.functions.invoke('get-audience-insights', { body: { adAccountId: selectedAccount, ...periodPayload } });
       if (e) throw e;
       setInsights(data?.insights || null);
     } catch { setInsights(null); }
     finally { setLoadingInsights(false); }
-  }, [selectedAccount, period]);
+  }, [selectedAccount, periodPayload, isCustom, customReady]);
 
-  useEffect(() => { if (selectedAccount && isConnected) loadInsights(); }, [selectedAccount, period, isConnected, loadInsights]);
+  useEffect(() => { if (selectedAccount && isConnected) loadInsights(); }, [selectedAccount, isConnected, loadInsights]);
   useEffect(() => { if (isConnected) fetchAdSets(); }, [isConnected, fetchAdSets]);
   useEffect(() => {
     if (isConnected && !loading && adSets.length === 0 && accounts.length > 0) syncCampaigns();
