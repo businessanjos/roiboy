@@ -492,6 +492,14 @@ export function CsIncentivePlanSection() {
                         <div className="text-xs font-medium truncate">{c.name}</div>
                         <div className="text-[10px] text-muted-foreground">{c.role_label}</div>
                       </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-[10px] text-muted-foreground leading-none">
+                          Recebido Q{currentQuarter}
+                        </div>
+                        <div className="text-xs font-semibold text-amber-500 leading-tight">
+                          {formatBRL(quarterPayouts[c.user_id] || 0)}
+                        </div>
+                      </div>
                       <Input
                         type="number"
                         step="0.1"
