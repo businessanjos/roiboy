@@ -216,13 +216,14 @@ Deno.serve(async (req) => {
       // Period responses across scope
       let rows: any[] = [];
       if (scopeFormIds.length) {
-        const { data: responses } = await supabase
+        let q = supabase
           .from("typeform_responses")
           .select("id, form_id, account_id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id")
           .eq("account_id", accountId)
           .in("form_id", scopeFormIds)
-          .gte("created_at", since)
-          .limit(20000);
+          .gte("created_at", since);
+        if (untilISO) q = q.lte("created_at", untilISO);
+        const { data: responses } = await q.limit(20000);
         rows = responses || [];
       }
 
