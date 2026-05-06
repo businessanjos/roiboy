@@ -291,8 +291,62 @@ Deno.serve(async (req) => {
         }
       }
 
+      // ---- Origem da Venda gating ----
+      // Build a set of allowed won deal IDs whose "Origem da Venda" custom field
+      // contains at least one of the form scope tags (e.g. [TRAF-IMP-EC]).
+      // If no tag could be extracted, we skip this gate (back-compat).
+      const originAllowedDealIds = new Set<string>();
+      let originGateActive = false;
+      if (scopeTags.size && allWonDeals.length) {
+        originGateActive = true;
+        const { data: origemField } = await supabase
+          .from("custom_fields")
+          .select("id, field_type, options")
+          .eq("account_id", accountId)
+          .eq("name", "Origem da Venda")
+          .eq("is_active", true)
+          .maybeSingle();
+        if (origemField?.id) {
+          // value -> label map for select/multi_select stored values
+          const optionsMap: Record<string, string> = {};
+          if (Array.isArray(origemField.options)) {
+            for (const opt of origemField.options as Array<{ value: string; label: string }>) {
+              optionsMap[opt.value] = opt.label;
+            }
+          }
+          const labelMatchesScope = (label: string) => {
+            const m = (label || "").match(/\[([^\]]+)\]/);
+            const tag = (m ? m[1] : label || "").trim().toUpperCase();
+            return tag && scopeTags.has(tag);
+          };
+          const wonIds = allWonDeals.map(d => d.id);
+          const PAGE = 200;
+          for (let i = 0; i < wonIds.length; i += PAGE) {
+            const slice = wonIds.slice(i, i + PAGE);
+            const { data: fvs } = await supabase
+              .from("deal_field_values")
+              .select("deal_id, value_text, value_json")
+              .eq("field_id", origemField.id)
+              .in("deal_id", slice);
+            for (const fv of fvs || []) {
+              const labels: string[] = [];
+              if (origemField.field_type === "multi_select" && Array.isArray(fv.value_json)) {
+                for (const v of fv.value_json as string[]) labels.push(optionsMap[v] || v);
+              } else if (origemField.field_type === "select" && fv.value_text) {
+                labels.push(optionsMap[fv.value_text] || fv.value_text);
+              } else if (fv.value_text) {
+                labels.push(fv.value_text);
+              }
+              if (labels.some(labelMatchesScope)) originAllowedDealIds.add(fv.deal_id);
+            }
+          }
+        }
+      }
+
       for (const d of allWonDeals) {
         if (wonDealIds.has(d.id)) continue;
+        // Origem gate: when active, deal must have Origem da Venda containing one of the form tags.
+        if (originGateActive && !originAllowedDealIds.has(d.id)) continue;
         const reasons: string[] = [];
         if (dealIdSet.has(d.id)) reasons.push("direct");
         if (d.lead_id && leadIdSet.has(d.lead_id)) reasons.push("lead");
@@ -307,6 +361,9 @@ Deno.serve(async (req) => {
             else if (li.phoneKey && phoneKeys.has(li.phoneKey)) reasons.push("lead_phone");
           }
         }
+        // When the Origem gate is active and the deal passes it, also accept
+        // "origem-only" matches even without email/phone reinforcement.
+        if (!reasons.length && originGateActive) reasons.push("origem");
         if (reasons.length) {
           wonDealIds.add(d.id);
           wonDealsMap.set(d.id, { value: Number(d.value || 0) });
