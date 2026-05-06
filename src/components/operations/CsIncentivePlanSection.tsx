@@ -1059,13 +1059,22 @@ function BonusSimulator({
           <Input value={formatBRL(baseSalary)} disabled />
         </div>
         <div>
-          <Label className="text-xs">Desconto por churn (R$)</Label>
+          <Label className="text-xs">% de churn</Label>
           <Input
             type="number"
-            value={churnDiscount ?? ""}
-            onChange={(e) => setChurnDiscount(parseNumberInput(e.target.value))}
-            placeholder="Ex: 200"
+            value={churnPct ?? ""}
+            onChange={(e) => setChurnPct(parseNumberInput(e.target.value))}
+            placeholder="Ex: 12"
+            disabled={!churnPenaltyEnabled}
           />
+          <p className="text-[10px] text-muted-foreground mt-1">
+            {churnPenaltyEnabled
+              ? `Acima de ${churnPenaltyThreshold}% desconta ${churnPenaltyPercent}% do bônus.`
+              : "Penalidade por churn está desativada."}
+            {churnTriggered && (
+              <span className="text-rose-600"> Desconto aplicado: −{formatBRL(churnDiscountValue)}</span>
+            )}
+          </p>
         </div>
       </div>
 
