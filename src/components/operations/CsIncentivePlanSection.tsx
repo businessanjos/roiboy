@@ -250,7 +250,7 @@ export function CsIncentivePlanSection() {
       churn_penalty_threshold: toNumber(form.churn_penalty_threshold),
       churn_penalty_percent: toNumber(form.churn_penalty_percent),
       bonus_budget_amount: toNumber(form.bonus_budget_amount),
-      bonus_distribution_method: "equal",
+      bonus_distribution_method: "equal" as const,
       bonus_distribution_shares: {},
     };
     const saved = await savePlan.mutateAsync(normalizedForm);
