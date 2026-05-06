@@ -61,37 +61,40 @@ export const ZappTimezoneBanner = memo(function ZappTimezoneBanner({
     >
       {/* Faixa lateral colorida com cores da bandeira */}
       <div
-        className="w-1.5 sm:w-2 shrink-0"
+        className="w-2 sm:w-2.5 shrink-0"
         style={{ background: stripeGradient }}
         aria-hidden
       />
 
       <div
-        className="flex-1 px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm min-w-0"
+        className="flex-1 px-3 sm:px-4 py-2.5 flex items-center gap-2.5 sm:gap-3 text-sm sm:text-sm min-w-0"
         style={{ color: colors.text }}
       >
-        <span className="text-base sm:text-lg leading-none" aria-hidden>
+        <span className="text-lg sm:text-xl leading-none" aria-hidden>
           {country.flag}
         </span>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0 flex-1">
-          <span className="font-medium truncate">
+          <span className="font-semibold truncate text-sm sm:text-sm">
             Cliente internacional · {country.name}
           </span>
-          <span className="flex items-center gap-1 text-[11px] sm:text-xs opacity-90">
-            <Clock className="h-3 w-3" />
-            {localTime} ({offsetLabel})
-            <Globe2 className="h-3 w-3 ml-1 opacity-70" />
-            <span className="hidden sm:inline opacity-80">{tz}</span>
+          <span className="flex items-center gap-1 text-xs sm:text-xs">
+            <Clock className="h-3.5 w-3.5" aria-hidden />
+            <span className="font-medium">
+              {localTime} ({offsetLabel})
+            </span>
+            <Globe2 className="h-3.5 w-3.5 ml-1" aria-hidden />
+            <span className="hidden sm:inline">{tz}</span>
           </span>
         </div>
 
         {offHours && (
           <span
-            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500 text-amber-950 font-semibold text-[11px] sm:text-xs whitespace-nowrap shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-400 text-amber-950 font-bold text-xs sm:text-xs whitespace-nowrap shadow-sm border border-amber-600/40"
             title={`Volta ao expediente em ${formatDurationShort(msUntilNextBusinessHour(tz, now))}`}
+            aria-label={`Fora do horário comercial. Volta em ${formatDurationShort(msUntilNextBusinessHour(tz, now))}`}
           >
-            <AlertTriangle className="h-3 w-3" />
+            <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
             <span className="hidden sm:inline">Fora do horário ·</span>
             <span className="sm:hidden">Off ·</span>
             volta em {formatDurationShort(msUntilNextBusinessHour(tz, now))}
