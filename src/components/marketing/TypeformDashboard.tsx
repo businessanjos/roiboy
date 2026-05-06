@@ -394,6 +394,55 @@ export function TypeformDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={wonOpen} onOpenChange={setWonOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col gap-0 p-0">
+          <DialogHeader className="p-6 pb-4 border-b border-border/40">
+            <DialogTitle className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-emerald-500" />
+              Ganhos cruzados com o Typeform
+            </DialogTitle>
+            <DialogDescription>
+              {wonDeals.length} deal{wonDeals.length === 1 ? '' : 's'} ganho{wonDeals.length === 1 ? '' : 's'} · {fmtBRL(wonDeals.reduce((s, d) => s + (d.value || 0), 0))} · respostas dos últimos {period}d
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-2">
+            {wonDeals.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhum match encontrado.</p>
+            ) : wonDeals.map((d) => (
+              <div key={d.id} className="p-3 rounded-md border border-border/40 hover:bg-muted/30 transition">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium truncate">{d.contact_name || d.title || 'Sem nome'}</p>
+                      <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                        match: {d.matched_by}
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                      {d.contact_email && <p className="truncate">📧 {d.contact_email}</p>}
+                      {d.contact_phone && <p className="truncate">📱 {d.contact_phone}</p>}
+                      {d.responsible_user_name && <p>👤 {d.responsible_user_name}</p>}
+                      {d.won_at && <p>🏆 Ganho em {new Date(d.won_at).toLocaleDateString('pt-BR')}</p>}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-emerald-500">{fmtBRL(d.value || 0)}</p>
+                    <Button variant="ghost" size="sm" asChild className="h-7 mt-1">
+                      <a href={`/sales?deal=${d.id}`} target="_blank" rel="noreferrer">
+                        Abrir <ExternalLink className="w-3 h-3 ml-1" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="p-4 border-t border-border/40">
+            <Button variant="outline" onClick={() => setWonOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
