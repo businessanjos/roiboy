@@ -281,8 +281,9 @@ export function TypeformDashboard() {
                       scope="period" label="Ganhos" value={funnel.won} icon={Trophy}
                       sub={fmtBRL(funnel.won_value)}
                       source="DB · deals (status=won)"
-                      tip="Quantos dos deals matched a partir das respostas do período estão atualmente com status='won' na tabela deals. Valor exibido = soma de deals.value desses deals ganhos. Deal IDs são deduplicados antes da consulta."
+                      tip="Quantos dos deals matched a partir das respostas do período estão atualmente com status='won' na tabela deals. Valor exibido = soma de deals.value desses deals ganhos. Deal IDs são deduplicados antes da consulta. Clique para ver a lista."
                       highlight
+                      onClick={funnel.won > 0 ? () => setWonOpen(true) : undefined}
                     />
                   </div>
                 </div>
