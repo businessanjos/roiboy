@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useCsIncentivePlans } from "@/hooks/useCsIncentivePlans";
@@ -14,12 +17,20 @@ import {
   Target,
   ShieldCheck,
   TrendingUp,
+  TrendingDown,
+  RefreshCw,
   Star,
   Flame,
   Gift,
   Users,
   Trophy,
   Rocket,
+  CalendarCheck,
+  Phone,
+  ClipboardList,
+  HeartHandshake,
+  AlarmClock,
+  LineChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
