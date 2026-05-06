@@ -91,7 +91,7 @@ export function TypeformDashboard() {
       setFunnel(data?.funnel || null);
       setConsistency(data?.consistency || null);
       setWonDeals(data?.won_deals || []);
-      if (data?.consistency && data.consistency.ok === false) {
+      if (data?.consistency && data.consistency.ok === false && (data.consistency.out_of_scope_responses ?? 0) > 0) {
         toast.warning(`Inconsistência detectada: ${data.consistency.out_of_scope_responses} resposta(s) fora do escopo do funil selecionado.`);
       }
     }
@@ -178,7 +178,7 @@ export function TypeformDashboard() {
                 </span>
                 {consistency && (
                   <span className="block pt-1">
-                    {consistency.ok ? (
+                    {consistency.ok || (consistency.out_of_scope_responses ?? 0) === 0 ? (
                       <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5" title={`${consistency.responses_in_scope} resposta(s) validada(s) em ${consistency.scope_form_ids?.length || 0} funil(is)`}>
                         ✓ Dados consistentes ({consistency.responses_in_scope} resp.)
                       </Badge>
@@ -241,7 +241,7 @@ export function TypeformDashboard() {
                 if (funnel.starts > 0 && funnel.completed > funnel.starts) {
                   issues.push(`Completados (${funnel.completed.toLocaleString('pt-BR')}) excedem Iniciados (${funnel.starts.toLocaleString('pt-BR')}) — Insights precisa ser ressincronizado.`);
                 }
-                if (consistency && consistency.ok === false) {
+                if (consistency && consistency.ok === false && (consistency.out_of_scope_responses ?? 0) > 0) {
                   issues.push(`${consistency.out_of_scope_responses} resposta(s) fora do escopo do funil selecionado foram descartadas do cálculo.`);
                 }
                 if (!issues.length) return null;
