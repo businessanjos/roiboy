@@ -887,6 +887,9 @@ export function CsIncentivePlanSection() {
             baseSalary={toNumber(form.base_salary_monthly)}
             tiers={draftTiers}
             scope={selectedScope}
+            churnPenaltyEnabled={!!form.churn_penalty_enabled}
+            churnPenaltyThreshold={toNumber(form.churn_penalty_threshold)}
+            churnPenaltyPercent={toNumber(form.churn_penalty_percent)}
           />
         </CardContent>
       </Card>
