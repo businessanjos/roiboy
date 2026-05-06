@@ -1264,49 +1264,55 @@ Deno.serve(async (req) => {
           // ============================================
           // PHONE NORMALIZATION FALLBACK (SAME INSTANCE ONLY)
           // ============================================
-          // Only try alternate phone format for BR numbers WITHIN THE SAME INSTANCE
-          // This preserves instance isolation while handling phone format variations
-          
-          if (!existingZappConvo && phone && phone.startsWith("+55") && phone.length === 14 && integrationId) {
-            const phoneWithout9 = phone.substring(0, 5) + phone.substring(6);
-            console.log(`[PHONE] Fallback: trying ${phoneWithout9} (removed 9th digit) for SAME integration ${integrationId}`);
-            
-            // Search WITH integration_id filter to maintain isolation
-            const { data: fallbackData } = await supabase
-              .from("zapp_conversations")
-              .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164, sector_id")
-              .eq("account_id", accountId)
-              .eq("phone_e164", phoneWithout9)
-              .eq("integration_id", integrationId)
-              .eq("is_group", false)
-              .maybeSingle();
-            
-            if (fallbackData) {
-              existingZappConvo = fallbackData;
-              console.log(`[PHONE] Found via fallback: old format ${phoneWithout9} in same instance, updating to ${phone}`);
-              
-              // Only update phone to normalized format (DO NOT change integration_id or sector_id)
-              await supabase
+          // Try ALL phone variants (with/without 9th digit, with/without DDI, with/without +)
+          // for BR numbers WITHIN THE SAME INSTANCE. This is bidirectional: handles both
+          // "incoming has 9th digit but DB stored without" AND "incoming missing 9th digit
+          // but DB stored with it" — preventing duplicate empty conversations.
+
+          if (!existingZappConvo && phone && integrationId) {
+            const variants = buildPhoneVariants(phone).filter((v) => v && v !== phone);
+            if (variants.length > 0) {
+              console.log(`[PHONE] Fallback: trying ${variants.length} variants of ${phone} for integration ${integrationId}`);
+
+              const { data: fallbackData } = await supabase
                 .from("zapp_conversations")
-                .update({ phone_e164: phone })
-                .eq("id", fallbackData.id);
-              
-              // Try to link client if not already linked
-              if (!fallbackData.client_id) {
-                const { data: clientMatch } = await supabase
-                  .from("clients")
-                  .select("id")
-                  .eq("account_id", accountId)
-                  .or(`phone_e164.eq.${phone},phone_e164.eq.${phoneWithout9}`)
-                  .limit(1)
-                  .maybeSingle();
-                
-                if (clientMatch) {
-                  await supabase
-                    .from("zapp_conversations")
-                    .update({ client_id: clientMatch.id })
-                    .eq("id", fallbackData.id);
-                  console.log(`[PHONE] Auto-linked client ${clientMatch.id} to conversation ${fallbackData.id}`);
+                .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164, sector_id")
+                .eq("account_id", accountId)
+                .in("phone_e164", variants)
+                .eq("integration_id", integrationId)
+                .eq("is_group", false)
+                .order("last_message_at", { ascending: false, nullsFirst: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (fallbackData) {
+                existingZappConvo = fallbackData;
+                console.log(`[PHONE] Found via variant fallback: ${fallbackData.phone_e164} → normalizing to ${phone}`);
+
+                // Update phone to canonical format (DO NOT change integration_id or sector_id)
+                await supabase
+                  .from("zapp_conversations")
+                  .update({ phone_e164: phone })
+                  .eq("id", fallbackData.id);
+
+                // Try to link client if not already linked
+                if (!fallbackData.client_id) {
+                  const clientVariants = buildPhoneVariants(phone);
+                  const { data: clientMatch } = await supabase
+                    .from("clients")
+                    .select("id")
+                    .eq("account_id", accountId)
+                    .in("phone_e164", clientVariants)
+                    .limit(1)
+                    .maybeSingle();
+
+                  if (clientMatch) {
+                    await supabase
+                      .from("zapp_conversations")
+                      .update({ client_id: clientMatch.id })
+                      .eq("id", fallbackData.id);
+                    console.log(`[PHONE] Auto-linked client ${clientMatch.id} to conversation ${fallbackData.id}`);
+                  }
                 }
               }
             }
