@@ -1003,8 +1003,17 @@ function BonusSimulator({
   const multiplier = matched ? toNumber(matched.multiplier) || 0 : 0;
   const attainmentPct = Math.round(multiplier * 100);
   const absoluteRenewals = Math.round((pct / 100) * totalRenewableContracts);
-  const churnVal = toNumber(churnDiscount);
-  const monthlyBonusValue = Math.max(0, monthlyBonus * multiplier - churnVal);
+
+  // Penalidade por churn: se ativada, ao ultrapassar o limite, aplica desconto
+  // de churn_penalty_percent (%) sobre o bônus do mês. Caso contrário, sem desconto.
+  const churnInput = toNumber(churnPct);
+  const churnTriggered =
+    churnPenaltyEnabled && churnInput > churnPenaltyThreshold;
+  const grossMonthlyBonus = monthlyBonus * multiplier;
+  const churnDiscountValue = churnTriggered
+    ? grossMonthlyBonus * (churnPenaltyPercent / 100)
+    : 0;
+  const monthlyBonusValue = Math.max(0, grossMonthlyBonus - churnDiscountValue);
   const quarterBonus = monthlyBonusValue * 3;
   const quarterSalary = baseSalary * 3;
   const quarterTotal = quarterSalary + quarterBonus;
