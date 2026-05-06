@@ -223,28 +223,70 @@ export function TypeformDashboard() {
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Adicionar formulário Typeform</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Selecionar formulários para acompanhar</DialogTitle>
+            <DialogDescription>
+              Marque os formulários que deseja rastrear em tempo real. O webhook é instalado automaticamente em cada um.
+            </DialogDescription>
+          </DialogHeader>
           <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium">Formulário</label>
-              {loadingAvailable ? <Skeleton className="h-9 mt-1" /> : (
-                <Select value={pickedForm} onValueChange={setPickedForm}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um formulário" /></SelectTrigger>
-                  <SelectContent>
-                    {availableForms.map(f => <SelectItem key={f.id} value={f.id}>{f.title}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            <div>
-              <label className="text-sm font-medium">Tag de campanha (opcional)</label>
-              <Input className="mt-1" value={campaignTag} onChange={e => setCampaignTag(e.target.value)} placeholder="ex: meta-blackfriday" />
-            </div>
+            {loadingAvailable ? (
+              <Skeleton className="h-64" />
+            ) : (
+              <>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    placeholder="Buscar formulário..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                  <span>{pickedForms.length} selecionado(s)</span>
+                  {pickedForms.length > 0 && (
+                    <button type="button" className="hover:underline" onClick={() => setPickedForms([])}>
+                      Limpar
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-[340px] overflow-y-auto border border-border/30 rounded-md divide-y divide-border/20">
+                  {availableForms
+                    .filter(f => !forms.some(t => t.form_id === f.id))
+                    .filter(f => !search || f.title.toLowerCase().includes(search.toLowerCase()))
+                    .map(f => {
+                      const checked = pickedForms.includes(f.id);
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => togglePicked(f.id)}
+                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
+                        >
+                          <Checkbox checked={checked} className="pointer-events-none" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{f.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">ID: {f.id}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  {availableForms.filter(f => !forms.some(t => t.form_id === f.id)).length === 0 && (
+                    <div className="p-6 text-center text-sm text-muted-foreground">
+                      Todos os seus formulários já estão sendo rastreados.
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
-            <Button onClick={addForm} disabled={!pickedForm}>Adicionar e instalar webhook</Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)} disabled={adding}>Cancelar</Button>
+            <Button onClick={addForm} disabled={!pickedForms.length || adding}>
+              {adding ? 'Adicionando...' : `Acompanhar ${pickedForms.length || ''} form${pickedForms.length === 1 ? '' : 's'}`}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
