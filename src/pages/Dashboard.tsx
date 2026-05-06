@@ -386,6 +386,19 @@ export default function Dashboard() {
     return { rate, novos, cancelamentos };
   }, [monthlyChartData, contractStats, gestaoClientStats, gestaoExitTypeFilter]);
 
+  // Period-scoped totals derived from the monthly chart data
+  const periodExitTotals = useMemo(() => {
+    return monthlyChartData.reduce(
+      (acc, m) => ({
+        cancelamentos: acc.cancelamentos + (m.cancelamentos || 0),
+        encerramentos: acc.encerramentos + (m.encerramentos || 0),
+        suspensos: acc.suspensos + (m.suspensos || 0),
+        pausados: acc.pausados + (m.pausados || 0),
+      }),
+      { cancelamentos: 0, encerramentos: 0, suspensos: 0, pausados: 0 },
+    );
+  }, [monthlyChartData]);
+
   // Lost financial value (within filtered period)
   const lostContracts = useMemo(() => {
     const periodStart = gestaoPeriodRange.periodStart;
