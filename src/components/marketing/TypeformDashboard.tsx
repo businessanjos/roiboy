@@ -382,15 +382,15 @@ export function TypeformDashboard() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · últimos {period}d</Badge>
+                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · {periodLabel}</Badge>
                     <span className="text-xs text-muted-foreground">filtrado pelo intervalo selecionado</span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <FunnelCard
                       scope="period" label="Submissões" value={funnel.submissions} icon={CheckCircle2}
-                      sub={`recebidas nos últimos ${period}d`}
+                      sub={`recebidas {periodLabel}`}
                       source="DB · typeform_responses"
-                      tip={`Total de respostas (completas + parciais) salvas no nosso banco via webhook nos últimos ${period} dias. Conta linhas em typeform_responses filtradas por form_id selecionado e created_at >= hoje-${period}d.`}
+                      tip={`Total de respostas (completas + parciais) salvas no nosso banco via webhook ${periodLabel}. Conta linhas em typeform_responses filtradas por form_id selecionado e janela: ${periodLabel}.`}
                       onDetails={() => setDetailsCard({
                         label: 'Submissões',
                         source: 'DB · typeform_responses',
@@ -594,7 +594,7 @@ export function TypeformDashboard() {
               Ganhos cruzados com o Typeform
             </DialogTitle>
             <DialogDescription>
-              {wonDeals.length} deal{wonDeals.length === 1 ? '' : 's'} ganho{wonDeals.length === 1 ? '' : 's'} · {fmtBRL(wonDeals.reduce((s, d) => s + (d.value || 0), 0))} · respostas dos últimos {period}d
+              {wonDeals.length} deal{wonDeals.length === 1 ? '' : 's'} ganho{wonDeals.length === 1 ? '' : 's'} · {fmtBRL(wonDeals.reduce((s, d) => s + (d.value || 0), 0))} · respostas {periodLabel}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-2">
