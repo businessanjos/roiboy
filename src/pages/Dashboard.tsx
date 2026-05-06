@@ -1097,6 +1097,8 @@ export default function Dashboard() {
 
             {/* Cancelamentos */}
             {showCancelamentos && (
+            <Card 
+              className={`shadow-card border-l-4 border-l-danger ${showCancellationAnalytics ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
               onClick={showCancellationAnalytics ? () => setCancellationModalOpen(true) : undefined}
             >
               <CardContent className="p-4">
