@@ -2289,13 +2289,28 @@ export default function Clients() {
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0 flex-1">
-                              <Link 
-                                to={`/clients/${client.id}`}
-                                className="font-medium truncate hover:text-primary hover:underline transition-colors flex items-center gap-1.5"
-                              >
-                                <span className="truncate">{client.full_name}</span>
-                                <VipBadge clientId={client.id} />
-                              </Link>
+                              {(() => {
+                                const ci = getCountryFromPhone(client.phone_e164);
+                                const isIntl = ci && ci.code !== "BR";
+                                return (
+                                  <Link
+                                    to={`/clients/${client.id}`}
+                                    className="font-medium truncate hover:text-primary hover:underline transition-colors flex items-center gap-1.5"
+                                  >
+                                    {isIntl && (
+                                      <span
+                                        className="text-base flex-shrink-0 leading-none"
+                                        title={ci!.name}
+                                        aria-label={`País: ${ci!.name}`}
+                                      >
+                                        {ci!.flag}
+                                      </span>
+                                    )}
+                                    <span className="truncate">{client.full_name}</span>
+                                    <VipBadge clientId={client.id} />
+                                  </Link>
+                                );
+                              })()}
                               <p className="text-xs text-muted-foreground">{client.phone_e164}</p>
                             </div>
                           </div>
