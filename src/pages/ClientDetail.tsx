@@ -547,7 +547,8 @@ export default function ClientDetail() {
           mls_level: editFormData.is_mls ? (editFormData.mls_level || null) : null,
           responsible_user_id: editFormData.responsible_user_id || null,
           companies: JSON.parse(JSON.stringify(editFormData.companies || [])),
-        })
+          timezone: editFormData.timezone || null,
+        } as any)
         .eq("id", id);
 
       if (error) throw error;
