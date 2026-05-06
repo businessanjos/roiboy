@@ -117,9 +117,15 @@ export function TypeformDashboard() {
   const refresh = async () => {
     if (!selectedForm) return;
     setLoadingFunnel(true);
-    const { error } = await supabase.functions.invoke('typeform-manager', { body: { action: 'refresh_form', form_id: selectedForm } });
-    if (error) toast.error('Erro ao sincronizar');
-    else { toast.success('Sincronizado'); await loadFunnel(); }
+    const targets = selectedForm === '__all__' ? forms.map(f => f.form_id) : [selectedForm];
+    let fail = 0;
+    for (const fid of targets) {
+      const { error } = await supabase.functions.invoke('typeform-manager', { body: { action: 'refresh_form', form_id: fid } });
+      if (error) fail++;
+    }
+    if (fail) toast.error(`Erro ao sincronizar ${fail} form(s)`);
+    else toast.success(targets.length > 1 ? `Sincronizando ${targets.length} formulários` : 'Sincronizado');
+    await loadFunnel();
     setLoadingFunnel(false);
   };
 
