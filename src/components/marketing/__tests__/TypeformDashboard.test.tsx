@@ -42,9 +42,13 @@ function setupSupabaseFromForms() {
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   invokeMock.mockReset();
   fromMock.mockReset();
+  const { toast } = await import('sonner');
+  (toast.warning as any).mockClear?.();
+  (toast.error as any).mockClear?.();
+  (toast.success as any).mockClear?.();
   setupSupabaseFromForms();
   invokeMock.mockResolvedValue({
     data: { funnel: FUNNEL_ALL, consistency: { ok: true, responses_in_scope: 500, scope_form_ids: ['fABC', 'fXYZ'] }, won_deals: [] },
@@ -152,4 +156,42 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
       ).toBe(true),
     );
   });
+
+  it('NÃO mostra banner de inconsistência quando out_of_scope_responses === 0 (mesmo com ok=false)', async () => {
+    const { toast } = await import('sonner');
+    invokeMock.mockResolvedValue({
+      data: {
+        funnel: FUNNEL_ALL,
+        consistency: { ok: false, out_of_scope_responses: 0, responses_in_scope: 500, scope_form_ids: ['fABC', 'fXYZ'] },
+        won_deals: [],
+      },
+      error: null,
+    });
+    await act(async () => { render(<TypeformDashboard />); });
+    await waitFor(() => expect(invokeMock).toHaveBeenCalled());
+
+    expect(toast.warning).not.toHaveBeenCalled();
+    expect(document.body.textContent || '').not.toMatch(/fora do escopo descartadas/);
+    await waitFor(() =>
+      expect(document.body.textContent || '').toMatch(/Dados consistentes/),
+    );
+  });
+
+  it('NÃO mostra banner quando out_of_scope_responses está ausente/undefined', async () => {
+    const { toast } = await import('sonner');
+    invokeMock.mockResolvedValue({
+      data: {
+        funnel: FUNNEL_ALL,
+        consistency: { ok: false, responses_in_scope: 500, scope_form_ids: ['fABC'] },
+        won_deals: [],
+      },
+      error: null,
+    });
+    await act(async () => { render(<TypeformDashboard />); });
+    await waitFor(() => expect(invokeMock).toHaveBeenCalled());
+
+    expect(toast.warning).not.toHaveBeenCalled();
+    expect(document.body.textContent || '').not.toMatch(/fora do escopo descartadas/);
+  });
 });
+
