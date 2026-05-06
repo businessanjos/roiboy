@@ -549,6 +549,64 @@ export function TypeformDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!detailsCard} onOpenChange={(o) => { if (!o) setDetailsCard(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="w-5 h-5 text-sky-500" />
+              Como calculamos: {detailsCard?.label}
+            </DialogTitle>
+            <DialogDescription>
+              Fonte: <span className="font-medium">{detailsCard?.source}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
+                Passo a passo
+              </p>
+              <ol className="space-y-2 text-sm">
+                {detailsCard?.steps.map((s, i) => (
+                  <li key={i} className="p-2 rounded-md bg-muted/40 border border-border/30 leading-relaxed">
+                    {s}
+                  </li>
+                ))}
+              </ol>
+            </div>
+            {detailsCard?.sample && detailsCard.sample.rows.length > 0 && (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
+                  Amostra dos registros usados ({detailsCard.sample.rows.length})
+                </p>
+                <div className="overflow-x-auto rounded-md border border-border/40">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40">
+                      <tr>
+                        {detailsCard.sample.columns.map((c) => (
+                          <th key={c} className="text-left px-2 py-1.5 font-medium">{c}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detailsCard.sample.rows.map((row, idx) => (
+                        <tr key={idx} className="border-t border-border/30">
+                          {row.map((cell, ci) => (
+                            <td key={ci} className="px-2 py-1.5 text-muted-foreground">{String(cell)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailsCard(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
