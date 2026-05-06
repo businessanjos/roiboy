@@ -74,7 +74,24 @@ const DEFAULT_ROUTINES = [
 export function CsIncentivePlanSection() {
   const { currentUser } = useCurrentUser();
   const { plans, tiers, loading, savePlan, deletePlan, saveTiers } = useCsIncentivePlans();
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["cs-incentive-consultants"] }),
+        queryClient.invalidateQueries({ queryKey: ["cs-incentive-quarter-payouts"] }),
+        queryClient.invalidateQueries({ queryKey: ["cs-incentive-plans"] }),
+        queryClient.invalidateQueries({ queryKey: ["cs-incentive-tiers"] }),
+        queryClient.invalidateQueries({ queryKey: ["consultant-bonus-payouts"] }),
+      ]);
+      toast.success("Dados atualizados");
+    } finally {
+      setRefreshing(false);
+    }
+  };
   // Consultoras ativas (puxando salário base do RH) — fonte única em @/lib/consultants
   const { data: consultants = [] } = useQuery({
     queryKey: ["cs-incentive-consultants", currentUser?.account_id],
