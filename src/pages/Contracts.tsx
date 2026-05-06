@@ -1421,6 +1421,7 @@ export default function Contracts() {
           business_zip_code: clientFormData.business_zip_code || null,
           business_segment: clientFormData.business_segment || null,
           business_niche: clientFormData.business_niche || null,
+          timezone: clientFormData.timezone || null,
           companies: clientFormData.companies.length > 0 ? clientFormData.companies : null,
           is_mls: clientFormData.is_mls,
           mls_level: clientFormData.mls_level || null,
