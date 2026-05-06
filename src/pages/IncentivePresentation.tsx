@@ -365,7 +365,9 @@ function SlideTiers({ tiers, bonusBase }: { tiers: any[]; bonusBase: number }) {
             >
               <div>
                 <p className="text-[10px] uppercase tracking-widest opacity-80">
-                  {pctToSales(Number(t.min_achievement_percent))}{t.max_achievement_percent ? `–${pctToSales(Number(t.max_achievement_percent))}` : "+"} vendas
+                  {TIER_SALES_OVERRIDE[t.label] != null
+                    ? `${TIER_SALES_OVERRIDE[t.label]} vendas`
+                    : `${pctToSales(Number(t.min_achievement_percent))}${t.max_achievement_percent ? `–${pctToSales(Number(t.max_achievement_percent))}` : "+"} vendas`}
                 </p>
                 <p className="text-base font-black mt-1 leading-tight">{t.label}</p>
               </div>
