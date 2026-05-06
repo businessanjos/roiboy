@@ -553,7 +553,7 @@ export function TypeformDashboard() {
   );
 }
 
-function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, source, onClick }: any) {
+function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, source, onClick, onDetails }: any) {
   const scopeStyles = scope === 'lifetime'
     ? 'border-sky-500/30 bg-sky-500/5'
     : scope === 'period'
@@ -575,7 +575,12 @@ function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, sour
         {tip && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button type="button" className="opacity-60 hover:opacity-100 transition-opacity shrink-0" aria-label={`Como ${label} é calculado`}>
+              <button
+                type="button"
+                className="opacity-60 hover:opacity-100 transition-opacity shrink-0"
+                aria-label={`Como ${label} é calculado`}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <Info className="w-3.5 h-3.5" />
               </button>
             </TooltipTrigger>
@@ -586,6 +591,16 @@ function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, sour
                 </div>
               )}
               <p>{tip}</p>
+              {onDetails && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="mt-2 h-7 w-full text-xs"
+                  onClick={(e) => { e.stopPropagation(); onDetails(); }}
+                >
+                  Ver detalhes do cálculo
+                </Button>
+              )}
             </TooltipContent>
           </Tooltip>
         )}
