@@ -192,22 +192,31 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         }
       }
 
-      // Fetch "Valor Recebido da Venda" custom field for tiebreaker
+      // "Valor Recebido" — prefer native column; fallback to legacy custom field
       const VALOR_RECEBIDO_FIELD_ID = '924c04a5-9824-443b-8122-8fc8c2ad727e';
       const dealIds = (dealsData.data || []).map((d: any) => d.id).filter(Boolean);
       let receivedValueMap = new Map<string, number>();
-      
-      if (dealIds.length > 0) {
+
+      // Pre-fill from native column
+      for (const d of (dealsData.data || []) as any[]) {
+        if (d.received_value != null) {
+          receivedValueMap.set(d.id, Number(d.received_value));
+        }
+      }
+
+      // Fallback fetch only for deals without native value
+      const missingIds = dealIds.filter((id: string) => !receivedValueMap.has(id));
+      if (missingIds.length > 0) {
         const batchSize = 500;
-        for (let i = 0; i < dealIds.length; i += batchSize) {
-          const batch = dealIds.slice(i, i + batchSize);
+        for (let i = 0; i < missingIds.length; i += batchSize) {
+          const batch = missingIds.slice(i, i + batchSize);
           const { data: fieldValues } = await supabase
             .from('deal_field_values')
             .select('deal_id, value_number')
             .eq('field_id', VALOR_RECEBIDO_FIELD_ID)
             .eq('account_id', currentUser.account_id)
             .in('deal_id', batch);
-          
+
           if (fieldValues) {
             for (const fv of fieldValues) {
               if (fv.value_number != null) {
