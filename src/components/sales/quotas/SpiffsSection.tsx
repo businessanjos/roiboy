@@ -784,13 +784,13 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deals")
-        .select("id, entry_value, value, responsible_user_id, won_at, status")
+        .select("id, entry_value, received_value, value, responsible_user_id, won_at, status")
         .eq("account_id", accountId!)
         .eq("status", "won")
         .gte("won_at", spiff.start_date)
         .lte("won_at", `${spiff.end_date}T23:59:59`);
       if (error) throw error;
-      let deals = (data ?? []) as Array<{ id: string; entry_value: number | null; value: number | null; responsible_user_id: string | null; won_at: string | null; status: string }>;
+      let deals = (data ?? []) as Array<{ id: string; entry_value: number | null; received_value: number | null; value: number | null; responsible_user_id: string | null; won_at: string | null; status: string }>;
 
       // Filtro por produto-alvo da campanha (via custom field "Item da Venda")
       if (targetProductId && deals.length > 0) {
@@ -878,7 +878,7 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
   const summary = userIds.map((uid) => {
     const total = (dealsQuery.data ?? [])
       .filter((d) => d.responsible_user_id === uid)
-      .reduce((acc, d) => acc + Number(d.entry_value || 0), 0);
+      .reduce((acc, d) => acc + Number(d.received_value ?? d.entry_value ?? 0), 0);
     const earnedSpins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
     const remainder = triggerPerValue > 0 ? total - earnedSpins * triggerPerValue : 0;
     const toNextSpin = triggerPerValue > 0 ? triggerPerValue - remainder : 0;

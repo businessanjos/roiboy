@@ -1232,21 +1232,30 @@ export function DealDetailSheet({
                           : <span className="text-muted-foreground text-sm font-normal italic">Clique para informar o valor recebido</span>}
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-72 p-3" align="start">
+                    <PopoverContent className="w-80 p-3" align="start">
                       <Label className="text-xs">Valor recebido (R$)</Label>
                       <p className="text-[11px] text-muted-foreground mb-2">
-                        Quanto entrou de fato no caixa. Alimenta a campanha de cash collect dos SPIFFs.
+                        Quanto entrou de fato no caixa. Alimenta o cash collect dos SPIFFs (libera 1 giro a cada R$ 20.000 captados).
                       </p>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={receivedDraft}
-                        onChange={(e) => setReceivedDraft(e.target.value)}
-                        placeholder="0,00"
-                        className="h-8 mt-1"
-                        autoFocus
-                      />
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">R$</span>
+                        <Input
+                          inputMode="decimal"
+                          value={(() => {
+                            const raw = receivedDraft.replace(/\D/g, "");
+                            if (!raw) return "";
+                            const num = Number(raw) / 100;
+                            return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                          })()}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, "");
+                            setReceivedDraft(raw ? String(Number(raw) / 100) : "");
+                          }}
+                          placeholder="0,00"
+                          className="h-9 pl-9"
+                          autoFocus
+                        />
+                      </div>
                       <div className="flex justify-end gap-2 mt-2">
                         <Button size="sm" variant="ghost" onClick={() => setReceivedEditOpen(false)}>
                           Cancelar
@@ -1554,7 +1563,9 @@ export function DealDetailSheet({
                     </h4>
                     {dealCustomFields.length > 0 && currentUser?.account_id ? (
                       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                        {dealCustomFields.map(field => {
+                        {dealCustomFields
+                          .filter((field) => field.id !== "924c04a5-9824-443b-8122-8fc8c2ad727e")
+                          .map(field => {
                           const value = dealFieldValues[field.id];
                           return (
                             <div key={field.id} className="min-w-0 overflow-hidden relative z-0">
