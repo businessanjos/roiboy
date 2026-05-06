@@ -14,6 +14,7 @@ import { MetaKpiCard } from '@/components/meta/MetaKpiCard';
 import { MetaKpiSettings } from '@/components/meta/MetaKpiSettings';
 import { useMetaKpiPreferences } from '@/hooks/useMetaKpiPreferences';
 import { ManageAdAccountsModal } from '@/components/meta/ManageAdAccountsModal';
+import { CampaignsManager } from '@/components/meta/CampaignsManager';
 import { toast } from 'sonner';
 
 interface AdSet {
