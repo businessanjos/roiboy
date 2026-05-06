@@ -1480,7 +1480,7 @@ export default function Dashboard() {
               </Card>
               )}
 
-              {gestaoViewMode === "operacoes" && (
+              {showEncerramentos && (
               <Card className="border-l-4 border-l-warning">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
