@@ -10,7 +10,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ChevronRight, RefreshCw, Loader2, Search, ArrowUpDown, Pencil, ExternalLink, Image as ImageIcon, TrendingUp, Inbox } from 'lucide-react';
+import { ChevronRight, RefreshCw, Loader2, Search, ArrowUpDown, Pencil, ExternalLink, Image as ImageIcon, TrendingUp, Inbox, Bell } from 'lucide-react';
+import { CampaignAlertsDialog } from './CampaignAlertsDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
@@ -344,6 +345,7 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
   const [sortBy, setSortBy] = useState<keyof Insights | 'name'>('spend');
   const [drillCampaign, setDrillCampaign] = useState<Campaign | null>(null);
   const [budgetEntity, setBudgetEntity] = useState<any>(null);
+  const [alertCampaign, setAlertCampaign] = useState<{ id: string; name: string } | null>(null);
   const [series, setSeries] = useState<any[]>([]);
   const [view, setView] = useState<'table' | 'bi'>('table');
 
@@ -563,10 +565,18 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
                             ) : '—'}
                           </td>
                           <td className="p-2 text-right">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100"
-                              onClick={(e) => { e.stopPropagation(); setBudgetEntity({ id: c.id, name: c.name, daily_budget: c.daily_budget, lifetime_budget: c.lifetime_budget }); }}>
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
+                            <div className="flex justify-end gap-0.5">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                                title="Alertas de performance"
+                                onClick={(e) => { e.stopPropagation(); setAlertCampaign({ id: c.id, name: c.name }); }}>
+                                <Bell className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                                title="Editar orçamento"
+                                onClick={(e) => { e.stopPropagation(); setBudgetEntity({ id: c.id, name: c.name, daily_budget: c.daily_budget, lifetime_budget: c.lifetime_budget }); }}>
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -581,6 +591,7 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
 
       <CampaignDrilldown campaign={drillCampaign} open={!!drillCampaign} onOpenChange={(o) => !o && setDrillCampaign(null)} datePreset={datePreset} onMutated={load} />
       <BudgetEditor open={!!budgetEntity} onOpenChange={(o) => !o && setBudgetEntity(null)} entity={budgetEntity} entityType="campaign" adAccountId={adAccountId} onSaved={load} />
+      <CampaignAlertsDialog open={!!alertCampaign} onOpenChange={(o) => !o && setAlertCampaign(null)} campaign={alertCampaign} adAccountId={adAccountId} />
     </div>
   );
 }

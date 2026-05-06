@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.meta-campaigns-manager]
 verify_jwt = false
+
+[functions.meta-alerts-evaluator]
+verify_jwt = false
