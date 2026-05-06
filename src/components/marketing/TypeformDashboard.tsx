@@ -282,7 +282,7 @@ export function TypeformDashboard() {
               </>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="p-4 border-t border-border/40">
             <Button variant="outline" onClick={() => setAddOpen(false)} disabled={adding}>Cancelar</Button>
             <Button onClick={addForm} disabled={!pickedForms.length || adding}>
               {adding ? 'Adicionando...' : `Acompanhar ${pickedForms.length || ''} form${pickedForms.length === 1 ? '' : 's'}`}
