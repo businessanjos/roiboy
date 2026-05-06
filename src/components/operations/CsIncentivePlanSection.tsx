@@ -477,50 +477,72 @@ export function CsIncentivePlanSection() {
               </div>
             )}
 
-            {form.bonus_distribution_method === "custom" && (
-              <div className="space-y-2">
+            <div className="space-y-2">
+              {form.bonus_distribution_method === "custom" && (
                 <p className="text-xs text-muted-foreground">
                   Defina o peso de cada consultora. O bônus será dividido proporcionalmente à soma dos pesos.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {consultants.map((c: any) => (
-                    <div key={c.user_id} className="flex items-center gap-2">
-                      <Avatar className="h-7 w-7">
-                        <AvatarFallback className="text-[10px]">{initials(c.name)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium truncate">{c.name}</div>
-                        <div className="text-[10px] text-muted-foreground">{c.role_label}</div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-[10px] text-muted-foreground leading-none">
-                          Recebido Q{currentQuarter}
-                        </div>
-                        <div className="text-xs font-semibold text-amber-500 leading-tight">
-                          {formatBRL(quarterPayouts[c.user_id] || 0)}
-                        </div>
-                      </div>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        className="w-24 h-8"
-                        value={(form.bonus_distribution_shares as any)?.[c.user_id] ?? ""}
-                        onChange={(e) => {
-                          const shares = { ...(form.bonus_distribution_shares || {}) };
-                          const v = parseNumberInput(e.target.value);
-                          if (v === "") delete shares[c.user_id]; else shares[c.user_id] = Number(v);
-                          setF("bonus_distribution_shares", shares);
-                        }}
-                        placeholder="peso"
-                      />
-                    </div>
-                  ))}
-                  {consultants.length === 0 && (
-                    <p className="text-xs text-muted-foreground">Nenhuma consultora ativa cadastrada.</p>
-                  )}
-                </div>
+              )}
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Consultora</TableHead>
+                      <TableHead>Cargo</TableHead>
+                      <TableHead className="text-right">Recebido Q{currentQuarter}</TableHead>
+                      {form.bonus_distribution_method === "custom" && (
+                        <TableHead className="w-28 text-right">Peso</TableHead>
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {consultants.map((c: any) => (
+                      <TableRow key={c.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-7 w-7">
+                              <AvatarFallback className="text-[10px]">{initials(c.name)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs font-medium">{c.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{c.role_label}</TableCell>
+                        <TableCell className="text-right text-xs font-semibold text-amber-500">
+                          {formatBRL(quarterPayouts[c.id] || 0)}
+                        </TableCell>
+                        {form.bonus_distribution_method === "custom" && (
+                          <TableCell>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              className="ml-auto h-8 w-24"
+                              value={(form.bonus_distribution_shares as any)?.[c.id] ?? ""}
+                              onChange={(e) => {
+                                const shares = { ...(form.bonus_distribution_shares || {}) };
+                                const v = parseNumberInput(e.target.value);
+                                if (v === "") delete shares[c.id]; else shares[c.id] = Number(v);
+                                setF("bonus_distribution_shares", shares);
+                              }}
+                              placeholder="peso"
+                            />
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                    {consultants.length === 0 && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={form.bonus_distribution_method === "custom" ? 4 : 3}
+                          className="py-6 text-center text-xs text-muted-foreground"
+                        >
+                          Nenhuma consultora ativa cadastrada.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-            )}
+            </div>
           </div>
         </CardContent>
       </Card>
