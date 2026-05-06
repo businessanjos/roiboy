@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useCsIncentivePlans } from "@/hooks/useCsIncentivePlans";
@@ -14,12 +17,20 @@ import {
   Target,
   ShieldCheck,
   TrendingUp,
+  TrendingDown,
+  RefreshCw,
   Star,
   Flame,
   Gift,
   Users,
   Trophy,
   Rocket,
+  CalendarCheck,
+  Phone,
+  ClipboardList,
+  HeartHandshake,
+  AlarmClock,
+  LineChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -202,13 +213,13 @@ function SlideHistoric() {
             CS cuidava do cliente. Comercial colhia a renovação.
           </p>
         </Card>
-        <Card className="bg-gradient-to-br from-rose-600/30 to-amber-500/20 border-rose-400/40 p-8 space-y-3 text-white">
-          <p className="text-xs uppercase tracking-wider text-rose-200">Agora</p>
-          <p className="text-2xl font-bold">
+        <Card className="bg-gradient-to-br from-emerald-500 to-teal-700 border-emerald-300/50 p-8 space-y-3 text-white shadow-2xl">
+          <p className="text-xs uppercase tracking-wider text-emerald-50 font-semibold">Agora</p>
+          <p className="text-2xl font-bold text-white">
             Quem viveu a jornada com a cliente é quem renova.{" "}
-            <span className="text-rose-200">Você.</span>
+            <span className="text-amber-200">Você.</span>
           </p>
-          <p className="text-sm text-rose-50">
+          <p className="text-sm text-emerald-50">
             Faz sentido. Você tem a relação, o contexto e a autoridade pra continuar.
           </p>
         </Card>
@@ -264,59 +275,187 @@ function SlideResponsibility() {
   );
 }
 
+function useDashboardKpis() {
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
+
+  const { data: goals } = useQuery({
+    queryKey: ["cs-pres-goals", accountId],
+    enabled: !!accountId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("account_settings")
+        .select("dashboard_churn_goal, dashboard_renewal_goal, dashboard_nps_goal")
+        .eq("account_id", accountId!)
+        .maybeSingle();
+      return {
+        churn: Number(data?.dashboard_churn_goal ?? 18),
+        renewal: Number(data?.dashboard_renewal_goal ?? 40),
+        nps: Number(data?.dashboard_nps_goal ?? 80),
+      };
+    },
+  });
+
+  const { data: renewal } = useQuery({
+    queryKey: ["cs-pres-renewal", accountId],
+    enabled: !!accountId,
+    queryFn: async () => {
+      const start = new Date(); start.setMonth(start.getMonth() - 12);
+      const { data } = await supabase
+        .from("renewal_outcomes")
+        .select("outcome, resolved_at")
+        .eq("account_id", accountId!)
+        .gte("resolved_at", start.toISOString());
+      let renewed = 0, lost = 0;
+      for (const r of (data ?? []) as any[]) {
+        if (r.outcome === "renewed") renewed++;
+        else if (r.outcome === "lost") lost++;
+      }
+      const total = renewed + lost;
+      return { rate: total > 0 ? (renewed / total) * 100 : 0, renewed, lost, total };
+    },
+  });
+
+  const { data: churn } = useQuery({
+    queryKey: ["cs-pres-churn", accountId],
+    enabled: !!accountId,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("get_dashboard_contract_counts", {
+        p_account_id: accountId!,
+      });
+      const stats = (data ?? {}) as any;
+      const activeCount = Number(stats.active ?? 0);
+      const cancelCount = Number(stats.cancelled ?? 0);
+      const denom = activeCount + cancelCount;
+      return { rate: denom > 0 ? (cancelCount / denom) * 100 : 0, cancelCount, activeCount };
+    },
+  });
+
+  const { data: nps } = useQuery({
+    queryKey: ["cs-pres-nps", accountId],
+    enabled: !!accountId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("vnps_snapshots")
+        .select("client_id, vnps_class, computed_at")
+        .eq("account_id", accountId!)
+        .order("computed_at", { ascending: false })
+        .limit(5000);
+      const latest = new Map<string, string>();
+      for (const r of (data ?? []) as any[]) {
+        if (!latest.has(r.client_id)) latest.set(r.client_id, r.vnps_class);
+      }
+      let p = 0, d = 0;
+      latest.forEach((c) => { if (c === "promoter") p++; else if (c === "detractor") d++; });
+      const total = latest.size;
+      return { score: total > 0 ? Math.round(((p - d) / total) * 100) : 0, total };
+    },
+  });
+
+  return { goals, renewal, churn, nps };
+}
+
 function SlideHow({ plan }: { plan: any }) {
-  const items = [
+  const { goals, renewal, churn, nps } = useDashboardKpis();
+
+  const renewalRate = renewal?.rate ?? 0;
+  const renewalGoal = goals?.renewal ?? 40;
+  const renewalOk = renewalRate >= renewalGoal;
+
+  const churnRate = churn?.rate ?? 0;
+  const churnGoal = goals?.churn ?? 18;
+  const churnOk = churnRate <= churnGoal;
+
+  const npsScore = nps?.score ?? 0;
+  const npsGoal = goals?.nps ?? 80;
+  const npsOk = npsScore >= npsGoal;
+
+  const cards = [
     {
-      icon: Target,
-      label: "Renovação",
-      pct: plan?.weight_renewal,
-      color: "text-emerald-300",
+      icon: RefreshCw,
+      label: "Taxa de Renovação",
+      weight: plan?.weight_renewal,
+      current: `${renewalRate.toFixed(1)}%`,
+      goal: `≥ ${renewalGoal}%`,
+      ok: renewalOk,
+      tone: "emerald",
       desc: "Quanto da sua carteira renova.",
     },
     {
-      icon: TrendingUp,
+      icon: TrendingDown,
       label: "Churn",
-      pct: plan?.weight_churn,
-      color: "text-rose-300",
-      desc: "Quanto da sua carteira vai embora.",
+      weight: plan?.weight_churn,
+      current: `${churnRate.toFixed(1)}%`,
+      goal: `≤ ${churnGoal}%`,
+      ok: churnOk,
+      tone: "rose",
+      desc: "Quanto da carteira vai embora.",
     },
     {
-      icon: Star,
+      icon: Heart,
       label: "NPS",
-      pct: plan?.weight_nps,
-      color: "text-amber-300",
+      weight: plan?.weight_nps,
+      current: `${npsScore}`,
+      goal: `≥ ${npsGoal}`,
+      ok: npsOk,
+      tone: "amber",
       desc: "O quanto a cliente recomenda.",
     },
   ];
+
+  const toneMap: Record<string, { ring: string; icon: string; chip: string }> = {
+    emerald: { ring: "border-emerald-400/40", icon: "text-emerald-300 bg-emerald-400/10", chip: "bg-emerald-400/15 text-emerald-200" },
+    rose: { ring: "border-rose-400/40", icon: "text-rose-300 bg-rose-400/10", chip: "bg-rose-400/15 text-rose-200" },
+    amber: { ring: "border-amber-400/40", icon: "text-amber-300 bg-amber-400/10", chip: "bg-amber-400/15 text-amber-200" },
+  };
+
   return (
-    <div className="space-y-10 py-8">
+    <div className="space-y-8 py-6">
       <div>
         <p className="text-rose-300 text-sm uppercase tracking-[0.3em] mb-3">Como você é avaliada</p>
         <h2 className="text-5xl font-black">3 indicadores. Nada mais.</h2>
         <p className="text-slate-400 mt-2 text-lg">
-          Simples de medir. Honestos com o seu trabalho.
+          Os mesmos números que aparecem no dashboard — atual e a meta.
         </p>
       </div>
       <div className="grid md:grid-cols-3 gap-4">
-        {items.map((it) => (
-          <div
-            key={it.label}
-            className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-3"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-white/5 flex items-center justify-center">
-                <it.icon className={cn("h-5 w-5", it.color)} />
+        {cards.map((c) => {
+          const t = toneMap[c.tone];
+          return (
+            <div
+              key={c.label}
+              className={cn("rounded-2xl border-2 bg-white/[0.04] p-5 space-y-4", t.ring)}
+            >
+              <div className="flex items-center justify-between">
+                <div className={cn("h-11 w-11 rounded-xl flex items-center justify-center", t.icon)}>
+                  <c.icon className="h-5 w-5" />
+                </div>
+                <span className={cn("text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-bold", t.chip)}>
+                  Peso {c.weight ? `${Number(c.weight)}%` : "—"}
+                </span>
               </div>
-              <span className="text-xs uppercase tracking-wider text-slate-400">
-                {it.label}
-              </span>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold">{c.label}</p>
+                <p className="text-5xl font-black tabular-nums text-white mt-1">{c.current}</p>
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500">Meta</p>
+                  <p className="text-base font-bold text-slate-200 tabular-nums">{c.goal}</p>
+                </div>
+                <span
+                  className={cn(
+                    "text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-bold",
+                    c.ok ? "bg-emerald-400/20 text-emerald-200" : "bg-rose-400/20 text-rose-200",
+                  )}
+                >
+                  {c.ok ? "Na meta" : "Fora"}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">{c.desc}</p>
             </div>
-            <p className={cn("text-4xl font-black tabular-nums", it.color)}>
-              {it.pct ? `${Number(it.pct)}%` : "—"}
-            </p>
-            <p className="text-sm text-slate-400">{it.desc}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <p className="text-sm text-slate-400 italic text-center">
         Os pesos somam 100%. Cada mês compõe seu desempenho final.
@@ -324,6 +463,8 @@ function SlideHow({ plan }: { plan: any }) {
     </div>
   );
 }
+
+
 
 function SlideTiers({ tiers, plan }: { tiers: any[]; plan: any }) {
   const monthlyBonus = Number(plan?.monthly_bonus_value || 0);
@@ -397,7 +538,6 @@ function SlideTiers({ tiers, plan }: { tiers: any[]; plan: any }) {
 }
 
 function SlideExtras({ plans }: { plans: any[] }) {
-  const quarterly = plans.find((p: any) => p.quarterly_bonus_enabled);
   const annual = plans.find((p: any) => p.annual_bonus_enabled);
   return (
     <div className="space-y-10 py-8">
@@ -407,28 +547,16 @@ function SlideExtras({ plans }: { plans: any[] }) {
           Constância vira <span className="text-rose-300">recompensa</span>
         </h2>
       </div>
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card className="bg-gradient-to-br from-cyan-600 to-blue-700 border-cyan-400/50 p-8 text-white space-y-3 shadow-xl">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-cyan-100" />
-            <p className="text-sm uppercase tracking-wider text-cyan-100 font-semibold">Trimestral</p>
-          </div>
-          <p className="text-5xl font-black text-white">
-            {fmtBRL(Number(quarterly?.quarterly_bonus_value || 0))}
-          </p>
-          <p className="text-cyan-50">
-            Pago a cada trimestre que vocês baterem as metas combinadas — recompensa pra quem entrega resultado em sequência.
-          </p>
-        </Card>
-        <Card className="bg-gradient-to-br from-fuchsia-600 to-rose-700 border-fuchsia-400/50 p-8 text-white space-y-3 shadow-xl">
+      <div className="grid md:grid-cols-1 gap-6">
+        <Card className="bg-gradient-to-br from-fuchsia-600 to-rose-700 border-fuchsia-400/50 p-10 text-white space-y-4 shadow-xl">
           <div className="flex items-center gap-2">
             <Crown className="h-5 w-5 text-fuchsia-100" />
             <p className="text-sm uppercase tracking-wider text-fuchsia-100 font-semibold">Anual</p>
           </div>
-          <p className="text-5xl font-black text-white">
+          <p className="text-6xl font-black text-white">
             {fmtBRL(Number(annual?.annual_bonus_value || 0))}
           </p>
-          <p className="text-fuchsia-50">
+          <p className="text-fuchsia-50 text-lg max-w-2xl">
             Pago no fechamento do ano — pra coroar quem manteve carteira saudável o ano inteiro.
           </p>
         </Card>
@@ -460,8 +588,19 @@ function SlideRituals({ plan }: { plan: any }) {
     "Plano de renovação iniciado no 9º mês de contrato",
   ];
   const list = routines.length > 0 ? routines : fallback;
+
+  // ícones rotativos para cada item, com tonalidades diferentes
+  const visuals = [
+    { icon: CalendarCheck, gradient: "from-rose-500 to-rose-700", glow: "shadow-rose-500/30" },
+    { icon: LineChart, gradient: "from-amber-500 to-orange-600", glow: "shadow-amber-500/30" },
+    { icon: HeartHandshake, gradient: "from-fuchsia-500 to-pink-600", glow: "shadow-fuchsia-500/30" },
+    { icon: AlarmClock, gradient: "from-emerald-500 to-teal-600", glow: "shadow-emerald-500/30" },
+    { icon: ClipboardList, gradient: "from-indigo-500 to-violet-600", glow: "shadow-indigo-500/30" },
+    { icon: Phone, gradient: "from-sky-500 to-cyan-600", glow: "shadow-sky-500/30" },
+  ];
+
   return (
-    <div className="space-y-10 py-8">
+    <div className="space-y-10 py-6">
       <div>
         <p className="text-rose-300 text-sm uppercase tracking-[0.3em] mb-3">O que se espera de vocês</p>
         <h2 className="text-5xl font-black">
@@ -471,18 +610,39 @@ function SlideRituals({ plan }: { plan: any }) {
           Renovação não acontece no último mês. Acontece todos os dias.
         </p>
       </div>
-      <div className="grid md:grid-cols-2 gap-3">
-        {list.map((r, i) => (
-          <div
-            key={i}
-            className="rounded-xl border border-white/10 bg-white/5 p-5 flex items-start gap-3"
-          >
-            <div className="h-8 w-8 rounded-full bg-rose-300/15 flex items-center justify-center flex-shrink-0 text-rose-200 font-bold tabular-nums text-sm">
-              {i + 1}
+      <div className="grid md:grid-cols-2 gap-4">
+        {list.map((r, i) => {
+          const v = visuals[i % visuals.length];
+          const Icon = v.icon;
+          return (
+            <div
+              key={i}
+              className="group relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.02] p-6 flex items-start gap-5 hover:border-white/20 transition-all overflow-hidden"
+            >
+              <div
+                className={cn(
+                  "h-14 w-14 rounded-2xl bg-gradient-to-br flex items-center justify-center flex-shrink-0 shadow-lg",
+                  v.gradient,
+                  v.glow,
+                )}
+              >
+                <Icon className="h-7 w-7 text-white" strokeWidth={2.2} />
+              </div>
+              <div className="flex-1 pt-1">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-rose-300/80 font-bold mb-1.5">
+                  Ritual {String(i + 1).padStart(2, "0")}
+                </p>
+                <p className="text-slate-100 leading-relaxed text-base font-medium">{r}</p>
+              </div>
             </div>
-            <p className="text-slate-200 leading-relaxed pt-1">{r}</p>
-          </div>
-        ))}
+          );
+        })}
+      </div>
+      <div className="rounded-xl border border-rose-300/30 bg-rose-300/5 p-5 flex items-center gap-3">
+        <Flame className="h-5 w-5 text-rose-300 flex-shrink-0" />
+        <p className="text-rose-100 text-sm">
+          <strong className="text-white">Disciplina é o atalho.</strong> Quem segue o ritual entrega resultado, e quem entrega resultado bate o bônus.
+        </p>
       </div>
     </div>
   );
@@ -508,10 +668,6 @@ function SlideClose() {
         <Stat icon={Rocket} label="Autonomia" value="Real" />
         <Stat icon={Trophy} label="Recompensa" value="Sem teto" />
       </div>
-      <p className="text-lg text-slate-300 max-w-2xl pt-4">
-        Esta é a era em que CS deixa de ser custo e passa a ser{" "}
-        <strong className="text-white">protagonista da receita recorrente</strong>. Bem-vindas.
-      </p>
     </div>
   );
 }
