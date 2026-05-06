@@ -10,7 +10,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ChevronRight, RefreshCw, Loader2, Search, ArrowUpDown, Pencil, ExternalLink, Image as ImageIcon, TrendingUp, Inbox } from 'lucide-react';
+import { ChevronRight, RefreshCw, Loader2, Search, ArrowUpDown, Pencil, ExternalLink, Image as ImageIcon, TrendingUp, Inbox, Bell } from 'lucide-react';
+import { CampaignAlertsDialog } from './CampaignAlertsDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
