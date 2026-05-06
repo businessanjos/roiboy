@@ -1,0 +1,1 @@
+ALTER TABLE public.oauth_states ADD COLUMN IF NOT EXISTS redirect_path TEXT NOT NULL DEFAULT '/marketing/trafego-pago';
