@@ -440,13 +440,25 @@ async function processResponses(supabase: any, accountId: string, formId: string
       }
     }
     if (!leadId && !dealId && row.phone) {
-      const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(50);
-      const match = (l || []).find((x: any) => normPhone(x.phone).endsWith(row.phone.slice(-9)) || row.phone.endsWith(normPhone(x.phone).slice(-9)));
-      if (match) { leadId = match.id; method = "phone"; }
-      if (!leadId) {
-        const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(50);
-        const dm = (d || []).find((x: any) => normPhone(x.contact_phone).endsWith(row.phone.slice(-9)) || row.phone.endsWith(normPhone(x.contact_phone).slice(-9)));
-        if (dm) { dealId = dm.id; method = "phone"; }
+      const variants = phoneVariants(row.phone);
+      const coreKey = phoneCoreKey(row.phone);
+      if (variants.length) {
+        const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).in("phone", variants).limit(1).maybeSingle();
+        if (l) { leadId = l.id; method = "phone"; }
+        if (!leadId) {
+          const { data: d } = await supabase.from("deals").select("id").eq("account_id", accountId).in("contact_phone", variants).limit(1).maybeSingle();
+          if (d) { dealId = d.id; method = "phone"; }
+        }
+      }
+      if (!leadId && !dealId && coreKey) {
+        const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(200);
+        const m = (l || []).find((x: any) => phoneCoreKey(x.phone) === coreKey);
+        if (m) { leadId = m.id; method = "phone"; }
+        if (!leadId) {
+          const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(200);
+          const dm = (d || []).find((x: any) => phoneCoreKey(x.contact_phone) === coreKey);
+          if (dm) { dealId = dm.id; method = "phone"; }
+        }
       }
     }
     if (leadId || dealId) {
