@@ -143,21 +143,67 @@ Deno.serve(async (req) => {
     if (action === "get_dashboard") {
       const { form_id, days = 30 } = body;
       const since = new Date(Date.now() - days * 86400_000).toISOString();
+      const isAll = !form_id || form_id === "__all__";
 
-      const { data: form } = await supabase.from("typeform_forms").select("*").eq("account_id", accountId).eq("form_id", form_id).maybeSingle();
-      const { data: stats } = await supabase.from("typeform_form_stats").select("*").eq("account_id", accountId).eq("form_id", form_id).order("snapshot_date", { ascending: false }).limit(1).maybeSingle();
-      const { data: responses } = await supabase.from("typeform_responses").select("id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id").eq("account_id", accountId).eq("form_id", form_id).gte("created_at", since).limit(5000);
+      // Resolve form ids in scope
+      let scopeFormIds: string[] = [];
+      if (isAll) {
+        const { data: allForms } = await supabase.from("typeform_forms").select("form_id").eq("account_id", accountId);
+        scopeFormIds = (allForms || []).map((f: any) => f.form_id);
+      } else {
+        scopeFormIds = [form_id];
+      }
 
-      const rows = responses || [];
+      // Form metadata (single only)
+      const { data: form } = isAll
+        ? { data: null }
+        : await supabase.from("typeform_forms").select("*").eq("account_id", accountId).eq("form_id", form_id).maybeSingle();
+
+      // Aggregate latest stats snapshot per form
+      let stats: any = null;
+      let aggVisits = 0, aggStarts = 0, aggAvgWeighted = 0, aggAvgWeight = 0, aggLifetimeCompletion = 0, aggLifetimeCompletionWeight = 0;
+      if (scopeFormIds.length) {
+        const { data: statsRows } = await supabase
+          .from("typeform_form_stats")
+          .select("form_id, snapshot_date, total_visits, total_starts, completion_rate, average_time_seconds")
+          .eq("account_id", accountId)
+          .in("form_id", scopeFormIds)
+          .order("snapshot_date", { ascending: false });
+        const latestPerForm = new Map<string, any>();
+        for (const r of statsRows || []) {
+          if (!latestPerForm.has(r.form_id)) latestPerForm.set(r.form_id, r);
+        }
+        for (const r of latestPerForm.values()) {
+          aggVisits += Number(r.total_visits || 0);
+          aggStarts += Number(r.total_starts || 0);
+          const w = Number(r.total_visits || 0) || 1;
+          aggAvgWeighted += Number(r.average_time_seconds || 0) * w;
+          aggAvgWeight += w;
+          aggLifetimeCompletion += Number(r.completion_rate || 0) * w;
+          aggLifetimeCompletionWeight += w;
+        }
+        if (!isAll) stats = latestPerForm.get(form_id) || null;
+      }
+
+      // Period responses across scope
+      let rows: any[] = [];
+      if (scopeFormIds.length) {
+        const { data: responses } = await supabase
+          .from("typeform_responses")
+          .select("id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id")
+          .eq("account_id", accountId)
+          .in("form_id", scopeFormIds)
+          .gte("created_at", since)
+          .limit(20000);
+        rows = responses || [];
+      }
       const submissions = rows.length;
       const completed = rows.filter(r => r.is_completed).length;
-      // distinct match count (a response with both lead+deal counts once)
       const matchedResponses = rows.filter(r => r.matched_lead_id || r.matched_deal_id).length;
       const matchedLeads = rows.filter(r => r.matched_lead_id).length;
       const matchedDeals = rows.filter(r => r.matched_deal_id).length;
 
-      // Won deals among matched (dedupe deal IDs)
-      const dealIds = Array.from(new Set((rows).map(r => r.matched_deal_id).filter(Boolean)));
+      const dealIds = Array.from(new Set(rows.map(r => r.matched_deal_id).filter(Boolean)));
       let won = 0, wonValue = 0;
       if (dealIds.length) {
         const { data: deals } = await supabase.from("deals").select("id, status, value").in("id", dealIds);
@@ -167,17 +213,18 @@ Deno.serve(async (req) => {
       }
 
       const periodCompletionRate = submissions ? (completed / submissions) * 100 : 0;
+      const avgTime = aggAvgWeight ? Math.round(aggAvgWeighted / aggAvgWeight) : 0;
+      const lifetimeCompletionRate = aggLifetimeCompletionWeight ? aggLifetimeCompletion / aggLifetimeCompletionWeight : 0;
 
       return new Response(JSON.stringify({
         form,
         stats,
+        scope: isAll ? { all: true, forms_count: scopeFormIds.length } : { all: false, forms_count: 1 },
         funnel: {
-          // Lifetime metrics from Typeform Insights (all-time, not period-filtered)
-          visits: stats?.total_visits || 0,
-          starts: stats?.total_starts || 0,
-          avg_time: stats?.average_time_seconds || 0,
-          lifetime_completion_rate: stats?.completion_rate || 0,
-          // Period-filtered metrics from local responses
+          visits: isAll ? aggVisits : (stats?.total_visits || 0),
+          starts: isAll ? aggStarts : (stats?.total_starts || 0),
+          avg_time: isAll ? avgTime : (stats?.average_time_seconds || 0),
+          lifetime_completion_rate: isAll ? lifetimeCompletionRate : (stats?.completion_rate || 0),
           submissions,
           completed,
           completion_rate: periodCompletionRate,
