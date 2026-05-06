@@ -779,6 +779,7 @@ export function useZappMessaging({
           media_mimetype: audioBlob.type,
           media_filename: `audio_${Date.now()}.webm`,
           audio_duration_sec: duration || null,
+          media_download_status: "completed",
           sent_at: now,
         }).select("id").single();
         
