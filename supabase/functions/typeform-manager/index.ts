@@ -228,19 +228,21 @@ async function backfillForm(supabase: any, accountId: string, formId: string, to
     console.error("Insights failed:", e);
   }
 
-  // Responses (last 1000 completed + uncompleted)
+  // Responses — fetch all (completed + partial), up to 50 pages of 200 = 10k
   try {
-    let token2 = "";
-    let pages = 0;
-    while (pages < 5) {
-      const url = `/forms/${formId}/responses?page_size=200&completed=true${token2 ? `&before=${token2}` : ""}`;
-      const data = await tfFetch(url, token);
-      const items = data?.items || [];
-      if (!items.length) break;
-      await processResponses(supabase, accountId, formId, items);
-      if (items.length < 200) break;
-      token2 = items[items.length - 1].token;
-      pages++;
+    for (const completedFlag of [true, false]) {
+      let token2 = "";
+      let pages = 0;
+      while (pages < 50) {
+        const url = `/forms/${formId}/responses?page_size=200&completed=${completedFlag}${token2 ? `&before=${token2}` : ""}`;
+        const data = await tfFetch(url, token);
+        const items = data?.items || [];
+        if (!items.length) break;
+        await processResponses(supabase, accountId, formId, items);
+        if (items.length < 200) break;
+        token2 = items[items.length - 1].token;
+        pages++;
+      }
     }
   } catch (e) {
     console.error("Responses failed:", e);
