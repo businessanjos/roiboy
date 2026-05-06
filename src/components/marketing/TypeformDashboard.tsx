@@ -412,7 +412,9 @@ export function TypeformDashboard() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-2">
-            {wonDeals.length === 0 ? (
+            {loadingFunnel ? (
+              <Skeleton className="h-40" />
+            ) : wonDeals.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Nenhum match encontrado.</p>
             ) : wonDeals.map((d) => (
               <div key={d.id} className="p-3 rounded-md border border-border/40 hover:bg-muted/30 transition">
