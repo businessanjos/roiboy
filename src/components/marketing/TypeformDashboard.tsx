@@ -323,9 +323,14 @@ export function TypeformDashboard() {
   );
 }
 
-function FunnelCard({ label, value, icon: Icon, sub, highlight }: any) {
+function FunnelCard({ label, value, icon: Icon, sub, highlight, scope }: any) {
+  const scopeStyles = scope === 'lifetime'
+    ? 'border-sky-500/30 bg-sky-500/5'
+    : scope === 'period'
+      ? 'border-emerald-500/30 bg-emerald-500/5'
+      : 'border-border/30 bg-muted/20';
   return (
-    <div className={`p-3 rounded-lg border ${highlight ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-border/30 bg-muted/20'}`}>
+    <div className={`p-3 rounded-lg border ${highlight ? 'border-emerald-500/40 bg-emerald-500/10' : scopeStyles}`}>
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
         <Icon className="w-3.5 h-3.5" />{label}
       </div>
