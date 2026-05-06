@@ -99,9 +99,10 @@ export function TypeformDashboard() {
 
   const loadFunnel = useCallback(async () => {
     if (!selectedForm) { setFunnel(null); setConsistency(null); return; }
+    if (period === 'custom' && !customReady) return;
     setLoadingFunnel(true);
     const { data, error } = await supabase.functions.invoke('typeform-manager', {
-      body: { action: 'get_dashboard', form_id: selectedForm, days: period },
+      body: { action: 'get_dashboard', form_id: selectedForm, ...periodPayload },
     });
     if (error) {
       toast.error('Erro ao carregar funil');
@@ -115,7 +116,7 @@ export function TypeformDashboard() {
       }
     }
     setLoadingFunnel(false);
-  }, [selectedForm, period]);
+  }, [selectedForm, periodPayload, period, customReady]);
 
   useEffect(() => { loadFunnel(); }, [loadFunnel]);
 
