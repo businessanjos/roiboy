@@ -189,14 +189,30 @@ export function TypeformDashboard() {
           ) : !funnel ? (
             <Skeleton className="h-40" />
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              <FunnelCard label="Visitas (total)" value={funnel.visits} icon={Users} sub="histórico" />
-              <FunnelCard label="Iniciados (total)" value={funnel.starts} icon={TrendingUp} sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'histórico'} />
-              <FunnelCard label="Submissões" value={funnel.submissions} icon={CheckCircle2} sub="no período" />
-              <FunnelCard label="Completados" value={funnel.completed} icon={CheckCircle2} sub={`${funnel.completion_rate.toFixed(1)}% das submissões`} highlight />
-              <FunnelCard label="Lead no Roy" value={funnel.matched_responses} icon={Users} sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : undefined} />
-              <FunnelCard label="Ganhos" value={funnel.won} icon={Trophy} sub={fmtBRL(funnel.won_value)} highlight />
-              <FunnelCard label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock} sub="histórico" />
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime · histórico total</Badge>
+                  <span className="text-xs text-muted-foreground">não muda com o filtro de período</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <FunnelCard scope="lifetime" label="Visitas" value={funnel.visits} icon={Users} sub="desde a criação do form" />
+                  <FunnelCard scope="lifetime" label="Iniciados" value={funnel.starts} icon={TrendingUp} sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'desde a criação do form'} />
+                  <FunnelCard scope="lifetime" label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock} sub="por resposta (histórico)" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · últimos {period}d</Badge>
+                  <span className="text-xs text-muted-foreground">filtrado pelo intervalo selecionado</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <FunnelCard scope="period" label="Submissões" value={funnel.submissions} icon={CheckCircle2} sub={`recebidas nos últimos ${period}d`} />
+                  <FunnelCard scope="period" label="Completados" value={funnel.completed} icon={CheckCircle2} sub={`${funnel.completion_rate.toFixed(1)}% das submissões`} highlight />
+                  <FunnelCard scope="period" label="Lead no Roy" value={funnel.matched_responses} icon={Users} sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : 'matches no período'} />
+                  <FunnelCard scope="period" label="Ganhos" value={funnel.won} icon={Trophy} sub={fmtBRL(funnel.won_value)} highlight />
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
