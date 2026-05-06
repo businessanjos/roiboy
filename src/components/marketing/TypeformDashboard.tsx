@@ -25,11 +25,13 @@ interface FunnelData {
   starts: number;
   submissions: number;
   completed: number;
+  matched_responses: number;
   matched_leads: number;
   matched_deals: number;
   won: number;
   won_value: number;
   completion_rate: number;
+  lifetime_completion_rate: number;
   avg_time: number;
 }
 
