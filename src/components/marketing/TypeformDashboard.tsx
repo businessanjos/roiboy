@@ -91,7 +91,7 @@ export function TypeformDashboard() {
       setFunnel(data?.funnel || null);
       setConsistency(data?.consistency || null);
       setWonDeals(data?.won_deals || []);
-      if (data?.consistency && data.consistency.ok === false) {
+      if (data?.consistency && data.consistency.ok === false && (data.consistency.out_of_scope_responses ?? 0) > 0) {
         toast.warning(`Inconsistência detectada: ${data.consistency.out_of_scope_responses} resposta(s) fora do escopo do funil selecionado.`);
       }
     }
