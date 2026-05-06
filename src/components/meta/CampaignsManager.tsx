@@ -345,6 +345,7 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
   const [sortBy, setSortBy] = useState<keyof Insights | 'name'>('spend');
   const [drillCampaign, setDrillCampaign] = useState<Campaign | null>(null);
   const [budgetEntity, setBudgetEntity] = useState<any>(null);
+  const [alertCampaign, setAlertCampaign] = useState<{ id: string; name: string } | null>(null);
   const [series, setSeries] = useState<any[]>([]);
   const [view, setView] = useState<'table' | 'bi'>('table');
 
