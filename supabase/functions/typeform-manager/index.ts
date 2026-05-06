@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { canonicalEmail } from "../_shared/email-normalize.ts";
+import { canonicalE164, phoneVariants, phoneCoreKey } from "../_shared/phone-normalize.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,10 +11,12 @@ const corsHeaders = {
 const TF_API = "https://api.typeform.com";
 
 function normPhone(p?: string | null) {
+  // Legacy: digits-only fallback used only inside fuzzy comparisons that already
+  // also use phoneCoreKey/canonicalE164 for the canonical path.
   return (p || "").replace(/\D/g, "").replace(/^0+/, "");
 }
 function normEmail(e?: string | null) {
-  return (e || "").trim().toLowerCase();
+  return canonicalEmail(e) || "";
 }
 
 async function tfFetch(path: string, token: string, init: RequestInit = {}) {
