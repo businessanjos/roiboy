@@ -11459,6 +11459,110 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_campaign_alert_events: {
+        Row: {
+          account_id: string
+          alert_id: string
+          campaign_id: string
+          created_at: string
+          id: string
+          message: string | null
+          metric: string
+          observed_value: number | null
+          threshold: number | null
+        }
+        Insert: {
+          account_id: string
+          alert_id: string
+          campaign_id: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          metric: string
+          observed_value?: number | null
+          threshold?: number | null
+        }
+        Update: {
+          account_id?: string
+          alert_id?: string
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          metric?: string
+          observed_value?: number | null
+          threshold?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_campaign_alert_events_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "meta_campaign_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_campaign_alerts: {
+        Row: {
+          account_id: string
+          ad_account_id: string
+          campaign_id: string
+          campaign_name: string | null
+          cooldown_hours: number
+          cpl_max: number | null
+          created_at: string
+          created_by: string | null
+          ctr_min: number | null
+          date_preset: string
+          enabled: boolean
+          frequency_max: number | null
+          id: string
+          notify_user_ids: string[]
+          roas_min: number | null
+          spend_daily_max: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          ad_account_id: string
+          campaign_id: string
+          campaign_name?: string | null
+          cooldown_hours?: number
+          cpl_max?: number | null
+          created_at?: string
+          created_by?: string | null
+          ctr_min?: number | null
+          date_preset?: string
+          enabled?: boolean
+          frequency_max?: number | null
+          id?: string
+          notify_user_ids?: string[]
+          roas_min?: number | null
+          spend_daily_max?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          ad_account_id?: string
+          campaign_id?: string
+          campaign_name?: string | null
+          cooldown_hours?: number
+          cpl_max?: number | null
+          created_at?: string
+          created_by?: string | null
+          ctr_min?: number | null
+          date_preset?: string
+          enabled?: boolean
+          frequency_max?: number | null
+          id?: string
+          notify_user_ids?: string[]
+          roas_min?: number | null
+          spend_daily_max?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notas_fiscais: {
         Row: {
           access_key: string | null
