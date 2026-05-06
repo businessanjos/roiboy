@@ -401,6 +401,7 @@ Deno.serve(async (req) => {
           won,
           won_value: wonValue,
         },
+        won_deals: wonDealsDetails,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
