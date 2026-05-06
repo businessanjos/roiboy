@@ -306,6 +306,64 @@ Deno.serve(async (req) => {
       won = wonDealIds.size;
       wonValue = Array.from(wonDealsMap.values()).reduce((s, d) => s + d.value, 0);
 
+      // Fetch details for matched won deals (for the modal drill-down)
+      let wonDealsDetails: any[] = [];
+      if (wonDealIds.size) {
+        const ids = Array.from(wonDealIds);
+        const { data: dealRows } = await supabase
+          .from("deals")
+          .select("id, title, value, currency, won_at, contact_name, contact_email, contact_phone, lead_id, account_id, responsible_user_id, users!deals_responsible_user_id_fkey(name)")
+          .eq("account_id", accountId)
+          .in("id", ids);
+
+        // Build a quick reverse-index from response → deal match reason
+        const emailToResp = new Map<string, any>();
+        const phoneKeyToResp = new Map<string, any>();
+        const dealIdToResp = new Map<string, any>();
+        const leadIdToResp = new Map<string, any>();
+        for (const r of cleanRows) {
+          const e = normEmail(r.email);
+          if (e && !emailToResp.has(e)) emailToResp.set(e, r);
+          const k = phoneCoreKey(r.phone);
+          if (k && !phoneKeyToResp.has(k)) phoneKeyToResp.set(k, r);
+          if (r.matched_deal_id && !dealIdToResp.has(r.matched_deal_id)) dealIdToResp.set(r.matched_deal_id, r);
+          if (r.matched_lead_id && !leadIdToResp.has(r.matched_lead_id)) leadIdToResp.set(r.matched_lead_id, r);
+        }
+
+        wonDealsDetails = (dealRows || []).map((d: any) => {
+          let matchedBy = "deal_id";
+          let resp = dealIdToResp.get(d.id);
+          if (!resp && d.lead_id && leadIdToResp.has(d.lead_id)) { resp = leadIdToResp.get(d.lead_id); matchedBy = "lead_id"; }
+          if (!resp) {
+            const ek = (d.contact_email || "").toLowerCase().trim();
+            if (ek && emailToResp.has(ek)) { resp = emailToResp.get(ek); matchedBy = "email"; }
+          }
+          if (!resp) {
+            const pk = phoneCoreKey(d.contact_phone);
+            if (pk && phoneKeyToResp.has(pk)) { resp = phoneKeyToResp.get(pk); matchedBy = "phone"; }
+          }
+          return {
+            id: d.id,
+            title: d.title,
+            value: Number(d.value || 0),
+            currency: d.currency || "BRL",
+            won_at: d.won_at,
+            contact_name: d.contact_name,
+            contact_email: d.contact_email,
+            contact_phone: d.contact_phone,
+            responsible_user_name: d.users?.name || null,
+            matched_by: matchedBy,
+            response: resp ? {
+              id: resp.id,
+              form_id: resp.form_id,
+              email: resp.email,
+              phone: resp.phone,
+              submitted_at: resp.submitted_at,
+            } : null,
+          };
+        }).sort((a, b) => (b.won_at || "").localeCompare(a.won_at || ""));
+      }
+
       const periodCompletionRate = submissions ? (completed / submissions) * 100 : 0;
       const avgTime = aggAvgWeight ? Math.round(aggAvgWeighted / aggAvgWeight) : 0;
       const lifetimeCompletionRate = aggLifetimeCompletionWeight ? aggLifetimeCompletion / aggLifetimeCompletionWeight : 0;
@@ -343,6 +401,7 @@ Deno.serve(async (req) => {
           won,
           won_value: wonValue,
         },
+        won_deals: wonDealsDetails,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
