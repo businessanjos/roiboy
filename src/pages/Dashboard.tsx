@@ -67,6 +67,8 @@ import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/co
 import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
 import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttendanceCard";
 import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
+import { EditableGoal } from "@/components/dashboard/EditableGoal";
+import { useQuery } from "@tanstack/react-query";
 
 
 
