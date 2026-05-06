@@ -51,6 +51,12 @@ export function TypeformDashboard() {
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
   const [wonDeals, setWonDeals] = useState<any[]>([]);
   const [wonOpen, setWonOpen] = useState(false);
+  const [detailsCard, setDetailsCard] = useState<null | {
+    label: string;
+    source: string;
+    steps: string[];
+    sample: { columns: string[]; rows: any[][] } | null;
+  }>(null);
   const [consistency, setConsistency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingFunnel, setLoadingFunnel] = useState(false);
@@ -237,18 +243,53 @@ export function TypeformDashboard() {
                       sub="desde a criação do form"
                       source="Typeform Insights API"
                       tip="Quantidade total de pessoas que abriram o link/embed do formulário, desde a criação. Vem do endpoint /insights/{form_id}/summary do Typeform (campo total_visits). Não é filtrado pelo período selecionado."
+                      onDetails={() => setDetailsCard({
+                        label: 'Visitas',
+                        source: 'Typeform Insights API',
+                        steps: [
+                          `1. Para cada form rastreado, chama GET /insights/{form_id}/summary do Typeform.`,
+                          `2. Lê o campo form.summary.total_visits.`,
+                          `3. Persiste o snapshot do dia em typeform_form_stats.total_visits.`,
+                          `4. Pega a linha mais recente por form_id e ${selectedForm === '__all__' ? `soma das ${forms.length} formulários` : 'usa o valor do form selecionado'}.`,
+                          `5. Total exibido = ${funnel.visits.toLocaleString('pt-BR')}.`,
+                        ],
+                        sample: null,
+                      })}
                     />
                     <FunnelCard
                       scope="lifetime" label="Iniciados" value={funnel.starts} icon={TrendingUp}
                       sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'desde a criação do form'}
                       source="Typeform Insights API"
                       tip="Visitas que avançaram além da welcome screen e visualizaram o primeiro campo real do form. Calculado a partir de fields[0].views do Insights (excluindo welcome/thankyou screens). Histórico total."
+                      onDetails={() => setDetailsCard({
+                        label: 'Iniciados',
+                        source: 'Typeform Insights API',
+                        steps: [
+                          `1. Chama /insights/{form_id}/summary e itera o array fields.`,
+                          `2. Ignora screens (welcome/thankyou) e pega o primeiro campo real.`,
+                          `3. Lê o atributo views = quantas pessoas viram o primeiro campo.`,
+                          `4. Persiste em typeform_form_stats.total_starts; agrega da mesma forma que Visitas.`,
+                          `5. Total exibido = ${funnel.starts.toLocaleString('pt-BR')}${funnel.visits ? ` (${((funnel.starts/funnel.visits)*100).toFixed(1)}% das ${funnel.visits.toLocaleString('pt-BR')} visitas)` : ''}.`,
+                        ],
+                        sample: null,
+                      })}
                     />
                     <FunnelCard
                       scope="lifetime" label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock}
                       sub="por resposta (histórico)"
                       source="Typeform Insights API"
                       tip="Tempo médio (segundos) que cada respondente leva para completar o formulário. Vem de form.summary.average_time. Quando 'Todos os funis' está selecionado, é uma média ponderada por visitas."
+                      onDetails={() => setDetailsCard({
+                        label: 'Tempo médio',
+                        source: 'Typeform Insights API',
+                        steps: [
+                          `1. Lê form.summary.average_time (em segundos) do endpoint Insights.`,
+                          `2. Persiste em typeform_form_stats.average_time_seconds.`,
+                          `3. Quando 'Todos os funis' está selecionado, aplica média ponderada: Σ(avg_time × visitas) / Σ(visitas).`,
+                          `4. Resultado convertido para minutos/segundos = ${fmtTime(funnel.avg_time)}.`,
+                        ],
+                        sample: null,
+                      })}
                     />
                   </div>
                 </div>
@@ -263,6 +304,17 @@ export function TypeformDashboard() {
                       sub={`recebidas nos últimos ${period}d`}
                       source="DB · typeform_responses"
                       tip={`Total de respostas (completas + parciais) salvas no nosso banco via webhook nos últimos ${period} dias. Conta linhas em typeform_responses filtradas por form_id selecionado e created_at >= hoje-${period}d.`}
+                      onDetails={() => setDetailsCard({
+                        label: 'Submissões',
+                        source: 'DB · typeform_responses',
+                        steps: [
+                          `1. Filtra typeform_responses por account_id da conta logada.`,
+                          `2. Restringe form_id ao(s) funil(is) selecionado(s) (${selectedForm === '__all__' ? `todos os ${forms.length}` : '1 funil'}).`,
+                          `3. Mantém apenas linhas com created_at >= hoje - ${period} dias.`,
+                          `4. Conta total de linhas resultantes = ${funnel.submissions.toLocaleString('pt-BR')}.`,
+                        ],
+                        sample: null,
+                      })}
                     />
                     <FunnelCard
                       scope="period" label="Completados" value={funnel.completed} icon={CheckCircle2}
@@ -270,12 +322,37 @@ export function TypeformDashboard() {
                       source="DB · typeform_responses"
                       tip={`Subset das submissões com submitted_at preenchido (respondente chegou até a thank-you screen). Taxa = completados / submissões no período.`}
                       highlight
+                      onDetails={() => setDetailsCard({
+                        label: 'Completados',
+                        source: 'DB · typeform_responses',
+                        steps: [
+                          `1. Parte do conjunto de Submissões (${funnel.submissions.toLocaleString('pt-BR')} no período).`,
+                          `2. Filtra apenas linhas com is_completed = true (chegou até a thank-you screen).`,
+                          `3. Resultado = ${funnel.completed.toLocaleString('pt-BR')} respostas completas.`,
+                          `4. Taxa de conversão = ${funnel.completed} / ${funnel.submissions} = ${funnel.completion_rate.toFixed(1)}%.`,
+                        ],
+                        sample: null,
+                      })}
                     />
                     <FunnelCard
                       scope="period" label="Lead no Roy" value={funnel.matched_responses} icon={Users}
                       sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : 'matches no período'}
                       source="DB · matching engine"
                       tip="Respostas do período que conseguimos cruzar com um lead OU deal existente no Roy (por email exato ou últimos 9 dígitos do telefone). Conta cada resposta única — se ela match com lead E deal, conta apenas 1."
+                      onDetails={() => setDetailsCard({
+                        label: 'Lead no Roy',
+                        source: 'DB · matching engine',
+                        steps: [
+                          `1. Parte das ${funnel.submissions.toLocaleString('pt-BR')} respostas do período.`,
+                          `2. Para cada resposta, normaliza email (lowercase/trim) e telefone (DDD + últimos 8 dígitos).`,
+                          `3. Cruza com leads e deals da conta procurando match por email OU phoneCoreKey.`,
+                          `4. Marca matched_lead_id / matched_deal_id na resposta quando encontra.`,
+                          `5. Conta respostas únicas com matched_lead_id OU matched_deal_id = ${funnel.matched_responses.toLocaleString('pt-BR')}.`,
+                          `   • Match por lead: ${funnel.matched_leads.toLocaleString('pt-BR')}`,
+                          `   • Match por deal: ${funnel.matched_deals.toLocaleString('pt-BR')}`,
+                        ],
+                        sample: null,
+                      })}
                     />
                     <FunnelCard
                       scope="period" label="Ganhos" value={funnel.won} icon={Trophy}
@@ -284,6 +361,28 @@ export function TypeformDashboard() {
                       tip="Quantos dos deals matched a partir das respostas do período estão atualmente com status='won' na tabela deals. Valor exibido = soma de deals.value desses deals ganhos. Deal IDs são deduplicados antes da consulta. Clique para ver a lista."
                       highlight
                       onClick={funnel.won > 0 ? () => setWonOpen(true) : undefined}
+                      onDetails={() => setDetailsCard({
+                        label: 'Ganhos',
+                        source: 'DB · deals (status=won)',
+                        steps: [
+                          `1. Parte das ${funnel.matched_responses.toLocaleString('pt-BR')} respostas com match no período.`,
+                          `2. Caminho A — matched_deal_id direto: busca deals com status='won'.`,
+                          `3. Caminho B — matched_lead_id: busca QUALQUER deal won criado depois para o mesmo lead.`,
+                          `4. Caminho C — cruzamento ao vivo por email (case-insensitive) e telefone (variantes BR) com TODOS os deals won da conta.`,
+                          `5. Caminho D — respostas → leads (por email/telefone) → deals won daqueles leads (pega casos onde o deal não tem email/telefone preenchido).`,
+                          `6. Deduplica os deal IDs encontrados nos 4 caminhos = ${funnel.won.toLocaleString('pt-BR')} deals únicos.`,
+                          `7. Valor total = soma de deals.value desses deals = ${fmtBRL(funnel.won_value)}.`,
+                        ],
+                        sample: wonDeals.length ? {
+                          columns: ['Contato', 'Valor', 'Won em', 'Vendedor'],
+                          rows: wonDeals.slice(0, 10).map((d: any) => [
+                            d.contact_name || d.contact_email || '—',
+                            fmtBRL(Number(d.value || 0)),
+                            d.won_at ? new Date(d.won_at).toLocaleDateString('pt-BR') : '—',
+                            d.responsible_user_name || '—',
+                          ]),
+                        } : null,
+                      })}
                     />
                   </div>
                 </div>
@@ -450,11 +549,69 @@ export function TypeformDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!detailsCard} onOpenChange={(o) => { if (!o) setDetailsCard(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="w-5 h-5 text-sky-500" />
+              Como calculamos: {detailsCard?.label}
+            </DialogTitle>
+            <DialogDescription>
+              Fonte: <span className="font-medium">{detailsCard?.source}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
+                Passo a passo
+              </p>
+              <ol className="space-y-2 text-sm">
+                {detailsCard?.steps.map((s, i) => (
+                  <li key={i} className="p-2 rounded-md bg-muted/40 border border-border/30 leading-relaxed">
+                    {s}
+                  </li>
+                ))}
+              </ol>
+            </div>
+            {detailsCard?.sample && detailsCard.sample.rows.length > 0 && (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
+                  Amostra dos registros usados ({detailsCard.sample.rows.length})
+                </p>
+                <div className="overflow-x-auto rounded-md border border-border/40">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40">
+                      <tr>
+                        {detailsCard.sample.columns.map((c) => (
+                          <th key={c} className="text-left px-2 py-1.5 font-medium">{c}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detailsCard.sample.rows.map((row, idx) => (
+                        <tr key={idx} className="border-t border-border/30">
+                          {row.map((cell, ci) => (
+                            <td key={ci} className="px-2 py-1.5 text-muted-foreground">{String(cell)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailsCard(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, source, onClick }: any) {
+function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, source, onClick, onDetails }: any) {
   const scopeStyles = scope === 'lifetime'
     ? 'border-sky-500/30 bg-sky-500/5'
     : scope === 'period'
@@ -476,7 +633,12 @@ function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, sour
         {tip && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button type="button" className="opacity-60 hover:opacity-100 transition-opacity shrink-0" aria-label={`Como ${label} é calculado`}>
+              <button
+                type="button"
+                className="opacity-60 hover:opacity-100 transition-opacity shrink-0"
+                aria-label={`Como ${label} é calculado`}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <Info className="w-3.5 h-3.5" />
               </button>
             </TooltipTrigger>
@@ -487,6 +649,16 @@ function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, sour
                 </div>
               )}
               <p>{tip}</p>
+              {onDetails && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="mt-2 h-7 w-full text-xs"
+                  onClick={(e) => { e.stopPropagation(); onDetails(); }}
+                >
+                  Ver detalhes do cálculo
+                </Button>
+              )}
             </TooltipContent>
           </Tooltip>
         )}
