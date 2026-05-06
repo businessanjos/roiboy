@@ -141,8 +141,15 @@ export function TypeformDashboard() {
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-emerald-500" />Funil Typeform
               </CardTitle>
-              <CardDescription>
-                Visitas/Iniciados/Tempo médio são <strong>histórico total</strong> (Typeform Insights). Submissões em diante respeitam o período selecionado.
+              <CardDescription className="space-y-1">
+                <span className="block">
+                  <Badge variant="outline" className="mr-1.5 border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime</Badge>
+                  Visitas, Iniciados e Tempo médio vêm do Typeform Insights (histórico total do formulário, ignora o período).
+                </span>
+                <span className="block">
+                  <Badge variant="outline" className="mr-1.5 border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período</Badge>
+                  Submissões, Completados, Lead no Roy e Ganhos consideram apenas o intervalo selecionado.
+                </span>
               </CardDescription>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -182,14 +189,30 @@ export function TypeformDashboard() {
           ) : !funnel ? (
             <Skeleton className="h-40" />
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              <FunnelCard label="Visitas (total)" value={funnel.visits} icon={Users} sub="histórico" />
-              <FunnelCard label="Iniciados (total)" value={funnel.starts} icon={TrendingUp} sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'histórico'} />
-              <FunnelCard label="Submissões" value={funnel.submissions} icon={CheckCircle2} sub="no período" />
-              <FunnelCard label="Completados" value={funnel.completed} icon={CheckCircle2} sub={`${funnel.completion_rate.toFixed(1)}% das submissões`} highlight />
-              <FunnelCard label="Lead no Roy" value={funnel.matched_responses} icon={Users} sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : undefined} />
-              <FunnelCard label="Ganhos" value={funnel.won} icon={Trophy} sub={fmtBRL(funnel.won_value)} highlight />
-              <FunnelCard label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock} sub="histórico" />
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime · histórico total</Badge>
+                  <span className="text-xs text-muted-foreground">não muda com o filtro de período</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <FunnelCard scope="lifetime" label="Visitas" value={funnel.visits} icon={Users} sub="desde a criação do form" />
+                  <FunnelCard scope="lifetime" label="Iniciados" value={funnel.starts} icon={TrendingUp} sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'desde a criação do form'} />
+                  <FunnelCard scope="lifetime" label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock} sub="por resposta (histórico)" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · últimos {period}d</Badge>
+                  <span className="text-xs text-muted-foreground">filtrado pelo intervalo selecionado</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <FunnelCard scope="period" label="Submissões" value={funnel.submissions} icon={CheckCircle2} sub={`recebidas nos últimos ${period}d`} />
+                  <FunnelCard scope="period" label="Completados" value={funnel.completed} icon={CheckCircle2} sub={`${funnel.completion_rate.toFixed(1)}% das submissões`} highlight />
+                  <FunnelCard scope="period" label="Lead no Roy" value={funnel.matched_responses} icon={Users} sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : 'matches no período'} />
+                  <FunnelCard scope="period" label="Ganhos" value={funnel.won} icon={Trophy} sub={fmtBRL(funnel.won_value)} highlight />
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
@@ -300,9 +323,14 @@ export function TypeformDashboard() {
   );
 }
 
-function FunnelCard({ label, value, icon: Icon, sub, highlight }: any) {
+function FunnelCard({ label, value, icon: Icon, sub, highlight, scope }: any) {
+  const scopeStyles = scope === 'lifetime'
+    ? 'border-sky-500/30 bg-sky-500/5'
+    : scope === 'period'
+      ? 'border-emerald-500/30 bg-emerald-500/5'
+      : 'border-border/30 bg-muted/20';
   return (
-    <div className={`p-3 rounded-lg border ${highlight ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-border/30 bg-muted/20'}`}>
+    <div className={`p-3 rounded-lg border ${highlight ? 'border-emerald-500/40 bg-emerald-500/10' : scopeStyles}`}>
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
         <Icon className="w-3.5 h-3.5" />{label}
       </div>
