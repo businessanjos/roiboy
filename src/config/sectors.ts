@@ -187,6 +187,7 @@ export const sectors: Sector[] = [
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/sales-calendar", icon: CalendarDays, label: "Calendário" },
       { to: "/sales-team/spiffs", icon: Gift, label: "SPIFFs", permission: PERMISSIONS.TEAM_VIEW },
+      { to: "/sales-team/incentive-presentation", icon: Trophy, label: "Plano de Incentivo" },
       { to: "/sales-scripts", icon: ScrollText, label: "Script de Vendas" },
       { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
