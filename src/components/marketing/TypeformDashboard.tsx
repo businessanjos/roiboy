@@ -475,6 +475,7 @@ export function TypeformDashboard() {
                   </div>
                 </div>
               </div>
+              </div>
             </TooltipProvider>
           )}
         </CardContent>
