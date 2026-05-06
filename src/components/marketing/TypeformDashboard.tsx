@@ -178,7 +178,7 @@ export function TypeformDashboard() {
                 </span>
                 {consistency && (
                   <span className="block pt-1">
-                    {consistency.ok ? (
+                    {consistency.ok || (consistency.out_of_scope_responses ?? 0) === 0 ? (
                       <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5" title={`${consistency.responses_in_scope} resposta(s) validada(s) em ${consistency.scope_form_ids?.length || 0} funil(is)`}>
                         ✓ Dados consistentes ({consistency.responses_in_scope} resp.)
                       </Badge>
