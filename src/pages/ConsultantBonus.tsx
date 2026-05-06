@@ -394,7 +394,7 @@ export default function ConsultantBonus() {
         <TabsContent value="incentive" className="space-y-4">
           <div className="flex justify-end">
             <Button
-              onClick={() => window.open("/operations/cs-incentive-presentation", "_blank")}
+              onClick={() => { window.location.href = "/operations/cs-incentive-presentation"; }}
               className="bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white gap-2"
             >
               <Trophy className="h-4 w-4" />
