@@ -1,0 +1,1 @@
+ALTER TABLE public.oauth_states ALTER COLUMN provider SET DEFAULT 'meta';
