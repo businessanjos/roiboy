@@ -1554,7 +1554,9 @@ export function DealDetailSheet({
                     </h4>
                     {dealCustomFields.length > 0 && currentUser?.account_id ? (
                       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                        {dealCustomFields.map(field => {
+                        {dealCustomFields
+                          .filter((field) => field.id !== "924c04a5-9824-443b-8122-8fc8c2ad727e")
+                          .map(field => {
                           const value = dealFieldValues[field.id];
                           return (
                             <div key={field.id} className="min-w-0 overflow-hidden relative z-0">
