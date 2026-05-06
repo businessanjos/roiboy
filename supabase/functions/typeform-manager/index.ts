@@ -256,9 +256,13 @@ Deno.serve(async (req) => {
       }
 
       // ---- LIVE cross by email/phone (covers responses whose match_* IDs are stale or never set) ----
-      const normP = (p: string) => (p || "").replace(/\D/g, "");
-      const emails = Array.from(new Set(cleanRows.map(r => (r.email || "").toLowerCase().trim()).filter(Boolean)));
-      const phoneSuffixes = Array.from(new Set(cleanRows.map(r => normP(r.phone)).filter(p => p.length >= 9).map(p => p.slice(-9))));
+      const emails = Array.from(new Set(cleanRows.map(r => normEmail(r.email)).filter(Boolean)));
+      // For phones we use core key (DDD + last 8) to be tolerant to BR 9th digit / DDI variations.
+      const phoneKeys = new Set<string>();
+      for (const r of cleanRows) {
+        const k = phoneCoreKey(r.phone);
+        if (k) phoneKeys.add(k);
+      }
 
       let wonByEmail = 0, wonByPhone = 0;
       if (emails.length) {
@@ -280,8 +284,8 @@ Deno.serve(async (req) => {
           }
         }
       }
-      if (phoneSuffixes.length) {
-        // can't IN on suffix; fetch all won deals with phone for account (small set typically)
+      if (phoneKeys.size) {
+        // can't IN on derived key; fetch all won deals with phone for account (small set typically)
         const { data: phoneDeals } = await supabase
           .from("deals")
           .select("id, status, value, contact_phone")
@@ -289,10 +293,9 @@ Deno.serve(async (req) => {
           .eq("status", "won")
           .not("contact_phone", "is", null)
           .limit(5000);
-        const suffixSet = new Set(phoneSuffixes);
         for (const d of phoneDeals || []) {
-          const suf = normP(d.contact_phone).slice(-9);
-          if (suf && suffixSet.has(suf) && !wonDealIds.has(d.id)) {
+          const key = phoneCoreKey(d.contact_phone);
+          if (key && phoneKeys.has(key) && !wonDealIds.has(d.id)) {
             wonDealIds.add(d.id);
             wonDealsMap.set(d.id, { value: Number(d.value || 0) });
             wonByPhone++;
