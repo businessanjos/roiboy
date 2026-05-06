@@ -887,6 +887,9 @@ export function CsIncentivePlanSection() {
             baseSalary={toNumber(form.base_salary_monthly)}
             tiers={draftTiers}
             scope={selectedScope}
+            churnPenaltyEnabled={!!form.churn_penalty_enabled}
+            churnPenaltyThreshold={toNumber(form.churn_penalty_threshold)}
+            churnPenaltyPercent={toNumber(form.churn_penalty_percent)}
           />
         </CardContent>
       </Card>
@@ -899,14 +902,20 @@ function BonusSimulator({
   baseSalary,
   tiers,
   scope,
+  churnPenaltyEnabled,
+  churnPenaltyThreshold,
+  churnPenaltyPercent,
 }: {
   monthlyBonus: number;
   baseSalary: number;
   tiers: { min: number | ""; max: string; multiplier: number | ""; label: string }[];
   scope: string;
+  churnPenaltyEnabled: boolean;
+  churnPenaltyThreshold: number;
+  churnPenaltyPercent: number;
 }) {
   const [renewalPct, setRenewalPct] = useState<number | "">(100);
-  const [churnDiscount, setChurnDiscount] = useState<number | "">(0);
+  const [churnPct, setChurnPct] = useState<number | "">(0);
   const pct = toNumber(renewalPct);
 
   // Senioridade do plano selecionado, para filtrar produtos atendidos
@@ -994,8 +1003,17 @@ function BonusSimulator({
   const multiplier = matched ? toNumber(matched.multiplier) || 0 : 0;
   const attainmentPct = Math.round(multiplier * 100);
   const absoluteRenewals = Math.round((pct / 100) * totalRenewableContracts);
-  const churnVal = toNumber(churnDiscount);
-  const monthlyBonusValue = Math.max(0, monthlyBonus * multiplier - churnVal);
+
+  // Penalidade por churn: se ativada, ao ultrapassar o limite, aplica desconto
+  // de churn_penalty_percent (%) sobre o bônus do mês. Caso contrário, sem desconto.
+  const churnInput = toNumber(churnPct);
+  const churnTriggered =
+    churnPenaltyEnabled && churnInput > churnPenaltyThreshold;
+  const grossMonthlyBonus = monthlyBonus * multiplier;
+  const churnDiscountValue = churnTriggered
+    ? grossMonthlyBonus * (churnPenaltyPercent / 100)
+    : 0;
+  const monthlyBonusValue = Math.max(0, grossMonthlyBonus - churnDiscountValue);
   const quarterBonus = monthlyBonusValue * 3;
   const quarterSalary = baseSalary * 3;
   const quarterTotal = quarterSalary + quarterBonus;
@@ -1041,13 +1059,22 @@ function BonusSimulator({
           <Input value={formatBRL(baseSalary)} disabled />
         </div>
         <div>
-          <Label className="text-xs">Desconto por churn (R$)</Label>
+          <Label className="text-xs">% de churn</Label>
           <Input
             type="number"
-            value={churnDiscount ?? ""}
-            onChange={(e) => setChurnDiscount(parseNumberInput(e.target.value))}
-            placeholder="Ex: 200"
+            value={churnPct ?? ""}
+            onChange={(e) => setChurnPct(parseNumberInput(e.target.value))}
+            placeholder="Ex: 12"
+            disabled={!churnPenaltyEnabled}
           />
+          <p className="text-[10px] text-muted-foreground mt-1">
+            {churnPenaltyEnabled
+              ? `Acima de ${churnPenaltyThreshold}% desconta ${churnPenaltyPercent}% do bônus.`
+              : "Penalidade por churn está desativada."}
+            {churnTriggered && (
+              <span className="text-rose-600"> Desconto aplicado: −{formatBRL(churnDiscountValue)}</span>
+            )}
+          </p>
         </div>
       </div>
 
