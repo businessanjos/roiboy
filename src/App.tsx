@@ -90,6 +90,7 @@ const SalesPipeline = lazyRetry(() => import("./pages/SalesPipeline"));
 const SalesCalendar = lazyRetry(() => import("./pages/SalesCalendar"));
 const SpiffsTracking = lazyRetry(() => import("./pages/SpiffsTracking"));
 const IncentivePresentation = lazyRetry(() => import("./pages/IncentivePresentation"));
+const CsIncentivePresentation = lazyRetry(() => import("./pages/CsIncentivePresentation"));
 const Leads = lazyRetry(() => import("./pages/Leads"));
 
 const Marketing = lazyRetry(() => import("./pages/Marketing"));
@@ -196,6 +197,7 @@ const App = () => (
                             <Route path="/clients/:id" element={<ClientDetail />} />
                             <Route path="/renewals" element={<Renewals />} />
                             <Route path="/operations/consultant-bonus" element={<ConsultantBonus />} />
+                            <Route path="/operations/cs-incentive-presentation" element={<CsIncentivePresentation />} />
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/settings/contract-defaults" element={<ContractDefaultsSettings />} />
                             <Route path="/sales/contracts" element={<SalesDigitalContracts />} />
