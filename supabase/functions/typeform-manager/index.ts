@@ -2,6 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { canonicalEmail } from "../_shared/email-normalize.ts";
 import { canonicalE164, phoneVariants, phoneCoreKey } from "../_shared/phone-normalize.ts";
+import { fetchAllWonDeals, crossMatchWonDeals } from "../_shared/won-deal-matching.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
