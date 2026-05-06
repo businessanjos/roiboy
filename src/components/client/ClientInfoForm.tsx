@@ -1159,6 +1159,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           <TimezoneField
             value={data.timezone}
             phone={data.phone_e164}
+            state={data.state}
             onChange={(v) => updateField("timezone", v)}
           />
 
