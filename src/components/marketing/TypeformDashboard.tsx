@@ -243,18 +243,53 @@ export function TypeformDashboard() {
                       sub="desde a criação do form"
                       source="Typeform Insights API"
                       tip="Quantidade total de pessoas que abriram o link/embed do formulário, desde a criação. Vem do endpoint /insights/{form_id}/summary do Typeform (campo total_visits). Não é filtrado pelo período selecionado."
+                      onDetails={() => setDetailsCard({
+                        label: 'Visitas',
+                        source: 'Typeform Insights API',
+                        steps: [
+                          `1. Para cada form rastreado, chama GET /insights/{form_id}/summary do Typeform.`,
+                          `2. Lê o campo form.summary.total_visits.`,
+                          `3. Persiste o snapshot do dia em typeform_form_stats.total_visits.`,
+                          `4. Pega a linha mais recente por form_id e ${selectedForm === '__all__' ? `soma das ${forms.length} formulários` : 'usa o valor do form selecionado'}.`,
+                          `5. Total exibido = ${funnel.visits.toLocaleString('pt-BR')}.`,
+                        ],
+                        sample: null,
+                      })}
                     />
                     <FunnelCard
                       scope="lifetime" label="Iniciados" value={funnel.starts} icon={TrendingUp}
                       sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'desde a criação do form'}
                       source="Typeform Insights API"
                       tip="Visitas que avançaram além da welcome screen e visualizaram o primeiro campo real do form. Calculado a partir de fields[0].views do Insights (excluindo welcome/thankyou screens). Histórico total."
+                      onDetails={() => setDetailsCard({
+                        label: 'Iniciados',
+                        source: 'Typeform Insights API',
+                        steps: [
+                          `1. Chama /insights/{form_id}/summary e itera o array fields.`,
+                          `2. Ignora screens (welcome/thankyou) e pega o primeiro campo real.`,
+                          `3. Lê o atributo views = quantas pessoas viram o primeiro campo.`,
+                          `4. Persiste em typeform_form_stats.total_starts; agrega da mesma forma que Visitas.`,
+                          `5. Total exibido = ${funnel.starts.toLocaleString('pt-BR')}${funnel.visits ? ` (${((funnel.starts/funnel.visits)*100).toFixed(1)}% das ${funnel.visits.toLocaleString('pt-BR')} visitas)` : ''}.`,
+                        ],
+                        sample: null,
+                      })}
                     />
                     <FunnelCard
                       scope="lifetime" label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock}
                       sub="por resposta (histórico)"
                       source="Typeform Insights API"
                       tip="Tempo médio (segundos) que cada respondente leva para completar o formulário. Vem de form.summary.average_time. Quando 'Todos os funis' está selecionado, é uma média ponderada por visitas."
+                      onDetails={() => setDetailsCard({
+                        label: 'Tempo médio',
+                        source: 'Typeform Insights API',
+                        steps: [
+                          `1. Lê form.summary.average_time (em segundos) do endpoint Insights.`,
+                          `2. Persiste em typeform_form_stats.average_time_seconds.`,
+                          `3. Quando 'Todos os funis' está selecionado, aplica média ponderada: Σ(avg_time × visitas) / Σ(visitas).`,
+                          `4. Resultado convertido para minutos/segundos = ${fmtTime(funnel.avg_time)}.`,
+                        ],
+                        sample: null,
+                      })}
                     />
                   </div>
                 </div>
