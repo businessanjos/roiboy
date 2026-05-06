@@ -54,7 +54,20 @@ const fmtTime = (s: number) => {
 export function TypeformDashboard() {
   const [forms, setForms] = useState<TrackedForm[]>([]);
   const [selectedForm, setSelectedForm] = useState<string>('');
-  const [period, setPeriod] = useState(30);
+  const [period, setPeriod] = useState<'today' | '7' | '30' | '90' | 'this_month' | 'custom'>('30');
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
+  const isCustom = period === 'custom';
+  const customReady = isCustom && !!customRange?.from && !!customRange?.to;
+  const periodPayload = useMemo(() => {
+    const now = new Date();
+    if (period === 'today') return { since: format(startOfDay(now), 'yyyy-MM-dd'), until: format(endOfDay(now), 'yyyy-MM-dd') };
+    if (period === 'this_month') return { since: format(startOfMonth(now), 'yyyy-MM-dd'), until: format(endOfMonth(now), 'yyyy-MM-dd') };
+    if (period === 'custom' && customReady) {
+      return { since: format(customRange!.from!, 'yyyy-MM-dd'), until: format(customRange!.to!, 'yyyy-MM-dd') };
+    }
+    return { days: Number(period) || 30 };
+  }, [period, customReady, customRange]);
+  const periodLabel = period === 'today' ? 'hoje' : period === 'this_month' ? 'este mês' : period === 'custom' && customReady ? `${format(customRange!.from!, 'dd/MM/yy')} – ${format(customRange!.to!, 'dd/MM/yy')}` : `últimos ${period}d`;
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
   const [wonDeals, setWonDeals] = useState<any[]>([]);
   const [wonOpen, setWonOpen] = useState(false);
