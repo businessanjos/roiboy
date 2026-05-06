@@ -230,7 +230,7 @@ export function TypeformDashboard() {
               Marque os formulários que deseja rastrear em tempo real. O webhook é instalado automaticamente em cada um.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-3">
             {loadingAvailable ? (
               <Skeleton className="h-64" />
             ) : (
