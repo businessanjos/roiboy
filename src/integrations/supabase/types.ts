@@ -2560,6 +2560,7 @@ export type Database = {
           street: string | null
           street_number: string | null
           tags: Json | null
+          timezone: string | null
           zip_code: string | null
         }
         Insert: {
@@ -2618,6 +2619,7 @@ export type Database = {
           street?: string | null
           street_number?: string | null
           tags?: Json | null
+          timezone?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -2676,6 +2678,7 @@ export type Database = {
           street?: string | null
           street_number?: string | null
           tags?: Json | null
+          timezone?: string | null
           zip_code?: string | null
         }
         Relationships: [
