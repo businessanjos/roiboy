@@ -61,7 +61,7 @@ export function TypeformDashboard() {
     setLoading(true);
     const { data } = await supabase.from('typeform_forms').select('*').order('created_at', { ascending: false });
     setForms((data as any) || []);
-    if (data && data.length && !selectedForm) setSelectedForm(data[0].form_id);
+    if (data && data.length && !selectedForm) setSelectedForm('__all__');
     setLoading(false);
   }, [selectedForm]);
 
@@ -117,9 +117,15 @@ export function TypeformDashboard() {
   const refresh = async () => {
     if (!selectedForm) return;
     setLoadingFunnel(true);
-    const { error } = await supabase.functions.invoke('typeform-manager', { body: { action: 'refresh_form', form_id: selectedForm } });
-    if (error) toast.error('Erro ao sincronizar');
-    else { toast.success('Sincronizado'); await loadFunnel(); }
+    const targets = selectedForm === '__all__' ? forms.map(f => f.form_id) : [selectedForm];
+    let fail = 0;
+    for (const fid of targets) {
+      const { error } = await supabase.functions.invoke('typeform-manager', { body: { action: 'refresh_form', form_id: fid } });
+      if (error) fail++;
+    }
+    if (fail) toast.error(`Erro ao sincronizar ${fail} form(s)`);
+    else toast.success(targets.length > 1 ? `Sincronizando ${targets.length} formulários` : 'Sincronizado');
+    await loadFunnel();
     setLoadingFunnel(false);
   };
 
@@ -157,6 +163,7 @@ export function TypeformDashboard() {
                 <Select value={selectedForm} onValueChange={setSelectedForm}>
                   <SelectTrigger className="w-[260px]"><SelectValue placeholder="Formulário" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__all__">📊 Todos os funis ({forms.length})</SelectItem>
                     {forms.map(f => <SelectItem key={f.form_id} value={f.form_id}>{f.title}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -193,7 +200,9 @@ export function TypeformDashboard() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime · histórico total</Badge>
-                  <span className="text-xs text-muted-foreground">não muda com o filtro de período</span>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedForm === '__all__' ? `somatório de ${forms.length} funis` : 'não muda com o filtro de período'}
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <FunnelCard scope="lifetime" label="Visitas" value={funnel.visits} icon={Users} sub="desde a criação do form" />
