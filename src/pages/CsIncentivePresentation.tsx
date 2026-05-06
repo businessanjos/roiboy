@@ -1,0 +1,527 @@
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useCsIncentivePlans } from "@/hooks/useCsIncentivePlans";
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Sparkles,
+  Heart,
+  Crown,
+  HandHeart,
+  Target,
+  ShieldCheck,
+  TrendingUp,
+  Star,
+  Flame,
+  Gift,
+  Users,
+  Trophy,
+  Rocket,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const fmtBRL = (v: number) =>
+  `R$ ${Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+export default function CsIncentivePresentation() {
+  const navigate = useNavigate();
+  const { plans, tiers } = useCsIncentivePlans();
+
+  // Pega o plano ativo de melhor referência (Pleno ou primeiro ativo)
+  const activePlans = useMemo(
+    () => plans.filter((p: any) => p.is_active),
+    [plans],
+  );
+  const referencePlan = useMemo(() => {
+    return (
+      activePlans.find((p: any) => /pleno/i.test(p.role_label || "")) ||
+      activePlans.find((p: any) => /s[eê]nior/i.test(p.role_label || "")) ||
+      activePlans[0] ||
+      null
+    );
+  }, [activePlans]);
+
+  const refTiers = useMemo(
+    () =>
+      [...tiers.filter((t: any) => referencePlan && t.plan_id === referencePlan.id)].sort(
+        (a: any, b: any) => Number(a.min_achievement_percent) - Number(b.min_achievement_percent),
+      ),
+    [tiers, referencePlan],
+  );
+
+  const [step, setStep] = useState(0);
+
+  const slides = useMemo(
+    () => [
+      { id: "intro", render: () => <SlideIntro /> },
+      { id: "historic", render: () => <SlideHistoric /> },
+      { id: "responsibility", render: () => <SlideResponsibility /> },
+      { id: "how", render: () => <SlideHow plan={referencePlan} /> },
+      { id: "tiers", render: () => <SlideTiers tiers={refTiers} plan={referencePlan} /> },
+      { id: "extras", render: () => <SlideExtras plans={activePlans} /> },
+      { id: "rituals", render: () => <SlideRituals plan={referencePlan} /> },
+      { id: "close", render: () => <SlideClose /> },
+    ],
+    [referencePlan, refTiers, activePlans],
+  );
+
+  const next = useCallback(
+    () => setStep((s) => Math.min(s + 1, slides.length - 1)),
+    [slides.length],
+  );
+  const prev = useCallback(() => setStep((s) => Math.max(s - 1, 0)), []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
+        e.preventDefault();
+        next();
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        prev();
+      } else if (e.key === "Escape") {
+        navigate("/operations/consultant-bonus");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [next, prev, navigate]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-gradient-to-br from-rose-950 via-slate-950 to-indigo-950 text-slate-50 overflow-hidden flex flex-col">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-white/5">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-rose-200/80">
+          <Sparkles className="h-3.5 w-3.5 text-rose-300" />
+          Plano de Incentivo CS · 2026
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400 tabular-nums">
+            {step + 1} / {slides.length}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
+            onClick={() => navigate("/operations/consultant-bonus")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        <div className="min-h-full flex items-stretch justify-center px-6 py-8">
+          <div className="w-full max-w-6xl">{slides[step].render()}</div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between px-6 py-3 border-t border-white/5">
+        <Button
+          variant="ghost"
+          onClick={prev}
+          disabled={step === 0}
+          className="text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+        </Button>
+        <div className="flex items-center gap-1.5">
+          {slides.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => setStep(i)}
+              className={cn(
+                "h-1.5 rounded-full transition-all",
+                i === step ? "w-8 bg-rose-300" : "w-1.5 bg-white/20 hover:bg-white/40",
+              )}
+              aria-label={`Slide ${i + 1}`}
+            />
+          ))}
+        </div>
+        <Button
+          onClick={next}
+          disabled={step === slides.length - 1}
+          className="bg-rose-400 hover:bg-rose-300 text-slate-950 font-semibold disabled:opacity-30"
+        >
+          Próximo <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ----------------- SLIDES ----------------- */
+
+function SlideIntro() {
+  return (
+    <div className="h-full flex flex-col items-center justify-center text-center space-y-8 py-16">
+      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-300/10 border border-rose-300/30 text-rose-200 text-xs uppercase tracking-[0.3em]">
+        <Flame className="h-3.5 w-3.5" /> Marco histórico · Eternum 2026
+      </div>
+      <h1 className="text-6xl md:text-7xl font-black leading-tight">
+        A renovação,<br />
+        a partir de agora,{" "}
+        <span className="bg-gradient-to-r from-rose-300 via-amber-200 to-rose-300 bg-clip-text text-transparent">
+          é com vocês
+        </span>
+        .
+      </h1>
+      <p className="text-xl md:text-2xl text-slate-300 max-w-3xl">
+        Pela primeira vez na história da Eternum, o time de{" "}
+        <strong className="text-white">Customer Success</strong> assume a renovação dos clientes —
+        e ganha bônus por isso.
+      </p>
+      <p className="text-sm text-slate-500 mt-12">
+        Use as setas <kbd className="px-1.5 py-0.5 bg-white/5 rounded text-xs">←</kbd>{" "}
+        <kbd className="px-1.5 py-0.5 bg-white/5 rounded text-xs">→</kbd> para navegar
+      </p>
+    </div>
+  );
+}
+
+function SlideHistoric() {
+  return (
+    <div className="space-y-12 py-8">
+      <div>
+        <p className="text-rose-300 text-sm uppercase tracking-[0.3em] mb-3">O que muda</p>
+        <h2 className="text-5xl font-black leading-tight">
+          Antes era do Comercial.
+          <br />
+          <span className="text-rose-300">Agora é nosso.</span>
+        </h2>
+      </div>
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-white/5 border-white/10 p-8 space-y-3 text-slate-200">
+          <p className="text-xs uppercase tracking-wider text-slate-400">Antes</p>
+          <p className="text-2xl font-bold text-slate-300">
+            Comercial fechava, entregava à operação, e voltava no fim do contrato pra renovar.
+          </p>
+          <p className="text-sm text-slate-400">
+            CS cuidava do cliente. Comercial colhia a renovação.
+          </p>
+        </Card>
+        <Card className="bg-gradient-to-br from-rose-600/30 to-amber-500/20 border-rose-400/40 p-8 space-y-3 text-white">
+          <p className="text-xs uppercase tracking-wider text-rose-200">Agora</p>
+          <p className="text-2xl font-bold">
+            Quem viveu a jornada com a cliente é quem renova.{" "}
+            <span className="text-rose-200">Você.</span>
+          </p>
+          <p className="text-sm text-rose-50">
+            Faz sentido. Você tem a relação, o contexto e a autoridade pra continuar.
+          </p>
+        </Card>
+      </div>
+      <p className="text-center text-lg text-slate-300 italic">
+        Confiamos a peça mais importante do nosso negócio nas mãos de quem mais entende a cliente.
+      </p>
+    </div>
+  );
+}
+
+function SlideResponsibility() {
+  const cards = [
+    {
+      icon: HandHeart,
+      title: "A relação é sua",
+      text: "Você é o rosto da Eternum pra cliente. A renovação começa no primeiro contato, não no fim do contrato.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "O resultado é seu",
+      text: "Cliente que entrega resultado renova. Cliente que se sente cuidada renova. Isso depende de você.",
+    },
+    {
+      icon: Crown,
+      title: "O bônus é seu",
+      text: "Pela primeira vez, parte do que vem da renovação volta pra quem trabalhou pra que ela acontecesse.",
+    },
+  ];
+  return (
+    <div className="space-y-12 py-8">
+      <div>
+        <p className="text-rose-300 text-sm uppercase tracking-[0.3em] mb-3">Por que vocês</p>
+        <h2 className="text-5xl font-black leading-tight">
+          Responsabilidade que <span className="text-rose-300">só vocês</span> podem honrar.
+        </h2>
+      </div>
+      <div className="grid md:grid-cols-3 gap-5">
+        {cards.map((c) => (
+          <Card
+            key={c.title}
+            className="bg-white/5 border-white/10 backdrop-blur p-6 space-y-3 text-slate-100"
+          >
+            <div className="h-10 w-10 rounded-lg bg-rose-300/15 flex items-center justify-center">
+              <c.icon className="h-5 w-5 text-rose-300" />
+            </div>
+            <h3 className="text-xl font-bold">{c.title}</h3>
+            <p className="text-sm text-slate-400 leading-relaxed">{c.text}</p>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SlideHow({ plan }: { plan: any }) {
+  const items = [
+    {
+      icon: Target,
+      label: "Renovação",
+      pct: plan?.weight_renewal,
+      color: "text-emerald-300",
+      desc: "Quanto da sua carteira renova.",
+    },
+    {
+      icon: TrendingUp,
+      label: "Churn",
+      pct: plan?.weight_churn,
+      color: "text-rose-300",
+      desc: "Quanto da sua carteira vai embora.",
+    },
+    {
+      icon: Star,
+      label: "NPS",
+      pct: plan?.weight_nps,
+      color: "text-amber-300",
+      desc: "O quanto a cliente recomenda.",
+    },
+  ];
+  return (
+    <div className="space-y-10 py-8">
+      <div>
+        <p className="text-rose-300 text-sm uppercase tracking-[0.3em] mb-3">Como você é avaliada</p>
+        <h2 className="text-5xl font-black">3 indicadores. Nada mais.</h2>
+        <p className="text-slate-400 mt-2 text-lg">
+          Simples de medir. Honestos com o seu trabalho.
+        </p>
+      </div>
+      <div className="grid md:grid-cols-3 gap-4">
+        {items.map((it) => (
+          <div
+            key={it.label}
+            className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-3"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-white/5 flex items-center justify-center">
+                <it.icon className={cn("h-5 w-5", it.color)} />
+              </div>
+              <span className="text-xs uppercase tracking-wider text-slate-400">
+                {it.label}
+              </span>
+            </div>
+            <p className={cn("text-4xl font-black tabular-nums", it.color)}>
+              {it.pct ? `${Number(it.pct)}%` : "—"}
+            </p>
+            <p className="text-sm text-slate-400">{it.desc}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-sm text-slate-400 italic text-center">
+        Os pesos somam 100%. Cada mês compõe seu desempenho final.
+      </p>
+    </div>
+  );
+}
+
+function SlideTiers({ tiers, plan }: { tiers: any[]; plan: any }) {
+  const monthlyBonus = Number(plan?.monthly_bonus_value || 0);
+  const fallback = [
+    { label: "Abaixo", min: 0, max: 79, mult: 0 },
+    { label: "Esperado", min: 80, max: 89, mult: 0.5 },
+    { label: "Bom", min: 90, max: 99, mult: 0.8 },
+    { label: "Excelente", min: 100, max: 109, mult: 1 },
+    { label: "Excepcional", min: 110, max: null, mult: 1.3 },
+  ];
+  const list =
+    tiers.length > 0
+      ? tiers.map((t: any) => ({
+          label: t.label,
+          min: Number(t.min_achievement_percent),
+          max: t.max_achievement_percent ? Number(t.max_achievement_percent) : null,
+          mult: Number(t.bonus_multiplier),
+        }))
+      : fallback;
+
+  const palette = [
+    "from-zinc-600 to-zinc-800",
+    "from-slate-500 to-slate-700",
+    "from-amber-700 to-amber-900",
+    "from-rose-400 to-rose-600",
+    "from-fuchsia-500 via-rose-500 to-amber-400",
+  ];
+
+  return (
+    <div className="space-y-8 py-6">
+      <div>
+        <p className="text-rose-300 text-sm uppercase tracking-[0.3em] mb-3">Faixas de bônus</p>
+        <h2 className="text-5xl font-black">Quanto melhor a entrega, maior o bônus</h2>
+        <p className="text-slate-400 mt-2">
+          Bônus base: <strong className="text-white">{fmtBRL(monthlyBonus)}</strong> · multiplicado pela faixa atingida.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {list.map((t, i) => {
+          const value = monthlyBonus * t.mult;
+          return (
+            <div
+              key={t.label + i}
+              className={cn(
+                "rounded-xl p-4 bg-gradient-to-br text-white shadow-lg flex flex-col justify-between min-h-[170px]",
+                palette[i % palette.length],
+              )}
+            >
+              <div>
+                <p className="text-[10px] uppercase tracking-widest opacity-80">
+                  {t.min}%{t.max ? `–${t.max}%` : "+"} de atingimento
+                </p>
+                <p className="text-lg font-black mt-1 leading-tight">{t.label}</p>
+              </div>
+              <div>
+                <p className="text-[10px] opacity-75">Bônus do mês</p>
+                <p className="text-xl font-black tabular-nums">
+                  {value > 0 ? fmtBRL(value) : "—"}
+                </p>
+                <p className="text-[10px] opacity-75 mt-0.5">{t.mult}x</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-sm text-slate-400 italic">
+        💡 100% de atingimento = bônus cheio. Acima disso, bônus turbinado.
+      </p>
+    </div>
+  );
+}
+
+function SlideExtras({ plans }: { plans: any[] }) {
+  const quarterly = plans.find((p: any) => p.quarterly_bonus_enabled);
+  const annual = plans.find((p: any) => p.annual_bonus_enabled);
+  return (
+    <div className="space-y-10 py-8">
+      <div>
+        <p className="text-rose-300 text-sm uppercase tracking-[0.3em] mb-3">Bônus complementares</p>
+        <h2 className="text-5xl font-black">
+          Constância vira <span className="text-rose-300">recompensa</span>
+        </h2>
+      </div>
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="bg-gradient-to-br from-cyan-600 to-blue-700 border-cyan-400/50 p-8 text-white space-y-3 shadow-xl">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-cyan-100" />
+            <p className="text-sm uppercase tracking-wider text-cyan-100 font-semibold">Trimestral</p>
+          </div>
+          <p className="text-5xl font-black text-white">
+            {fmtBRL(Number(quarterly?.quarterly_bonus_value || 0))}
+          </p>
+          <p className="text-cyan-50">
+            Pago a cada trimestre que vocês baterem as metas combinadas — recompensa pra quem entrega resultado em sequência.
+          </p>
+        </Card>
+        <Card className="bg-gradient-to-br from-fuchsia-600 to-rose-700 border-fuchsia-400/50 p-8 text-white space-y-3 shadow-xl">
+          <div className="flex items-center gap-2">
+            <Crown className="h-5 w-5 text-fuchsia-100" />
+            <p className="text-sm uppercase tracking-wider text-fuchsia-100 font-semibold">Anual</p>
+          </div>
+          <p className="text-5xl font-black text-white">
+            {fmtBRL(Number(annual?.annual_bonus_value || 0))}
+          </p>
+          <p className="text-fuchsia-50">
+            Pago no fechamento do ano — pra coroar quem manteve carteira saudável o ano inteiro.
+          </p>
+        </Card>
+      </div>
+      <Card className="bg-gradient-to-r from-rose-600 to-amber-500 border-rose-300/50 p-6 text-white shadow-xl">
+        <div className="flex items-start gap-4">
+          <Gift className="h-6 w-6 text-rose-50 flex-shrink-0 mt-1" />
+          <div>
+            <p className="text-sm uppercase tracking-wider text-rose-50 font-semibold mb-1">
+              Campanhas e prêmios
+            </p>
+            <p className="text-rose-50">
+              Ao longo do ano, campanhas relâmpago premiam quem se destaca em renovação, NPS ou recuperação de churn —{" "}
+              <strong className="text-white">tudo extra ao bônus mensal</strong>.
+            </p>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function SlideRituals({ plan }: { plan: any }) {
+  const routines: string[] = Array.isArray(plan?.routines) ? plan.routines : [];
+  const fallback = [
+    "Check-in semanal estruturado com cada cliente da carteira",
+    "Acompanhamento de evolução por indicadores de resultado",
+    "Reunião mensal de saúde de carteira com o time",
+    "Plano de renovação iniciado no 9º mês de contrato",
+  ];
+  const list = routines.length > 0 ? routines : fallback;
+  return (
+    <div className="space-y-10 py-8">
+      <div>
+        <p className="text-rose-300 text-sm uppercase tracking-[0.3em] mb-3">O que se espera de vocês</p>
+        <h2 className="text-5xl font-black">
+          O bônus vem do <span className="text-rose-300">ritual</span>, não do milagre
+        </h2>
+        <p className="text-slate-400 mt-2 text-lg">
+          Renovação não acontece no último mês. Acontece todos os dias.
+        </p>
+      </div>
+      <div className="grid md:grid-cols-2 gap-3">
+        {list.map((r, i) => (
+          <div
+            key={i}
+            className="rounded-xl border border-white/10 bg-white/5 p-5 flex items-start gap-3"
+          >
+            <div className="h-8 w-8 rounded-full bg-rose-300/15 flex items-center justify-center flex-shrink-0 text-rose-200 font-bold tabular-nums text-sm">
+              {i + 1}
+            </div>
+            <p className="text-slate-200 leading-relaxed pt-1">{r}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SlideClose() {
+  return (
+    <div className="h-full flex flex-col items-center justify-center text-center space-y-10 py-16">
+      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-300/10 border border-rose-300/30 text-rose-200 text-xs uppercase tracking-[0.3em]">
+        <Heart className="h-3.5 w-3.5" /> Vocês foram escolhidas
+      </div>
+      <h1 className="text-6xl md:text-7xl font-black leading-tight max-w-4xl">
+        Cuidem das clientes
+        <br />
+        como ninguém cuidaria.
+        <br />
+        <span className="bg-gradient-to-r from-rose-300 via-amber-200 to-rose-300 bg-clip-text text-transparent">
+          O resto é consequência.
+        </span>
+      </h1>
+      <div className="grid grid-cols-3 gap-6 max-w-3xl w-full pt-6">
+        <Stat icon={Users} label="Confiança" value="Total" />
+        <Stat icon={Rocket} label="Autonomia" value="Real" />
+        <Stat icon={Trophy} label="Recompensa" value="Sem teto" />
+      </div>
+      <p className="text-lg text-slate-300 max-w-2xl pt-4">
+        Esta é a era em que CS deixa de ser custo e passa a ser{" "}
+        <strong className="text-white">protagonista da receita recorrente</strong>. Bem-vindas.
+      </p>
+    </div>
+  );
+}
+
+function Stat({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-2">
+      <Icon className="h-5 w-5 text-rose-300 mx-auto" />
+      <p className="text-xs uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="text-2xl font-black text-white">{value}</p>
+    </div>
+  );
+}
