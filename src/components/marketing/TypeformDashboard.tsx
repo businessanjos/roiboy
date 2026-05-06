@@ -200,7 +200,9 @@ export function TypeformDashboard() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime · histórico total</Badge>
-                  <span className="text-xs text-muted-foreground">não muda com o filtro de período</span>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedForm === '__all__' ? `somatório de ${forms.length} funis` : 'não muda com o filtro de período'}
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <FunnelCard scope="lifetime" label="Visitas" value={funnel.visits} icon={Users} sub="desde a criação do form" />
