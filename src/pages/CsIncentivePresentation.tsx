@@ -213,13 +213,13 @@ function SlideHistoric() {
             CS cuidava do cliente. Comercial colhia a renovação.
           </p>
         </Card>
-        <Card className="bg-gradient-to-br from-rose-600/30 to-amber-500/20 border-rose-400/40 p-8 space-y-3 text-white">
-          <p className="text-xs uppercase tracking-wider text-rose-200">Agora</p>
-          <p className="text-2xl font-bold">
+        <Card className="bg-gradient-to-br from-emerald-500 to-teal-700 border-emerald-300/50 p-8 space-y-3 text-white shadow-2xl">
+          <p className="text-xs uppercase tracking-wider text-emerald-50 font-semibold">Agora</p>
+          <p className="text-2xl font-bold text-white">
             Quem viveu a jornada com a cliente é quem renova.{" "}
-            <span className="text-rose-200">Você.</span>
+            <span className="text-amber-200">Você.</span>
           </p>
-          <p className="text-sm text-rose-50">
+          <p className="text-sm text-emerald-50">
             Faz sentido. Você tem a relação, o contexto e a autoridade pra continuar.
           </p>
         </Card>
