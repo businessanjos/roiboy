@@ -67,6 +67,7 @@ import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/co
 import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
 import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttendanceCard";
 import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
+import { EditableGoal } from "@/components/dashboard/EditableGoal";
 
 
 
@@ -129,6 +130,26 @@ export default function Dashboard() {
 
   // Contract stats from RPC for accurate Gestão metrics
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
+
+  // Editable dashboard goals (per account)
+  const { data: dashboardGoals } = useQuery({
+    queryKey: ["dashboard-goals", currentUser?.account_id],
+    enabled: !!currentUser?.account_id,
+    staleTime: 1000 * 60,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("account_settings")
+        .select("dashboard_churn_goal, dashboard_renewal_goal, dashboard_nps_goal")
+        .eq("account_id", currentUser!.account_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return {
+        churn: Number(data?.dashboard_churn_goal ?? 18),
+        renewal: Number(data?.dashboard_renewal_goal ?? 40),
+        nps: Number(data?.dashboard_nps_goal ?? 80),
+      };
+    },
+  });
   const { data: doubleChairCount } = useDoubleChairCount(currentUser?.account_id);
 
   // Contracts data for the Contratos tab (exclude renewals to avoid duplicates)
@@ -923,8 +944,9 @@ export default function Dashboard() {
 
           {/* ⭐ Métricas Estrela de Operações: Churn & NPS */}
           {gestaoViewMode === "operacoes" && (() => {
-            const CHURN_GOAL = 18;
-            const RENEWAL_GOAL = 40;
+            const CHURN_GOAL = dashboardGoals?.churn ?? 18;
+            const RENEWAL_GOAL = dashboardGoals?.renewal ?? 40;
+            const NPS_GOAL = dashboardGoals?.nps ?? 80;
             const churnRate = churnMetrics.rate;
             const churnTone = churnRate <= CHURN_GOAL ? "success" : churnRate <= CHURN_GOAL * 1.25 ? "warning" : "danger";
             const churnColor = churnTone === "success" ? "text-success" : churnTone === "warning" ? "text-warning" : "text-danger";
@@ -960,7 +982,14 @@ export default function Dashboard() {
                       <p className={`text-5xl font-bold leading-none ${churnColor}`}>{churnRate.toFixed(1)}%</p>
                       <div className={`text-right rounded-md px-2.5 py-1.5 ${churnBg}`}>
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meta</p>
-                        <p className={`text-lg font-bold leading-none ${churnColor}`}>≤ {CHURN_GOAL}%</p>
+                        <EditableGoal
+                          accountId={currentUser?.account_id}
+                          field="dashboard_churn_goal"
+                          value={CHURN_GOAL}
+                          prefix="≤"
+                          suffix="%"
+                          textClassName={`text-lg font-bold leading-none ${churnColor}`}
+                        />
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-3 text-xs">
@@ -1004,7 +1033,14 @@ export default function Dashboard() {
                       <p className={`text-5xl font-bold leading-none ${renewalColor}`}>{renewalRate.toFixed(1)}%</p>
                       <div className={`text-right rounded-md px-2.5 py-1.5 ${renewalBg}`}>
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meta</p>
-                        <p className={`text-lg font-bold leading-none ${renewalColor}`}>≥ {RENEWAL_GOAL}%</p>
+                        <EditableGoal
+                          accountId={currentUser?.account_id}
+                          field="dashboard_renewal_goal"
+                          value={RENEWAL_GOAL}
+                          prefix="≥"
+                          suffix="%"
+                          textClassName={`text-lg font-bold leading-none ${renewalColor}`}
+                        />
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-3 text-xs">
@@ -1049,7 +1085,13 @@ export default function Dashboard() {
                       <p className="text-5xl font-bold leading-none text-muted-foreground">0</p>
                       <div className="text-right rounded-md px-2.5 py-1.5 bg-muted">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meta</p>
-                        <p className="text-lg font-bold leading-none text-foreground">≥ 80</p>
+                        <EditableGoal
+                          accountId={currentUser?.account_id}
+                          field="dashboard_nps_goal"
+                          value={NPS_GOAL}
+                          prefix="≥"
+                          textClassName="text-lg font-bold leading-none text-foreground"
+                        />
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-3 text-xs">
@@ -1060,8 +1102,8 @@ export default function Dashboard() {
                       <div className="h-full rounded-full bg-muted-foreground/30" style={{ width: `0%` }} />
                       <div
                         className="absolute top-0 h-full w-0.5 bg-foreground/60"
-                        style={{ left: `${(80 + 100) / 2}%` }}
-                        title="Meta: 80"
+                        style={{ left: `${((NPS_GOAL + 100) / 2)}%` }}
+                        title={`Meta: ${NPS_GOAL}`}
                       />
                     </div>
                   </CardContent>
