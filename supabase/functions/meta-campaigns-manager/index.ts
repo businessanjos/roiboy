@@ -162,8 +162,19 @@ serve(async (req) => {
 
     // ============ UPDATE BUDGET ============
     if (action === "update_budget") {
-      const { entityId, dailyBudget, lifetimeBudget } = body;
+      const { entityId, entityType, entityName, adAccountId, dailyBudget, lifetimeBudget } = body;
       if (!entityId) return new Response(JSON.stringify({ error: "entityId obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      // Fetch current budget before update
+      let previousDaily: number | null = null;
+      let previousLifetime: number | null = null;
+      try {
+        const curUrl = `${META}/${entityId}?fields=daily_budget,lifetime_budget,name&access_token=${token}`;
+        const cur = await (await fetch(curUrl)).json();
+        if (cur.daily_budget) previousDaily = parseFloat(cur.daily_budget) / 100;
+        if (cur.lifetime_budget) previousLifetime = parseFloat(cur.lifetime_budget) / 100;
+      } catch (_) { /* ignore */ }
+
       const url = `${META}/${entityId}`;
       const fd = new FormData();
       if (dailyBudget != null) fd.append("daily_budget", String(Math.round(dailyBudget * 100)));
@@ -171,7 +182,53 @@ serve(async (req) => {
       fd.append("access_token", token);
       const r = await (await fetch(url, { method: "POST", body: fd })).json();
       if (r.error) return new Response(JSON.stringify({ error: r.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      // Log history
+      try {
+        const { user, supabase } = auth as any;
+        const { data: appUser } = await supabase.from("users").select("account_id, name, email").eq("auth_user_id", user.id).maybeSingle();
+        const rows: any[] = [];
+        if (dailyBudget != null) rows.push({
+          account_id: appUser?.account_id ?? null,
+          user_id: user.id,
+          user_name: appUser?.name ?? null,
+          user_email: appUser?.email ?? user.email ?? null,
+          ad_account_id: adAccountId ?? null,
+          entity_type: entityType ?? "campaign",
+          entity_id: entityId,
+          entity_name: entityName ?? null,
+          budget_type: "daily",
+          previous_value: previousDaily,
+          new_value: dailyBudget,
+        });
+        if (lifetimeBudget != null) rows.push({
+          account_id: appUser?.account_id ?? null,
+          user_id: user.id,
+          user_name: appUser?.name ?? null,
+          user_email: appUser?.email ?? user.email ?? null,
+          ad_account_id: adAccountId ?? null,
+          entity_type: entityType ?? "campaign",
+          entity_id: entityId,
+          entity_name: entityName ?? null,
+          budget_type: "lifetime",
+          previous_value: previousLifetime,
+          new_value: lifetimeBudget,
+        });
+        if (rows.length > 0) await supabase.from("meta_budget_history").insert(rows);
+      } catch (e) { console.error("budget history log error:", e); }
+
+      return new Response(JSON.stringify({ success: true, previousDaily, previousLifetime }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ============ BUDGET HISTORY ============
+    if (action === "budget_history") {
+      const { entityId } = body;
+      const { supabase } = auth as any;
+      let q = supabase.from("meta_budget_history").select("*").order("created_at", { ascending: false }).limit(200);
+      if (entityId) q = q.eq("entity_id", entityId);
+      const { data, error } = await q;
+      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true, history: data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ============ TIMESERIES (BI) ============
