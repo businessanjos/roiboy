@@ -394,7 +394,7 @@ export function TypeformDashboard() {
   );
 }
 
-function FunnelCard({ label, value, icon: Icon, sub, highlight, scope }: any) {
+function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, source }: any) {
   const scopeStyles = scope === 'lifetime'
     ? 'border-sky-500/30 bg-sky-500/5'
     : scope === 'period'
@@ -402,8 +402,28 @@ function FunnelCard({ label, value, icon: Icon, sub, highlight, scope }: any) {
       : 'border-border/30 bg-muted/20';
   return (
     <div className={`p-3 rounded-lg border ${highlight ? 'border-emerald-500/40 bg-emerald-500/10' : scopeStyles}`}>
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-        <Icon className="w-3.5 h-3.5" />{label}
+      <div className="flex items-center justify-between gap-1.5 text-xs text-muted-foreground mb-1">
+        <span className="flex items-center gap-1.5 min-w-0">
+          <Icon className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">{label}</span>
+        </span>
+        {tip && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="opacity-60 hover:opacity-100 transition-opacity shrink-0" aria-label={`Como ${label} é calculado`}>
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+              {source && (
+                <div className="font-semibold mb-1 text-[10px] uppercase tracking-wide opacity-80">
+                  Fonte: {source}
+                </div>
+              )}
+              <p>{tip}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
       <p className="text-xl font-bold">{typeof value === 'number' ? value.toLocaleString('pt-BR') : value}</p>
       {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
