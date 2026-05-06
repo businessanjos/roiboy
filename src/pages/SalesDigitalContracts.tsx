@@ -128,20 +128,19 @@ export default function SalesDigitalContracts() {
 
       setLoadingDeals(true);
       try {
-        // Buscar IDs das stages "Reunião Concluída" e "Proposta Enviada" do funil Closer
+        // Buscar todas as stages do funil Closer (qualquer etapa pode gerar contrato)
         const { data: stagesData, error: stagesError } = await supabase
           .from("deal_stages")
           .select("id, name, pipeline:pipelines!inner(name)")
-          .eq("account_id", currentUser.account_id)
-          .in("name", ["Reunião Concluída", "Proposta Enviada"]);
+          .eq("account_id", currentUser.account_id);
 
         if (stagesError) throw stagesError;
 
-        const allowedStageIds = (stagesData ?? [])
+        const closerStageIds = (stagesData ?? [])
           .filter((s: any) => (s.pipeline?.name ?? "").toLowerCase() === "closer")
           .map((s: any) => s.id);
 
-        if (allowedStageIds.length === 0) {
+        if (closerStageIds.length === 0) {
           setDeals([]);
           return;
         }
@@ -150,9 +149,10 @@ export default function SalesDigitalContracts() {
           .from("deals")
           .select("id, title, status, value, updated_at, client:clients(full_name), lead:leads(full_name), stage:deal_stages(name), responsible:users!deals_responsible_user_id_fkey(name)")
           .eq("account_id", currentUser.account_id)
-          .in("stage_id", allowedStageIds)
+          .in("stage_id", closerStageIds)
+          .not("status", "in", "(won,lost)")
           .order("updated_at", { ascending: false })
-          .limit(80);
+          .limit(200);
 
         if (error) throw error;
         setDeals((data ?? []) as unknown as DealOption[]);
