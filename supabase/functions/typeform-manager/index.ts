@@ -134,8 +134,9 @@ Deno.serve(async (req) => {
     // ----- REFRESH stats + responses for one form -----
     if (action === "refresh_form") {
       const { form_id } = body;
-      await backfillForm(supabase, accountId, form_id, TOKEN);
-      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // @ts-ignore
+      EdgeRuntime.waitUntil(backfillForm(supabase, accountId, form_id, TOKEN));
+      return new Response(JSON.stringify({ ok: true, refresh: "started" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ----- GET dashboard data (funnel) -----
