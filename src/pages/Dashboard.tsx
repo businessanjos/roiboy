@@ -370,27 +370,41 @@ export default function Dashboard() {
     paused: gestaoFilteredClients.filter(c => c.status === "paused").length,
   }), [gestaoFilteredClients]);
 
+  // Helper to sum exit counts based on the active filter (cancel only / ended only / both)
+  const sumExits = (m: { cancelamentos: number; encerramentos: number }) => {
+    if (gestaoExitTypeFilter === "cancelled") return m.cancelamentos;
+    if (gestaoExitTypeFilter === "ended") return m.encerramentos;
+    return m.cancelamentos + m.encerramentos;
+  };
+
   // Retention metrics (within filtered period)
   const retentionMetrics = useMemo(() => {
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
-    const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
+    const cancelamentos = monthlyChartData.reduce((sum, m) => sum + sumExits(m), 0);
     const total = (contractStats?.active ?? gestaoClientStats.active) + cancelamentos;
     const rate = total > 0 ? Math.round(((total - cancelamentos) / total) * 100) : 100;
     return { rate, novos, cancelamentos };
-  }, [monthlyChartData, contractStats, gestaoClientStats]);
+  }, [monthlyChartData, contractStats, gestaoClientStats, gestaoExitTypeFilter]);
 
   // Lost financial value (within filtered period)
   const lostContracts = useMemo(() => {
     const periodStart = gestaoPeriodRange.periodStart;
     const periodEnd = gestaoPeriodRange.periodEnd;
+    const cancelStatuses = ["cancelled", "dismissed", "dropout_7d"];
+    const allowed =
+      gestaoExitTypeFilter === "cancelled"
+        ? cancelStatuses
+        : gestaoExitTypeFilter === "ended"
+        ? ["ended"]
+        : [...cancelStatuses, "ended"];
     return contractData.filter(contract => {
-      if (!["cancelled", "dismissed", "dropout_7d", "ended"].includes(contract.status)) return false;
+      if (!allowed.includes(contract.status)) return false;
       const exitDate = contract.cancelled_at || contract.status_changed_at || contract.end_date;
       if (!exitDate) return false;
       const date = parseISO(exitDate);
       return date >= periodStart && date <= periodEnd;
     });
-  }, [contractData, gestaoPeriodRange]);
+  }, [contractData, gestaoPeriodRange, gestaoExitTypeFilter]);
 
   const lostFinancialValue = useMemo(() => {
     const totalLost = lostContracts.reduce((sum, c) => sum + (c.value || 0), 0);
