@@ -11633,6 +11633,7 @@ export type Database = {
           expires_at: string | null
           id: string
           provider: string
+          redirect_path: string
           state: string
           user_id: string
         }
@@ -11640,7 +11641,8 @@ export type Database = {
           created_at?: string | null
           expires_at?: string | null
           id?: string
-          provider: string
+          provider?: string
+          redirect_path?: string
           state: string
           user_id: string
         }
@@ -11649,6 +11651,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           provider?: string
+          redirect_path?: string
           state?: string
           user_id?: string
         }
