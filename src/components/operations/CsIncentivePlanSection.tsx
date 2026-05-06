@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
@@ -42,6 +43,7 @@ import {
   Loader2,
   Users,
   ListChecks,
+  RefreshCw,
 } from "lucide-react";
 import { PAYMENT_CHANNELS } from "@/components/sales/quotas/paymentChannels";
 import { fetchActiveConsultants } from "@/lib/consultants";
@@ -72,7 +74,24 @@ const DEFAULT_ROUTINES = [
 export function CsIncentivePlanSection() {
   const { currentUser } = useCurrentUser();
   const { plans, tiers, loading, savePlan, deletePlan, saveTiers } = useCsIncentivePlans();
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["cs-incentive-consultants"] }),
+        queryClient.invalidateQueries({ queryKey: ["cs-incentive-quarter-payouts"] }),
+        queryClient.invalidateQueries({ queryKey: ["cs-incentive-plans"] }),
+        queryClient.invalidateQueries({ queryKey: ["cs-incentive-tiers"] }),
+        queryClient.invalidateQueries({ queryKey: ["consultant-bonus-payouts"] }),
+      ]);
+      toast.success("Dados atualizados");
+    } finally {
+      setRefreshing(false);
+    }
+  };
   // Consultoras ativas (puxando salário base do RH) — fonte única em @/lib/consultants
   const { data: consultants = [] } = useQuery({
     queryKey: ["cs-incentive-consultants", currentUser?.account_id],
@@ -310,6 +329,16 @@ export function CsIncentivePlanSection() {
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
           <Button size="sm" onClick={handleSave} disabled={savePlan.isPending} className="gap-1.5">
             {savePlan.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
