@@ -902,14 +902,20 @@ function BonusSimulator({
   baseSalary,
   tiers,
   scope,
+  churnPenaltyEnabled,
+  churnPenaltyThreshold,
+  churnPenaltyPercent,
 }: {
   monthlyBonus: number;
   baseSalary: number;
   tiers: { min: number | ""; max: string; multiplier: number | ""; label: string }[];
   scope: string;
+  churnPenaltyEnabled: boolean;
+  churnPenaltyThreshold: number;
+  churnPenaltyPercent: number;
 }) {
   const [renewalPct, setRenewalPct] = useState<number | "">(100);
-  const [churnDiscount, setChurnDiscount] = useState<number | "">(0);
+  const [churnPct, setChurnPct] = useState<number | "">(0);
   const pct = toNumber(renewalPct);
 
   // Senioridade do plano selecionado, para filtrar produtos atendidos
