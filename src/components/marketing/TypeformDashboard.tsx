@@ -165,6 +165,19 @@ export function TypeformDashboard() {
                   <Badge variant="outline" className="mr-1.5 border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período</Badge>
                   Submissões, Completados, Lead no Roy e Ganhos consideram apenas o intervalo selecionado.
                 </span>
+                {consistency && (
+                  <span className="block pt-1">
+                    {consistency.ok ? (
+                      <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5" title={`${consistency.responses_in_scope} resposta(s) validada(s) em ${consistency.scope_form_ids?.length || 0} funil(is)`}>
+                        ✓ Dados consistentes ({consistency.responses_in_scope} resp.)
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-amber-500/40 text-amber-500 bg-amber-500/5" title="Foram encontradas respostas fora do escopo do funil selecionado. Os números exibidos descartaram esses registros.">
+                        ⚠ {consistency.out_of_scope_responses} resposta(s) fora do escopo descartadas
+                      </Badge>
+                    )}
+                  </span>
+                )}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
