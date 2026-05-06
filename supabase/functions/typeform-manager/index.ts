@@ -148,34 +148,44 @@ Deno.serve(async (req) => {
       const { data: stats } = await supabase.from("typeform_form_stats").select("*").eq("account_id", accountId).eq("form_id", form_id).order("snapshot_date", { ascending: false }).limit(1).maybeSingle();
       const { data: responses } = await supabase.from("typeform_responses").select("id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id").eq("account_id", accountId).eq("form_id", form_id).gte("created_at", since).limit(5000);
 
-      const total = responses?.length || 0;
-      const completed = responses?.filter(r => r.is_completed).length || 0;
-      const matchedLeads = responses?.filter(r => r.matched_lead_id).length || 0;
-      const matchedDeals = responses?.filter(r => r.matched_deal_id).length || 0;
+      const rows = responses || [];
+      const submissions = rows.length;
+      const completed = rows.filter(r => r.is_completed).length;
+      // distinct match count (a response with both lead+deal counts once)
+      const matchedResponses = rows.filter(r => r.matched_lead_id || r.matched_deal_id).length;
+      const matchedLeads = rows.filter(r => r.matched_lead_id).length;
+      const matchedDeals = rows.filter(r => r.matched_deal_id).length;
 
-      // Won deals among matched
-      const dealIds = (responses || []).map(r => r.matched_deal_id).filter(Boolean);
+      // Won deals among matched (dedupe deal IDs)
+      const dealIds = Array.from(new Set((rows).map(r => r.matched_deal_id).filter(Boolean)));
       let won = 0, wonValue = 0;
       if (dealIds.length) {
         const { data: deals } = await supabase.from("deals").select("id, status, value").in("id", dealIds);
-        won = deals?.filter(d => d.status === "won").length || 0;
-        wonValue = deals?.filter(d => d.status === "won").reduce((s, d) => s + Number(d.value || 0), 0) || 0;
+        const wonDeals = (deals || []).filter(d => d.status === "won");
+        won = wonDeals.length;
+        wonValue = wonDeals.reduce((s, d) => s + Number(d.value || 0), 0);
       }
+
+      const periodCompletionRate = submissions ? (completed / submissions) * 100 : 0;
 
       return new Response(JSON.stringify({
         form,
         stats,
         funnel: {
+          // Lifetime metrics from Typeform Insights (all-time, not period-filtered)
           visits: stats?.total_visits || 0,
           starts: stats?.total_starts || 0,
-          submissions: total,
+          avg_time: stats?.average_time_seconds || 0,
+          lifetime_completion_rate: stats?.completion_rate || 0,
+          // Period-filtered metrics from local responses
+          submissions,
           completed,
+          completion_rate: periodCompletionRate,
+          matched_responses: matchedResponses,
           matched_leads: matchedLeads,
           matched_deals: matchedDeals,
           won,
           won_value: wonValue,
-          completion_rate: stats?.completion_rate || (total ? (completed / total) * 100 : 0),
-          avg_time: stats?.average_time_seconds || 0,
         },
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }

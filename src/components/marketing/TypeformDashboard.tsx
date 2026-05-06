@@ -25,11 +25,13 @@ interface FunnelData {
   starts: number;
   submissions: number;
   completed: number;
+  matched_responses: number;
   matched_leads: number;
   matched_deals: number;
   won: number;
   won_value: number;
   completion_rate: number;
+  lifetime_completion_rate: number;
   avg_time: number;
 }
 
@@ -139,7 +141,9 @@ export function TypeformDashboard() {
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-emerald-500" />Funil Typeform
               </CardTitle>
-              <CardDescription>Visitas → Iniciados → Concluídos → Lead no Roy → Ganho</CardDescription>
+              <CardDescription>
+                Visitas/Iniciados/Tempo médio são <strong>histórico total</strong> (Typeform Insights). Submissões em diante respeitam o período selecionado.
+              </CardDescription>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {forms.length > 0 && (
@@ -179,13 +183,13 @@ export function TypeformDashboard() {
             <Skeleton className="h-40" />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              <FunnelCard label="Visitas" value={funnel.visits} icon={Users} />
-              <FunnelCard label="Iniciados" value={funnel.starts} icon={TrendingUp} sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}%` : undefined} />
-              <FunnelCard label="Submissões" value={funnel.submissions} icon={CheckCircle2} sub={funnel.starts ? `${((funnel.submissions/funnel.starts)*100).toFixed(1)}%` : undefined} />
-              <FunnelCard label="Completados" value={funnel.completed} icon={CheckCircle2} sub={`${funnel.completion_rate.toFixed(1)}%`} highlight />
-              <FunnelCard label="Lead no Roy" value={funnel.matched_leads + funnel.matched_deals} icon={Users} sub={funnel.completed ? `${(((funnel.matched_leads + funnel.matched_deals)/funnel.completed)*100).toFixed(1)}%` : undefined} />
+              <FunnelCard label="Visitas (total)" value={funnel.visits} icon={Users} sub="histórico" />
+              <FunnelCard label="Iniciados (total)" value={funnel.starts} icon={TrendingUp} sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'histórico'} />
+              <FunnelCard label="Submissões" value={funnel.submissions} icon={CheckCircle2} sub="no período" />
+              <FunnelCard label="Completados" value={funnel.completed} icon={CheckCircle2} sub={`${funnel.completion_rate.toFixed(1)}% das submissões`} highlight />
+              <FunnelCard label="Lead no Roy" value={funnel.matched_responses} icon={Users} sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : undefined} />
               <FunnelCard label="Ganhos" value={funnel.won} icon={Trophy} sub={fmtBRL(funnel.won_value)} highlight />
-              <FunnelCard label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock} />
+              <FunnelCard label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock} sub="histórico" />
             </div>
           )}
         </CardContent>
@@ -259,18 +263,20 @@ export function TypeformDashboard() {
                     .map(f => {
                       const checked = pickedForms.includes(f.id);
                       return (
-                        <button
+                        <div
                           key={f.id}
-                          type="button"
+                          role="button"
+                          tabIndex={0}
                           onClick={() => togglePicked(f.id)}
-                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePicked(f.id); } }}
+                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/40 transition-colors cursor-pointer"
                         >
                           <Checkbox checked={checked} className="pointer-events-none" />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{f.title}</p>
                             <p className="text-xs text-muted-foreground truncate">ID: {f.id}</p>
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                   {availableForms.filter(f => !forms.some(t => t.form_id === f.id)).length === 0 && (
