@@ -563,10 +563,18 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
                             ) : '—'}
                           </td>
                           <td className="p-2 text-right">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100"
-                              onClick={(e) => { e.stopPropagation(); setBudgetEntity({ id: c.id, name: c.name, daily_budget: c.daily_budget, lifetime_budget: c.lifetime_budget }); }}>
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
+                            <div className="flex justify-end gap-0.5">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                                title="Alertas de performance"
+                                onClick={(e) => { e.stopPropagation(); setAlertCampaign({ id: c.id, name: c.name }); }}>
+                                <Bell className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                                title="Editar orçamento"
+                                onClick={(e) => { e.stopPropagation(); setBudgetEntity({ id: c.id, name: c.name, daily_budget: c.daily_budget, lifetime_budget: c.lifetime_budget }); }}>
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
