@@ -190,24 +190,37 @@ Deno.serve(async (req) => {
       if (scopeFormIds.length) {
         const { data: responses } = await supabase
           .from("typeform_responses")
-          .select("id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id")
+          .select("id, form_id, account_id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id")
           .eq("account_id", accountId)
           .in("form_id", scopeFormIds)
           .gte("created_at", since)
           .limit(20000);
         rows = responses || [];
       }
-      const submissions = rows.length;
-      const completed = rows.filter(r => r.is_completed).length;
-      const matchedResponses = rows.filter(r => r.matched_lead_id || r.matched_deal_id).length;
-      const matchedLeads = rows.filter(r => r.matched_lead_id).length;
-      const matchedDeals = rows.filter(r => r.matched_deal_id).length;
 
-      const dealIds = Array.from(new Set(rows.map(r => r.matched_deal_id).filter(Boolean)));
+      // ---- Consistency checks: every row must belong to the requested scope ----
+      const scopeSet = new Set(scopeFormIds);
+      const outOfScopeResponses = rows.filter(r => !scopeSet.has(r.form_id) || r.account_id !== accountId);
+      const cleanRows = rows.filter(r => scopeSet.has(r.form_id) && r.account_id === accountId);
+
+      const submissions = cleanRows.length;
+      const completed = cleanRows.filter(r => r.is_completed).length;
+      const matchedResponses = cleanRows.filter(r => r.matched_lead_id || r.matched_deal_id).length;
+      const matchedLeads = cleanRows.filter(r => r.matched_lead_id).length;
+      const matchedDeals = cleanRows.filter(r => r.matched_deal_id).length;
+
+      const dealIds = Array.from(new Set(cleanRows.map(r => r.matched_deal_id).filter(Boolean)));
       let won = 0, wonValue = 0;
+      let outOfScopeDeals = 0;
       if (dealIds.length) {
-        const { data: deals } = await supabase.from("deals").select("id, status, value").in("id", dealIds);
-        const wonDeals = (deals || []).filter(d => d.status === "won");
+        const { data: deals } = await supabase
+          .from("deals")
+          .select("id, status, value, account_id")
+          .eq("account_id", accountId)
+          .in("id", dealIds);
+        const validDeals = (deals || []).filter(d => d.account_id === accountId);
+        outOfScopeDeals = dealIds.length - validDeals.length;
+        const wonDeals = validDeals.filter(d => d.status === "won");
         won = wonDeals.length;
         wonValue = wonDeals.reduce((s, d) => s + Number(d.value || 0), 0);
       }
@@ -216,10 +229,25 @@ Deno.serve(async (req) => {
       const avgTime = aggAvgWeight ? Math.round(aggAvgWeighted / aggAvgWeight) : 0;
       const lifetimeCompletionRate = aggLifetimeCompletionWeight ? aggLifetimeCompletion / aggLifetimeCompletionWeight : 0;
 
+      const consistency = {
+        ok: outOfScopeResponses.length === 0 && outOfScopeDeals === 0,
+        scope_form_ids: scopeFormIds,
+        responses_total: rows.length,
+        responses_in_scope: cleanRows.length,
+        out_of_scope_responses: outOfScopeResponses.length,
+        out_of_scope_deals: outOfScopeDeals,
+      };
+      if (!consistency.ok) {
+        console.warn("[typeform-manager] consistency mismatch", consistency, {
+          sample: outOfScopeResponses.slice(0, 3).map(r => ({ id: r.id, form_id: r.form_id, account_id: r.account_id })),
+        });
+      }
+
       return new Response(JSON.stringify({
         form,
         stats,
-        scope: isAll ? { all: true, forms_count: scopeFormIds.length } : { all: false, forms_count: 1 },
+        scope: isAll ? { all: true, forms_count: scopeFormIds.length } : { all: false, forms_count: 1, form_id },
+        consistency,
         funnel: {
           visits: isAll ? aggVisits : (stats?.total_visits || 0),
           starts: isAll ? aggStarts : (stats?.total_starts || 0),
