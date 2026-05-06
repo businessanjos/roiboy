@@ -878,7 +878,7 @@ export function CsIncentivePlanSection() {
             <Target className="h-4 w-4 text-primary" /> Simulador de bônus
           </CardTitle>
           <CardDescription>
-            Informe um % de atingimento e veja qual faixa se aplica e o valor que seria pago.
+            Informe o % de renovação atingido e veja o impacto no bônus e no total trimestral (salário bruto + bônus).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -895,65 +895,118 @@ export function CsIncentivePlanSection() {
 
 function BonusSimulator({
   monthlyBonus,
+  baseSalary,
   tiers,
 }: {
   monthlyBonus: number;
+  baseSalary: number;
   tiers: { min: number | ""; max: string; multiplier: number | ""; label: string }[];
 }) {
-  const [pct, setPct] = useState<number | "">(100);
-  const achievement = toNumber(pct);
+  const [renewalPct, setRenewalPct] = useState<number | "">(100);
+  const [churnDiscount, setChurnDiscount] = useState<number | "">(0);
+  const pct = toNumber(renewalPct);
+
+  // Total de contratos expirando entre Maio e Dezembro de 2026 (referência para calcular nº absoluto de renovações)
+  const { data: totalRenewableContracts = 0 } = useQuery({
+    queryKey: ["bonus-simulator-renewable-contracts-2026"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("client_contracts")
+        .select("id", { count: "exact", head: true })
+        .gte("end_date", "2026-05-01")
+        .lte("end_date", "2026-12-31");
+      if (error) throw error;
+      return count || 0;
+    },
+    staleTime: 5 * 60_000,
+  });
 
   const matched = useMemo(() => {
     return tiers.find((t) => {
       const min = toNumber(t.min);
       const max = t.max ? parseFloat(t.max) : Infinity;
-      return achievement >= min && achievement <= max;
+      return pct >= min && pct <= max;
     });
-  }, [tiers, achievement]);
+  }, [tiers, pct]);
 
   const multiplier = matched ? toNumber(matched.multiplier) || 0 : 0;
-  const monthlyValue = monthlyBonus * multiplier;
-  const quarterValue = monthlyValue * 3;
-  const pctLabel = Math.round(multiplier * 100);
+  const attainmentPct = Math.round(multiplier * 100);
+  const absoluteRenewals = Math.round((pct / 100) * totalRenewableContracts);
+  const churnVal = toNumber(churnDiscount);
+  const monthlyBonusValue = Math.max(0, monthlyBonus * multiplier - churnVal);
+  const quarterBonus = monthlyBonusValue * 3;
+  const quarterSalary = baseSalary * 3;
+  const quarterTotal = quarterSalary + quarterBonus;
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <Label className="text-xs">% de atingimento</Label>
+          <Label className="text-xs">% de renovação</Label>
           <Input
             type="number"
-            value={pct ?? ""}
-            onChange={(e) => setPct(parseNumberInput(e.target.value))}
+            value={renewalPct ?? ""}
+            onChange={(e) => setRenewalPct(parseNumberInput(e.target.value))}
             placeholder="Ex: 85"
           />
         </div>
+        <div>
+          <Label className="text-xs">% de atingimento (auto)</Label>
+          <Input
+            value={matched ? `${attainmentPct}%` : "—"}
+            disabled
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Renovações (nº absoluto)</Label>
+          <Input
+            value={`${absoluteRenewals} de ${totalRenewableContracts}`}
+            disabled
+          />
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Base: contratos com vencimento entre Mai/2026 e Dez/2026.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
           <Label className="text-xs">Bônus mensal base</Label>
           <Input value={formatBRL(monthlyBonus)} disabled />
         </div>
         <div>
-          <Label className="text-xs">Faixa aplicada</Label>
+          <Label className="text-xs">Salário bruto mensal</Label>
+          <Input value={formatBRL(baseSalary)} disabled />
+        </div>
+        <div>
+          <Label className="text-xs">Desconto por churn (R$)</Label>
           <Input
-            value={
-              matched
-                ? `${toNumber(matched.min)}%${matched.max ? `–${matched.max}%` : "+"} (${pctLabel}%)`
-                : "Nenhuma faixa"
-            }
-            disabled
+            type="number"
+            value={churnDiscount ?? ""}
+            onChange={(e) => setChurnDiscount(parseNumberInput(e.target.value))}
+            placeholder="Ex: 200"
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="rounded-md border p-3 bg-muted/30">
           <div className="text-xs text-muted-foreground">Bônus no mês</div>
-          <div className="text-lg font-semibold text-amber-600">{formatBRL(monthlyValue)}</div>
+          <div className="text-lg font-semibold text-amber-600">{formatBRL(monthlyBonusValue)}</div>
         </div>
         <div className="rounded-md border p-3 bg-muted/30">
           <div className="text-xs text-muted-foreground">Bônus no trimestre</div>
-          <div className="text-lg font-semibold text-amber-600">{formatBRL(quarterValue)}</div>
+          <div className="text-lg font-semibold text-amber-600">{formatBRL(quarterBonus)}</div>
+        </div>
+        <div className="rounded-md border p-3 bg-primary/5 border-primary/30">
+          <div className="text-xs text-muted-foreground">Trimestre: salário bruto + bônus</div>
+          <div className="text-lg font-semibold text-primary">{formatBRL(quarterTotal)}</div>
+          <div className="text-[10px] text-muted-foreground mt-1">
+            {formatBRL(quarterSalary)} salário + {formatBRL(quarterBonus)} bônus
+          </div>
         </div>
       </div>
+
       {matched?.label && (
         <p className="text-xs text-muted-foreground">{matched.label}</p>
       )}
