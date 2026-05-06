@@ -483,6 +483,7 @@ export default function Contracts() {
           business_zip_code: data.business_zip_code || "",
           business_segment: data.business_segment || "",
           business_niche: data.business_niche || "",
+          timezone: (data as any).timezone || "",
           companies: Array.isArray(data.companies) ? (data.companies as any[]) : [],
           contract_start_date: data.contract_start_date || "",
           contract_end_date: data.contract_end_date || "",
