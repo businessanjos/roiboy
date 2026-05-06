@@ -1590,16 +1590,17 @@ const SOURCE_LABEL: Record<NonNullable<TimezoneSource>, string> = {
  * - Vazio = "Detectar automaticamente".
  */
 function TimezoneField({ value, phone, state, onChange }: TimezoneFieldProps) {
-  // Detecção sem o override (para mostrar o que o "auto" decidiria)
+  const country = getCountryFromPhone(phone);
+  // Detecção sem o override (mostra o que o "auto" decidiria via DDD > UF > DDI)
   const auto = useMemo(
     () =>
       resolveClientTimezone({
         manualTimezone: null,
         phone,
         state,
-        countryCode: null, // deixar resolver buscar via DDI internamente
-      }) ?? null,
-    [phone, state],
+        countryCode: country?.code ?? null,
+      }),
+    [phone, state, country?.code],
   );
   const autoTz = auto?.timezone ?? null;
   const autoSource = auto?.source ?? null;
