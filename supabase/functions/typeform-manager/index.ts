@@ -154,13 +154,30 @@ Deno.serve(async (req) => {
       const since = new Date(Date.now() - days * 86400_000).toISOString();
       const isAll = !form_id || form_id === "__all__";
 
-      // Resolve form ids in scope
+      // Resolve form ids + titles in scope (title is needed to extract the [TAG] used as Origem da Venda)
       let scopeFormIds: string[] = [];
+      let scopeForms: Array<{ form_id: string; title: string | null; campaign_tag: string | null }> = [];
       if (isAll) {
-        const { data: allForms } = await supabase.from("typeform_forms").select("form_id").eq("account_id", accountId);
-        scopeFormIds = (allForms || []).map((f: any) => f.form_id);
+        const { data: allForms } = await supabase.from("typeform_forms").select("form_id, title, campaign_tag").eq("account_id", accountId);
+        scopeForms = (allForms || []) as any;
+        scopeFormIds = scopeForms.map((f) => f.form_id);
       } else {
+        const { data: oneForm } = await supabase.from("typeform_forms").select("form_id, title, campaign_tag").eq("account_id", accountId).eq("form_id", form_id).maybeSingle();
+        scopeForms = oneForm ? [oneForm as any] : [{ form_id, title: null, campaign_tag: null }];
         scopeFormIds = [form_id];
+      }
+
+      // Extract [TAG] from each form title (e.g. "[TRAF-IMP-EC] Funil ..." -> "TRAF-IMP-EC")
+      // Falls back to campaign_tag if explicitly set.
+      const extractTag = (title?: string | null, campaign?: string | null): string | null => {
+        if (campaign && campaign.trim()) return campaign.trim().replace(/^\[|\]$/g, "").toUpperCase();
+        const m = (title || "").match(/\[([^\]]+)\]/);
+        return m ? m[1].trim().toUpperCase() : null;
+      };
+      const scopeTags = new Set<string>();
+      for (const f of scopeForms) {
+        const t = extractTag(f.title, f.campaign_tag);
+        if (t) scopeTags.add(t);
       }
 
       // Form metadata (single only)
