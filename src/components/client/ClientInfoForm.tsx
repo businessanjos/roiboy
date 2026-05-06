@@ -1155,6 +1155,15 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
           <div className="h-px bg-border/50" />
 
+          {/* Timezone */}
+          <TimezoneField
+            value={data.timezone}
+            phone={data.phone_e164}
+            onChange={(v) => updateField("timezone", v)}
+          />
+
+          <div className="h-px bg-border/50" />
+
           {/* Business Address */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
