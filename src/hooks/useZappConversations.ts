@@ -236,8 +236,8 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       // Also include messages with permanent URL but wrong status for auto-correction
       const pendingMediaMsgs = msgs.filter(
         (m) => m.media_type && (
-          // Needs actual download: pending/null status, no permanent URL
-          (((m.media_download_status === "pending" || !m.media_download_status) && !m.media_url))
+          // Needs actual download: pending/null/failed status, no permanent URL
+          ((m.media_download_status === "pending" || m.media_download_status === "failed" || !m.media_download_status) && !m.media_url)
           // Needs auto-correction: has permanent URL but wrong status
           || (m.media_url && m.media_url.includes("supabase") && m.media_download_status !== "completed")
         )
