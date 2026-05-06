@@ -275,59 +275,197 @@ function SlideResponsibility() {
   );
 }
 
+function useDashboardKpis() {
+  const { user } = useCurrentUser();
+  const accountId = user?.account_id;
+
+  const { data: goals } = useQuery({
+    queryKey: ["cs-pres-goals", accountId],
+    enabled: !!accountId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("account_settings")
+        .select("dashboard_churn_goal, dashboard_renewal_goal, dashboard_nps_goal")
+        .eq("account_id", accountId!)
+        .maybeSingle();
+      return {
+        churn: Number(data?.dashboard_churn_goal ?? 18),
+        renewal: Number(data?.dashboard_renewal_goal ?? 40),
+        nps: Number(data?.dashboard_nps_goal ?? 80),
+      };
+    },
+  });
+
+  const { data: renewal } = useQuery({
+    queryKey: ["cs-pres-renewal", accountId],
+    enabled: !!accountId,
+    queryFn: async () => {
+      const start = new Date(); start.setMonth(start.getMonth() - 12);
+      const { data } = await supabase
+        .from("renewal_outcomes")
+        .select("outcome, resolved_at")
+        .eq("account_id", accountId!)
+        .gte("resolved_at", start.toISOString());
+      let renewed = 0, lost = 0;
+      for (const r of (data ?? []) as any[]) {
+        if (r.outcome === "renewed") renewed++;
+        else if (r.outcome === "lost") lost++;
+      }
+      const total = renewed + lost;
+      return { rate: total > 0 ? (renewed / total) * 100 : 0, renewed, lost, total };
+    },
+  });
+
+  const { data: churn } = useQuery({
+    queryKey: ["cs-pres-churn", accountId],
+    enabled: !!accountId,
+    queryFn: async () => {
+      const start = new Date(); start.setMonth(start.getMonth() - 12);
+      const [{ data: cancels }, { count: active }] = await Promise.all([
+        supabase
+          .from("contracts")
+          .select("id", { count: "exact", head: false })
+          .eq("account_id", accountId!)
+          .eq("status", "cancelled")
+          .gte("end_date", start.toISOString().slice(0, 10)),
+        supabase
+          .from("contracts")
+          .select("id", { count: "exact", head: true })
+          .eq("account_id", accountId!)
+          .eq("status", "active"),
+      ]);
+      const cancelCount = (cancels as any[] | null)?.length ?? 0;
+      const activeCount = active ?? 0;
+      const denom = activeCount + cancelCount;
+      return { rate: denom > 0 ? (cancelCount / denom) * 100 : 0, cancelCount, activeCount };
+    },
+  });
+
+  const { data: nps } = useQuery({
+    queryKey: ["cs-pres-nps", accountId],
+    enabled: !!accountId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("vnps_snapshots")
+        .select("client_id, vnps_class, computed_at")
+        .eq("account_id", accountId!)
+        .order("computed_at", { ascending: false })
+        .limit(5000);
+      const latest = new Map<string, string>();
+      for (const r of (data ?? []) as any[]) {
+        if (!latest.has(r.client_id)) latest.set(r.client_id, r.vnps_class);
+      }
+      let p = 0, d = 0;
+      latest.forEach((c) => { if (c === "promoter") p++; else if (c === "detractor") d++; });
+      const total = latest.size;
+      return { score: total > 0 ? Math.round(((p - d) / total) * 100) : 0, total };
+    },
+  });
+
+  return { goals, renewal, churn, nps };
+}
+
 function SlideHow({ plan }: { plan: any }) {
-  const items = [
+  const { goals, renewal, churn, nps } = useDashboardKpis();
+
+  const renewalRate = renewal?.rate ?? 0;
+  const renewalGoal = goals?.renewal ?? 40;
+  const renewalOk = renewalRate >= renewalGoal;
+
+  const churnRate = churn?.rate ?? 0;
+  const churnGoal = goals?.churn ?? 18;
+  const churnOk = churnRate <= churnGoal;
+
+  const npsScore = nps?.score ?? 0;
+  const npsGoal = goals?.nps ?? 80;
+  const npsOk = npsScore >= npsGoal;
+
+  const cards = [
     {
-      icon: Target,
-      label: "Renovação",
-      pct: plan?.weight_renewal,
-      color: "text-emerald-300",
+      icon: RefreshCw,
+      label: "Taxa de Renovação",
+      weight: plan?.weight_renewal,
+      current: `${renewalRate.toFixed(1)}%`,
+      goal: `≥ ${renewalGoal}%`,
+      ok: renewalOk,
+      tone: "emerald",
       desc: "Quanto da sua carteira renova.",
     },
     {
-      icon: TrendingUp,
+      icon: TrendingDown,
       label: "Churn",
-      pct: plan?.weight_churn,
-      color: "text-rose-300",
-      desc: "Quanto da sua carteira vai embora.",
+      weight: plan?.weight_churn,
+      current: `${churnRate.toFixed(1)}%`,
+      goal: `≤ ${churnGoal}%`,
+      ok: churnOk,
+      tone: "rose",
+      desc: "Quanto da carteira vai embora.",
     },
     {
-      icon: Star,
+      icon: Heart,
       label: "NPS",
-      pct: plan?.weight_nps,
-      color: "text-amber-300",
+      weight: plan?.weight_nps,
+      current: `${npsScore}`,
+      goal: `≥ ${npsGoal}`,
+      ok: npsOk,
+      tone: "amber",
       desc: "O quanto a cliente recomenda.",
     },
   ];
+
+  const toneMap: Record<string, { ring: string; icon: string; chip: string }> = {
+    emerald: { ring: "border-emerald-400/40", icon: "text-emerald-300 bg-emerald-400/10", chip: "bg-emerald-400/15 text-emerald-200" },
+    rose: { ring: "border-rose-400/40", icon: "text-rose-300 bg-rose-400/10", chip: "bg-rose-400/15 text-rose-200" },
+    amber: { ring: "border-amber-400/40", icon: "text-amber-300 bg-amber-400/10", chip: "bg-amber-400/15 text-amber-200" },
+  };
+
   return (
-    <div className="space-y-10 py-8">
+    <div className="space-y-8 py-6">
       <div>
         <p className="text-rose-300 text-sm uppercase tracking-[0.3em] mb-3">Como você é avaliada</p>
         <h2 className="text-5xl font-black">3 indicadores. Nada mais.</h2>
         <p className="text-slate-400 mt-2 text-lg">
-          Simples de medir. Honestos com o seu trabalho.
+          Os mesmos números que aparecem no dashboard — atual e a meta.
         </p>
       </div>
       <div className="grid md:grid-cols-3 gap-4">
-        {items.map((it) => (
-          <div
-            key={it.label}
-            className="rounded-xl border border-white/10 bg-white/5 p-6 space-y-3"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-white/5 flex items-center justify-center">
-                <it.icon className={cn("h-5 w-5", it.color)} />
+        {cards.map((c) => {
+          const t = toneMap[c.tone];
+          return (
+            <div
+              key={c.label}
+              className={cn("rounded-2xl border-2 bg-white/[0.04] p-5 space-y-4", t.ring)}
+            >
+              <div className="flex items-center justify-between">
+                <div className={cn("h-11 w-11 rounded-xl flex items-center justify-center", t.icon)}>
+                  <c.icon className="h-5 w-5" />
+                </div>
+                <span className={cn("text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-bold", t.chip)}>
+                  Peso {c.weight ? `${Number(c.weight)}%` : "—"}
+                </span>
               </div>
-              <span className="text-xs uppercase tracking-wider text-slate-400">
-                {it.label}
-              </span>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold">{c.label}</p>
+                <p className="text-5xl font-black tabular-nums text-white mt-1">{c.current}</p>
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500">Meta</p>
+                  <p className="text-base font-bold text-slate-200 tabular-nums">{c.goal}</p>
+                </div>
+                <span
+                  className={cn(
+                    "text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-bold",
+                    c.ok ? "bg-emerald-400/20 text-emerald-200" : "bg-rose-400/20 text-rose-200",
+                  )}
+                >
+                  {c.ok ? "Na meta" : "Fora"}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">{c.desc}</p>
             </div>
-            <p className={cn("text-4xl font-black tabular-nums", it.color)}>
-              {it.pct ? `${Number(it.pct)}%` : "—"}
-            </p>
-            <p className="text-sm text-slate-400">{it.desc}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <p className="text-sm text-slate-400 italic text-center">
         Os pesos somam 100%. Cada mês compõe seu desempenho final.
@@ -335,6 +473,8 @@ function SlideHow({ plan }: { plan: any }) {
     </div>
   );
 }
+
+
 
 function SlideTiers({ tiers, plan }: { tiers: any[]; plan: any }) {
   const monthlyBonus = Number(plan?.monthly_bonus_value || 0);
