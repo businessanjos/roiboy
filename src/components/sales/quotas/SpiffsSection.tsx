@@ -878,7 +878,7 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
   const summary = userIds.map((uid) => {
     const total = (dealsQuery.data ?? [])
       .filter((d) => d.responsible_user_id === uid)
-      .reduce((acc, d) => acc + Number(d.entry_value || 0), 0);
+      .reduce((acc, d) => acc + Number(d.received_value ?? d.entry_value ?? 0), 0);
     const earnedSpins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
     const remainder = triggerPerValue > 0 ? total - earnedSpins * triggerPerValue : 0;
     const toNextSpin = triggerPerValue > 0 ? triggerPerValue - remainder : 0;
