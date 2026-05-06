@@ -201,12 +201,17 @@ async function backfillForm(supabase: any, accountId: string, formId: string, to
   // Insights summary
   try {
     const summary = await tfFetch(`/insights/${formId}/summary`, token);
-    const m = summary?.metrics || summary;
-    const visits = Number(m?.visits || 0);
-    const starts = Number(m?.starts || 0);
-    const submissions = Number(m?.submissions || 0);
-    const completion_rate = Number(m?.completion_rate || (visits ? (submissions / visits) * 100 : 0));
-    const avg = Number(m?.average_completion_time || m?.average_time || 0);
+    // Typeform Insights returns: { fields: [...], form: { summary: {...}, platforms: [...] } }
+    const formSummary = summary?.form?.summary || {};
+    const fields = summary?.fields || [];
+    // Visits = total_visits from summary
+    const visits = Number(formSummary?.total_visits || 0);
+    // Starts = visits to first real field (after welcome screen) — fallback to visits to second field
+    const firstField = fields.find((f: any) => f?.type !== "welcome_screen" && f?.type !== "thankyou_screen");
+    const starts = Number(firstField?.views || formSummary?.unique_visits || 0);
+    const submissions = Number(formSummary?.responses_count || 0);
+    const completion_rate = Number(formSummary?.completion_rate || (visits ? (submissions / visits) * 100 : 0));
+    const avg = Number(formSummary?.average_time || 0);
     await supabase.from("typeform_form_stats").upsert({
       account_id: accountId,
       form_id: formId,
