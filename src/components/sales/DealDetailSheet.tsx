@@ -1,4 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import {
+  parseReceivedInput,
+  formatReceivedDraft,
+  toReceivedDraft,
+  fromReceivedDraft,
+} from "@/lib/receivedValueFormat";
 import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
@@ -363,8 +369,7 @@ export function DealDetailSheet({
       setHasSecondSeat(!!(deal as any)?.has_second_seat);
       setSecondSeatName((deal as any)?.second_seat_name || "");
       setValueDraft(String(deal.value ?? 0));
-      const rv = (deal as any).received_value;
-      setReceivedDraft(rv == null || rv === "" ? "" : String(Math.round(Number(rv) * 100)));
+      setReceivedDraft(toReceivedDraft((deal as any).received_value));
     }
   }, [deal?.id, open]);
 
@@ -1242,15 +1247,8 @@ export function DealDetailSheet({
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">R$</span>
                         <Input
                           inputMode="decimal"
-                          value={(() => {
-                            if (!receivedDraft) return "";
-                            const num = Number(receivedDraft) / 100;
-                            return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                          })()}
-                          onChange={(e) => {
-                            const raw = e.target.value.replace(/\D/g, "");
-                            setReceivedDraft(raw);
-                          }}
+                          value={formatReceivedDraft(receivedDraft)}
+                          onChange={(e) => setReceivedDraft(parseReceivedInput(e.target.value))}
                           placeholder="0,00"
                           className="h-9 pl-9"
                           autoFocus
@@ -1263,7 +1261,7 @@ export function DealDetailSheet({
                         <Button
                           size="sm"
                           onClick={async () => {
-                            const v = receivedDraft === "" ? null : Number(receivedDraft) / 100;
+                            const v = fromReceivedDraft(receivedDraft);
                             if (v !== null && (isNaN(v) || v < 0)) {
                               toast.error("Valor inválido");
                               return;
