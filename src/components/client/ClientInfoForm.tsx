@@ -1568,7 +1568,100 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
   );
 }
 
-export const getEmptyClientFormData = (): ClientFormData => ({
+interface TimezoneFieldProps {
+  value: string;
+  phone: string;
+  onChange: (value: string) => void;
+}
+
+/**
+ * Campo de fuso horário do cliente.
+ * - Detecta automaticamente pelo DDI/telefone (preview).
+ * - Permite override manual quando a detecção falhar (ex.: brasileiros em
+ *   Manaus/Acre, expatriados, números virtuais com DDI estrangeiro).
+ * - Vazio = "Detectar automaticamente".
+ */
+function TimezoneField({ value, phone, onChange }: TimezoneFieldProps) {
+  const country = getCountryFromPhone(phone);
+  const autoTz = country ? getTimezoneForCountry(country.code) : null;
+  const effectiveTz = value || autoTz;
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    if (!effectiveTz) return;
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, [effectiveTz]);
+
+  const localTime = effectiveTz ? getLocalTime(effectiveTz, now) : "";
+  const offset = effectiveTz ? getTimezoneOffsetHours(effectiveTz, now) : null;
+  const offsetLabel = formatTimezoneOffset(offset);
+
+  const grouped = useMemo(() => {
+    const out: Record<string, typeof TIMEZONE_OPTIONS> = {};
+    for (const opt of TIMEZONE_OPTIONS) {
+      (out[opt.group] ||= []).push(opt);
+    }
+    return out;
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+        <Clock className="h-3.5 w-3.5" />
+        Fuso Horário
+      </div>
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">Fuso horário do cliente</Label>
+          <Select value={value || "__auto__"} onValueChange={(v) => onChange(v === "__auto__" ? "" : v)}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Detectar automaticamente" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[320px]">
+              <SelectItem value="__auto__">
+                <span className="flex items-center gap-2">
+                  <Wand2 className="h-3.5 w-3.5 text-primary" />
+                  Detectar automaticamente
+                  {autoTz && (
+                    <span className="text-xs text-muted-foreground">→ {autoTz}</span>
+                  )}
+                </span>
+              </SelectItem>
+              {Object.entries(grouped).map(([group, opts]) => (
+                <div key={group}>
+                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    {group}
+                  </div>
+                  {opts.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </div>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">
+            {value
+              ? "Override manual ativo. Será usado em vez da detecção automática."
+              : autoTz
+                ? `Detectado pelo telefone: ${autoTz}. Ajuste manualmente se o cliente estiver em outro fuso (ex.: Manaus, Acre, viagem).`
+                : "Sem detecção automática (telefone ausente ou país não mapeado). Selecione manualmente."}
+          </p>
+        </div>
+        {effectiveTz && localTime && (
+          <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-center min-w-[110px]">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Hora local</div>
+            <div className="font-mono text-sm font-semibold tabular-nums">{localTime}</div>
+            <div className="text-[10px] text-muted-foreground">{offsetLabel}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
   full_name: "",
   phone_e164: "",
   emails: [],
