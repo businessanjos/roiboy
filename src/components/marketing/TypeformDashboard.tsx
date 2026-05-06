@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, Plus, RefreshCw, Trash2, Users, CheckCircle2, TrendingUp, Trophy, Clock, ExternalLink, Search } from 'lucide-react';
+import { FileText, Plus, RefreshCw, Trash2, Users, CheckCircle2, TrendingUp, Trophy, Clock, ExternalLink, Search, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -218,33 +219,72 @@ export function TypeformDashboard() {
           ) : !funnel ? (
             <Skeleton className="h-40" />
           ) : (
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime · histórico total</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {selectedForm === '__all__' ? `somatório de ${forms.length} funis` : 'não muda com o filtro de período'}
-                  </span>
+            <TooltipProvider delayDuration={150}>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime · histórico total</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedForm === '__all__' ? `somatório de ${forms.length} funis` : 'não muda com o filtro de período'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <FunnelCard
+                      scope="lifetime" label="Visitas" value={funnel.visits} icon={Users}
+                      sub="desde a criação do form"
+                      source="Typeform Insights API"
+                      tip="Quantidade total de pessoas que abriram o link/embed do formulário, desde a criação. Vem do endpoint /insights/{form_id}/summary do Typeform (campo total_visits). Não é filtrado pelo período selecionado."
+                    />
+                    <FunnelCard
+                      scope="lifetime" label="Iniciados" value={funnel.starts} icon={TrendingUp}
+                      sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'desde a criação do form'}
+                      source="Typeform Insights API"
+                      tip="Visitas que avançaram além da welcome screen e visualizaram o primeiro campo real do form. Calculado a partir de fields[0].views do Insights (excluindo welcome/thankyou screens). Histórico total."
+                    />
+                    <FunnelCard
+                      scope="lifetime" label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock}
+                      sub="por resposta (histórico)"
+                      source="Typeform Insights API"
+                      tip="Tempo médio (segundos) que cada respondente leva para completar o formulário. Vem de form.summary.average_time. Quando 'Todos os funis' está selecionado, é uma média ponderada por visitas."
+                    />
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  <FunnelCard scope="lifetime" label="Visitas" value={funnel.visits} icon={Users} sub="desde a criação do form" />
-                  <FunnelCard scope="lifetime" label="Iniciados" value={funnel.starts} icon={TrendingUp} sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'desde a criação do form'} />
-                  <FunnelCard scope="lifetime" label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock} sub="por resposta (histórico)" />
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · últimos {period}d</Badge>
+                    <span className="text-xs text-muted-foreground">filtrado pelo intervalo selecionado</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <FunnelCard
+                      scope="period" label="Submissões" value={funnel.submissions} icon={CheckCircle2}
+                      sub={`recebidas nos últimos ${period}d`}
+                      source="DB · typeform_responses"
+                      tip={`Total de respostas (completas + parciais) salvas no nosso banco via webhook nos últimos ${period} dias. Conta linhas em typeform_responses filtradas por form_id selecionado e created_at >= hoje-${period}d.`}
+                    />
+                    <FunnelCard
+                      scope="period" label="Completados" value={funnel.completed} icon={CheckCircle2}
+                      sub={`${funnel.completion_rate.toFixed(1)}% das submissões`}
+                      source="DB · typeform_responses"
+                      tip={`Subset das submissões com submitted_at preenchido (respondente chegou até a thank-you screen). Taxa = completados / submissões no período.`}
+                      highlight
+                    />
+                    <FunnelCard
+                      scope="period" label="Lead no Roy" value={funnel.matched_responses} icon={Users}
+                      sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : 'matches no período'}
+                      source="DB · matching engine"
+                      tip="Respostas do período que conseguimos cruzar com um lead OU deal existente no Roy (por email exato ou últimos 9 dígitos do telefone). Conta cada resposta única — se ela match com lead E deal, conta apenas 1."
+                    />
+                    <FunnelCard
+                      scope="period" label="Ganhos" value={funnel.won} icon={Trophy}
+                      sub={fmtBRL(funnel.won_value)}
+                      source="DB · deals (status=won)"
+                      tip="Quantos dos deals matched a partir das respostas do período estão atualmente com status='won' na tabela deals. Valor exibido = soma de deals.value desses deals ganhos. Deal IDs são deduplicados antes da consulta."
+                      highlight
+                    />
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · últimos {period}d</Badge>
-                  <span className="text-xs text-muted-foreground">filtrado pelo intervalo selecionado</span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <FunnelCard scope="period" label="Submissões" value={funnel.submissions} icon={CheckCircle2} sub={`recebidas nos últimos ${period}d`} />
-                  <FunnelCard scope="period" label="Completados" value={funnel.completed} icon={CheckCircle2} sub={`${funnel.completion_rate.toFixed(1)}% das submissões`} highlight />
-                  <FunnelCard scope="period" label="Lead no Roy" value={funnel.matched_responses} icon={Users} sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : 'matches no período'} />
-                  <FunnelCard scope="period" label="Ganhos" value={funnel.won} icon={Trophy} sub={fmtBRL(funnel.won_value)} highlight />
-                </div>
-              </div>
-            </div>
+            </TooltipProvider>
           )}
         </CardContent>
       </Card>
@@ -354,7 +394,7 @@ export function TypeformDashboard() {
   );
 }
 
-function FunnelCard({ label, value, icon: Icon, sub, highlight, scope }: any) {
+function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, source }: any) {
   const scopeStyles = scope === 'lifetime'
     ? 'border-sky-500/30 bg-sky-500/5'
     : scope === 'period'
@@ -362,8 +402,28 @@ function FunnelCard({ label, value, icon: Icon, sub, highlight, scope }: any) {
       : 'border-border/30 bg-muted/20';
   return (
     <div className={`p-3 rounded-lg border ${highlight ? 'border-emerald-500/40 bg-emerald-500/10' : scopeStyles}`}>
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-        <Icon className="w-3.5 h-3.5" />{label}
+      <div className="flex items-center justify-between gap-1.5 text-xs text-muted-foreground mb-1">
+        <span className="flex items-center gap-1.5 min-w-0">
+          <Icon className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">{label}</span>
+        </span>
+        {tip && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="opacity-60 hover:opacity-100 transition-opacity shrink-0" aria-label={`Como ${label} é calculado`}>
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+              {source && (
+                <div className="font-semibold mb-1 text-[10px] uppercase tracking-wide opacity-80">
+                  Fonte: {source}
+                </div>
+              )}
+              <p>{tip}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
       <p className="text-xl font-bold">{typeof value === 'number' ? value.toLocaleString('pt-BR') : value}</p>
       {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
