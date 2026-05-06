@@ -222,7 +222,7 @@ export default function MarketingInsightsTab() {
                 )}
                 <Badge variant="outline" className="gap-1 border-emerald-500/50 text-emerald-600 bg-emerald-50 text-[10px] uppercase font-bold tracking-wider py-0 px-1.5 h-5">
                   <Trophy className="h-3 w-3" />
-                  11 VENDAS
+                  4 VENDAS
                 </Badge>
               </div>
               {canManage && (
