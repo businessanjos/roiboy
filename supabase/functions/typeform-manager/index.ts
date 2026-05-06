@@ -271,35 +271,20 @@ Deno.serve(async (req) => {
       // captures phone variants robustly via phoneCoreKey.
       const emailSet = new Set(emails);
       if (emailSet.size || phoneKeys.size) {
-        const allWonDeals: any[] = [];
-        const pageSize = 1000;
-        let from = 0;
-        // paginate to bypass the default 1000-row cap
-        while (true) {
-          const { data: pageRows, error: pageErr } = await supabase
+        const allWonDeals = await fetchAllWonDeals(() =>
+          supabase
             .from("deals")
             .select("id, status, value, contact_email, contact_phone")
             .eq("account_id", accountId)
             .eq("status", "won")
-            .range(from, from + pageSize - 1);
-          if (pageErr) break;
-          const arr = pageRows || [];
-          allWonDeals.push(...arr);
-          if (arr.length < pageSize) break;
-          from += pageSize;
+        );
+        const result = crossMatchWonDeals(allWonDeals, emailSet, phoneKeys, wonDealIds);
+        for (const id of result.matchedIds) wonDealIds.add(id);
+        for (const [id, value] of result.matchedValueById) {
+          if (!wonDealsMap.has(id)) wonDealsMap.set(id, { value });
         }
-        for (const d of allWonDeals) {
-          if (wonDealIds.has(d.id)) continue;
-          const eMatch = emailSet.size && d.contact_email && emailSet.has(normEmail(d.contact_email));
-          const pKey = phoneKeys.size ? phoneCoreKey(d.contact_phone) : null;
-          const pMatch = pKey && phoneKeys.has(pKey);
-          if (eMatch || pMatch) {
-            wonDealIds.add(d.id);
-            wonDealsMap.set(d.id, { value: Number(d.value || 0) });
-            if (eMatch) wonByEmail++;
-            else if (pMatch) wonByPhone++;
-          }
-        }
+        wonByEmail += result.wonByEmail;
+        wonByPhone += result.wonByPhone;
       }
 
       won = wonDealIds.size;
