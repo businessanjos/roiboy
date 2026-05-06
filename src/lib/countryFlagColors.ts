@@ -166,7 +166,45 @@ const COLORS: Record<string, FlagColors> = {
   CV: { stripes: ["#003893", "#FFFFFF", "#CF2027"], background: BG_NAVY, text: "#ffffff" },
 };
 
+/**
+ * Mapeamento ISO alpha-3 → alpha-2 para os países cobertos no COLORS.
+ * Permite aceitar tanto "BR"/"br" quanto "BRA"/"bra" como entrada.
+ */
+const ISO3_TO_ISO2: Record<string, string> = {
+  PRT: "PT", ESP: "ES", FRA: "FR", ITA: "IT", DEU: "DE", GBR: "GB", IRL: "IE",
+  NLD: "NL", BEL: "BE", CHE: "CH", AUT: "AT", SWE: "SE", NOR: "NO", DNK: "DK",
+  FIN: "FI", POL: "PL", ISL: "IS", CZE: "CZ", SVK: "SK", HUN: "HU", ROU: "RO",
+  BGR: "BG", GRC: "GR", TUR: "TR", RUS: "RU", UKR: "UA", BLR: "BY", MDA: "MD",
+  SRB: "RS", HRV: "HR", SVN: "SI", BIH: "BA", MKD: "MK", ALB: "AL", LUX: "LU",
+  MLT: "MT", LTU: "LT", LVA: "LV", EST: "EE", AND: "AD", MCO: "MC", LIE: "LI",
+  BRA: "BR", USA: "US", CAN: "CA", MEX: "MX", ARG: "AR", CHL: "CL", COL: "CO",
+  PER: "PE", URY: "UY", PRY: "PY", BOL: "BO", ECU: "EC", VEN: "VE", CUB: "CU",
+  CRI: "CR", PAN: "PA", GTM: "GT", HND: "HN", SLV: "SV", NIC: "NI", HTI: "HT",
+  BLZ: "BZ", GUY: "GY", SUR: "SR", DOM: "DO", JAM: "JM",
+  EGY: "EG", ZAF: "ZA", ARE: "AE", SAU: "SA", QAT: "QA", KWT: "KW", BHR: "BH",
+  OMN: "OM", ISR: "IL", PSE: "PS", JOR: "JO", LBN: "LB", SYR: "SY", IRQ: "IQ",
+  IRN: "IR", YEM: "YE", AFG: "AF", PAK: "PK", IND: "IN", BGD: "BD", LKA: "LK",
+  NPL: "NP", BTN: "BT", MDV: "MV", MMR: "MM", THA: "TH", VNM: "VN", KHM: "KH",
+  LAO: "LA", MYS: "MY", SGP: "SG", IDN: "ID", PHL: "PH", CHN: "CN", HKG: "HK",
+  MAC: "MO", TWN: "TW", JPN: "JP", KOR: "KR", MNG: "MN", AUS: "AU", NZL: "NZ",
+  KEN: "KE", MAR: "MA", DZA: "DZ", TUN: "TN", LBY: "LY", ETH: "ET", GHA: "GH",
+  SEN: "SN", CIV: "CI", AGO: "AO", MOZ: "MZ", CPV: "CV", NGA: "NG",
+};
+
+/**
+ * Normaliza um código de país aceitando ISO-2 ou ISO-3, em qualquer caixa,
+ * com espaços extras. Retorna sempre alpha-2 maiúsculo, ou null se inválido.
+ */
+export function normalizeCountryCode(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const cleaned = code.trim().toUpperCase();
+  if (cleaned.length === 2) return cleaned;
+  if (cleaned.length === 3) return ISO3_TO_ISO2[cleaned] ?? null;
+  return null;
+}
+
 export function getFlagColors(countryCode: string | null | undefined): FlagColors {
-  if (!countryCode) return DEFAULT_COLORS;
-  return COLORS[countryCode.toUpperCase()] ?? DEFAULT_COLORS;
+  const normalized = normalizeCountryCode(countryCode);
+  if (!normalized) return DEFAULT_COLORS;
+  return COLORS[normalized] ?? DEFAULT_COLORS;
 }
