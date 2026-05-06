@@ -398,14 +398,20 @@ export function TypeformDashboard() {
   );
 }
 
-function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, source }: any) {
+function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, source, onClick }: any) {
   const scopeStyles = scope === 'lifetime'
     ? 'border-sky-500/30 bg-sky-500/5'
     : scope === 'period'
       ? 'border-emerald-500/30 bg-emerald-500/5'
       : 'border-border/30 bg-muted/20';
+  const clickable = typeof onClick === 'function';
   return (
-    <div className={`p-3 rounded-lg border ${highlight ? 'border-emerald-500/40 bg-emerald-500/10' : scopeStyles}`}>
+    <div
+      className={`p-3 rounded-lg border ${highlight ? 'border-emerald-500/40 bg-emerald-500/10' : scopeStyles} ${clickable ? 'cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition' : ''}`}
+      onClick={clickable ? onClick : undefined}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+    >
       <div className="flex items-center justify-between gap-1.5 text-xs text-muted-foreground mb-1">
         <span className="flex items-center gap-1.5 min-w-0">
           <Icon className="w-3.5 h-3.5 shrink-0" />
