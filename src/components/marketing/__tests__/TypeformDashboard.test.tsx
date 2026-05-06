@@ -146,7 +146,10 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
       error: null,
     });
     await act(async () => { render(<TypeformDashboard />); });
-    await waitFor(() => screen.getByText(/fora do escopo/i));
-    expect(screen.getByText(/7 resposta\(s\) fora do escopo/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        document.body.textContent?.includes('7 resposta(s) fora do escopo descartadas'),
+      ).toBe(true),
+    );
   });
 });
