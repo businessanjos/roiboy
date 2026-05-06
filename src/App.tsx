@@ -90,6 +90,7 @@ const SalesPipeline = lazyRetry(() => import("./pages/SalesPipeline"));
 const SalesCalendar = lazyRetry(() => import("./pages/SalesCalendar"));
 const SpiffsTracking = lazyRetry(() => import("./pages/SpiffsTracking"));
 const IncentivePresentation = lazyRetry(() => import("./pages/IncentivePresentation"));
+const CsIncentivePresentation = lazyRetry(() => import("./pages/CsIncentivePresentation"));
 const Leads = lazyRetry(() => import("./pages/Leads"));
 
 const Marketing = lazyRetry(() => import("./pages/Marketing"));
