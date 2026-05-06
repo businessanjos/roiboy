@@ -127,6 +127,7 @@ export interface ConversationAssignment {
       phone_e164: string;
       avatar_url: string | null;
       timezone?: string | null;
+      state?: string | null;
     };
   };
   zapp_conversation?: {
@@ -152,6 +153,7 @@ export interface ConversationAssignment {
       phone_e164: string;
       avatar_url: string | null;
       timezone?: string | null;
+      state?: string | null;
     } | null;
     lead?: {
       id: string;
@@ -181,6 +183,8 @@ export interface ContactInfo {
   searchableText: string;
   /** Override manual de fuso horário do cliente (IANA). Null = auto-detect pelo telefone. */
   clientTimezone?: string | null;
+  /** UF cadastrada do cliente, fallback para detecção de fuso quando DDD não resolve. */
+  clientState?: string | null;
 }
 
 // Normalize string for flexible search (remove accents, special chars)
@@ -266,6 +270,7 @@ export const getContactInfo = (assignment: ConversationAssignment): ContactInfo 
       isArchived: zappConv.is_archived || false,
       searchableText,
       clientTimezone: clientData?.timezone || null,
+      clientState: clientData?.state || null,
     };
   } else if (oldConv?.client) {
     const searchableText = normalizeSearchText([

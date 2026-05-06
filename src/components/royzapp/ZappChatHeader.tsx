@@ -106,7 +106,13 @@ export const ZappChatHeader = memo(function ZappChatHeader({
       )}
       
       {/* International timezone alert */}
-      {!isGroup && <ZappTimezoneBanner phone={contactInfo.phone} clientTimezone={contactInfo.clientTimezone} />}
+      {!isGroup && (
+        <ZappTimezoneBanner
+          phone={contactInfo.phone}
+          clientTimezone={contactInfo.clientTimezone}
+          clientState={contactInfo.clientState}
+        />
+      )}
 
       {/* Header */}
       <div className="bg-zapp-panel-header px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 border-b border-zapp-border">
