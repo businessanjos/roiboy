@@ -1250,6 +1250,7 @@ export default function Dashboard() {
                   />
                   {gestaoViewMode === "operacoes" && (
                     <>
+                      {showCancelamentos && (
                       <Bar 
                         dataKey="cancelamentos" 
                         fill="url(#cancelamentosGradient)" 
@@ -1258,6 +1259,8 @@ export default function Dashboard() {
                         animationDuration={800}
                         animationEasing="ease-out"
                       />
+                      )}
+                      {showEncerramentos && (
                       <Bar 
                         dataKey="encerramentos" 
                         fill="url(#encerramentosGradient)" 
@@ -1266,6 +1269,7 @@ export default function Dashboard() {
                         animationDuration={800}
                         animationEasing="ease-out"
                       />
+                      )}
                       <Bar 
                         dataKey="suspensos" 
                         fill="url(#suspensosGradient)" 
