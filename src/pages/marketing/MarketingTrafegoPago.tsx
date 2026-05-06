@@ -51,6 +51,11 @@ export default function MarketingTrafegoPago() {
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [campaignStatusFilter, setCampaignStatusFilter] = useState<string>('active');
+  const [campaignPlatformFilter, setCampaignPlatformFilter] = useState<string>('all');
+  const [campaignSearch, setCampaignSearch] = useState('');
+  const [campaignPage, setCampaignPage] = useState(1);
+  const CAMPAIGN_PAGE_SIZE = 10;
 
   const { getVisibleKpiDetails, visibleKpis } = useMetaKpiPreferences();
   const { isConnected, isLoading: isLoadingConnection, accounts, allAccounts, connectMeta, disconnectMeta, refreshSelectedAccounts, error } = useUserMetaConnection('/marketing/trafego-pago');
