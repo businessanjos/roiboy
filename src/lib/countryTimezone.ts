@@ -174,6 +174,133 @@ export function isValidTimezone(tz: string | null | undefined): boolean {
   }
 }
 
+// ============================================================================
+// Detecção de fuso dentro do Brasil
+// ----------------------------------------------------------------------------
+// O Brasil tem 4 fusos: UTC−2 (Noronha), UTC−3 (Brasília), UTC−4 (AM/MT/MS/RO/RR),
+// UTC−5 (Acre + oeste do AM). DDD permite resolver corretamente em ~95% dos casos.
+// Quando só temos o estado (UF), usamos como fallback.
+// ============================================================================
+
+const BR_DDD_TZ: Record<string, string> = {
+  // UTC−3 — Brasília e maioria do país
+  "11": "America/Sao_Paulo", "12": "America/Sao_Paulo", "13": "America/Sao_Paulo",
+  "14": "America/Sao_Paulo", "15": "America/Sao_Paulo", "16": "America/Sao_Paulo",
+  "17": "America/Sao_Paulo", "18": "America/Sao_Paulo", "19": "America/Sao_Paulo",
+  "21": "America/Sao_Paulo", "22": "America/Sao_Paulo", "24": "America/Sao_Paulo",
+  "27": "America/Sao_Paulo", "28": "America/Sao_Paulo",
+  "31": "America/Sao_Paulo", "32": "America/Sao_Paulo", "33": "America/Sao_Paulo",
+  "34": "America/Sao_Paulo", "35": "America/Sao_Paulo", "37": "America/Sao_Paulo",
+  "38": "America/Sao_Paulo",
+  "41": "America/Sao_Paulo", "42": "America/Sao_Paulo", "43": "America/Sao_Paulo",
+  "44": "America/Sao_Paulo", "45": "America/Sao_Paulo", "46": "America/Sao_Paulo",
+  "47": "America/Sao_Paulo", "48": "America/Sao_Paulo", "49": "America/Sao_Paulo",
+  "51": "America/Sao_Paulo", "53": "America/Sao_Paulo",
+  "54": "America/Sao_Paulo", "55": "America/Sao_Paulo",
+  "61": "America/Sao_Paulo",
+  "62": "America/Sao_Paulo", "64": "America/Sao_Paulo",
+  "63": "America/Araguaina",
+  "71": "America/Bahia", "73": "America/Bahia", "74": "America/Bahia",
+  "75": "America/Bahia", "77": "America/Bahia",
+  "79": "America/Maceio",
+  "81": "America/Recife", "87": "America/Recife",
+  "82": "America/Maceio",
+  "83": "America/Fortaleza",
+  "84": "America/Fortaleza",
+  "85": "America/Fortaleza", "88": "America/Fortaleza",
+  "86": "America/Fortaleza", "89": "America/Fortaleza",
+  "91": "America/Belem", "93": "America/Belem", "94": "America/Belem",
+  "96": "America/Belem",
+  "98": "America/Fortaleza", "99": "America/Fortaleza",
+  // UTC−4
+  "65": "America/Cuiaba", "66": "America/Cuiaba",
+  "67": "America/Campo_Grande",
+  "69": "America/Porto_Velho",
+  "92": "America/Manaus", "97": "America/Manaus",
+  "95": "America/Boa_Vista",
+  // UTC−5
+  "68": "America/Rio_Branco",
+};
+
+const BR_STATE_TZ: Record<string, string> = {
+  // UTC−3
+  AL: "America/Maceio", BA: "America/Bahia", CE: "America/Fortaleza",
+  DF: "America/Sao_Paulo", ES: "America/Sao_Paulo", GO: "America/Sao_Paulo",
+  MA: "America/Fortaleza", MG: "America/Sao_Paulo", PA: "America/Belem",
+  PB: "America/Fortaleza", PE: "America/Recife", PI: "America/Fortaleza",
+  PR: "America/Sao_Paulo", RJ: "America/Sao_Paulo", RN: "America/Fortaleza",
+  RS: "America/Sao_Paulo", SC: "America/Sao_Paulo", SE: "America/Maceio",
+  SP: "America/Sao_Paulo", TO: "America/Araguaina", AP: "America/Belem",
+  // UTC−4
+  AM: "America/Manaus", MT: "America/Cuiaba", MS: "America/Campo_Grande",
+  RO: "America/Porto_Velho", RR: "America/Boa_Vista",
+  // UTC−5
+  AC: "America/Rio_Branco",
+};
+
+export function getTimezoneForBrazilianDDD(ddd: string | null | undefined): string | null {
+  if (!ddd) return null;
+  const clean = ddd.replace(/\D/g, "").slice(0, 2);
+  return BR_DDD_TZ[clean] ?? null;
+}
+
+export function getTimezoneForBrazilianState(state: string | null | undefined): string | null {
+  if (!state) return null;
+  return BR_STATE_TZ[state.trim().toUpperCase()] ?? null;
+}
+
+/**
+ * Extrai DDD de telefone +55 em E.164 ("+55 92 99999-1234" → "92").
+ * Retorna null se não for número brasileiro.
+ */
+export function extractBrazilianDDD(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const digits = String(phone).replace(/\D/g, "");
+  if (!digits.startsWith("55") || digits.length < 12) return null;
+  return digits.slice(2, 4);
+}
+
+export type TimezoneSource = "manual" | "ddd" | "state" | "ddi" | null;
+
+/**
+ * Resolve o melhor timezone IANA para um cliente, em ordem de prioridade:
+ *   1. Override manual — sempre vence se válido.
+ *   2. DDD brasileiro (telefone +55) — resolve os 4 fusos do Brasil.
+ *   3. UF brasileira cadastrada — fallback quando DDD não dá.
+ *   4. País detectado pelo DDI — fallback internacional.
+ */
+export function resolveClientTimezone(opts: {
+  manualTimezone?: string | null;
+  phone?: string | null;
+  state?: string | null;
+  countryCode?: string | null;
+}): { timezone: string; source: TimezoneSource } | null {
+  const { manualTimezone, phone, state, countryCode } = opts;
+
+  if (manualTimezone && isValidTimezone(manualTimezone)) {
+    return { timezone: manualTimezone, source: "manual" };
+  }
+
+  const ddd = extractBrazilianDDD(phone);
+  if (ddd) {
+    const tz = getTimezoneForBrazilianDDD(ddd);
+    if (tz) return { timezone: tz, source: "ddd" };
+  }
+
+  const isBrazilian = (countryCode ?? "").toUpperCase() === "BR" || ddd !== null;
+  if (isBrazilian) {
+    const tzState = getTimezoneForBrazilianState(state);
+    if (tzState) return { timezone: tzState, source: "state" };
+  }
+
+  if (countryCode) {
+    const tz = getTimezoneForCountry(countryCode);
+    if (tz) return { timezone: tz, source: "ddi" };
+  }
+
+  return null;
+}
+
 /**
  * Retorna a hora local atual no timezone, formato 24h "HH:mm".
  */
