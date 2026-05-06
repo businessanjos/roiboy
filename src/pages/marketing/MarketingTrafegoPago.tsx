@@ -218,16 +218,40 @@ export default function MarketingTrafegoPago() {
                       </SelectContent>
                     </Select>
                   )}
-                  <Select value={period} onValueChange={setPeriod}>
-                    <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                  <Select value={period} onValueChange={(v) => { setPeriod(v); if (v !== 'custom') setCustomRange(undefined); }}>
+                    <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="today">Hoje</SelectItem>
                       <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
                       <SelectItem value="last_14d">Últimos 14 dias</SelectItem>
                       <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
                       <SelectItem value="last_90d">Últimos 90 dias</SelectItem>
                       <SelectItem value="this_month">Este mês</SelectItem>
+                      <SelectItem value="custom">Personalizado</SelectItem>
                     </SelectContent>
                   </Select>
+                  {isCustom && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className={cn('gap-2', !customReady && 'text-muted-foreground')}>
+                          <CalendarIcon className="w-4 h-4" />
+                          {customReady
+                            ? `${format(customRange!.from!, 'dd/MM/yy', { locale: ptBR })} - ${format(customRange!.to!, 'dd/MM/yy', { locale: ptBR })}`
+                            : 'Selecionar período'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                          mode="range"
+                          selected={customRange}
+                          onSelect={setCustomRange}
+                          numberOfMonths={2}
+                          locale={ptBR}
+                          className={cn('p-3 pointer-events-auto')}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
                   <MetaKpiSettings />
                   <Button variant="outline" size="icon" onClick={loadInsights} disabled={loadingInsights}>
                     <RefreshCw className={`w-4 h-4 ${loadingInsights ? 'animate-spin' : ''}`} />
@@ -236,7 +260,7 @@ export default function MarketingTrafegoPago() {
               </div>
             </CardHeader>
             <CardContent>
-              {loadingInsights ? (
+              {loadingInsights && !insights ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {visibleKpis.slice(0, 8).map(i => <Skeleton key={i} className="h-24 w-full" />)}
                 </div>
@@ -247,7 +271,7 @@ export default function MarketingTrafegoPago() {
                   <p className="text-sm mt-1">Verifique se a conta possui campanhas ativas</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className={cn('grid grid-cols-2 md:grid-cols-4 gap-4 transition-opacity', loadingInsights && 'opacity-60')}>
                   {getVisibleKpiDetails().map((kpi, i) => (
                     <MetaKpiCard key={kpi.id} kpi={kpi} value={insights[kpi.id as keyof Insights] as number} index={i} />
                   ))}
