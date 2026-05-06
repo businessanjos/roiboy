@@ -68,7 +68,6 @@ import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakd
 import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttendanceCard";
 import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
 import { EditableGoal } from "@/components/dashboard/EditableGoal";
-import { useQuery } from "@tanstack/react-query";
 
 
 
