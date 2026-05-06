@@ -113,10 +113,11 @@ Deno.serve(async (req) => {
         console.error("Webhook install failed:", e);
       }
 
-      // Backfill: fetch existing responses + insights
-      await backfillForm(supabase, accountId, form_id, TOKEN);
+      // Backfill in background to avoid 150s edge timeout
+      // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
+      EdgeRuntime.waitUntil(backfillForm(supabase, accountId, form_id, TOKEN));
 
-      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, backfill: "started" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ----- REMOVE a form -----
