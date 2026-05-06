@@ -1033,7 +1033,14 @@ export default function Dashboard() {
                       <p className={`text-5xl font-bold leading-none ${renewalColor}`}>{renewalRate.toFixed(1)}%</p>
                       <div className={`text-right rounded-md px-2.5 py-1.5 ${renewalBg}`}>
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meta</p>
-                        <p className={`text-lg font-bold leading-none ${renewalColor}`}>≥ {RENEWAL_GOAL}%</p>
+                        <EditableGoal
+                          accountId={currentUser?.account_id}
+                          field="dashboard_renewal_goal"
+                          value={RENEWAL_GOAL}
+                          prefix="≥"
+                          suffix="%"
+                          textClassName={`text-lg font-bold leading-none ${renewalColor}`}
+                        />
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-3 text-xs">
