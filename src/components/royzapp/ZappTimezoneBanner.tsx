@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from "react";
-import { Clock, Globe2 } from "lucide-react";
+import { Clock, Globe2, AlertTriangle } from "lucide-react";
 import { getCountryFromPhone } from "@/lib/phoneCountry";
+import { getFlagColors } from "@/lib/countryFlagColors";
 import {
   formatTimezoneOffset,
   getLocalTime,
@@ -8,7 +9,6 @@ import {
   getTimezoneOffsetHours,
   isOutsideBusinessHours,
 } from "@/lib/countryTimezone";
-import { cn } from "@/lib/utils";
 
 interface ZappTimezoneBannerProps {
   phone: string | null | undefined;
@@ -16,8 +16,9 @@ interface ZappTimezoneBannerProps {
 
 /**
  * Banner exibido em conversas com clientes internacionais (DDI != +55).
- * Mostra a bandeira do país, hora local atual e fuso horário, com aviso
- * destacado quando o horário local está fora da janela comercial (8h–21h).
+ * Usa as cores da bandeira do país como faixa lateral vertical para identificação
+ * visual imediata, mantendo fundo escuro de alto contraste para legibilidade.
+ * Quando fora do horário comercial, exibe um badge âmbar destacado inline.
  */
 export const ZappTimezoneBanner = memo(function ZappTimezoneBanner({
   phone,
@@ -39,41 +40,57 @@ export const ZappTimezoneBanner = memo(function ZappTimezoneBanner({
   const offset = getTimezoneOffsetHours(tz, now);
   const offsetLabel = formatTimezoneOffset(offset);
   const offHours = isOutsideBusinessHours(tz, now);
+  const colors = getFlagColors(country.code);
+
+  // Faixa lateral: gradiente vertical com as cores da bandeira
+  const stripeGradient =
+    colors.stripes.length === 1
+      ? colors.stripes[0]
+      : `linear-gradient(to bottom, ${colors.stripes
+          .map((c, i) => `${c} ${(i / colors.stripes.length) * 100}%, ${c} ${((i + 1) / colors.stripes.length) * 100}%`)
+          .join(", ")})`;
 
   return (
     <div
-      className={cn(
-        "px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm border-b",
-        offHours
-          ? "bg-amber-500/15 border-amber-500/30 text-amber-200"
-          : "bg-sky-500/10 border-sky-500/30 text-sky-200",
-      )}
+      className="flex items-stretch border-b border-white/10 overflow-hidden"
+      style={{ backgroundColor: colors.background }}
       role="status"
       aria-live="polite"
     >
-      <span className="text-base sm:text-lg leading-none" aria-hidden>
-        {country.flag}
-      </span>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0 flex-1">
-        <span className="font-medium truncate">
-          Cliente internacional · {country.name}
+      {/* Faixa lateral colorida com cores da bandeira */}
+      <div
+        className="w-1.5 sm:w-2 shrink-0"
+        style={{ background: stripeGradient }}
+        aria-hidden
+      />
+
+      <div
+        className="flex-1 px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm min-w-0"
+        style={{ color: colors.text }}
+      >
+        <span className="text-base sm:text-lg leading-none" aria-hidden>
+          {country.flag}
         </span>
-        <span className="flex items-center gap-1 text-[11px] sm:text-xs opacity-90">
-          <Clock className="h-3 w-3" />
-          {localTime} ({offsetLabel})
-          <Globe2 className="h-3 w-3 ml-1 opacity-70" />
-          <span className="hidden sm:inline opacity-80">{tz}</span>
-        </span>
+
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0 flex-1">
+          <span className="font-medium truncate">
+            Cliente internacional · {country.name}
+          </span>
+          <span className="flex items-center gap-1 text-[11px] sm:text-xs opacity-90">
+            <Clock className="h-3 w-3" />
+            {localTime} ({offsetLabel})
+            <Globe2 className="h-3 w-3 ml-1 opacity-70" />
+            <span className="hidden sm:inline opacity-80">{tz}</span>
+          </span>
+        </div>
+
+        {offHours && (
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500 text-amber-950 font-semibold text-[11px] sm:text-xs whitespace-nowrap shadow-sm">
+            <AlertTriangle className="h-3 w-3" />
+            Fora do horário comercial
+          </span>
+        )}
       </div>
-      {offHours ? (
-        <span className="font-semibold text-amber-100 text-[11px] sm:text-xs whitespace-nowrap">
-          Fora do horário comercial — evite mensagens agora
-        </span>
-      ) : (
-        <span className="opacity-80 text-[11px] sm:text-xs whitespace-nowrap hidden md:inline">
-          Atenção ao fuso antes de enviar
-        </span>
-      )}
     </div>
   );
 });
