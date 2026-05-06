@@ -15782,6 +15782,201 @@ export type Database = {
           },
         ]
       }
+      typeform_form_stats: {
+        Row: {
+          account_id: string
+          average_time_seconds: number | null
+          completion_rate: number | null
+          fetched_at: string
+          form_id: string
+          id: string
+          raw: Json | null
+          snapshot_date: string
+          total_starts: number | null
+          total_submissions: number | null
+          total_visits: number | null
+        }
+        Insert: {
+          account_id: string
+          average_time_seconds?: number | null
+          completion_rate?: number | null
+          fetched_at?: string
+          form_id: string
+          id?: string
+          raw?: Json | null
+          snapshot_date?: string
+          total_starts?: number | null
+          total_submissions?: number | null
+          total_visits?: number | null
+        }
+        Update: {
+          account_id?: string
+          average_time_seconds?: number | null
+          completion_rate?: number | null
+          fetched_at?: string
+          form_id?: string
+          id?: string
+          raw?: Json | null
+          snapshot_date?: string
+          total_starts?: number | null
+          total_submissions?: number | null
+          total_visits?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "typeform_form_stats_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      typeform_forms: {
+        Row: {
+          account_id: string
+          campaign_tag: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          form_id: string
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string
+          webhook_installed: boolean | null
+          webhook_tag: string | null
+        }
+        Insert: {
+          account_id: string
+          campaign_tag?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          form_id: string
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string
+          webhook_installed?: boolean | null
+          webhook_tag?: string | null
+        }
+        Update: {
+          account_id?: string
+          campaign_tag?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          form_id?: string
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string
+          webhook_installed?: boolean | null
+          webhook_tag?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "typeform_forms_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "typeform_forms_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      typeform_responses: {
+        Row: {
+          account_id: string
+          answers: Json | null
+          created_at: string
+          email: string | null
+          form_id: string
+          full_name: string | null
+          hidden_fields: Json | null
+          id: string
+          is_completed: boolean | null
+          landed_at: string | null
+          match_method: string | null
+          matched_deal_id: string | null
+          matched_lead_id: string | null
+          metadata: Json | null
+          phone: string | null
+          response_id: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          answers?: Json | null
+          created_at?: string
+          email?: string | null
+          form_id: string
+          full_name?: string | null
+          hidden_fields?: Json | null
+          id?: string
+          is_completed?: boolean | null
+          landed_at?: string | null
+          match_method?: string | null
+          matched_deal_id?: string | null
+          matched_lead_id?: string | null
+          metadata?: Json | null
+          phone?: string | null
+          response_id: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          answers?: Json | null
+          created_at?: string
+          email?: string | null
+          form_id?: string
+          full_name?: string | null
+          hidden_fields?: Json | null
+          id?: string
+          is_completed?: boolean | null
+          landed_at?: string | null
+          match_method?: string | null
+          matched_deal_id?: string | null
+          matched_lead_id?: string | null
+          metadata?: Json | null
+          phone?: string | null
+          response_id?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "typeform_responses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "typeform_responses_matched_deal_id_fkey"
+            columns: ["matched_deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "typeform_responses_matched_lead_id_fkey"
+            columns: ["matched_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_instance_preferences: {
         Row: {
           account_id: string
