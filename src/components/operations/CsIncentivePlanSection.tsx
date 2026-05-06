@@ -936,16 +936,49 @@ function BonusSimulator({
         if (productIds.length === 0) return 0;
       }
 
+      // Mesma lógica do painel de Renovações: status='active', sem parent,
+      // e excluindo contratos cujo cliente já tem um sucessor ativo do mesmo
+      // produto começando perto do vencimento (renovação já fechada).
       let q = supabase
         .from("client_contracts")
-        .select("id", { count: "exact", head: true })
+        .select("id, client_id, product_id, end_date")
         .gte("end_date", "2026-05-01")
         .lte("end_date", "2026-12-31")
-        .in("status", ["active", "suspended", "suspended_bonus", "paused"]);
+        .eq("status", "active")
+        .is("parent_contract_id", null);
       if (productIds) q = q.in("product_id", productIds);
-      const { count, error } = await q;
+      const { data: candidates, error } = await q;
       if (error) throw error;
-      return count || 0;
+
+      const list = candidates || [];
+      if (list.length === 0) return 0;
+
+      const clientIds = [...new Set(list.map((c: any) => c.client_id))];
+      const { data: peers } = await supabase
+        .from("client_contracts")
+        .select("id, client_id, product_id, start_date")
+        .in("client_id", clientIds)
+        .eq("status", "active")
+        .is("parent_contract_id", null);
+
+      const peersByClient: Record<string, any[]> = {};
+      (peers || []).forEach((p: any) => {
+        (peersByClient[p.client_id] ||= []).push(p);
+      });
+
+      const filtered = list.filter((c: any) => {
+        const oldEnd = new Date(c.end_date);
+        const windowStart = new Date(oldEnd); windowStart.setDate(windowStart.getDate() - 30);
+        const windowEnd = new Date(oldEnd); windowEnd.setDate(windowEnd.getDate() + 365);
+        const hasSuccessor = (peersByClient[c.client_id] || []).some((p) => {
+          if (p.id === c.id) return false;
+          if (c.product_id && p.product_id && p.product_id !== c.product_id) return false;
+          const start = new Date(p.start_date);
+          return start >= windowStart && start <= windowEnd;
+        });
+        return !hasSuccessor;
+      });
+      return filtered.length;
     },
     staleTime: 5 * 60_000,
   });
