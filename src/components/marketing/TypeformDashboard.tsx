@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Plus, RefreshCw, Trash2, Users, CheckCircle2, TrendingUp, Trophy, Clock, ExternalLink } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { FileText, Plus, RefreshCw, Trash2, Users, CheckCircle2, TrendingUp, Trophy, Clock, ExternalLink, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -50,8 +51,9 @@ export function TypeformDashboard() {
   const [addOpen, setAddOpen] = useState(false);
   const [availableForms, setAvailableForms] = useState<any[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
-  const [pickedForm, setPickedForm] = useState<string>('');
-  const [campaignTag, setCampaignTag] = useState('');
+  const [pickedForms, setPickedForms] = useState<string[]>([]);
+  const [search, setSearch] = useState('');
+  const [adding, setAdding] = useState(false);
 
   const loadForms = useCallback(async () => {
     setLoading(true);
@@ -79,21 +81,34 @@ export function TypeformDashboard() {
   const openAdd = async () => {
     setAddOpen(true);
     setLoadingAvailable(true);
+    setSearch('');
+    setPickedForms([]);
     const { data, error } = await supabase.functions.invoke('typeform-manager', { body: { action: 'list_typeform_forms' } });
     if (error) toast.error('Erro ao listar formulários do Typeform');
     else setAvailableForms(data?.items || []);
     setLoadingAvailable(false);
   };
 
+  const togglePicked = (id: string) => {
+    setPickedForms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
   const addForm = async () => {
-    const f = availableForms.find(x => x.id === pickedForm);
-    if (!f) { toast.error('Selecione um formulário'); return; }
-    const { error } = await supabase.functions.invoke('typeform-manager', {
-      body: { action: 'add_form', form_id: f.id, title: f.title, campaign_tag: campaignTag || null },
-    });
-    if (error) { toast.error('Erro ao adicionar'); return; }
-    toast.success('Formulário rastreado! Webhook instalado.');
-    setAddOpen(false); setPickedForm(''); setCampaignTag('');
+    if (!pickedForms.length) { toast.error('Selecione ao menos um formulário'); return; }
+    setAdding(true);
+    let ok = 0, fail = 0;
+    for (const id of pickedForms) {
+      const f = availableForms.find(x => x.id === id);
+      if (!f) { fail++; continue; }
+      const { error } = await supabase.functions.invoke('typeform-manager', {
+        body: { action: 'add_form', form_id: f.id, title: f.title, campaign_tag: null },
+      });
+      if (error) fail++; else ok++;
+    }
+    setAdding(false);
+    if (ok) toast.success(`${ok} formulário(s) rastreados em tempo real`);
+    if (fail) toast.error(`${fail} falha(s) ao adicionar`);
+    setAddOpen(false); setPickedForms([]);
     await loadForms();
   };
 
@@ -208,28 +223,70 @@ export function TypeformDashboard() {
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Adicionar formulário Typeform</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Selecionar formulários para acompanhar</DialogTitle>
+            <DialogDescription>
+              Marque os formulários que deseja rastrear em tempo real. O webhook é instalado automaticamente em cada um.
+            </DialogDescription>
+          </DialogHeader>
           <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium">Formulário</label>
-              {loadingAvailable ? <Skeleton className="h-9 mt-1" /> : (
-                <Select value={pickedForm} onValueChange={setPickedForm}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um formulário" /></SelectTrigger>
-                  <SelectContent>
-                    {availableForms.map(f => <SelectItem key={f.id} value={f.id}>{f.title}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            <div>
-              <label className="text-sm font-medium">Tag de campanha (opcional)</label>
-              <Input className="mt-1" value={campaignTag} onChange={e => setCampaignTag(e.target.value)} placeholder="ex: meta-blackfriday" />
-            </div>
+            {loadingAvailable ? (
+              <Skeleton className="h-64" />
+            ) : (
+              <>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    placeholder="Buscar formulário..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                  <span>{pickedForms.length} selecionado(s)</span>
+                  {pickedForms.length > 0 && (
+                    <button type="button" className="hover:underline" onClick={() => setPickedForms([])}>
+                      Limpar
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-[340px] overflow-y-auto border border-border/30 rounded-md divide-y divide-border/20">
+                  {availableForms
+                    .filter(f => !forms.some(t => t.form_id === f.id))
+                    .filter(f => !search || f.title.toLowerCase().includes(search.toLowerCase()))
+                    .map(f => {
+                      const checked = pickedForms.includes(f.id);
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => togglePicked(f.id)}
+                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
+                        >
+                          <Checkbox checked={checked} className="pointer-events-none" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{f.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">ID: {f.id}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  {availableForms.filter(f => !forms.some(t => t.form_id === f.id)).length === 0 && (
+                    <div className="p-6 text-center text-sm text-muted-foreground">
+                      Todos os seus formulários já estão sendo rastreados.
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
-            <Button onClick={addForm} disabled={!pickedForm}>Adicionar e instalar webhook</Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)} disabled={adding}>Cancelar</Button>
+            <Button onClick={addForm} disabled={!pickedForms.length || adding}>
+              {adding ? 'Adicionando...' : `Acompanhar ${pickedForms.length || ''} form${pickedForms.length === 1 ? '' : 's'}`}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
