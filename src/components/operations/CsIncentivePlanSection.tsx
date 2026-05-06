@@ -703,6 +703,7 @@ export function CsIncentivePlanSection() {
                 <TableHead>De %</TableHead>
                 <TableHead>Até %</TableHead>
                 <TableHead>% do bônus pago</TableHead>
+                <TableHead>Valor no trimestre</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -716,6 +717,8 @@ export function CsIncentivePlanSection() {
                     : pct >= 100
                     ? "text-emerald-600"
                     : "text-amber-600";
+                const monthly = toNumber(form.monthly_bonus_value);
+                const quarterValue = monthly * 3 * (toNumber(t.multiplier) || 0);
                 return (
                   <TableRow key={i}>
                     <TableCell>
@@ -759,6 +762,11 @@ export function CsIncentivePlanSection() {
                         />
                         <span className="text-xs text-muted-foreground">%</span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`text-xs font-semibold ${tone}`}>
+                        {formatBRL(quarterValue)}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Input
