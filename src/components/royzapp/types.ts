@@ -180,7 +180,7 @@ export interface ContactInfo {
   isArchived: boolean;
   searchableText: string;
   /** Override manual de fuso horário do cliente (IANA). Null = auto-detect pelo telefone. */
-  clientTimezone: string | null;
+  clientTimezone?: string | null;
 }
 
 // Normalize string for flexible search (remove accents, special chars)
