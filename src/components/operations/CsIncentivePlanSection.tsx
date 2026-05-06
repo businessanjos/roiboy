@@ -1008,7 +1008,7 @@ function BonusSimulator({
 
   // Penalidade por churn: se ativada, ao ultrapassar o limite, aplica desconto
   // de churn_penalty_percent (%) sobre o bônus do mês. Caso contrário, sem desconto.
-  const churnInput = toNumber(churnPct);
+  const churnInput = churnPct;
   const churnTriggered =
     churnPenaltyEnabled && churnInput > churnPenaltyThreshold;
   const grossMonthlyBonus = monthlyBonus * multiplier;
