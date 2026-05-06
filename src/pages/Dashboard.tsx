@@ -1466,8 +1466,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {gestaoViewMode === "operacoes" && (
-              <Card className="border-l-4 border-l-destructive">
+              {showCancelamentos && (
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
