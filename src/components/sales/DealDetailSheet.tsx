@@ -348,6 +348,8 @@ export function DealDetailSheet({
   const [updatingSecondSeat, setUpdatingSecondSeat] = useState(false);
   const [valueEditOpen, setValueEditOpen] = useState(false);
   const [valueDraft, setValueDraft] = useState<string>("");
+  const [receivedEditOpen, setReceivedEditOpen] = useState(false);
+  const [receivedDraft, setReceivedDraft] = useState<string>("");
   
   const { isAdmin } = usePermissions();
 
