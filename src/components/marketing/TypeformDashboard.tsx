@@ -223,8 +223,8 @@ export function TypeformDashboard() {
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
+          <DialogHeader className="p-6 pb-4 border-b border-border/40">
             <DialogTitle>Selecionar formulários para acompanhar</DialogTitle>
             <DialogDescription>
               Marque os formulários que deseja rastrear em tempo real. O webhook é instalado automaticamente em cada um.
