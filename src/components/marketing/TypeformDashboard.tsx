@@ -183,13 +183,13 @@ export function TypeformDashboard() {
             <Skeleton className="h-40" />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              <FunnelCard label="Visitas" value={funnel.visits} icon={Users} />
-              <FunnelCard label="Iniciados" value={funnel.starts} icon={TrendingUp} sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}%` : undefined} />
-              <FunnelCard label="Submissões" value={funnel.submissions} icon={CheckCircle2} sub={funnel.starts ? `${((funnel.submissions/funnel.starts)*100).toFixed(1)}%` : undefined} />
-              <FunnelCard label="Completados" value={funnel.completed} icon={CheckCircle2} sub={`${funnel.completion_rate.toFixed(1)}%`} highlight />
-              <FunnelCard label="Lead no Roy" value={funnel.matched_leads + funnel.matched_deals} icon={Users} sub={funnel.completed ? `${(((funnel.matched_leads + funnel.matched_deals)/funnel.completed)*100).toFixed(1)}%` : undefined} />
+              <FunnelCard label="Visitas (total)" value={funnel.visits} icon={Users} sub="histórico" />
+              <FunnelCard label="Iniciados (total)" value={funnel.starts} icon={TrendingUp} sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'histórico'} />
+              <FunnelCard label="Submissões" value={funnel.submissions} icon={CheckCircle2} sub="no período" />
+              <FunnelCard label="Completados" value={funnel.completed} icon={CheckCircle2} sub={`${funnel.completion_rate.toFixed(1)}% das submissões`} highlight />
+              <FunnelCard label="Lead no Roy" value={funnel.matched_responses} icon={Users} sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : undefined} />
               <FunnelCard label="Ganhos" value={funnel.won} icon={Trophy} sub={fmtBRL(funnel.won_value)} highlight />
-              <FunnelCard label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock} />
+              <FunnelCard label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock} sub="histórico" />
             </div>
           )}
         </CardContent>
