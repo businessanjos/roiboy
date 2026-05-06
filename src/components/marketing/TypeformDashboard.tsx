@@ -81,21 +81,34 @@ export function TypeformDashboard() {
   const openAdd = async () => {
     setAddOpen(true);
     setLoadingAvailable(true);
+    setSearch('');
+    setPickedForms([]);
     const { data, error } = await supabase.functions.invoke('typeform-manager', { body: { action: 'list_typeform_forms' } });
     if (error) toast.error('Erro ao listar formulários do Typeform');
     else setAvailableForms(data?.items || []);
     setLoadingAvailable(false);
   };
 
+  const togglePicked = (id: string) => {
+    setPickedForms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
   const addForm = async () => {
-    const f = availableForms.find(x => x.id === pickedForm);
-    if (!f) { toast.error('Selecione um formulário'); return; }
-    const { error } = await supabase.functions.invoke('typeform-manager', {
-      body: { action: 'add_form', form_id: f.id, title: f.title, campaign_tag: campaignTag || null },
-    });
-    if (error) { toast.error('Erro ao adicionar'); return; }
-    toast.success('Formulário rastreado! Webhook instalado.');
-    setAddOpen(false); setPickedForm(''); setCampaignTag('');
+    if (!pickedForms.length) { toast.error('Selecione ao menos um formulário'); return; }
+    setAdding(true);
+    let ok = 0, fail = 0;
+    for (const id of pickedForms) {
+      const f = availableForms.find(x => x.id === id);
+      if (!f) { fail++; continue; }
+      const { error } = await supabase.functions.invoke('typeform-manager', {
+        body: { action: 'add_form', form_id: f.id, title: f.title, campaign_tag: null },
+      });
+      if (error) fail++; else ok++;
+    }
+    setAdding(false);
+    if (ok) toast.success(`${ok} formulário(s) rastreados em tempo real`);
+    if (fail) toast.error(`${fail} falha(s) ao adicionar`);
+    setAddOpen(false); setPickedForms([]);
     await loadForms();
   };
 
