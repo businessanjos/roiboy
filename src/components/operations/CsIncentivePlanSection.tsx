@@ -15,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -703,7 +705,27 @@ export function CsIncentivePlanSection() {
                 <TableHead>De %</TableHead>
                 <TableHead>Até %</TableHead>
                 <TableHead>% do bônus pago</TableHead>
-                <TableHead>Valor no trimestre</TableHead>
+                <TableHead>
+                  <TooltipProvider delayDuration={150}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-center gap-1 cursor-help">
+                          Valor no trimestre
+                          <Info className="h-3 w-3 text-muted-foreground" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <div className="space-y-1 text-xs">
+                          <p className="font-semibold">Fórmula</p>
+                          <p>Valor base mensal × 3 meses × % do bônus da faixa</p>
+                          <p className="text-muted-foreground">
+                            Usa o campo "Valor do bônus mensal" do plano e a "% do bônus pago" desta faixa.
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead></TableHead>
               </TableRow>
