@@ -221,15 +221,39 @@ export function TypeformDashboard() {
                   </SelectContent>
                 </Select>
               )}
-              <Select value={String(period)} onValueChange={(v) => setPeriod(Number(v))}>
-                <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
+                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="today">Hoje</SelectItem>
                   <SelectItem value="7">Últimos 7d</SelectItem>
                   <SelectItem value="30">Últimos 30d</SelectItem>
                   <SelectItem value="90">Últimos 90d</SelectItem>
-                  <SelectItem value="365">Últimos 12m</SelectItem>
+                  <SelectItem value="this_month">Este mês</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
                 </SelectContent>
               </Select>
+              {isCustom && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('gap-2', !customReady && 'text-muted-foreground')}>
+                      <CalendarIcon className="w-4 h-4" />
+                      {customReady
+                        ? `${format(customRange!.from!, 'dd/MM/yy')} – ${format(customRange!.to!, 'dd/MM/yy')}`
+                        : 'Selecionar intervalo'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="range"
+                      selected={customRange}
+                      onSelect={setCustomRange}
+                      numberOfMonths={2}
+                      locale={ptBR}
+                      defaultMonth={customRange?.from ?? subDays(new Date(), 30)}
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
               <Button variant="outline" size="sm" onClick={refresh} disabled={!selectedForm || loadingFunnel}>
                 <RefreshCw className={`w-4 h-4 mr-1 ${loadingFunnel ? 'animate-spin' : ''}`} />Sincronizar
               </Button>
