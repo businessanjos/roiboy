@@ -174,6 +174,9 @@ export default function Dashboard() {
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [gestaoDatePickerOpen, setGestaoDatePickerOpen] = useState(false);
   const [gestaoViewMode, setGestaoViewMode] = useState<"operacoes" | "comercial">("operacoes");
+  const [gestaoExitTypeFilter, setGestaoExitTypeFilter] = useState<"all" | "cancelled" | "ended">("all");
+  const showCancelamentos = gestaoViewMode === "operacoes" && gestaoExitTypeFilter !== "ended";
+  const showEncerramentos = gestaoViewMode === "operacoes" && gestaoExitTypeFilter !== "cancelled";
 
   // Focus mode states
   const [isFocusMode, setIsFocusMode] = useState(false);
