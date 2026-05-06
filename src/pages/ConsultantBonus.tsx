@@ -74,6 +74,8 @@ export default function ConsultantBonus() {
       return data || [];
     },
     enabled: !!currentUser?.account_id,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -97,12 +99,24 @@ export default function ConsultantBonus() {
 
   const totalBonusBudget = goals.reduce((sum, g) => sum + Number(g.bonus_amount || 0), 0);
 
+  const getCompatibleProductsForConsultant = (userId: string) => {
+    const consultant = consultants.find((c: any) => c.id === userId);
+    const seniorityKey = getConsultantSeniorityKey(consultant?.position);
+    if (!seniorityKey) return [];
+
+    return (products as any[]).filter((p) => {
+      const seniorities = Array.isArray(p.consultant_seniority) ? p.consultant_seniority : [];
+      return seniorities.includes(seniorityKey);
+    });
+  };
+
   const openNew = (userId: string) => {
+    const compatibleProducts = getCompatibleProductsForConsultant(userId);
     setEditing({
       id: "",
       account_id: currentUser!.account_id!,
       user_id: userId,
-      product_id: products[0]?.id || "",
+      product_id: compatibleProducts[0]?.id || "",
       year,
       metric_type: "renewal_rate",
       annual_target: 0,
@@ -120,6 +134,11 @@ export default function ConsultantBonus() {
 
   const handleSave = async () => {
     if (!editing) return;
+    const compatibleProducts = getCompatibleProductsForConsultant(editing.user_id);
+    if (!compatibleProducts.some((p: any) => p.id === editing.product_id)) {
+      toast.error("Selecione um produto compatível com a senioridade da consultora.");
+      return;
+    }
     await upsertGoal.mutateAsync({
       user_id: editing.user_id,
       product_id: editing.product_id,
