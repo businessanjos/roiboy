@@ -263,18 +263,20 @@ export function TypeformDashboard() {
                     .map(f => {
                       const checked = pickedForms.includes(f.id);
                       return (
-                        <button
+                        <div
                           key={f.id}
-                          type="button"
+                          role="button"
+                          tabIndex={0}
                           onClick={() => togglePicked(f.id)}
-                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePicked(f.id); } }}
+                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-muted/40 transition-colors cursor-pointer"
                         >
                           <Checkbox checked={checked} className="pointer-events-none" />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{f.title}</p>
                             <p className="text-xs text-muted-foreground truncate">ID: {f.id}</p>
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                   {availableForms.filter(f => !forms.some(t => t.form_id === f.id)).length === 0 && (
