@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, Plus, RefreshCw, Trash2, Users, CheckCircle2, TrendingUp, Trophy, Clock, ExternalLink, Search, Info, AlertTriangle } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import type { DateRange } from 'react-day-picker';
+import { FileText, Plus, RefreshCw, Trash2, Users, CheckCircle2, TrendingUp, Trophy, Clock, ExternalLink, Search, Info, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,7 +54,20 @@ const fmtTime = (s: number) => {
 export function TypeformDashboard() {
   const [forms, setForms] = useState<TrackedForm[]>([]);
   const [selectedForm, setSelectedForm] = useState<string>('');
-  const [period, setPeriod] = useState(30);
+  const [period, setPeriod] = useState<'today' | '7' | '30' | '90' | 'this_month' | 'custom'>('30');
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
+  const isCustom = period === 'custom';
+  const customReady = isCustom && !!customRange?.from && !!customRange?.to;
+  const periodPayload = useMemo(() => {
+    const now = new Date();
+    if (period === 'today') return { since: format(startOfDay(now), 'yyyy-MM-dd'), until: format(endOfDay(now), 'yyyy-MM-dd') };
+    if (period === 'this_month') return { since: format(startOfMonth(now), 'yyyy-MM-dd'), until: format(endOfMonth(now), 'yyyy-MM-dd') };
+    if (period === 'custom' && customReady) {
+      return { since: format(customRange!.from!, 'yyyy-MM-dd'), until: format(customRange!.to!, 'yyyy-MM-dd') };
+    }
+    return { days: Number(period) || 30 };
+  }, [period, customReady, customRange]);
+  const periodLabel = period === 'today' ? 'hoje' : period === 'this_month' ? 'este mês' : period === 'custom' && customReady ? `${format(customRange!.from!, 'dd/MM/yy')} – ${format(customRange!.to!, 'dd/MM/yy')}` : `últimos ${period}d`;
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
   const [wonDeals, setWonDeals] = useState<any[]>([]);
   const [wonOpen, setWonOpen] = useState(false);
@@ -80,9 +99,10 @@ export function TypeformDashboard() {
 
   const loadFunnel = useCallback(async () => {
     if (!selectedForm) { setFunnel(null); setConsistency(null); return; }
+    if (period === 'custom' && !customReady) return;
     setLoadingFunnel(true);
     const { data, error } = await supabase.functions.invoke('typeform-manager', {
-      body: { action: 'get_dashboard', form_id: selectedForm, days: period },
+      body: { action: 'get_dashboard', form_id: selectedForm, ...periodPayload },
     });
     if (error) {
       toast.error('Erro ao carregar funil');
@@ -96,7 +116,7 @@ export function TypeformDashboard() {
       }
     }
     setLoadingFunnel(false);
-  }, [selectedForm, period]);
+  }, [selectedForm, periodPayload, period, customReady]);
 
   useEffect(() => { loadFunnel(); }, [loadFunnel]);
 
@@ -201,15 +221,39 @@ export function TypeformDashboard() {
                   </SelectContent>
                 </Select>
               )}
-              <Select value={String(period)} onValueChange={(v) => setPeriod(Number(v))}>
-                <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
+                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="today">Hoje</SelectItem>
                   <SelectItem value="7">Últimos 7d</SelectItem>
                   <SelectItem value="30">Últimos 30d</SelectItem>
                   <SelectItem value="90">Últimos 90d</SelectItem>
-                  <SelectItem value="365">Últimos 12m</SelectItem>
+                  <SelectItem value="this_month">Este mês</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
                 </SelectContent>
               </Select>
+              {isCustom && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('gap-2', !customReady && 'text-muted-foreground')}>
+                      <CalendarIcon className="w-4 h-4" />
+                      {customReady
+                        ? `${format(customRange!.from!, 'dd/MM/yy')} – ${format(customRange!.to!, 'dd/MM/yy')}`
+                        : 'Selecionar intervalo'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="range"
+                      selected={customRange}
+                      onSelect={setCustomRange}
+                      numberOfMonths={2}
+                      locale={ptBR}
+                      defaultMonth={customRange?.from ?? subDays(new Date(), 30)}
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
               <Button variant="outline" size="sm" onClick={refresh} disabled={!selectedForm || loadingFunnel}>
                 <RefreshCw className={`w-4 h-4 mr-1 ${loadingFunnel ? 'animate-spin' : ''}`} />Sincronizar
               </Button>
@@ -230,6 +274,7 @@ export function TypeformDashboard() {
             <Skeleton className="h-40" />
           ) : (
             <TooltipProvider delayDuration={150}>
+              <div className={cn('transition-opacity', loadingFunnel && 'opacity-60 pointer-events-none')}>
               {(() => {
                 const issues: string[] = [];
                 if (funnel.submissions > 0 && funnel.visits === 0) {
@@ -338,15 +383,15 @@ export function TypeformDashboard() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · últimos {period}d</Badge>
+                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · {periodLabel}</Badge>
                     <span className="text-xs text-muted-foreground">filtrado pelo intervalo selecionado</span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <FunnelCard
                       scope="period" label="Submissões" value={funnel.submissions} icon={CheckCircle2}
-                      sub={`recebidas nos últimos ${period}d`}
+                      sub={`recebidas ${periodLabel}`}
                       source="DB · typeform_responses"
-                      tip={`Total de respostas (completas + parciais) salvas no nosso banco via webhook nos últimos ${period} dias. Conta linhas em typeform_responses filtradas por form_id selecionado e created_at >= hoje-${period}d.`}
+                      tip={`Total de respostas (completas + parciais) salvas no nosso banco via webhook ${periodLabel}. Conta linhas em typeform_responses filtradas por form_id selecionado e janela: ${periodLabel}.`}
                       onDetails={() => setDetailsCard({
                         label: 'Submissões',
                         source: 'DB · typeform_responses',
@@ -429,6 +474,7 @@ export function TypeformDashboard() {
                     />
                   </div>
                 </div>
+              </div>
               </div>
             </TooltipProvider>
           )}
@@ -550,7 +596,7 @@ export function TypeformDashboard() {
               Ganhos cruzados com o Typeform
             </DialogTitle>
             <DialogDescription>
-              {wonDeals.length} deal{wonDeals.length === 1 ? '' : 's'} ganho{wonDeals.length === 1 ? '' : 's'} · {fmtBRL(wonDeals.reduce((s, d) => s + (d.value || 0), 0))} · respostas dos últimos {period}d
+              {wonDeals.length} deal{wonDeals.length === 1 ? '' : 's'} ganho{wonDeals.length === 1 ? '' : 's'} · {fmtBRL(wonDeals.reduce((s, d) => s + (d.value || 0), 0))} · respostas {periodLabel}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-2">
