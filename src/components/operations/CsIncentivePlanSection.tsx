@@ -870,6 +870,92 @@ export function CsIncentivePlanSection() {
           </CardContent>
         </Card>
       ) : null}
+
+      {/* Simulador */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="h-4 w-4 text-primary" /> Simulador de bônus
+          </CardTitle>
+          <CardDescription>
+            Informe um % de atingimento e veja qual faixa se aplica e o valor que seria pago.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BonusSimulator
+            monthlyBonus={toNumber(form.monthly_bonus_value)}
+            tiers={draftTiers}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function BonusSimulator({
+  monthlyBonus,
+  tiers,
+}: {
+  monthlyBonus: number;
+  tiers: { min: number | ""; max: string; multiplier: number | ""; label: string }[];
+}) {
+  const [pct, setPct] = useState<number | "">(100);
+  const achievement = toNumber(pct);
+
+  const matched = useMemo(() => {
+    return tiers.find((t) => {
+      const min = toNumber(t.min);
+      const max = t.max ? parseFloat(t.max) : Infinity;
+      return achievement >= min && achievement <= max;
+    });
+  }, [tiers, achievement]);
+
+  const multiplier = matched ? toNumber(matched.multiplier) || 0 : 0;
+  const monthlyValue = monthlyBonus * multiplier;
+  const quarterValue = monthlyValue * 3;
+  const pctLabel = Math.round(multiplier * 100);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <Label className="text-xs">% de atingimento</Label>
+          <Input
+            type="number"
+            value={pct ?? ""}
+            onChange={(e) => setPct(parseNumberInput(e.target.value))}
+            placeholder="Ex: 85"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Bônus mensal base</Label>
+          <Input value={formatBRL(monthlyBonus)} disabled />
+        </div>
+        <div>
+          <Label className="text-xs">Faixa aplicada</Label>
+          <Input
+            value={
+              matched
+                ? `${toNumber(matched.min)}%${matched.max ? `–${matched.max}%` : "+"} (${pctLabel}%)`
+                : "Nenhuma faixa"
+            }
+            disabled
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="rounded-md border p-3 bg-muted/30">
+          <div className="text-xs text-muted-foreground">Bônus no mês</div>
+          <div className="text-lg font-semibold text-amber-600">{formatBRL(monthlyValue)}</div>
+        </div>
+        <div className="rounded-md border p-3 bg-muted/30">
+          <div className="text-xs text-muted-foreground">Bônus no trimestre</div>
+          <div className="text-lg font-semibold text-amber-600">{formatBRL(quarterValue)}</div>
+        </div>
+      </div>
+      {matched?.label && (
+        <p className="text-xs text-muted-foreground">{matched.label}</p>
+      )}
     </div>
   );
 }
