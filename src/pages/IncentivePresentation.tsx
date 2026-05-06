@@ -47,6 +47,19 @@ const TIER_COLORS: Record<string, string> = {
   Elite: "from-fuchsia-500 via-purple-600 to-indigo-700",
 };
 
+// Override fixo de vendas por nível (definido pelo time comercial)
+const TIER_SALES_OVERRIDE: Record<string, number> = {
+  Latão: 4,
+  Níquel: 4,
+  Bronze: 5,
+  Prata: 6,
+  Ouro: 7,
+  Platinum: 8,
+  Diamond: 9,
+  Black: 10,
+  Elite: 12,
+};
+
 export default function IncentivePresentation() {
   const navigate = useNavigate();
   const now = new Date();
@@ -352,7 +365,9 @@ function SlideTiers({ tiers, bonusBase }: { tiers: any[]; bonusBase: number }) {
             >
               <div>
                 <p className="text-[10px] uppercase tracking-widest opacity-80">
-                  {pctToSales(Number(t.min_achievement_percent))}{t.max_achievement_percent ? `–${pctToSales(Number(t.max_achievement_percent))}` : "+"} vendas
+                  {TIER_SALES_OVERRIDE[t.label] != null
+                    ? `${TIER_SALES_OVERRIDE[t.label]} vendas`
+                    : `${pctToSales(Number(t.min_achievement_percent))}${t.max_achievement_percent ? `–${pctToSales(Number(t.max_achievement_percent))}` : "+"} vendas`}
                 </p>
                 <p className="text-base font-black mt-1 leading-tight">{t.label}</p>
               </div>
