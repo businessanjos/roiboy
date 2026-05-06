@@ -141,8 +141,15 @@ export function TypeformDashboard() {
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-emerald-500" />Funil Typeform
               </CardTitle>
-              <CardDescription>
-                Visitas/Iniciados/Tempo médio são <strong>histórico total</strong> (Typeform Insights). Submissões em diante respeitam o período selecionado.
+              <CardDescription className="space-y-1">
+                <span className="block">
+                  <Badge variant="outline" className="mr-1.5 border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime</Badge>
+                  Visitas, Iniciados e Tempo médio vêm do Typeform Insights (histórico total do formulário, ignora o período).
+                </span>
+                <span className="block">
+                  <Badge variant="outline" className="mr-1.5 border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período</Badge>
+                  Submissões, Completados, Lead no Roy e Ganhos consideram apenas o intervalo selecionado.
+                </span>
               </CardDescription>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
