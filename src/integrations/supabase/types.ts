@@ -11408,6 +11408,57 @@ export type Database = {
           },
         ]
       }
+      meta_budget_history: {
+        Row: {
+          account_id: string | null
+          ad_account_id: string | null
+          budget_type: string
+          created_at: string
+          currency: string | null
+          entity_id: string
+          entity_name: string | null
+          entity_type: string
+          id: string
+          new_value: number | null
+          previous_value: number | null
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          ad_account_id?: string | null
+          budget_type?: string
+          created_at?: string
+          currency?: string | null
+          entity_id: string
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          new_value?: number | null
+          previous_value?: number | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          ad_account_id?: string | null
+          budget_type?: string
+          created_at?: string
+          currency?: string | null
+          entity_id?: string
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          new_value?: number | null
+          previous_value?: number | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       notas_fiscais: {
         Row: {
           access_key: string | null
