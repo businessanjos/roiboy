@@ -127,6 +127,7 @@ export interface ConversationAssignment {
       phone_e164: string;
       avatar_url: string | null;
       timezone?: string | null;
+      state?: string | null;
     };
   };
   zapp_conversation?: {
@@ -152,6 +153,7 @@ export interface ConversationAssignment {
       phone_e164: string;
       avatar_url: string | null;
       timezone?: string | null;
+      state?: string | null;
     } | null;
     lead?: {
       id: string;
