@@ -663,6 +663,18 @@ export default function Dashboard() {
                 <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
+            {gestaoViewMode === "operacoes" && (
+              <Select value={gestaoExitTypeFilter} onValueChange={(v) => setGestaoExitTypeFilter(v as any)}>
+                <SelectTrigger className="w-[140px] sm:w-[170px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
+                  <SelectValue placeholder="Tipo de saída" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Cancel. + Encerr.</SelectItem>
+                  <SelectItem value="cancelled">Só cancelamentos</SelectItem>
+                  <SelectItem value="ended">Só encerramentos</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             {gestaoPeriodFilter === "custom" && (
               <Popover open={gestaoDatePickerOpen} onOpenChange={setGestaoDatePickerOpen}>
                 <PopoverTrigger asChild>
