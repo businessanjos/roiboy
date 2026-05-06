@@ -395,7 +395,12 @@ export function TypeformDashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={wonOpen} onOpenChange={setWonOpen}>
+      <Dialog open={wonOpen} onOpenChange={(o) => {
+        setWonOpen(o);
+        if (o && wonDeals.length === 0 && (funnel?.won || 0) > 0 && !loadingFunnel) {
+          loadFunnel();
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col gap-0 p-0">
           <DialogHeader className="p-6 pb-4 border-b border-border/40">
             <DialogTitle className="flex items-center gap-2">
