@@ -150,6 +150,46 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
       expect(
         document.body.textContent?.includes('7 resposta(s) fora do escopo descartadas'),
       ).toBe(true),
+  );
+
+  it('NÃO mostra banner de inconsistência quando out_of_scope_responses === 0 (mesmo com ok=false)', async () => {
+    const { toast } = await import('sonner');
+    invokeMock.mockResolvedValue({
+      data: {
+        funnel: FUNNEL_ALL,
+        consistency: { ok: false, out_of_scope_responses: 0, responses_in_scope: 500, scope_form_ids: ['fABC', 'fXYZ'] },
+        won_deals: [],
+      },
+      error: null,
+    });
+    await act(async () => { render(<TypeformDashboard />); });
+    await waitFor(() => expect(invokeMock).toHaveBeenCalled());
+
+    // Sem toast de aviso
+    expect(toast.warning).not.toHaveBeenCalled();
+    // Sem texto de "fora do escopo descartadas"
+    expect(document.body.textContent || '').not.toMatch(/fora do escopo descartadas/);
+    // Mostra o badge verde de dados consistentes
+    await waitFor(() =>
+      expect(document.body.textContent || '').toMatch(/Dados consistentes/),
     );
   });
+
+  it('NÃO mostra banner quando out_of_scope_responses está ausente/undefined', async () => {
+    const { toast } = await import('sonner');
+    invokeMock.mockResolvedValue({
+      data: {
+        funnel: FUNNEL_ALL,
+        consistency: { ok: false, responses_in_scope: 500, scope_form_ids: ['fABC'] },
+        won_deals: [],
+      },
+      error: null,
+    });
+    await act(async () => { render(<TypeformDashboard />); });
+    await waitFor(() => expect(invokeMock).toHaveBeenCalled());
+
+    expect(toast.warning).not.toHaveBeenCalled();
+    expect(document.body.textContent || '').not.toMatch(/fora do escopo descartadas/);
+  });
+});
 });
