@@ -363,6 +363,7 @@ export function DealDetailSheet({
       setHasSecondSeat(!!(deal as any)?.has_second_seat);
       setSecondSeatName((deal as any)?.second_seat_name || "");
       setValueDraft(String(deal.value ?? 0));
+      setReceivedDraft(String((deal as any).received_value ?? ""));
     }
   }, [deal?.id, open]);
 
