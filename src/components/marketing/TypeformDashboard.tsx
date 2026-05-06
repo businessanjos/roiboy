@@ -241,7 +241,7 @@ export function TypeformDashboard() {
                 if (funnel.starts > 0 && funnel.completed > funnel.starts) {
                   issues.push(`Completados (${funnel.completed.toLocaleString('pt-BR')}) excedem Iniciados (${funnel.starts.toLocaleString('pt-BR')}) — Insights precisa ser ressincronizado.`);
                 }
-                if (consistency && consistency.ok === false) {
+                if (consistency && consistency.ok === false && (consistency.out_of_scope_responses ?? 0) > 0) {
                   issues.push(`${consistency.out_of_scope_responses} resposta(s) fora do escopo do funil selecionado foram descartadas do cálculo.`);
                 }
                 if (!issues.length) return null;
