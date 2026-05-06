@@ -329,6 +329,16 @@ export function CsIncentivePlanSection() {
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
           <Button size="sm" onClick={handleSave} disabled={savePlan.isPending} className="gap-1.5">
             {savePlan.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
