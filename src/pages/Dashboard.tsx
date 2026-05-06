@@ -481,7 +481,9 @@ export default function Dashboard() {
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + sumExits(m), 0);
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
     const activeBase = contractStats?.active ?? gestaoClientStats.active;
-    const rate = activeBase > 0 ? (cancelamentos / activeBase) * 100 : 0;
+    // Base = ativos atuais + saídas no período (aproxima a base inicial do período)
+    const denominator = activeBase + cancelamentos;
+    const rate = denominator > 0 ? (cancelamentos / denominator) * 100 : 0;
     return { rate, cancelamentos, novos, activeBase };
   }, [monthlyChartData, contractStats, gestaoClientStats, gestaoExitTypeFilter]);
 
