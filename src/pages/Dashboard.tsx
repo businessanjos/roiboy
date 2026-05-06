@@ -1085,7 +1085,13 @@ export default function Dashboard() {
                       <p className="text-5xl font-bold leading-none text-muted-foreground">0</p>
                       <div className="text-right rounded-md px-2.5 py-1.5 bg-muted">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meta</p>
-                        <p className="text-lg font-bold leading-none text-foreground">≥ 80</p>
+                        <EditableGoal
+                          accountId={currentUser?.account_id}
+                          field="dashboard_nps_goal"
+                          value={NPS_GOAL}
+                          prefix="≥"
+                          textClassName="text-lg font-bold leading-none text-foreground"
+                        />
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-3 text-xs">
@@ -1096,8 +1102,8 @@ export default function Dashboard() {
                       <div className="h-full rounded-full bg-muted-foreground/30" style={{ width: `0%` }} />
                       <div
                         className="absolute top-0 h-full w-0.5 bg-foreground/60"
-                        style={{ left: `${(80 + 100) / 2}%` }}
-                        title="Meta: 80"
+                        style={{ left: `${((NPS_GOAL + 100) / 2)}%` }}
+                        title={`Meta: ${NPS_GOAL}`}
                       />
                     </div>
                   </CardContent>
