@@ -51,6 +51,12 @@ export function TypeformDashboard() {
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
   const [wonDeals, setWonDeals] = useState<any[]>([]);
   const [wonOpen, setWonOpen] = useState(false);
+  const [detailsCard, setDetailsCard] = useState<null | {
+    label: string;
+    source: string;
+    steps: string[];
+    sample: { columns: string[]; rows: any[][] } | null;
+  }>(null);
   const [consistency, setConsistency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingFunnel, setLoadingFunnel] = useState(false);
