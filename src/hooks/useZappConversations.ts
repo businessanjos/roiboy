@@ -480,6 +480,19 @@ export function useZappConversations(options: UseZappConversationsOptions) {
               updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
               return updated;
             });
+
+            // Auto-download pending inbound media as it arrives in realtime
+            const needsDownload =
+              newMsg.media_type &&
+              newMsg.media_type !== "sticker" &&
+              !newMsg.media_url &&
+              (newMsg.media_download_status === "pending" || !newMsg.media_download_status);
+            if (needsDownload) {
+              console.log(`[ZappRT] Auto-downloading realtime media ${newMsg.id?.substring(0, 8)} (${newMsg.media_type})`);
+              supabase.functions
+                .invoke("download-media", { body: { message_ids: [newMsg.id] } })
+                .catch((err) => console.error("[ZappRT] Realtime auto-download error:", err));
+            }
           }
 
           maybeThrottle(debouncedFetchAssignments);
