@@ -183,6 +183,8 @@ export interface ContactInfo {
   searchableText: string;
   /** Override manual de fuso horário do cliente (IANA). Null = auto-detect pelo telefone. */
   clientTimezone?: string | null;
+  /** UF cadastrada do cliente, fallback para detecção de fuso quando DDD não resolve. */
+  clientState?: string | null;
 }
 
 // Normalize string for flexible search (remove accents, special chars)
