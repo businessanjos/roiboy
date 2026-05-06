@@ -276,8 +276,8 @@ function SlideResponsibility() {
 }
 
 function useDashboardKpis() {
-  const { user } = useCurrentUser();
-  const accountId = user?.account_id;
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
 
   const { data: goals } = useQuery({
     queryKey: ["cs-pres-goals", accountId],
