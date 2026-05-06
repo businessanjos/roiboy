@@ -518,7 +518,7 @@ export function CsIncentivePlanSection() {
                     <TableRow>
                       <TableHead>Consultora</TableHead>
                       <TableHead>Cargo</TableHead>
-                      <TableHead className="text-right">Recebido Q{currentQuarter}</TableHead>
+                      
                       {form.bonus_distribution_method === "custom" && (
                         <TableHead className="w-28 text-right">Peso</TableHead>
                       )}
