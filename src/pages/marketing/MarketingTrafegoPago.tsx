@@ -49,6 +49,18 @@ interface Insights {
 export default function MarketingTrafegoPago() {
   const { user } = useAuth();
   const [period, setPeriod] = useState('last_30d');
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
+  const isCustom = period === 'custom';
+  const customReady = isCustom && !!customRange?.from && !!customRange?.to;
+  const periodPayload = useMemo(() => {
+    if (customReady) {
+      return {
+        since: format(customRange!.from!, 'yyyy-MM-dd'),
+        until: format(customRange!.to!, 'yyyy-MM-dd'),
+      };
+    }
+    return { datePreset: isCustom ? 'last_30d' : period };
+  }, [period, isCustom, customReady, customRange]);
   const [adSets, setAdSets] = useState<AdSet[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
