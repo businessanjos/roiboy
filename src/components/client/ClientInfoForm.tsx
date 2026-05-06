@@ -1672,7 +1672,7 @@ function TimezoneField({ value, phone, state, onChange }: TimezoneFieldProps) {
             {value
               ? "Override manual ativo. Será usado em vez da detecção automática."
               : autoTz
-                ? `Detectado pelo telefone: ${autoTz}. Ajuste manualmente se o cliente estiver em outro fuso (ex.: Manaus, Acre, viagem).`
+                ? `Detectado via ${autoSource ? SOURCE_LABEL[autoSource] : "automático"}: ${autoTz}. Ajuste manualmente se o cliente estiver em outro fuso (ex.: viagem, expatriado).`
                 : "Sem detecção automática (telefone ausente ou país não mapeado). Selecione manualmente."}
           </p>
         </div>
