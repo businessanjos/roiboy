@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown, Home, Instagram, FileUser, Landmark, QrCode } from "lucide-react";
+import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown, Home, Instagram, FileUser, Landmark, QrCode, Clock, Wand2 } from "lucide-react";
+import { TIMEZONE_OPTIONS, getTimezoneForCountry, getLocalTime, formatTimezoneOffset, getTimezoneOffsetHours } from "@/lib/countryTimezone";
+import { getCountryFromPhone } from "@/lib/phoneCountry";
 import { CompaniesManager, CompanyData } from "./CompaniesManager";
 import { cn } from "@/lib/utils";
 import { 
