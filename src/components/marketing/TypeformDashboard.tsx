@@ -223,14 +223,14 @@ export function TypeformDashboard() {
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
+          <DialogHeader className="p-6 pb-4 border-b border-border/40">
             <DialogTitle>Selecionar formulários para acompanhar</DialogTitle>
             <DialogDescription>
               Marque os formulários que deseja rastrear em tempo real. O webhook é instalado automaticamente em cada um.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-3">
             {loadingAvailable ? (
               <Skeleton className="h-64" />
             ) : (
@@ -282,7 +282,7 @@ export function TypeformDashboard() {
               </>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="p-4 border-t border-border/40">
             <Button variant="outline" onClick={() => setAddOpen(false)} disabled={adding}>Cancelar</Button>
             <Button onClick={addForm} disabled={!pickedForms.length || adding}>
               {adding ? 'Adicionando...' : `Acompanhar ${pickedForms.length || ''} form${pickedForms.length === 1 ? '' : 's'}`}
