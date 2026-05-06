@@ -1115,6 +1115,7 @@ export default function Dashboard() {
 
             {/* Encerramentos */}
             {showEncerramentos && (
+            <Card className="shadow-card border-l-4 border-l-warning">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
