@@ -915,9 +915,13 @@ function BonusSimulator({
   churnPenaltyPercent: number;
 }) {
   const [renewalPct, setRenewalPct] = useState<number | "">(100);
-  // % de churn = 100 − % renovação (mesma definição do painel de Renovações:
-  // todo contrato vencido vira "renovado" ou "perdido").
-  const churnPct = Math.max(0, Math.min(100, 100 - toNumber(renewalPct)));
+  // Churn editável: por padrão segue 100 − % renovação, mas pode ser sobrescrito
+  // manualmente para simular cenários (ex.: testar penalidade de churn).
+  const [churnOverride, setChurnOverride] = useState<number | "">("");
+  const churnPct =
+    churnOverride === ""
+      ? Math.max(0, Math.min(100, 100 - toNumber(renewalPct)))
+      : Math.max(0, Math.min(100, toNumber(churnOverride)));
   const pct = toNumber(renewalPct);
 
   // Senioridade do plano selecionado, para filtrar produtos atendidos
