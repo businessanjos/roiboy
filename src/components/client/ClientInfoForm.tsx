@@ -99,6 +99,8 @@ export interface ClientFormData {
   // Business info
   business_segment: string;
   business_niche: string;
+  // Timezone (IANA). Vazio = detectar automaticamente pelo DDI/telefone.
+  timezone: string;
   // Additional companies
   companies: CompanyData[];
   // Contract
