@@ -416,15 +416,7 @@ export default function ConsultantBonus() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {(() => {
-                        const consultant = consultants.find((c: any) => c.id === editing.user_id);
-                        const seniorityKey = getConsultantSeniorityKey(consultant?.position);
-                        const filteredProducts = (products as any[]).filter((p) => {
-                          const sl = Array.isArray(p.consultant_seniority) ? p.consultant_seniority : [];
-                          // Sem senioridade configurada = não aparece para ninguém.
-                          if (sl.length === 0) return false;
-                          if (!seniorityKey) return false;
-                          return sl.includes(seniorityKey);
-                        });
+                        const filteredProducts = getCompatibleProductsForConsultant(editing.user_id);
                         if (filteredProducts.length === 0) {
                           return (
                             <div className="px-2 py-3 text-xs text-muted-foreground">
