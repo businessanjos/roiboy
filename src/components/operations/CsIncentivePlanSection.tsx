@@ -536,9 +536,6 @@ export function CsIncentivePlanSection() {
                           </div>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{c.role_label}</TableCell>
-                        <TableCell className="text-right text-xs font-semibold text-amber-500">
-                          {formatBRL(quarterPayouts[c.id] || 0)}
-                        </TableCell>
                         {form.bonus_distribution_method === "custom" && (
                           <TableCell>
                             <Input
