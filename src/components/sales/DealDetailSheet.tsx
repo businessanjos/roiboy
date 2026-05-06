@@ -1207,7 +1207,80 @@ export function DealDetailSheet({
                   </div>
                 </div>
 
-                {/* Details Card */}
+                {/* Valor Recebido (alimenta SPIFFs de cash collect) */}
+                <div className="rounded-lg border p-3 bg-emerald-500/5 border-emerald-500/20">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1.5">
+                      <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+                        Valor Recebido
+                      </span>
+                      <span className="text-[9px] uppercase tracking-wide text-emerald-700/70 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                        Cash collect · SPIFF
+                      </span>
+                    </div>
+                  </div>
+                  <Popover open={receivedEditOpen} onOpenChange={setReceivedEditOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-2xl font-bold text-emerald-600 hover:underline text-left w-full"
+                        title="Editar valor recebido"
+                      >
+                        {(deal as any).received_value != null
+                          ? formatCurrency(Number((deal as any).received_value))
+                          : <span className="text-muted-foreground text-sm font-normal italic">Clique para informar o valor recebido</span>}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-3" align="start">
+                      <Label className="text-xs">Valor recebido (R$)</Label>
+                      <p className="text-[11px] text-muted-foreground mb-2">
+                        Quanto entrou de fato no caixa. Alimenta a campanha de cash collect dos SPIFFs.
+                      </p>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={receivedDraft}
+                        onChange={(e) => setReceivedDraft(e.target.value)}
+                        placeholder="0,00"
+                        className="h-8 mt-1"
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-2 mt-2">
+                        <Button size="sm" variant="ghost" onClick={() => setReceivedEditOpen(false)}>
+                          Cancelar
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            const trimmed = receivedDraft.trim();
+                            const v = trimmed === "" ? null : Number(trimmed);
+                            if (v !== null && (isNaN(v) || v < 0)) {
+                              toast.error("Valor inválido");
+                              return;
+                            }
+                            const { error } = await supabase
+                              .from("deals")
+                              .update({ received_value: v } as any)
+                              .eq("id", deal.id);
+                            if (error) {
+                              toast.error("Erro ao atualizar");
+                              return;
+                            }
+                            toast.success("Valor recebido atualizado");
+                            setReceivedEditOpen(false);
+                            onDealUpdated?.();
+                          }}
+                        >
+                          Salvar
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+
                 <div className="rounded-lg border p-3 space-y-3">
                   {/* Pipeline + Stage Selector (only for open deals) */}
                   {!isClosed && (
