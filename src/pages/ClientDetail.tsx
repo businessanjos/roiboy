@@ -469,6 +469,7 @@ export default function ClientDetail() {
       business_zip_code: client.business_zip_code || "",
       business_segment: (client as any).business_segment || "",
       business_niche: (client as any).business_niche || "",
+      timezone: (client as any).timezone || "",
       contract_start_date: client.contract_start_date || "",
       contract_end_date: client.contract_end_date || "",
       is_mls: client.is_mls || false,
@@ -546,7 +547,8 @@ export default function ClientDetail() {
           mls_level: editFormData.is_mls ? (editFormData.mls_level || null) : null,
           responsible_user_id: editFormData.responsible_user_id || null,
           companies: JSON.parse(JSON.stringify(editFormData.companies || [])),
-        })
+          timezone: editFormData.timezone || null,
+        } as any)
         .eq("id", id);
 
       if (error) throw error;

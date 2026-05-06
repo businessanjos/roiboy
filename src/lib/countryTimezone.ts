@@ -121,6 +121,60 @@ export function getTimezoneForCountry(code: string | null | undefined): string |
 }
 
 /**
+ * Lista curada de fusos horários para seleção manual no perfil do cliente.
+ * Cobre os 4 fusos do Brasil + principais fusos internacionais.
+ * `auto` = deixa o sistema detectar pelo DDI/telefone.
+ */
+export interface TimezoneOption {
+  value: string;
+  label: string;
+  group: "Brasil" | "Américas" | "Europa" | "Ásia & Oceania" | "África & Oriente Médio";
+}
+
+export const TIMEZONE_OPTIONS: TimezoneOption[] = [
+  // Brasil — múltiplos fusos
+  { value: "America/Noronha", label: "Fernando de Noronha (UTC−2)", group: "Brasil" },
+  { value: "America/Sao_Paulo", label: "Brasília / SP / RJ / Sul / Nordeste (UTC−3)", group: "Brasil" },
+  { value: "America/Manaus", label: "Manaus / AM / MT / MS / RO / RR (UTC−4)", group: "Brasil" },
+  { value: "America/Rio_Branco", label: "Acre / Oeste do AM (UTC−5)", group: "Brasil" },
+  // Américas
+  { value: "America/New_York", label: "Nova York / Miami (UTC−5/−4)", group: "Américas" },
+  { value: "America/Chicago", label: "Chicago / CDMX (UTC−6/−5)", group: "Américas" },
+  { value: "America/Denver", label: "Denver (UTC−7/−6)", group: "Américas" },
+  { value: "America/Los_Angeles", label: "Los Angeles (UTC−8/−7)", group: "Américas" },
+  { value: "America/Buenos_Aires", label: "Buenos Aires / Santiago (UTC−3)", group: "Américas" },
+  { value: "America/Bogota", label: "Bogotá / Lima (UTC−5)", group: "Américas" },
+  { value: "America/Caracas", label: "Caracas (UTC−4)", group: "Américas" },
+  { value: "America/Mexico_City", label: "Cidade do México (UTC−6)", group: "Américas" },
+  // Europa
+  { value: "Europe/Lisbon", label: "Lisboa / Londres (UTC+0/+1)", group: "Europa" },
+  { value: "Europe/Madrid", label: "Madrid / Paris / Berlim / Roma (UTC+1/+2)", group: "Europa" },
+  { value: "Europe/Athens", label: "Atenas / Istambul (UTC+2/+3)", group: "Europa" },
+  { value: "Europe/Moscow", label: "Moscou (UTC+3)", group: "Europa" },
+  // Ásia & Oceania
+  { value: "Asia/Dubai", label: "Dubai (UTC+4)", group: "Ásia & Oceania" },
+  { value: "Asia/Kolkata", label: "Índia (UTC+5:30)", group: "Ásia & Oceania" },
+  { value: "Asia/Bangkok", label: "Bangkok / Jacarta (UTC+7)", group: "Ásia & Oceania" },
+  { value: "Asia/Shanghai", label: "Pequim / Singapura / Hong Kong (UTC+8)", group: "Ásia & Oceania" },
+  { value: "Asia/Tokyo", label: "Tóquio / Seul (UTC+9)", group: "Ásia & Oceania" },
+  { value: "Australia/Sydney", label: "Sydney (UTC+10/+11)", group: "Ásia & Oceania" },
+  { value: "Pacific/Auckland", label: "Nova Zelândia (UTC+12/+13)", group: "Ásia & Oceania" },
+  // África & Oriente Médio
+  { value: "Africa/Johannesburg", label: "Joanesburgo / Cairo (UTC+2)", group: "África & Oriente Médio" },
+  { value: "Asia/Jerusalem", label: "Jerusalém (UTC+2/+3)", group: "África & Oriente Médio" },
+];
+
+export function isValidTimezone(tz: string | null | undefined): boolean {
+  if (!tz) return false;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Retorna a hora local atual no timezone, formato 24h "HH:mm".
  */
 export function getLocalTime(timezone: string, date: Date = new Date()): string {

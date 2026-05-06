@@ -912,7 +912,8 @@ export default function Clients() {
         is_mls: newClientData.is_mls,
         mls_level: newClientData.is_mls ? (newClientData.mls_level || null) : null,
         responsible_user_id: newClientData.responsible_user_id || null,
-      }).select().single();
+        timezone: newClientData.timezone || null,
+      } as any).select().single();
 
       if (error) throw error;
 
