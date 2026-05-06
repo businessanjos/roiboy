@@ -187,3 +187,49 @@ export function isOutsideBusinessHours(timezone: string, date: Date = new Date()
   if (Number.isNaN(hour)) return false;
   return hour < 8 || hour >= 21;
 }
+
+/**
+ * Retorna milissegundos até o próximo início de expediente (08:00) no fuso informado.
+ * Se já estiver dentro do horário comercial, retorna 0.
+ */
+export function msUntilNextBusinessHour(
+  timezone: string,
+  date: Date = new Date(),
+  startHour = 8,
+): number {
+  const hhmm = getLocalTime(timezone, date);
+  if (!hhmm) return 0;
+  const [hStr, mStr] = hhmm.split(":");
+  const hour = Number(hStr);
+  const minute = Number(mStr);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return 0;
+
+  // Segundos atuais no minuto local — Intl não dá; aproximamos com segundos UTC
+  const seconds = date.getUTCSeconds();
+
+  let minutesUntil: number;
+  if (hour < startHour) {
+    // mesmo dia, faltam (startHour - hour) horas - minutos
+    minutesUntil = (startHour - hour) * 60 - minute;
+  } else {
+    // depois das 21h (ou >= startHour mas após 21 — só chamamos quando off-hours)
+    // até meia-noite + startHour
+    minutesUntil = (24 - hour) * 60 - minute + startHour * 60;
+  }
+  const ms = minutesUntil * 60_000 - seconds * 1000;
+  return Math.max(ms, 0);
+}
+
+/**
+ * Formata duração em ms como "Xh Ymin" ou "Ymin" (ou "<1min").
+ */
+export function formatDurationShort(ms: number): string {
+  if (ms <= 0) return "<1min";
+  const totalMin = Math.ceil(ms / 60_000);
+  if (totalMin < 1) return "<1min";
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+}

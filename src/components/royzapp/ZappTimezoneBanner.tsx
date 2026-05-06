@@ -3,11 +3,13 @@ import { Clock, Globe2, AlertTriangle } from "lucide-react";
 import { getCountryFromPhone } from "@/lib/phoneCountry";
 import { getFlagColors } from "@/lib/countryFlagColors";
 import {
+  formatDurationShort,
   formatTimezoneOffset,
   getLocalTime,
   getTimezoneForCountry,
   getTimezoneOffsetHours,
   isOutsideBusinessHours,
+  msUntilNextBusinessHour,
 } from "@/lib/countryTimezone";
 
 interface ZappTimezoneBannerProps {
@@ -30,7 +32,7 @@ export const ZappTimezoneBanner = memo(function ZappTimezoneBanner({
 
   useEffect(() => {
     if (!tz) return;
-    const id = setInterval(() => setNow(new Date()), 30_000);
+    const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, [tz]);
 
@@ -85,9 +87,14 @@ export const ZappTimezoneBanner = memo(function ZappTimezoneBanner({
         </div>
 
         {offHours && (
-          <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500 text-amber-950 font-semibold text-[11px] sm:text-xs whitespace-nowrap shadow-sm">
+          <span
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500 text-amber-950 font-semibold text-[11px] sm:text-xs whitespace-nowrap shadow-sm"
+            title={`Volta ao expediente em ${formatDurationShort(msUntilNextBusinessHour(tz, now))}`}
+          >
             <AlertTriangle className="h-3 w-3" />
-            Fora do horário comercial
+            <span className="hidden sm:inline">Fora do horário ·</span>
+            <span className="sm:hidden">Off ·</span>
+            volta em {formatDurationShort(msUntilNextBusinessHour(tz, now))}
           </span>
         )}
       </div>
