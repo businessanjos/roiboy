@@ -150,7 +150,8 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
       expect(
         document.body.textContent?.includes('7 resposta(s) fora do escopo descartadas'),
       ).toBe(true),
-  );
+    );
+  });
 
   it('NÃO mostra banner de inconsistência quando out_of_scope_responses === 0 (mesmo com ok=false)', async () => {
     const { toast } = await import('sonner');
@@ -165,11 +166,8 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
     await act(async () => { render(<TypeformDashboard />); });
     await waitFor(() => expect(invokeMock).toHaveBeenCalled());
 
-    // Sem toast de aviso
     expect(toast.warning).not.toHaveBeenCalled();
-    // Sem texto de "fora do escopo descartadas"
     expect(document.body.textContent || '').not.toMatch(/fora do escopo descartadas/);
-    // Mostra o badge verde de dados consistentes
     await waitFor(() =>
       expect(document.body.textContent || '').toMatch(/Dados consistentes/),
     );
@@ -192,4 +190,4 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
     expect(document.body.textContent || '').not.toMatch(/fora do escopo descartadas/);
   });
 });
-});
+
