@@ -580,7 +580,7 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
       </Card>
 
       <CampaignDrilldown campaign={drillCampaign} open={!!drillCampaign} onOpenChange={(o) => !o && setDrillCampaign(null)} datePreset={datePreset} onMutated={load} />
-      <BudgetEditor open={!!budgetEntity} onOpenChange={(o) => !o && setBudgetEntity(null)} entity={budgetEntity} onSaved={load} />
+      <BudgetEditor open={!!budgetEntity} onOpenChange={(o) => !o && setBudgetEntity(null)} entity={budgetEntity} entityType="campaign" adAccountId={adAccountId} onSaved={load} />
     </div>
   );
 }
