@@ -40,8 +40,8 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     *,
     agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
     department:zapp_departments(*),
-    conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url, timezone)),
-    zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, sector_id, integration_id, client:clients(id, full_name, phone_e164, avatar_url, timezone), lead:leads(id, full_name, phone, email, status)),
+    conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url, timezone, state)),
+    zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, sector_id, integration_id, client:clients(id, full_name, phone_e164, avatar_url, timezone, state), lead:leads(id, full_name, phone, email, status)),
     conversation_tags:zapp_conversation_tags(tag_id, tag:zapp_tags(id, name, color))
   `;
 
