@@ -388,7 +388,7 @@ export function TypeformDashboard() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <FunnelCard
                       scope="period" label="Submissões" value={funnel.submissions} icon={CheckCircle2}
-                      sub={`recebidas {periodLabel}`}
+                      sub={`recebidas ${periodLabel}`}
                       source="DB · typeform_responses"
                       tip={`Total de respostas (completas + parciais) salvas no nosso banco via webhook ${periodLabel}. Conta linhas em typeform_responses filtradas por form_id selecionado e janela: ${periodLabel}.`}
                       onDetails={() => setDetailsCard({
