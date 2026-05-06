@@ -109,12 +109,18 @@ Deno.serve(async (req) => {
 
     const accountId = auth.accountId!;
 
-    // Check duplicate by phone
-    if (payload.phone && payload.phone.trim()) {
+    // Normalize email + phone canonically so future matches (Typeform, deals)
+    // succeed regardless of formatting (BR 9th digit, +DDI, casing, mailto:, etc).
+    const normalizedEmail = canonicalEmail(payload.email);
+    const normalizedPhone = canonicalE164(payload.phone);
+
+    // Check duplicate by phone — uses ALL plausible variants
+    if (normalizedPhone) {
+      const variants = phoneVariants(normalizedPhone);
       const { data: existing } = await supabase
         .from("leads")
         .select("id, full_name")
-        .eq("phone", payload.phone.trim())
+        .in("phone", variants)
         .eq("account_id", accountId)
         .maybeSingle();
 
@@ -137,8 +143,8 @@ Deno.serve(async (req) => {
       .insert({
         account_id: accountId,
         full_name: payload.full_name.trim(),
-        phone: payload.phone?.trim() || null,
-        email: payload.email?.trim() || null,
+        phone: normalizedPhone || null,
+        email: normalizedEmail || null,
         instagram: payload.instagram?.trim() || null,
         source: payload.source?.trim() || null,
         revenue_range: payload.revenue_range?.trim() || null,
