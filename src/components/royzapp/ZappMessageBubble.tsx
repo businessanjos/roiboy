@@ -758,7 +758,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
                   className="h-6 px-2 text-[10px] text-red-400 hover:text-red-300 hover:bg-red-500/20"
                 >
                   <RefreshCw className="h-3 w-3 mr-1" />
-                  Tentar novamente
+                  {message.message_type === "audio" ? "Reenviar áudio" : "Tentar novamente"}
                 </Button>
               )}
             </div>
