@@ -1953,6 +1953,90 @@ export type Database = {
           },
         ]
       }
+      client_instagram_snapshots: {
+        Row: {
+          account_id: string
+          biography: string | null
+          category: string | null
+          client_id: string
+          created_at: string
+          external_url: string | null
+          followers_count: number | null
+          following_count: number | null
+          full_name: string | null
+          id: string
+          is_business: boolean | null
+          is_private: boolean | null
+          is_verified: boolean | null
+          last_synced_at: string
+          media_count: number | null
+          posts: Json | null
+          profile_pic_url: string | null
+          raw: Json | null
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          account_id: string
+          biography?: string | null
+          category?: string | null
+          client_id: string
+          created_at?: string
+          external_url?: string | null
+          followers_count?: number | null
+          following_count?: number | null
+          full_name?: string | null
+          id?: string
+          is_business?: boolean | null
+          is_private?: boolean | null
+          is_verified?: boolean | null
+          last_synced_at?: string
+          media_count?: number | null
+          posts?: Json | null
+          profile_pic_url?: string | null
+          raw?: Json | null
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          account_id?: string
+          biography?: string | null
+          category?: string | null
+          client_id?: string
+          created_at?: string
+          external_url?: string | null
+          followers_count?: number | null
+          following_count?: number | null
+          full_name?: string | null
+          id?: string
+          is_business?: boolean | null
+          is_private?: boolean | null
+          is_verified?: boolean | null
+          last_synced_at?: string
+          media_count?: number | null
+          posts?: Json | null
+          profile_pic_url?: string | null
+          raw?: Json | null
+          updated_at?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_instagram_snapshots_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_instagram_snapshots_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_life_event_images: {
         Row: {
           account_id: string
