@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Copy, Check, MessageSquare, Sparkles, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
+import { Copy, Check, MessageSquare, Sparkles, ChevronLeft, ChevronRight, UserRound, NotebookPen } from "lucide-react";
+import { TimelineCheckinDialog } from "@/components/operations/TimelineCheckinDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -320,6 +321,7 @@ export default function OperationsScripts() {
   const [search, setSearch] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState<string>(getWeekStart());
+  const [timelineDialogOpen, setTimelineDialogOpen] = useState(false);
 
   const filteredClients = useMemo(
     () =>
@@ -327,6 +329,11 @@ export default function OperationsScripts() {
         c.name?.toLowerCase().includes(search.toLowerCase()),
       ),
     [clients, search],
+  );
+
+  const selectedClient = useMemo(
+    () => (clients as any[]).find((c) => c.id === clientId),
+    [clients, clientId],
   );
 
   const { completedKeys, toggle } = useWeeklyChecklist(clientId, weekStart);
@@ -341,17 +348,35 @@ export default function OperationsScripts() {
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-start gap-3">
-        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Sparkles className="h-5 w-5 text-primary" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Sparkles className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Scripts</h1>
+            <p className="text-sm text-muted-foreground">
+              Beabá pronto pro check-in. Selecione a cliente e a semana, e marque cada item conforme for fazendo.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold">Scripts</h1>
-          <p className="text-sm text-muted-foreground">
-            Beabá pronto pro check-in. Selecione a cliente e a semana, e marque cada item conforme for fazendo.
-          </p>
-        </div>
+        {clientId && (
+          <Button onClick={() => setTimelineDialogOpen(true)} className="gap-2">
+            <NotebookPen className="h-4 w-4" />
+            Registrar na Timeline
+          </Button>
+        )}
       </div>
+
+      {clientId && selectedClient && (
+        <TimelineCheckinDialog
+          open={timelineDialogOpen}
+          onOpenChange={setTimelineDialogOpen}
+          clientId={clientId}
+          clientName={selectedClient.name}
+          weekLabel={formatWeekLabel(weekStart)}
+        />
+      )}
 
       <Card>
         <CardContent className="pt-6 space-y-4">
