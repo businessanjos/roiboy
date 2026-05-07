@@ -113,9 +113,10 @@ export const sectors: Sector[] = [
     icon: CreditCard,
     color: "text-emerald-600",
     bgColor: "bg-emerald-500/10",
-    defaultRoute: "/financial/entries",
+    defaultRoute: "/financial/dashboard",
     navItems: [
       // Principal
+      { to: "/financial/dashboard", icon: LayoutDashboard, label: "Dashboard", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/cash-flow", icon: TrendingUp, label: "Fluxo de Caixa", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/entries", icon: Receipt, label: "Lançamentos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/bank-accounts", icon: Building2, label: "Contas Bancárias", permission: PERMISSIONS.CLIENTS_VIEW },
