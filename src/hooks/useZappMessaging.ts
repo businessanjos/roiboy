@@ -53,6 +53,8 @@ export function useZappMessaging({
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingStartTimeRef = useRef<number>(0);
+  // Cache de áudios que falharam pra permitir reenvio em 1 clique mantendo o mesmo conteúdo
+  const failedAudiosRef = useRef<Map<string, { blob: Blob; duration?: number }>>(new Map());
 
   // Contact picker state
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
