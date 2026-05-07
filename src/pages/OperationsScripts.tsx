@@ -346,6 +346,17 @@ export default function OperationsScripts() {
   );
   const overallPct = totalItems > 0 ? Math.round((totalDone / totalItems) * 100) : 0;
 
+  // Required items = todos os itens do check-in (blocos especiais são opcionais)
+  const requiredKeys = useMemo(
+    () =>
+      CHECKIN_BLOCKS.flatMap((b) => b.items.map((_, i) => makeItemKey(b.id, i))),
+    [],
+  );
+  const requiredDone = requiredKeys.filter((k) => completedKeys.has(k)).length;
+  const requiredTotal = requiredKeys.length;
+  const requiredMissing = requiredTotal - requiredDone;
+  const canRegister = !!clientId && requiredMissing === 0;
+
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-start justify-between gap-3">
@@ -361,10 +372,29 @@ export default function OperationsScripts() {
           </div>
         </div>
         {clientId && (
-          <Button onClick={() => setTimelineDialogOpen(true)} className="gap-2">
-            <NotebookPen className="h-4 w-4" />
-            Registrar na Timeline
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              onClick={() => setTimelineDialogOpen(true)}
+              className="gap-2"
+              disabled={!canRegister}
+              title={
+                canRegister
+                  ? "Registrar check-in da semana na timeline"
+                  : `Conclua os ${requiredMissing} item(ns) obrigatório(s) do check-in antes de registrar`
+              }
+            >
+              <NotebookPen className="h-4 w-4" />
+              Registrar na Timeline
+            </Button>
+            <p className={cn(
+              "text-xs",
+              canRegister ? "text-emerald-600" : "text-muted-foreground",
+            )}>
+              {canRegister
+                ? "✓ Check-in completo, pronto pra registrar"
+                : `Faltam ${requiredMissing} de ${requiredTotal} itens obrigatórios`}
+            </p>
+          </div>
         )}
       </div>
 
