@@ -2110,6 +2110,16 @@ export const ContractWizard = ({
 
           {/* Stepper */}
           <Stepper steps={visibleSteps} current={step} onPick={setStep} filledCounts={filledCounts} />
+
+          {!currentStepComplete && missingLabels.length > 0 && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+              <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <span className="font-medium">Para continuar, preencha:</span>{" "}
+                <span>{missingLabels.join(" · ")}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Step content */}
