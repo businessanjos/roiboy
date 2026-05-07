@@ -472,7 +472,7 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                           </Button>
                         </DropdownMenuTrigger>
                         {hasMultipleInstances && (
-                          <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuContent align="end" className="w-56 bg-zapp-panel border-zapp-border">
                             {instances.map((instance) => {
                               const isSelected = selectedInstance?.id === instance.id;
                               // Check if verified: instance-level OR sector-level
