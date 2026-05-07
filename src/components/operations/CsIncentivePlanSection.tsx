@@ -908,6 +908,9 @@ function BonusSimulator({
   churnPenaltyEnabled,
   churnPenaltyThreshold,
   churnPenaltyPercent,
+  weightRenewal,
+  weightChurn,
+  weightNps,
 }: {
   monthlyBonus: number;
   baseSalary: number;
@@ -916,16 +919,56 @@ function BonusSimulator({
   churnPenaltyEnabled: boolean;
   churnPenaltyThreshold: number;
   churnPenaltyPercent: number;
+  weightRenewal: number;
+  weightChurn: number;
+  weightNps: number;
 }) {
   const [renewalPct, setRenewalPct] = useState<number | "">(100);
   // Churn editável: por padrão segue 100 − % renovação, mas pode ser sobrescrito
   // manualmente para simular cenários (ex.: testar penalidade de churn).
   const [churnOverride, setChurnOverride] = useState<number | "">("");
+  const [npsScore, setNpsScore] = useState<number | "">(80);
   const churnPct =
     churnOverride === ""
       ? Math.max(0, Math.min(100, 100 - toNumber(renewalPct)))
       : Math.max(0, Math.min(100, toNumber(churnOverride)));
-  const pct = toNumber(renewalPct);
+  const renewalPctNum = toNumber(renewalPct);
+  const npsNum = toNumber(npsScore);
+
+  // Metas do dashboard (mesmas exibidas na apresentação) para calcular atingimento por métrica
+  const { data: dashboardGoals } = useQuery({
+    queryKey: ["cs-bonus-dashboard-goals"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("accounts")
+        .select("dashboard_churn_goal, dashboard_renewal_goal, dashboard_nps_goal")
+        .limit(1)
+        .single();
+      return {
+        renewal: Number(data?.dashboard_renewal_goal ?? 40),
+        churn: Number(data?.dashboard_churn_goal ?? 18),
+        nps: Number(data?.dashboard_nps_goal ?? 80),
+      };
+    },
+    staleTime: 60_000,
+  });
+
+  const goals = dashboardGoals ?? { renewal: 40, churn: 18, nps: 80 };
+
+  // Atingimento por métrica (0..200%, capado depois pelas faixas)
+  // Renovação: maior é melhor → atual / meta
+  // Churn: menor é melhor → meta / atual (se atual=0, 200%)
+  // NPS: maior é melhor → atual / meta
+  const renewalAttain = goals.renewal > 0 ? (renewalPctNum / goals.renewal) * 100 : 0;
+  const churnAttain =
+    churnPct <= 0 ? 200 : goals.churn > 0 ? (goals.churn / churnPct) * 100 : 0;
+  const npsAttain = goals.nps > 0 ? (npsNum / goals.nps) * 100 : 0;
+
+  const totalWeight = weightRenewal + weightChurn + weightNps;
+  // Média ponderada (% atingimento global)
+  const pct = totalWeight > 0
+    ? (renewalAttain * weightRenewal + churnAttain * weightChurn + npsAttain * weightNps) / totalWeight
+    : renewalPctNum;
 
   // Senioridade do plano selecionado, para filtrar produtos atendidos
   const seniorityKey = useMemo(() => {
@@ -1011,7 +1054,7 @@ function BonusSimulator({
 
   const multiplier = matched ? toNumber(matched.multiplier) || 0 : 0;
   const attainmentPct = Math.round(multiplier * 100);
-  const absoluteRenewals = Math.round((pct / 100) * totalRenewableContracts);
+  const absoluteRenewals = Math.round((renewalPctNum / 100) * totalRenewableContracts);
 
   // Penalidade por churn: se ativada, ao ultrapassar o limite, aplica desconto
   // de churn_penalty_percent (%) sobre o bônus do mês. Caso contrário, sem desconto.
@@ -1031,44 +1074,17 @@ function BonusSimulator({
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <Label className="text-xs">% de renovação</Label>
+          <Label className="text-xs">% de renovação ({weightRenewal}% peso · meta {goals.renewal}%)</Label>
           <Input
             type="number"
             value={renewalPct ?? ""}
             onChange={(e) => setRenewalPct(parseNumberInput(e.target.value))}
             placeholder="Ex: 85"
           />
+          <p className="text-[10px] text-muted-foreground mt-1">Atingimento: {renewalAttain.toFixed(0)}%</p>
         </div>
         <div>
-          <Label className="text-xs">% de atingimento (auto)</Label>
-          <Input
-            value={matched ? `${attainmentPct}%` : "—"}
-            disabled
-          />
-        </div>
-        <div>
-          <Label className="text-xs">Renovações (nº absoluto)</Label>
-          <Input
-            value={`${absoluteRenewals} de ${totalRenewableContracts}`}
-            disabled
-          />
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Base: contratos ativos com vencimento entre Mai/2026 e Dez/2026.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div>
-          <Label className="text-xs">Bônus mensal base</Label>
-          <Input value={formatBRL(monthlyBonus)} disabled />
-        </div>
-        <div>
-          <Label className="text-xs">Salário bruto mensal</Label>
-          <Input value={formatBRL(baseSalary)} disabled />
-        </div>
-        <div>
-          <Label className="text-xs">% de churn</Label>
+          <Label className="text-xs">% de churn ({weightChurn}% peso · meta ≤ {goals.churn}%)</Label>
           <Input
             type="number"
             value={churnOverride === "" ? churnPct : churnOverride}
@@ -1076,7 +1092,7 @@ function BonusSimulator({
             placeholder="Ex: 12"
           />
           <p className="text-[10px] text-muted-foreground mt-1">
-            Padrão: 100% − % de renovação. Edite para simular outro cenário.
+            Atingimento: {churnAttain.toFixed(0)}%
             {churnOverride !== "" && (
               <button
                 type="button"
@@ -1086,15 +1102,61 @@ function BonusSimulator({
                 resetar
               </button>
             )}
-            {churnPenaltyEnabled
-              ? ` Acima de ${churnPenaltyThreshold}% desconta ${churnPenaltyPercent}% do bônus.`
-              : " Penalidade por churn desativada."}
-            {churnTriggered && (
-              <span className="text-rose-600"> Desconto aplicado: −{formatBRL(churnDiscountValue)}</span>
-            )}
           </p>
         </div>
+        <div>
+          <Label className="text-xs">NPS ({weightNps}% peso · meta {goals.nps})</Label>
+          <Input
+            type="number"
+            value={npsScore ?? ""}
+            onChange={(e) => setNpsScore(parseNumberInput(e.target.value))}
+            placeholder="Ex: 75"
+          />
+          <p className="text-[10px] text-muted-foreground mt-1">Atingimento: {npsAttain.toFixed(0)}%</p>
+        </div>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="rounded-md border p-3 bg-muted/30">
+          <div className="text-xs text-muted-foreground">Atingimento global (ponderado)</div>
+          <div className="text-lg font-semibold">{pct.toFixed(0)}%</div>
+          <div className="text-[10px] text-muted-foreground mt-1">
+            Soma dos pesos: {totalWeight}%{totalWeight !== 100 ? " (ajuste para 100%)" : ""}
+          </div>
+        </div>
+        <div className="rounded-md border p-3 bg-muted/30">
+          <div className="text-xs text-muted-foreground">Faixa atingida</div>
+          <div className="text-lg font-semibold">{matched ? `${attainmentPct}% do bônus` : "—"}</div>
+          {matched?.label && <div className="text-[10px] text-muted-foreground mt-1">{matched.label}</div>}
+        </div>
+        <div className="rounded-md border p-3 bg-muted/30">
+          <div className="text-xs text-muted-foreground">Renovações (nº absoluto)</div>
+          <div className="text-lg font-semibold">{absoluteRenewals} de {totalRenewableContracts}</div>
+          <div className="text-[10px] text-muted-foreground mt-1">
+            Base: contratos ativos com vencimento entre Mai/2026 e Dez/2026.
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs">Bônus mensal base</Label>
+          <Input value={formatBRL(monthlyBonus)} disabled />
+        </div>
+        <div>
+          <Label className="text-xs">Salário bruto mensal</Label>
+          <Input value={formatBRL(baseSalary)} disabled />
+        </div>
+      </div>
+
+      {churnPenaltyEnabled && (
+        <p className="text-[11px] text-muted-foreground">
+          Penalidade por churn: acima de {churnPenaltyThreshold}% desconta {churnPenaltyPercent}% do bônus.
+          {churnTriggered && (
+            <span className="text-rose-600"> Aplicado: −{formatBRL(churnDiscountValue)}</span>
+          )}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="rounded-md border p-3 bg-muted/30">
@@ -1113,10 +1175,6 @@ function BonusSimulator({
           </div>
         </div>
       </div>
-
-      {matched?.label && (
-        <p className="text-xs text-muted-foreground">{matched.label}</p>
-      )}
     </div>
   );
 }
