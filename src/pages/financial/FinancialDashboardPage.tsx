@@ -1,296 +1,466 @@
-import { useState, useCallback } from "react";
-import { LayoutDashboard, Plus, Pencil, Trash2 } from "lucide-react";
-import { useFinancialDashboards } from "@/hooks/useFinancialDashboards";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { InsightsGrid } from "@/components/insights/grid/InsightsGrid";
-import { AddVisualModal } from "@/components/insights/AddVisualModal";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useMemo } from "react";
+import {
+  LayoutDashboard,
+  TrendingUp,
+  Wallet,
+  AlertTriangle,
+  CheckCircle2,
+  CalendarClock,
+  Repeat,
+  DollarSign,
+  Target,
+  Receipt,
+} from "lucide-react";
+import { useFinancialDashboardMetrics } from "@/hooks/useFinancialDashboardMetrics";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Legend,
+} from "recharts";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
-function useCanManage() {
-  const { currentUser } = useCurrentUser();
-  if (!currentUser) return false;
-  if (currentUser.role === "admin" || currentUser.is_also_admin) return true;
-  if (["Admin", "Gestor", "Financeiro"].includes(currentUser.team_role_name || "")) return true;
-  return false;
+const fmtBRL = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const fmtBRLcompact = (n: number) => {
+  if (Math.abs(n) >= 1_000_000) return `R$ ${(n / 1_000_000).toFixed(1).replace(".", ",")}M`;
+  if (Math.abs(n) >= 1_000) return `R$ ${(n / 1_000).toFixed(0)}k`;
+  return fmtBRL(n);
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  active: "Ativos",
+  paused: "Pausados",
+  suspended: "Suspensos",
+  suspended_bonus: "Susp. Bônus",
+  cancelled: "Cancelados",
+  ended: "Encerrados",
+  dismissed: "Demitidos",
+  dismissal_termination: "Rescisão",
+  dropout_7d: "Desistência 7d",
+};
+const STATUS_COLORS: Record<string, string> = {
+  active: "hsl(142 71% 45%)",
+  paused: "hsl(217 91% 60%)",
+  suspended: "hsl(38 92% 50%)",
+  suspended_bonus: "hsl(38 92% 50%)",
+  cancelled: "hsl(0 84% 60%)",
+  ended: "hsl(220 9% 46%)",
+  dismissed: "hsl(0 70% 50%)",
+  dismissal_termination: "hsl(0 60% 40%)",
+  dropout_7d: "hsl(280 65% 60%)",
+};
+
+function KpiCard({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  tone = "default",
+}: {
+  icon: any;
+  label: string;
+  value: string;
+  hint?: React.ReactNode;
+  tone?: "default" | "success" | "warning" | "danger" | "info";
+}) {
+  const toneClasses: Record<string, string> = {
+    default: "text-foreground",
+    success: "text-emerald-600",
+    warning: "text-amber-600",
+    danger: "text-red-600",
+    info: "text-blue-600",
+  };
+  const bgClasses: Record<string, string> = {
+    default: "bg-muted",
+    success: "bg-emerald-500/10",
+    warning: "bg-amber-500/10",
+    danger: "bg-red-500/10",
+    info: "bg-blue-500/10",
+  };
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1 min-w-0">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+            <p className={cn("text-2xl font-bold tabular-nums truncate", toneClasses[tone])}>{value}</p>
+            {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
+          </div>
+          <div className={cn("p-2.5 rounded-lg shrink-0", bgClasses[tone])}>
+            <Icon className={cn("h-5 w-5", toneClasses[tone])} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function FinancialDashboardPage() {
-  const canManage = useCanManage();
-  const {
-    dashboards,
-    activeDashboard,
-    activeDashboardId,
-    visuals,
-    isLoading,
-    isLoadingVisuals,
-    setActiveDashboardId,
-    createDashboard,
-    deleteDashboard,
-    renameDashboard,
-    addVisual,
-    updateVisual,
-    removeVisual,
-    isCreating,
-  } = useFinancialDashboards();
+  const navigate = useNavigate();
+  const { data, isLoading } = useFinancialDashboardMetrics();
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createName, setCreateName] = useState("");
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renameName, setRenameName] = useState("");
-  const [renameId, setRenameId] = useState<string | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [builderOpen, setBuilderOpen] = useState(false);
+  const contractStatusChart = useMemo(() => {
+    if (!data) return [];
+    return Object.entries(data.contractStatus)
+      .map(([status, v]) => ({
+        status,
+        label: STATUS_LABELS[status] || status,
+        color: STATUS_COLORS[status] || "hsl(220 9% 46%)",
+        count: v.count,
+        value: v.value,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [data]);
 
-  const handleCreate = async () => {
-    if (!createName.trim()) return;
-    await createDashboard(createName.trim());
-    setCreateName("");
-    setCreateOpen(false);
-  };
+  const agingChart = useMemo(() => {
+    if (!data) return [];
+    return [
+      { bucket: "1-30 dias", value: data.aging.d_0_30, count: data.agingCount.d_0_30, color: "hsl(38 92% 50%)" },
+      { bucket: "31-60 dias", value: data.aging.d_31_60, count: data.agingCount.d_31_60, color: "hsl(25 95% 53%)" },
+      { bucket: "61-90 dias", value: data.aging.d_61_90, count: data.agingCount.d_61_90, color: "hsl(0 84% 60%)" },
+      { bucket: "90+ dias", value: data.aging.d_90_plus, count: data.agingCount.d_90_plus, color: "hsl(0 70% 40%)" },
+    ];
+  }, [data]);
 
-  const handleRename = async () => {
-    if (!renameId || !renameName.trim()) return;
-    await renameDashboard(renameId, renameName.trim());
-    setRenameOpen(false);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    await deleteDashboard(deleteId);
-    setDeleteOpen(false);
-  };
-
-  const handleLayoutChange = useCallback((layouts: Array<{ id: string; layout: any }>) => {
-    layouts.forEach(({ id, layout }) => {
-      updateVisual(id, { layout: { x: layout.x, y: layout.y, w: layout.w, h: layout.h, scale: 48 } });
-    });
-  }, [updateVisual]);
-
-  if (isLoading) {
+  if (isLoading || !data) {
     return (
-      <div className="p-6 flex gap-4 h-[600px]">
-        <Skeleton className="w-56 h-full" />
-        <Skeleton className="flex-1 h-full" />
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-10 w-72" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <Skeleton className="h-72" />
       </div>
     );
   }
 
+  const k = data.kpis;
+
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <LayoutDashboard className="h-6 w-6" />
+            <LayoutDashboard className="h-6 w-6 text-primary" />
             Dashboard Financeiro
           </h1>
           <p className="text-sm text-muted-foreground">
-            Painéis personalizados com indicadores financeiros
+            Visão consolidada de recebíveis, contratos e saúde financeira • {format(new Date(), "dd 'de' MMMM, yyyy", { locale: ptBR })}
           </p>
         </div>
       </div>
 
-      <div className="flex gap-4 min-h-[600px]">
-        {/* Sidebar */}
-        <div className="w-56 shrink-0 border rounded-lg bg-card flex flex-col">
-          <div className="p-3 border-b">
-            <h3 className="font-semibold text-sm flex items-center gap-2 mb-2">
-              <LayoutDashboard className="h-4 w-4" />
-              Painéis
-            </h3>
-            {canManage && (
-              <Button variant="outline" size="sm" className="w-full justify-start gap-2" onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Criar Painel
-              </Button>
+      {/* KPIs principais */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard
+          icon={Repeat}
+          label="MRR"
+          value={fmtBRLcompact(k.mrr)}
+          hint={<>Receita recorrente mensal</>}
+          tone="success"
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label="ARR"
+          value={fmtBRLcompact(k.arr)}
+          hint={<>Receita anualizada</>}
+          tone="success"
+        />
+        <KpiCard
+          icon={Wallet}
+          label="A Receber (em aberto)"
+          value={fmtBRLcompact(k.totalOpen)}
+          hint={<>Total pendente histórico</>}
+          tone="info"
+        />
+        <KpiCard
+          icon={AlertTriangle}
+          label="Inadimplência"
+          value={fmtBRLcompact(k.totalOverdue)}
+          hint={
+            <>
+              {k.totalOpen > 0 ? `${((k.totalOverdue / k.totalOpen) * 100).toFixed(1)}%` : "0%"} do total em aberto
+            </>
+          }
+          tone={k.totalOverdue > 0 ? "danger" : "success"}
+        />
+
+        <KpiCard
+          icon={CheckCircle2}
+          label="Recebido no mês"
+          value={fmtBRLcompact(k.receivedThisMonth)}
+          hint={<>{k.paidThisMonthCount} parcelas pagas</>}
+          tone="success"
+        />
+        <KpiCard
+          icon={CalendarClock}
+          label="Previsto no mês"
+          value={fmtBRLcompact(k.expectedThisMonth)}
+          hint={<>{k.expectedCountThisMonth} parcelas com vencimento</>}
+          tone="info"
+        />
+        <KpiCard
+          icon={Target}
+          label="Taxa de cobrança"
+          value={`${k.collectionRate.toFixed(1)}%`}
+          hint={
+            <Progress value={Math.min(100, k.collectionRate)} className="h-1.5 mt-1" />
+          }
+          tone={k.collectionRate >= 80 ? "success" : k.collectionRate >= 50 ? "warning" : "danger"}
+        />
+        <KpiCard
+          icon={DollarSign}
+          label="Ticket médio (contrato)"
+          value={fmtBRLcompact(k.ticketMedio)}
+          hint={<>{k.activeContractsCount} contratos ativos</>}
+        />
+      </div>
+
+      {/* Forecast + Aging */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Forecast de Recebíveis (12 meses)</CardTitle>
+            <CardDescription>Previsto por vencimento × recebido por pagamento</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={[...data.history, ...data.forecast]} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tickFormatter={(v) => fmtBRLcompact(v)} tick={{ fontSize: 11 }} />
+                <Tooltip
+                  formatter={(v: any) => fmtBRL(Number(v))}
+                  contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="expected" name="Previsto" fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="received" name="Recebido" fill="hsl(142 71% 45%)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              Aging de Inadimplência
+            </CardTitle>
+            <CardDescription>Atrasos por faixa de dias</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {agingChart.map((b) => {
+              const total = data.kpis.totalOverdue || 1;
+              const pct = (b.value / total) * 100;
+              return (
+                <div key={b.bucket} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">{b.bucket}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {fmtBRLcompact(b.value)} <span className="text-xs">({b.count})</span>
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: b.color }} />
+                  </div>
+                </div>
+              );
+            })}
+            {data.kpis.totalOverdue === 0 && (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
+                Sem inadimplência 🎉
+              </div>
             )}
-          </div>
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-1">
-              {dashboards.length === 0 && (
-                <p className="text-xs text-muted-foreground p-2">Nenhum painel criado</p>
-              )}
-              {dashboards.map((d) => (
-                <div
-                  key={d.id}
-                  className={cn(
-                    "group flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer text-sm transition-colors",
-                    d.id === activeDashboardId
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "hover:bg-muted"
-                  )}
-                  onClick={() => setActiveDashboardId(d.id)}
-                >
-                  <span className="truncate flex-1">{d.name}</span>
-                  {canManage && (
-                    <div className="hidden group-hover:flex items-center gap-0.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setRenameId(d.id);
-                          setRenameName(d.name);
-                          setRenameOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteId(d.id);
-                          setDeleteOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Contratos + Receita por produto */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Contratos por Status</CardTitle>
+            <CardDescription>{k.totalContracts} contratos no total</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={contractStatusChart} dataKey="count" nameKey="label" innerRadius={50} outerRadius={85} paddingAngle={2}>
+                  {contractStatusChart.map((s) => (
+                    <Cell key={s.status} fill={s.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(v: any, _n, p: any) => [`${v} contratos · ${fmtBRLcompact(p.payload.value)}`, p.payload.label]}
+                  contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="mt-2 grid grid-cols-2 gap-1 text-xs">
+              {contractStatusChart.slice(0, 6).map((s) => (
+                <div key={s.status} className="flex items-center gap-1.5 truncate">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ background: s.color }} />
+                  <span className="truncate">{s.label}</span>
+                  <span className="text-muted-foreground ml-auto tabular-nums">{s.count}</span>
                 </div>
               ))}
             </div>
-          </ScrollArea>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Main content */}
-        <div className="flex-1 min-w-0">
-          {!activeDashboard ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 border rounded-lg bg-card/30 py-16">
-              <LayoutDashboard className="h-12 w-12 opacity-30" />
-              <p>{dashboards.length === 0 ? "Crie seu primeiro painel financeiro" : "Selecione um painel"}</p>
-              {canManage && dashboards.length === 0 && (
-                <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)} className="mt-2">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Painel
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">{activeDashboard.name}</h3>
-                {canManage && (
-                  <Button variant="outline" size="sm" onClick={() => setBuilderOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Visual
-                  </Button>
-                )}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Receita por Produto (contratos ativos)</CardTitle>
+            <CardDescription>Distribuição do valor contratado em base ativa</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.productBreakdown.length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-8">Sem contratos ativos</div>
+            ) : (
+              <div className="space-y-2.5">
+                {data.productBreakdown.slice(0, 8).map((p, i) => {
+                  const totalActive = data.productBreakdown.reduce((s, x) => s + x.total, 0) || 1;
+                  const pct = (p.total / totalActive) * 100;
+                  const color = p.product?.color || "#6b7280";
+                  return (
+                    <div key={i} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Badge
+                            variant="outline"
+                            className="font-medium border-transparent text-white"
+                            style={{ background: color }}
+                          >
+                            {p.product?.name || "Sem produto"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{p.count} contratos</span>
+                        </div>
+                        <span className="tabular-nums font-medium">{fmtBRLcompact(p.total)}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-
-              {isLoadingVisuals ? (
-                <Skeleton className="h-64 w-full" />
-              ) : visuals.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2 border rounded-lg bg-card/30">
-                  <LayoutDashboard className="h-10 w-10 opacity-30" />
-                  <p>Nenhum visual neste painel</p>
-                  {canManage && (
-                    <Button variant="outline" size="sm" onClick={() => setBuilderOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Visual
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <InsightsGrid
-                  visuals={visuals}
-                  onLayoutChange={handleLayoutChange}
-                  readOnly={!canManage}
-                  onUpdateVisual={updateVisual}
-                  onRemoveVisual={removeVisual}
-                />
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Criar Painel Financeiro</DialogTitle>
-          </DialogHeader>
-          <Input
-            placeholder="Nome do painel"
-            value={createName}
-            onChange={(e) => setCreateName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={isCreating || !createName.trim()}>Criar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Top devedores + Próximos vencimentos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                Top Inadimplentes
+              </CardTitle>
+              <CardDescription>Clientes com maior valor em atraso</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/financial/aging")}>
+              Ver tudo
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {data.topDebtors.length === 0 ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
+                Nenhum cliente em atraso
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {data.topDebtors.map((d, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                    onClick={() => d.client && navigate(`/clients/${d.client.id}`)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0">
+                        {d.client?.full_name?.charAt(0) || "?"}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm truncate">{d.client?.full_name || "Cliente desconhecido"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {d.count} parcelas · até {d.oldest}d de atraso
+                        </div>
+                      </div>
+                    </div>
+                    <div className="font-semibold tabular-nums text-red-600">{fmtBRLcompact(d.total)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Rename Dialog */}
-      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Renomear Painel</DialogTitle>
-          </DialogHeader>
-          <Input
-            value={renameName}
-            onChange={(e) => setRenameName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleRename()}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancelar</Button>
-            <Button onClick={handleRename} disabled={!renameName.trim()}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Dialog */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir painel?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Todos os visuais deste painel serão excluídos permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AddVisualModal
-        open={builderOpen}
-        onOpenChange={setBuilderOpen}
-        overrideDashboardId={activeDashboardId}
-        overrideAddVisual={addVisual}
-      />
+        <Card>
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <CalendarClock className="h-4 w-4 text-blue-600" />
+                Próximos Vencimentos (7 dias)
+              </CardTitle>
+              <CardDescription>Recebíveis a vencer na próxima semana</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/financial/parcelas")}>
+              Ver parcelas
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {data.upcoming.length === 0 ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                <Receipt className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                Nenhum vencimento nos próximos 7 dias
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {data.upcoming.map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                    onClick={() => u.client && navigate(`/clients/${u.client.id}`)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="text-xs font-semibold text-muted-foreground w-12 text-center">
+                        {format(new Date(u.due_date), "dd/MM")}
+                      </div>
+                      <div className="font-medium text-sm truncate">{u.client?.full_name || "—"}</div>
+                    </div>
+                    <div className="font-semibold tabular-nums">{fmtBRLcompact(u.amount)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
