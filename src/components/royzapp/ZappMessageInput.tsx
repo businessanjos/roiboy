@@ -1,4 +1,4 @@
-import { memo, useRef, useState, useMemo } from "react";
+import { memo, useRef, useState, useMemo, useEffect } from "react";
 import {
   Bold,
   BookOpen,
@@ -21,6 +21,8 @@ import {
   X,
   Zap,
   Reply,
+  Contrast,
+  Check,
 } from "lucide-react";
 import { SECURITY_LIMITS } from "@/lib/security-validators";
 import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
@@ -48,6 +50,99 @@ import { ZappGroupMentionInput, MentionData } from "./ZappGroupMentionInput";
 import { Message } from "./types";
 
 export type { MentionData };
+
+const HC_KEY = "royzapp-attachment-menu-hc";
+
+function AttachmentMenu({
+  uploadingMedia,
+  fileInputRef,
+  imageInputRef,
+  onOpenContactPicker,
+  onOpenQuickReplies,
+}: {
+  uploadingMedia: boolean;
+  fileInputRef?: React.RefObject<HTMLInputElement>;
+  imageInputRef?: React.RefObject<HTMLInputElement>;
+  onOpenContactPicker?: () => void;
+  onOpenQuickReplies?: () => void;
+}) {
+  const [highContrast, setHighContrast] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(HC_KEY) === "1";
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(HC_KEY, highContrast ? "1" : "0");
+    } catch {}
+  }, [highContrast]);
+
+  const contentClass = highContrast
+    ? "bg-black border-2 border-white text-white z-50 shadow-[0_0_0_1px_rgba(255,255,255,0.4)]"
+    : "bg-zapp-panel border-zapp-border z-50";
+
+  const itemClass = highContrast
+    ? "text-white hover:bg-white hover:text-black focus:bg-white focus:text-black cursor-pointer font-medium"
+    : "text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer";
+
+  const sepClass = highContrast ? "bg-white/40" : "bg-zapp-border";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
+          disabled={uploadingMedia}
+        >
+          {uploadingMedia ? (
+            <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
+          ) : (
+            <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className={contentClass}>
+        <DropdownMenuItem
+          onClick={() => fileInputRef?.current?.click()}
+          className={itemClass}
+        >
+          <FileText className={cn("h-4 w-4 mr-2", !highContrast && "text-[#7f66ff]")} />
+          Documento
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => imageInputRef?.current?.click()}
+          className={itemClass}
+        >
+          <ImageIcon className={cn("h-4 w-4 mr-2", !highContrast && "text-[#007bfc]")} />
+          Fotos e vídeos
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className={sepClass} />
+        <DropdownMenuItem onClick={onOpenContactPicker} className={itemClass}>
+          <Contact className={cn("h-4 w-4 mr-2", !highContrast && "text-[#02a698]")} />
+          Contato
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenQuickReplies} className={itemClass}>
+          <Zap className={cn("h-4 w-4 mr-2", !highContrast && "text-[#ffb000]")} />
+          Resposta rápida
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className={sepClass} />
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.preventDefault();
+            setHighContrast((v) => !v);
+          }}
+          className={itemClass}
+        >
+          <Contrast className="h-4 w-4 mr-2" />
+          <span className="flex-1">Alto contraste</span>
+          {highContrast && <Check className="h-4 w-4 ml-2" />}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 interface ReplyingToMessage {
   id: string;
@@ -424,53 +519,13 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </Tooltip>
         )}
         
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
-              disabled={uploadingMedia}
-            >
-              {uploadingMedia ? (
-                <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
-              ) : (
-                <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="bg-zapp-panel border-zapp-border z-50">
-            <DropdownMenuItem 
-              onClick={() => fileInputRef?.current?.click()}
-              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
-            >
-              <FileText className="h-4 w-4 mr-2 text-[#7f66ff]" />
-              Documento
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => imageInputRef?.current?.click()}
-              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
-            >
-              <ImageIcon className="h-4 w-4 mr-2 text-[#007bfc]" />
-              Fotos e vídeos
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-zapp-border" />
-            <DropdownMenuItem 
-              onClick={onOpenContactPicker}
-              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
-            >
-              <Contact className="h-4 w-4 mr-2 text-[#02a698]" />
-              Contato
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={onOpenQuickReplies}
-              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
-            >
-              <Zap className="h-4 w-4 mr-2 text-[#ffb000]" />
-              Resposta rápida
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <AttachmentMenu
+          uploadingMedia={uploadingMedia}
+          fileInputRef={fileInputRef}
+          imageInputRef={imageInputRef}
+          onOpenContactPicker={onOpenContactPicker}
+          onOpenQuickReplies={onOpenQuickReplies}
+        />
         
         {/* Playbook button - hidden on mobile */}
         {onOpenPlaybook && (
