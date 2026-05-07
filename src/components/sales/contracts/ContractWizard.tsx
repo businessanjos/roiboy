@@ -723,20 +723,16 @@ export const ContractWizard = ({
   }, [effectiveVariables]);
 
   const filledCounts = useMemo(() => {
-    const counts: Record<StepKey, { filled: number; total: number }> = {
-      client: { filled: 0, total: 0 },
-      mentee: { filled: 0, total: 0 },
-      company: { filled: 0, total: 0 },
-      payment: { filled: 0, total: 0 },
+    const counts: Record<StepKey, { filled: number; total: number; missingLabels: string[] }> = {
+      client: { filled: 0, total: 0, missingLabels: [] },
+      mentee: { filled: 0, total: 0, missingLabels: [] },
+      company: { filled: 0, total: 0, missingLabels: [] },
+      payment: { filled: 0, total: 0, missingLabels: [] },
     };
+    const isFilled = (x: any) => x !== null && x !== undefined && x !== "";
     (Object.keys(groupedVars) as StepKey[]).forEach((k) => {
       const list = groupedVars[k];
-      // For payment, only count fields relevant to the selected forma.
       let effectiveList = list;
-      // Para o step "client", os campos de CPF/CNPJ do contratante são
-      // ocultos do formulário (preenchidos pelo bloco de busca acima).
-      // Não devem ser contados como obrigatórios — caso contrário, o botão
-      // "Continuar" nunca habilita quando o template tem ambos CPF e CNPJ.
       if (k === "client") {
         effectiveList = list.filter((v) => {
           const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
@@ -760,24 +756,23 @@ export const ContractWizard = ({
         });
       }
       counts[k].total = effectiveList.length;
-      counts[k].filled = effectiveList.filter((v) => {
-        const x = placeholderValues?.[v.key];
-        return x !== null && x !== undefined && x !== "";
-      }).length;
-      // Adiciona "Forma de pagamento" (virtual) como campo obrigatório do step.
+      effectiveList.forEach((v) => {
+        if (isFilled(placeholderValues?.[v.key])) {
+          counts[k].filled += 1;
+        } else {
+          counts[k].missingLabels.push(v.label || v.key);
+        }
+      });
       if (k === "payment") {
         const hasFormaVarFilled = list.some(
-          (v) => classifyPaymentVar(v.key) === "forma" &&
-            placeholderValues?.[v.key] !== null &&
-            placeholderValues?.[v.key] !== undefined &&
-            placeholderValues?.[v.key] !== "",
+          (v) => classifyPaymentVar(v.key) === "forma" && isFilled(placeholderValues?.[v.key]),
         );
         const formaUi = placeholderValues?.["__FORMA_PAGAMENTO_UI__"];
         const formaFilled = !!formaUi || hasFormaVarFilled;
         counts[k].total += 1;
         if (formaFilled) counts[k].filled += 1;
+        else counts[k].missingLabels.push("Forma de pagamento");
 
-        // Se houve entrada, exigir valor e forma da entrada.
         const formaCurrent = placeholderValues?.["__FORMA_PAGAMENTO_UI__"];
         const opt = PAYMENT_OPTIONS.find(
           (o) => o.value === formaCurrent || o.contractLabel === formaCurrent || o.label === formaCurrent,
@@ -788,29 +783,30 @@ export const ContractWizard = ({
           const entradaValor = placeholderValues?.["__ENTRADA_VALOR__"];
           const entradaForma = placeholderValues?.["__ENTRADA_FORMA__"];
           counts[k].total += 2;
-          if (entradaValor !== null && entradaValor !== undefined && entradaValor !== "" && Number(entradaValor) > 0) {
-            counts[k].filled += 1;
-          }
+          if (isFilled(entradaValor) && Number(entradaValor) > 0) counts[k].filled += 1;
+          else counts[k].missingLabels.push("Valor da entrada");
           if (entradaForma) counts[k].filled += 1;
+          else counts[k].missingLabels.push("Forma da entrada");
         }
       }
     });
-    // Mentee step is data-driven (not template-variable-driven). Compute its
-    // own progress from menteeData when it is wired in.
     if (onMenteeChange && menteeData) {
-      const fields: (keyof DigitalContractData)[] = [
-        "client_name",
-        "client_cpf_cnpj",
-        "client_email",
-        "client_address",
-        "client_nationality",
-        "client_marital_status",
+      const fields: { key: keyof DigitalContractData; label: string }[] = [
+        { key: "client_name", label: "Nome do mentorado" },
+        { key: "client_cpf_cnpj", label: "CPF/CNPJ do mentorado" },
+        { key: "client_email", label: "E-mail do mentorado" },
+        { key: "client_address", label: "Endereço do mentorado" },
+        { key: "client_nationality", label: "Nacionalidade" },
+        { key: "client_marital_status", label: "Estado civil" },
       ];
       counts.mentee.total = fields.length;
-      counts.mentee.filled = fields.filter((f) => {
-        const v = (menteeData as any)?.[f];
-        return v !== null && v !== undefined && v !== "";
-      }).length;
+      counts.mentee.filled = 0;
+      counts.mentee.missingLabels = [];
+      fields.forEach((f) => {
+        const v = (menteeData as any)?.[f.key];
+        if (isFilled(v)) counts.mentee.filled += 1;
+        else counts.mentee.missingLabels.push(f.label);
+      });
     }
     return counts;
   }, [groupedVars, placeholderValues, menteeData, onMenteeChange]);
