@@ -39,7 +39,25 @@ Deno.serve(async (req) => {
     // 1) profile
     const prof = await hiker("/v1/user/by/username", { username: cleanUsername }, apiKey);
     if (!prof.ok) {
-      return new Response(JSON.stringify({ error: "Falha ao buscar perfil", status: prof.status, details: prof.json || prof.text }), {
+      const code = (prof.json?.detail || prof.json?.error || "").toString().toLowerCase();
+      let friendly = "Falha ao buscar perfil no Instagram.";
+      let action: string | null = null;
+      if (prof.status === 402 || code.includes("insufficient")) {
+        friendly = "Saldo insuficiente na HikerAPI.";
+        action = "Recarregue o saldo em https://hikerapi.com/billing e tente novamente.";
+      } else if (prof.status === 401 || prof.status === 403) {
+        friendly = "Chave da HikerAPI inválida ou sem permissão.";
+        action = "Verifique a chave em https://hikerapi.com e atualize o segredo HIKERAPI_KEY.";
+      } else if (prof.status === 404) {
+        friendly = `Usuário @${cleanUsername} não encontrado no Instagram.`;
+      } else if (prof.status === 429) {
+        friendly = "Limite de requisições da HikerAPI atingido.";
+        action = "Aguarde alguns instantes e tente novamente.";
+      } else if (prof.status >= 500) {
+        friendly = "A HikerAPI está instável no momento.";
+        action = "Tente novamente em alguns minutos.";
+      }
+      return new Response(JSON.stringify({ error: friendly, action, status: prof.status, details: prof.json || prof.text }), {
         status: prof.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
