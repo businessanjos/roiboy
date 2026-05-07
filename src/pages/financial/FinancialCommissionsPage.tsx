@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Percent, Briefcase, HeartHandshake } from "lucide-react";
 import { CommissionTab } from "@/components/sales/commission/CommissionTab";
+import { CommissionConsultantBreakdown } from "@/components/financial/CommissionConsultantBreakdown";
 import { CsIncentivePlanSection } from "@/components/operations/CsIncentivePlanSection";
 import { ConsultantPayoutTable } from "@/components/operations/ConsultantPayoutTable";
 import { useConsultantGoals } from "@/hooks/useConsultantGoals";
@@ -92,6 +93,7 @@ export default function FinancialCommissionsPage() {
                 no pipeline de vendas.
               </div>
               <CommissionTab />
+              <CommissionConsultantBreakdown />
             </TabsContent>
 
             <TabsContent value="operations" className="space-y-6">
