@@ -93,6 +93,7 @@ export default function FinancialCommissionsPage() {
                 no pipeline de vendas.
               </div>
               <CommissionTab />
+              <CommissionConsultantBreakdown />
             </TabsContent>
 
             <TabsContent value="operations" className="space-y-6">
