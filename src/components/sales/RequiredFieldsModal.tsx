@@ -241,6 +241,75 @@ export function RequiredFieldsModal({
         }
       }
 
+      // Upsert Pagador (payer) + vínculo client_payers
+      if (showBilling && isBillingMentoreeComplete(billingValues)) {
+        try {
+          const { data: dealRow } = await supabase
+            .from("deals")
+            .select("client_id")
+            .eq("id", dealId)
+            .maybeSingle();
+          const cid = (dealRow as any)?.client_id || clientId || null;
+
+          const docClean = billingValues.doc.replace(/\D/g, "");
+          if (docClean) {
+            // Find existing payer by account + document
+            const { data: existingPayer } = await supabase
+              .from("payers")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("document", docClean)
+              .maybeSingle();
+
+            const payerPayload: any = {
+              account_id: accountId,
+              document_type: billingValues.tipo_pessoa,
+              document: docClean,
+              legal_name: billingValues.razao_social,
+              email_billing: billingValues.email_nf || null,
+              phone_billing: billingValues.ment_telefone || null,
+            };
+
+            let payerId = (existingPayer as any)?.id as string | undefined;
+            if (payerId) {
+              await supabase.from("payers").update(payerPayload).eq("id", payerId);
+            } else {
+              const { data: inserted, error: pErr } = await supabase
+                .from("payers")
+                .insert(payerPayload)
+                .select("id")
+                .single();
+              if (pErr) throw pErr;
+              payerId = (inserted as any).id;
+            }
+
+            if (cid && payerId) {
+              const { data: link } = await supabase
+                .from("client_payers")
+                .select("id")
+                .eq("client_id", cid)
+                .eq("payer_id", payerId)
+                .maybeSingle();
+              if (!link) {
+                const isSelf =
+                  billingValues.razao_social.trim().toLowerCase() ===
+                  (billingValues.ment_nome || "").trim().toLowerCase();
+                await supabase.from("client_payers").insert({
+                  account_id: accountId,
+                  client_id: cid,
+                  payer_id: payerId,
+                  relationship: billingValues.tipo_pessoa === "cnpj" ? "company" : isSelf ? "self" : "other",
+                  is_default: true,
+                });
+              }
+            }
+          }
+        } catch (payerErr) {
+          console.error("Erro ao salvar pagador:", payerErr);
+          // não bloqueia o ganho — apenas registra
+        }
+      }
+
       toast.success("Campos preenchidos!");
       onComplete();
       onOpenChange(false);
