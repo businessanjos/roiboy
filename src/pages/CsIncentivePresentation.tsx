@@ -74,6 +74,7 @@ export default function CsIncentivePresentation() {
       { id: "tiers", render: () => <SlideTiers tiers={refTiers} plan={referencePlan} /> },
       { id: "extras", render: () => <SlideExtras plans={activePlans} /> },
       { id: "rituals", render: () => <SlideRituals plan={referencePlan} /> },
+      { id: "stepbystep", render: () => <SlideStepByStep /> },
       { id: "close", render: () => <SlideClose /> },
     ],
     [referencePlan, refTiers, activePlans],
@@ -642,6 +643,143 @@ function SlideRituals({ plan }: { plan: any }) {
         <Flame className="h-5 w-5 text-rose-300 flex-shrink-0" />
         <p className="text-rose-100 text-sm">
           <strong className="text-white">Disciplina é o atalho.</strong> Quem segue o ritual entrega resultado, e quem entrega resultado bate o bônus.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SlideStepByStep() {
+  const days = [
+    {
+      tag: "Toda segunda",
+      title: "Abra a carteira e olhe cliente por cliente",
+      color: "from-rose-500 to-rose-700",
+      icon: ClipboardList,
+      steps: [
+        "Entre em Operações › Minhas Clientes.",
+        "Filtre por status Ativo e ordene por 'próximo do vencimento'.",
+        "Marque na sua agenda quem precisa de check-in nesta semana.",
+        "Sinalize no card quem está em risco (vermelho) ou atenção (amarelo).",
+      ],
+    },
+    {
+      tag: "Todo dia",
+      title: "Faça os check-ins agendados — sem pular",
+      color: "from-amber-500 to-orange-600",
+      icon: Phone,
+      steps: [
+        "Abra a cliente do dia e leia o histórico antes de chamar.",
+        "Pergunte sobre evolução, dificuldade e expectativa do mês.",
+        "Registre TUDO no Timeline da cliente (mesmo áudio rápido vale).",
+        "Agende a próxima conversa antes de encerrar a atual.",
+      ],
+    },
+    {
+      tag: "Toda sexta",
+      title: "Atualize os indicadores da carteira",
+      color: "from-fuchsia-500 to-pink-600",
+      icon: LineChart,
+      steps: [
+        "Marque NPS coletado da semana em cada cliente.",
+        "Atualize status de risco/saúde com base no que viveu.",
+        "Liste no grupo do time quem entrou em risco e por quê.",
+        "Comemore as vitórias da semana — toda renovação merece festa.",
+      ],
+    },
+    {
+      tag: "Mês 9 do contrato",
+      title: "Comece o plano de renovação",
+      color: "from-emerald-500 to-teal-600",
+      icon: CalendarCheck,
+      steps: [
+        "A plataforma avisa: cliente entrou na janela de renovação.",
+        "Marque uma conversa de 'balanço do ano' — não fale de venda ainda.",
+        "Mapeie resultados, dores que sumiram e novas ambições.",
+        "No mês 10, apresente a proposta de renovação com base nesse balanço.",
+      ],
+    },
+    {
+      tag: "Toda virada de mês",
+      title: "Confira seu bônus na plataforma",
+      color: "from-indigo-500 to-violet-600",
+      icon: Trophy,
+      steps: [
+        "Vá em Financeiro › Comissões › aba Operações.",
+        "Veja sua apuração: renovação, churn e NPS do mês.",
+        "Clique em cada métrica para entender o cálculo (transparência total).",
+        "Se algo parecer errado, fale com a liderança ANTES de aprovar.",
+      ],
+    },
+    {
+      tag: "Quando bater dúvida",
+      title: "Não invente — pergunte",
+      color: "from-sky-500 to-cyan-600",
+      icon: HeartHandshake,
+      steps: [
+        "Dúvida de cliente: chame no grupo das consultoras primeiro.",
+        "Dúvida de regra ou bônus: chame a Bruna direto.",
+        "Caso delicado: registre o caso no Timeline e escala pra liderança.",
+        "Tudo que ficou combinado vira nota no card da cliente.",
+      ],
+    },
+  ];
+
+  return (
+    <div className="space-y-8 py-6">
+      <div>
+        <p className="text-rose-300 text-sm uppercase tracking-[0.3em] mb-3">Passo a passo · beabá</p>
+        <h2 className="text-5xl font-black">
+          O dia a dia, <span className="text-rose-300">no detalhe</span>
+        </h2>
+        <p className="text-slate-400 mt-2 text-lg">
+          Sem mistério. Se seguir esse roteiro, o bônus acontece.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {days.map((d, i) => {
+          const Icon = d.icon;
+          return (
+            <div
+              key={i}
+              className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.01] p-6 hover:border-white/20 transition-all"
+            >
+              <div className="flex items-start gap-5">
+                <div
+                  className={cn(
+                    "h-14 w-14 rounded-2xl bg-gradient-to-br flex items-center justify-center flex-shrink-0 shadow-lg",
+                    d.color,
+                  )}
+                >
+                  <Icon className="h-7 w-7 text-white" strokeWidth={2.2} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-rose-300/80 font-bold mb-1">
+                    {d.tag}
+                  </p>
+                  <p className="text-xl font-black text-white mb-3">{d.title}</p>
+                  <ol className="space-y-2">
+                    {d.steps.map((s, j) => (
+                      <li key={j} className="flex gap-3 text-slate-200 text-sm leading-relaxed">
+                        <span className="flex-shrink-0 h-6 w-6 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs font-bold text-rose-200">
+                          {j + 1}
+                        </span>
+                        <span className="pt-0.5">{s}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="rounded-xl border border-amber-300/30 bg-amber-300/5 p-5 flex items-start gap-3">
+        <Star className="h-5 w-5 text-amber-300 flex-shrink-0 mt-0.5" />
+        <p className="text-amber-50 text-sm leading-relaxed">
+          <strong className="text-white">Regra de ouro:</strong> registrou no sistema, aconteceu. Não registrou, não conta — nem pra cliente, nem pro bônus.
         </p>
       </div>
     </div>
