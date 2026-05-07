@@ -141,6 +141,7 @@ const FinancialBoletosPage = lazyRetry(() => import("./pages/financial/Financial
 const FinancialNotasFiscaisPage = lazyRetry(() => import("./pages/financial/FinancialNotasFiscaisPage"));
 const FinancialBalanceSheetPage = lazyRetry(() => import("./pages/financial/FinancialBalanceSheetPage"));
 const FinancialInvoicesPage = lazyRetry(() => import("./pages/financial/FinancialInvoicesPage"));
+const FinancialInstallmentsPage = lazyRetry(() => import("./pages/financial/FinancialInstallmentsPage"));
 const FinancialPaymentMethodsPage = lazyRetry(() => import("./pages/financial/FinancialPaymentMethodsPage"));
 
 const queryClient = new QueryClient({
