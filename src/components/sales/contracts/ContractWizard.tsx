@@ -2044,6 +2044,18 @@ export const ContractWizard = ({
   const missingLabels = currentStepCounts?.missingLabels ?? [];
   const missingPreview = missingLabels.slice(0, 4).join(", ") + (missingLabels.length > 4 ? `, +${missingLabels.length - 4}` : "");
 
+  // Debug: ajuda a investigar quando o botão fica desabilitado sem aviso visível
+  if (typeof window !== "undefined" && step !== "review" && !currentStepComplete) {
+    // eslint-disable-next-line no-console
+    console.debug("[ContractWizard] Step incompleto", {
+      step,
+      filled: currentStepCounts?.filled,
+      total: currentStepCounts?.total,
+      missingLabels,
+      placeholderValues,
+    });
+  }
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className="rounded-xl border border-border bg-card overflow-hidden">
