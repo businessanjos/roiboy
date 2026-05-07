@@ -2411,6 +2411,8 @@ export default function ClientDetail() {
             );
           case "churn-signals":
             return <ClientChurnSignals clientId={id!} />;
+          case "instagram":
+            return <ClientInstagram clientId={id!} initialUsername={(client as any)?.instagram} />;
           case "deals":
             return (
               <Card className="shadow-card">
