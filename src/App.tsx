@@ -168,6 +168,7 @@ const App = () => (
                     <Sonner />
                     <BrowserRouter>
                       <SectorProvider>
+                        <CompanyProvider>
                         <ImpersonationBanner />
                         <Suspense fallback={<PageLoader />}>
                           <Routes>
