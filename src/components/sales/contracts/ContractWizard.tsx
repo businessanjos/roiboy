@@ -2041,6 +2041,8 @@ export const ContractWizard = ({
   const currentStepComplete =
     !currentStepCounts || currentStepCounts.total === 0 || currentStepCounts.filled >= currentStepCounts.total;
   const missingInStep = currentStepCounts ? currentStepCounts.total - currentStepCounts.filled : 0;
+  const missingLabels = currentStepCounts?.missingLabels ?? [];
+  const missingPreview = missingLabels.slice(0, 4).join(", ") + (missingLabels.length > 4 ? `, +${missingLabels.length - 4}` : "");
 
   return (
     <TooltipProvider delayDuration={150}>
