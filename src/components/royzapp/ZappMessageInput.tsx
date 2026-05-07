@@ -439,7 +439,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="bg-[#233138] border-zapp-border z-50">
+          <DropdownMenuContent side="top" align="start" className="bg-zapp-panel border-zapp-border z-50">
             <DropdownMenuItem 
               onClick={() => fileInputRef?.current?.click()}
               className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
