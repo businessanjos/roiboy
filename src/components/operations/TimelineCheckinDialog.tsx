@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, NotebookPen } from "lucide-react";
+import { Loader2, NotebookPen, Eye, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 
 const schema = z.object({
@@ -27,6 +27,23 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
+
+function buildPreview(v: Partial<FormValues>, weekLabel: string): string {
+  return [
+    `📋 *Check-in semanal* (${weekLabel})`,
+    ``,
+    `🗒 *Resumo:* ${v.summary || "—"}`,
+    ``,
+    `✅ *Vitórias:* ${v.wins || "—"}`,
+    ``,
+    `⚠️ *Frustrações / bloqueios:* ${v.blockers || "—"}`,
+    ``,
+    `🎯 *Próximo passo combinado:* ${v.nextStep || "—"}`,
+    v.nextDate ? `📅 *Próximo check-in:* ${v.nextDate}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 
 interface Props {
   open: boolean;
@@ -80,20 +97,7 @@ export function TimelineCheckinDialog({
       const v = parsed.data;
       const today = new Date().toLocaleDateString("pt-BR");
       const title = `Check-in semanal — ${today}`;
-      const content = [
-        `📋 *Check-in semanal* (${weekLabel})`,
-        ``,
-        `🗒 *Resumo:* ${v.summary}`,
-        ``,
-        `✅ *Vitórias:* ${v.wins}`,
-        ``,
-        `⚠️ *Frustrações / bloqueios:* ${v.blockers}`,
-        ``,
-        `🎯 *Próximo passo combinado:* ${v.nextStep}`,
-        v.nextDate ? `📅 *Próximo check-in:* ${v.nextDate}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
+      const content = buildPreview(v, weekLabel);
 
       const { error } = await supabase.from("client_followups").insert({
         account_id: currentUser.account_id,
@@ -208,6 +212,8 @@ export function TimelineCheckinDialog({
           </Field>
         </div>
 
+        <PreviewBlock text={buildPreview(values, weekLabel)} />
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
@@ -242,6 +248,33 @@ function Field({
       ) : help ? (
         <p className="text-xs text-muted-foreground">{help}</p>
       ) : null}
+    </div>
+  );
+}
+
+function PreviewBlock({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Prévia copiada");
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <div className="mt-4 rounded-lg border border-primary/30 bg-muted/40">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Eye className="h-3.5 w-3.5" />
+          Prévia do que vai pra Timeline
+        </div>
+        <Button size="sm" variant="ghost" onClick={handleCopy} className="h-7 gap-1.5 text-xs">
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "Copiado" : "Copiar"}
+        </Button>
+      </div>
+      <pre className="px-4 py-3 text-sm whitespace-pre-wrap font-sans leading-relaxed text-foreground">
+        {text}
+      </pre>
     </div>
   );
 }
