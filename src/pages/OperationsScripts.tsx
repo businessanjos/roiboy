@@ -346,6 +346,17 @@ export default function OperationsScripts() {
   );
   const overallPct = totalItems > 0 ? Math.round((totalDone / totalItems) * 100) : 0;
 
+  // Required items = todos os itens do check-in (blocos especiais são opcionais)
+  const requiredKeys = useMemo(
+    () =>
+      CHECKIN_BLOCKS.flatMap((b) => b.items.map((_, i) => makeItemKey(b.id, i))),
+    [],
+  );
+  const requiredDone = requiredKeys.filter((k) => completedKeys.has(k)).length;
+  const requiredTotal = requiredKeys.length;
+  const requiredMissing = requiredTotal - requiredDone;
+  const canRegister = !!clientId && requiredMissing === 0;
+
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-start justify-between gap-3">
