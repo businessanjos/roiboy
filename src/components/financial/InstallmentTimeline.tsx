@@ -156,52 +156,117 @@ export function InstallmentTimeline({ installmentId, className }: Props) {
     );
   }
 
+  const latest = events[events.length - 1];
+  const latestMeta = EVENT_META[latest.event_type] ?? {
+    icon: Clock,
+    label: latest.event_type,
+    tone: "text-muted-foreground",
+  };
+  const LatestIcon = latestMeta.icon;
+  const latestDescription = describePayload(latest.event_type, latest.payload);
+  const lastStatusChange = [...events]
+    .reverse()
+    .find((e) => e.event_type === "status_change");
+  const currentStatus =
+    lastStatusChange?.payload?.to ?? lastStatusChange?.payload?.new ?? null;
+
   return (
-    <ol className={cn("relative space-y-4 pl-6", className)}>
-      <span
-        aria-hidden
-        className="absolute left-2 top-1 bottom-1 w-px bg-border"
-      />
-      {events.map((ev) => {
-        const meta = EVENT_META[ev.event_type] ?? {
-          icon: Clock,
-          label: ev.event_type,
-          tone: "text-muted-foreground",
-        };
-        const Icon = meta.icon;
-        const description = describePayload(ev.event_type, ev.payload);
-        return (
-          <li key={ev.id} className="relative">
+    <div className={cn("space-y-4", className)}>
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
             <span
               className={cn(
-                "absolute -left-[22px] top-1 flex h-5 w-5 items-center justify-center rounded-full bg-background ring-2 ring-border",
-                meta.tone
+                "flex h-9 w-9 items-center justify-center rounded-full bg-muted",
+                latestMeta.tone
               )}
             >
-              <Icon className="h-3 w-3" />
+              <LatestIcon className="h-4 w-4" />
             </span>
-            <div className="flex flex-col gap-1 rounded-md border border-border bg-card/50 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{meta.label}</span>
-                  <Badge variant="outline" className="text-[10px] uppercase">
-                    {ev.event_type}
-                  </Badge>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {format(new Date(ev.created_at), "dd/MM/yyyy 'às' HH:mm", {
-                    locale: ptBR,
-                  })}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Status atual
                 </span>
+                {currentStatus && (
+                  <Badge variant="secondary" className="capitalize">
+                    {String(currentStatus).replace(/_/g, " ")}
+                  </Badge>
+                )}
               </div>
-              {description && (
-                <p className="text-sm text-muted-foreground">{description}</p>
+              <p className="text-sm font-medium">
+                Última movimentação: {latestMeta.label}
+              </p>
+              {latestDescription && (
+                <p className="text-xs text-muted-foreground">
+                  {latestDescription}
+                </p>
               )}
             </div>
-          </li>
-        );
-      })}
-    </ol>
+          </div>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {format(new Date(latest.created_at), "dd/MM/yyyy 'às' HH:mm", {
+              locale: ptBR,
+            })}
+          </span>
+        </div>
+        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+          <span>{events.length} eventos registrados</span>
+          <span>
+            Início:{" "}
+            {format(new Date(events[0].created_at), "dd/MM/yyyy", {
+              locale: ptBR,
+            })}
+          </span>
+        </div>
+      </div>
+
+      <ol className="relative space-y-4 pl-6">
+        <span
+          aria-hidden
+          className="absolute left-2 top-1 bottom-1 w-px bg-border"
+        />
+        {events.map((ev) => {
+          const meta = EVENT_META[ev.event_type] ?? {
+            icon: Clock,
+            label: ev.event_type,
+            tone: "text-muted-foreground",
+          };
+          const Icon = meta.icon;
+          const description = describePayload(ev.event_type, ev.payload);
+          return (
+            <li key={ev.id} className="relative">
+              <span
+                className={cn(
+                  "absolute -left-[22px] top-1 flex h-5 w-5 items-center justify-center rounded-full bg-background ring-2 ring-border",
+                  meta.tone
+                )}
+              >
+                <Icon className="h-3 w-3" />
+              </span>
+              <div className="flex flex-col gap-1 rounded-md border border-border bg-card/50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{meta.label}</span>
+                    <Badge variant="outline" className="text-[10px] uppercase">
+                      {ev.event_type}
+                    </Badge>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(ev.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                      locale: ptBR,
+                    })}
+                  </span>
+                </div>
+                {description && (
+                  <p className="text-sm text-muted-foreground">{description}</p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 
