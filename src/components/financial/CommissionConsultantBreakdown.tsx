@@ -87,6 +87,7 @@ function groupByUser(entries: CommissionDealEntry[], cargo: "Closer" | "SDR"): C
 
 function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
   const [open, setOpen] = useState(false);
+  const [approvalEntry, setApprovalEntry] = useState<CommissionDealEntry | null>(null);
 
   const tierName = useMemo(() => {
     if (!plan?.tiers?.length) return null;
