@@ -29,6 +29,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useReloadPermissions } from "@/hooks/useReloadPermissions";
 import { CompanySelector } from "@/components/financial/CompanySelector";
+import { FailedZappSendsAlert } from "@/components/royzapp/FailedZappSendsAlert";
 
 export function GlobalHeader() {
   const { currentUser } = useCurrentUser();
