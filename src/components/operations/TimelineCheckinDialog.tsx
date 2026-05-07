@@ -251,3 +251,30 @@ function Field({
     </div>
   );
 }
+
+function PreviewBlock({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Prévia copiada");
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <div className="mt-4 rounded-lg border border-primary/30 bg-muted/40">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Eye className="h-3.5 w-3.5" />
+          Prévia do que vai pra Timeline
+        </div>
+        <Button size="sm" variant="ghost" onClick={handleCopy} className="h-7 gap-1.5 text-xs">
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "Copiado" : "Copiar"}
+        </Button>
+      </div>
+      <pre className="px-4 py-3 text-sm whitespace-pre-wrap font-sans leading-relaxed text-foreground">
+        {text}
+      </pre>
+    </div>
+  );
+}
