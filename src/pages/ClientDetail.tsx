@@ -32,6 +32,7 @@ import { ClientFormResponses } from "@/components/client/ClientFormResponses";
 import { OperationBriefingForm } from "@/components/operations/OperationBriefingForm";
 import { ClientRelationships } from "@/components/client/ClientRelationships";
 import { ClientDeals } from "@/components/client/ClientDeals";
+import { ClientInstagram } from "@/components/client/ClientInstagram";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
