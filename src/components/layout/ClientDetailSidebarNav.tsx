@@ -37,6 +37,7 @@ const navGroups: NavGroup[] = [
       { id: "campos", label: "Campos", icon: Grid3X3 },
       { id: "sales", label: "Metas & Vendas", icon: Target },
       { id: "cx", label: "Momentos CX", icon: Heart },
+      { id: "instagram", label: "Instagram", icon: Instagram },
       { id: "vinculos", label: "Vínculos", icon: Link2 },
     ],
   },
