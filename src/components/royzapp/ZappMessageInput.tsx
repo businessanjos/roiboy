@@ -1,4 +1,4 @@
-import { memo, useRef, useState, useMemo } from "react";
+import { memo, useRef, useState, useMemo, useEffect } from "react";
 import {
   Bold,
   BookOpen,
@@ -21,6 +21,8 @@ import {
   X,
   Zap,
   Reply,
+  Contrast,
+  Check,
 } from "lucide-react";
 import { SECURITY_LIMITS } from "@/lib/security-validators";
 import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
@@ -424,53 +426,13 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </Tooltip>
         )}
         
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
-              disabled={uploadingMedia}
-            >
-              {uploadingMedia ? (
-                <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
-              ) : (
-                <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="bg-zapp-panel border-zapp-border z-50">
-            <DropdownMenuItem 
-              onClick={() => fileInputRef?.current?.click()}
-              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
-            >
-              <FileText className="h-4 w-4 mr-2 text-[#7f66ff]" />
-              Documento
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => imageInputRef?.current?.click()}
-              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
-            >
-              <ImageIcon className="h-4 w-4 mr-2 text-[#007bfc]" />
-              Fotos e vídeos
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-zapp-border" />
-            <DropdownMenuItem 
-              onClick={onOpenContactPicker}
-              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
-            >
-              <Contact className="h-4 w-4 mr-2 text-[#02a698]" />
-              Contato
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={onOpenQuickReplies}
-              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
-            >
-              <Zap className="h-4 w-4 mr-2 text-[#ffb000]" />
-              Resposta rápida
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <AttachmentMenu
+          uploadingMedia={uploadingMedia}
+          fileInputRef={fileInputRef}
+          imageInputRef={imageInputRef}
+          onOpenContactPicker={onOpenContactPicker}
+          onOpenQuickReplies={onOpenQuickReplies}
+        />
         
         {/* Playbook button - hidden on mobile */}
         {onOpenPlaybook && (
