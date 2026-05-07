@@ -939,7 +939,7 @@ function BonusSimulator({
   const { data: dashboardGoals } = useQuery({
     queryKey: ["cs-bonus-dashboard-goals"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("accounts")
         .select("dashboard_churn_goal, dashboard_renewal_goal, dashboard_nps_goal")
         .limit(1)
