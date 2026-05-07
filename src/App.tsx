@@ -287,7 +287,8 @@ const App = () => (
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Suspense>
-                    </SectorProvider>
+                        </CompanyProvider>
+                      </SectorProvider>
                   </BrowserRouter>
                   </TooltipProvider>
             </PermissionsProvider>
