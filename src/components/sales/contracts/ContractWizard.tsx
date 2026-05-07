@@ -2044,6 +2044,18 @@ export const ContractWizard = ({
   const missingLabels = currentStepCounts?.missingLabels ?? [];
   const missingPreview = missingLabels.slice(0, 4).join(", ") + (missingLabels.length > 4 ? `, +${missingLabels.length - 4}` : "");
 
+  // Debug: ajuda a investigar quando o botão fica desabilitado sem aviso visível
+  if (typeof window !== "undefined" && step !== "review" && !currentStepComplete) {
+    // eslint-disable-next-line no-console
+    console.debug("[ContractWizard] Step incompleto", {
+      step,
+      filled: currentStepCounts?.filled,
+      total: currentStepCounts?.total,
+      missingLabels,
+      placeholderValues,
+    });
+  }
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -2111,12 +2123,16 @@ export const ContractWizard = ({
           {/* Stepper */}
           <Stepper steps={visibleSteps} current={step} onPick={setStep} filledCounts={filledCounts} />
 
-          {!currentStepComplete && missingLabels.length > 0 && (
+          {!currentStepComplete && (
             <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
               <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
               <div className="min-w-0">
                 <span className="font-medium">Para continuar, preencha:</span>{" "}
-                <span>{missingLabels.join(" · ")}</span>
+                <span>
+                  {missingLabels.length > 0
+                    ? missingLabels.join(" · ")
+                    : `${missingInStep} campo(s) pendente(s) — abra o console (F12) para ver detalhes`}
+                </span>
               </div>
             </div>
           )}
