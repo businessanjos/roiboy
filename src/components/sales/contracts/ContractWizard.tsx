@@ -2145,6 +2145,9 @@ export const ContractWizard = ({
                     `Preencha todos os campos obrigatórios antes de avançar${
                       missingInStep > 0 ? ` (${missingInStep} pendente${missingInStep > 1 ? "s" : ""})` : ""
                     }.`,
+                    missingLabels.length > 0
+                      ? { description: `Faltam: ${missingLabels.join(", ")}` }
+                      : undefined,
                   );
                   return;
                 }
@@ -2164,7 +2167,13 @@ export const ContractWizard = ({
                 setStep(allKeys[currentIdx + 1]);
               }}
               disabled={!canNext || disabled || !currentStepComplete}
-              title={!currentStepComplete ? "Preencha todos os campos da etapa para continuar" : undefined}
+              title={
+                !currentStepComplete
+                  ? missingLabels.length > 0
+                    ? `Faltam: ${missingPreview}`
+                    : "Preencha todos os campos da etapa para continuar"
+                  : undefined
+              }
             >
               {allKeys[currentIdx + 1] === "review" ? (
                 <>
