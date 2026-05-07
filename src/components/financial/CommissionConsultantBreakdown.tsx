@@ -265,6 +265,11 @@ function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
           </CardContent>
         </CollapsibleContent>
       </Card>
+      <CommissionApprovalDialog
+        open={!!approvalEntry}
+        onOpenChange={(v) => !v && setApprovalEntry(null)}
+        entry={approvalEntry}
+      />
     </Collapsible>
   );
 }
