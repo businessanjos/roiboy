@@ -1206,6 +1206,29 @@ export function useZappMessaging({
 
   // Retry failed message
   const retryMessage = (msg: Message) => {
+    // Áudio: reenviar em 1 clique usando o blob em cache
+    if (msg.message_type === "audio") {
+      const cached = failedAudiosRef.current.get(msg.id);
+      if (!cached) {
+        toast.error("Áudio original não disponível para reenvio. Grave novamente.");
+        return;
+      }
+      // Marcar bolha atual como "enviando" enquanto refazemos a tentativa
+      setMessages(prev => prev.map(m =>
+        m.id === msg.id
+          ? { ...m, send_status: "sending" as const, send_error: "Reenviando áudio...", delivery_status: "pending" as const }
+          : m
+      ));
+      // Remover bolha antiga e disparar novo envio (cria nova bolha)
+      setMessages(prev => prev.filter(m => m.id !== msg.id));
+      failedAudiosRef.current.delete(msg.id);
+      // Apagar registro órfão antigo no banco
+      supabase.from("zapp_messages").delete().eq("id", msg.id).then(() => {});
+      sendAudioMessage(cached.blob, cached.duration);
+      toast.info("Reenviando áudio...");
+      return;
+    }
+    // Texto: restaurar no input
     setMessages(prev => prev.filter(m => m.id !== msg.id));
     setMessageInput(msg.content || "");
     messageInputRef.current?.focus();
