@@ -507,11 +507,15 @@ Deno.serve(async (req) => {
     // Resolve which UAZAPI server to use for this request.
     // Priority: explicit sector_id > integration's sector > global fallback.
     // This isolates "Operações" (new server) from "Vendas" (legacy global server).
+    // Priority: integration_id (which carries the token) > sector_id > global.
+    // Resolving by integration_id ensures the server matches the token's owning instance,
+    // even when the UI sector differs from the integration's sector (e.g. a "vendas"
+    // conversation viewed under the "operacoes" sector).
     let sectorServer: ServerConfig = GLOBAL_SERVER;
-    if (sector_id) {
-      sectorServer = await resolveServerForSector(supabase, accountId, sector_id);
-    } else if (integration_id) {
+    if (integration_id) {
       sectorServer = await resolveServerForIntegrationId(supabase, accountId, integration_id);
+    } else if (sector_id) {
+      sectorServer = await resolveServerForSector(supabase, accountId, sector_id);
     }
 
     // Ações que requerem token
