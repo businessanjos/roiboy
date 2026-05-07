@@ -22,9 +22,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Users, Briefcase } from "lucide-react";
+import { ChevronDown, ChevronRight, Users, Briefcase, ShieldCheck } from "lucide-react";
 import { useCommissionPlan, type CommissionDealEntry } from "@/hooks/useCommissionPlan";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CommissionApprovalDialog } from "./CommissionApprovalDialog";
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(v || 0);
@@ -86,6 +87,7 @@ function groupByUser(entries: CommissionDealEntry[], cargo: "Closer" | "SDR"): C
 
 function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
   const [open, setOpen] = useState(false);
+  const [approvalEntry, setApprovalEntry] = useState<CommissionDealEntry | null>(null);
 
   const tierName = useMemo(() => {
     if (!plan?.tiers?.length) return null;
@@ -180,6 +182,7 @@ function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
                   <TableHead className="text-right">% aplicado</TableHead>
                   <TableHead className="text-right">Comissão</TableHead>
                   <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-center w-[110px]">Aprovação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -211,6 +214,22 @@ function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
                         <Badge variant="outline" className={`text-[10px] ${status.className}`}>
                           {status.label}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => setApprovalEntry(e)}
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          <ShieldCheck className="h-3 w-3" />
+                          {(e as any).approval_status === "approved"
+                            ? "Aprovada"
+                            : (e as any).approval_status === "pending_approval"
+                            ? "Pendente"
+                            : (e as any).approval_status === "rejected"
+                            ? "Rejeitada"
+                            : "Aprovar"}
+                        </button>
                       </TableCell>
                     </TableRow>
                   );
@@ -246,6 +265,11 @@ function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
           </CardContent>
         </CollapsibleContent>
       </Card>
+      <CommissionApprovalDialog
+        open={!!approvalEntry}
+        onOpenChange={(v) => !v && setApprovalEntry(null)}
+        entry={approvalEntry}
+      />
     </Collapsible>
   );
 }
