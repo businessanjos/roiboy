@@ -215,6 +215,22 @@ function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
                           {status.label}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => setApprovalEntry(e)}
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          <ShieldCheck className="h-3 w-3" />
+                          {(e as any).approval_status === "approved"
+                            ? "Aprovada"
+                            : (e as any).approval_status === "pending_approval"
+                            ? "Pendente"
+                            : (e as any).approval_status === "rejected"
+                            ? "Rejeitada"
+                            : "Aprovar"}
+                        </button>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
