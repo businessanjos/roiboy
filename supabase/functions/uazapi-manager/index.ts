@@ -720,6 +720,12 @@ Deno.serve(async (req) => {
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
       result = await uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer);
+      // 🚨 Diagnóstico: detectar respostas sem id (falha silenciosa)
+      const r: any = result;
+      const hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
+      if (!hasId) {
+        console.error(`[uazapi-manager] ⚠️ /send/media sem messageid! type=${payload.media_type} server=${sectorServer.source} response=${JSON.stringify(result).substring(0, 400)}`);
+      }
     
     } else if (action === "send_to_group") {
       // ✅ CORRIGIDO: Usar /send/text para grupos
