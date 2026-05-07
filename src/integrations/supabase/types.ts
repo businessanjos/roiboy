@@ -3705,6 +3705,63 @@ export type Database = {
           },
         ]
       }
+      consultant_weekly_checklist: {
+        Row: {
+          account_id: string
+          client_id: string
+          completed: boolean
+          completed_at: string
+          created_at: string
+          id: string
+          item_key: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          completed?: boolean
+          completed_at?: string
+          created_at?: string
+          id?: string
+          item_key: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          completed?: boolean
+          completed_at?: string
+          created_at?: string
+          id?: string
+          item_key?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultant_weekly_checklist_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "consultant_weekly_checklist_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_company_defaults: {
         Row: {
           account_id: string
