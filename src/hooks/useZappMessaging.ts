@@ -833,8 +833,15 @@ export function useZappMessaging({
         
         if (error) {
           if (insertedMessageId) {
-            await supabase.from("zapp_messages").delete().eq("id", insertedMessageId);
-            setMessages(prev => prev.filter(m => m.id !== insertedMessageId));
+            failedAudiosRef.current.set(insertedMessageId, { blob: audioBlob, duration });
+            await supabase.from("zapp_messages").update({
+              media_download_status: "failed",
+            }).eq("id", insertedMessageId);
+            setMessages(prev => prev.map(m =>
+              m.id === insertedMessageId
+                ? { ...m, send_status: "failed" as const, send_error: error.message || "Falha ao enviar áudio", delivery_status: "failed" as const }
+                : m
+            ));
           }
           throw error;
         }
@@ -842,8 +849,12 @@ export function useZappMessaging({
         const innerData = data?.data || data;
         if (!innerData?.success && innerData?.message) {
           if (insertedMessageId) {
-            await supabase.from("zapp_messages").delete().eq("id", insertedMessageId);
-            setMessages(prev => prev.filter(m => m.id !== insertedMessageId));
+            failedAudiosRef.current.set(insertedMessageId, { blob: audioBlob, duration });
+            setMessages(prev => prev.map(m =>
+              m.id === insertedMessageId
+                ? { ...m, send_status: "failed" as const, send_error: innerData.message || "Falha ao enviar áudio", delivery_status: "failed" as const }
+                : m
+            ));
           }
           throw new Error(innerData.message || "Falha ao enviar áudio");
         }
@@ -851,14 +862,18 @@ export function useZappMessaging({
         const audioExternalId = innerData?.id || innerData?.messageid || data?.data?.id || data?.data?.messageid || null;
         
         // 🚨 CRÍTICO: sem ID externo, o uazapi NÃO confirmou entrega ao WhatsApp.
-        // Não podemos exibir como enviado — a mensagem provavelmente não chegou ao cliente.
+        // Mantemos a bolha como "falhou" e guardamos o blob pra reenvio em 1 clique.
         if (!audioExternalId) {
           console.error("[ZAPP-AUDIO] Resposta sem messageid — provável falha silenciosa:", JSON.stringify(data)?.substring(0, 500));
           if (insertedMessageId) {
-            await supabase.from("zapp_messages").delete().eq("id", insertedMessageId);
-            setMessages(prev => prev.filter(m => m.id !== insertedMessageId));
+            failedAudiosRef.current.set(insertedMessageId, { blob: audioBlob, duration });
+            setMessages(prev => prev.map(m =>
+              m.id === insertedMessageId
+                ? { ...m, send_status: "failed" as const, send_error: "WhatsApp não confirmou o envio. Toque em Reenviar áudio.", delivery_status: "failed" as const }
+                : m
+            ));
           }
-          throw new Error("WhatsApp não confirmou o envio do áudio. Tente novamente em instantes.");
+          throw new Error("WhatsApp não confirmou o envio do áudio. Toque em Reenviar áudio.");
         }
         
         if (insertedMessageId) {
@@ -867,7 +882,7 @@ export function useZappMessaging({
         
         setMessages(prev => prev.map(m => 
           m.id === insertedMessageId 
-            ? { ...m, delivery_status: "sent" as const, external_message_id: audioExternalId }
+            ? { ...m, delivery_status: "sent" as const, external_message_id: audioExternalId, send_status: "sent" as const, send_error: null }
             : m
         ));
         
