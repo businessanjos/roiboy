@@ -74,6 +74,7 @@ export default function CsIncentivePresentation() {
       { id: "tiers", render: () => <SlideTiers tiers={refTiers} plan={referencePlan} /> },
       { id: "extras", render: () => <SlideExtras plans={activePlans} /> },
       { id: "rituals", render: () => <SlideRituals plan={referencePlan} /> },
+      { id: "stepbystep", render: () => <SlideStepByStep /> },
       { id: "close", render: () => <SlideClose /> },
     ],
     [referencePlan, refTiers, activePlans],
