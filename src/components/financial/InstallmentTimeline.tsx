@@ -89,9 +89,28 @@ function describePayload(eventType: string, payload: any): string | null {
   }
 }
 
+type FilterKey = "all" | "status" | "payments" | "renegotiation" | "dispute";
+
+const FILTERS: { key: FilterKey; label: string; types: string[] }[] = [
+  { key: "all", label: "Tudo", types: [] },
+  {
+    key: "status",
+    label: "Status",
+    types: ["status_change", "check_status_change", "card_status_change", "lock", "unlock"],
+  },
+  {
+    key: "payments",
+    label: "Pagamentos",
+    types: ["full_payment", "partial_payment", "discount", "write_off", "charge_attempt", "promise"],
+  },
+  { key: "renegotiation", label: "Renegociações", types: ["renegotiation"] },
+  { key: "dispute", label: "Disputas", types: ["dispute", "bounce"] },
+];
+
 export function InstallmentTimeline({ installmentId, className }: Props) {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<FilterKey>("all");
 
   useEffect(() => {
     let cancelled = false;
