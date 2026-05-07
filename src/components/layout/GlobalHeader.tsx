@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useReloadPermissions } from "@/hooks/useReloadPermissions";
+import { CompanySelector } from "@/components/financial/CompanySelector";
 
 export function GlobalHeader() {
   const { currentUser } = useCurrentUser();
@@ -67,6 +68,9 @@ export function GlobalHeader() {
 
       {/* Right controls */}
       <div className="flex items-center gap-1 md:gap-2">
+        {/* Company selector (only on /financial* routes) */}
+        <CompanySelector />
+
         {/* Theme toggle */}
         <TooltipProvider>
           <Tooltip>
