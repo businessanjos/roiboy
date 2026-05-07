@@ -80,11 +80,15 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
       const { data, error } = await supabase.functions.invoke("instagram-public-snapshot", {
         body: { username: u, clientId },
       });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      setSnapshot((data as any).snapshot);
+      const payload: any = data;
+      if (error || payload?.error) {
+        const msg = payload?.error || error?.message || "Falha ao sincronizar";
+        const action = payload?.action;
+        toast.error(msg, action ? { description: action, duration: 8000 } : undefined);
+        return;
+      }
+      setSnapshot(payload.snapshot);
       toast.success("Instagram sincronizado");
-      // also persist username to client.instagram if empty
       await supabase.from("clients").update({ instagram: u }).eq("id", clientId);
       await loadCached();
     } catch (e: any) {
