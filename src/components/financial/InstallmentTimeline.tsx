@@ -334,6 +334,8 @@ export function InstallmentTimeline({ installmentId, className }: Props) {
           );
         })}
       </ol>
+        );
+      })()}
     </div>
   );
 }
