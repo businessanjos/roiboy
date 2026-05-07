@@ -2773,9 +2773,73 @@ export type Database = {
           },
         ]
       }
+      commission_approval_history: {
+        Row: {
+          account_id: string
+          action: string
+          created_at: string
+          entry_id: string
+          id: string
+          metadata: Json | null
+          new_status: string | null
+          performed_by: string | null
+          performed_by_name: string | null
+          previous_status: string | null
+          reason: string | null
+        }
+        Insert: {
+          account_id: string
+          action: string
+          created_at?: string
+          entry_id: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          performed_by?: string | null
+          performed_by_name?: string | null
+          previous_status?: string | null
+          reason?: string | null
+        }
+        Update: {
+          account_id?: string
+          action?: string
+          created_at?: string
+          entry_id?: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          performed_by?: string | null
+          performed_by_name?: string | null
+          previous_status?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_approval_history_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "commission_deal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_approval_history_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_deal_entries: {
         Row: {
           account_id: string
+          approval_reason: string | null
+          approval_requested_at: string | null
+          approval_requested_by: string | null
+          approval_requested_reason: string | null
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           client_name: string | null
           commission_on_pix: number | null
           commission_on_remaining: number | null
@@ -2800,6 +2864,9 @@ export type Database = {
           pix_amount_paid: number | null
           pix_installments_paid: number | null
           plan_id: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
           released_at: string | null
           remaining_amount: number | null
           remaining_paid: boolean | null
@@ -2809,6 +2876,13 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          approval_reason?: string | null
+          approval_requested_at?: string | null
+          approval_requested_by?: string | null
+          approval_requested_reason?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           client_name?: string | null
           commission_on_pix?: number | null
           commission_on_remaining?: number | null
@@ -2833,6 +2907,9 @@ export type Database = {
           pix_amount_paid?: number | null
           pix_installments_paid?: number | null
           plan_id: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           released_at?: string | null
           remaining_amount?: number | null
           remaining_paid?: boolean | null
@@ -2842,6 +2919,13 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          approval_reason?: string | null
+          approval_requested_at?: string | null
+          approval_requested_by?: string | null
+          approval_requested_reason?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           client_name?: string | null
           commission_on_pix?: number | null
           commission_on_remaining?: number | null
@@ -2866,6 +2950,9 @@ export type Database = {
           pix_amount_paid?: number | null
           pix_installments_paid?: number | null
           plan_id?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           released_at?: string | null
           remaining_amount?: number | null
           remaining_paid?: boolean | null
@@ -2879,6 +2966,20 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_deal_entries_approval_requested_by_fkey"
+            columns: ["approval_requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_deal_entries_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -2907,6 +3008,13 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "commission_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_deal_entries_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
