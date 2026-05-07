@@ -89,9 +89,28 @@ function describePayload(eventType: string, payload: any): string | null {
   }
 }
 
+type FilterKey = "all" | "status" | "payments" | "renegotiation" | "dispute";
+
+const FILTERS: { key: FilterKey; label: string; types: string[] }[] = [
+  { key: "all", label: "Tudo", types: [] },
+  {
+    key: "status",
+    label: "Status",
+    types: ["status_change", "check_status_change", "card_status_change", "lock", "unlock"],
+  },
+  {
+    key: "payments",
+    label: "Pagamentos",
+    types: ["full_payment", "partial_payment", "discount", "write_off", "charge_attempt", "promise"],
+  },
+  { key: "renegotiation", label: "Renegociações", types: ["renegotiation"] },
+  { key: "dispute", label: "Disputas", types: ["dispute", "bounce"] },
+];
+
 export function InstallmentTimeline({ installmentId, className }: Props) {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<FilterKey>("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -221,12 +240,61 @@ export function InstallmentTimeline({ installmentId, className }: Props) {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-1.5">
+        {FILTERS.map((f) => {
+          const count =
+            f.key === "all"
+              ? events.length
+              : events.filter((e) => f.types.includes(e.event_type)).length;
+          const active = filter === f.key;
+          return (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-xs border transition-colors",
+                active
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              )}
+            >
+              {f.label}
+              <span
+                className={cn(
+                  "ml-1.5 text-[10px]",
+                  active ? "opacity-90" : "opacity-60"
+                )}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {(() => {
+        const activeFilter = FILTERS.find((f) => f.key === filter)!;
+        const filteredEvents =
+          filter === "all"
+            ? events
+            : events.filter((e) => activeFilter.types.includes(e.event_type));
+
+        if (filteredEvents.length === 0) {
+          return (
+            <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              Nenhum evento desta categoria.
+            </div>
+          );
+        }
+
+        return (
       <ol className="relative space-y-4 pl-6">
         <span
           aria-hidden
           className="absolute left-2 top-1 bottom-1 w-px bg-border"
         />
-        {events.map((ev) => {
+        {filteredEvents.map((ev) => {
           const meta = EVENT_META[ev.event_type] ?? {
             icon: Clock,
             label: ev.event_type,
@@ -266,6 +334,8 @@ export function InstallmentTimeline({ installmentId, className }: Props) {
           );
         })}
       </ol>
+        );
+      })()}
     </div>
   );
 }
