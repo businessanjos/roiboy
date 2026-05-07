@@ -121,6 +121,7 @@ const ExternalDashboard = lazyRetry(() => import("./pages/ExternalDashboard"));
 const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
 // Financial module with sub-routes (lazy loaded)
 const FinancialLayout = lazyRetry(() => import("@/components/financial/FinancialLayout").then(m => ({ default: m.FinancialLayout })));
+const FinancialDashboardPage = lazyRetry(() => import("./pages/financial/FinancialDashboardPage"));
 const FinancialEntriesPage = lazyRetry(() => import("./pages/financial/FinancialEntriesPage"));
 const FinancialCashFlowPage = lazyRetry(() => import("./pages/financial/FinancialCashFlowPage"));
 const FinancialBankAccountsPage = lazyRetry(() => import("./pages/financial/FinancialBankAccountsPage"));
@@ -213,7 +214,8 @@ const App = () => (
                             <Route path="/sales-team/incentive-presentation" element={<IncentivePresentation />} />
                             <Route path="/leads" element={<Leads />} />
                             <Route path="/financial" element={<FinancialLayout />}>
-                              <Route index element={<Navigate to="/financial/entries" replace />} />
+                              <Route index element={<Navigate to="/financial/dashboard" replace />} />
+                              <Route path="dashboard" element={<FinancialDashboardPage />} />
                               <Route path="entries" element={<FinancialEntriesPage />} />
                               <Route path="cash-flow" element={<FinancialCashFlowPage />} />
                               <Route path="bank-accounts" element={<FinancialBankAccountsPage />} />
