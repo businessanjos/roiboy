@@ -502,6 +502,9 @@ function SlideTiers({ tiers, plan }: { tiers: any[]; plan: any }) {
         <p className="text-slate-400 mt-2">
           Bônus base: <strong className="text-white">{fmtBRL(monthlyBonus)}</strong> · multiplicado pela faixa atingida.
         </p>
+        <p className="text-slate-500 mt-1 text-sm">
+          % de atingimento = média ponderada de Renovação ({Number(plan?.weight_renewal ?? 0)}%) + Churn ({Number(plan?.weight_churn ?? 0)}%) + NPS ({Number(plan?.weight_nps ?? 0)}%).
+        </p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {list.map((t, i) => {
