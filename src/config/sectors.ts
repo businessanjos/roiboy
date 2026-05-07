@@ -120,6 +120,7 @@ export const sectors: Sector[] = [
       { to: "/financial/entries", icon: Receipt, label: "Lançamentos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/bank-accounts", icon: Building2, label: "Contas Bancárias", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/invoices", icon: CreditCard, label: "Faturas", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/financial/parcelas", icon: Receipt, label: "Parcelas", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/boletos", icon: FileText, label: "Boletos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/notas-fiscais", icon: Receipt, label: "Notas Fiscais", permission: PERMISSIONS.CLIENTS_VIEW },
       // Gestão
