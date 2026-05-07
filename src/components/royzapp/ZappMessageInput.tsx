@@ -442,14 +442,14 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           <DropdownMenuContent side="top" align="start" className="bg-zapp-panel border-zapp-border z-50">
             <DropdownMenuItem 
               onClick={() => fileInputRef?.current?.click()}
-              className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
+              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
             >
               <FileText className="h-4 w-4 mr-2 text-[#7f66ff]" />
               Documento
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => imageInputRef?.current?.click()}
-              className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
+              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
             >
               <ImageIcon className="h-4 w-4 mr-2 text-[#007bfc]" />
               Fotos e vídeos
@@ -457,14 +457,14 @@ export const ZappMessageInput = memo(function ZappMessageInput({
             <DropdownMenuSeparator className="bg-zapp-border" />
             <DropdownMenuItem 
               onClick={onOpenContactPicker}
-              className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
+              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
             >
               <Contact className="h-4 w-4 mr-2 text-[#02a698]" />
               Contato
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={onOpenQuickReplies}
-              className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
+              className="text-zapp-text hover:bg-zapp-hover focus:bg-zapp-hover focus:text-zapp-text cursor-pointer"
             >
               <Zap className="h-4 w-4 mr-2 text-[#ffb000]" />
               Resposta rápida
