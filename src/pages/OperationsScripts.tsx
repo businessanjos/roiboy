@@ -170,7 +170,38 @@ const SPECIAL_BLOCKS: ScriptBlock[] = [
   },
 ];
 
-function ScriptCard({ item }: { item: ScriptItem }) {
+function makeItemKey(blockId: string, idx: number) {
+  return `${blockId}__${idx}`;
+}
+
+function formatWeekLabel(isoDate: string) {
+  const d = new Date(isoDate + "T00:00:00");
+  const end = new Date(d);
+  end.setDate(end.getDate() + 6);
+  const fmt = (x: Date) =>
+    x.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "");
+  return `${fmt(d)} → ${fmt(end)}`;
+}
+
+function shiftWeek(isoDate: string, deltaWeeks: number) {
+  const d = new Date(isoDate + "T00:00:00");
+  d.setDate(d.getDate() + 7 * deltaWeeks);
+  return d.toISOString().slice(0, 10);
+}
+
+function ScriptCard({
+  item,
+  itemKey,
+  checked,
+  disabled,
+  onToggle,
+}: {
+  item: ScriptItem;
+  itemKey: string;
+  checked: boolean;
+  disabled: boolean;
+  onToggle: (next: boolean) => void;
+}) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await navigator.clipboard.writeText(item.question);
@@ -179,10 +210,24 @@ function ScriptCard({ item }: { item: ScriptItem }) {
     setTimeout(() => setCopied(false), 1500);
   };
   return (
-    <div className="rounded-xl border bg-card p-4 space-y-3 hover:border-primary/40 transition-colors">
+    <div
+      className={cn(
+        "rounded-xl border bg-card p-4 space-y-3 transition-colors",
+        checked ? "border-emerald-500/40 bg-emerald-500/5" : "hover:border-primary/40",
+      )}
+    >
       <div className="flex items-start gap-3">
+        <Checkbox
+          checked={checked}
+          disabled={disabled}
+          onCheckedChange={(v) => onToggle(!!v)}
+          className="mt-1"
+          aria-label="Marcar item como feito"
+        />
         <MessageSquare className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-        <p className="flex-1 text-sm font-medium leading-relaxed">"{item.question}"</p>
+        <p className={cn("flex-1 text-sm font-medium leading-relaxed", checked && "line-through text-muted-foreground")}>
+          "{item.question}"
+        </p>
         <Button
           size="sm"
           variant="ghost"
@@ -192,7 +237,7 @@ function ScriptCard({ item }: { item: ScriptItem }) {
           {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
         </Button>
       </div>
-      <div className="ml-7 space-y-1.5 text-xs text-muted-foreground">
+      <div className="ml-12 space-y-1.5 text-xs text-muted-foreground">
         <p><span className="font-semibold text-foreground">Por que perguntar:</span> {item.whyAsk}</p>
         {item.followUp && (
           <p><span className="font-semibold text-foreground">Caminho seguinte:</span> {item.followUp}</p>
@@ -202,26 +247,98 @@ function ScriptCard({ item }: { item: ScriptItem }) {
   );
 }
 
-function BlockSection({ block }: { block: ScriptBlock }) {
+function BlockSection({
+  block,
+  completedKeys,
+  disabled,
+  onToggle,
+}: {
+  block: ScriptBlock;
+  completedKeys: Set<string>;
+  disabled: boolean;
+  onToggle: (itemKey: string, next: boolean) => void;
+}) {
+  const total = block.items.length;
+  const done = block.items.reduce(
+    (acc, _, i) => (completedKeys.has(makeItemKey(block.id, i)) ? acc + 1 : acc),
+    0,
+  );
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="flex-1">
             <CardTitle className="text-base">{block.title}</CardTitle>
             <CardDescription className="mt-1">{block.intro}</CardDescription>
           </div>
-          <Badge variant="secondary">{block.items.length} perguntas</Badge>
+          <Badge variant={done === total ? "default" : "secondary"}>
+            {done}/{total}
+          </Badge>
         </div>
+        <Progress value={pct} className="h-1.5 mt-2" />
       </CardHeader>
       <CardContent className="space-y-3">
-        {block.items.map((item, i) => <ScriptCard key={i} item={item} />)}
+        {block.items.map((item, i) => {
+          const key = makeItemKey(block.id, i);
+          return (
+            <ScriptCard
+              key={i}
+              item={item}
+              itemKey={key}
+              checked={completedKeys.has(key)}
+              disabled={disabled}
+              onToggle={(next) => onToggle(key, next)}
+            />
+          );
+        })}
       </CardContent>
     </Card>
   );
 }
 
+function useMyClients() {
+  const { currentUser } = useCurrentUser();
+  return useQuery({
+    queryKey: ["scripts-my-clients", currentUser?.id, currentUser?.account_id],
+    enabled: !!currentUser?.id && !!currentUser?.account_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name, logo_url")
+        .eq("account_id", currentUser!.account_id)
+        .or(`responsible_user_id.eq.${currentUser!.id},sales_user_id.eq.${currentUser!.id}`)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
 export default function OperationsScripts() {
+  const { data: clients = [], isLoading: clientsLoading } = useMyClients();
+  const [search, setSearch] = useState("");
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [weekStart, setWeekStart] = useState<string>(getWeekStart());
+
+  const filteredClients = useMemo(
+    () =>
+      (clients as any[]).filter((c) =>
+        c.name?.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [clients, search],
+  );
+
+  const { completedKeys, toggle } = useWeeklyChecklist(clientId, weekStart);
+
+  const allBlocks = [...CHECKIN_BLOCKS, ...SPECIAL_BLOCKS];
+  const totalItems = allBlocks.reduce((acc, b) => acc + b.items.length, 0);
+  const totalDone = allBlocks.reduce(
+    (acc, b) => acc + b.items.filter((_, i) => completedKeys.has(makeItemKey(b.id, i))).length,
+    0,
+  );
+  const overallPct = totalItems > 0 ? Math.round((totalDone / totalItems) * 100) : 0;
+
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-start gap-3">
@@ -231,25 +348,128 @@ export default function OperationsScripts() {
         <div>
           <h1 className="text-2xl font-bold">Scripts</h1>
           <p className="text-sm text-muted-foreground">
-            Beabá pronto pro check-in com a cliente. Copia, cola, adapta — e fala com naturalidade.
+            Beabá pronto pro check-in. Selecione a cliente e a semana, e marque cada item conforme for fazendo.
           </p>
         </div>
       </div>
 
-      <Tabs defaultValue="checkin" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="checkin">Check-in do dia</TabsTrigger>
-          <TabsTrigger value="especiais">Situações especiais</TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <div className="grid md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Cliente
+              </label>
+              <Input
+                placeholder="Buscar cliente…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="mb-2"
+              />
+              <Select value={clientId ?? ""} onValueChange={setClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={clientsLoading ? "Carregando…" : "Escolha uma cliente"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredClients.length === 0 && (
+                    <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                      Nenhuma cliente encontrada
+                    </div>
+                  )}
+                  {filteredClients.slice(0, 50).map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="flex items-center gap-2">
+                        <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
+                        {c.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <TabsContent value="checkin" className="space-y-4">
-          {CHECKIN_BLOCKS.map((b) => <BlockSection key={b.id} block={b} />)}
-        </TabsContent>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Semana
+              </label>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setWeekStart((w) => shiftWeek(w, -1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex-1 text-center text-sm font-medium border rounded-md py-2 px-3 bg-muted/30">
+                  {formatWeekLabel(weekStart)}
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setWeekStart((w) => shiftWeek(w, 1))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              {weekStart !== getWeekStart() && (
+                <button
+                  onClick={() => setWeekStart(getWeekStart())}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Voltar pra semana atual
+                </button>
+              )}
+            </div>
 
-        <TabsContent value="especiais" className="space-y-4">
-          {SPECIAL_BLOCKS.map((b) => <BlockSection key={b.id} block={b} />)}
-        </TabsContent>
-      </Tabs>
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Progresso</p>
+              <p className="text-2xl font-black tabular-nums">{overallPct}%</p>
+              <p className="text-xs text-muted-foreground">{totalDone}/{totalItems} itens</p>
+            </div>
+          </div>
+          {clientId && <Progress value={overallPct} className="h-2" />}
+        </CardContent>
+      </Card>
+
+      {!clientId && (
+        <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+          Selecione uma cliente acima pra começar a marcar o passo a passo da semana.
+        </div>
+      )}
+
+      {clientId && (
+        <Tabs defaultValue="checkin" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="checkin">Check-in do dia</TabsTrigger>
+            <TabsTrigger value="especiais">Situações especiais</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="checkin" className="space-y-4">
+            {CHECKIN_BLOCKS.map((b) => (
+              <BlockSection
+                key={b.id}
+                block={b}
+                completedKeys={completedKeys}
+                disabled={!clientId}
+                onToggle={toggle}
+              />
+            ))}
+          </TabsContent>
+
+          <TabsContent value="especiais" className="space-y-4">
+            {SPECIAL_BLOCKS.map((b) => (
+              <BlockSection
+                key={b.id}
+                block={b}
+                completedKeys={completedKeys}
+                disabled={!clientId}
+                onToggle={toggle}
+              />
+            ))}
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }
+
