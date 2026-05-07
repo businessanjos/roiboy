@@ -28,6 +28,23 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+function buildPreview(v: Partial<FormValues>, weekLabel: string): string {
+  return [
+    `📋 *Check-in semanal* (${weekLabel})`,
+    ``,
+    `🗒 *Resumo:* ${v.summary || "—"}`,
+    ``,
+    `✅ *Vitórias:* ${v.wins || "—"}`,
+    ``,
+    `⚠️ *Frustrações / bloqueios:* ${v.blockers || "—"}`,
+    ``,
+    `🎯 *Próximo passo combinado:* ${v.nextStep || "—"}`,
+    v.nextDate ? `📅 *Próximo check-in:* ${v.nextDate}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
