@@ -32,6 +32,7 @@ import { ClientFormResponses } from "@/components/client/ClientFormResponses";
 import { OperationBriefingForm } from "@/components/operations/OperationBriefingForm";
 import { ClientRelationships } from "@/components/client/ClientRelationships";
 import { ClientDeals } from "@/components/client/ClientDeals";
+import { ClientInstagram } from "@/components/client/ClientInstagram";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
@@ -2410,6 +2411,8 @@ export default function ClientDetail() {
             );
           case "churn-signals":
             return <ClientChurnSignals clientId={id!} />;
+          case "instagram":
+            return <ClientInstagram clientId={id!} initialUsername={(client as any)?.instagram} />;
           case "deals":
             return (
               <Card className="shadow-card">
