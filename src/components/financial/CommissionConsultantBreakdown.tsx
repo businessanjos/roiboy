@@ -182,6 +182,7 @@ function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
                   <TableHead className="text-right">% aplicado</TableHead>
                   <TableHead className="text-right">Comissão</TableHead>
                   <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-center w-[110px]">Aprovação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
