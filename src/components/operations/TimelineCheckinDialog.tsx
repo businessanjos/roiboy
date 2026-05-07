@@ -80,20 +80,7 @@ export function TimelineCheckinDialog({
       const v = parsed.data;
       const today = new Date().toLocaleDateString("pt-BR");
       const title = `Check-in semanal — ${today}`;
-      const content = [
-        `📋 *Check-in semanal* (${weekLabel})`,
-        ``,
-        `🗒 *Resumo:* ${v.summary}`,
-        ``,
-        `✅ *Vitórias:* ${v.wins}`,
-        ``,
-        `⚠️ *Frustrações / bloqueios:* ${v.blockers}`,
-        ``,
-        `🎯 *Próximo passo combinado:* ${v.nextStep}`,
-        v.nextDate ? `📅 *Próximo check-in:* ${v.nextDate}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
+      const content = buildPreview(v, weekLabel);
 
       const { error } = await supabase.from("client_followups").insert({
         account_id: currentUser.account_id,
