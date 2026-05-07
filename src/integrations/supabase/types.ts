@@ -2086,6 +2086,67 @@ export type Database = {
           },
         ]
       }
+      client_payers: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          notes: string | null
+          payer_id: string
+          relationship: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          notes?: string | null
+          payer_id: string
+          relationship?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          notes?: string | null
+          payer_id?: string
+          relationship?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_payers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_payers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_payers_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_products: {
         Row: {
           account_id: string
@@ -3187,6 +3248,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      companies: {
+        Row: {
+          account_id: string
+          address_city: string | null
+          address_complement: string | null
+          address_neighborhood: string | null
+          address_number: string | null
+          address_state: string | null
+          address_street: string | null
+          address_zip: string | null
+          created_at: string
+          created_by: string | null
+          default_product_pct: number
+          default_service_pct: number
+          document: string
+          email: string | null
+          id: string
+          ie: string | null
+          im: string | null
+          is_active: boolean
+          is_default: boolean
+          legal_name: string
+          notazz_token: string | null
+          notes: string | null
+          phone: string | null
+          tax_regime: string | null
+          trade_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_product_pct?: number
+          default_service_pct?: number
+          document: string
+          email?: string | null
+          id?: string
+          ie?: string | null
+          im?: string | null
+          is_active?: boolean
+          is_default?: boolean
+          legal_name: string
+          notazz_token?: string | null
+          notes?: string | null
+          phone?: string | null
+          tax_regime?: string | null
+          trade_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_product_pct?: number
+          default_service_pct?: number
+          document?: string
+          email?: string | null
+          id?: string
+          ie?: string | null
+          im?: string | null
+          is_active?: boolean
+          is_default?: boolean
+          legal_name?: string
+          notazz_token?: string | null
+          notes?: string | null
+          phone?: string | null
+          tax_regime?: string | null
+          trade_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       company_goals: {
         Row: {
@@ -11927,6 +12075,92 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: true
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payers: {
+        Row: {
+          account_id: string
+          address_city: string | null
+          address_complement: string | null
+          address_neighborhood: string | null
+          address_number: string | null
+          address_state: string | null
+          address_street: string | null
+          address_zip: string | null
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          document: string
+          document_type: string
+          email_billing: string | null
+          id: string
+          ie: string | null
+          im: string | null
+          is_active: boolean
+          legal_name: string
+          notes: string | null
+          phone_billing: string | null
+          trade_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          document: string
+          document_type: string
+          email_billing?: string | null
+          id?: string
+          ie?: string | null
+          im?: string | null
+          is_active?: boolean
+          legal_name: string
+          notes?: string | null
+          phone_billing?: string | null
+          trade_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          document?: string
+          document_type?: string
+          email_billing?: string | null
+          id?: string
+          ie?: string | null
+          im?: string | null
+          is_active?: boolean
+          legal_name?: string
+          notes?: string | null
+          phone_billing?: string | null
+          trade_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
