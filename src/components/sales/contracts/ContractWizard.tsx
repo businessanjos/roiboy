@@ -532,7 +532,7 @@ const Stepper = ({
   steps: StepDef[];
   current: StepKey | "review";
   onPick: (k: StepKey | "review") => void;
-  filledCounts: Record<StepKey, { filled: number; total: number }>;
+  filledCounts: Record<StepKey, { filled: number; total: number; missingLabels?: string[] }>;
 }) => {
   const all: ({ key: StepKey | "review"; label: string; shortLabel: string; icon: any } )[] = [
     ...steps.map((s) => ({ key: s.key, label: s.label, shortLabel: s.shortLabel, icon: s.icon })),
