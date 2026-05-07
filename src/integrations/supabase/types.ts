@@ -9310,6 +9310,134 @@ export type Database = {
           },
         ]
       }
+      installment_events: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          event_type: string
+          id: string
+          installment_id: string
+          invoice_id: string
+          payload: Json
+          visible_to: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          event_type: string
+          id?: string
+          installment_id: string
+          invoice_id: string
+          payload?: Json
+          visible_to?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          event_type?: string
+          id?: string
+          installment_id?: string
+          invoice_id?: string
+          payload?: Json
+          visible_to?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installment_events_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "installments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installment_events_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      installments: {
+        Row: {
+          account_id: string
+          amount: number
+          card_status: string | null
+          check_status: string | null
+          created_at: string
+          created_by: string | null
+          discount: number | null
+          due_date: string
+          fees: number | null
+          id: string
+          invoice_id: string
+          locked: boolean
+          locked_at: string | null
+          notes: string | null
+          number: number
+          paid_amount: number | null
+          paid_at: string | null
+          payment_method: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          card_status?: string | null
+          check_status?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount?: number | null
+          due_date: string
+          fees?: number | null
+          id?: string
+          invoice_id: string
+          locked?: boolean
+          locked_at?: string | null
+          notes?: string | null
+          number: number
+          paid_amount?: number | null
+          paid_at?: string | null
+          payment_method: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          card_status?: string | null
+          check_status?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount?: number | null
+          due_date?: string
+          fees?: number | null
+          id?: string
+          invoice_id?: string
+          locked?: boolean
+          locked_at?: string | null
+          notes?: string | null
+          number?: number
+          paid_amount?: number | null
+          paid_at?: string | null
+          payment_method?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integrations: {
         Row: {
           account_id: string
@@ -9649,6 +9777,120 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          account_id: string
+          client_id: string
+          closed_at: string | null
+          company_id: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          deal_id: string | null
+          description: string | null
+          id: string
+          locked: boolean
+          locked_at: string | null
+          notes: string | null
+          opened_at: string | null
+          parent_invoice_id: string | null
+          payer_id: string
+          product_id: string | null
+          product_pct: number
+          service_pct: number
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          closed_at?: string | null
+          company_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          deal_id?: string | null
+          description?: string | null
+          id?: string
+          locked?: boolean
+          locked_at?: string | null
+          notes?: string | null
+          opened_at?: string | null
+          parent_invoice_id?: string | null
+          payer_id: string
+          product_id?: string | null
+          product_pct?: number
+          service_pct?: number
+          status?: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          closed_at?: string | null
+          company_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          deal_id?: string | null
+          description?: string | null
+          id?: string
+          locked?: boolean
+          locked_at?: string | null
+          notes?: string | null
+          opened_at?: string | null
+          parent_invoice_id?: string | null
+          payer_id?: string
+          product_id?: string | null
+          product_pct?: number
+          service_pct?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_parent_invoice_id_fkey"
+            columns: ["parent_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
             referencedColumns: ["id"]
           },
         ]
