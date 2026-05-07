@@ -68,6 +68,9 @@ export function GlobalHeader() {
 
       {/* Right controls */}
       <div className="flex items-center gap-1 md:gap-2">
+        {/* Company selector (only on /financial* routes) */}
+        <CompanySelector />
+
         {/* Theme toggle */}
         <TooltipProvider>
           <Tooltip>
