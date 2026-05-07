@@ -890,6 +890,9 @@ export function CsIncentivePlanSection() {
             churnPenaltyEnabled={!!form.churn_penalty_enabled}
             churnPenaltyThreshold={toNumber(form.churn_penalty_threshold)}
             churnPenaltyPercent={toNumber(form.churn_penalty_percent)}
+            weightRenewal={toNumber(form.weight_renewal)}
+            weightChurn={toNumber(form.weight_churn)}
+            weightNps={toNumber(form.weight_nps)}
           />
         </CardContent>
       </Card>
