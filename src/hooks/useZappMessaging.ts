@@ -847,7 +847,19 @@ export function useZappMessaging({
         }
         
         const audioExternalId = innerData?.id || innerData?.messageid || data?.data?.id || data?.data?.messageid || null;
-        if (audioExternalId && insertedMessageId) {
+        
+        // 🚨 CRÍTICO: sem ID externo, o uazapi NÃO confirmou entrega ao WhatsApp.
+        // Não podemos exibir como enviado — a mensagem provavelmente não chegou ao cliente.
+        if (!audioExternalId) {
+          console.error("[ZAPP-AUDIO] Resposta sem messageid — provável falha silenciosa:", JSON.stringify(data)?.substring(0, 500));
+          if (insertedMessageId) {
+            await supabase.from("zapp_messages").delete().eq("id", insertedMessageId);
+            setMessages(prev => prev.filter(m => m.id !== insertedMessageId));
+          }
+          throw new Error("WhatsApp não confirmou o envio do áudio. Tente novamente em instantes.");
+        }
+        
+        if (insertedMessageId) {
           await supabase.from("zapp_messages").update({ external_message_id: audioExternalId }).eq("id", insertedMessageId);
         }
         
