@@ -11,6 +11,7 @@ import { PermissionsProvider } from "@/hooks/usePermissions";
 import { ImpersonationProvider } from "@/hooks/useImpersonation";
 import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { SectorProvider } from "@/contexts/SectorContext";
+import { CompanyProvider } from "@/contexts/CompanyContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
