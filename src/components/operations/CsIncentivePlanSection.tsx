@@ -615,8 +615,8 @@ export function CsIncentivePlanSection() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>De %</TableHead>
-                <TableHead>Até %</TableHead>
+                <TableHead>De % (global)</TableHead>
+                <TableHead>Até % (global)</TableHead>
                 <TableHead>% do bônus pago</TableHead>
                 <TableHead>
                   <TooltipProvider delayDuration={150}>
