@@ -212,6 +212,8 @@ export function TimelineCheckinDialog({
           </Field>
         </div>
 
+        <PreviewBlock text={buildPreview(values, weekLabel)} />
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
