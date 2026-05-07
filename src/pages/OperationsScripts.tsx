@@ -372,10 +372,29 @@ export default function OperationsScripts() {
           </div>
         </div>
         {clientId && (
-          <Button onClick={() => setTimelineDialogOpen(true)} className="gap-2">
-            <NotebookPen className="h-4 w-4" />
-            Registrar na Timeline
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              onClick={() => setTimelineDialogOpen(true)}
+              className="gap-2"
+              disabled={!canRegister}
+              title={
+                canRegister
+                  ? "Registrar check-in da semana na timeline"
+                  : `Conclua os ${requiredMissing} item(ns) obrigatório(s) do check-in antes de registrar`
+              }
+            >
+              <NotebookPen className="h-4 w-4" />
+              Registrar na Timeline
+            </Button>
+            <p className={cn(
+              "text-xs",
+              canRegister ? "text-emerald-600" : "text-muted-foreground",
+            )}>
+              {canRegister
+                ? "✓ Check-in completo, pronto pra registrar"
+                : `Faltam ${requiredMissing} de ${requiredTotal} itens obrigatórios`}
+            </p>
+          </div>
         )}
       </div>
 
