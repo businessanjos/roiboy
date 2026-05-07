@@ -22,9 +22,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Users, Briefcase } from "lucide-react";
+import { ChevronDown, ChevronRight, Users, Briefcase, ShieldCheck } from "lucide-react";
 import { useCommissionPlan, type CommissionDealEntry } from "@/hooks/useCommissionPlan";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CommissionApprovalDialog } from "./CommissionApprovalDialog";
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(v || 0);
