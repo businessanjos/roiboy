@@ -577,11 +577,24 @@ export function CsIncentivePlanSection() {
         <CardHeader className="pb-3 flex flex-row items-center justify-between gap-3">
           <div>
             <CardTitle className="text-base">Faixas de Atingimento do Bônus</CardTitle>
-            <CardDescription>
-              Defina, por faixa de % atingida, qual percentual do bônus é pago.
-              Use <strong>0%</strong> para zerar o bônus, <strong>70%</strong> para pagamento parcial e
-              {" "}<strong>100%</strong> (ou mais) quando a meta for batida. A faixa final pode ficar com{" "}
-              <em>Até %</em> em branco para representar "ou mais".
+            <CardDescription className="space-y-2">
+              <span className="block">
+                As faixas se aplicam ao <strong>atingimento global ponderado</strong>, calculado a partir das
+                3 métricas (Renovação, Churn e NPS) com os pesos definidos no plano.
+              </span>
+              <span className="block rounded-md border bg-muted/40 px-3 py-2 text-xs">
+                <strong>Fórmula:</strong> % global = (% Renovação × {toNumber(form.weight_renewal)} + % Churn × {toNumber(form.weight_churn)} + % NPS × {toNumber(form.weight_nps)}) ÷ {totalWeight || 100}
+                <br />
+                Pesos atuais →{" "}
+                <Badge variant="outline" className="mx-0.5">Renovação {toNumber(form.weight_renewal)}%</Badge>
+                <Badge variant="outline" className="mx-0.5">Churn {toNumber(form.weight_churn)}%</Badge>
+                <Badge variant="outline" className="mx-0.5">NPS {toNumber(form.weight_nps)}%</Badge>
+              </span>
+              <span className="block">
+                Use <strong>0%</strong> para zerar o bônus, <strong>70%</strong> para pagamento parcial e{" "}
+                <strong>100%</strong> (ou mais) quando a meta for batida. A faixa final pode ficar com{" "}
+                <em>Até %</em> em branco para representar "ou mais".
+              </span>
             </CardDescription>
           </div>
           <div className="flex gap-2 shrink-0">
