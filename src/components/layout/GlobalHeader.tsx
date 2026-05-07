@@ -115,6 +115,9 @@ export function GlobalHeader() {
           </TooltipProvider>
         )}
 
+        {/* Failed RoyZapp sends alert (admins only) */}
+        {showAdminButton && <FailedZappSendsAlert />}
+
         {/* Notifications */}
         <TooltipProvider>
           <Tooltip>
