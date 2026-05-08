@@ -52,6 +52,7 @@ const VipClients = lazyRetry(() => import("./pages/VipClients"));
 const Renewals = lazyRetry(() => import("./pages/Renewals"));
 const ConsultantBonus = lazyRetry(() => import("./pages/ConsultantBonus"));
 const OperationsScripts = lazyRetry(() => import("./pages/OperationsScripts"));
+const InstagramRanking = lazyRetry(() => import("./pages/InstagramRanking"));
 const ClientDetail = lazyRetry(() => import("./pages/ClientDetail"));
 const Integrations = lazyRetry(() => import("./pages/Integrations"));
 const Settings = lazyRetry(() => import("./pages/Settings"));
@@ -204,6 +205,7 @@ const App = () => (
                             <Route path="/operations/consultant-bonus" element={<ConsultantBonus />} />
                             <Route path="/operations/cs-incentive-presentation" element={<CsIncentivePresentation />} />
                             <Route path="/operations/scripts" element={<OperationsScripts />} />
+                            <Route path="/operations/instagram-ranking" element={<InstagramRanking />} />
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/settings/contract-defaults" element={<ContractDefaultsSettings />} />
                             <Route path="/sales/contracts" element={<SalesDigitalContracts />} />
