@@ -20,7 +20,33 @@ interface IGPost {
   product_type?: string;
   caption?: string | null;
   thumbnail_url?: string | null;
+  display_uri?: string | null;
+  display_url?: string | null;
+  video_url?: string | null;
   url?: string | null;
+}
+
+function PostThumb({ p }: { p: IGPost }) {
+  const candidates = [p.thumbnail_url, p.display_uri, p.display_url, p.video_url].filter(
+    (u): u is string => !!u,
+  );
+  const [idx, setIdx] = useState(0);
+  if (candidates.length === 0 || idx >= candidates.length) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+        Sem prévia
+      </div>
+    );
+  }
+  return (
+    <img
+      src={candidates[idx]}
+      alt={p.caption?.slice(0, 80) || "post"}
+      className="w-full h-full object-cover"
+      loading="lazy"
+      onError={() => setIdx((i) => i + 1)}
+    />
+  );
 }
 
 interface IGSnapshot {
@@ -193,11 +219,7 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
                       rel="noopener noreferrer"
                       className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
                     >
-                      {p.thumbnail_url ? (
-                        <img src={p.thumbnail_url} alt={p.caption?.slice(0, 80) || "post"} className="w-full h-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Sem prévia</div>
-                      )}
+                      <PostThumb p={p} />
                       {(p.media_type === 2 || p.product_type === "clips") && (
                         <Play className="absolute top-2 right-2 h-4 w-4 text-white drop-shadow" fill="white" />
                       )}
