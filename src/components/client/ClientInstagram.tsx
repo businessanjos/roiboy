@@ -20,7 +20,33 @@ interface IGPost {
   product_type?: string;
   caption?: string | null;
   thumbnail_url?: string | null;
+  display_uri?: string | null;
+  display_url?: string | null;
+  video_url?: string | null;
   url?: string | null;
+}
+
+function PostThumb({ p }: { p: IGPost }) {
+  const candidates = [p.thumbnail_url, p.display_uri, p.display_url, p.video_url].filter(
+    (u): u is string => !!u,
+  );
+  const [idx, setIdx] = useState(0);
+  if (candidates.length === 0 || idx >= candidates.length) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+        Sem prévia
+      </div>
+    );
+  }
+  return (
+    <img
+      src={candidates[idx]}
+      alt={p.caption?.slice(0, 80) || "post"}
+      className="w-full h-full object-cover"
+      loading="lazy"
+      onError={() => setIdx((i) => i + 1)}
+    />
+  );
 }
 
 interface IGSnapshot {
