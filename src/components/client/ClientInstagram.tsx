@@ -6,8 +6,34 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, RefreshCw, Instagram, ExternalLink, Heart, MessageCircle, Play, BadgeCheck, Lock } from "lucide-react";
+import { Loader2, RefreshCw, Instagram, ExternalLink, Heart, MessageCircle, Play, BadgeCheck, Lock, Video, Images, Image as ImageIcon, Eye } from "lucide-react";
 import { toast } from "sonner";
+
+type PostFormat = "reels" | "carousel" | "static";
+
+function getPostFormat(p: { media_type?: number; product_type?: string }): PostFormat {
+  if (p.product_type === "clips" || p.media_type === 2) return "reels";
+  if (p.media_type === 8) return "carousel";
+  return "static";
+}
+
+const formatBadgeConfig: Record<PostFormat, { label: string; Icon: typeof Video; className: string }> = {
+  reels: {
+    label: "Reels",
+    Icon: Video,
+    className: "bg-pink-500/90 text-white border-transparent",
+  },
+  carousel: {
+    label: "Carrossel",
+    Icon: Images,
+    className: "bg-blue-500/90 text-white border-transparent",
+  },
+  static: {
+    label: "Foto",
+    Icon: ImageIcon,
+    className: "bg-zinc-800/80 text-white border-transparent",
+  },
+};
 
 interface IGPost {
   id?: string;
