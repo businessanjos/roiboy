@@ -25,6 +25,9 @@ import {
   CustomSpinsPanel,
 } from "@/components/sales/quotas/SpiffsSection";
 import { PaymentMethodSpiffPanel } from "@/components/sales/quotas/PaymentMethodSpiffPanel";
+import { TierProgressHero } from "@/components/sales/quotas/TierProgressHero";
+import { useUserMonthlyTier } from "@/hooks/useUserMonthlyTier";
+import { cn } from "@/lib/utils";
 
 const MONTH_QUOTA_DEFAULT = 8; // 100% da meta = 8 vendas no mês (Closer)
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
