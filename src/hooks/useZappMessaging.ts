@@ -583,6 +583,7 @@ export function useZappMessaging({
           media_filename: file.name,
           sent_at: now,
           external_message_id: externalId,
+          sender_user_id: currentUser?.id || null,
         }).select("id").single();
 
         if (insertError) {
