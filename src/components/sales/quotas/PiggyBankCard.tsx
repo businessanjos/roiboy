@@ -8,7 +8,7 @@ interface PiggyBankCardProps {
 }
 
 const TIERS = [
-  { min: 0, label: "Vazio", emoji: "🐷", mood: "neutro", scale: 1.0, glow: "" },
+  { min: 0, label: "Furioso", emoji: "🤬🐷", mood: "FURIOSO", scale: 1.15, glow: "drop-shadow(0 0 20px rgba(239,68,68,0.85))" },
   { min: 1, label: "Animado", emoji: "🐽", mood: "animado", scale: 1.05, glow: "drop-shadow(0 0 12px rgba(244,114,182,0.45))" },
   { min: 500, label: "Feliz", emoji: "😊🐷", mood: "feliz", scale: 1.1, glow: "drop-shadow(0 0 18px rgba(244,114,182,0.55))" },
   { min: 1500, label: "Empolgado", emoji: "🤩🐷", mood: "empolgado", scale: 1.18, glow: "drop-shadow(0 0 24px rgba(251,191,36,0.6))" },
