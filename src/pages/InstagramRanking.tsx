@@ -330,6 +330,21 @@ export default function InstagramRanking() {
         </div>
       </div>
 
+      {syncing && (
+        <div className="rounded-xl border bg-gradient-to-r from-fuchsia-500/10 to-rose-500/10 px-4 py-3 flex items-center gap-3">
+          <Loader2 className="h-4 w-4 animate-spin text-fuchsia-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium">Sincronizando perfis do Eternum Club…</div>
+            <div className="text-xs text-muted-foreground">
+              {rows.length} {rows.length === 1 ? "perfil sincronizado" : "perfis sincronizados"} até agora. Os rankings vão sendo atualizados em tempo real.
+            </div>
+          </div>
+          <div className="relative h-1.5 w-32 overflow-hidden rounded-full bg-background/60">
+            <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-fuchsia-500 to-rose-500 animate-[shimmer_1.4s_ease-in-out_infinite]" />
+          </div>
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
