@@ -52,6 +52,7 @@ const VipClients = lazyRetry(() => import("./pages/VipClients"));
 const Renewals = lazyRetry(() => import("./pages/Renewals"));
 const ConsultantBonus = lazyRetry(() => import("./pages/ConsultantBonus"));
 const OperationsScripts = lazyRetry(() => import("./pages/OperationsScripts"));
+const InstagramRanking = lazyRetry(() => import("./pages/InstagramRanking"));
 const ClientDetail = lazyRetry(() => import("./pages/ClientDetail"));
 const Integrations = lazyRetry(() => import("./pages/Integrations"));
 const Settings = lazyRetry(() => import("./pages/Settings"));
