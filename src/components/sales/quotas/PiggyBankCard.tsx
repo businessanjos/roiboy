@@ -8,7 +8,7 @@ interface PiggyBankCardProps {
 }
 
 const TIERS = [
-  { min: 0, label: "Furioso", emoji: "🤬🐷", mood: "FURIOSO", scale: 1.15, glow: "drop-shadow(0 0 20px rgba(239,68,68,0.85))" },
+  { min: 0, label: "Furioso", emoji: "🐷", mood: "FURIOSO", scale: 1.15, glow: "drop-shadow(0 0 20px rgba(239,68,68,0.85)) hue-rotate(-25deg) saturate(2.2) brightness(0.95)" },
   { min: 1, label: "Animado", emoji: "🐽", mood: "animado", scale: 1.05, glow: "drop-shadow(0 0 12px rgba(244,114,182,0.45))" },
   { min: 500, label: "Feliz", emoji: "😊🐷", mood: "feliz", scale: 1.1, glow: "drop-shadow(0 0 18px rgba(244,114,182,0.55))" },
   { min: 1500, label: "Empolgado", emoji: "🤩🐷", mood: "empolgado", scale: 1.18, glow: "drop-shadow(0 0 24px rgba(251,191,36,0.6))" },
@@ -54,20 +54,28 @@ export function PiggyBankCard({ value, loading }: PiggyBankCardProps) {
       <CardContent className="pb-6">
         <div className="flex flex-col items-center justify-center py-2">
           {/* Piggy */}
-          <div
-            className={cn(
-              "text-7xl select-none transition-all duration-700 ease-out",
-              value > 0
-                ? "animate-[bounce_2.4s_ease-in-out_infinite]"
-                : "animate-angry-shake",
+          <div className="relative">
+            {tier.mood === "FURIOSO" && (
+              <>
+                <span className="absolute -top-1 -left-3 text-2xl animate-pulse">💢</span>
+                <span className="absolute -top-2 -right-3 text-2xl animate-pulse">💢</span>
+              </>
             )}
-            style={{
-              transform: `scale(${tier.scale})`,
-              filter: tier.glow,
-            }}
-            aria-label={`Porquinho ${tier.mood}`}
-          >
-            {tier.emoji}
+            <div
+              className={cn(
+                "text-7xl select-none transition-all duration-700 ease-out",
+                value > 0
+                  ? "animate-[bounce_2.4s_ease-in-out_infinite]"
+                  : "animate-angry-shake",
+              )}
+              style={{
+                transform: `scale(${tier.scale})`,
+                filter: tier.glow,
+              }}
+              aria-label={`Porquinho ${tier.mood}`}
+            >
+              {tier.emoji}
+            </div>
           </div>
 
           {/* Value */}
