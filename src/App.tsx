@@ -216,7 +216,8 @@ const App = () => (
                             <Route path="/sales-calendar" element={<SalesCalendar />} />
                             <Route path="/sales-team" element={<SalesTeam />} />
                             <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
-                            <Route path="/sales-team/incentive-presentation" element={<IncentivePresentation />} />
+                            <Route path="/sales-team/incentive-presentation" element={<CloserDashboard />} />
+                            <Route path="/sales-team/incentive-slideshow" element={<IncentivePresentation />} />
                             <Route path="/leads" element={<Leads />} />
                             <Route path="/financial" element={<FinancialLayout />}>
                               <Route index element={<Navigate to="/financial/dashboard" replace />} />
