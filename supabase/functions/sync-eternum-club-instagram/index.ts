@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
     const { data: clients, error: clientsError } = await supabase
       .from("clients")
-      .select("id, name, instagram, instagrams")
+      .select("id, full_name, instagram, instagrams")
       .in("id", clientIds);
     if (clientsError) throw clientsError;
 
