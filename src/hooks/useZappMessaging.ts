@@ -786,6 +786,7 @@ export function useZappMessaging({
           audio_duration_sec: duration || null,
           media_download_status: "completed",
           sent_at: now,
+          sender_user_id: currentUser?.id || null,
         }).select("id").single();
         
         if (insertError) throw insertError;
