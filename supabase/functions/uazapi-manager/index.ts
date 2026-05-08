@@ -789,7 +789,9 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer);
+      result = await enqueueSend(token!, `send_media user=${userData.name} type=${payload.media_type}`, () =>
+        uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
+      );
       // 🚨 Diagnóstico: detectar respostas sem id (falha silenciosa)
       const r: any = result;
       const hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
