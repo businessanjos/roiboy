@@ -25,6 +25,9 @@ import {
   CustomSpinsPanel,
 } from "@/components/sales/quotas/SpiffsSection";
 import { PaymentMethodSpiffPanel } from "@/components/sales/quotas/PaymentMethodSpiffPanel";
+import { TierProgressHero } from "@/components/sales/quotas/TierProgressHero";
+import { useUserMonthlyTier } from "@/hooks/useUserMonthlyTier";
+import { cn } from "@/lib/utils";
 
 const MONTH_QUOTA_DEFAULT = 8; // 100% da meta = 8 vendas no mês (Closer)
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
@@ -214,30 +217,41 @@ export default function CloserDashboard() {
 
   const monthLabel = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
+  const { tier } = useUserMonthlyTier();
+
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-4 sm:p-6 space-y-6 max-w-7xl">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-semibold flex items-center gap-2">
-              <Trophy className="h-6 w-6 text-amber-500" />
-              Plano de Incentivo
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1 capitalize">
-              Sua performance · {monthLabel}
-            </p>
+      <div
+        className={cn(
+          "min-h-full bg-gradient-to-br transition-colors duration-700",
+          tier.pageBg,
+        )}
+      >
+        <div className="container mx-auto p-4 sm:p-6 space-y-6 max-w-7xl">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <h1 className="text-2xl font-semibold flex items-center gap-2">
+                <Trophy className="h-6 w-6 text-amber-500" />
+                Plano de Incentivo
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 capitalize">
+                Sua performance · {monthLabel}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/sales-team/incentive-slideshow")}
+              className="gap-1.5"
+            >
+              <Presentation className="h-4 w-4" />
+              Apresentar plano
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/sales-team/incentive-slideshow")}
-            className="gap-1.5"
-          >
-            <Presentation className="h-4 w-4" />
-            Apresentar plano
-          </Button>
-        </div>
+
+          <TierProgressHero />
+
 
         {/* Speedometer + Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -366,6 +380,7 @@ export default function CloserDashboard() {
             </Tabs>
           )}
         </div>
+      </div>
       </div>
     </TooltipProvider>
   );

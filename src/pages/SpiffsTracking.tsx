@@ -10,16 +10,12 @@ import { RouletteSpinsPanel, CustomSpinsPanel } from "@/components/sales/quotas/
 import { PaymentMethodSpiffPanel } from "@/components/sales/quotas/PaymentMethodSpiffPanel";
 import { SpiffSpinsHistory } from "@/components/sales/quotas/SpiffSpinsHistory";
 import { SpiffSpinsCompactMonth } from "@/components/sales/quotas/SpiffSpinsCompactMonth";
-import { TierProgressHero } from "@/components/sales/quotas/TierProgressHero";
-import { useUserMonthlyTier } from "@/hooks/useUserMonthlyTier";
-import { cn } from "@/lib/utils";
 
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
 
 export default function SpiffsTracking() {
   const now = new Date();
   const { spiffs } = useQuotasIncentives(now.getFullYear(), now.getMonth() + 1);
-  const { tier } = useUserMonthlyTier();
   const isLoading = false;
   const [tab, setTab] = useState<"active" | "all">("active");
   const [view, setView] = useState<"tracking" | "history">("tracking");
@@ -36,24 +32,16 @@ export default function SpiffsTracking() {
 
   return (
     <TooltipProvider>
-      <div
-        className={cn(
-          "min-h-full bg-gradient-to-br transition-colors duration-700",
-          tier.pageBg,
-        )}
-      >
-        <div className="container mx-auto p-4 sm:p-6 space-y-6 max-w-7xl">
-          <div>
-            <h1 className="text-2xl font-semibold flex items-center gap-2">
-              <Zap className="h-6 w-6 text-amber-500" />
-              Acompanhamento de SPIFFs
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Acompanhe em tempo real o progresso das campanhas e o histórico de prêmios sorteados.
-            </p>
-          </div>
-
-          <TierProgressHero />
+      <div className="container mx-auto p-4 sm:p-6 space-y-6 max-w-7xl">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <Zap className="h-6 w-6 text-amber-500" />
+            Acompanhamento de SPIFFs
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Acompanhe em tempo real o progresso das campanhas e o histórico de prêmios sorteados.
+          </p>
+        </div>
 
           <Tabs value={view} onValueChange={(v) => setView(v as "tracking" | "history")} className="space-y-4">
             <TabsList>
@@ -150,7 +138,6 @@ export default function SpiffsTracking() {
               <SpiffSpinsHistory />
             </TabsContent>
           </Tabs>
-        </div>
       </div>
     </TooltipProvider>
   );
