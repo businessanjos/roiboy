@@ -134,6 +134,15 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       sectorItems = sectorItems.filter(item => item.to !== "/operations/consultant-bonus");
     }
 
+    // Ranking Instagram: restrito a Maikol, Bruna, Everton, Jonathan e Andreia
+    const IG_RANKING_VIEWERS = ["maikol", "bruna", "everton", "jonathan", "andreia"];
+    const canSeeIgRanking = IG_RANKING_VIEWERS.some(
+      (k) => userName.includes(k) || userEmail.includes(k)
+    );
+    if (!canSeeIgRanking) {
+      sectorItems = sectorItems.filter(item => item.to !== "/operations/instagram-ranking");
+    }
+
     // Admins can see all sector items. Everyone else must pass explicit permissions.
     if (showAllItems) return sectorItems;
     
