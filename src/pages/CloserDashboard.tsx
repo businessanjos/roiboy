@@ -240,10 +240,8 @@ export default function CloserDashboard() {
     [metrics, currentUser?.id],
   );
 
-  const wonDeals = me?.won_deals ?? 0;
   const meetingsHeld = Math.max(0, (me?.scheduled_calls ?? 0) - (me?.noshow_calls ?? 0));
   const noShows = me?.noshow_calls ?? 0;
-  const closeRate = meetingsHeld > 0 ? Math.round((wonDeals / meetingsHeld) * 100) : 0;
   const wonValue = me?.won_value ?? 0;
 
   const { spiffs } = useQuotasIncentives(selYear, selMonth + 1);
