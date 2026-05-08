@@ -80,7 +80,9 @@ export function PiggyBankCard({ value, loading }: PiggyBankCardProps) {
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1 capitalize">
-              {tier.mood === "neutro" ? "Cofrinho ainda vazio" : `Porquinho ${tier.mood}`}
+              {tier.mood === "FURIOSO"
+                ? "🔥 Cofrinho VAZIO — porquinho FURIOSO! 🔥"
+                : `Porquinho ${tier.mood}`}
             </p>
           </div>
 
