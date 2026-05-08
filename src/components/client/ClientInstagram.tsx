@@ -263,10 +263,18 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
                 },
                 { reels: 0, carousel: 0, static: 0 } as Record<PostFormat, number>,
               );
+              const commentRate = totalLikes > 0 ? (totalComments / totalLikes) * 100 : null;
               const stats: Array<{ label: string; value: string; sub?: string; trend?: number | null; Icon: typeof Heart; color: string }> = [
                 { label: `Engajamento (${posts.length} posts)`, value: fmt(totalLikes + totalComments), Icon: Heart, color: "text-pink-500" },
                 { label: "Curtidas (média)", value: fmt(avgLikes), sub: `Total ${fmt(totalLikes)}`, trend: likesTrend, Icon: Heart, color: "text-pink-500" },
                 { label: "Comentários (média)", value: fmt(avgComments), sub: `Total ${fmt(totalComments)}`, trend: commentsTrend, Icon: MessageCircle, color: "text-blue-500" },
+                {
+                  label: "Taxa de comentários",
+                  value: commentRate == null ? "—" : `${commentRate.toFixed(2)}%`,
+                  sub: "Comentários / Curtidas",
+                  Icon: MessageCircle,
+                  color: "text-emerald-500",
+                },
                 ...(totalViews > 0
                   ? [{ label: "Views (Reels)", value: fmt(totalViews), Icon: Eye, color: "text-purple-500" }]
                   : []),
