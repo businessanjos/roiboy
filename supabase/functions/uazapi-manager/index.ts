@@ -808,7 +808,9 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { groupBody.replyid = normalizedQuotedMessageId; }
       if (payload.mentions) groupBody.mentions = payload.mentions;
       
-      result = await uazapiInstance("/send/text", "POST", token!, groupBody, sectorServer);
+      result = await enqueueSend(token!, `send_to_group user=${userData.name}`, () =>
+        uazapiInstance("/send/text", "POST", token!, groupBody, sectorServer)
+      );
     
     } else if (action === "send_media_to_group") {
       // ✅ NOVO: Mídia em grupos
