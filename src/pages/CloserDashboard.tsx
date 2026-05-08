@@ -311,10 +311,6 @@ export default function CloserDashboard() {
             )}
           </div>
         </div>
-              </>
-            )}
-          </div>
-        </div>
 
         {/* SPIFFs */}
         <div className="space-y-4">
