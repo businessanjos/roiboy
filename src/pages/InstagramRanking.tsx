@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { EvolutionTrendsSection } from "@/components/instagram/EvolutionTrendsSection";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 type Snap = {
   client_id: string;
