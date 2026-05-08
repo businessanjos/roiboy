@@ -114,6 +114,55 @@ Deno.serve(async (req) => {
           raw: { profile: u },
           last_synced_at: new Date().toISOString(),
         }, { onConflict: "client_id,username" });
+
+        // Histórico de métricas: registra na entrada e a cada 30 dias
+        try {
+          const { data: lastHistory } = await supabase
+            .from("client_instagram_metrics_history")
+            .select("snapshot_at")
+            .eq("client_id", clientId)
+            .eq("username", snapshot.username)
+            .order("snapshot_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+          const shouldRecord =
+            !lastHistory ||
+            Date.now() - new Date(lastHistory.snapshot_at).getTime() >= THIRTY_DAYS_MS;
+
+          if (shouldRecord) {
+            await supabase.from("client_instagram_metrics_history").insert({
+              account_id: client.account_id,
+              client_id: clientId,
+              username: snapshot.username,
+              followers_count: snapshot.followers_count ?? null,
+              following_count: snapshot.following_count ?? null,
+              media_count: snapshot.media_count ?? null,
+            });
+
+            // Também registra na timeline do cliente
+            const followers = snapshot.followers_count ?? 0;
+            const media = snapshot.media_count ?? 0;
+            const isFirst = !lastHistory;
+            const title = isFirst
+              ? `Instagram: ${followers.toLocaleString("pt-BR")} seguidores · ${media.toLocaleString("pt-BR")} posts`
+              : `Atualização Instagram: ${followers.toLocaleString("pt-BR")} seguidores · ${media.toLocaleString("pt-BR")} posts`;
+            const description = `@${snapshot.username} — ${followers.toLocaleString("pt-BR")} seguidores, ${(snapshot.following_count ?? 0).toLocaleString("pt-BR")} seguindo, ${media.toLocaleString("pt-BR")} publicações.`;
+
+            await supabase.from("client_life_events").insert({
+              account_id: client.account_id,
+              client_id: clientId,
+              event_type: "instagram_metrics",
+              event_date: new Date().toISOString().slice(0, 10),
+              title,
+              description,
+              source: "system",
+            });
+          }
+        } catch (histErr) {
+          console.error("[instagram-public-snapshot] history insert error", histErr);
+        }
       }
     }
 

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, RefreshCw, Instagram, ExternalLink, Heart, MessageCircle, Play, BadgeCheck, Lock, Video, Images, Image as ImageIcon, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { InstagramEvolutionChart } from "./InstagramEvolutionChart";
 
 type PostFormat = "reels" | "carousel" | "static";
 
@@ -231,6 +232,9 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
                 )}
               </div>
             </div>
+
+            {/* Evolução (seguidores e posts ao longo do tempo) */}
+            <InstagramEvolutionChart clientId={clientId} username={snapshot.username} />
 
             {/* Posts grid */}
             {snapshot.posts && snapshot.posts.length > 0 && (() => {

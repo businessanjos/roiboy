@@ -1953,6 +1953,42 @@ export type Database = {
           },
         ]
       }
+      client_instagram_metrics_history: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          followers_count: number | null
+          following_count: number | null
+          id: string
+          media_count: number | null
+          snapshot_at: string
+          username: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          followers_count?: number | null
+          following_count?: number | null
+          id?: string
+          media_count?: number | null
+          snapshot_at?: string
+          username: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          followers_count?: number | null
+          following_count?: number | null
+          id?: string
+          media_count?: number | null
+          snapshot_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
       client_instagram_snapshots: {
         Row: {
           account_id: string
