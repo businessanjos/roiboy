@@ -77,6 +77,7 @@ import {
   XCircle,
   AlertCircle,
   FlaskConical,
+  Instagram,
 } from "lucide-react";
 import { toast } from "sonner";
 import { differenceInDays, addYears, isBefore } from "date-fns";
