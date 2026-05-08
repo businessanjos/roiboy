@@ -20,7 +20,7 @@ const TIERS = [
   { min: 7, label: "Feliz",            emoji: "😊🐷", scale: 1.12, glow: "drop-shadow(0 0 18px rgba(244,114,182,0.6))", anger: 0 },
   { min: 8, label: "Muito feliz",      emoji: "🥰🐷", scale: 1.20, glow: "drop-shadow(0 0 24px rgba(251,191,36,0.7))", anger: 0 },
   { min: 9, label: "HIPER MEGA BLASTER", emoji: "🤩🐷👑", scale: 1.32, glow: "drop-shadow(0 0 36px rgba(234,179,8,0.9))", anger: 0 },
-] as const;
+];
 
 function getTier(salesCount: number) {
   let t = TIERS[0];
