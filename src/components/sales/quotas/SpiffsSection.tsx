@@ -773,7 +773,7 @@ export function SpiffsSection() {
 const ITEM_DA_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
 // ── Painel de giros pendentes por vendedor ──
-export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
+export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; restrictToUserId?: string }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const triggerPerValue = Number(spiff.trigger_per_value || 0);
@@ -898,6 +898,8 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
     };
   }).sort((a, b) => b.pendingSpins - a.pendingSpins || b.earnedSpins - a.earnedSpins || a.name.localeCompare(b.name));
 
+  const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
+
   const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
 
   if (triggerPerValue <= 0) return null;
@@ -918,7 +920,7 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
           </TooltipContent>
         </Tooltip>
       </div>
-      {summary.length === 0 ? (
+      {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhum negócio ganho no período ainda.</p>
       ) : (
         <Table>
@@ -933,7 +935,7 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {summary.map((s) => (
+            {visibleSummary.map((s) => (
               <TableRow key={s.uid}>
                 <TableCell className="text-sm font-medium">{s.name}</TableCell>
                 <TableCell className="text-center text-sm tabular-nums">R$ {formatBRL(Math.round(s.total))}</TableCell>
@@ -986,7 +988,7 @@ export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
 }
 
 // ── Painel de giros pendentes — Roleta Custom (vendas em janela) ──
-export function CustomSpinsPanel({ spiff }: { spiff: any }) {
+export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; restrictToUserId?: string }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const triggerSalesCount = Number(spiff.trigger_sales_count || 0);
@@ -1132,6 +1134,8 @@ export function CustomSpinsPanel({ spiff }: { spiff: any }) {
     return { uid, name: user?.name || collab?.full_name || "—", sales, spins, toNext };
   }).sort((a, b) => b.spins - a.spins || b.sales - a.sales || a.name.localeCompare(b.name));
 
+  const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
+
   if (triggerSalesCount <= 0) return null;
 
   return (
@@ -1159,7 +1163,7 @@ export function CustomSpinsPanel({ spiff }: { spiff: any }) {
       {spiff.custom_prize_description && (
         <p className="text-xs text-muted-foreground italic">🎁 Prêmio: {spiff.custom_prize_description}</p>
       )}
-      {summary.length === 0 ? (
+      {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhuma venda ganha na janela atual ainda.</p>
       ) : (
         <Table>
@@ -1172,7 +1176,7 @@ export function CustomSpinsPanel({ spiff }: { spiff: any }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {summary.map((s) => (
+            {visibleSummary.map((s) => (
               <TableRow key={s.uid}>
                 <TableCell className="text-sm font-medium">{s.name}</TableCell>
                 <TableCell className="text-center text-sm tabular-nums">{s.sales}</TableCell>

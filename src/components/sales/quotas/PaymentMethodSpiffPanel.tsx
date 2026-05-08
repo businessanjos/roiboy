@@ -41,9 +41,10 @@ interface Props {
     payment_tiers?: PaymentTier[] | null;
     participant_user_ids?: string[] | null;
   };
+  restrictToUserId?: string;
 }
 
-export function PaymentMethodSpiffPanel({ spiff }: Props) {
+export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const tiers: PaymentTier[] = Array.isArray(spiff.payment_tiers) ? spiff.payment_tiers : [];
@@ -160,6 +161,13 @@ export function PaymentMethodSpiffPanel({ spiff }: Props) {
     return { uid, name: collab?.full_name || "—", totalSales: userDeals.length, tierCounts, totalBonus, unclassified };
   }).sort((a, b) => b.totalBonus - a.totalBonus || a.name.localeCompare(b.name));
 
+  const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
+
+  // Se restrito e o usuário não é participante deste SPIFF, esconder o painel inteiro
+  if (restrictToUserId && !participantIds.includes(restrictToUserId)) {
+    return null;
+  }
+
   if (tiers.length === 0) {
     return (
       <div className="rounded-lg border-2 border-purple-500/30 bg-purple-500/5 p-3">
@@ -200,7 +208,7 @@ export function PaymentMethodSpiffPanel({ spiff }: Props) {
         ))}
       </div>
 
-      {summary.length === 0 ? (
+      {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhum participante encontrado.</p>
       ) : (
         <Table>
@@ -217,7 +225,7 @@ export function PaymentMethodSpiffPanel({ spiff }: Props) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {summary.map((s) => (
+            {visibleSummary.map((s) => (
               <TableRow key={s.uid}>
                 <TableCell className="text-sm font-medium">
                   {s.name}
