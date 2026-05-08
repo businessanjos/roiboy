@@ -286,7 +286,9 @@ export default function Clients() {
     hold: "paused,suspended",
     cancelled: "cancelled,dismissed,ended",
   };
-  const effectiveContractFilter = tabContractFilter[activeTab] ?? (filterContract !== "all" ? filterContract : null);
+  // User's explicit contract filter (when not "all") wins over the tab default,
+  // so "Expirado / Expira em 30/60 dias" actually narrows the list instead of being shadowed by the tab.
+  const effectiveContractFilter = filterContract !== "all" ? filterContract : (tabContractFilter[activeTab] ?? null);
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
