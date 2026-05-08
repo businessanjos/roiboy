@@ -139,21 +139,23 @@ export function nextTier(current: TierDef): TierDef | null {
  * Returns the user's current tier based on won deals in the current month.
  * Counts deals where the user is the responsible_user_id (closer).
  */
-export function useUserMonthlyTier() {
+export function useUserMonthlyTier(year?: number, month?: number) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const userId = currentUser?.id;
 
   const { start, end, monthLabel } = useMemo(() => {
     const now = new Date();
-    const s = new Date(now.getFullYear(), now.getMonth(), 1);
-    const e = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const y = year ?? now.getFullYear();
+    const m = month ?? now.getMonth();
+    const s = new Date(y, m, 1);
+    const e = new Date(y, m + 1, 1);
     return {
       start: s.toISOString(),
       end: e.toISOString(),
       monthLabel: s.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
     };
-  }, []);
+  }, [year, month]);
 
   const q = useQuery({
     queryKey: ["user-monthly-won-count", accountId, userId, start],
