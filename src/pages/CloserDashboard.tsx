@@ -273,7 +273,7 @@ export default function CloserDashboard() {
             <div>
               <h1 className="text-2xl font-semibold flex items-center gap-2">
                 <Trophy className="h-6 w-6 text-amber-500" />
-                Plano de Incentivo
+                Acelerômetro
               </h1>
               <p className="text-sm text-muted-foreground mt-1 capitalize">
                 Sua performance · {monthLabel}
