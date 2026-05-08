@@ -132,6 +132,10 @@ Deno.serve(async (req) => {
             Date.now() - new Date(lastHistory.snapshot_at).getTime() >= THIRTY_DAYS_MS;
 
           if (shouldRecord) {
+            const considered = Array.isArray(posts) ? posts.slice(0, 12) : [];
+            const totalLikes = considered.reduce((acc: number, p: any) => acc + (Number(p?.like_count) || 0), 0);
+            const totalComments = considered.reduce((acc: number, p: any) => acc + (Number(p?.comment_count) || 0), 0);
+
             await supabase.from("client_instagram_metrics_history").insert({
               account_id: client.account_id,
               client_id: clientId,
@@ -139,6 +143,9 @@ Deno.serve(async (req) => {
               followers_count: snapshot.followers_count ?? null,
               following_count: snapshot.following_count ?? null,
               media_count: snapshot.media_count ?? null,
+              total_likes: totalLikes,
+              total_comments: totalComments,
+              posts_considered: considered.length,
             });
 
             // Também registra na timeline do cliente
