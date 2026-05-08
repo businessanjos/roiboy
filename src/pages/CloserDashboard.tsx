@@ -307,13 +307,10 @@ export default function CloserDashboard() {
                   hint={`${wonDeals} fechadas / ${meetingsHeld} reuniões`}
                   variant={closeRate >= 30 ? "success" : closeRate >= 15 ? "warning" : "danger"}
                 />
-                <MetricCard
-                  icon={DollarSign}
-                  label="Valor fechado"
-                  value={`R$ ${Number(wonValue).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`}
-                  hint={`${wonDeals} ${wonDeals === 1 ? "venda" : "vendas"}`}
-                  variant="success"
-                />
+              </>
+            )}
+          </div>
+        </div>
               </>
             )}
           </div>
