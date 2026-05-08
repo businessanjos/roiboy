@@ -9,6 +9,8 @@ interface MetricRow {
   followers_count: number | null;
   following_count: number | null;
   media_count: number | null;
+  total_likes: number | null;
+  total_comments: number | null;
 }
 
 const fmtNum = (n: number | null | undefined) =>
