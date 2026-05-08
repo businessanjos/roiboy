@@ -186,12 +186,46 @@ export default function CloserDashboard() {
   const { currentUser } = useCurrentUser();
   const now = new Date();
 
-  // Date range: current month
-  const startOfMonth = useMemo(() => new Date(now.getFullYear(), now.getMonth(), 1), [now]);
-  const endOfMonth = useMemo(
-    () => new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59),
-    [now],
+  // Histórico disponível a partir de Maio/2026 (inclusive). Default = mês atual.
+  const HISTORY_START_YEAR = 2026;
+  const HISTORY_START_MONTH = 4; // Maio (0-indexado)
+
+  const [selectedKey, setSelectedKey] = useState(
+    () => `${now.getFullYear()}-${now.getMonth()}`,
   );
+  const [selYear, selMonth] = useMemo(() => {
+    const [y, m] = selectedKey.split("-").map(Number);
+    return [y, m] as [number, number];
+  }, [selectedKey]);
+
+  const isCurrentMonth = selYear === now.getFullYear() && selMonth === now.getMonth();
+
+  // Date range: selected month
+  const startOfMonth = useMemo(() => new Date(selYear, selMonth, 1), [selYear, selMonth]);
+  const endOfMonth = useMemo(
+    () => new Date(selYear, selMonth + 1, 0, 23, 59, 59),
+    [selYear, selMonth],
+  );
+
+  // Lista de meses disponíveis (>= Maio/2026 e <= mês atual), do mais recente para o mais antigo
+  const availableMonths = useMemo(() => {
+    const out: { key: string; label: string }[] = [];
+    let y = now.getFullYear();
+    let m = now.getMonth();
+    while (y > HISTORY_START_YEAR || (y === HISTORY_START_YEAR && m >= HISTORY_START_MONTH)) {
+      const d = new Date(y, m, 1);
+      out.push({
+        key: `${y}-${m}`,
+        label: d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+      });
+      m -= 1;
+      if (m < 0) {
+        m = 11;
+        y -= 1;
+      }
+    }
+    return out;
+  }, [now.getFullYear(), now.getMonth()]);
 
   const { metrics, loading } = useSalesTeamMetrics({
     startDate: startOfMonth,
@@ -209,16 +243,16 @@ export default function CloserDashboard() {
   const closeRate = meetingsHeld > 0 ? Math.round((wonDeals / meetingsHeld) * 100) : 0;
   const wonValue = me?.won_value ?? 0;
 
-  const { spiffs } = useQuotasIncentives(now.getFullYear(), now.getMonth() + 1);
+  const { spiffs } = useQuotasIncentives(selYear, selMonth + 1);
   const visibleSpiffs = (spiffs ?? []).filter((s: any) => s.is_active && !isExpired(s.end_date));
   const rouletteSpiffs = visibleSpiffs.filter((s: any) => s.prize_type === "roulette");
   const customSpiffs = visibleSpiffs.filter((s: any) => s.prize_type === "custom");
   const paymentSpiffs = visibleSpiffs.filter((s: any) => s.prize_type === "payment_method");
   const totalSpiffs = rouletteSpiffs.length + customSpiffs.length + paymentSpiffs.length;
 
-  const monthLabel = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const monthLabel = startOfMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-  const { tier } = useUserMonthlyTier();
+  const { tier } = useUserMonthlyTier(selYear, selMonth);
 
   return (
     <TooltipProvider>
