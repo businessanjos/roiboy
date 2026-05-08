@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,9 @@ import {
   Zap,
   Sparkles,
   Presentation,
+  Eye,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSalesTeamMetrics } from "@/hooks/useSalesTeamMetrics";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
@@ -32,6 +35,13 @@ import { SalesRecordCard } from "@/components/sales/quotas/SalesRecordCard";
 import { useUserMonthlyTier } from "@/hooks/useUserMonthlyTier";
 import { useCloserPersonalStats } from "@/hooks/useCloserPersonalStats";
 import { cn } from "@/lib/utils";
+
+// Líderes que enxergam o acelerômetro de seus liderados
+const MANAGER_IDS = new Set<string>([
+  "1232ec15-5f66-4b5f-9e74-f40d436f9d0f", // Jonathan Marcato
+  "d20201f6-a9bd-4934-ae50-07ce7a47574b", // Maikol Parnow
+]);
+
 
 const MONTH_QUOTA_DEFAULT = 8; // 100% da meta = 8 vendas no mês (Closer)
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
@@ -223,6 +233,44 @@ export default function CloserDashboard() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const now = new Date();
+  const isManager = !!currentUser?.id && MANAGER_IDS.has(currentUser.id);
+
+  // Lista de liderados visíveis (ele mesmo + closers do account) — apenas para managers
+  const { data: viewableUsers = [] } = useQuery({
+    queryKey: ["closer-dash-viewable", currentUser?.account_id, currentUser?.id],
+    enabled: isManager && !!currentUser?.account_id,
+    queryFn: async () => {
+      const { data: roles } = await supabase
+        .from("team_roles")
+        .select("id")
+        .eq("account_id", currentUser!.account_id)
+        .eq("cargo", "Closer");
+      const roleIds = (roles ?? []).map((r) => r.id);
+      const closerIds = new Set<string>();
+      if (roleIds.length) {
+        const { data: utr } = await supabase
+          .from("user_team_roles")
+          .select("user_id")
+          .in("team_role_id", roleIds);
+        (utr ?? []).forEach((r: any) => r.user_id && closerIds.add(r.user_id));
+      }
+      const ids = new Set<string>([currentUser!.id, ...closerIds]);
+      const { data: users } = await supabase
+        .from("users")
+        .select("id, name")
+        .in("id", Array.from(ids))
+        .order("name");
+      return (users ?? []) as { id: string; name: string }[];
+    },
+  });
+
+  const [viewedUserId, setViewedUserId] = useState<string | undefined>(undefined);
+  const effectiveUserId = viewedUserId ?? currentUser?.id;
+  const isViewingOther = isManager && !!viewedUserId && viewedUserId !== currentUser?.id;
+  const viewedUserName = useMemo(
+    () => viewableUsers.find((u) => u.id === effectiveUserId)?.name ?? null,
+    [viewableUsers, effectiveUserId],
+  );
 
   // Histórico disponível a partir de Maio/2026 (inclusive). Default = mês atual.
   const HISTORY_START_YEAR = 2026;
@@ -271,8 +319,8 @@ export default function CloserDashboard() {
   });
 
   const me = useMemo(
-    () => metrics.find((m) => m.user_id === currentUser?.id),
-    [metrics, currentUser?.id],
+    () => metrics.find((m) => m.user_id === effectiveUserId),
+    [metrics, effectiveUserId],
   );
 
   const meetingsHeld = Math.max(0, (me?.scheduled_calls ?? 0) - (me?.noshow_calls ?? 0));
@@ -288,10 +336,11 @@ export default function CloserDashboard() {
 
   const monthLabel = startOfMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-  const { tier, sales: wonDeals } = useUserMonthlyTier(selYear, selMonth);
+  const { tier, sales: wonDeals } = useUserMonthlyTier(selYear, selMonth, effectiveUserId);
   const closeRate = meetingsHeld > 0 ? Math.round((wonDeals / meetingsHeld) * 100) : 0;
   const { record, recordMonthLabel, piggyValue, loading: statsLoading } =
-    useCloserPersonalStats(selYear, selMonth);
+    useCloserPersonalStats(selYear, selMonth, effectiveUserId);
+
 
 
   return (
@@ -311,10 +360,31 @@ export default function CloserDashboard() {
                 Acelerômetro
               </h1>
               <p className="text-sm text-muted-foreground mt-1 capitalize">
-                Sua performance · {monthLabel}
+                {isViewingOther && viewedUserName
+                  ? `Visualizando: ${viewedUserName} · ${monthLabel}`
+                  : `Sua performance · ${monthLabel}`}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {isManager && viewableUsers.length > 1 && (
+                <Select
+                  value={effectiveUserId ?? currentUser?.id ?? ""}
+                  onValueChange={(v) => setViewedUserId(v === currentUser?.id ? undefined : v)}
+                >
+                  <SelectTrigger className="w-[200px] h-9 gap-1.5">
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {viewableUsers.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                        {u.id === currentUser?.id ? " (você)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {availableMonths.length > 1 && (
                 <Select value={selectedKey} onValueChange={setSelectedKey}>
                   <SelectTrigger className="w-[180px] h-9 capitalize">
@@ -342,13 +412,20 @@ export default function CloserDashboard() {
             </div>
           </div>
 
+          {isViewingOther && (
+            <div className="rounded-lg border border-sky-200 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-900 px-4 py-2.5 text-sm text-sky-900 dark:text-sky-200 flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Você está visualizando o Acelerômetro de <strong>{viewedUserName}</strong>. Modo somente leitura.
+            </div>
+          )}
+
           {!isCurrentMonth && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 px-4 py-2.5 text-sm text-amber-900 dark:text-amber-200">
               Você está visualizando o histórico de <span className="capitalize font-medium">{monthLabel}</span>. Os dados são apenas para consulta.
             </div>
           )}
 
-          {isCurrentMonth && <TierProgressHero />}
+          {isCurrentMonth && <TierProgressHero userId={effectiveUserId} />}
 
 
 
@@ -495,18 +572,18 @@ export default function CloserDashboard() {
               </TabsList>
 
               <TabsContent value="all" className="space-y-4">
-                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
-                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
-                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} restrictToUserId={currentUser?.id} />)}
+                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} restrictToUserId={effectiveUserId} />)}
+                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} restrictToUserId={effectiveUserId} />)}
+                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} restrictToUserId={effectiveUserId} />)}
               </TabsContent>
               <TabsContent value="roulette" className="space-y-4">
-                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
+                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} restrictToUserId={effectiveUserId} />)}
               </TabsContent>
               <TabsContent value="custom" className="space-y-4">
-                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
+                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} restrictToUserId={effectiveUserId} />)}
               </TabsContent>
               <TabsContent value="payment" className="space-y-4">
-                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} restrictToUserId={currentUser?.id} />)}
+                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} restrictToUserId={effectiveUserId} />)}
               </TabsContent>
             </Tabs>
           )}

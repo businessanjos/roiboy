@@ -139,10 +139,10 @@ export function nextTier(current: TierDef): TierDef | null {
  * Returns the user's current tier based on won deals in the current month.
  * Counts deals where the user is the responsible_user_id (closer).
  */
-export function useUserMonthlyTier(year?: number, month?: number) {
+export function useUserMonthlyTier(year?: number, month?: number, userIdOverride?: string) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
-  const userId = currentUser?.id;
+  const userId = userIdOverride ?? currentUser?.id;
 
   const { start, end, monthLabel } = useMemo(() => {
     const now = new Date();
