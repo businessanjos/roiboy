@@ -225,7 +225,7 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {summary.map((s) => (
+            {visibleSummary.map((s) => (
               <TableRow key={s.uid}>
                 <TableCell className="text-sm font-medium">
                   {s.name}
