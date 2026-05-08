@@ -140,6 +140,25 @@ Deno.serve(async (req) => {
               following_count: snapshot.following_count ?? null,
               media_count: snapshot.media_count ?? null,
             });
+
+            // Também registra na timeline do cliente
+            const followers = snapshot.followers_count ?? 0;
+            const media = snapshot.media_count ?? 0;
+            const isFirst = !lastHistory;
+            const title = isFirst
+              ? `Instagram: ${followers.toLocaleString("pt-BR")} seguidores · ${media.toLocaleString("pt-BR")} posts`
+              : `Atualização Instagram: ${followers.toLocaleString("pt-BR")} seguidores · ${media.toLocaleString("pt-BR")} posts`;
+            const description = `@${snapshot.username} — ${followers.toLocaleString("pt-BR")} seguidores, ${(snapshot.following_count ?? 0).toLocaleString("pt-BR")} seguindo, ${media.toLocaleString("pt-BR")} publicações.`;
+
+            await supabase.from("client_life_events").insert({
+              account_id: client.account_id,
+              client_id: clientId,
+              event_type: "instagram_metrics",
+              event_date: new Date().toISOString().slice(0, 10),
+              title,
+              description,
+              source: "system",
+            });
           }
         } catch (histErr) {
           console.error("[instagram-public-snapshot] history insert error", histErr);
