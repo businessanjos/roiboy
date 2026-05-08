@@ -208,7 +208,7 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
         ))}
       </div>
 
-      {summary.length === 0 ? (
+      {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhum participante encontrado.</p>
       ) : (
         <Table>
