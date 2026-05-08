@@ -2068,7 +2068,6 @@ export default function Clients() {
                   </SelectContent>
                 </Select>
               </div>
-              )}
 
               {/* Contract Filter */}
               {!["pending_contract", "hold", "cancelled"].includes(activeTab) && (
@@ -2092,6 +2091,7 @@ export default function Clients() {
                   </SelectContent>
                 </Select>
               </div>
+              )}
 
               {/* Responsible Filter */}
               {teamUsers.length > 0 && (
