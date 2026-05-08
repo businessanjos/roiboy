@@ -66,6 +66,40 @@ Deno.serve(async (req) => {
     // 2) medias (last 12)
     const medias = await hiker("/v1/user/medias", { user_id: String(u.pk || u.id || ""), amount: "12" }, apiKey);
     const items: any[] = Array.isArray(medias.json) ? medias.json : (medias.json?.items || medias.json?.medias || []);
+    const pickThumb = (m: any): string | null => {
+      // Direct fields
+      const direct =
+        m?.thumbnail_url ||
+        m?.thumbnail_src ||
+        m?.display_url ||
+        m?.display_uri ||
+        null;
+      if (direct) return direct;
+
+      // image_versions2.candidates[0].url (most common on HikerAPI v2)
+      const iv2 = m?.image_versions2?.candidates?.[0]?.url;
+      if (iv2) return iv2;
+
+      // image_versions.items[0].url (older shape)
+      const ivItems = m?.image_versions?.items?.[0]?.url;
+      if (ivItems) return ivItems;
+
+      // Carousel: media_type 8 → first child's image
+      const carousel = m?.carousel_media?.[0] || m?.resources?.[0];
+      if (carousel) {
+        const c =
+          carousel?.thumbnail_url ||
+          carousel?.thumbnail_src ||
+          carousel?.display_url ||
+          carousel?.image_versions2?.candidates?.[0]?.url ||
+          carousel?.image_versions?.items?.[0]?.url ||
+          null;
+        if (c) return c;
+      }
+
+      return null;
+    };
+
     const posts = (items || []).slice(0, 12).map((m: any) => ({
       id: m.id || m.pk,
       code: m.code,
@@ -76,8 +110,8 @@ Deno.serve(async (req) => {
       media_type: m.media_type,
       product_type: m.product_type,
       caption: m.caption_text || m.caption?.text || null,
-      thumbnail_url: m.thumbnail_url || m.image_versions2?.candidates?.[0]?.url || null,
-      video_url: m.video_url || null,
+      thumbnail_url: pickThumb(m),
+      video_url: m.video_url || m.video_versions?.[0]?.url || null,
       url: m.code ? `https://www.instagram.com/p/${m.code}/` : null,
     }));
 
