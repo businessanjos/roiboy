@@ -87,6 +87,19 @@ interface NavItem {
 
 const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
+// SDR-specific allowlist within the Vendas sector. SDRs should only see these
+// nav items; everything else (Plano de Incentivo, SPIFFs, Gestão, Script de
+// Vendas, Produtos, Insights, etc.) is hidden for them.
+const SDR_ROLES = ["SDR"];
+const SDR_VENDAS_ALLOWED_ROUTES = new Set<string>([
+  "/pipeline",
+  "/leads",
+  "/tasks",
+  "/sales-calendar",
+  "/clients",
+  "/sales/contracts",
+]);
+
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
   const { user } = useAuth();
@@ -120,8 +133,15 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       return currentSector.navItems.filter(item => item.to !== "/notifications");
     }
     
+    const isSdrUser = roleNameMatches(teamRoleName, SDR_ROLES) && !showAllItems;
+
     let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
-    
+
+    // SDRs in the Vendas sector see only the explicit allowlist.
+    if (isSdrUser && currentSector.id === "vendas") {
+      sectorItems = sectorItems.filter(item => SDR_VENDAS_ALLOWED_ROUTES.has(item.to));
+    }
+
     const userName = (currentUser?.name || "").toLowerCase();
     const userEmail = (currentUser?.email || "").toLowerCase();
 
