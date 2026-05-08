@@ -121,7 +121,7 @@ export function PiggyBankCard({ value, salesCount, loading }: PiggyBankCardProps
                 <span className="font-semibold text-foreground">
                   {remaining} {remaining === 1 ? "venda" : "vendas"}
                 </span>{" "}
-                para o seu porco melhorar de humor
+                para o seu porquinho melhorar de humor
               </p>
             </div>
           )}

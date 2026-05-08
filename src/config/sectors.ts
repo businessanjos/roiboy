@@ -185,7 +185,7 @@ export const sectors: Sector[] = [
     bgColor: "bg-blue-500/10",
     defaultRoute: "/pipeline",
     navItems: [
-      { to: "/sales-team/incentive-presentation", icon: Trophy, label: "Plano de Incentivo" },
+      { to: "/sales-team/incentive-presentation", icon: Trophy, label: "Acelerômetro" },
       { to: "/sales-team/spiffs", icon: Gift, label: "SPIFFs", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/sales-team", icon: UserCheck, label: "Gestão", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/pipeline", icon: TrendingUp, label: "Pipeline", permission: PERMISSIONS.CLIENTS_VIEW },
