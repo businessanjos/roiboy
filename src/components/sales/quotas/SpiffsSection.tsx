@@ -773,7 +773,7 @@ export function SpiffsSection() {
 const ITEM_DA_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
 // ── Painel de giros pendentes por vendedor ──
-export function RouletteSpinsPanel({ spiff }: { spiff: any }) {
+export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; restrictToUserId?: string }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const triggerPerValue = Number(spiff.trigger_per_value || 0);
