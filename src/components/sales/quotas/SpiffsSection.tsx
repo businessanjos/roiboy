@@ -898,6 +898,8 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     };
   }).sort((a, b) => b.pendingSpins - a.pendingSpins || b.earnedSpins - a.earnedSpins || a.name.localeCompare(b.name));
 
+  const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
+
   const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
 
   if (triggerPerValue <= 0) return null;
