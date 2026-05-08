@@ -988,7 +988,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
 }
 
 // ── Painel de giros pendentes — Roleta Custom (vendas em janela) ──
-export function CustomSpinsPanel({ spiff }: { spiff: any }) {
+export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; restrictToUserId?: string }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const triggerSalesCount = Number(spiff.trigger_sales_count || 0);
