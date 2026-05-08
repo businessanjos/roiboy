@@ -572,18 +572,18 @@ export default function CloserDashboard() {
               </TabsList>
 
               <TabsContent value="all" className="space-y-4">
-                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
-                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
-                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} restrictToUserId={currentUser?.id} />)}
+                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} restrictToUserId={effectiveUserId} />)}
+                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} restrictToUserId={effectiveUserId} />)}
+                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} restrictToUserId={effectiveUserId} />)}
               </TabsContent>
               <TabsContent value="roulette" className="space-y-4">
-                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
+                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} restrictToUserId={effectiveUserId} />)}
               </TabsContent>
               <TabsContent value="custom" className="space-y-4">
-                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
+                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} restrictToUserId={effectiveUserId} />)}
               </TabsContent>
               <TabsContent value="payment" className="space-y-4">
-                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} restrictToUserId={currentUser?.id} />)}
+                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} restrictToUserId={effectiveUserId} />)}
               </TabsContent>
             </Tabs>
           )}
