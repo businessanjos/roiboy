@@ -253,7 +253,8 @@ export default function CloserDashboard() {
 
   const monthLabel = startOfMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-  const { tier } = useUserMonthlyTier(selYear, selMonth);
+  const { tier, sales: wonDeals } = useUserMonthlyTier(selYear, selMonth);
+  const closeRate = meetingsHeld > 0 ? Math.round((wonDeals / meetingsHeld) * 100) : 0;
   const { record, recordMonthLabel, piggyValue, loading: statsLoading } =
     useCloserPersonalStats(selYear, selMonth);
 
