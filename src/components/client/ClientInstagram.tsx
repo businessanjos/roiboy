@@ -233,6 +233,9 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
               </div>
             </div>
 
+            {/* Evolução (seguidores e posts ao longo do tempo) */}
+            <InstagramEvolutionChart clientId={clientId} username={snapshot.username} />
+
             {/* Posts grid */}
             {snapshot.posts && snapshot.posts.length > 0 && (() => {
               const posts = snapshot.posts;
