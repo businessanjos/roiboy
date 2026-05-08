@@ -38,6 +38,8 @@ const isExpired = (endDate: string) => new Date(endDate) < new Date();
 
 function Speedometer({ value, max }: { value: number; max: number }) {
   const safeMax = Math.max(1, max);
+  const turbo = value > safeMax;
+  const extras = turbo ? value - safeMax : 0;
   const pct = Math.max(0, Math.min(1, value / safeMax));
   // Half-circle arc from 180° to 360° (left → right)
   const cx = 150;
@@ -78,23 +80,37 @@ function Speedometer({ value, max }: { value: number; max: number }) {
     };
   });
 
-  const pctLabel = Math.round(pct * 100);
+  const pctLabel = Math.round((value / safeMax) * 100);
 
   return (
     <div className="flex flex-col items-center justify-center">
       <svg viewBox="0 0 300 200" className="w-full max-w-[360px]">
+        <defs>
+          <filter id="turbo-arc-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
         {/* Zones */}
-        {zones.map(([a, b], i) => (
-          <path
-            key={i}
-            d={arcPath(a, b)}
-            fill="none"
-            stroke={zoneColors[i]}
-            strokeWidth={22}
-            strokeLinecap="butt"
-            opacity={0.85}
-          />
-        ))}
+        {zones.map(([a, b], i) => {
+          const isLast = i === zones.length - 1;
+          return (
+            <path
+              key={i}
+              d={arcPath(a, b)}
+              fill="none"
+              stroke={zoneColors[i]}
+              strokeWidth={turbo && isLast ? 26 : 22}
+              strokeLinecap="butt"
+              opacity={turbo && isLast ? 1 : 0.85}
+              filter={turbo && isLast ? "url(#turbo-arc-glow)" : undefined}
+              className={turbo && isLast ? "animate-pulse" : undefined}
+            />
+          );
+        })}
         {/* Tick labels */}
         {ticks.map((t, i) => (
           <text
@@ -116,21 +132,40 @@ function Speedometer({ value, max }: { value: number; max: number }) {
           y1={cy}
           x2={needleX}
           y2={needleY}
-          stroke="hsl(var(--foreground))"
-          strokeWidth={4}
+          stroke={turbo ? "hsl(20 95% 55%)" : "hsl(var(--foreground))"}
+          strokeWidth={turbo ? 5 : 4}
           strokeLinecap="round"
+          filter={turbo ? "url(#turbo-arc-glow)" : undefined}
         />
-        <circle cx={cx} cy={cy} r={9} className="fill-foreground" />
+        <circle cx={cx} cy={cy} r={9} className={turbo ? "fill-orange-500" : "fill-foreground"} />
         <circle cx={cx} cy={cy} r={4} className="fill-background" />
       </svg>
       <div className="-mt-2 text-center">
-        <div className="text-5xl font-bold tabular-nums leading-none">
-          {value}
-          <span className="text-2xl text-muted-foreground font-medium"> / {safeMax}</span>
-        </div>
-        <div className="mt-1 text-sm text-muted-foreground">
-          {pctLabel}% da meta · {value === 1 ? "1 venda" : `${value} vendas`}
-        </div>
+        {turbo ? (
+          <>
+            <div className="text-5xl font-bold tabular-nums leading-none flex items-baseline justify-center gap-2">
+              <span>{safeMax}</span>
+              <span className="text-2xl text-muted-foreground font-medium">+</span>
+              <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 bg-clip-text text-transparent drop-shadow-sm">
+                {extras}
+              </span>
+            </div>
+            <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-red-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-300 ring-1 ring-orange-500/30 animate-pulse">
+              <Zap className="h-3 w-3 fill-current" />
+              Turbo · {extras} {extras === 1 ? "extra" : "extras"} · {pctLabel}% da meta
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-5xl font-bold tabular-nums leading-none">
+              {value}
+              <span className="text-2xl text-muted-foreground font-medium"> / {safeMax}</span>
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              {pctLabel}% da meta · {value === 1 ? "1 venda" : `${value} vendas`}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
