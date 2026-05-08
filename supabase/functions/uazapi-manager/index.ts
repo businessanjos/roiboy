@@ -826,7 +826,9 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer);
+      result = await enqueueSend(token!, `send_media_to_group user=${userData.name}`, () =>
+        uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
+      );
     
     } else if (action === "list_groups") {
       const r = await uazapiInstance("/group/fetchAllGroups", "GET", token!, undefined, sectorServer);
