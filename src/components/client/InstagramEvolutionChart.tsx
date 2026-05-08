@@ -9,6 +9,8 @@ interface MetricRow {
   followers_count: number | null;
   following_count: number | null;
   media_count: number | null;
+  total_likes: number | null;
+  total_comments: number | null;
 }
 
 const fmtNum = (n: number | null | undefined) =>
@@ -33,7 +35,7 @@ export function InstagramEvolutionChart({
       setLoading(true);
       const { data } = await supabase
         .from("client_instagram_metrics_history" as any)
-        .select("snapshot_at, followers_count, following_count, media_count")
+        .select("snapshot_at, followers_count, following_count, media_count, total_likes, total_comments")
         .eq("client_id", clientId)
         .eq("username", username)
         .order("snapshot_at", { ascending: true })
