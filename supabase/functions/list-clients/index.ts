@@ -169,6 +169,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    const formatDateOnly = (date: Date) => date.toISOString().slice(0, 10);
+    const addUtcDays = (date: Date, days: number) => {
+      const next = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+      next.setUTCDate(next.getUTCDate() + days);
+      return next;
+    };
+    const todayStr = formatDateOnly(new Date());
+    const getExpiringWindow = (filter: string) => {
+      if (filter !== "urgent" && filter !== "warning") return null;
+      const daysAhead = filter === "urgent" ? 30 : 60;
+      return {
+        startsOn: todayStr,
+        endsOn: formatDateOnly(addUtcDays(new Date(), daysAhead)),
+      };
+    };
+
     // Pre-filter by contract status if needed
     let statusContractClientIds: string[] | null = null;
     const statusBasedFilters = ["active", "cancelled", "suspended", "pending", "paused", "ended", "dismissed", "dropout_7d", "scheduled"];
@@ -193,13 +209,12 @@ Deno.serve(async (req) => {
         return emptyResponse();
       }
     } else if (contractFilter === "expired") {
-      // Clients with active contracts where end_date < today
       const { data: expiredContracts } = await supabase
         .from("client_contracts")
         .select("client_id")
         .eq("account_id", accountId)
         .eq("status", "active")
-        .lt("end_date", new Date().toISOString().split("T")[0]);
+        .lt("end_date", todayStr);
 
       statusContractClientIds = [
         ...new Set((expiredContracts || []).map((c) => c.client_id)),
@@ -212,20 +227,17 @@ Deno.serve(async (req) => {
         return emptyResponse();
       }
     } else if (contractFilter === "urgent" || contractFilter === "warning") {
-      // Clients with contracts expiring within 30 or 60 days
-      const daysAhead = contractFilter === "urgent" ? 30 : 60;
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + daysAhead);
-      const today = new Date().toISOString().split("T")[0];
-      const futureDateStr = futureDate.toISOString().split("T")[0];
+      // Clients with active contracts expiring only inside the selected window.
+      // The final day is included by default: today <= end_date <= today + N days.
+      const window = getExpiringWindow(contractFilter)!;
 
       const { data: expiringContracts } = await supabase
         .from("client_contracts")
         .select("client_id")
         .eq("account_id", accountId)
         .eq("status", "active")
-        .gte("end_date", today)
-        .lte("end_date", futureDateStr);
+        .gte("end_date", window.startsOn)
+        .lte("end_date", window.endsOn);
 
       statusContractClientIds = [
         ...new Set((expiringContracts || []).map((c) => c.client_id)),
