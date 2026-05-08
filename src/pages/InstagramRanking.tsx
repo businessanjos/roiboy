@@ -13,6 +13,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { EvolutionTrendsSection } from "@/components/instagram/EvolutionTrendsSection";
 
 type Snap = {
   client_id: string;
