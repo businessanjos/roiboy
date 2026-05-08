@@ -381,6 +381,7 @@ export default function CloserDashboard() {
           )}
         </div>
       </div>
+      </div>
     </TooltipProvider>
   );
 }
