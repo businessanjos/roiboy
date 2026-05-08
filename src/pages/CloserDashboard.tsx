@@ -27,7 +27,10 @@ import {
 } from "@/components/sales/quotas/SpiffsSection";
 import { PaymentMethodSpiffPanel } from "@/components/sales/quotas/PaymentMethodSpiffPanel";
 import { TierProgressHero } from "@/components/sales/quotas/TierProgressHero";
+import { PiggyBankCard } from "@/components/sales/quotas/PiggyBankCard";
+import { SalesRecordCard } from "@/components/sales/quotas/SalesRecordCard";
 import { useUserMonthlyTier } from "@/hooks/useUserMonthlyTier";
+import { useCloserPersonalStats } from "@/hooks/useCloserPersonalStats";
 import { cn } from "@/lib/utils";
 
 const MONTH_QUOTA_DEFAULT = 8; // 100% da meta = 8 vendas no mês (Closer)
@@ -253,6 +256,8 @@ export default function CloserDashboard() {
   const monthLabel = startOfMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
   const { tier } = useUserMonthlyTier(selYear, selMonth);
+  const { record, recordMonthLabel, piggyValue, loading: statsLoading } =
+    useCloserPersonalStats(selYear, selMonth);
 
   return (
     <TooltipProvider>
@@ -369,6 +374,17 @@ export default function CloserDashboard() {
               </>
             )}
           </div>
+        </div>
+
+        {/* Recorde + Cofrinho */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SalesRecordCard
+            record={record}
+            monthLabel={recordMonthLabel}
+            current={wonDeals}
+            loading={statsLoading}
+          />
+          <PiggyBankCard value={piggyValue} loading={statsLoading} />
         </div>
 
         {/* SPIFFs */}
