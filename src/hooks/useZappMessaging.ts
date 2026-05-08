@@ -309,6 +309,7 @@ export function useZappMessaging({
             message_type: "text",
             sent_at: now,
             external_message_id: externalId,
+            sender_user_id: currentUser?.id || null,
             quoted_message_id: replyContext?.external_message_id || null,
             quoted_content: replyContext?.content || null,
             quoted_sender_name: replyContext?.is_from_client 
@@ -425,6 +426,7 @@ export function useZappMessaging({
                 content: messageContent,
                 message_type: "text",
                 sent_at: now,
+                sender_user_id: currentUser?.id || null,
                 quoted_message_id: replyContext?.external_message_id || null,
                 quoted_content: replyContext?.content || null,
                 quoted_sender_name: replyContext?.is_from_client 
@@ -581,6 +583,7 @@ export function useZappMessaging({
           media_filename: file.name,
           sent_at: now,
           external_message_id: externalId,
+          sender_user_id: currentUser?.id || null,
         }).select("id").single();
 
         if (insertError) {
@@ -783,6 +786,7 @@ export function useZappMessaging({
           audio_duration_sec: duration || null,
           media_download_status: "completed",
           sent_at: now,
+          sender_user_id: currentUser?.id || null,
         }).select("id").single();
         
         if (insertError) throw insertError;
@@ -1075,6 +1079,7 @@ export function useZappMessaging({
           message_type: "text",
           sent_at: now,
           external_message_id: contactExternalId,
+          sender_user_id: currentUser?.id || null,
         }).select("id").single();
 
         if (contactInsertErr) {

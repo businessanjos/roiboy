@@ -6,6 +6,8 @@ type: feature
 
 Anti-spam do `uazapi-manager` (envio WhatsApp):
 
+**Schema**: `zapp_messages.sender_user_id` (uuid → public.users.id, nullable). Populado em todos os INSERT outbound de `useZappMessaging.ts` (texto, mídia, áudio, contato e retry). Inbound e webhooks ficam NULL. Índice parcial `idx_zapp_messages_sender_user_created` para queries por usuário.
+
 1. **Checagem de mensagem idêntica (duplicate)**: filtrada por `account_id + sender_user_id + content` nos últimos 30min. Bloqueia (429) se o **mesmo usuário** mandou a mesma mensagem para 5+ destinatários únicos diferentes.
    - Importante: NÃO é por account inteira. Múltiplos closers no mesmo número/instância podem usar templates parecidos sem se bloquearem mutuamente. Cada um tem seu próprio contador.
 
