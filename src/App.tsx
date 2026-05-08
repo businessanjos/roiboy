@@ -93,6 +93,7 @@ const SalesPipeline = lazyRetry(() => import("./pages/SalesPipeline"));
 const SalesCalendar = lazyRetry(() => import("./pages/SalesCalendar"));
 const SpiffsTracking = lazyRetry(() => import("./pages/SpiffsTracking"));
 const IncentivePresentation = lazyRetry(() => import("./pages/IncentivePresentation"));
+const CloserDashboard = lazyRetry(() => import("./pages/CloserDashboard"));
 const CsIncentivePresentation = lazyRetry(() => import("./pages/CsIncentivePresentation"));
 const Leads = lazyRetry(() => import("./pages/Leads"));
 
@@ -215,7 +216,8 @@ const App = () => (
                             <Route path="/sales-calendar" element={<SalesCalendar />} />
                             <Route path="/sales-team" element={<SalesTeam />} />
                             <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
-                            <Route path="/sales-team/incentive-presentation" element={<IncentivePresentation />} />
+                            <Route path="/sales-team/incentive-presentation" element={<CloserDashboard />} />
+                            <Route path="/sales-team/incentive-slideshow" element={<IncentivePresentation />} />
                             <Route path="/leads" element={<Leads />} />
                             <Route path="/financial" element={<FinancialLayout />}>
                               <Route index element={<Navigate to="/financial/dashboard" replace />} />
