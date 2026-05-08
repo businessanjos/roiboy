@@ -28,7 +28,7 @@ export function QuotasIncentivesTab() {
         </TabsList>
         <Button
           size="sm"
-          onClick={() => navigate("/sales-team/incentive-presentation")}
+          onClick={() => navigate("/sales-team/incentive-slideshow")}
           className="gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-semibold"
         >
           <Presentation className="h-4 w-4" />
