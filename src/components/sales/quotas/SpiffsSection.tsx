@@ -1163,7 +1163,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
       {spiff.custom_prize_description && (
         <p className="text-xs text-muted-foreground italic">🎁 Prêmio: {spiff.custom_prize_description}</p>
       )}
-      {summary.length === 0 ? (
+      {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhuma venda ganha na janela atual ainda.</p>
       ) : (
         <Table>
@@ -1176,7 +1176,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
             </TableRow>
           </TableHeader>
           <TableBody>
-            {summary.map((s) => (
+            {visibleSummary.map((s) => (
               <TableRow key={s.uid}>
                 <TableCell className="text-sm font-medium">{s.name}</TableCell>
                 <TableCell className="text-center text-sm tabular-nums">{s.sales}</TableCell>
