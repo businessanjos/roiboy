@@ -5,8 +5,8 @@ import { useUserMonthlyTier, TIER_LADDER } from "@/hooks/useUserMonthlyTier";
 import { Crown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function TierProgressHero() {
-  const { sales, tier, nextTier, salesToNext, isLoading, monthLabel } = useUserMonthlyTier();
+export function TierProgressHero({ userId }: { userId?: string } = {}) {
+  const { sales, tier, nextTier, salesToNext, isLoading, monthLabel } = useUserMonthlyTier(undefined, undefined, userId);
 
   if (isLoading) {
     return <Skeleton className="h-28 w-full rounded-xl" />;
