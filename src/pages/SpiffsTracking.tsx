@@ -9,6 +9,7 @@ import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { RouletteSpinsPanel, CustomSpinsPanel } from "@/components/sales/quotas/SpiffsSection";
 import { PaymentMethodSpiffPanel } from "@/components/sales/quotas/PaymentMethodSpiffPanel";
 import { SpiffSpinsHistory } from "@/components/sales/quotas/SpiffSpinsHistory";
+import { SpiffSpinsCompactMonth } from "@/components/sales/quotas/SpiffSpinsCompactMonth";
 
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
 
@@ -129,6 +130,8 @@ export default function SpiffsTracking() {
                 )}
               </div>
             )}
+
+            <SpiffSpinsCompactMonth />
           </TabsContent>
 
           <TabsContent value="history">
