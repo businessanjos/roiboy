@@ -1962,7 +1962,10 @@ export type Database = {
           following_count: number | null
           id: string
           media_count: number | null
+          posts_considered: number | null
           snapshot_at: string
+          total_comments: number | null
+          total_likes: number | null
           username: string
         }
         Insert: {
@@ -1973,7 +1976,10 @@ export type Database = {
           following_count?: number | null
           id?: string
           media_count?: number | null
+          posts_considered?: number | null
           snapshot_at?: string
+          total_comments?: number | null
+          total_likes?: number | null
           username: string
         }
         Update: {
@@ -1984,7 +1990,10 @@ export type Database = {
           following_count?: number | null
           id?: string
           media_count?: number | null
+          posts_considered?: number | null
           snapshot_at?: string
+          total_comments?: number | null
+          total_likes?: number | null
           username?: string
         }
         Relationships: []
