@@ -114,6 +114,36 @@ Deno.serve(async (req) => {
           raw: { profile: u },
           last_synced_at: new Date().toISOString(),
         }, { onConflict: "client_id,username" });
+
+        // Histórico de métricas: registra na entrada e a cada 30 dias
+        try {
+          const { data: lastHistory } = await supabase
+            .from("client_instagram_metrics_history")
+            .select("snapshot_at")
+            .eq("client_id", clientId)
+            .eq("username", snapshot.username)
+            .order("snapshot_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+          const shouldRecord =
+            !lastHistory ||
+            Date.now() - new Date(lastHistory.snapshot_at).getTime() >= THIRTY_DAYS_MS;
+
+          if (shouldRecord) {
+            await supabase.from("client_instagram_metrics_history").insert({
+              account_id: client.account_id,
+              client_id: clientId,
+              username: snapshot.username,
+              followers_count: snapshot.followers_count ?? null,
+              following_count: snapshot.following_count ?? null,
+              media_count: snapshot.media_count ?? null,
+            });
+          }
+        } catch (histErr) {
+          console.error("[instagram-public-snapshot] history insert error", histErr);
+        }
       }
     }
 
