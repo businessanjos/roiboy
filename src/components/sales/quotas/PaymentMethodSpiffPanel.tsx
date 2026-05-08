@@ -161,6 +161,13 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
     return { uid, name: collab?.full_name || "—", totalSales: userDeals.length, tierCounts, totalBonus, unclassified };
   }).sort((a, b) => b.totalBonus - a.totalBonus || a.name.localeCompare(b.name));
 
+  const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
+
+  // Se restrito e o usuário não é participante deste SPIFF, esconder o painel inteiro
+  if (restrictToUserId && !participantIds.includes(restrictToUserId)) {
+    return null;
+  }
+
   if (tiers.length === 0) {
     return (
       <div className="rounded-lg border-2 border-purple-500/30 bg-purple-500/5 p-3">
