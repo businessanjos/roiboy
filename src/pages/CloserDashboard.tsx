@@ -354,13 +354,41 @@ export default function CloserDashboard() {
 
         {/* Speedometer + Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Card className="lg:col-span-1">
+          <Card
+            className={cn(
+              "lg:col-span-1 relative transition-shadow",
+              wonDeals > MONTH_QUOTA_DEFAULT &&
+                "animate-turbo-glow border-orange-500/40 ring-1 ring-orange-500/40 overflow-visible",
+            )}
+          >
+            {wonDeals > MONTH_QUOTA_DEFAULT && (
+              <>
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-orange-500/50 animate-turbo-ring"
+                />
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-amber-400/40 animate-turbo-ring"
+                  style={{ animationDelay: "0.6s" }}
+                />
+              </>
+            )}
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Target className="h-4 w-4 text-primary" />
                 Velocímetro de Vendas
+                {wonDeals > MONTH_QUOTA_DEFAULT && (
+                  <Badge className="ml-1 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white border-0 gap-1">
+                    <Zap className="h-3 w-3 fill-current" /> TURBO
+                  </Badge>
+                )}
               </CardTitle>
-              <CardDescription>Vendas fechadas no mês vs. meta</CardDescription>
+              <CardDescription>
+                {wonDeals > MONTH_QUOTA_DEFAULT
+                  ? "Meta batida! Cada venda extra acelera ainda mais 🔥"
+                  : "Vendas fechadas no mês vs. meta"}
+              </CardDescription>
             </CardHeader>
             <CardContent className="pb-6">
               {loading ? (
