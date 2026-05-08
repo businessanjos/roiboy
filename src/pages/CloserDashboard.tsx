@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,9 @@ import {
   Zap,
   Sparkles,
   Presentation,
+  Eye,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSalesTeamMetrics } from "@/hooks/useSalesTeamMetrics";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
@@ -32,6 +35,13 @@ import { SalesRecordCard } from "@/components/sales/quotas/SalesRecordCard";
 import { useUserMonthlyTier } from "@/hooks/useUserMonthlyTier";
 import { useCloserPersonalStats } from "@/hooks/useCloserPersonalStats";
 import { cn } from "@/lib/utils";
+
+// Líderes que enxergam o acelerômetro de seus liderados
+const MANAGER_IDS = new Set<string>([
+  "1232ec15-5f66-4b5f-9e74-f40d436f9d0f", // Jonathan Marcato
+  "d20201f6-a9bd-4934-ae50-07ce7a47574b", // Maikol Parnow
+]);
+
 
 const MONTH_QUOTA_DEFAULT = 8; // 100% da meta = 8 vendas no mês (Closer)
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
