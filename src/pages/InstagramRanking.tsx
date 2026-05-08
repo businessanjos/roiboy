@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Instagram, Users2, Heart, MessageCircle, BadgeCheck, ExternalLink, Trophy, Medal, Award, Search, TrendingUp } from "lucide-react";
+import { Instagram, Users2, Heart, MessageCircle, BadgeCheck, ExternalLink, Trophy, Medal, Award, Search, TrendingUp, RefreshCw, Loader2, Clock } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 type Snap = {
   client_id: string;
