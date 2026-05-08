@@ -134,6 +134,7 @@ const EVENT_TYPES = [
   { value: "celebration", label: "Comemoração", icon: Star, color: "text-amber-500" },
   { value: "moving", label: "Mudança", icon: Home, color: "text-teal-500" },
   { value: "other", label: "Outro", icon: Star, color: "text-muted-foreground" },
+  { value: "instagram_metrics", label: "Snapshot Instagram", icon: Instagram, color: "text-pink-500" },
 ];
 
 export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
