@@ -18414,6 +18414,7 @@ export type Database = {
           quoted_sender_name: string | null
           sender_name: string | null
           sender_phone: string | null
+          sender_user_id: string | null
           sent_at: string
           synced_from_history: boolean | null
           transcription: string | null
@@ -18446,6 +18447,7 @@ export type Database = {
           quoted_sender_name?: string | null
           sender_name?: string | null
           sender_phone?: string | null
+          sender_user_id?: string | null
           sent_at?: string
           synced_from_history?: boolean | null
           transcription?: string | null
@@ -18478,6 +18480,7 @@ export type Database = {
           quoted_sender_name?: string | null
           sender_name?: string | null
           sender_phone?: string | null
+          sender_user_id?: string | null
           sent_at?: string
           synced_from_history?: boolean | null
           transcription?: string | null
@@ -18490,6 +18493,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_messages_sender_user_id_fkey"
+            columns: ["sender_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
