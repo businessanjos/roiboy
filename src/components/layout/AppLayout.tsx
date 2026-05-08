@@ -134,7 +134,9 @@ export function AppLayout() {
     return <Navigate to="/setores" replace />;
   }
 
-  const routeItem = routeSector?.navItems.find((item) => location.pathname.startsWith(item.to));
+  const routeItem = routeSector?.navItems
+    .filter((item) => location.pathname === item.to || location.pathname.startsWith(item.to + "/") || location.pathname.startsWith(item.to))
+    .sort((a, b) => b.to.length - a.to.length)[0];
   if (!permissionsLoading && routeSector && !skipSectorGuard && routeItem?.permission && !hasPermission(routeItem.permission)) {
     return <Navigate to="/setores" replace />;
   }
