@@ -139,7 +139,14 @@ export default function InstagramRanking() {
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [period, setPeriod] = useState<"7" | "30" | "90" | "all">("all");
   const pollRef = useRef<number | null>(null);
+
+  const periodSinceMs = useMemo(() => {
+    if (period === "all") return null;
+    const days = Number(period);
+    return Date.now() - days * 24 * 60 * 60 * 1000;
+  }, [period]);
 
   const allowed = useMemo(() => {
     if (!user) return false;
