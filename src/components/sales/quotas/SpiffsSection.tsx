@@ -920,7 +920,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
           </TooltipContent>
         </Tooltip>
       </div>
-      {summary.length === 0 ? (
+      {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhum negócio ganho no período ainda.</p>
       ) : (
         <Table>
@@ -935,7 +935,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
             </TableRow>
           </TableHeader>
           <TableBody>
-            {summary.map((s) => (
+            {visibleSummary.map((s) => (
               <TableRow key={s.uid}>
                 <TableCell className="text-sm font-medium">{s.name}</TableCell>
                 <TableCell className="text-center text-sm tabular-nums">R$ {formatBRL(Math.round(s.total))}</TableCell>
