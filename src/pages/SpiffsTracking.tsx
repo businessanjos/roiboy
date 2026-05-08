@@ -138,7 +138,6 @@ export default function SpiffsTracking() {
               <SpiffSpinsHistory />
             </TabsContent>
           </Tabs>
-        </div>
       </div>
     </TooltipProvider>
   );
