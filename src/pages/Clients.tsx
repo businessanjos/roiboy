@@ -2070,7 +2070,7 @@ export default function Clients() {
               </div>
 
               {/* Contract Filter */}
-              {!["pending_contract", "hold", "cancelled"].includes(activeTab) && (
+              {!["awaiting", "hold", "cancelled"].includes(activeTab) && (
               <div className="space-y-1.5 min-w-[160px]">
                 <Label className="text-xs text-muted-foreground">Contrato</Label>
                 <Select value={filterContract} onValueChange={setFilterContract}>
