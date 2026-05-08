@@ -299,6 +299,18 @@
     100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
   }
 
+  @keyframes angry-shake {
+    0%, 100% { transform: translate(0, 0) rotate(-4deg); }
+    20% { transform: translate(-3px, 1px) rotate(-6deg); }
+    40% { transform: translate(3px, -1px) rotate(6deg); }
+    60% { transform: translate(-2px, 2px) rotate(-5deg); }
+    80% { transform: translate(2px, -2px) rotate(5deg); }
+  }
+
+  .animate-angry-shake {
+    animation: angry-shake 0.35s ease-in-out infinite;
+  }
+
   .animate-confetti {
     animation: confetti 3s ease-out forwards;
   }
