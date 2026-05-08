@@ -350,18 +350,18 @@ export default function CloserDashboard() {
               </TabsList>
 
               <TabsContent value="all" className="space-y-4">
-                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} />)}
-                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} />)}
-                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} />)}
+                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
+                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
+                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} restrictToUserId={currentUser?.id} />)}
               </TabsContent>
               <TabsContent value="roulette" className="space-y-4">
-                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} />)}
+                {rouletteSpiffs.map((s: any) => <RouletteSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
               </TabsContent>
               <TabsContent value="custom" className="space-y-4">
-                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} />)}
+                {customSpiffs.map((s: any) => <CustomSpinsPanel key={s.id} spiff={s} restrictToUserId={currentUser?.id} />)}
               </TabsContent>
               <TabsContent value="payment" className="space-y-4">
-                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} />)}
+                {paymentSpiffs.map((s: any) => <PaymentMethodSpiffPanel key={s.id} spiff={s as any} restrictToUserId={currentUser?.id} />)}
               </TabsContent>
             </Tabs>
           )}
