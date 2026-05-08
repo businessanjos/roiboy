@@ -87,6 +87,19 @@ interface NavItem {
 
 const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
+// SDR-specific allowlist within the Vendas sector. SDRs should only see these
+// nav items; everything else (Plano de Incentivo, SPIFFs, Gestão, Script de
+// Vendas, Produtos, Insights, etc.) is hidden for them.
+const SDR_ROLES = ["SDR"];
+const SDR_VENDAS_ALLOWED_ROUTES = new Set<string>([
+  "/pipeline",
+  "/leads",
+  "/tasks",
+  "/sales-calendar",
+  "/clients",
+  "/sales/contracts",
+]);
+
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
   const { user } = useAuth();
