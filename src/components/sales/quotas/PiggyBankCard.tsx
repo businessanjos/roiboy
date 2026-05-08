@@ -59,7 +59,7 @@ export function PiggyBankCard({ value, loading }: PiggyBankCardProps) {
               "text-7xl select-none transition-all duration-700 ease-out",
               value > 0
                 ? "animate-[bounce_2.4s_ease-in-out_infinite]"
-                : "animate-[wiggle_0.25s_ease-in-out_infinite]",
+                : "animate-angry-shake",
             )}
             style={{
               transform: `scale(${tier.scale})`,
