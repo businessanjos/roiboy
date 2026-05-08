@@ -133,8 +133,15 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       return currentSector.navItems.filter(item => item.to !== "/notifications");
     }
     
+    const isSdrUser = roleNameMatches(teamRoleName, SDR_ROLES) && !showAllItems;
+
     let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
-    
+
+    // SDRs in the Vendas sector see only the explicit allowlist.
+    if (isSdrUser && currentSector.id === "vendas") {
+      sectorItems = sectorItems.filter(item => SDR_VENDAS_ALLOWED_ROUTES.has(item.to));
+    }
+
     const userName = (currentUser?.name || "").toLowerCase();
     const userEmail = (currentUser?.email || "").toLowerCase();
 
