@@ -219,11 +219,7 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
                       rel="noopener noreferrer"
                       className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
                     >
-                      {p.thumbnail_url ? (
-                        <img src={p.thumbnail_url} alt={p.caption?.slice(0, 80) || "post"} className="w-full h-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Sem prévia</div>
-                      )}
+                      <PostThumb p={p} />
                       {(p.media_type === 2 || p.product_type === "clips") && (
                         <Play className="absolute top-2 right-2 h-4 w-4 text-white drop-shadow" fill="white" />
                       )}
