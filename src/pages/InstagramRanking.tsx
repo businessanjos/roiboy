@@ -134,7 +134,7 @@ function RankList({ rows, metric, getValue, getSub }: {
 
 export default function InstagramRanking() {
   const { currentUser: user, loading: userLoading } = useCurrentUser();
-  const [rows, setRows] = useState<Row[]>([]);
+  const [snaps, setSnaps] = useState<Snap[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
@@ -142,10 +142,10 @@ export default function InstagramRanking() {
   const [period, setPeriod] = useState<"7" | "30" | "90" | "all">("all");
   const pollRef = useRef<number | null>(null);
 
-  const periodSinceMs = useMemo(() => {
+  const periodSinceSec = useMemo(() => {
     if (period === "all") return null;
     const days = Number(period);
-    return Date.now() - days * 24 * 60 * 60 * 1000;
+    return Math.floor((Date.now() - days * 24 * 60 * 60 * 1000) / 1000);
   }, [period]);
 
   const allowed = useMemo(() => {
@@ -172,25 +172,36 @@ export default function InstagramRanking() {
       seen.add(key);
       dedup.push(s as Snap);
     }
-
-    const computed: Row[] = dedup.map((s) => {
-      const posts: any[] = Array.isArray(s.posts) ? s.posts.slice(0, 12) : [];
-      const total_likes = posts.reduce((acc, p) => acc + (Number(p?.like_count) || 0), 0);
-      const total_comments = posts.reduce((acc, p) => acc + (Number(p?.comment_count) || 0), 0);
-      const n = posts.length || 0;
-      return {
-        ...s,
-        total_likes,
-        total_comments,
-        avg_likes: n > 0 ? Math.round(total_likes / n) : 0,
-        avg_comments: n > 0 ? Math.round(total_comments / n) : 0,
-        posts_considered: n,
-      };
-    });
-
-    setRows(computed);
+    setSnaps(dedup);
     setLastSyncedAt(maxSync);
   }, []);
+
+  // Compute Row[] dynamically based on period. Posts have a unix `taken_at` (seconds).
+  const rows = useMemo<Row[]>(() => {
+    const filterFn = (p: any): boolean => {
+      if (periodSinceSec == null) return true;
+      const t = Number(p?.taken_at);
+      if (!Number.isFinite(t) || t <= 0) return false;
+      return t >= periodSinceSec;
+    };
+
+    return snaps
+      .map((s) => {
+        const all: any[] = Array.isArray(s.posts) ? s.posts.slice(0, 12) : [];
+        const considered = all.filter(filterFn);
+        const total_likes = considered.reduce((acc, p) => acc + (Number(p?.like_count) || 0), 0);
+        const total_comments = considered.reduce((acc, p) => acc + (Number(p?.comment_count) || 0), 0);
+        const n = considered.length;
+        return {
+          ...s,
+          total_likes,
+          total_comments,
+          avg_likes: n > 0 ? Math.round(total_likes / n) : 0,
+          avg_comments: n > 0 ? Math.round(total_comments / n) : 0,
+          posts_considered: n,
+        };
+      });
+  }, [snaps, periodSinceSec]);
 
   useEffect(() => {
     if (!allowed) return;
