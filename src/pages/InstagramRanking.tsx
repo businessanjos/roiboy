@@ -420,6 +420,12 @@ export default function InstagramRanking() {
           </TabsContent>
         </Tabs>
       )}
+
+      {!loading && (
+        <EvolutionTrendsSection
+          allowedClientIds={new Set(filtered.map((r) => r.client_id))}
+        />
+      )}
     </div>
   );
 }
