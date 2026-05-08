@@ -56,7 +56,7 @@ export function PiggyBankCard({ value, salesCount, loading }: PiggyBankCardProps
           </div>
 
           {next && !loading && (
-            <div className="w-full mt-5 space-y-1.5">
+            <div className="w-full mt-5">
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full bg-primary transition-all duration-500"
@@ -65,19 +65,7 @@ export function PiggyBankCard({ value, salesCount, loading }: PiggyBankCardProps
                   }}
                 />
               </div>
-              <p className="text-[11px] text-muted-foreground text-center">
-                {remaining === 1 ? "Falta " : "Faltam "}
-                <span className="font-semibold text-foreground">
-                  {remaining} {remaining === 1 ? "venda" : "vendas"}
-                </span>{" "}
-                para o próximo marco ({next})
-              </p>
             </div>
-          )}
-          {!next && !loading && (
-            <p className="text-[11px] text-muted-foreground mt-4 text-center">
-              Marco máximo atingido neste mês.
-            </p>
           )}
         </div>
       </CardContent>
