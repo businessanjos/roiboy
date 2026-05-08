@@ -240,6 +240,22 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
               const totalViews = posts.reduce((s, p) => s + (p.play_count || 0), 0);
               const avgLikes = Math.round(totalLikes / posts.length);
               const avgComments = Math.round(totalComments / posts.length);
+
+              // Variação vs. posts anteriores (metade recente vs metade anterior)
+              const half = Math.floor(posts.length / 2);
+              const recent = posts.slice(0, half);
+              const previous = posts.slice(half, half * 2);
+              const avgOf = (arr: typeof posts, key: "like_count" | "comment_count") =>
+                arr.length ? arr.reduce((s, p) => s + (p[key] || 0), 0) / arr.length : 0;
+              const pctChange = (curr: number, prev: number): number | null =>
+                !prev ? null : ((curr - prev) / prev) * 100;
+              const likesTrend = recent.length && previous.length
+                ? pctChange(avgOf(recent, "like_count"), avgOf(previous, "like_count"))
+                : null;
+              const commentsTrend = recent.length && previous.length
+                ? pctChange(avgOf(recent, "comment_count"), avgOf(previous, "comment_count"))
+                : null;
+
               const counts = posts.reduce(
                 (acc, p) => {
                   acc[getPostFormat(p)]++;
@@ -247,10 +263,10 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
                 },
                 { reels: 0, carousel: 0, static: 0 } as Record<PostFormat, number>,
               );
-              const stats = [
+              const stats: Array<{ label: string; value: string; sub?: string; trend?: number | null; Icon: typeof Heart; color: string }> = [
                 { label: `Engajamento (${posts.length} posts)`, value: fmt(totalLikes + totalComments), Icon: Heart, color: "text-pink-500" },
-                { label: "Curtidas (média)", value: fmt(avgLikes), sub: `Total ${fmt(totalLikes)}`, Icon: Heart, color: "text-pink-500" },
-                { label: "Comentários (média)", value: fmt(avgComments), sub: `Total ${fmt(totalComments)}`, Icon: MessageCircle, color: "text-blue-500" },
+                { label: "Curtidas (média)", value: fmt(avgLikes), sub: `Total ${fmt(totalLikes)}`, trend: likesTrend, Icon: Heart, color: "text-pink-500" },
+                { label: "Comentários (média)", value: fmt(avgComments), sub: `Total ${fmt(totalComments)}`, trend: commentsTrend, Icon: MessageCircle, color: "text-blue-500" },
                 ...(totalViews > 0
                   ? [{ label: "Views (Reels)", value: fmt(totalViews), Icon: Eye, color: "text-purple-500" }]
                   : []),
@@ -258,16 +274,40 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
               return (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {stats.map((s) => (
-                      <div key={s.label} className="rounded-lg border bg-card p-3">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <s.Icon className={`h-3.5 w-3.5 ${s.color}`} />
-                          {s.label}
+                    {stats.map((s) => {
+                      const trend = s.trend;
+                      const trendCls =
+                        trend == null
+                          ? "text-muted-foreground"
+                          : trend > 0
+                            ? "text-emerald-500"
+                            : trend < 0
+                              ? "text-destructive"
+                              : "text-muted-foreground";
+                      return (
+                        <div key={s.label} className="rounded-lg border bg-card p-3">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <s.Icon className={`h-3.5 w-3.5 ${s.color}`} />
+                            {s.label}
+                          </div>
+                          <div className="mt-1 flex items-baseline gap-2">
+                            <div className="text-xl font-bold">{s.value}</div>
+                            {trend != null && (
+                              <span className={`text-[11px] font-medium ${trendCls}`}>
+                                {trend > 0 ? "+" : ""}
+                                {trend.toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
+                          {s.sub && (
+                            <div className="text-[11px] text-muted-foreground">
+                              {s.sub}
+                              {trend != null && " · vs anteriores"}
+                            </div>
+                          )}
                         </div>
-                        <div className="mt-1 text-xl font-bold">{s.value}</div>
-                        {s.sub && <div className="text-[11px] text-muted-foreground">{s.sub}</div>}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <div>
