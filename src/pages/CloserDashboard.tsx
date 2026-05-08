@@ -233,6 +233,44 @@ export default function CloserDashboard() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const now = new Date();
+  const isManager = !!currentUser?.id && MANAGER_IDS.has(currentUser.id);
+
+  // Lista de liderados visíveis (ele mesmo + closers do account) — apenas para managers
+  const { data: viewableUsers = [] } = useQuery({
+    queryKey: ["closer-dash-viewable", currentUser?.account_id, currentUser?.id],
+    enabled: isManager && !!currentUser?.account_id,
+    queryFn: async () => {
+      const { data: roles } = await supabase
+        .from("team_roles")
+        .select("id")
+        .eq("account_id", currentUser!.account_id)
+        .eq("cargo", "Closer");
+      const roleIds = (roles ?? []).map((r) => r.id);
+      const closerIds = new Set<string>();
+      if (roleIds.length) {
+        const { data: utr } = await supabase
+          .from("user_team_roles")
+          .select("user_id")
+          .in("team_role_id", roleIds);
+        (utr ?? []).forEach((r: any) => r.user_id && closerIds.add(r.user_id));
+      }
+      const ids = new Set<string>([currentUser!.id, ...closerIds]);
+      const { data: users } = await supabase
+        .from("users")
+        .select("id, name")
+        .in("id", Array.from(ids))
+        .order("name");
+      return (users ?? []) as { id: string; name: string }[];
+    },
+  });
+
+  const [viewedUserId, setViewedUserId] = useState<string | undefined>(undefined);
+  const effectiveUserId = viewedUserId ?? currentUser?.id;
+  const isViewingOther = isManager && !!viewedUserId && viewedUserId !== currentUser?.id;
+  const viewedUserName = useMemo(
+    () => viewableUsers.find((u) => u.id === effectiveUserId)?.name ?? null,
+    [viewableUsers, effectiveUserId],
+  );
 
   // Histórico disponível a partir de Maio/2026 (inclusive). Default = mês atual.
   const HISTORY_START_YEAR = 2026;
@@ -281,8 +319,8 @@ export default function CloserDashboard() {
   });
 
   const me = useMemo(
-    () => metrics.find((m) => m.user_id === currentUser?.id),
-    [metrics, currentUser?.id],
+    () => metrics.find((m) => m.user_id === effectiveUserId),
+    [metrics, effectiveUserId],
   );
 
   const meetingsHeld = Math.max(0, (me?.scheduled_calls ?? 0) - (me?.noshow_calls ?? 0));
@@ -298,10 +336,11 @@ export default function CloserDashboard() {
 
   const monthLabel = startOfMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-  const { tier, sales: wonDeals } = useUserMonthlyTier(selYear, selMonth);
+  const { tier, sales: wonDeals } = useUserMonthlyTier(selYear, selMonth, effectiveUserId);
   const closeRate = meetingsHeld > 0 ? Math.round((wonDeals / meetingsHeld) * 100) : 0;
   const { record, recordMonthLabel, piggyValue, loading: statsLoading } =
-    useCloserPersonalStats(selYear, selMonth);
+    useCloserPersonalStats(selYear, selMonth, effectiveUserId);
+
 
 
   return (
