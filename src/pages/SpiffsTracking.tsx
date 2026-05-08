@@ -130,6 +130,8 @@ export default function SpiffsTracking() {
                 )}
               </div>
             )}
+
+            <SpiffSpinsCompactMonth />
           </TabsContent>
 
           <TabsContent value="history">
