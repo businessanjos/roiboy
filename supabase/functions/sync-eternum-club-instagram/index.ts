@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
         .filter((h) => h.length > 0);
       const unique = Array.from(new Set(cleaned));
       for (const u of unique) {
-        targets.push({ clientId: c.id, username: u, clientName: c.name || "" });
+        targets.push({ clientId: c.id, username: u, clientName: c.full_name || "" });
       }
     }
 
