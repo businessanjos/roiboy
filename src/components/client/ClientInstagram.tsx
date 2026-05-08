@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, RefreshCw, Instagram, ExternalLink, Heart, MessageCircle, Play, BadgeCheck, Lock, Video, Images, Image as ImageIcon, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { InstagramEvolutionChart } from "./InstagramEvolutionChart";
 
 type PostFormat = "reels" | "carousel" | "static";
 
