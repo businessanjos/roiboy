@@ -287,10 +287,27 @@ export default function InstagramRanking() {
               Os maiores perfis dos nossos clientes em seguidores, curtidas e comentários — atualizado a partir das sincronizações.
             </p>
           </div>
-          <Badge variant="outline" className="gap-1 bg-background/60 backdrop-blur">
-            <TrendingUp className="h-3.5 w-3.5" />
-            Acesso restrito
-          </Badge>
+          <div className="flex flex-col items-end gap-2">
+            <Badge variant="outline" className="gap-1 bg-background/60 backdrop-blur">
+              <TrendingUp className="h-3.5 w-3.5" />
+              Acesso restrito
+            </Badge>
+            <Button
+              onClick={handleManualSync}
+              disabled={syncing}
+              size="sm"
+              className="gap-2 bg-gradient-to-r from-fuchsia-500 to-rose-500 hover:from-fuchsia-600 hover:to-rose-600 text-white border-0 shadow-md"
+            >
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {syncing ? "Sincronizando…" : "Atualizar agora"}
+            </Button>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {lastSyncedAt
+                ? `Última atualização: ${formatDistanceToNow(new Date(lastSyncedAt), { locale: ptBR, addSuffix: true })}`
+                : "Sem sincronizações ainda"}
+            </div>
+          </div>
         </div>
 
         <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
