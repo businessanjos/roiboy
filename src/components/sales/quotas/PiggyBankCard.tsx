@@ -103,20 +103,6 @@ export function PiggyBankCard({ value, salesCount, loading }: PiggyBankCardProps
                 </p>
               </>
             )}
-            <p
-              className={cn(
-                "text-xs mt-1 font-medium",
-                isMaxAngry
-                  ? "text-red-600 dark:text-red-400"
-                  : isAngry
-                    ? "text-orange-600 dark:text-orange-400"
-                    : "text-muted-foreground",
-              )}
-            >
-              {isMaxAngry
-                ? "🔥 Porquinho MUITO PUTO! 🔥"
-                : `Porquinho ${tier.label}`}
-            </p>
           </div>
 
           {/* Progress to next tier */}
@@ -135,8 +121,7 @@ export function PiggyBankCard({ value, salesCount, loading }: PiggyBankCardProps
                 <span className="font-semibold text-foreground">
                   {remaining} {remaining === 1 ? "venda" : "vendas"}
                 </span>{" "}
-                para deixar o porquinho{" "}
-                <span className="font-semibold">{next.label}</span>
+                para o seu porco melhorar de humor
               </p>
             </div>
           )}
