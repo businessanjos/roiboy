@@ -768,7 +768,9 @@ Deno.serve(async (req) => {
       }
       if (payload.mentions) textBody.mentions = payload.mentions;
       
-      result = await uazapiInstance("/send/text", "POST", token!, textBody, sectorServer);
+      result = await enqueueSend(token!, `send_text user=${userData.name}`, () =>
+        uazapiInstance("/send/text", "POST", token!, textBody, sectorServer)
+      );
     
     } else if (action === "send_media") {
       // ✅ NOVO: Suporte a envio de mídia
