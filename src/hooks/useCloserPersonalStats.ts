@@ -8,9 +8,9 @@ import { useCurrentUser } from "./useCurrentUser";
  * - recordMonthLabel: which month set the record (e.g. "Mai/2025")
  * - piggyValue: sum of SPIFF prizes won by the user in the given month
  */
-export function useCloserPersonalStats(year: number, month0: number) {
+export function useCloserPersonalStats(year: number, month0: number, userIdOverride?: string) {
   const { currentUser } = useCurrentUser();
-  const userId = currentUser?.id;
+  const userId = userIdOverride ?? currentUser?.id;
 
   const recordQuery = useQuery({
     queryKey: ["closer-record", userId],
