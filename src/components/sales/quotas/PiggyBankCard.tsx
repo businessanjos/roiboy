@@ -54,20 +54,28 @@ export function PiggyBankCard({ value, loading }: PiggyBankCardProps) {
       <CardContent className="pb-6">
         <div className="flex flex-col items-center justify-center py-2">
           {/* Piggy */}
-          <div
-            className={cn(
-              "text-7xl select-none transition-all duration-700 ease-out",
-              value > 0
-                ? "animate-[bounce_2.4s_ease-in-out_infinite]"
-                : "animate-angry-shake",
+          <div className="relative">
+            {tier.mood === "FURIOSO" && (
+              <>
+                <span className="absolute -top-1 -left-3 text-2xl animate-pulse">💢</span>
+                <span className="absolute -top-2 -right-3 text-2xl animate-pulse">💢</span>
+              </>
             )}
-            style={{
-              transform: `scale(${tier.scale})`,
-              filter: tier.glow,
-            }}
-            aria-label={`Porquinho ${tier.mood}`}
-          >
-            {tier.emoji}
+            <div
+              className={cn(
+                "text-7xl select-none transition-all duration-700 ease-out",
+                value > 0
+                  ? "animate-[bounce_2.4s_ease-in-out_infinite]"
+                  : "animate-angry-shake",
+              )}
+              style={{
+                transform: `scale(${tier.scale})`,
+                filter: tier.glow,
+              }}
+              aria-label={`Porquinho ${tier.mood}`}
+            >
+              {tier.emoji}
+            </div>
           </div>
 
           {/* Value */}
