@@ -233,31 +233,91 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
             </div>
 
             {/* Posts grid */}
-            {snapshot.posts && snapshot.posts.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3">Últimos posts</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {snapshot.posts.map((p, idx) => (
-                    <a
-                      key={p.id || idx}
-                      href={p.url || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
-                    >
-                      <PostThumb p={p} />
-                      {(p.media_type === 2 || p.product_type === "clips") && (
-                        <Play className="absolute top-2 right-2 h-4 w-4 text-white drop-shadow" fill="white" />
-                      )}
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white text-sm font-medium">
-                        <span className="flex items-center gap-1"><Heart className="h-4 w-4" fill="white" />{fmt(p.like_count || 0)}</span>
-                        <span className="flex items-center gap-1"><MessageCircle className="h-4 w-4" fill="white" />{fmt(p.comment_count || 0)}</span>
+            {snapshot.posts && snapshot.posts.length > 0 && (() => {
+              const posts = snapshot.posts;
+              const totalLikes = posts.reduce((s, p) => s + (p.like_count || 0), 0);
+              const totalComments = posts.reduce((s, p) => s + (p.comment_count || 0), 0);
+              const totalViews = posts.reduce((s, p) => s + (p.play_count || 0), 0);
+              const avgLikes = Math.round(totalLikes / posts.length);
+              const avgComments = Math.round(totalComments / posts.length);
+              const counts = posts.reduce(
+                (acc, p) => {
+                  acc[getPostFormat(p)]++;
+                  return acc;
+                },
+                { reels: 0, carousel: 0, static: 0 } as Record<PostFormat, number>,
+              );
+              const stats = [
+                { label: `Engajamento (${posts.length} posts)`, value: fmt(totalLikes + totalComments), Icon: Heart, color: "text-pink-500" },
+                { label: "Curtidas (média)", value: fmt(avgLikes), sub: `Total ${fmt(totalLikes)}`, Icon: Heart, color: "text-pink-500" },
+                { label: "Comentários (média)", value: fmt(avgComments), sub: `Total ${fmt(totalComments)}`, Icon: MessageCircle, color: "text-blue-500" },
+                ...(totalViews > 0
+                  ? [{ label: "Views (Reels)", value: fmt(totalViews), Icon: Eye, color: "text-purple-500" }]
+                  : []),
+              ];
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {stats.map((s) => (
+                      <div key={s.label} className="rounded-lg border bg-card p-3">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <s.Icon className={`h-3.5 w-3.5 ${s.color}`} />
+                          {s.label}
+                        </div>
+                        <div className="mt-1 text-xl font-bold">{s.value}</div>
+                        {s.sub && <div className="text-[11px] text-muted-foreground">{s.sub}</div>}
                       </div>
-                    </a>
-                  ))}
+                    ))}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold">Últimos posts</h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["reels", "carousel", "static"] as PostFormat[]).map((f) => {
+                          if (!counts[f]) return null;
+                          const cfg = formatBadgeConfig[f];
+                          return (
+                            <Badge key={f} variant="outline" className={`gap-1 ${cfg.className}`}>
+                              <cfg.Icon className="h-3 w-3" />
+                              {cfg.label} · {counts[f]}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {posts.map((p, idx) => {
+                        const fmtKey = getPostFormat(p);
+                        const cfg = formatBadgeConfig[fmtKey];
+                        return (
+                          <a
+                            key={p.id || idx}
+                            href={p.url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
+                          >
+                            <PostThumb p={p} />
+                            <Badge
+                              variant="outline"
+                              className={`absolute top-2 right-2 gap-1 text-[10px] px-1.5 py-0 h-5 ${cfg.className}`}
+                            >
+                              <cfg.Icon className="h-3 w-3" />
+                              {cfg.label}
+                            </Badge>
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white text-sm font-medium">
+                              <span className="flex items-center gap-1"><Heart className="h-4 w-4" fill="white" />{fmt(p.like_count || 0)}</span>
+                              <span className="flex items-center gap-1"><MessageCircle className="h-4 w-4" fill="white" />{fmt(p.comment_count || 0)}</span>
+                            </div>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </>
         )}
       </CardContent>
