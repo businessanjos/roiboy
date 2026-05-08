@@ -1134,6 +1134,8 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
     return { uid, name: user?.name || collab?.full_name || "—", sales, spins, toNext };
   }).sort((a, b) => b.spins - a.spins || b.sales - a.sales || a.name.localeCompare(b.name));
 
+  const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
+
   if (triggerSalesCount <= 0) return null;
 
   return (
