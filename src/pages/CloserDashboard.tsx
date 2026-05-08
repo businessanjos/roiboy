@@ -293,7 +293,13 @@ export default function CloserDashboard() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate("/sales-team/incentive-slideshow")}
+                onClick={() =>
+                  window.open(
+                    "/sales-team/incentive-slideshow",
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
                 className="gap-1.5"
               >
                 <Presentation className="h-4 w-4" />
