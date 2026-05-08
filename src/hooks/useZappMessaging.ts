@@ -1079,6 +1079,7 @@ export function useZappMessaging({
           message_type: "text",
           sent_at: now,
           external_message_id: contactExternalId,
+          sender_user_id: currentUser?.id || null,
         }).select("id").single();
 
         if (contactInsertErr) {
