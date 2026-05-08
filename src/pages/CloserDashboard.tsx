@@ -274,18 +274,42 @@ export default function CloserDashboard() {
                 Sua performance · {monthLabel}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/sales-team/incentive-slideshow")}
-              className="gap-1.5"
-            >
-              <Presentation className="h-4 w-4" />
-              Apresentar plano
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {availableMonths.length > 1 && (
+                <Select value={selectedKey} onValueChange={setSelectedKey}>
+                  <SelectTrigger className="w-[180px] h-9 capitalize">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMonths.map((m) => (
+                      <SelectItem key={m.key} value={m.key} className="capitalize">
+                        {m.label}
+                        {m.key === `${now.getFullYear()}-${now.getMonth()}` ? " · atual" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/sales-team/incentive-slideshow")}
+                className="gap-1.5"
+              >
+                <Presentation className="h-4 w-4" />
+                Apresentar plano
+              </Button>
+            </div>
           </div>
 
-          <TierProgressHero />
+          {!isCurrentMonth && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 px-4 py-2.5 text-sm text-amber-900 dark:text-amber-200">
+              Você está visualizando o histórico de <span className="capitalize font-medium">{monthLabel}</span>. Os dados são apenas para consulta.
+            </div>
+          )}
+
+          {isCurrentMonth && <TierProgressHero />}
+
 
 
         {/* Speedometer + Metrics */}
