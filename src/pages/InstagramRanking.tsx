@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { EvolutionTrendsSection } from "@/components/instagram/EvolutionTrendsSection";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 type Snap = {
   client_id: string;
@@ -134,12 +135,19 @@ function RankList({ rows, metric, getValue, getSub }: {
 
 export default function InstagramRanking() {
   const { currentUser: user, loading: userLoading } = useCurrentUser();
-  const [rows, setRows] = useState<Row[]>([]);
+  const [snaps, setSnaps] = useState<Snap[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [period, setPeriod] = useState<"7" | "30" | "90" | "all">("all");
   const pollRef = useRef<number | null>(null);
+
+  const periodSinceSec = useMemo(() => {
+    if (period === "all") return null;
+    const days = Number(period);
+    return Math.floor((Date.now() - days * 24 * 60 * 60 * 1000) / 1000);
+  }, [period]);
 
   const allowed = useMemo(() => {
     if (!user) return false;
@@ -165,25 +173,36 @@ export default function InstagramRanking() {
       seen.add(key);
       dedup.push(s as Snap);
     }
-
-    const computed: Row[] = dedup.map((s) => {
-      const posts: any[] = Array.isArray(s.posts) ? s.posts.slice(0, 12) : [];
-      const total_likes = posts.reduce((acc, p) => acc + (Number(p?.like_count) || 0), 0);
-      const total_comments = posts.reduce((acc, p) => acc + (Number(p?.comment_count) || 0), 0);
-      const n = posts.length || 0;
-      return {
-        ...s,
-        total_likes,
-        total_comments,
-        avg_likes: n > 0 ? Math.round(total_likes / n) : 0,
-        avg_comments: n > 0 ? Math.round(total_comments / n) : 0,
-        posts_considered: n,
-      };
-    });
-
-    setRows(computed);
+    setSnaps(dedup);
     setLastSyncedAt(maxSync);
   }, []);
+
+  // Compute Row[] dynamically based on period. Posts have a unix `taken_at` (seconds).
+  const rows = useMemo<Row[]>(() => {
+    const filterFn = (p: any): boolean => {
+      if (periodSinceSec == null) return true;
+      const t = Number(p?.taken_at);
+      if (!Number.isFinite(t) || t <= 0) return false;
+      return t >= periodSinceSec;
+    };
+
+    return snaps
+      .map((s) => {
+        const all: any[] = Array.isArray(s.posts) ? s.posts.slice(0, 12) : [];
+        const considered = all.filter(filterFn);
+        const total_likes = considered.reduce((acc, p) => acc + (Number(p?.like_count) || 0), 0);
+        const total_comments = considered.reduce((acc, p) => acc + (Number(p?.comment_count) || 0), 0);
+        const n = considered.length;
+        return {
+          ...s,
+          total_likes,
+          total_comments,
+          avg_likes: n > 0 ? Math.round(total_likes / n) : 0,
+          avg_comments: n > 0 ? Math.round(total_comments / n) : 0,
+          posts_considered: n,
+        };
+      });
+  }, [snaps, periodSinceSec]);
 
   useEffect(() => {
     if (!allowed) return;
@@ -346,16 +365,46 @@ export default function InstagramRanking() {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por @ ou nome…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Filtros */}
+      <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
+        <div className="relative md:max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por @ ou nome…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground hidden md:inline">Período:</span>
+          <ToggleGroup
+            type="single"
+            value={period}
+            onValueChange={(v) => v && setPeriod(v as any)}
+            className="bg-muted/40 rounded-lg p-1"
+          >
+            <ToggleGroupItem value="7" className="h-8 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm">
+              7 dias
+            </ToggleGroupItem>
+            <ToggleGroupItem value="30" className="h-8 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm">
+              30 dias
+            </ToggleGroupItem>
+            <ToggleGroupItem value="90" className="h-8 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm">
+              90 dias
+            </ToggleGroupItem>
+            <ToggleGroupItem value="all" className="h-8 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm">
+              Tudo
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </div>
+
+      {period !== "all" && (
+        <div className="text-xs text-muted-foreground -mt-3">
+          Curtidas e comentários consideram apenas posts publicados nos últimos {period} dias. Seguidores refletem o snapshot mais recente.
+        </div>
+      )}
 
       {loading ? (
         <Card><CardContent className="p-6 space-y-3">
