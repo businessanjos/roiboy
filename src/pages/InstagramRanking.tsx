@@ -136,6 +136,9 @@ export default function InstagramRanking() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const pollRef = useRef<number | null>(null);
 
   const allowed = useMemo(() => {
     if (!user) return false;
@@ -145,48 +148,87 @@ export default function InstagramRanking() {
     return ALLOWED_KEYS.some((k) => name.includes(k) || email.includes(k));
   }, [user]);
 
+  const loadRows = useCallback(async () => {
+    const { data } = await supabase
+      .from("client_instagram_snapshots" as any)
+      .select("client_id, username, full_name, profile_pic_url, is_verified, followers_count, media_count, posts, last_synced_at")
+      .order("last_synced_at", { ascending: false });
+
+    const seen = new Set<string>();
+    const dedup: Snap[] = [];
+    let maxSync: string | null = null;
+    for (const s of (data as any[]) || []) {
+      if (s.last_synced_at && (!maxSync || s.last_synced_at > maxSync)) maxSync = s.last_synced_at;
+      const key = s.client_id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      dedup.push(s as Snap);
+    }
+
+    const computed: Row[] = dedup.map((s) => {
+      const posts: any[] = Array.isArray(s.posts) ? s.posts.slice(0, 12) : [];
+      const total_likes = posts.reduce((acc, p) => acc + (Number(p?.like_count) || 0), 0);
+      const total_comments = posts.reduce((acc, p) => acc + (Number(p?.comment_count) || 0), 0);
+      const n = posts.length || 0;
+      return {
+        ...s,
+        total_likes,
+        total_comments,
+        avg_likes: n > 0 ? Math.round(total_likes / n) : 0,
+        avg_comments: n > 0 ? Math.round(total_comments / n) : 0,
+        posts_considered: n,
+      };
+    });
+
+    setRows(computed);
+    setLastSyncedAt(maxSync);
+  }, []);
+
   useEffect(() => {
     if (!allowed) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
-      // Get latest snapshot per client_id
-      const { data } = await supabase
-        .from("client_instagram_snapshots" as any)
-        .select("client_id, username, full_name, profile_pic_url, is_verified, followers_count, media_count, posts, last_synced_at")
-        .order("last_synced_at", { ascending: false });
-
-      const seen = new Set<string>();
-      const dedup: Snap[] = [];
-      for (const s of (data as any[]) || []) {
-        const key = s.client_id;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        dedup.push(s as Snap);
-      }
-
-      const computed: Row[] = dedup.map((s) => {
-        const posts: any[] = Array.isArray(s.posts) ? s.posts.slice(0, 12) : [];
-        const total_likes = posts.reduce((acc, p) => acc + (Number(p?.like_count) || 0), 0);
-        const total_comments = posts.reduce((acc, p) => acc + (Number(p?.comment_count) || 0), 0);
-        const n = posts.length || 0;
-        return {
-          ...s,
-          total_likes,
-          total_comments,
-          avg_likes: n > 0 ? Math.round(total_likes / n) : 0,
-          avg_comments: n > 0 ? Math.round(total_comments / n) : 0,
-          posts_considered: n,
-        };
-      });
-
-      if (!cancelled) {
-        setRows(computed);
-        setLoading(false);
-      }
+      await loadRows();
+      if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [allowed]);
+  }, [allowed, loadRows]);
+
+  // Poll while syncing so the user sees progress in near-real-time
+  useEffect(() => {
+    if (!syncing) return;
+    pollRef.current = window.setInterval(() => { loadRows(); }, 5000);
+    return () => {
+      if (pollRef.current) window.clearInterval(pollRef.current);
+      pollRef.current = null;
+    };
+  }, [syncing, loadRows]);
+
+  const handleManualSync = useCallback(async () => {
+    if (syncing) return;
+    setSyncing(true);
+    toast.info("Sincronização iniciada", {
+      description: "Pode levar alguns minutos. Os perfis aparecerão conforme forem atualizados.",
+    });
+    // Fire-and-forget: invoke roda no servidor; mantemos polling até concluir.
+    supabase.functions
+      .invoke("sync-eternum-club-instagram", { body: {} })
+      .then(({ error }) => {
+        if (error) {
+          toast.error("Falha na sincronização", { description: error.message });
+        } else {
+          toast.success("Sincronização concluída");
+        }
+      })
+      .catch((e: any) => {
+        toast.error(e?.message || "Falha ao iniciar sincronização");
+      })
+      .finally(() => {
+        loadRows();
+        setSyncing(false);
+      });
+  }, [syncing, loadRows]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
