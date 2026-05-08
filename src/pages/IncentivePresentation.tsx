@@ -132,7 +132,7 @@ export default function IncentivePresentation() {
         e.preventDefault();
         prev();
       } else if (e.key === "Escape") {
-        navigate("/sales-team");
+        navigate("/sales-team/incentive-presentation");
       }
     };
     window.addEventListener("keydown", onKey);
@@ -155,7 +155,7 @@ export default function IncentivePresentation() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
-            onClick={() => navigate("/sales-team")}
+            onClick={() => navigate("/sales-team/incentive-presentation")}
           >
             <X className="h-4 w-4" />
           </Button>
