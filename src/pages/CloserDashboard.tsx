@@ -360,10 +360,31 @@ export default function CloserDashboard() {
                 Acelerômetro
               </h1>
               <p className="text-sm text-muted-foreground mt-1 capitalize">
-                Sua performance · {monthLabel}
+                {isViewingOther && viewedUserName
+                  ? `Visualizando: ${viewedUserName} · ${monthLabel}`
+                  : `Sua performance · ${monthLabel}`}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {isManager && viewableUsers.length > 1 && (
+                <Select
+                  value={effectiveUserId ?? currentUser?.id ?? ""}
+                  onValueChange={(v) => setViewedUserId(v === currentUser?.id ? undefined : v)}
+                >
+                  <SelectTrigger className="w-[200px] h-9 gap-1.5">
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {viewableUsers.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                        {u.id === currentUser?.id ? " (você)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {availableMonths.length > 1 && (
                 <Select value={selectedKey} onValueChange={setSelectedKey}>
                   <SelectTrigger className="w-[180px] h-9 capitalize">
@@ -391,13 +412,20 @@ export default function CloserDashboard() {
             </div>
           </div>
 
+          {isViewingOther && (
+            <div className="rounded-lg border border-sky-200 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-900 px-4 py-2.5 text-sm text-sky-900 dark:text-sky-200 flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Você está visualizando o Acelerômetro de <strong>{viewedUserName}</strong>. Modo somente leitura.
+            </div>
+          )}
+
           {!isCurrentMonth && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 px-4 py-2.5 text-sm text-amber-900 dark:text-amber-200">
               Você está visualizando o histórico de <span className="capitalize font-medium">{monthLabel}</span>. Os dados são apenas para consulta.
             </div>
           )}
 
-          {isCurrentMonth && <TierProgressHero />}
+          {isCurrentMonth && <TierProgressHero userId={effectiveUserId} />}
 
 
 
