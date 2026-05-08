@@ -163,6 +163,20 @@ export default {
             backgroundColor: "transparent",
           },
         },
+        "turbo-glow": {
+          "0%, 100%": {
+            boxShadow:
+              "0 0 0 2px hsl(38 95% 55% / 0.6), 0 0 30px hsl(20 95% 55% / 0.45), 0 0 60px hsl(0 90% 55% / 0.25)",
+          },
+          "50%": {
+            boxShadow:
+              "0 0 0 4px hsl(38 95% 60% / 0.85), 0 0 55px hsl(20 95% 55% / 0.7), 0 0 110px hsl(0 90% 55% / 0.45)",
+          },
+        },
+        "turbo-ring": {
+          "0%": { transform: "scale(1)", opacity: "0.7" },
+          "100%": { transform: "scale(1.35)", opacity: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -173,6 +187,8 @@ export default {
         "shake": "shake 0.5s ease-in-out",
         "highlight-glow": "highlight-glow 1s ease-in-out infinite",
         "highlight-fade": "highlight-fade-out 0.5s ease-out forwards",
+        "turbo-glow": "turbo-glow 1.6s ease-in-out infinite",
+        "turbo-ring": "turbo-ring 2s ease-out infinite",
       },
     },
   },
