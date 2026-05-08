@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -258,6 +258,24 @@ export default function CloserDashboard() {
   const { tier } = useUserMonthlyTier(selYear, selMonth);
   const { record, recordMonthLabel, piggyValue, loading: statsLoading } =
     useCloserPersonalStats(selYear, selMonth);
+
+  // Som de F1 acelerando ao entrar pela primeira vez no dia
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `acelerometro:f1-sound:${currentUser.id}:${today}`;
+    if (localStorage.getItem(key)) return;
+    const audio = new Audio("/sounds/f1-acceleration.mp3");
+    audio.volume = 0.6;
+    audio
+      .play()
+      .then(() => {
+        localStorage.setItem(key, "1");
+      })
+      .catch(() => {
+        // Autoplay bloqueado pelo browser; tenta novamente na próxima interação
+      });
+  }, [currentUser?.id]);
 
   return (
     <TooltipProvider>
