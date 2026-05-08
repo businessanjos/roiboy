@@ -128,7 +128,7 @@ function RankList({ rows, metric, getValue, getSub }: {
 }
 
 export default function InstagramRanking() {
-  const { user, loading: userLoading } = useCurrentUser();
+  const { currentUser: user, loading: userLoading } = useCurrentUser();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
