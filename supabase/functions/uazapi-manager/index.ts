@@ -418,6 +418,67 @@ async function uazapiAdmin(endpoint: string, method: string, body?: unknown, ser
   return json;
 }
 
+// ============================================================
+// 🚦 PER-TOKEN SEND QUEUE
+// Serializes outbound /send/* calls per WhatsApp instance (token).
+// When 3+ closers share the same number, this prevents:
+//   - Concurrent bursts that look like spam to WhatsApp
+//   - UAZAPI 429/500 from request contention on the same instance
+//   - Race conditions on message ordering
+//
+// Each token gets its own FIFO promise chain. We also enforce a
+// minimum gap (jitter) between consecutive sends on the same token,
+// so the cadence looks human even under load.
+// ============================================================
+const tokenSendChains = new Map<string, Promise<unknown>>();
+const tokenLastSendAt = new Map<string, number>();
+const MIN_GAP_MS = 700;   // baseline gap between sends on same token
+const JITTER_MS = 800;    // additional random 0..JITTER_MS
+const MAX_QUEUE_WAIT_MS = 45_000; // safety: don't queue forever
+
+async function enqueueSend<T>(token: string, label: string, fn: () => Promise<T>): Promise<T> {
+  const queueKey = token || "__no_token__";
+  const previous = tokenSendChains.get(queueKey) || Promise.resolve();
+  const enqueuedAt = Date.now();
+
+  const run = previous
+    .catch(() => {}) // isolate: previous failure must not poison this send
+    .then(async () => {
+      const waited = Date.now() - enqueuedAt;
+      if (waited > MAX_QUEUE_WAIT_MS) {
+        console.warn(`[send-queue] ⚠️ ${label} waited ${waited}ms in queue (token=${queueKey.slice(0,8)}…) — proceeding anyway`);
+      } else if (waited > 1500) {
+        console.log(`[send-queue] ${label} waited ${waited}ms in queue (token=${queueKey.slice(0,8)}…)`);
+      }
+
+      // Enforce minimum gap since last send on this token
+      const last = tokenLastSendAt.get(queueKey) || 0;
+      const sinceLast = Date.now() - last;
+      const gap = MIN_GAP_MS + Math.floor(Math.random() * JITTER_MS);
+      if (sinceLast < gap) {
+        await new Promise((r) => setTimeout(r, gap - sinceLast));
+      }
+
+      try {
+        const result = await fn();
+        return result;
+      } finally {
+        tokenLastSendAt.set(queueKey, Date.now());
+      }
+    });
+
+  tokenSendChains.set(queueKey, run);
+
+  // Cleanup tail to avoid memory leak on long-lived isolate
+  run.finally(() => {
+    if (tokenSendChains.get(queueKey) === run) {
+      tokenSendChains.delete(queueKey);
+    }
+  }).catch(() => {});
+
+  return run as Promise<T>;
+}
+
 async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown, server?: ServerConfig) {
   const s = server || GLOBAL_SERVER;
   console.log(`[uazapi] Calling: ${method} ${s.host}${endpoint} (server: ${s.source})`);
@@ -707,7 +768,9 @@ Deno.serve(async (req) => {
       }
       if (payload.mentions) textBody.mentions = payload.mentions;
       
-      result = await uazapiInstance("/send/text", "POST", token!, textBody, sectorServer);
+      result = await enqueueSend(token!, `send_text user=${userData.name}`, () =>
+        uazapiInstance("/send/text", "POST", token!, textBody, sectorServer)
+      );
     
     } else if (action === "send_media") {
       // ✅ NOVO: Suporte a envio de mídia
@@ -726,7 +789,9 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer);
+      result = await enqueueSend(token!, `send_media user=${userData.name} type=${payload.media_type}`, () =>
+        uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
+      );
       // 🚨 Diagnóstico: detectar respostas sem id (falha silenciosa)
       const r: any = result;
       const hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
@@ -743,7 +808,9 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { groupBody.replyid = normalizedQuotedMessageId; }
       if (payload.mentions) groupBody.mentions = payload.mentions;
       
-      result = await uazapiInstance("/send/text", "POST", token!, groupBody, sectorServer);
+      result = await enqueueSend(token!, `send_to_group user=${userData.name}`, () =>
+        uazapiInstance("/send/text", "POST", token!, groupBody, sectorServer)
+      );
     
     } else if (action === "send_media_to_group") {
       // ✅ NOVO: Mídia em grupos
@@ -759,7 +826,9 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer);
+      result = await enqueueSend(token!, `send_media_to_group user=${userData.name}`, () =>
+        uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
+      );
     
     } else if (action === "list_groups") {
       const r = await uazapiInstance("/group/fetchAllGroups", "GET", token!, undefined, sectorServer);
