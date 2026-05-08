@@ -41,9 +41,10 @@ interface Props {
     payment_tiers?: PaymentTier[] | null;
     participant_user_ids?: string[] | null;
   };
+  restrictToUserId?: string;
 }
 
-export function PaymentMethodSpiffPanel({ spiff }: Props) {
+export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const tiers: PaymentTier[] = Array.isArray(spiff.payment_tiers) ? spiff.payment_tiers : [];
