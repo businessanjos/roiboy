@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Instagram, Users2, Heart, MessageCircle, BadgeCheck, ExternalLink, Trophy, Medal, Award, Search, TrendingUp } from "lucide-react";
+import { Instagram, Users2, Heart, MessageCircle, BadgeCheck, ExternalLink, Trophy, Medal, Award, Search, TrendingUp, RefreshCw, Loader2, Clock } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 type Snap = {
   client_id: string;
@@ -132,6 +136,9 @@ export default function InstagramRanking() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const pollRef = useRef<number | null>(null);
 
   const allowed = useMemo(() => {
     if (!user) return false;
@@ -141,48 +148,87 @@ export default function InstagramRanking() {
     return ALLOWED_KEYS.some((k) => name.includes(k) || email.includes(k));
   }, [user]);
 
+  const loadRows = useCallback(async () => {
+    const { data } = await supabase
+      .from("client_instagram_snapshots" as any)
+      .select("client_id, username, full_name, profile_pic_url, is_verified, followers_count, media_count, posts, last_synced_at")
+      .order("last_synced_at", { ascending: false });
+
+    const seen = new Set<string>();
+    const dedup: Snap[] = [];
+    let maxSync: string | null = null;
+    for (const s of (data as any[]) || []) {
+      if (s.last_synced_at && (!maxSync || s.last_synced_at > maxSync)) maxSync = s.last_synced_at;
+      const key = s.client_id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      dedup.push(s as Snap);
+    }
+
+    const computed: Row[] = dedup.map((s) => {
+      const posts: any[] = Array.isArray(s.posts) ? s.posts.slice(0, 12) : [];
+      const total_likes = posts.reduce((acc, p) => acc + (Number(p?.like_count) || 0), 0);
+      const total_comments = posts.reduce((acc, p) => acc + (Number(p?.comment_count) || 0), 0);
+      const n = posts.length || 0;
+      return {
+        ...s,
+        total_likes,
+        total_comments,
+        avg_likes: n > 0 ? Math.round(total_likes / n) : 0,
+        avg_comments: n > 0 ? Math.round(total_comments / n) : 0,
+        posts_considered: n,
+      };
+    });
+
+    setRows(computed);
+    setLastSyncedAt(maxSync);
+  }, []);
+
   useEffect(() => {
     if (!allowed) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
-      // Get latest snapshot per client_id
-      const { data } = await supabase
-        .from("client_instagram_snapshots" as any)
-        .select("client_id, username, full_name, profile_pic_url, is_verified, followers_count, media_count, posts, last_synced_at")
-        .order("last_synced_at", { ascending: false });
-
-      const seen = new Set<string>();
-      const dedup: Snap[] = [];
-      for (const s of (data as any[]) || []) {
-        const key = s.client_id;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        dedup.push(s as Snap);
-      }
-
-      const computed: Row[] = dedup.map((s) => {
-        const posts: any[] = Array.isArray(s.posts) ? s.posts.slice(0, 12) : [];
-        const total_likes = posts.reduce((acc, p) => acc + (Number(p?.like_count) || 0), 0);
-        const total_comments = posts.reduce((acc, p) => acc + (Number(p?.comment_count) || 0), 0);
-        const n = posts.length || 0;
-        return {
-          ...s,
-          total_likes,
-          total_comments,
-          avg_likes: n > 0 ? Math.round(total_likes / n) : 0,
-          avg_comments: n > 0 ? Math.round(total_comments / n) : 0,
-          posts_considered: n,
-        };
-      });
-
-      if (!cancelled) {
-        setRows(computed);
-        setLoading(false);
-      }
+      await loadRows();
+      if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [allowed]);
+  }, [allowed, loadRows]);
+
+  // Poll while syncing so the user sees progress in near-real-time
+  useEffect(() => {
+    if (!syncing) return;
+    pollRef.current = window.setInterval(() => { loadRows(); }, 5000);
+    return () => {
+      if (pollRef.current) window.clearInterval(pollRef.current);
+      pollRef.current = null;
+    };
+  }, [syncing, loadRows]);
+
+  const handleManualSync = useCallback(async () => {
+    if (syncing) return;
+    setSyncing(true);
+    toast.info("Sincronização iniciada", {
+      description: "Pode levar alguns minutos. Os perfis aparecerão conforme forem atualizados.",
+    });
+    // Fire-and-forget: invoke roda no servidor; mantemos polling até concluir.
+    supabase.functions
+      .invoke("sync-eternum-club-instagram", { body: {} })
+      .then(({ error }) => {
+        if (error) {
+          toast.error("Falha na sincronização", { description: error.message });
+        } else {
+          toast.success("Sincronização concluída");
+        }
+      })
+      .catch((e: any) => {
+        toast.error(e?.message || "Falha ao iniciar sincronização");
+      })
+      .finally(() => {
+        loadRows();
+        setSyncing(false);
+      });
+  }, [syncing, loadRows]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -241,10 +287,27 @@ export default function InstagramRanking() {
               Os maiores perfis dos nossos clientes em seguidores, curtidas e comentários — atualizado a partir das sincronizações.
             </p>
           </div>
-          <Badge variant="outline" className="gap-1 bg-background/60 backdrop-blur">
-            <TrendingUp className="h-3.5 w-3.5" />
-            Acesso restrito
-          </Badge>
+          <div className="flex flex-col items-end gap-2">
+            <Badge variant="outline" className="gap-1 bg-background/60 backdrop-blur">
+              <TrendingUp className="h-3.5 w-3.5" />
+              Acesso restrito
+            </Badge>
+            <Button
+              onClick={handleManualSync}
+              disabled={syncing}
+              size="sm"
+              className="gap-2 bg-gradient-to-r from-fuchsia-500 to-rose-500 hover:from-fuchsia-600 hover:to-rose-600 text-white border-0 shadow-md"
+            >
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {syncing ? "Sincronizando…" : "Atualizar agora"}
+            </Button>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {lastSyncedAt
+                ? `Última atualização: ${formatDistanceToNow(new Date(lastSyncedAt), { locale: ptBR, addSuffix: true })}`
+                : "Sem sincronizações ainda"}
+            </div>
+          </div>
         </div>
 
         <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
@@ -266,6 +329,21 @@ export default function InstagramRanking() {
           </div>
         </div>
       </div>
+
+      {syncing && (
+        <div className="rounded-xl border bg-gradient-to-r from-fuchsia-500/10 to-rose-500/10 px-4 py-3 flex items-center gap-3">
+          <Loader2 className="h-4 w-4 animate-spin text-fuchsia-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium">Sincronizando perfis do Eternum Club…</div>
+            <div className="text-xs text-muted-foreground">
+              {rows.length} {rows.length === 1 ? "perfil sincronizado" : "perfis sincronizados"} até agora. Os rankings vão sendo atualizados em tempo real.
+            </div>
+          </div>
+          <div className="relative h-1.5 w-32 overflow-hidden rounded-full bg-background/60">
+            <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-fuchsia-500 to-rose-500 animate-pulse rounded-full" />
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative max-w-md">
