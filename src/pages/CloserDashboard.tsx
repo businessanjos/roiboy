@@ -384,7 +384,7 @@ export default function CloserDashboard() {
             current={wonDeals}
             loading={statsLoading}
           />
-          <PiggyBankCard value={piggyValue} loading={statsLoading} />
+          <PiggyBankCard value={piggyValue} salesCount={wonDeals} loading={statsLoading} />
         </div>
 
         {/* SPIFFs */}
