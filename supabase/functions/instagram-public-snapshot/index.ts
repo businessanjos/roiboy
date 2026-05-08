@@ -111,6 +111,7 @@ Deno.serve(async (req) => {
       product_type: m.product_type,
       caption: m.caption_text || m.caption?.text || null,
       thumbnail_url: pickThumb(m),
+      display_uri: m.display_uri || m.display_url || null,
       video_url: m.video_url || m.video_versions?.[0]?.url || null,
       url: m.code ? `https://www.instagram.com/p/${m.code}/` : null,
     }));
