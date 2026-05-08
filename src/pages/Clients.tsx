@@ -2069,8 +2069,8 @@ export default function Clients() {
                 </Select>
               </div>
 
-
               {/* Contract Filter */}
+              {!["awaiting", "hold", "cancelled"].includes(activeTab) && (
               <div className="space-y-1.5 min-w-[160px]">
                 <Label className="text-xs text-muted-foreground">Contrato</Label>
                 <Select value={filterContract} onValueChange={setFilterContract}>
@@ -2091,6 +2091,7 @@ export default function Clients() {
                   </SelectContent>
                 </Select>
               </div>
+              )}
 
               {/* Responsible Filter */}
               {teamUsers.length > 0 && (
