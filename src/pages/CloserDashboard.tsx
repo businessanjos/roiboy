@@ -254,7 +254,7 @@ export default function CloserDashboard() {
           .in("team_role_id", roleIds);
         (utr ?? []).forEach((r: any) => r.user_id && closerIds.add(r.user_id));
       }
-      const ids = new Set<string>([currentUser!.id, ...closerIds]);
+      const ids = new Set<string>([currentUser!.id, ...closerIds, ...MANAGER_IDS]);
       const { data: users } = await supabase
         .from("users")
         .select("id, name")
