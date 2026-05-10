@@ -391,10 +391,19 @@ Deno.serve(async (req) => {
         }
       }
 
-      // outOfScopeDeals: number of matched_deal_id values that don't belong to this account.
+      // outOfScopeDeals: matched_deal_id values that don't exist in this account at all.
+      // We previously flagged any non-won deal here, which produced false alarms for
+      // legitimate matches against lost/open deals. Restrict to true cross-account leakage.
       if (dealIds.length) {
-        const knownIds = new Set(allWonDeals.map(d => d.id));
-        outOfScopeDeals = dealIds.filter(id => !knownIds.has(id) && !wonDealIds.has(id)).length;
+        const PAGE = 200;
+        const knownIds = new Set<string>();
+        for (let i = 0; i < dealIds.length; i += PAGE) {
+          const slice = dealIds.slice(i, i + PAGE);
+          const { data: existing } = await supabase
+            .from("deals").select("id").eq("account_id", accountId).in("id", slice);
+          for (const d of existing || []) knownIds.add(d.id);
+        }
+        outOfScopeDeals = dealIds.filter(id => !knownIds.has(id)).length;
       }
 
       console.log(`[typeform-manager] match breakdown: direct=${wonByDirectDeal}, viaLead=${wonByLead}, viaDealEmail=${wonByEmail}, viaDealPhone=${wonByPhone}, viaLeadContact=${wonByLeadEmailPhone}, total=${wonDealIds.size}, allWonInAccount=${allWonDeals.length}`);
