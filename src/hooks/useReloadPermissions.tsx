@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useContext, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { usePermissions } from "@/hooks/usePermissions";
+import { usePermissionsContextSafe } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 
 /**
