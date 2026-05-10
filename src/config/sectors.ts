@@ -186,7 +186,6 @@ export const sectors: Sector[] = [
     bgColor: "bg-blue-500/10",
     defaultRoute: "/pipeline",
     navItems: [
-      { to: "/sales-team/spiffs", icon: Gift, label: "SPIFFs", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/sales-team", icon: UserCheck, label: "Gestão", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/pipeline", icon: TrendingUp, label: "Pipeline", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/leads", icon: UserPlus, label: "Leads", permission: PERMISSIONS.CLIENTS_VIEW },
@@ -197,6 +196,7 @@ export const sectors: Sector[] = [
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/sales/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/sales-team/incentive-presentation", icon: Gauge, label: "Acelerômetro" },
+      { to: "/sales-team/spiffs", icon: Gift, label: "SPIFFs", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/insights", icon: BarChart3, label: "Insights", permission: PERMISSIONS.REPORTS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
