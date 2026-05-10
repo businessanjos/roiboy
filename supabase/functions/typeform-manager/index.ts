@@ -611,35 +611,40 @@ async function processResponses(supabase: any, accountId: string, formId: string
   if (!rows.length) return;
   await supabase.from("typeform_responses").upsert(rows, { onConflict: "form_id,response_id" });
 
-  // Match against leads/deals
+  // Match against leads/deals — also re-match rows that were upserted earlier
+  // and may have gained a corresponding lead/deal in the meantime.
+  // We always re-evaluate (no skip on already-matched) so newer/better matches
+  // overwrite stale ones; matching is idempotent on (form_id, response_id).
   for (const row of rows) {
-    if (!row.email && !row.phone) continue;
-    let leadId = null, dealId = null, method = null;
-    if (row.email) {
-      const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).ilike("email", row.email).limit(1).maybeSingle();
+    const email = canonicalEmail(row.email) || "";
+    const phone = canonicalE164(row.phone) || row.phone || "";
+    if (!email && !phone) continue;
+    let leadId: string | null = null, dealId: string | null = null, method: string | null = null;
+    if (email) {
+      const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).ilike("email", email).limit(1).maybeSingle();
       if (l) { leadId = l.id; method = "email"; }
       if (!leadId) {
-        const { data: d } = await supabase.from("deals").select("id").eq("account_id", accountId).ilike("contact_email", row.email).limit(1).maybeSingle();
+        const { data: d } = await supabase.from("deals").select("id").eq("account_id", accountId).ilike("contact_email", email).limit(1).maybeSingle();
         if (d) { dealId = d.id; method = "email"; }
       }
     }
-    if (!leadId && !dealId && row.phone) {
-      const variants = phoneVariants(row.phone);
-      const coreKey = phoneCoreKey(row.phone);
+    if (!leadId && !dealId && phone) {
+      const variants = phoneVariants(phone);
+      const coreKey = phoneCoreKey(phone);
       if (variants.length) {
-        const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).in("phone", variants).limit(1).maybeSingle();
+        const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).in("phone", variants).limit(1).maybeSingle();
         if (l) { leadId = l.id; method = "phone"; }
         if (!leadId) {
-          const { data: d } = await supabase.from("deals").select("id").eq("account_id", accountId).in("contact_phone", variants).limit(1).maybeSingle();
+          const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).in("contact_phone", variants).limit(1).maybeSingle();
           if (d) { dealId = d.id; method = "phone"; }
         }
       }
       if (!leadId && !dealId && coreKey) {
-        const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(200);
+        const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(500);
         const m = (l || []).find((x: any) => phoneCoreKey(x.phone) === coreKey);
         if (m) { leadId = m.id; method = "phone"; }
         if (!leadId) {
-          const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(200);
+          const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(500);
           const dm = (d || []).find((x: any) => phoneCoreKey(x.contact_phone) === coreKey);
           if (dm) { dealId = dm.id; method = "phone"; }
         }
