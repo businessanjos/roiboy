@@ -9,7 +9,8 @@ import { toast } from "sonner";
  */
 export function useReloadPermissions() {
   const queryClient = useQueryClient();
-  const { refetchPermissions } = usePermissions();
+  const permissionsCtx = usePermissionsContextSafe();
+  const refetchPermissions = permissionsCtx?.refetchPermissions;
   const [reloading, setReloading] = useState(false);
 
   const reload = useCallback(async () => {
