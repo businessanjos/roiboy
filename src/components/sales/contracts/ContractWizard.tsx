@@ -348,7 +348,7 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        placeholder={(v.default as any) ?? ""}
+        placeholder={defaultPlaceholder}
       />
     );
   } else if (v.type === "date") {
