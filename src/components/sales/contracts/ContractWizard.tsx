@@ -454,6 +454,11 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
           Campo obrigatório. Preencha o número da inscrição ou digite <span className="font-semibold">ISENTO</span> para continuar.
         </p>
       )}
+      {inscricaoHasInvalidChars && (
+        <p className="text-[11px] font-medium text-destructive bg-destructive/10 border border-destructive/30 rounded px-2 py-1">
+          Valor inválido. Use apenas números ou digite <span className="font-semibold">ISENTO</span>.
+        </p>
+      )}
       {help && <p className="text-[11px] text-muted-foreground">{help}</p>}
     </div>
   );
