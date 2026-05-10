@@ -333,6 +333,13 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
   const keyUpper = v.key.toUpperCase();
   const isInscricaoField =
     /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(keyUpper);
+  const inscricaoRaw = isInscricaoField ? String(value ?? "").trim() : "";
+  const inscricaoIsValid =
+    !isInscricaoField ||
+    inscricaoRaw === "" ||
+    /^\d+$/.test(inscricaoRaw) ||
+    /^isento$/i.test(inscricaoRaw);
+  const inscricaoHasInvalidChars = isInscricaoField && inscricaoRaw !== "" && !inscricaoIsValid;
   // Para campos de Inscrição Municipal/Estadual, não usamos o default ("ISENTO")
   // como placeholder porque dá a impressão de que o campo já está preenchido.
   const defaultPlaceholder = isInscricaoField
