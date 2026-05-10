@@ -330,6 +330,14 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
   const isCurrencyField = v.type === "currency";
   const isFullWidth = v.type === "textarea" || /endereco|rua|complemento|extenso/i.test(v.key);
   const required = v.required;
+  const keyUpper = v.key.toUpperCase();
+  const isInscricaoField =
+    /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(keyUpper);
+  // Para campos de Inscrição Municipal/Estadual, não usamos o default ("ISENTO")
+  // como placeholder porque dá a impressão de que o campo já está preenchido.
+  const defaultPlaceholder = isInscricaoField
+    ? "Preencha ou digite ISENTO"
+    : ((v.default as any) ?? "");
 
   let input: React.ReactNode;
 
@@ -340,7 +348,7 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        placeholder={(v.default as any) ?? ""}
+        placeholder={defaultPlaceholder}
       />
     );
   } else if (v.type === "date") {
@@ -410,7 +418,7 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        placeholder={(v.default as any) ?? ""}
+        placeholder={defaultPlaceholder}
       />
     );
   }
@@ -434,6 +442,11 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
         )}
       </div>
       {input}
+      {isInscricaoField && required && !value && (
+        <p className="text-[11px] font-medium text-amber-600 dark:text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1">
+          Campo obrigatório. Preencha o número da inscrição ou digite <span className="font-semibold">ISENTO</span> para continuar.
+        </p>
+      )}
       {help && <p className="text-[11px] text-muted-foreground">{help}</p>}
     </div>
   );
