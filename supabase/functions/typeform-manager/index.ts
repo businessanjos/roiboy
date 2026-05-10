@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
       if (scopeFormIds.length) {
         const { data: statsRows } = await supabase
           .from("typeform_form_stats")
-          .select("form_id, snapshot_date, total_visits, total_starts, completion_rate, average_time_seconds")
+          .select("form_id, snapshot_date, total_visits, total_starts, completion_rate, average_time_seconds, fetched_at")
           .eq("account_id", accountId)
           .in("form_id", scopeFormIds)
           .order("snapshot_date", { ascending: false });
@@ -211,20 +211,53 @@ Deno.serve(async (req) => {
           aggLifetimeCompletionWeight += w;
         }
         if (!isAll) stats = latestPerForm.get(form_id) || null;
+
+        // Auto-refresh any form whose latest snapshot is older than 6h (or missing).
+        // Runs in background — current response uses whatever is on file now, but
+        // the next dashboard load reflects fresh Insights data.
+        const STALE_MS = 6 * 60 * 60 * 1000;
+        const nowMs = Date.now();
+        const staleFormIds = scopeFormIds.filter((fid) => {
+          const r = latestPerForm.get(fid);
+          if (!r) return true;
+          const t = r.fetched_at ? new Date(r.fetched_at).getTime() : 0;
+          return !t || (nowMs - t) > STALE_MS;
+        });
+        if (staleFormIds.length) {
+          // @ts-ignore EdgeRuntime is provided by Supabase
+          EdgeRuntime.waitUntil((async () => {
+            for (const fid of staleFormIds) {
+              try { await backfillForm(supabase, accountId, fid, TOKEN); } catch (e) { console.error("auto-refresh failed", fid, e); }
+            }
+          })());
+        }
       }
 
-      // Period responses across scope
+      // Period responses across scope — paginated to bypass PostgREST default
+      // db-max-rows cap (1000). Without this, large date ranges silently truncate
+      // and every funnel metric below ends up underestimated.
       let rows: any[] = [];
       if (scopeFormIds.length) {
-        let q = supabase
-          .from("typeform_responses")
-          .select("id, form_id, account_id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id")
-          .eq("account_id", accountId)
-          .in("form_id", scopeFormIds)
-          .gte("created_at", since);
-        if (untilISO) q = q.lte("created_at", untilISO);
-        const { data: responses } = await q.limit(20000);
-        rows = responses || [];
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          let q = supabase
+            .from("typeform_responses")
+            .select("id, form_id, account_id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id")
+            .eq("account_id", accountId)
+            .in("form_id", scopeFormIds)
+            .gte("created_at", since);
+          if (untilISO) q = q.lte("created_at", untilISO);
+          const { data: page, error: pageErr } = await q
+            .order("created_at", { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (pageErr) { console.error("[typeform-manager] page fetch failed:", pageErr); break; }
+          const batch = page || [];
+          rows.push(...batch);
+          if (batch.length < PAGE) break;
+          from += PAGE;
+          if (from >= 50000) break; // hard safety stop
+        }
       }
 
       // ---- Consistency checks: every row must belong to the requested scope ----
@@ -378,10 +411,19 @@ Deno.serve(async (req) => {
         }
       }
 
-      // outOfScopeDeals: number of matched_deal_id values that don't belong to this account.
+      // outOfScopeDeals: matched_deal_id values that don't exist in this account at all.
+      // We previously flagged any non-won deal here, which produced false alarms for
+      // legitimate matches against lost/open deals. Restrict to true cross-account leakage.
       if (dealIds.length) {
-        const knownIds = new Set(allWonDeals.map(d => d.id));
-        outOfScopeDeals = dealIds.filter(id => !knownIds.has(id) && !wonDealIds.has(id)).length;
+        const PAGE = 200;
+        const knownIds = new Set<string>();
+        for (let i = 0; i < dealIds.length; i += PAGE) {
+          const slice = dealIds.slice(i, i + PAGE);
+          const { data: existing } = await supabase
+            .from("deals").select("id").eq("account_id", accountId).in("id", slice);
+          for (const d of existing || []) knownIds.add(d.id);
+        }
+        outOfScopeDeals = dealIds.filter(id => !knownIds.has(id)).length;
       }
 
       console.log(`[typeform-manager] match breakdown: direct=${wonByDirectDeal}, viaLead=${wonByLead}, viaDealEmail=${wonByEmail}, viaDealPhone=${wonByPhone}, viaLeadContact=${wonByLeadEmailPhone}, total=${wonDealIds.size}, allWonInAccount=${allWonDeals.length}`);
@@ -569,35 +611,40 @@ async function processResponses(supabase: any, accountId: string, formId: string
   if (!rows.length) return;
   await supabase.from("typeform_responses").upsert(rows, { onConflict: "form_id,response_id" });
 
-  // Match against leads/deals
+  // Match against leads/deals — also re-match rows that were upserted earlier
+  // and may have gained a corresponding lead/deal in the meantime.
+  // We always re-evaluate (no skip on already-matched) so newer/better matches
+  // overwrite stale ones; matching is idempotent on (form_id, response_id).
   for (const row of rows) {
-    if (!row.email && !row.phone) continue;
-    let leadId = null, dealId = null, method = null;
-    if (row.email) {
-      const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).ilike("email", row.email).limit(1).maybeSingle();
+    const email = canonicalEmail(row.email) || "";
+    const phone = canonicalE164(row.phone) || row.phone || "";
+    if (!email && !phone) continue;
+    let leadId: string | null = null, dealId: string | null = null, method: string | null = null;
+    if (email) {
+      const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).ilike("email", email).limit(1).maybeSingle();
       if (l) { leadId = l.id; method = "email"; }
       if (!leadId) {
-        const { data: d } = await supabase.from("deals").select("id").eq("account_id", accountId).ilike("contact_email", row.email).limit(1).maybeSingle();
+        const { data: d } = await supabase.from("deals").select("id").eq("account_id", accountId).ilike("contact_email", email).limit(1).maybeSingle();
         if (d) { dealId = d.id; method = "email"; }
       }
     }
-    if (!leadId && !dealId && row.phone) {
-      const variants = phoneVariants(row.phone);
-      const coreKey = phoneCoreKey(row.phone);
+    if (!leadId && !dealId && phone) {
+      const variants = phoneVariants(phone);
+      const coreKey = phoneCoreKey(phone);
       if (variants.length) {
-        const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).in("phone", variants).limit(1).maybeSingle();
+        const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).in("phone", variants).limit(1).maybeSingle();
         if (l) { leadId = l.id; method = "phone"; }
         if (!leadId) {
-          const { data: d } = await supabase.from("deals").select("id").eq("account_id", accountId).in("contact_phone", variants).limit(1).maybeSingle();
+          const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).in("contact_phone", variants).limit(1).maybeSingle();
           if (d) { dealId = d.id; method = "phone"; }
         }
       }
       if (!leadId && !dealId && coreKey) {
-        const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(200);
+        const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(500);
         const m = (l || []).find((x: any) => phoneCoreKey(x.phone) === coreKey);
         if (m) { leadId = m.id; method = "phone"; }
         if (!leadId) {
-          const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(200);
+          const { data: d } = await supabase.from("deals").select("id, contact_phone").eq("account_id", accountId).not("contact_phone", "is", null).limit(500);
           const dm = (d || []).find((x: any) => phoneCoreKey(x.contact_phone) === coreKey);
           if (dm) { dealId = dm.id; method = "phone"; }
         }
