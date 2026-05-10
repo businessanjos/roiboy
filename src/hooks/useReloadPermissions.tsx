@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useContext, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { usePermissions } from "@/hooks/usePermissions";
+import { usePermissionsContextSafe } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 
 /**
@@ -9,7 +9,8 @@ import { toast } from "sonner";
  */
 export function useReloadPermissions() {
   const queryClient = useQueryClient();
-  const { refetchPermissions } = usePermissions();
+  const permissionsCtx = usePermissionsContextSafe();
+  const refetchPermissions = permissionsCtx?.refetchPermissions;
   const [reloading, setReloading] = useState(false);
 
   const reload = useCallback(async () => {
@@ -25,7 +26,7 @@ export function useReloadPermissions() {
         queryClient.invalidateQueries({ queryKey: ["subscription-status"] }),
       ]);
       // Re-run the permissions resolver (team_roles + sector access merge).
-      await refetchPermissions();
+      await refetchPermissions?.();
       toast.success("Permissões atualizadas", {
         description: "Setores e acessos foram recarregados.",
       });
