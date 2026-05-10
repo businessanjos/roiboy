@@ -26,7 +26,7 @@ export function useReloadPermissions() {
         queryClient.invalidateQueries({ queryKey: ["subscription-status"] }),
       ]);
       // Re-run the permissions resolver (team_roles + sector access merge).
-      await refetchPermissions();
+      await refetchPermissions?.();
       toast.success("Permissões atualizadas", {
         description: "Setores e acessos foram recarregados.",
       });
