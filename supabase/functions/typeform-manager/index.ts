@@ -297,13 +297,19 @@ Deno.serve(async (req) => {
       // (which silently truncate above ~30 IDs on PostgREST) and case-sensitivity
       // issues on `.in(contact_email, [...])`.
       let wonByDirectDeal = 0, wonByLead = 0, wonByEmail = 0, wonByPhone = 0, wonByLeadEmailPhone = 0;
-      const allWonDeals = await fetchAllWonDeals(() =>
-        supabase
+      // IMPORTANT: filter won deals by `won_at` within the dashboard date range.
+      // Otherwise a response from the last 30 days could match a deal won YEARS ago
+      // (same lead/email/phone), inflating the "Ganhos" count.
+      const allWonDeals = await fetchAllWonDeals(() => {
+        let q = supabase
           .from("deals")
-          .select("id, status, value, contact_email, contact_phone, lead_id")
+          .select("id, status, value, contact_email, contact_phone, lead_id, won_at")
           .eq("account_id", accountId)
           .eq("status", "won")
-      );
+          .gte("won_at", since);
+        if (untilISO) q = q.lte("won_at", untilISO);
+        return q;
+      });
 
       // Pre-load leads attached to won deals so we can fall back to lead.email / lead.phone
       // (many older deals have NULL contact_email / contact_phone).
