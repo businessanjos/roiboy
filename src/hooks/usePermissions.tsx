@@ -187,6 +187,10 @@ export function usePermissions() {
   return context;
 }
 
+export function usePermissionsContextSafe() {
+  return useContext(PermissionsContext);
+}
+
 // Helper component for conditional rendering based on permissions
 interface RequirePermissionProps {
   permission: Permission | Permission[];
