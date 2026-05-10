@@ -782,10 +782,18 @@ export const ContractWizard = ({
       }
       counts[k].total = effectiveList.length;
       effectiveList.forEach((v) => {
-        if (isFilled(placeholderValues?.[v.key])) {
+        const keyUpper = v.key.toUpperCase();
+        const isInscricao =
+          /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(keyUpper);
+        const raw = placeholderValues?.[v.key];
+        const filled = isFilled(raw);
+        const inscricaoInvalid =
+          isInscricao && filled && !(/^\d+$/.test(String(raw).trim()) || /^isento$/i.test(String(raw).trim()));
+        if (filled && !inscricaoInvalid) {
           counts[k].filled += 1;
         } else {
-          counts[k].missingLabels.push(v.label || v.key);
+          const label = v.label || v.key;
+          counts[k].missingLabels.push(inscricaoInvalid ? `${label} (formato inválido)` : label);
         }
       });
       if (k === "payment") {
