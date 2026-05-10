@@ -333,6 +333,13 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
   const keyUpper = v.key.toUpperCase();
   const isInscricaoField =
     /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(keyUpper);
+  const inscricaoRaw = isInscricaoField ? String(value ?? "").trim() : "";
+  const inscricaoIsValid =
+    !isInscricaoField ||
+    inscricaoRaw === "" ||
+    /^\d+$/.test(inscricaoRaw) ||
+    /^isento$/i.test(inscricaoRaw);
+  const inscricaoHasInvalidChars = isInscricaoField && inscricaoRaw !== "" && !inscricaoIsValid;
   // Para campos de Inscrição Municipal/Estadual, não usamos o default ("ISENTO")
   // como placeholder porque dá a impressão de que o campo já está preenchido.
   const defaultPlaceholder = isInscricaoField
@@ -445,6 +452,11 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
       {isInscricaoField && required && !value && (
         <p className="text-[11px] font-medium text-amber-600 dark:text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1">
           Campo obrigatório. Preencha o número da inscrição ou digite <span className="font-semibold">ISENTO</span> para continuar.
+        </p>
+      )}
+      {inscricaoHasInvalidChars && (
+        <p className="text-[11px] font-medium text-destructive bg-destructive/10 border border-destructive/30 rounded px-2 py-1">
+          Valor inválido. Use apenas números ou digite <span className="font-semibold">ISENTO</span>.
         </p>
       )}
       {help && <p className="text-[11px] text-muted-foreground">{help}</p>}
@@ -770,10 +782,18 @@ export const ContractWizard = ({
       }
       counts[k].total = effectiveList.length;
       effectiveList.forEach((v) => {
-        if (isFilled(placeholderValues?.[v.key])) {
+        const keyUpper = v.key.toUpperCase();
+        const isInscricao =
+          /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(keyUpper);
+        const raw = placeholderValues?.[v.key];
+        const filled = isFilled(raw);
+        const inscricaoInvalid =
+          isInscricao && filled && !(/^\d+$/.test(String(raw).trim()) || /^isento$/i.test(String(raw).trim()));
+        if (filled && !inscricaoInvalid) {
           counts[k].filled += 1;
         } else {
-          counts[k].missingLabels.push(v.label || v.key);
+          const label = v.label || v.key;
+          counts[k].missingLabels.push(inscricaoInvalid ? `${label} (formato inválido)` : label);
         }
       });
       if (k === "payment") {
