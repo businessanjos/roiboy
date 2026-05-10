@@ -330,6 +330,14 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
   const isCurrencyField = v.type === "currency";
   const isFullWidth = v.type === "textarea" || /endereco|rua|complemento|extenso/i.test(v.key);
   const required = v.required;
+  const keyUpper = v.key.toUpperCase();
+  const isInscricaoField =
+    /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(keyUpper);
+  // Para campos de Inscrição Municipal/Estadual, não usamos o default ("ISENTO")
+  // como placeholder porque dá a impressão de que o campo já está preenchido.
+  const defaultPlaceholder = isInscricaoField
+    ? "Preencha ou digite ISENTO"
+    : ((v.default as any) ?? "");
 
   let input: React.ReactNode;
 
