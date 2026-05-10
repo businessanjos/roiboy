@@ -213,18 +213,31 @@ Deno.serve(async (req) => {
         if (!isAll) stats = latestPerForm.get(form_id) || null;
       }
 
-      // Period responses across scope
+      // Period responses across scope — paginated to bypass PostgREST default
+      // db-max-rows cap (1000). Without this, large date ranges silently truncate
+      // and every funnel metric below ends up underestimated.
       let rows: any[] = [];
       if (scopeFormIds.length) {
-        let q = supabase
-          .from("typeform_responses")
-          .select("id, form_id, account_id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id")
-          .eq("account_id", accountId)
-          .in("form_id", scopeFormIds)
-          .gte("created_at", since);
-        if (untilISO) q = q.lte("created_at", untilISO);
-        const { data: responses } = await q.limit(20000);
-        rows = responses || [];
+        const PAGE = 1000;
+        let from = 0;
+        while (true) {
+          let q = supabase
+            .from("typeform_responses")
+            .select("id, form_id, account_id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id")
+            .eq("account_id", accountId)
+            .in("form_id", scopeFormIds)
+            .gte("created_at", since);
+          if (untilISO) q = q.lte("created_at", untilISO);
+          const { data: page, error: pageErr } = await q
+            .order("created_at", { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (pageErr) { console.error("[typeform-manager] page fetch failed:", pageErr); break; }
+          const batch = page || [];
+          rows.push(...batch);
+          if (batch.length < PAGE) break;
+          from += PAGE;
+          if (from >= 50000) break; // hard safety stop
+        }
       }
 
       // ---- Consistency checks: every row must belong to the requested scope ----
