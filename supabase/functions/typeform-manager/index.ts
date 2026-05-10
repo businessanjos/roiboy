@@ -211,26 +211,9 @@ Deno.serve(async (req) => {
           aggLifetimeCompletionWeight += w;
         }
         if (!isAll) stats = latestPerForm.get(form_id) || null;
-
-        // Auto-refresh any form whose latest snapshot is older than 6h (or missing).
-        // Runs in background — current response uses whatever is on file now, but
-        // the next dashboard load reflects fresh Insights data.
-        const STALE_MS = 6 * 60 * 60 * 1000;
-        const nowMs = Date.now();
-        const staleFormIds = scopeFormIds.filter((fid) => {
-          const r = latestPerForm.get(fid);
-          if (!r) return true;
-          const t = r.fetched_at ? new Date(r.fetched_at).getTime() : 0;
-          return !t || (nowMs - t) > STALE_MS;
-        });
-        if (staleFormIds.length) {
-          // @ts-ignore EdgeRuntime is provided by Supabase
-          EdgeRuntime.waitUntil((async () => {
-            for (const fid of staleFormIds) {
-              try { await backfillForm(supabase, accountId, fid, TOKEN); } catch (e) { console.error("auto-refresh failed", fid, e); }
-            }
-          })());
-        }
+        // NOTE: dashboard reads from local DB only. Sync with Typeform happens
+        // via the explicit "Sincronizar" button (refresh_form) or via webhook.
+        // Filter changes must NOT trigger background backfills.
       }
 
       // Period responses across scope — paginated to bypass PostgREST default
