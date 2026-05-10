@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { FileText, Plus, RefreshCw, Trash2, Users, CheckCircle2, TrendingUp, Trophy, Clock, ExternalLink, Search, Info, AlertTriangle, CalendarIcon } from 'lucide-react';
@@ -54,7 +54,7 @@ const fmtTime = (s: number) => {
 export function TypeformDashboard() {
   const [forms, setForms] = useState<TrackedForm[]>([]);
   const [selectedForm, setSelectedForm] = useState<string>('');
-  const [period, setPeriod] = useState<'today' | '7' | '30' | '90' | 'this_month' | 'custom'>('30');
+  const [period, setPeriod] = useState<'today' | '7' | '30' | 'this_year' | 'this_month' | 'custom'>('30');
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const isCustom = period === 'custom';
   const customReady = isCustom && !!customRange?.from && !!customRange?.to;
@@ -62,12 +62,13 @@ export function TypeformDashboard() {
     const now = new Date();
     if (period === 'today') return { since: format(startOfDay(now), 'yyyy-MM-dd'), until: format(endOfDay(now), 'yyyy-MM-dd') };
     if (period === 'this_month') return { since: format(startOfMonth(now), 'yyyy-MM-dd'), until: format(endOfMonth(now), 'yyyy-MM-dd') };
+    if (period === 'this_year') return { since: format(startOfYear(now), 'yyyy-MM-dd'), until: format(endOfYear(now), 'yyyy-MM-dd') };
     if (period === 'custom' && customReady) {
       return { since: format(customRange!.from!, 'yyyy-MM-dd'), until: format(customRange!.to!, 'yyyy-MM-dd') };
     }
     return { days: Number(period) || 30 };
   }, [period, customReady, customRange]);
-  const periodLabel = period === 'today' ? 'hoje' : period === 'this_month' ? 'este mês' : period === 'custom' && customReady ? `${format(customRange!.from!, 'dd/MM/yy')} – ${format(customRange!.to!, 'dd/MM/yy')}` : `últimos ${period}d`;
+  const periodLabel = period === 'today' ? 'hoje' : period === 'this_month' ? 'este mês' : period === 'this_year' ? 'este ano' : period === 'custom' && customReady ? `${format(customRange!.from!, 'dd/MM/yy')} – ${format(customRange!.to!, 'dd/MM/yy')}` : `últimos ${period}d`;
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
   const [wonDeals, setWonDeals] = useState<any[]>([]);
   const [wonOpen, setWonOpen] = useState(false);
@@ -227,7 +228,7 @@ export function TypeformDashboard() {
                   <SelectItem value="today">Hoje</SelectItem>
                   <SelectItem value="7">Últimos 7d</SelectItem>
                   <SelectItem value="30">Últimos 30d</SelectItem>
-                  <SelectItem value="90">Últimos 90d</SelectItem>
+                  <SelectItem value="this_year">Este ano</SelectItem>
                   <SelectItem value="this_month">Este mês</SelectItem>
                   <SelectItem value="custom">Personalizado</SelectItem>
                 </SelectContent>
