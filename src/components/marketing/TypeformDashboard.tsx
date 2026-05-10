@@ -228,7 +228,7 @@ export function TypeformDashboard() {
                   <SelectItem value="today">Hoje</SelectItem>
                   <SelectItem value="7">Últimos 7d</SelectItem>
                   <SelectItem value="30">Últimos 30d</SelectItem>
-                  <SelectItem value="90">Últimos 90d</SelectItem>
+                  <SelectItem value="this_year">Este ano</SelectItem>
                   <SelectItem value="this_month">Este mês</SelectItem>
                   <SelectItem value="custom">Personalizado</SelectItem>
                 </SelectContent>
