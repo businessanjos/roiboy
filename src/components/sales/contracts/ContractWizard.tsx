@@ -340,11 +340,10 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
     /^\d+$/.test(inscricaoRaw) ||
     /^isento$/i.test(inscricaoRaw);
   const inscricaoHasInvalidChars = isInscricaoField && inscricaoRaw !== "" && !inscricaoIsValid;
-  // Para campos de Inscrição Municipal/Estadual, não usamos o default ("ISENTO")
-  // como placeholder porque dá a impressão de que o campo já está preenchido.
-  const defaultPlaceholder = isInscricaoField
-    ? "Preencha ou digite ISENTO"
-    : ((v.default as any) ?? "");
+  // Para campos de Inscrição Municipal/Estadual, removemos completamente qualquer
+  // placeholder automático (incl. "ISENTO") para não passar a falsa impressão de
+  // que o campo já está preenchido. O aviso aparece somente quando obrigatório e vazio.
+  const defaultPlaceholder = isInscricaoField ? "" : ((v.default as any) ?? "");
 
   let input: React.ReactNode;
 
