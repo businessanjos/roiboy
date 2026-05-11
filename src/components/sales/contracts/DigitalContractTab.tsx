@@ -818,6 +818,32 @@ export const DigitalContractTab = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Nó oculto sempre montado para gerar PDF mesmo sem abrir o preview */}
+      <div
+        aria-hidden
+        style={{
+          position: "fixed",
+          left: "-10000px",
+          top: 0,
+          width: "210mm",
+          background: "#ffffff",
+          pointerEvents: "none",
+          opacity: 0,
+        }}
+      >
+        <div ref={hiddenPdfRef} className="p-6">
+          {templateHtml ? (
+            <TemplatedContractPreview
+              templateHtml={templateHtml}
+              templateVariables={templateVariables}
+              placeholderValues={resolvedPlaceholderValues}
+            />
+          ) : (
+            <ContractDocument data={data} />
+          )}
+        </div>
+      </div>
     </div>
   );
 };
