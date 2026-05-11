@@ -581,8 +581,8 @@ function SlideTiers({ tiers, plan }: { tiers: any[]; plan: any }) {
   );
 }
 
-function SlideExtras({ plans }: { plans: any[] }) {
-  const annual = plans.find((p: any) => p.annual_bonus_enabled);
+function SlideExtras({ plan }: { plan: any }) {
+  const annual = plan?.annual_bonus_enabled ? plan : null;
   return (
     <div className="space-y-10 py-8">
       <div>
