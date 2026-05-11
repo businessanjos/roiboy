@@ -48,6 +48,31 @@ const ROLE_LABEL: Record<ZapSignerRole, string> = {
   fiador: "Fiador",
 };
 
+// Signatários fixos da CONTRATADA (sempre exibidos, editáveis se necessário)
+const FIXED_CONTRACTADA_SIGNERS: SignerDraft[] = [
+  {
+    enabled: true,
+    role: "representante_legal",
+    name: "Everton Pieri",
+    email: "coachevertonsantos@gmail.com",
+    phone: "",
+  },
+  {
+    enabled: true,
+    role: "testemunha",
+    name: "Jessica Marcato",
+    email: "jessicamarcato@anjosbusiness.com",
+    phone: "",
+  },
+  {
+    enabled: true,
+    role: "testemunha",
+    name: "Jonathan Marcato",
+    email: "jonathanmarcato@anjosbusiness.com",
+    phone: "",
+  },
+];
+
 interface DigitalContractTabProps {
   dealId: string;
   dealValue?: number | null;
@@ -575,17 +600,9 @@ export const DigitalContractTab = ({
         phone: clientPhone,
       });
     }
-    drafts.push({
-      enabled: true,
-      role: "contratado",
-      name: data.company_representative || "",
-      email: data.company_email || "",
-      phone: "",
-    });
-    if (data.include_witnesses) {
-      drafts.push({ enabled: false, role: "testemunha", name: "", email: "", phone: "" });
-      drafts.push({ enabled: false, role: "testemunha", name: "", email: "", phone: "" });
-    }
+    // Signatários fixos da CONTRATADA (Everton + 2 testemunhas Marcato).
+    // Sempre presentes, mas editáveis caso necessário.
+    FIXED_CONTRACTADA_SIGNERS.forEach((fs) => drafts.push({ ...fs }));
     setSignerDrafts(drafts);
     const clientLabel = data.client_name || data.client_representative || "";
     const numberLabel = contract?.contract_number ? ` ${contract.contract_number}` : "";
@@ -962,7 +979,7 @@ export const DigitalContractTab = ({
             />
           </div>
 
-          <ScrollArea className="flex-1 -mx-6 px-6">
+          <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
             <div className="space-y-3 py-1">
               {signerDrafts.map((s, idx) => (
                 <Card key={idx} className="p-3 space-y-2">
