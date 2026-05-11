@@ -781,12 +781,58 @@ export default function Clients() {
     // Note: teamUsers now comes from edge function response
   }, [currentSector?.id, currentUser?.account_id, currentPage, pageSize]);
   
+  // Fetch counts for each status tab respecting current filters (excluding tab/contract)
+  const fetchTabCounts = async () => {
+    const accId = currentUser?.account_id;
+    const userId = currentUser?.id;
+    if (!accId || !userId) return;
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+    const tabs: Array<{ key: string; contract: string }> = [
+      { key: "active", contract: "active" },
+      { key: "awaiting", contract: "none" },
+      { key: "hold", contract: "paused,suspended" },
+      { key: "cancelled", contract: "cancelled,dismissed,ended" },
+    ];
+    const buildParams = (contract: string) => {
+      const p = new URLSearchParams({ limit: "1", offset: "0" });
+      if (searchQuery) p.set("search", searchQuery);
+      if (filterResponsible !== "all") p.set("responsible_user_id", filterResponsible);
+      if (filterProduct !== "all") p.set("product_id", filterProduct);
+      // Respect user's explicit contract filter; otherwise scope by tab
+      if (filterContract !== "all") p.set("contract_filter", filterContract);
+      else p.set("contract_filter", contract);
+      if (filterLinks === "with") p.set("with_links", "true");
+      if (filterCountry !== "all") p.set("country", filterCountry);
+      return p;
+    };
+    try {
+      const results = await Promise.all(
+        tabs.map(t =>
+          fetch(`${SUPABASE_URL}/functions/v1/list-clients?${buildParams(t.contract).toString()}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "x-account-id": accId,
+              "x-session-token": userId,
+            },
+          }).then(r => r.ok ? r.json() : { total: 0 }).then(j => ({ key: t.key, total: j.total || 0 }))
+        )
+      );
+      const next: Record<string, number> = {};
+      results.forEach(r => { next[r.key] = r.total; });
+      setTabCounts(next);
+    } catch (e) {
+      console.error("Error fetching tab counts:", e);
+    }
+  };
+
   // Refetch clients when filters change (server-side filtering) - 800ms debounce to reduce API calls
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
     const timer = setTimeout(() => {
       fetchClients();
+      fetchTabCounts();
     }, 800);
     return () => clearTimeout(timer);
   }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, sortOrder, activeTab]);
