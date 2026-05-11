@@ -688,7 +688,7 @@ export const ContractWizard = ({
         docInitedRef.current = true;
       }
     }
-  }, [effectiveVariables, placeholderValues]);
+  }, [templateVariables, placeholderValues]);
 
 
   /* ---- Load templates & products ---- */
