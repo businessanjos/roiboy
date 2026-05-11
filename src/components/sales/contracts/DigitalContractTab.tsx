@@ -4,6 +4,10 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2,
   Save,
@@ -14,6 +18,8 @@ import {
   Eye,
   Pencil,
   X,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -25,6 +31,22 @@ import { ContractWizard } from "./ContractWizard";
 import { mergeContractorPlaceholders, type TemplateVariableDef } from "@/lib/contractTemplates";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+
+type ZapSignerRole = "contratante" | "contratado" | "representante_legal" | "testemunha" | "fiador";
+interface SignerDraft {
+  enabled: boolean;
+  role: ZapSignerRole;
+  name: string;
+  email: string;
+  phone: string;
+}
+const ROLE_LABEL: Record<ZapSignerRole, string> = {
+  contratante: "Contratante",
+  contratado: "Contratado",
+  representante_legal: "Representante Legal",
+  testemunha: "Testemunha",
+  fiador: "Fiador",
+};
 
 interface DigitalContractTabProps {
   dealId: string;
@@ -517,14 +539,75 @@ export const DigitalContractTab = ({
     }
   };
 
+  const [signerDialogOpen, setSignerDialogOpen] = useState(false);
+  const [signerDrafts, setSignerDrafts] = useState<SignerDraft[]>([]);
+
+  const openSignerDialog = () => {
+    if (!contract) {
+      toast.error("Salve o contrato antes de enviar.");
+      return;
+    }
+    // Prefill from current contract data
+    const clientPhone = (clientFull?.phone_e164 || clientFull?.phone || "") as string;
+    const drafts: SignerDraft[] = [];
+    if (data.client_representative) {
+      drafts.push({
+        enabled: true,
+        role: "representante_legal",
+        name: data.client_representative || "",
+        email: data.client_email || "",
+        phone: clientPhone,
+      });
+      drafts.push({
+        enabled: false,
+        role: "contratante",
+        name: data.client_name || "",
+        email: data.client_email || "",
+        phone: clientPhone,
+      });
+    } else {
+      drafts.push({
+        enabled: true,
+        role: "contratante",
+        name: data.client_name || "",
+        email: data.client_email || "",
+        phone: clientPhone,
+      });
+    }
+    drafts.push({
+      enabled: true,
+      role: "contratado",
+      name: data.company_representative || "",
+      email: data.company_email || "",
+      phone: "",
+    });
+    if (data.include_witnesses) {
+      drafts.push({ enabled: false, role: "testemunha", name: "", email: "", phone: "" });
+      drafts.push({ enabled: false, role: "testemunha", name: "", email: "", phone: "" });
+    }
+    setSignerDrafts(drafts);
+    setSignerDialogOpen(true);
+  };
+
   const handleSendZapsign = async () => {
     if (!contract) {
       toast.error("Salve o contrato antes de enviar.");
       return;
     }
-    if (!data.client_email) {
-      toast.error("Defina o e-mail do cliente.");
+    const selected = signerDrafts.filter((s) => s.enabled);
+    if (selected.length === 0) {
+      toast.error("Selecione pelo menos um signatário.");
       return;
+    }
+    for (const s of selected) {
+      if (!s.name.trim()) {
+        toast.error(`Informe o nome do signatário (${ROLE_LABEL[s.role]}).`);
+        return;
+      }
+      if (!s.email.trim() && !s.phone.replace(/\D/g, "")) {
+        toast.error(`Informe e-mail ou WhatsApp para ${s.name || ROLE_LABEL[s.role]}.`);
+        return;
+      }
     }
     setSendingZapsign(true);
     try {
@@ -537,10 +620,19 @@ export const DigitalContractTab = ({
       }
 
       const { error } = await supabase.functions.invoke("zapsign-send", {
-        body: { contract_id: contract.id },
+        body: {
+          contract_id: contract.id,
+          signers: selected.map((s) => ({
+            role: s.role,
+            name: s.name.trim(),
+            email: s.email.trim() || undefined,
+            phone: s.phone.replace(/\D/g, "") || undefined,
+          })),
+        },
       });
       if (error) throw error;
       toast.success("Enviado para assinatura via ZapSign");
+      setSignerDialogOpen(false);
       const { data: updated } = await supabase
         .from("digital_contracts")
         .select("*")
@@ -644,7 +736,7 @@ export const DigitalContractTab = ({
           <LinkIcon className="h-3.5 w-3.5" />
           <span className="ml-1.5">Link público</span>
         </Button>
-        <Button size="sm" onClick={handleSendZapsign} disabled={!contract || sendingZapsign}>
+        <Button size="sm" onClick={openSignerDialog} disabled={!contract || sendingZapsign}>
           {sendingZapsign ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
           <span className="ml-1.5">Enviar p/ assinatura</span>
         </Button>
@@ -844,6 +936,140 @@ export const DigitalContractTab = ({
           )}
         </div>
       </div>
+
+      <Dialog open={signerDialogOpen} onOpenChange={(o) => !sendingZapsign && setSignerDialogOpen(o)}>
+        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-base">Selecionar signatários</DialogTitle>
+            <DialogDescription className="text-xs">
+              Marque quem deve assinar e revise nome, e-mail e WhatsApp. ZapSign exige pelo
+              menos um meio de contato (e-mail ou WhatsApp) por signatário.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="space-y-3 py-1">
+              {signerDrafts.map((s, idx) => (
+                <Card key={idx} className="p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={s.enabled}
+                      onCheckedChange={(v) =>
+                        setSignerDrafts((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, enabled: !!v } : p)),
+                        )
+                      }
+                    />
+                    <div className="flex-1">
+                      <Label className="text-[11px] text-muted-foreground">Papel</Label>
+                      <Select
+                        value={s.role}
+                        onValueChange={(v: ZapSignerRole) =>
+                          setSignerDrafts((prev) =>
+                            prev.map((p, i) => (i === idx ? { ...p, role: v } : p)),
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(ROLE_LABEL) as ZapSignerRole[]).map((r) => (
+                            <SelectItem key={r} value={r} className="text-xs">
+                              {ROLE_LABEL[r]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 self-end"
+                      onClick={() =>
+                        setSignerDrafts((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">Nome</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        value={s.name}
+                        onChange={(e) =>
+                          setSignerDrafts((prev) =>
+                            prev.map((p, i) => (i === idx ? { ...p, name: e.target.value } : p)),
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">E-mail</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        type="email"
+                        value={s.email}
+                        onChange={(e) =>
+                          setSignerDrafts((prev) =>
+                            prev.map((p, i) => (i === idx ? { ...p, email: e.target.value } : p)),
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">WhatsApp (com DDD)</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        value={s.phone}
+                        placeholder="11999998888"
+                        onChange={(e) =>
+                          setSignerDrafts((prev) =>
+                            prev.map((p, i) => (i === idx ? { ...p, phone: e.target.value } : p)),
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setSignerDrafts((prev) => [
+                    ...prev,
+                    { enabled: true, role: "testemunha", name: "", email: "", phone: "" },
+                  ])
+                }
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar signatário
+              </Button>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="flex-row sm:justify-between gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSignerDialogOpen(false)}
+              disabled={sendingZapsign}
+            >
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={handleSendZapsign} disabled={sendingZapsign}>
+              {sendingZapsign ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+              ) : (
+                <Send className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              {sendingZapsign ? "Enviando..." : "Enviar para ZapSign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

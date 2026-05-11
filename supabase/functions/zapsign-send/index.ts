@@ -31,6 +31,7 @@ serve(async (req) => {
 
     // Back-compat path: payload already prepared
     let { contract_pdf_base64, contract_name, signers } = body || {};
+    const explicitSigners = Array.isArray(signers) && signers.length > 0 ? signers : null;
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -76,56 +77,74 @@ serve(async (req) => {
       contract_pdf_base64 = btoa(binary);
       contract_name = contract_name || `Contrato ${contract.contract_number || contract.id}`;
 
-      // Build signers from contract row
-      const built: any[] = [];
+      if (explicitSigners) {
+        // Caller chose signers explicitly; use them as-is (after light normalization)
+        signers = explicitSigners
+          .map((s: any) => ({
+            role: s.role || "contratante",
+            name: (s.name || "").trim(),
+            email: s.email ? String(s.email).trim() : undefined,
+            phone: onlyDigits(s.phone) || undefined,
+          }))
+          .filter((s: any) => s.name && (s.email || s.phone));
+        if (signers.length === 0) {
+          return json(
+            { success: false, error: "Selecione ao menos um signatário com e-mail ou telefone." },
+            400,
+          );
+        }
+      } else {
+        // Build signers from contract row
+        const built: any[] = [];
 
-      // Client (or representative)
-      const clientPhone = onlyDigits((contract as any).client_phone);
-      if (contract.client_representative) {
-        built.push({
-          role: "representante_legal",
-          name: contract.client_representative,
-          email: contract.client_email || undefined,
-          phone: clientPhone || undefined,
-        });
-      } else if (contract.client_name) {
-        built.push({
-          role: "contratante",
-          name: contract.client_name,
-          email: contract.client_email || undefined,
-          phone: clientPhone || undefined,
-        });
-      }
+        // Client (or representative)
+        const clientPhone = onlyDigits((contract as any).client_phone);
+        if (contract.client_representative) {
+          built.push({
+            role: "representante_legal",
+            name: contract.client_representative,
+            email: contract.client_email || undefined,
+            phone: clientPhone || undefined,
+          });
+        } else if (contract.client_name) {
+          built.push({
+            role: "contratante",
+            name: contract.client_name,
+            email: contract.client_email || undefined,
+            phone: clientPhone || undefined,
+          });
+        }
 
-      // Company side
-      if (contract.company_representative) {
-        built.push({
-          role: "contratado",
-          name: contract.company_representative,
-          email: contract.company_email || undefined,
-        });
-      }
+        // Company side
+        if (contract.company_representative) {
+          built.push({
+            role: "contratado",
+            name: contract.company_representative,
+            email: contract.company_email || undefined,
+          });
+        }
 
-      // Pull additional phone from clients table if missing
-      if (built[0] && !built[0].phone && contract.client_id) {
-        const { data: clientRow } = await supabase
-          .from("clients")
-          .select("phone")
-          .eq("id", contract.client_id)
-          .maybeSingle();
-        const p = onlyDigits(clientRow?.phone);
-        if (p) built[0].phone = p;
-      }
+        // Pull additional phone from clients table if missing
+        if (built[0] && !built[0].phone && contract.client_id) {
+          const { data: clientRow } = await supabase
+            .from("clients")
+            .select("phone")
+            .eq("id", contract.client_id)
+            .maybeSingle();
+          const p = onlyDigits(clientRow?.phone);
+          if (p) built[0].phone = p;
+        }
 
-      signers = built.filter((s) => s.name && (s.email || s.phone));
-      if (signers.length === 0) {
-        return json(
-          {
-            success: false,
-            error: "Nenhum signatário com e-mail ou telefone disponível no contrato.",
-          },
-          400,
-        );
+        signers = built.filter((s) => s.name && (s.email || s.phone));
+        if (signers.length === 0) {
+          return json(
+            {
+              success: false,
+              error: "Nenhum signatário com e-mail ou telefone disponível no contrato.",
+            },
+            400,
+          );
+        }
       }
     }
 
