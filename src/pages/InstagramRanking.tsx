@@ -309,6 +309,14 @@ export default function InstagramRanking() {
     );
   }, [rows, search]);
 
+  const stats = useMemo(() => {
+    const totalClients = filtered.length;
+    const totalFollowers = filtered.reduce((a, r) => a + (r.followers_count || 0), 0);
+    const totalLikes = filtered.reduce((a, r) => a + r.total_likes, 0);
+    const totalComments = filtered.reduce((a, r) => a + r.total_comments, 0);
+    return { totalClients, totalFollowers, totalLikes, totalComments };
+  }, [filtered]);
+
   if (userLoading) {
     return (
       <div className="container mx-auto p-6 space-y-4">
@@ -330,14 +338,6 @@ export default function InstagramRanking() {
       </div>
     );
   }
-
-  const stats = useMemo(() => {
-    const totalClients = filtered.length;
-    const totalFollowers = filtered.reduce((a, r) => a + (r.followers_count || 0), 0);
-    const totalLikes = filtered.reduce((a, r) => a + r.total_likes, 0);
-    const totalComments = filtered.reduce((a, r) => a + r.total_comments, 0);
-    return { totalClients, totalFollowers, totalLikes, totalComments };
-  }, [filtered]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
