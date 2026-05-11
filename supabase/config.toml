@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.typeform-webhook]
 verify_jwt = false
+
+[functions.zapsign-webhook]
+verify_jwt = false
