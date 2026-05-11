@@ -84,6 +84,67 @@ const composeAddress = (p: AddressParts): string => {
     .join(", ");
 };
 
+/** Best-effort: reverte `composeAddress` para reabrir contratos já salvos. */
+const parseAddress = (raw: string | null | undefined): AddressParts => {
+  const out: AddressParts = { ...EMPTY_PARTS };
+  if (!raw) return out;
+  let s = String(raw).trim();
+
+  // CEP no final
+  const cepRe = /,?\s*CEP\s*(\d{5})-?(\d{3})\s*$/i;
+  const cepMatch = s.match(cepRe);
+  if (cepMatch) {
+    out.cep = `${cepMatch[1]}-${cepMatch[2]}`;
+    s = s.replace(cepRe, "").trim().replace(/,\s*$/, "");
+  } else {
+    const anyCep = s.match(/(\d{5})-?(\d{3})/);
+    if (anyCep) out.cep = `${anyCep[1]}-${anyCep[2]}`;
+  }
+
+  // Cidade/UF no final (ex: "São Paulo/SP")
+  const cityUfRe = /,?\s*([^,]+?)\/([A-Za-z]{2})\s*$/;
+  const cityUfMatch = s.match(cityUfRe);
+  if (cityUfMatch) {
+    out.cidade = cityUfMatch[1].trim();
+    out.uf = cityUfMatch[2].toUpperCase();
+    s = s.replace(cityUfRe, "").trim().replace(/,\s*$/, "");
+  }
+
+  // Resto: "logradouro, numero, complemento - bairro" (qualquer parte pode faltar)
+  // Primeiro separa por " - " para extrair bairro/complemento
+  const dashIdx = s.indexOf(" - ");
+  let head = s;
+  let afterDash = "";
+  if (dashIdx >= 0) {
+    head = s.slice(0, dashIdx).trim();
+    afterDash = s.slice(dashIdx + 3).trim();
+  }
+
+  if (afterDash) {
+    // afterDash pode ser "complemento, bairro" ou só "bairro"
+    const parts = afterDash.split(",").map((x) => x.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      out.complemento = parts.slice(0, -1).join(", ");
+      out.bairro = parts[parts.length - 1];
+    } else if (parts.length === 1) {
+      out.bairro = parts[0];
+    }
+  }
+
+  // head: "logradouro, numero" — número geralmente é o último segmento curto
+  if (head) {
+    const headParts = head.split(",").map((x) => x.trim()).filter(Boolean);
+    if (headParts.length >= 2) {
+      out.numero = headParts[headParts.length - 1];
+      out.logradouro = headParts.slice(0, -1).join(", ");
+    } else if (headParts.length === 1) {
+      out.logradouro = headParts[0];
+    }
+  }
+
+  return out;
+};
+
 export interface MenteeContractFieldsProps {
   data: DigitalContractData;
   onChange: (next: DigitalContractData) => void;
@@ -108,22 +169,27 @@ export const MenteeContractFields = ({
   const [copyingBilling, setCopyingBilling] = useState(false);
   const [billingTipo, setBillingTipo] = useState<string | null>(null);
   const [billingChecked, setBillingChecked] = useState(false);
-  const [addr, setAddr] = useState<AddressParts>(EMPTY_PARTS);
+  const [addr, setAddr] = useState<AddressParts>(() => parseAddress(data.client_address));
   const [cepLoading, setCepLoading] = useState(false);
   const lastCepRef = useRef<string>("");
   const userEditedRef = useRef(false);
 
-  // Initialize from existing client_address only once on mount.
+  // Re-parse if the underlying address changes externally (ex.: contrato recém-carregado).
   useEffect(() => {
-    if (data.client_address && !addr.logradouro && !addr.numero && !addr.cep) {
-      // Best-effort parse: try extract CEP from existing string.
-      const cepMatch = (data.client_address || "").match(/(\d{5})-?(\d{3})/);
-      if (cepMatch) {
-        setAddr((p) => ({ ...p, cep: `${cepMatch[1]}-${cepMatch[2]}` }));
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (userEditedRef.current) return;
+    const parsed = parseAddress(data.client_address);
+    setAddr((prev) => {
+      const same =
+        prev.cep === parsed.cep &&
+        prev.logradouro === parsed.logradouro &&
+        prev.numero === parsed.numero &&
+        prev.complemento === parsed.complemento &&
+        prev.bairro === parsed.bairro &&
+        prev.cidade === parsed.cidade &&
+        prev.uf === parsed.uf;
+      return same ? prev : parsed;
+    });
+  }, [data.client_address]);
 
   // Compose and persist the address string when parts change (after user edits).
   useEffect(() => {

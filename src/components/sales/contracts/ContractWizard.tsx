@@ -1069,26 +1069,43 @@ export const ContractWizard = ({
     const updates: Record<string, any> = {};
     for (const v of templateVariables) {
       const k = v.key.toUpperCase();
-      if (/CNPJ/.test(k) && !/EMPRESA|CONTRATADA|COMPANY/.test(k)) {
-        updates[v.key] = (raw ?? "").replace(/\D/g, "");
-      }
-      if ((/RAZAO|NOME(?!_FANTASIA)|FULL_NAME|CLIENT_NAME|CONTRATANTE/.test(k)) && data.razao_social) {
-        updates[v.key] = data.razao_social;
-      }
-      if (k.includes("FANTASIA") && data.nome_fantasia) updates[v.key] = data.nome_fantasia;
-      if (k.includes("EMAIL") && data.email) updates[v.key] = data.email;
-      if ((k.includes("CELULAR") || k.includes("TELEFONE") || k.includes("PHONE")) && data.telefone) {
-        updates[v.key] = data.telefone;
-      }
-      if ((k === "RUA" || k.includes("LOGRADOURO") || k === "ENDERECO") && data.logradouro) {
-        updates[v.key] = data.logradouro;
-      }
-      if (k.includes("BAIRRO") && data.bairro) updates[v.key] = data.bairro;
-      if (k.includes("CEP") && data.cep) updates[v.key] = data.cep;
-      if (k.includes("CIDADE") && data.cidade) updates[v.key] = data.cidade;
-      if ((k.includes("ESTADO") || k === "UF") && data.estado) updates[v.key] = data.estado;
-      if (k === "NUMERO" && data.numero) updates[v.key] = data.numero;
-      if (k.includes("COMPLEMENTO") && data.complemento) updates[v.key] = data.complemento;
+      // Pula explicitamente a CONTRATADA — só preenche o CONTRATANTE
+      if (/EMPRESA|CONTRATADA|COMPANY/.test(k)) continue;
+
+      // Classificação exclusiva por categoria. Cada chave só pode receber UM tipo
+      // de valor — evita que regex genéricas (ex.: /CONTRATANTE/) sobrescrevam
+      // campos específicos como CONTRATANTE_INSCRICAO_ESTADUAL, CONTRATANTE_EMAIL etc.
+      const isInscricao = /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|(^|_)IE$|(^|_)IM$/.test(k);
+      const isCnpj = /(^|_)CNPJ($|_)/.test(k);
+      const isCpf = /(^|_)CPF($|_)/.test(k);
+      const isRg = /(^|_)RG($|_)/.test(k);
+      const isEmail = /EMAIL|E_?MAIL/.test(k);
+      const isPhone = /CELULAR|TELEFONE|WHATSAPP|PHONE/.test(k);
+      const isCep = /(^|_)CEP($|_)|ZIP/.test(k);
+      const isBairro = /BAIRRO/.test(k);
+      const isCidade = /(^|_)CIDADE($|_)/.test(k);
+      const isEstado = /(^|_)ESTADO($|_)|^UF$|_UF$/.test(k);
+      const isNumero = /^NUMERO$|NUM_END|NUMERO_ENDERECO/.test(k);
+      const isComplemento = /COMPLEMENTO/.test(k);
+      const isLogradouro = /(^|_)RUA($|_)|LOGRADOURO|^ENDERECO$|^ENDEREÇO$/.test(k);
+      const isFantasia = /FANTASIA/.test(k);
+      const isRazaoOuNome =
+        /RAZAO_?SOCIAL|RAZÃO_?SOCIAL|(^|_)NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|^CONTRATANTE$|CONTRATANTE_NOME|CLIENTE_NOME/.test(k);
+
+      if (isInscricao) continue; // nunca preencher IE/IM automaticamente pelo CNPJ lookup
+      if (isCnpj) { updates[v.key] = (raw ?? "").replace(/\D/g, ""); continue; }
+      if (isCpf || isRg) continue;
+      if (isFantasia) { if (data.nome_fantasia) updates[v.key] = data.nome_fantasia; continue; }
+      if (isEmail) { if (data.email) updates[v.key] = data.email; continue; }
+      if (isPhone) { if (data.telefone) updates[v.key] = data.telefone; continue; }
+      if (isCep) { if (data.cep) updates[v.key] = data.cep; continue; }
+      if (isBairro) { if (data.bairro) updates[v.key] = data.bairro; continue; }
+      if (isCidade) { if (data.cidade) updates[v.key] = data.cidade; continue; }
+      if (isEstado) { if (data.estado) updates[v.key] = data.estado; continue; }
+      if (isNumero) { if (data.numero) updates[v.key] = data.numero; continue; }
+      if (isComplemento) { if (data.complemento) updates[v.key] = data.complemento; continue; }
+      if (isLogradouro) { if (data.logradouro) updates[v.key] = data.logradouro; continue; }
+      if (isRazaoOuNome) { if (data.razao_social) updates[v.key] = data.razao_social; continue; }
     }
     applyLookupUpdates(updates);
   };
