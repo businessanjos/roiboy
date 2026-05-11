@@ -154,6 +154,7 @@ export const DigitalContractTab = ({
   const [clientFull, setClientFull] = useState<any | null>(null);
   const docRef = useRef<HTMLDivElement>(null);
   const pdfPreviewRef = useRef<HTMLDivElement>(null);
+  const hiddenPdfRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
   const resolvedPlaceholderValues = useMemo(() => {
