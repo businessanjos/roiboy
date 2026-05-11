@@ -120,7 +120,29 @@ export default function CsIncentivePresentation() {
           <Sparkles className="h-3.5 w-3.5 text-rose-300" />
           Plano de Incentivo CS · 2026
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {activePlans.length > 1 && (
+            <div className="flex items-center gap-1 rounded-full bg-white/5 border border-white/10 p-0.5">
+              {activePlans.map((p: any) => {
+                const active = p.id === referencePlan?.id;
+                const label = p.role_label || p.name;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedPlanId(p.id)}
+                    className={cn(
+                      "px-3 py-1 rounded-full text-xs font-medium transition-all",
+                      active
+                        ? "bg-rose-300 text-slate-950"
+                        : "text-slate-300 hover:text-white hover:bg-white/5",
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <span className="text-xs text-slate-400 tabular-nums">
             {step + 1} / {slides.length}
           </span>
