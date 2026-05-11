@@ -31,6 +31,7 @@ serve(async (req) => {
 
     // Back-compat path: payload already prepared
     let { contract_pdf_base64, contract_name, signers } = body || {};
+    const explicitSigners = Array.isArray(signers) && signers.length > 0 ? signers : null;
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
