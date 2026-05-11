@@ -541,6 +541,7 @@ export const DigitalContractTab = ({
 
   const [signerDialogOpen, setSignerDialogOpen] = useState(false);
   const [signerDrafts, setSignerDrafts] = useState<SignerDraft[]>([]);
+  const [documentName, setDocumentName] = useState("");
 
   const openSignerDialog = () => {
     if (!contract) {
