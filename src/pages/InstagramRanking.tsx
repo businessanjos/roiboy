@@ -100,6 +100,8 @@ function InstagramAvatar({
     </Avatar>
   );
 }
+
+function RankRow({ rank, row, metric, value, sublabel }: {
   rank: number;
   row: Row;
   metric: "followers" | "likes" | "comments";
