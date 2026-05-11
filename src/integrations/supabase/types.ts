@@ -5304,6 +5304,7 @@ export type Database = {
           service_mode: string | null
           share_token: string
           signed_at: string | null
+          signed_file_url: string | null
           signed_pdf_path: string | null
           status: string
           template_html: string | null
@@ -5312,6 +5313,7 @@ export type Database = {
           total_value: number | null
           updated_at: string
           zapsign_document_token: string | null
+          zapsign_signers: Json | null
         }
         Insert: {
           account_id: string
@@ -5360,6 +5362,7 @@ export type Database = {
           service_mode?: string | null
           share_token?: string
           signed_at?: string | null
+          signed_file_url?: string | null
           signed_pdf_path?: string | null
           status?: string
           template_html?: string | null
@@ -5368,6 +5371,7 @@ export type Database = {
           total_value?: number | null
           updated_at?: string
           zapsign_document_token?: string | null
+          zapsign_signers?: Json | null
         }
         Update: {
           account_id?: string
@@ -5416,6 +5420,7 @@ export type Database = {
           service_mode?: string | null
           share_token?: string
           signed_at?: string | null
+          signed_file_url?: string | null
           signed_pdf_path?: string | null
           status?: string
           template_html?: string | null
@@ -5424,6 +5429,7 @@ export type Database = {
           total_value?: number | null
           updated_at?: string
           zapsign_document_token?: string | null
+          zapsign_signers?: Json | null
         }
         Relationships: [
           {
