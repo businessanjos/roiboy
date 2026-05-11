@@ -455,7 +455,7 @@ export const DigitalContractTab = ({
   };
 
   const generatePdfToStorage = async (opts?: { silent?: boolean }): Promise<string | null> => {
-    const target = pdfPreviewRef.current ?? docRef.current;
+    const target = pdfPreviewRef.current ?? docRef.current ?? hiddenPdfRef.current;
     if (!target || !contract) {
       if (!opts?.silent) toast.error("Salve o contrato antes de gerar o PDF.");
       return null;
