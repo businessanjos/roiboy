@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -644,6 +644,52 @@ export const ContractWizard = ({
   const [docType, setDocType] = useState<"cnpj" | "cpf">("cnpj");
   const [docInput, setDocInput] = useState("");
   const [docBirth, setDocBirth] = useState("");
+  const docInitedRef = useRef(false);
+
+  /* Inicializa o tipo (CNPJ/CPF) e o input do documento a partir dos
+     placeholder_values já salvos no contrato. Executa uma vez quando
+     as variáveis e valores estão disponíveis. */
+  useEffect(() => {
+    if (docInitedRef.current) return;
+    if (!templateVariables || templateVariables.length === 0) return;
+    if (!placeholderValues) return;
+
+    const vars = templateVariables.filter((v) => !isFixedContratadaKey(v.key));
+
+    const findVal = (re: RegExp) => {
+      for (const v of vars) {
+        if (re.test(v.key)) {
+          const raw = placeholderValues[v.key];
+          if (raw !== undefined && raw !== null && String(raw).trim() !== "") {
+            return String(raw);
+          }
+        }
+      }
+      return undefined;
+    };
+
+    const cnpjVal = findVal(/cnpj/i);
+    const cpfVal = findVal(/^cpf$|cpf_|_cpf/i);
+
+    if (cnpjVal) {
+      const digits = cnpjVal.replace(/\D/g, "");
+      if (digits.length >= 11) {
+        setDocType("cnpj");
+        setDocInput(digits);
+        docInitedRef.current = true;
+        return;
+      }
+    }
+    if (cpfVal) {
+      const digits = cpfVal.replace(/\D/g, "");
+      if (digits.length >= 11) {
+        setDocType("cpf");
+        setDocInput(digits);
+        docInitedRef.current = true;
+      }
+    }
+  }, [templateVariables, placeholderValues]);
+
 
   /* ---- Load templates & products ---- */
   useEffect(() => {
