@@ -83,7 +83,7 @@ export default function CsIncentivePresentation() {
       { id: "responsibility", render: () => <SlideResponsibility /> },
       { id: "how", render: () => <SlideHow plan={referencePlan} /> },
       { id: "tiers", render: () => <SlideTiers tiers={refTiers} plan={referencePlan} /> },
-      { id: "extras", render: () => <SlideExtras plans={activePlans} /> },
+      { id: "extras", render: () => <SlideExtras plan={referencePlan} /> },
       { id: "rituals", render: () => <SlideRituals plans={activePlans} /> },
       { id: "stepbystep", render: () => <SlideStepByStep /> },
       { id: "close", render: () => <SlideClose /> },
