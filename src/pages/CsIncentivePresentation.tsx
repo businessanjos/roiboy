@@ -590,15 +590,26 @@ function SlideExtras({ plans }: { plans: any[] }) {
   );
 }
 
-function SlideRituals({ plan }: { plan: any }) {
-  const routines: string[] = Array.isArray(plan?.routines) ? plan.routines : [];
+function SlideRituals({ plans }: { plans: any[] }) {
+  // Une rituais de todos os planos ativos, preservando ordem e removendo duplicatas
+  const merged: string[] = [];
+  const seen = new Set<string>();
+  (plans || []).forEach((p) => {
+    (Array.isArray(p?.routines) ? p.routines : []).forEach((r: string) => {
+      const key = String(r || "").trim();
+      if (key && !seen.has(key.toLowerCase())) {
+        seen.add(key.toLowerCase());
+        merged.push(key);
+      }
+    });
+  });
   const fallback = [
     "Check-in semanal estruturado com cada cliente da carteira",
     "Acompanhamento de evolução por indicadores de resultado",
     "Reunião mensal de saúde de carteira com o time",
     "Plano de renovação iniciado no 9º mês de contrato",
   ];
-  const list = routines.length > 0 ? routines : fallback;
+  const list = merged.length > 0 ? merged : fallback;
 
   // ícones rotativos para cada item, com tonalidades diferentes
   const visuals = [
