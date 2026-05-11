@@ -952,6 +952,16 @@ export const DigitalContractTab = ({
             </DialogDescription>
           </DialogHeader>
 
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Nome do documento (aparece no ZapSign e nas notificações)</Label>
+            <Input
+              value={documentName}
+              onChange={(e) => setDocumentName(e.target.value)}
+              placeholder="Ex.: Contrato 0001 - Cliente"
+              className="h-9 text-sm"
+            />
+          </div>
+
           <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-3 py-1">
               {signerDrafts.map((s, idx) => (
