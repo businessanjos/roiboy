@@ -539,14 +539,75 @@ export const DigitalContractTab = ({
     }
   };
 
+  const [signerDialogOpen, setSignerDialogOpen] = useState(false);
+  const [signerDrafts, setSignerDrafts] = useState<SignerDraft[]>([]);
+
+  const openSignerDialog = () => {
+    if (!contract) {
+      toast.error("Salve o contrato antes de enviar.");
+      return;
+    }
+    // Prefill from current contract data
+    const clientPhone = (clientFull?.phone_e164 || clientFull?.phone || "") as string;
+    const drafts: SignerDraft[] = [];
+    if (data.client_representative) {
+      drafts.push({
+        enabled: true,
+        role: "representante_legal",
+        name: data.client_representative || "",
+        email: data.client_email || "",
+        phone: clientPhone,
+      });
+      drafts.push({
+        enabled: false,
+        role: "contratante",
+        name: data.client_name || "",
+        email: data.client_email || "",
+        phone: clientPhone,
+      });
+    } else {
+      drafts.push({
+        enabled: true,
+        role: "contratante",
+        name: data.client_name || "",
+        email: data.client_email || "",
+        phone: clientPhone,
+      });
+    }
+    drafts.push({
+      enabled: true,
+      role: "contratado",
+      name: data.company_representative || "",
+      email: data.company_email || "",
+      phone: "",
+    });
+    if (data.include_witnesses) {
+      drafts.push({ enabled: false, role: "testemunha", name: "", email: "", phone: "" });
+      drafts.push({ enabled: false, role: "testemunha", name: "", email: "", phone: "" });
+    }
+    setSignerDrafts(drafts);
+    setSignerDialogOpen(true);
+  };
+
   const handleSendZapsign = async () => {
     if (!contract) {
       toast.error("Salve o contrato antes de enviar.");
       return;
     }
-    if (!data.client_email) {
-      toast.error("Defina o e-mail do cliente.");
+    const selected = signerDrafts.filter((s) => s.enabled);
+    if (selected.length === 0) {
+      toast.error("Selecione pelo menos um signatário.");
       return;
+    }
+    for (const s of selected) {
+      if (!s.name.trim()) {
+        toast.error(`Informe o nome do signatário (${ROLE_LABEL[s.role]}).`);
+        return;
+      }
+      if (!s.email.trim() && !s.phone.replace(/\D/g, "")) {
+        toast.error(`Informe e-mail ou WhatsApp para ${s.name || ROLE_LABEL[s.role]}.`);
+        return;
+      }
     }
     setSendingZapsign(true);
     try {
@@ -559,10 +620,19 @@ export const DigitalContractTab = ({
       }
 
       const { error } = await supabase.functions.invoke("zapsign-send", {
-        body: { contract_id: contract.id },
+        body: {
+          contract_id: contract.id,
+          signers: selected.map((s) => ({
+            role: s.role,
+            name: s.name.trim(),
+            email: s.email.trim() || undefined,
+            phone: s.phone.replace(/\D/g, "") || undefined,
+          })),
+        },
       });
       if (error) throw error;
       toast.success("Enviado para assinatura via ZapSign");
+      setSignerDialogOpen(false);
       const { data: updated } = await supabase
         .from("digital_contracts")
         .select("*")
