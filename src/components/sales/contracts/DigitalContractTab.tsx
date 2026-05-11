@@ -600,17 +600,9 @@ export const DigitalContractTab = ({
         phone: clientPhone,
       });
     }
-    drafts.push({
-      enabled: true,
-      role: "contratado",
-      name: data.company_representative || "",
-      email: data.company_email || "",
-      phone: "",
-    });
-    if (data.include_witnesses) {
-      drafts.push({ enabled: false, role: "testemunha", name: "", email: "", phone: "" });
-      drafts.push({ enabled: false, role: "testemunha", name: "", email: "", phone: "" });
-    }
+    // Signatários fixos da CONTRATADA (Everton + 2 testemunhas Marcato).
+    // Sempre presentes, mas editáveis caso necessário.
+    FIXED_CONTRACTADA_SIGNERS.forEach((fs) => drafts.push({ ...fs }));
     setSignerDrafts(drafts);
     const clientLabel = data.client_name || data.client_representative || "";
     const numberLabel = contract?.contract_number ? ` ${contract.contract_number}` : "";
