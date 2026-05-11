@@ -2014,11 +2014,9 @@ export default function Clients() {
           >
             <CheckCircle2 className="h-4 w-4 mr-2" />
             <span className="font-medium">Ativos</span>
-            {activeTab === "active" && (
-              <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs font-semibold">
-                {totalClients}
-              </span>
-            )}
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs font-semibold">
+              {tabCounts.active ?? 0}
+            </span>
           </TabsTrigger>
           <TabsTrigger
             value="awaiting"
@@ -2026,6 +2024,9 @@ export default function Clients() {
           >
             <Clock className="h-4 w-4 mr-2" />
             <span className="font-medium">Aguardando Contrato</span>
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 text-xs font-semibold">
+              {tabCounts.awaiting ?? 0}
+            </span>
           </TabsTrigger>
           <TabsTrigger
             value="hold"
@@ -2033,6 +2034,9 @@ export default function Clients() {
           >
             <PauseCircle className="h-4 w-4 mr-2" />
             <span className="font-medium">Hold</span>
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-xs font-semibold">
+              {tabCounts.hold ?? 0}
+            </span>
           </TabsTrigger>
           <TabsTrigger
             value="cancelled"
@@ -2040,6 +2044,9 @@ export default function Clients() {
           >
             <XCircle className="h-4 w-4 mr-2" />
             <span className="font-medium">Cancelados</span>
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 text-xs font-semibold">
+              {tabCounts.cancelled ?? 0}
+            </span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
