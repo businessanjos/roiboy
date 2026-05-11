@@ -736,7 +736,7 @@ export const DigitalContractTab = ({
           <LinkIcon className="h-3.5 w-3.5" />
           <span className="ml-1.5">Link público</span>
         </Button>
-        <Button size="sm" onClick={handleSendZapsign} disabled={!contract || sendingZapsign}>
+        <Button size="sm" onClick={openSignerDialog} disabled={!contract || sendingZapsign}>
           {sendingZapsign ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
           <span className="ml-1.5">Enviar p/ assinatura</span>
         </Button>
