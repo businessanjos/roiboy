@@ -587,6 +587,9 @@ export const DigitalContractTab = ({
       drafts.push({ enabled: false, role: "testemunha", name: "", email: "", phone: "" });
     }
     setSignerDrafts(drafts);
+    const clientLabel = data.client_name || data.client_representative || "";
+    const numberLabel = contract?.contract_number ? ` ${contract.contract_number}` : "";
+    setDocumentName(`Contrato${numberLabel}${clientLabel ? ` - ${clientLabel}` : ""}`.trim());
     setSignerDialogOpen(true);
   };
 
