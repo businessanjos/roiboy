@@ -107,11 +107,49 @@ Deno.serve(async (req) => {
       );
       const { data: client } = await supabase.from("clients").select("account_id").eq("id", clientId).maybeSingle();
       if (client?.account_id) {
+        // Cache avatar in Storage to avoid volatile Instagram CDN URLs
+        const originalPicUrl = snapshot.profile_pic_url;
+        let cachedPicUrl: string | null = originalPicUrl;
+        if (originalPicUrl) {
+          try {
+            const imgRes = await fetch(originalPicUrl, {
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0 Safari/537.36",
+                "Accept": "image/avif,image/webp,image/*,*/*;q=0.8",
+                "Referer": "https://www.instagram.com/",
+              },
+            });
+            if (imgRes.ok) {
+              const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+              const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+              const bytes = new Uint8Array(await imgRes.arrayBuffer());
+              const path = `${clientId}/${snapshot.username}.${ext}`;
+              const { error: upErr } = await supabase.storage
+                .from("instagram-avatars")
+                .upload(path, bytes, { contentType, upsert: true, cacheControl: "604800" });
+              if (!upErr) {
+                const { data: pub } = supabase.storage.from("instagram-avatars").getPublicUrl(path);
+                if (pub?.publicUrl) {
+                  // Cache-bust so clients re-fetch when avatar changes
+                  cachedPicUrl = `${pub.publicUrl}?v=${Date.now()}`;
+                }
+              } else {
+                console.error("[instagram-public-snapshot] avatar upload error", upErr);
+              }
+            } else {
+              console.warn("[instagram-public-snapshot] avatar fetch failed", imgRes.status);
+            }
+          } catch (e) {
+            console.error("[instagram-public-snapshot] avatar cache error", e);
+          }
+        }
+
         await supabase.from("client_instagram_snapshots").upsert({
           account_id: client.account_id,
           client_id: clientId,
           ...snapshot,
-          raw: { profile: u },
+          profile_pic_url: cachedPicUrl,
+          raw: { profile: u, original_profile_pic_url: originalPicUrl },
           last_synced_at: new Date().toISOString(),
         }, { onConflict: "client_id,username" });
 
