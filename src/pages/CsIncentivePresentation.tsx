@@ -83,7 +83,7 @@ export default function CsIncentivePresentation() {
       { id: "responsibility", render: () => <SlideResponsibility /> },
       { id: "how", render: () => <SlideHow plan={referencePlan} /> },
       { id: "tiers", render: () => <SlideTiers tiers={refTiers} plan={referencePlan} /> },
-      { id: "extras", render: () => <SlideExtras plans={activePlans} /> },
+      { id: "extras", render: () => <SlideExtras plan={referencePlan} /> },
       { id: "rituals", render: () => <SlideRituals plans={activePlans} /> },
       { id: "stepbystep", render: () => <SlideStepByStep /> },
       { id: "close", render: () => <SlideClose /> },
@@ -581,8 +581,8 @@ function SlideTiers({ tiers, plan }: { tiers: any[]; plan: any }) {
   );
 }
 
-function SlideExtras({ plans }: { plans: any[] }) {
-  const annual = plans.find((p: any) => p.annual_bonus_enabled);
+function SlideExtras({ plan }: { plan: any }) {
+  const annual = plan?.annual_bonus_enabled ? plan : null;
   return (
     <div className="space-y-10 py-8">
       <div>
