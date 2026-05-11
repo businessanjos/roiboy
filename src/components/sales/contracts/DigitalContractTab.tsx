@@ -4,6 +4,10 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2,
   Save,
@@ -14,6 +18,8 @@ import {
   Eye,
   Pencil,
   X,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -25,6 +31,22 @@ import { ContractWizard } from "./ContractWizard";
 import { mergeContractorPlaceholders, type TemplateVariableDef } from "@/lib/contractTemplates";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+
+type ZapSignerRole = "contratante" | "contratado" | "representante_legal" | "testemunha" | "fiador";
+interface SignerDraft {
+  enabled: boolean;
+  role: ZapSignerRole;
+  name: string;
+  email: string;
+  phone: string;
+}
+const ROLE_LABEL: Record<ZapSignerRole, string> = {
+  contratante: "Contratante",
+  contratado: "Contratado",
+  representante_legal: "Representante Legal",
+  testemunha: "Testemunha",
+  fiador: "Fiador",
+};
 
 interface DigitalContractTabProps {
   dealId: string;
