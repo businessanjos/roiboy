@@ -46,14 +46,25 @@ export default function CsIncentivePresentation() {
     () => plans.filter((p: any) => p.is_active),
     [plans],
   );
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+
   const referencePlan = useMemo(() => {
+    if (selectedPlanId) {
+      const found = activePlans.find((p: any) => p.id === selectedPlanId);
+      if (found) return found;
+    }
     return (
       activePlans.find((p: any) => /pleno/i.test(p.role_label || "")) ||
       activePlans.find((p: any) => /s[eê]nior/i.test(p.role_label || "")) ||
       activePlans[0] ||
       null
     );
-  }, [activePlans]);
+  }, [activePlans, selectedPlanId]);
+
+  // Inicializa a seleção quando os planos chegam
+  useEffect(() => {
+    if (!selectedPlanId && referencePlan?.id) setSelectedPlanId(referencePlan.id);
+  }, [referencePlan?.id, selectedPlanId]);
 
   const refTiers = useMemo(
     () =>
