@@ -52,6 +52,55 @@ function MedalIcon({ rank }: { rank: number }) {
   return <span className="text-sm font-semibold text-muted-foreground tabular-nums w-5 text-center">{rank}</span>;
 }
 
+/**
+ * Avatar com cascata de fallback:
+ * 1) URL principal (cache no Storage ou CDN do Instagram)
+ * 2) Proxy público unavatar.io por username
+ * 3) Letra inicial via AvatarFallback
+ */
+function InstagramAvatar({
+  primary,
+  username,
+  className,
+}: {
+  primary?: string | null;
+  username?: string | null;
+  className?: string;
+}) {
+  const sources = useMemo(() => {
+    const list: string[] = [];
+    if (primary) list.push(primary);
+    if (username) {
+      const u = username.replace(/^@/, "").trim();
+      if (u) {
+        list.push(`https://unavatar.io/instagram/${encodeURIComponent(u)}?fallback=false`);
+        list.push(`https://unavatar.io/${encodeURIComponent(u)}?fallback=false`);
+      }
+    }
+    return list;
+  }, [primary, username]);
+
+  const [idx, setIdx] = useState(0);
+  // Reset quando username/primary mudam
+  useEffect(() => { setIdx(0); }, [primary, username]);
+
+  const current = sources[idx];
+
+  return (
+    <Avatar className={className}>
+      {current && (
+        <AvatarImage
+          key={current}
+          src={current}
+          alt={username || ""}
+          onError={() => setIdx((i) => i + 1)}
+        />
+      )}
+      <AvatarFallback>{username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
+    </Avatar>
+  );
+}
+
 function RankRow({ rank, row, metric, value, sublabel }: {
   rank: number;
   row: Row;
@@ -73,10 +122,11 @@ function RankRow({ rank, row, metric, value, sublabel }: {
       <div className="flex items-center justify-center w-7">
         <MedalIcon rank={rank} />
       </div>
-      <Avatar className="h-10 w-10 ring-2 ring-background shadow-sm">
-        <AvatarImage src={row.profile_pic_url || undefined} alt={row.username} />
-        <AvatarFallback>{row.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
-      </Avatar>
+      <InstagramAvatar
+        primary={row.profile_pic_url}
+        username={row.username}
+        className="h-10 w-10 ring-2 ring-background shadow-sm"
+      />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 truncate">
           <span className="font-medium truncate">{row.full_name || row.username}</span>
