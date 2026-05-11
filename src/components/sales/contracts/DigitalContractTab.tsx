@@ -48,6 +48,31 @@ const ROLE_LABEL: Record<ZapSignerRole, string> = {
   fiador: "Fiador",
 };
 
+// Signatários fixos da CONTRATADA (sempre exibidos, editáveis se necessário)
+const FIXED_CONTRACTADA_SIGNERS: SignerDraft[] = [
+  {
+    enabled: true,
+    role: "representante_legal",
+    name: "Everton Pieri",
+    email: "coachevertonsantos@gmail.com",
+    phone: "",
+  },
+  {
+    enabled: true,
+    role: "testemunha",
+    name: "Jessica Marcato",
+    email: "jessicamarcato@anjosbusiness.com",
+    phone: "",
+  },
+  {
+    enabled: true,
+    role: "testemunha",
+    name: "Jonathan Marcato",
+    email: "jonathanmarcato@anjosbusiness.com",
+    phone: "",
+  },
+];
+
 interface DigitalContractTabProps {
   dealId: string;
   dealValue?: number | null;
