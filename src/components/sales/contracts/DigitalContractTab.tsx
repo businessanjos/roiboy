@@ -626,6 +626,7 @@ export const DigitalContractTab = ({
       const { error } = await supabase.functions.invoke("zapsign-send", {
         body: {
           contract_id: contract.id,
+          contract_name: documentName.trim() || undefined,
           signers: selected.map((s) => ({
             role: s.role,
             name: s.name.trim(),
