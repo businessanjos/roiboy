@@ -154,6 +154,7 @@ export const DigitalContractTab = ({
   const [clientFull, setClientFull] = useState<any | null>(null);
   const docRef = useRef<HTMLDivElement>(null);
   const pdfPreviewRef = useRef<HTMLDivElement>(null);
+  const hiddenPdfRef = useRef<HTMLDivElement>(null);
 
   const accountId = currentUser?.account_id;
   const resolvedPlaceholderValues = useMemo(() => {
@@ -454,7 +455,7 @@ export const DigitalContractTab = ({
   };
 
   const generatePdfToStorage = async (opts?: { silent?: boolean }): Promise<string | null> => {
-    const target = pdfPreviewRef.current ?? docRef.current;
+    const target = pdfPreviewRef.current ?? docRef.current ?? hiddenPdfRef.current;
     if (!target || !contract) {
       if (!opts?.silent) toast.error("Salve o contrato antes de gerar o PDF.");
       return null;
@@ -817,6 +818,32 @@ export const DigitalContractTab = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Nó oculto sempre montado para gerar PDF mesmo sem abrir o preview */}
+      <div
+        aria-hidden
+        style={{
+          position: "fixed",
+          left: "-10000px",
+          top: 0,
+          width: "210mm",
+          background: "#ffffff",
+          pointerEvents: "none",
+          opacity: 0,
+        }}
+      >
+        <div ref={hiddenPdfRef} className="p-6">
+          {templateHtml ? (
+            <TemplatedContractPreview
+              templateHtml={templateHtml}
+              templateVariables={templateVariables}
+              placeholderValues={resolvedPlaceholderValues}
+            />
+          ) : (
+            <ContractDocument data={data} />
+          )}
+        </div>
+      </div>
     </div>
   );
 };
