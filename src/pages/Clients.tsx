@@ -776,6 +776,7 @@ export default function Clients() {
 
   useEffect(() => {
     fetchClients();
+    fetchTabCounts();
     fetchProducts();
     fetchCustomFields();
     // Note: teamUsers now comes from edge function response
