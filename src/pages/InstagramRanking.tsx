@@ -73,10 +73,11 @@ function RankRow({ rank, row, metric, value, sublabel }: {
       <div className="flex items-center justify-center w-7">
         <MedalIcon rank={rank} />
       </div>
-      <Avatar className="h-10 w-10 ring-2 ring-background shadow-sm">
-        <AvatarImage src={row.profile_pic_url || undefined} alt={row.username} />
-        <AvatarFallback>{row.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
-      </Avatar>
+      <InstagramAvatar
+        primary={row.profile_pic_url}
+        username={row.username}
+        className="h-10 w-10 ring-2 ring-background shadow-sm"
+      />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 truncate">
           <span className="font-medium truncate">{row.full_name || row.username}</span>
