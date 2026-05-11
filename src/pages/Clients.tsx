@@ -265,6 +265,7 @@ export default function Clients() {
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalClients, setTotalClients] = useState(0);
+  const [tabCounts, setTabCounts] = useState<Record<string, number>>({ active: 0, awaiting: 0, hold: 0, cancelled: 0 });
   const [showFilters, setShowFilters] = useState(false);
   
   // Filter states
@@ -775,17 +776,64 @@ export default function Clients() {
 
   useEffect(() => {
     fetchClients();
+    fetchTabCounts();
     fetchProducts();
     fetchCustomFields();
     // Note: teamUsers now comes from edge function response
   }, [currentSector?.id, currentUser?.account_id, currentPage, pageSize]);
   
+  // Fetch counts for each status tab respecting current filters (excluding tab/contract)
+  const fetchTabCounts = async () => {
+    const accId = currentUser?.account_id;
+    const userId = currentUser?.id;
+    if (!accId || !userId) return;
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+    const tabs: Array<{ key: string; contract: string }> = [
+      { key: "active", contract: "active" },
+      { key: "awaiting", contract: "none" },
+      { key: "hold", contract: "paused,suspended" },
+      { key: "cancelled", contract: "cancelled,dismissed,ended" },
+    ];
+    const buildParams = (contract: string) => {
+      const p = new URLSearchParams({ limit: "1", offset: "0" });
+      if (searchQuery) p.set("search", searchQuery);
+      if (filterResponsible !== "all") p.set("responsible_user_id", filterResponsible);
+      if (filterProduct !== "all") p.set("product_id", filterProduct);
+      // Respect user's explicit contract filter; otherwise scope by tab
+      if (filterContract !== "all") p.set("contract_filter", filterContract);
+      else p.set("contract_filter", contract);
+      if (filterLinks === "with") p.set("with_links", "true");
+      if (filterCountry !== "all") p.set("country", filterCountry);
+      return p;
+    };
+    try {
+      const results = await Promise.all(
+        tabs.map(t =>
+          fetch(`${SUPABASE_URL}/functions/v1/list-clients?${buildParams(t.contract).toString()}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "x-account-id": accId,
+              "x-session-token": userId,
+            },
+          }).then(r => r.ok ? r.json() : { total: 0 }).then(j => ({ key: t.key, total: j.total || 0 }))
+        )
+      );
+      const next: Record<string, number> = {};
+      results.forEach(r => { next[r.key] = r.total; });
+      setTabCounts(next);
+    } catch (e) {
+      console.error("Error fetching tab counts:", e);
+    }
+  };
+
   // Refetch clients when filters change (server-side filtering) - 800ms debounce to reduce API calls
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
     const timer = setTimeout(() => {
       fetchClients();
+      fetchTabCounts();
     }, 800);
     return () => clearTimeout(timer);
   }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, sortOrder, activeTab]);
@@ -1966,11 +2014,9 @@ export default function Clients() {
           >
             <CheckCircle2 className="h-4 w-4 mr-2" />
             <span className="font-medium">Ativos</span>
-            {activeTab === "active" && (
-              <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs font-semibold">
-                {totalClients}
-              </span>
-            )}
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs font-semibold">
+              {tabCounts.active ?? 0}
+            </span>
           </TabsTrigger>
           <TabsTrigger
             value="awaiting"
@@ -1978,6 +2024,9 @@ export default function Clients() {
           >
             <Clock className="h-4 w-4 mr-2" />
             <span className="font-medium">Aguardando Contrato</span>
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 text-xs font-semibold">
+              {tabCounts.awaiting ?? 0}
+            </span>
           </TabsTrigger>
           <TabsTrigger
             value="hold"
@@ -1985,6 +2034,9 @@ export default function Clients() {
           >
             <PauseCircle className="h-4 w-4 mr-2" />
             <span className="font-medium">Hold</span>
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-xs font-semibold">
+              {tabCounts.hold ?? 0}
+            </span>
           </TabsTrigger>
           <TabsTrigger
             value="cancelled"
@@ -1992,6 +2044,9 @@ export default function Clients() {
           >
             <XCircle className="h-4 w-4 mr-2" />
             <span className="font-medium">Cancelados</span>
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 text-xs font-semibold">
+              {tabCounts.cancelled ?? 0}
+            </span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
