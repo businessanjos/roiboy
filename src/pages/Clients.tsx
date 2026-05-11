@@ -265,6 +265,7 @@ export default function Clients() {
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalClients, setTotalClients] = useState(0);
+  const [tabCounts, setTabCounts] = useState<Record<string, number>>({ active: 0, awaiting: 0, hold: 0, cancelled: 0 });
   const [showFilters, setShowFilters] = useState(false);
   
   // Filter states
