@@ -651,11 +651,13 @@ export const ContractWizard = ({
      as variáveis e valores estão disponíveis. */
   useEffect(() => {
     if (docInitedRef.current) return;
-    if (!effectiveVariables || effectiveVariables.length === 0) return;
+    if (!templateVariables || templateVariables.length === 0) return;
     if (!placeholderValues) return;
 
+    const vars = templateVariables.filter((v) => !isFixedContratadaKey(v.key));
+
     const findVal = (re: RegExp) => {
-      for (const v of effectiveVariables) {
+      for (const v of vars) {
         if (re.test(v.key)) {
           const raw = placeholderValues[v.key];
           if (raw !== undefined && raw !== null && String(raw).trim() !== "") {
