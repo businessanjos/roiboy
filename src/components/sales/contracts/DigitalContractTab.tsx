@@ -453,53 +453,58 @@ export const DigitalContractTab = ({
     }
   };
 
-  const handleGeneratePdf = async () => {
+  const generatePdfToStorage = async (opts?: { silent?: boolean }): Promise<string | null> => {
     const target = pdfPreviewRef.current ?? docRef.current;
     if (!target || !contract) {
-      toast.error("Salve o contrato antes de gerar o PDF.");
-      return;
+      if (!opts?.silent) toast.error("Salve o contrato antes de gerar o PDF.");
+      return null;
     }
-    setGeneratingPdf(true);
-    try {
-      const canvas = await html2canvas(target, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-      });
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+    });
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      let heightLeft = imgHeight;
-      let position = 0;
+    let heightLeft = imgHeight;
+    let position = 0;
+    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while (heightLeft > 0) {
+      position -= pageHeight;
+      pdf.addPage();
       pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-      while (heightLeft > 0) {
-        position -= pageHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
+    }
 
-      const blob = pdf.output("blob");
-      const filePath = `${accountId}/${contract.id}.pdf`;
-      const { error: upErr } = await supabase.storage
-        .from("digital-contracts")
-        .upload(filePath, blob, { contentType: "application/pdf", upsert: true });
-      if (upErr) throw upErr;
+    const blob = pdf.output("blob");
+    const filePath = `${accountId}/${contract.id}.pdf`;
+    const { error: upErr } = await supabase.storage
+      .from("digital-contracts")
+      .upload(filePath, blob, { contentType: "application/pdf", upsert: true });
+    if (upErr) throw upErr;
 
+    await supabase
+      .from("digital_contracts")
+      .update({ signed_pdf_path: filePath })
+      .eq("id", contract.id);
+
+    setContract({ ...contract, signed_pdf_path: filePath });
+    return filePath;
+  };
+
+  const handleGeneratePdf = async () => {
+    setGeneratingPdf(true);
+    try {
+      const filePath = await generatePdfToStorage();
+      if (!filePath) return;
       const { data: signed } = await supabase.storage
         .from("digital-contracts")
         .createSignedUrl(filePath, 60 * 60 * 24 * 7);
-
-      await supabase
-        .from("digital_contracts")
-        .update({ signed_pdf_path: filePath })
-        .eq("id", contract.id);
-
-      setContract({ ...contract, signed_pdf_path: filePath });
       if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
       toast.success("PDF gerado");
       setPdfPreviewOpen(false);
@@ -522,6 +527,14 @@ export const DigitalContractTab = ({
     }
     setSendingZapsign(true);
     try {
+      // Etapa de pré-visualização: garante que o PDF esteja no storage antes de enviar
+      toast.info("Gerando PDF para assinatura...");
+      const filePath = await generatePdfToStorage({ silent: true });
+      if (!filePath) {
+        toast.error("Não foi possível gerar o PDF. Abra a Pré-visualização e tente novamente.");
+        return;
+      }
+
       const { error } = await supabase.functions.invoke("zapsign-send", {
         body: { contract_id: contract.id },
       });
