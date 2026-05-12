@@ -653,7 +653,14 @@ export default function SalesDashboard() {
     churn_value: { id: "churn_value", label: "Valor cancelado", description: "Soma do valor de contratos cancelados", icon: <TrendingDown className="w-5 h-5" />, value: fmtBRL(churnTotalValue), hint: `${churnTotalCount} contrato${churnTotalCount === 1 ? "" : "s"}`, warn: churnTotalValue > 0 },
   };
 
-  const KPI_OPTIONS: KpiOption[] = Object.values(KPI_CATALOG).map(({ id, label, description }) => ({ id, label, description }));
+  const KPI_CATEGORY: Record<string, string> = {
+    received: "Receita", billed: "Receita", ticket: "Receita", monthly_progress: "Receita", monthly_gap: "Receita",
+    win_rate: "Conversão", close_rate: "Conversão", won_count: "Conversão", lost_count: "Conversão",
+    created: "Atividade", held_meetings: "Atividade", no_show: "Atividade", avg_cycle: "Atividade",
+    open_count: "Pipeline", open_value: "Pipeline", stagnated: "Pipeline",
+    churn_count: "Churn", churn_value: "Churn",
+  };
+  const KPI_OPTIONS: KpiOption[] = Object.values(KPI_CATALOG).map(({ id, label, description }) => ({ id, label, description, category: KPI_CATEGORY[id] || "Outros" }));
 
   const renderKpis = (section: KpiSection) =>
     (kpiSel[section] || [])
