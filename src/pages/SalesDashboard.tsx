@@ -500,6 +500,26 @@ export default function SalesDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-primary" />
+                Meta do trimestre (Q{Math.floor(new Date().getMonth() / 3) + 1} {year})
+              </CardTitle>
+              <CardDescription>
+                Faturamento acumulado do trimestre atual vs. soma das metas mensais do trimestre
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <QuarterlyGoalCard
+                accountId={accountId}
+                enabled={!!accountId && allowed}
+                monthlyGoals={(goal?.monthly_goals as Record<string, number> | undefined) || {}}
+                annualGoal={annualGoal}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ---------- FUNIL ---------- */}
