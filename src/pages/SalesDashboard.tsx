@@ -848,7 +848,7 @@ function YearlyGoalCard({
         .lte("won_at", yearEnd);
       if (error) throw error;
       return (data || []).reduce(
-        (acc, d) => acc + Number(d.received_value ?? d.value ?? 0),
+        (acc, d) => acc + Number(d.value ?? d.received_value ?? 0),
         0
       );
     },
