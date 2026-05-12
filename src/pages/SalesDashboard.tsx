@@ -328,6 +328,180 @@ export default function SalesDashboard() {
       .slice(0, 8);
   }, [lostDeals, lossReasons]);
 
+  // ---------------------- NEW KPIs ----------------------
+  // Reuniões realizadas no período (internal_tasks completadas com agendamento)
+  const { data: heldMeetingsRows } = useQuery({
+    queryKey: ["sales-dashboard-held", accountId, period],
+    enabled: !!accountId && allowed,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("internal_tasks")
+        .select("assigned_to, title, completed_at, activity_types!internal_tasks_activity_type_id_fkey(name)")
+        .eq("account_id", accountId!)
+        .not("completed_at", "is", null)
+        .gte("completed_at", start.toISOString())
+        .lte("completed_at", end.toISOString());
+      if (error) throw error;
+      return (data || []).filter((t: any) => {
+        const s = ((t.activity_types?.name || "") + " " + (t.title || "")).toLowerCase();
+        return s.includes("agendamento") || s.includes("agendada") || s.includes("call comercial") || s.includes("reuniao") || s.includes("reunião") || s.includes("meeting");
+      });
+    },
+  });
+
+  // Cancelamentos no período (Churn)
+  const { data: churnContracts } = useQuery({
+    queryKey: ["sales-dashboard-churn", accountId, period],
+    enabled: !!accountId && allowed,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_contracts")
+        .select("id, deal_id, cancelled_at, value")
+        .eq("account_id", accountId!)
+        .eq("status", "cancelled")
+        .not("cancelled_at", "is", null)
+        .gte("cancelled_at", start.toISOString())
+        .lte("cancelled_at", end.toISOString());
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Mapa deal_id -> responsible_user_id para atribuir churn ao vendedor
+  const churnDealIds = useMemo(
+    () => Array.from(new Set((churnContracts || []).map((c: any) => c.deal_id).filter(Boolean))),
+    [churnContracts]
+  );
+  const { data: churnDealOwners } = useQuery({
+    queryKey: ["sales-dashboard-churn-owners", accountId, churnDealIds],
+    enabled: !!accountId && allowed && churnDealIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("deals")
+        .select("id, responsible_user_id, sdr_user_id")
+        .in("id", churnDealIds as string[]);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const heldMeetingsTotal = (heldMeetingsRows || []).length;
+  const closeRate = heldMeetingsTotal > 0 ? (wonCount / heldMeetingsTotal) * 100 : 0;
+
+  // Ciclo médio de vendas (dias entre criação e ganho)
+  const avgCycleDays = useMemo(() => {
+    const valid = (wonDeals || [])
+      .map((d: any) => {
+        if (!d.won_at) return null;
+        // created_at não está no payload de wonDeals; buscar via deals (que tem created_at)
+        const matched = (deals || []).find((x: any) => x.id === d.id);
+        if (!matched?.created_at || !d.won_at) return null;
+        const ms = new Date(d.won_at).getTime() - new Date(matched.created_at).getTime();
+        return ms > 0 ? ms / (1000 * 60 * 60 * 24) : null;
+      })
+      .filter((v): v is number => v !== null);
+    if (valid.length === 0) return 0;
+    return valid.reduce((a, b) => a + b, 0) / valid.length;
+  }, [wonDeals, deals]);
+
+  // No-show total (somar do teamMetrics)
+  const noShowTotal = useMemo(
+    () => teamMetrics.reduce((acc, m) => acc + (m.noshow_calls || 0), 0),
+    [teamMetrics]
+  );
+
+  // Conversão por origem do lead (deals: won/total por source)
+  const sourceConversion = useMemo(() => {
+    const map = new Map<string, { total: number; won: number; value: number }>();
+    for (const d of deals || []) {
+      const src = ((d as any).source || "Sem origem").trim() || "Sem origem";
+      const cur = map.get(src) || { total: 0, won: 0, value: 0 };
+      cur.total += 1;
+      if ((d as any).status === "won") {
+        cur.won += 1;
+        cur.value += Number((d as any).received_value ?? (d as any).value ?? 0);
+      }
+      map.set(src, cur);
+    }
+    return Array.from(map.entries())
+      .map(([name, v]) => ({
+        name,
+        total: v.total,
+        won: v.won,
+        value: v.value,
+        conv: v.total > 0 ? (v.won / v.total) * 100 : 0,
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 12);
+  }, [deals]);
+
+  // Close rate por executivo (won / reuniões realizadas)
+  const closeRateByRep = useMemo(() => {
+    const userMap = new Map<string, { name: string; avatar: string | null; held: number; won: number }>();
+    for (const m of teamMetrics) {
+      userMap.set(m.user_id, {
+        name: m.user_name,
+        avatar: m.user_avatar,
+        held: 0,
+        won: m.won_deals,
+      });
+    }
+    for (const t of heldMeetingsRows || []) {
+      const uid = (t as any).assigned_to;
+      if (!uid) continue;
+      const cur = userMap.get(uid);
+      if (cur) {
+        cur.held += 1;
+      }
+    }
+    return Array.from(userMap.entries())
+      .map(([id, v]) => ({
+        id,
+        name: v.name,
+        avatar: v.avatar,
+        held: v.held,
+        won: v.won,
+        rate: v.held > 0 ? (v.won / v.held) * 100 : 0,
+      }))
+      .filter((r) => r.held > 0 || r.won > 0)
+      .sort((a, b) => b.rate - a.rate);
+  }, [teamMetrics, heldMeetingsRows]);
+
+  // Churn por vendedor
+  const churnByRep = useMemo(() => {
+    const ownerMap = new Map((churnDealOwners || []).map((d: any) => [d.id, d.responsible_user_id]));
+    const userInfo = new Map(teamMetrics.map((m) => [m.user_id, { name: m.user_name, avatar: m.user_avatar }]));
+    const counts = new Map<string, { name: string; avatar: string | null; count: number; value: number }>();
+    let unassigned = 0;
+    let unassignedValue = 0;
+    for (const c of churnContracts || []) {
+      const uid = (c as any).deal_id ? ownerMap.get((c as any).deal_id) : null;
+      const val = Number((c as any).value || 0);
+      if (uid) {
+        const info = userInfo.get(uid as string);
+        const cur = counts.get(uid as string) || {
+          name: info?.name || "Sem nome",
+          avatar: info?.avatar || null,
+          count: 0,
+          value: 0,
+        };
+        cur.count += 1;
+        cur.value += val;
+        counts.set(uid as string, cur);
+      } else {
+        unassigned += 1;
+        unassignedValue += val;
+      }
+    }
+    const list = Array.from(counts.entries()).map(([id, v]) => ({ id, ...v }));
+    list.sort((a, b) => b.count - a.count);
+    if (unassigned > 0) {
+      list.push({ id: "_unassigned", name: "Sem vendedor atribuído", avatar: null, count: unassigned, value: unassignedValue });
+    }
+    return list;
+  }, [churnContracts, churnDealOwners, teamMetrics]);
+
+
   // ---------------------- GUARDS ----------------------
   if (userLoading) {
     return (
