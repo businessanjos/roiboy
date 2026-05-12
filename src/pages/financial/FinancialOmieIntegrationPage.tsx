@@ -141,7 +141,13 @@ export default function FinancialOmieIntegrationPage() {
             Conecte um ou mais CNPJs Omie. Cada CNPJ tem suas próprias credenciais e dados isolados.
           </p>
         </div>
-        <AddCompanyDialog accountId={currentUser?.account_id} onCreated={refresh} />
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSyncEntries} disabled={syncing || !selectedId} variant="outline">
+            {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowDownToLine className="h-4 w-4 mr-2" />}
+            Sincronizar lançamentos agora
+          </Button>
+          <AddCompanyDialog accountId={currentUser?.account_id} onCreated={refresh} />
+        </div>
       </div>
 
       {/* Lista de CNPJs */}
