@@ -349,14 +349,14 @@ export default function SalesDashboard() {
     },
   });
 
-  // Cancelamentos no período (Churn)
+  // Cancelamentos no período (Churn) — inclui dados do cliente p/ fallback de vendedor
   const { data: churnContracts } = useQuery({
     queryKey: ["sales-dashboard-churn", accountId, period],
     enabled: !!accountId && allowed,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("client_contracts")
-        .select("id, deal_id, cancelled_at, value")
+        .select("id, deal_id, client_id, cancelled_at, value, clients(full_name, phone_e164, emails)")
         .eq("account_id", accountId!)
         .eq("status", "cancelled")
         .not("cancelled_at", "is", null)
@@ -382,6 +382,42 @@ export default function SalesDashboard() {
         .in("id", churnDealIds as string[]);
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  // Fallback: para churns sem deal_id, buscar deals "won" históricos (desde 2025) e
+  // tentar match por client_id, e-mail (ANY do array clients.emails) ou últimos 8 dígitos do telefone.
+  const hasUnlinkedChurn = useMemo(
+    () => (churnContracts || []).some((c: any) => !c.deal_id),
+    [churnContracts]
+  );
+  const { data: wonDealsForChurnMatch } = useQuery({
+    queryKey: ["sales-dashboard-churn-fallback-wondeals", accountId],
+    enabled: !!accountId && allowed && hasUnlinkedChurn,
+    queryFn: async () => {
+      const since = new Date("2025-01-01T00:00:00Z").toISOString();
+      // Pagina manualmente para passar do limite de 1000 linhas
+      const all: any[] = [];
+      const PAGE = 1000;
+      let from = 0;
+      // hard cap defensivo
+      while (all.length < 20000) {
+        const { data, error } = await supabase
+          .from("deals")
+          .select("id, client_id, contact_email, contact_phone, responsible_user_id, won_at")
+          .eq("account_id", accountId!)
+          .eq("status", "won")
+          .not("responsible_user_id", "is", null)
+          .gte("won_at", since)
+          .order("won_at", { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const arr = data || [];
+        all.push(...arr);
+        if (arr.length < PAGE) break;
+        from += PAGE;
+      }
+      return all;
     },
   });
 
