@@ -247,6 +247,7 @@ const App = () => (
                               <Route path="notas-fiscais" element={<FinancialNotasFiscaisPage />} />
                               <Route path="balance-sheet" element={<FinancialBalanceSheetPage />} />
                               <Route path="payment-methods" element={<FinancialPaymentMethodsPage />} />
+                              <Route path="integracoes/omie" element={<FinancialOmieIntegrationPage />} />
                             </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
