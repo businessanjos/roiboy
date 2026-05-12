@@ -6,14 +6,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function callOmie(endpoint: string, call: string, param: any, appKey: string, appSecret: string) {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function callOmie(endpoint: string, call: string, param: any, appKey: string, appSecret: string, attempt = 0): Promise<any> {
   const res = await fetch(`https://app.omie.com.br/api/v1/${endpoint}/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ call, app_key: appKey, app_secret: appSecret, param: [param] }),
   });
-  if (!res.ok) throw new Error(`Omie ${call} ${res.status}: ${await res.text()}`);
-  const json = await res.json();
+  const text = await res.text();
+  // Handle Omie redundant-call rate limit with retries
+  if (text.includes('REDUNDANT') || text.includes('Consumo redundante')) {
+    if (attempt < 2) {
+      const waitMs = 52000;
+      console.warn(`Omie REDUNDANT on ${call}, waiting ${waitMs}ms (attempt ${attempt + 1})`);
+      await sleep(waitMs);
+      return callOmie(endpoint, call, param, appKey, appSecret, attempt + 1);
+    }
+    const err: any = new Error(`Omie ${call}: rate limited (REDUNDANT)`);
+    err.code = 'OMIE_REDUNDANT';
+    throw err;
+  }
+  if (!res.ok) throw new Error(`Omie ${call} ${res.status}: ${text}`);
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error(`Omie ${call}: invalid JSON`); }
   if (json.faultstring) throw new Error(`Omie: ${json.faultstring}`);
   return json;
 }
@@ -39,18 +55,21 @@ async function listAllPages(
   appKey: string,
   appSecret: string,
 ) {
-  const all: any[] = [];
-  let page = 1;
-  while (page <= 30) {
-    const r = await callOmie(endpoint, call, { ...baseParam, pagina: page, registros_por_pagina: 500 }, appKey, appSecret);
-    const items = r[listKey] || [];
-    all.push(...items);
-    const total = r.total_de_paginas || 1;
-    if (page >= total) break;
-    page++;
+    const all: any[] = [];
+    let page = 1;
+    while (page <= 30) {
+      const r = await callOmie(endpoint, call, { ...baseParam, pagina: page, registros_por_pagina: 500 }, appKey, appSecret);
+      const items = r[listKey] || [];
+      all.push(...items);
+      const total = r.total_de_paginas || 1;
+      if (page >= total) break;
+      page++;
+      await sleep(250);
+    }
+    return all;
   }
-  return all;
-}
+
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -110,10 +129,10 @@ Deno.serve(async (req) => {
     const periodStart = start;
     const periodEnd = end;
 
-    const [receber, pagar] = await Promise.all([
-      listAllPages('financas/contareceber', 'ListarContasReceber', receberFilter, 'conta_receber_cadastro', appKey, appSecret),
-      listAllPages('financas/contapagar', 'ListarContasPagar', pagarFilter, 'conta_pagar_cadastro', appKey, appSecret),
-    ]);
+    // Serialize to avoid Omie REDUNDANT rate-limit triggered by parallel calls
+    const receber = await listAllPages('financas/contareceber', 'ListarContasReceber', receberFilter, 'conta_receber_cadastro', appKey, appSecret);
+    await sleep(500);
+    const pagar = await listAllPages('financas/contapagar', 'ListarContasPagar', pagarFilter, 'conta_pagar_cadastro', appKey, appSecret);
 
     const isPaid = (status: string) => status === 'LIQUIDADO';
     const isCancelled = (status: string) => status === 'CANCELADO';
@@ -216,6 +235,14 @@ Deno.serve(async (req) => {
     });
   } catch (e: any) {
     console.error('omie-dashboard-metrics error:', e);
+    const isRedundant = e?.code === 'OMIE_REDUNDANT' || /REDUNDANT|Consumo redundante/.test(e?.message || '');
+    if (isRedundant) {
+      return new Response(JSON.stringify({
+        error: 'OMIE_RATE_LIMITED',
+        message: 'A Omie está bloqueando consultas repetidas. Aguarde ~1 minuto e tente novamente.',
+        rateLimited: true,
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
