@@ -348,8 +348,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="lifetime" label="Iniciados" value={funnel.starts} icon={TrendingUp}
                       sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'desde a criação do form'}
-                      source="Typeform Insights API"
-                      tip="Visitas que avançaram além da welcome screen e visualizaram o primeiro campo real do form. Calculado a partir de fields[0].views do Insights (excluindo welcome/thankyou screens). Histórico total."
+                      source="Typeform"
+                      tip="Quem abriu o formulário e começou a responder, indo além da tela inicial de boas-vindas. Também é histórico total."
                       onDetails={() => setDetailsCard({
                         label: 'Iniciados',
                         source: 'Typeform Insights API',
