@@ -2193,7 +2193,22 @@ export default function Clients() {
                 </Select>
               </div>
 
-              {/* País (DDI) Filter */}
+              {/* Risco financeiro */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Risco financeiro</Label>
+                <Select value={filterRisk} onValueChange={setFilterRisk}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="critical">🔴 Inadimplente (&gt;30d ou &gt;R$5k)</SelectItem>
+                    <SelectItem value="high">🟠 Em atraso</SelectItem>
+                    <SelectItem value="warning">🟡 Vence ≤7 dias</SelectItem>
+                    <SelectItem value="ok">🟢 Em dia</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5 min-w-[180px]">
                 <Label className="text-xs text-muted-foreground">País (DDI)</Label>
                 <Select value={filterCountry} onValueChange={setFilterCountry}>
