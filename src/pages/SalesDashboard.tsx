@@ -84,6 +84,8 @@ import { useCompanyGoals } from "@/hooks/useCompanyGoals";
 import { useSalesTeamMetrics } from "@/hooks/useSalesTeamMetrics";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { cn } from "@/lib/utils";
+import { KpiPicker, type KpiOption } from "@/components/sales/KpiPicker";
+import { Settings2 } from "lucide-react";
 
 type PeriodKey =
   | "this_month"
@@ -150,6 +152,37 @@ export default function SalesDashboard() {
   const { isSuperAdmin } = useSuperAdmin();
   const [period, setPeriod] = useState<PeriodKey>("this_month");
   const [churnDetailRep, setChurnDetailRep] = useState<{ name: string; contracts: any[] } | null>(null);
+
+  // ---------- KPI customization (per section, persisted in localStorage) ----------
+  type KpiSection = "header" | "funnel" | "performance";
+  const KPI_DEFAULTS: Record<KpiSection, string[]> = {
+    header: ["received", "ticket", "win_rate", "open_value"],
+    funnel: ["created", "win_rate", "stagnated"],
+    performance: ["close_rate", "won_count", "avg_cycle", "no_show"],
+  };
+  const KPI_STORAGE_KEY = "sales-dashboard-kpis-v1";
+  const [pickerOpen, setPickerOpen] = useState<KpiSection | null>(null);
+  const [kpiSel, setKpiSel] = useState<Record<KpiSection, string[]>>(() => {
+    try {
+      const raw = localStorage.getItem(KPI_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          header: Array.isArray(parsed.header) && parsed.header.length ? parsed.header : KPI_DEFAULTS.header,
+          funnel: Array.isArray(parsed.funnel) && parsed.funnel.length ? parsed.funnel : KPI_DEFAULTS.funnel,
+          performance: Array.isArray(parsed.performance) && parsed.performance.length ? parsed.performance : KPI_DEFAULTS.performance,
+        };
+      }
+    } catch {}
+    return KPI_DEFAULTS;
+  });
+  const saveKpiSel = (section: KpiSection, ids: string[]) => {
+    setKpiSel((prev) => {
+      const next = { ...prev, [section]: ids.length ? ids : KPI_DEFAULTS[section] };
+      try { localStorage.setItem(KPI_STORAGE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   const allowed = useMemo(
     () => isManagementUser(currentUser, isSuperAdmin),
@@ -590,6 +623,54 @@ export default function SalesDashboard() {
     return list;
   }, [churnContracts, churnDealOwners, wonDealsForChurnMatch, teamMetrics]);
 
+  // ---------------------- KPI CATALOG ----------------------
+  const churnTotalCount = churnByRep.reduce((a, r) => a + r.count, 0);
+  const churnTotalValue = churnByRep.reduce((a, r) => a + r.value, 0);
+
+  const KPI_CATALOG: Record<string, KpiOption & {
+    icon: JSX.Element;
+    value: string;
+    hint?: string;
+    warn?: boolean;
+  }> = {
+    received: { id: "received", label: "Receita recebida", description: "Soma de received_value das vendas ganhas", icon: <DollarSign className="w-5 h-5" />, value: fmtBRL(wonValue), hint: `${wonCount} venda${wonCount === 1 ? "" : "s"}` },
+    billed: { id: "billed", label: "Faturamento", description: "Valor bruto vendido (independente de parcelamento)", icon: <DollarSign className="w-5 h-5" />, value: fmtBRL(billedValue), hint: `${wonCount} venda${wonCount === 1 ? "" : "s"}` },
+    ticket: { id: "ticket", label: "Ticket médio", description: "Receita recebida ÷ vendas", icon: <Trophy className="w-5 h-5" />, value: fmtBRL(avgTicket), hint: "Por venda ganha" },
+    monthly_progress: { id: "monthly_progress", label: "% da meta mensal", description: "Faturamento sobre meta do mês", icon: <Target className="w-5 h-5" />, value: fmtPct(monthlyProgress), hint: `${fmtBRL(billedValue)} de ${fmtBRL(monthlyGoal)}` },
+    monthly_gap: { id: "monthly_gap", label: "Gap p/ meta mensal", description: "Quanto falta para bater a meta", icon: <Target className="w-5 h-5" />, value: fmtBRL(monthlyGap), hint: monthlyGap > 0 ? "ainda faltam" : "meta batida", warn: monthlyGap > 0 && monthlyGoal > 0 },
+    win_rate: { id: "win_rate", label: "Win rate", description: "Ganhos sobre fechados (ganhos + perdidos)", icon: <TrendingUp className="w-5 h-5" />, value: fmtPct(winRate), hint: `${wonCount} ganhos · ${lostCount} perdas` },
+    close_rate: { id: "close_rate", label: "Close rate", description: "Ganhos sobre reuniões realizadas", icon: <CalendarCheck className="w-5 h-5" />, value: fmtPct(closeRate), hint: `${wonCount} ganhos / ${heldMeetingsTotal} reuniões` },
+    won_count: { id: "won_count", label: "Vendas absolutas", description: "Total de deals ganhos no período", icon: <Trophy className="w-5 h-5" />, value: String(wonCount), hint: `${fmtBRL(billedValue)} faturados` },
+    lost_count: { id: "lost_count", label: "Deals perdidos", description: "Total de deals marcados como perdidos", icon: <TrendingDown className="w-5 h-5" />, value: String(lostCount), hint: `${fmtPct(allClosed > 0 ? (lostCount / allClosed) * 100 : 0)} dos fechados` },
+    avg_cycle: { id: "avg_cycle", label: "Ciclo médio de vendas", description: "Dias entre criação do deal e ganho", icon: <Clock className="w-5 h-5" />, value: `${avgCycleDays.toFixed(0)} dias`, hint: "Da criação ao ganho" },
+    no_show: { id: "no_show", label: "No-show", description: "Reuniões agendadas e não comparecidas", icon: <UserX className="w-5 h-5" />, value: String(noShowTotal), hint: "no período", warn: noShowTotal > 0 },
+    held_meetings: { id: "held_meetings", label: "Reuniões realizadas", description: "Reuniões/calls realizadas pela equipe", icon: <CalendarCheck className="w-5 h-5" />, value: String(heldMeetingsTotal), hint: "no período" },
+    open_count: { id: "open_count", label: "Deals abertos", description: "Deals atualmente no pipeline", icon: <Activity className="w-5 h-5" />, value: String((openDeals || []).length), hint: `${stagnated} parados >14d`, warn: stagnated > 0 },
+    open_value: { id: "open_value", label: "Pipeline aberto", description: "Valor total dos deals abertos", icon: <Activity className="w-5 h-5" />, value: fmtBRL(openValue), hint: `${(openDeals || []).length} deals · ${stagnated} parados >14d`, warn: stagnated > 0 },
+    stagnated: { id: "stagnated", label: "Deals parados >14d", description: "Sem mudar de etapa há mais de 14 dias", icon: <AlertTriangle className="w-5 h-5" />, value: String(stagnated), hint: "Risco de esfriar", warn: stagnated > 0 },
+    created: { id: "created", label: "Deals criados", description: "Novos deals no período", icon: <ArrowUpRight className="w-5 h-5" />, value: String((deals || []).length), hint: "no período" },
+    churn_count: { id: "churn_count", label: "Cancelamentos", description: "Contratos cancelados no período", icon: <TrendingDown className="w-5 h-5" />, value: String(churnTotalCount), hint: `${fmtBRL(churnTotalValue)} cancelados`, warn: churnTotalCount > 0 },
+    churn_value: { id: "churn_value", label: "Valor cancelado", description: "Soma do valor de contratos cancelados", icon: <TrendingDown className="w-5 h-5" />, value: fmtBRL(churnTotalValue), hint: `${churnTotalCount} contrato${churnTotalCount === 1 ? "" : "s"}`, warn: churnTotalValue > 0 },
+  };
+
+  const KPI_OPTIONS: KpiOption[] = Object.values(KPI_CATALOG).map(({ id, label, description }) => ({ id, label, description }));
+
+  const renderKpis = (section: KpiSection) =>
+    (kpiSel[section] || [])
+      .map((id) => KPI_CATALOG[id])
+      .filter(Boolean)
+      .map((k) => (
+        <KpiCard
+          key={k.id}
+          icon={k.icon}
+          label={k.label}
+          value={k.value}
+          hint={k.hint}
+          loading={isLoading}
+          warn={k.warn}
+        />
+      ));
+
 
   // ---------------------- GUARDS ----------------------
   if (userLoading) {
@@ -659,37 +740,15 @@ export default function SalesDashboard() {
         {format(end, "dd/MM/yyyy", { locale: ptBR })}
       </div>
 
-      {/* KPI Row */}
+      {/* KPI Row (configurável) */}
+      <div className="flex items-center justify-between -mb-2">
+        <span className="text-xs text-muted-foreground">Indicadores principais</span>
+        <Button variant="ghost" size="sm" onClick={() => setPickerOpen("header")}>
+          <Settings2 className="w-4 h-4 mr-1.5" /> Personalizar KPIs
+        </Button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          icon={<DollarSign className="w-5 h-5" />}
-          label="Receita ganha"
-          value={fmtBRL(wonValue)}
-          hint={`${wonCount} venda${wonCount === 1 ? "" : "s"} no período`}
-          loading={isLoading}
-        />
-        <KpiCard
-          icon={<Trophy className="w-5 h-5" />}
-          label="Ticket médio"
-          value={fmtBRL(avgTicket)}
-          hint="Valor recebido ÷ vendas"
-          loading={isLoading}
-        />
-        <KpiCard
-          icon={<TrendingUp className="w-5 h-5" />}
-          label="Win rate"
-          value={fmtPct(winRate)}
-          hint={`${wonCount} ganhos · ${lostCount} perdas`}
-          loading={isLoading}
-        />
-        <KpiCard
-          icon={<Activity className="w-5 h-5" />}
-          label="Pipeline aberto"
-          value={fmtBRL(openValue)}
-          hint={`${(openDeals || []).length} deals · ${stagnated} parados >14d`}
-          loading={isLoading}
-          warn={stagnated > 0}
-        />
+        {renderKpis("header")}
       </div>
 
       <Tabs defaultValue="goals" className="w-full">
@@ -792,43 +851,14 @@ export default function SalesDashboard() {
 
         {/* ---------- FUNIL ---------- */}
         <TabsContent value="funnel" className="space-y-4 mt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Deals criados</CardDescription>
-                <CardTitle className="text-3xl">
-                  {(deals || []).length}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-muted-foreground">
-                no período selecionado
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Conversão (Win Rate)</CardDescription>
-                <CardTitle className="text-3xl">{fmtPct(winRate)}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-muted-foreground">
-                {wonCount} ganhos sobre {allClosed} fechados
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Deals parados</CardDescription>
-                <CardTitle
-                  className={cn(
-                    "text-3xl",
-                    stagnated > 0 && "text-amber-600 dark:text-amber-400"
-                  )}
-                >
-                  {stagnated}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-muted-foreground">
-                sem mover de etapa há mais de 14 dias
-              </CardContent>
-            </Card>
+          <div className="flex items-center justify-between -mb-2">
+            <span className="text-xs text-muted-foreground">Indicadores do funil</span>
+            <Button variant="ghost" size="sm" onClick={() => setPickerOpen("funnel")}>
+              <Settings2 className="w-4 h-4 mr-1.5" /> Personalizar KPIs
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {renderKpis("funnel")}
           </div>
 
           <Card>
@@ -870,37 +900,15 @@ export default function SalesDashboard() {
 
         {/* ---------- PERFORMANCE ---------- */}
         <TabsContent value="performance" className="space-y-4 mt-4">
-          {/* KPI Row */}
+          {/* KPI Row (configurável) */}
+          <div className="flex items-center justify-between -mb-2">
+            <span className="text-xs text-muted-foreground">Indicadores de performance</span>
+            <Button variant="ghost" size="sm" onClick={() => setPickerOpen("performance")}>
+              <Settings2 className="w-4 h-4 mr-1.5" /> Personalizar KPIs
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard
-              icon={<CalendarCheck className="w-5 h-5" />}
-              label="Close rate"
-              value={fmtPct(closeRate)}
-              hint={`${wonCount} ganhos / ${heldMeetingsTotal} reuniões realizadas`}
-              loading={isLoading}
-            />
-            <KpiCard
-              icon={<Trophy className="w-5 h-5" />}
-              label="Vendas absolutas"
-              value={String(wonCount)}
-              hint={`${fmtBRL(billedValue)} faturados`}
-              loading={isLoading}
-            />
-            <KpiCard
-              icon={<Clock className="w-5 h-5" />}
-              label="Ciclo médio"
-              value={`${avgCycleDays.toFixed(0)} dias`}
-              hint="Da criação do deal até o ganho"
-              loading={isLoading}
-            />
-            <KpiCard
-              icon={<UserX className="w-5 h-5" />}
-              label="No-show"
-              value={String(noShowTotal)}
-              hint="Reuniões agendadas e não comparecidas"
-              loading={isLoading}
-              warn={noShowTotal > 0}
-            />
+            {renderKpis("performance")}
           </div>
 
           {/* Close rate por executivo */}
@@ -1323,6 +1331,22 @@ export default function SalesDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <KpiPicker
+        open={pickerOpen !== null}
+        onOpenChange={(o) => !o && setPickerOpen(null)}
+        title={
+          pickerOpen === "header"
+            ? "Personalizar KPIs principais"
+            : pickerOpen === "funnel"
+            ? "Personalizar KPIs do funil"
+            : "Personalizar KPIs de performance"
+        }
+        catalog={KPI_OPTIONS}
+        selected={pickerOpen ? kpiSel[pickerOpen] : []}
+        onSave={(ids) => pickerOpen && saveKpiSel(pickerOpen, ids)}
+        maxItems={8}
+      />
     </div>
   );
 }
