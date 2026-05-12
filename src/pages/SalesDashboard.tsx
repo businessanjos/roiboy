@@ -69,6 +69,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -142,6 +149,7 @@ export default function SalesDashboard() {
   const { currentUser, loading: userLoading } = useCurrentUser();
   const { isSuperAdmin } = useSuperAdmin();
   const [period, setPeriod] = useState<PeriodKey>("this_month");
+  const [churnDetailRep, setChurnDetailRep] = useState<{ name: string; contracts: any[] } | null>(null);
 
   const allowed = useMemo(
     () => isManagementUser(currentUser, isSuperAdmin),
@@ -356,7 +364,7 @@ export default function SalesDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("client_contracts")
-        .select("id, deal_id, client_id, cancelled_at, value, clients(full_name, phone_e164, emails)")
+        .select("id, deal_id, client_id, cancelled_at, value, payment_method, payment_option, installments_count, cancellation_reason, cancellation_justification, product_id, products(name, color), clients(full_name, phone_e164, emails)")
         .eq("account_id", accountId!)
         .eq("status", "cancelled")
         .not("cancelled_at", "is", null)
@@ -548,9 +556,10 @@ export default function SalesDashboard() {
       return null;
     };
 
-    const counts = new Map<string, { name: string; avatar: string | null; count: number; value: number }>();
+    const counts = new Map<string, { name: string; avatar: string | null; count: number; value: number; contracts: any[] }>();
     let unassigned = 0;
     let unassignedValue = 0;
+    const unassignedContracts: any[] = [];
     for (const c of churnContracts || []) {
       const uid = resolveOwner(c);
       const val = Number((c as any).value || 0);
@@ -561,19 +570,22 @@ export default function SalesDashboard() {
           avatar: info?.avatar || null,
           count: 0,
           value: 0,
+          contracts: [],
         };
         cur.count += 1;
         cur.value += val;
+        cur.contracts.push(c);
         counts.set(uid, cur);
       } else {
         unassigned += 1;
         unassignedValue += val;
+        unassignedContracts.push(c);
       }
     }
     const list = Array.from(counts.entries()).map(([id, v]) => ({ id, ...v }));
     list.sort((a, b) => b.count - a.count);
     if (unassigned > 0) {
-      list.push({ id: "_unassigned", name: "Sem vendedor atribuído", avatar: null, count: unassigned, value: unassignedValue });
+      list.push({ id: "_unassigned", name: "Sem vendedor atribuído", avatar: null, count: unassigned, value: unassignedValue, contracts: unassignedContracts });
     }
     return list;
   }, [churnContracts, churnDealOwners, wonDealsForChurnMatch, teamMetrics]);
@@ -1028,7 +1040,11 @@ export default function SalesDashboard() {
                     </thead>
                     <tbody>
                       {churnByRep.map((r) => (
-                        <tr key={r.id} className="border-b hover:bg-muted/40 transition-colors">
+                        <tr
+                          key={r.id}
+                          className="border-b hover:bg-muted/40 transition-colors cursor-pointer"
+                          onClick={() => setChurnDetailRep({ name: r.name, contracts: r.contracts || [] })}
+                        >
                           <td className="py-2 px-2">
                             <div className="flex items-center gap-2">
                               <Avatar className="h-7 w-7">
@@ -1247,6 +1263,66 @@ export default function SalesDashboard() {
       <div className="text-xs text-muted-foreground text-center pt-4">
         {" "}
       </div>
+
+      <Dialog open={!!churnDetailRep} onOpenChange={(o) => !o && setChurnDetailRep(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Cancelamentos · {churnDetailRep?.name}</DialogTitle>
+            <DialogDescription>
+              {churnDetailRep?.contracts.length || 0} contrato(s) cancelado(s) no período · Total{" "}
+              {fmtBRL((churnDetailRep?.contracts || []).reduce((a, c: any) => a + Number(c.value || 0), 0))}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-muted-foreground border-b">
+                <tr>
+                  <th className="text-left py-2 px-2">Cliente</th>
+                  <th className="text-left py-2 px-2">Produto</th>
+                  <th className="text-left py-2 px-2">Pagamento</th>
+                  <th className="text-right py-2 px-2">Valor</th>
+                  <th className="text-left py-2 px-2">Cancelado em</th>
+                  <th className="text-left py-2 px-2">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(churnDetailRep?.contracts || []).map((c: any) => {
+                  const inst = c.installments_count && c.installments_count > 1
+                    ? ` (${c.installments_count}x)`
+                    : "";
+                  const payment = [c.payment_method, c.payment_option].filter(Boolean).join(" · ") + inst;
+                  const productColor = c.products?.color || "#6b7280";
+                  return (
+                    <tr key={c.id} className="border-b">
+                      <td className="py-2 px-2 font-medium">{c.clients?.full_name || "—"}</td>
+                      <td className="py-2 px-2">
+                        {c.products?.name ? (
+                          <Badge style={{ backgroundColor: productColor, color: "white" }}>
+                            {c.products.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{payment.trim() || "—"}</td>
+                      <td className="py-2 px-2 text-right font-mono">{fmtBRL(Number(c.value || 0))}</td>
+                      <td className="py-2 px-2 text-muted-foreground">
+                        {c.cancelled_at ? format(new Date(c.cancelled_at), "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">
+                        {c.cancellation_reason || "—"}
+                        {c.cancellation_justification && (
+                          <div className="text-xs opacity-70 mt-0.5">{c.cancellation_justification}</div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
