@@ -200,7 +200,7 @@ export function TypeformDashboard() {
                   ) : (
                     <>
                       <Badge variant="outline" className="mr-1.5 border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · {periodLabel}</Badge>
-                      Todos os cards consideram apenas o intervalo selecionado. Para ver Visitas, Iniciados e Tempo médio, escolha "Histórico total".
+                      Todos os cards consideram apenas o intervalo selecionado.
                     </>
                   )}
                 </span>
