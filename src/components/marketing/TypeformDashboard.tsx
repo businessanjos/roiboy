@@ -330,8 +330,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="lifetime" label="Visitas" value={funnel.visits} icon={Users}
                       sub="desde a criação do form"
-                      source="Typeform Insights API"
-                      tip="Quantidade total de pessoas que abriram o link/embed do formulário, desde a criação. Vem do endpoint /insights/{form_id}/summary do Typeform (campo total_visits). Não é filtrado pelo período selecionado."
+                      source="Typeform"
+                      tip="Quantas pessoas abriram o link do formulário desde que ele foi criado. É o histórico total — não muda quando você troca o período."
                       onDetails={() => setDetailsCard({
                         label: 'Visitas',
                         source: 'Typeform Insights API',
