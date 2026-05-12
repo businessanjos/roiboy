@@ -45,6 +45,8 @@ import { DuplicateAlert } from "@/components/client/DuplicateAlert";
 import { useDuplicateDetection } from "@/hooks/useDuplicateDetection";
 import { MergeClientDialog } from "@/components/client/MergeClientDialog";
 import { useClientMerge } from "@/hooks/useClientMerge";
+import { useClientsFinancialStatusBatch } from "@/hooks/useClientsFinancialStatusBatch";
+import { OverdueBadge } from "@/components/client/OverdueBadge";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -277,6 +279,7 @@ export default function Clients() {
   const [filterResponsible, setFilterResponsible] = usePersistedFilter<string>("clients", "responsible", "all");
   const [filterLinks, setFilterLinks] = usePersistedFilter<string>("clients", "links", "all");
   const [filterCountry, setFilterCountry] = usePersistedFilter<string>("clients", "country", "all");
+  const [filterRisk, setFilterRisk] = usePersistedFilter<string>("clients", "risk", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
 
@@ -1393,7 +1396,16 @@ export default function Clients() {
   ];
 
   // Server-side filter handles country now; just use clients as-is
-  const filtered = clients;
+  const baseFiltered = clients;
+  const clientIdsForStatus = baseFiltered.map((c: any) => c.id);
+  const { data: financialStatusMap } = useClientsFinancialStatusBatch(clientIdsForStatus);
+  const filtered = (filterRisk === "all"
+    ? baseFiltered
+    : baseFiltered.filter((c: any) => {
+        const s = financialStatusMap?.get(c.id);
+        if (filterRisk === "ok") return !s || s.risk === "ok";
+        return s?.risk === filterRisk;
+      })) as typeof baseFiltered;
 
   const handleFieldValueChange = (clientId: string, fieldId: string, newValue: any) => {
     setFieldValues(prev => ({
@@ -2181,7 +2193,22 @@ export default function Clients() {
                 </Select>
               </div>
 
-              {/* País (DDI) Filter */}
+              {/* Risco financeiro */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Risco financeiro</Label>
+                <Select value={filterRisk} onValueChange={setFilterRisk}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="critical">🔴 Inadimplente (&gt;30d ou &gt;R$5k)</SelectItem>
+                    <SelectItem value="high">🟠 Em atraso</SelectItem>
+                    <SelectItem value="warning">🟡 Vence ≤7 dias</SelectItem>
+                    <SelectItem value="ok">🟢 Em dia</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5 min-w-[180px]">
                 <Label className="text-xs text-muted-foreground">País (DDI)</Label>
                 <Select value={filterCountry} onValueChange={setFilterCountry}>
@@ -2367,6 +2394,7 @@ export default function Clients() {
                                     )}
                                     <span className="truncate">{client.full_name}</span>
                                     <VipBadge clientId={client.id} />
+                                    <OverdueBadge status={financialStatusMap?.get(client.id)} compact />
                                   </Link>
                                 );
                               })()}
