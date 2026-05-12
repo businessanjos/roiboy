@@ -649,6 +649,7 @@ export default function FinancialEntriesPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Descrição</TableHead>
+                      <TableHead>Origem</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Vencimento</TableHead>
