@@ -327,11 +327,12 @@ export function TypeformDashboard() {
                 );
               })()}
               <div className="space-y-4">
+                {isLifetime && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime · histórico total</Badge>
+                    <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Histórico total</Badge>
                     <span className="text-xs text-muted-foreground">
-                      {selectedForm === '__all__' ? `somatório de ${forms.length} funis` : 'não muda com o filtro de período'}
+                      {selectedForm === '__all__' ? `somatório de ${forms.length} funis` : 'desde a criação do form'}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -390,10 +391,11 @@ export function TypeformDashboard() {
                     />
                   </div>
                 </div>
+                )}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · {periodLabel}</Badge>
-                    <span className="text-xs text-muted-foreground">filtrado pelo intervalo selecionado</span>
+                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">{isLifetime ? 'Histórico total' : `Período · ${periodLabel}`}</Badge>
+                    <span className="text-xs text-muted-foreground">{isLifetime ? 'todas as respostas recebidas' : 'filtrado pelo intervalo selecionado'}</span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <FunnelCard
