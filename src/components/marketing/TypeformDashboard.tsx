@@ -327,62 +327,70 @@ export function TypeformDashboard() {
                 );
               })()}
               <div className="space-y-4">
-                {isLifetime && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Histórico total</Badge>
+                    <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">
+                      {isLifetime ? 'Histórico total' : `Período · ${periodLabel}`}
+                    </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {selectedForm === '__all__' ? `somatório de ${forms.length} funis` : 'desde a criação do form'}
+                      {isLifetime
+                        ? (selectedForm === '__all__' ? `somatório de ${forms.length} funis` : 'desde a criação do form')
+                        : (selectedForm === '__all__' ? `${forms.length} funis · filtrado pelo intervalo` : 'filtrado pelo intervalo selecionado')}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <FunnelCard
-                      scope="lifetime" label="Visitas" value={funnel.visits} icon={Users}
-                      sub="desde a criação do form"
+                      scope={isLifetime ? 'lifetime' : 'period'} label="Visitas" value={funnel.visits} icon={Users}
+                      sub={isLifetime ? 'desde a criação do form' : `pessoas que abriram ${periodLabel}`}
                       source="Typeform"
-                      tip="Quantas pessoas abriram o link do formulário desde que ele foi criado. É o histórico total — não muda quando você troca o período."
+                      tip={isLifetime
+                        ? "Quantas pessoas abriram o link do formulário desde que ele foi criado."
+                        : `Quantas pessoas abriram o link do formulário ${periodLabel}. Vem do Typeform já filtrado pelo período.`}
                       onDetails={() => setDetailsCard({
                         label: 'Visitas',
                         source: 'Typeform Insights API',
                         steps: [
-                          `1. Para cada form rastreado, chama GET /insights/{form_id}/summary do Typeform.`,
+                          `1. Para cada form rastreado, chama GET /insights/{form_id}/summary do Typeform${isLifetime ? '' : ' com os parâmetros from/to do período'}.`,
                           `2. Lê o campo form.summary.total_visits.`,
-                          `3. Persiste o snapshot do dia em typeform_form_stats.total_visits.`,
-                          `4. Pega a linha mais recente por form_id e ${selectedForm === '__all__' ? `soma das ${forms.length} formulários` : 'usa o valor do form selecionado'}.`,
-                          `5. Total exibido = ${funnel.visits.toLocaleString('pt-BR')}.`,
+                          `3. ${isLifetime ? 'Usa o snapshot mais recente armazenado em typeform_form_stats.' : 'Soma o resultado de cada form do escopo (chamada ao vivo, sem cache).'}`,
+                          `4. Total exibido = ${funnel.visits.toLocaleString('pt-BR')}.`,
                         ],
                         sample: null,
                       })}
                     />
                     <FunnelCard
-                      scope="lifetime" label="Iniciados" value={funnel.starts} icon={TrendingUp}
-                      sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'desde a criação do form'}
+                      scope={isLifetime ? 'lifetime' : 'period'} label="Iniciados" value={funnel.starts} icon={TrendingUp}
+                      sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : (isLifetime ? 'desde a criação do form' : `iniciados ${periodLabel}`)}
                       source="Typeform"
-                      tip="Quem abriu o formulário e começou a responder, indo além da tela inicial de boas-vindas. Também é histórico total."
+                      tip={isLifetime
+                        ? "Quem abriu o formulário e começou a responder, indo além da tela de boas-vindas."
+                        : `Quem começou a responder o formulário ${periodLabel} (passou da tela de boas-vindas).`}
                       onDetails={() => setDetailsCard({
                         label: 'Iniciados',
                         source: 'Typeform Insights API',
                         steps: [
-                          `1. Chama /insights/{form_id}/summary e itera o array fields.`,
+                          `1. Chama /insights/{form_id}/summary${isLifetime ? '' : ' com from/to do período'} e itera o array fields.`,
                           `2. Ignora screens (welcome/thankyou) e pega o primeiro campo real.`,
                           `3. Lê o atributo views = quantas pessoas viram o primeiro campo.`,
-                          `4. Persiste em typeform_form_stats.total_starts; agrega da mesma forma que Visitas.`,
+                          `4. ${isLifetime ? 'Lê do snapshot mais recente em typeform_form_stats.' : 'Soma o resultado de cada form do escopo ao vivo.'}`,
                           `5. Total exibido = ${funnel.starts.toLocaleString('pt-BR')}${funnel.visits ? ` (${((funnel.starts/funnel.visits)*100).toFixed(1)}% das ${funnel.visits.toLocaleString('pt-BR')} visitas)` : ''}.`,
                         ],
                         sample: null,
                       })}
                     />
                     <FunnelCard
-                      scope="lifetime" label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock}
-                      sub="por resposta (histórico)"
+                      scope={isLifetime ? 'lifetime' : 'period'} label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock}
+                      sub={isLifetime ? 'por resposta (histórico)' : `por resposta ${periodLabel}`}
                       source="Typeform"
-                      tip="Tempo médio que cada pessoa leva para responder o formulário do começo ao fim. Quando você está vendo todos os funis juntos, é uma média que dá mais peso aos formulários com mais visitas."
+                      tip={isLifetime
+                        ? "Tempo médio que cada pessoa leva para responder o formulário do começo ao fim."
+                        : `Tempo médio que cada pessoa levou para responder o formulário ${periodLabel}.`}
                       onDetails={() => setDetailsCard({
                         label: 'Tempo médio',
                         source: 'Typeform Insights API',
                         steps: [
-                          `1. Lê form.summary.average_time (em segundos) do endpoint Insights.`,
-                          `2. Persiste em typeform_form_stats.average_time_seconds.`,
+                          `1. Lê form.summary.average_time (em segundos) do endpoint Insights${isLifetime ? '' : ' com from/to do período'}.`,
+                          `2. ${isLifetime ? 'Persiste em typeform_form_stats.average_time_seconds.' : 'Calcula ao vivo, sem cache.'}`,
                           `3. Quando 'Todos os funis' está selecionado, aplica média ponderada: Σ(avg_time × visitas) / Σ(visitas).`,
                           `4. Resultado convertido para minutos/segundos = ${fmtTime(funnel.avg_time)}.`,
                         ],
@@ -391,7 +399,6 @@ export function TypeformDashboard() {
                     />
                   </div>
                 </div>
-                )}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">{isLifetime ? 'Histórico total' : `Período · ${periodLabel}`}</Badge>
