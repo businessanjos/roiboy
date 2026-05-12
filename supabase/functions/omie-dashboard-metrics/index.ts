@@ -75,11 +75,10 @@ Deno.serve(async (req) => {
       data_ate: fmtBR(end),
       filtrar_por_data_de: 'VENCIMENTO',
     };
-    // ListarContasPagar (lcpListarRequest) does NOT accept data_de/data_ate.
-    // Use filtrar_por_data_vencimento_de / _ate which are the supported fields.
+    // ListarContasPagar (lcpListarRequest) usa data_vencimento_de / data_vencimento_ate
     const pagarFilter = {
-      filtrar_por_data_vencimento_de: fmtBR(start),
-      filtrar_por_data_vencimento_ate: fmtBR(end),
+      data_vencimento_de: fmtBR(start),
+      data_vencimento_ate: fmtBR(end),
     };
 
     // Fetch all pages (receber + pagar) in parallel
