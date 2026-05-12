@@ -2394,6 +2394,7 @@ export default function Clients() {
                                     )}
                                     <span className="truncate">{client.full_name}</span>
                                     <VipBadge clientId={client.id} />
+                                    <OverdueBadge status={financialStatusMap?.get(client.id)} compact />
                                   </Link>
                                 );
                               })()}
