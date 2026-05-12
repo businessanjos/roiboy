@@ -235,6 +235,14 @@ Deno.serve(async (req) => {
     });
   } catch (e: any) {
     console.error('omie-dashboard-metrics error:', e);
+    const isRedundant = e?.code === 'OMIE_REDUNDANT' || /REDUNDANT|Consumo redundante/.test(e?.message || '');
+    if (isRedundant) {
+      return new Response(JSON.stringify({
+        error: 'OMIE_RATE_LIMITED',
+        message: 'A Omie está bloqueando consultas repetidas. Aguarde ~1 minuto e tente novamente.',
+        rateLimited: true,
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
