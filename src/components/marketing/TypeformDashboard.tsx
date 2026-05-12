@@ -366,8 +366,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="lifetime" label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock}
                       sub="por resposta (histórico)"
-                      source="Typeform Insights API"
-                      tip="Tempo médio (segundos) que cada respondente leva para completar o formulário. Vem de form.summary.average_time. Quando 'Todos os funis' está selecionado, é uma média ponderada por visitas."
+                      source="Typeform"
+                      tip="Tempo médio que cada pessoa leva para responder o formulário do começo ao fim. Quando você está vendo todos os funis juntos, é uma média que dá mais peso aos formulários com mais visitas."
                       onDetails={() => setDetailsCard({
                         label: 'Tempo médio',
                         source: 'Typeform Insights API',
