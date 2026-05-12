@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { roleNameMatches } from "@/lib/roles";
+import { isManagementUser } from "@/lib/access/managementRoles";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -161,6 +162,12 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     );
     if (!canSeeIgRanking) {
       sectorItems = sectorItems.filter(item => item.to !== "/operations/instagram-ranking");
+    }
+
+    // Sales Dashboard: exclusivo para gestão (Head/Gerente/Diretor/C-level/Sócio) ou admin.
+    const canSeeSalesDashboard = isManagementUser(currentUser, isSuperAdmin);
+    if (!canSeeSalesDashboard) {
+      sectorItems = sectorItems.filter(item => item.to !== "/sales-dashboard");
     }
 
     // Admins can see all sector items. Everyone else must pass explicit permissions.
