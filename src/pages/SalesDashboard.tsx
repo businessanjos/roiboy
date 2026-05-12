@@ -539,7 +539,7 @@ export default function SalesDashboard() {
       // fallback por e-mail
       const emails: string[] = Array.isArray(cl.emails) ? cl.emails : [];
       for (const e of emails) {
-        const k = (e || "").trim().toLowerCase();
+        const k = String(e ?? "").trim().toLowerCase();
         if (k && wonByEmail.has(k)) return wonByEmail.get(k)!;
       }
       // fallback por telefone (últimos 8 dígitos)
