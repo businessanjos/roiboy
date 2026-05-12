@@ -94,6 +94,7 @@ const SalesCalendar = lazyRetry(() => import("./pages/SalesCalendar"));
 const SpiffsTracking = lazyRetry(() => import("./pages/SpiffsTracking"));
 const IncentivePresentation = lazyRetry(() => import("./pages/IncentivePresentation"));
 const CloserDashboard = lazyRetry(() => import("./pages/CloserDashboard"));
+const SalesDashboard = lazyRetry(() => import("./pages/SalesDashboard"));
 const CsIncentivePresentation = lazyRetry(() => import("./pages/CsIncentivePresentation"));
 const Leads = lazyRetry(() => import("./pages/Leads"));
 
