@@ -153,7 +153,37 @@ export default function SalesDashboard() {
   const [period, setPeriod] = useState<PeriodKey>("this_month");
   const [churnDetailRep, setChurnDetailRep] = useState<{ name: string; contracts: any[] } | null>(null);
 
-  const allowed = useMemo(
+  // ---------- KPI customization (per section, persisted in localStorage) ----------
+  type KpiSection = "header" | "funnel" | "performance";
+  const KPI_DEFAULTS: Record<KpiSection, string[]> = {
+    header: ["received", "ticket", "win_rate", "open_value"],
+    funnel: ["created", "win_rate", "stagnated"],
+    performance: ["close_rate", "won_count", "avg_cycle", "no_show"],
+  };
+  const KPI_STORAGE_KEY = "sales-dashboard-kpis-v1";
+  const [pickerOpen, setPickerOpen] = useState<KpiSection | null>(null);
+  const [kpiSel, setKpiSel] = useState<Record<KpiSection, string[]>>(() => {
+    try {
+      const raw = localStorage.getItem(KPI_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          header: Array.isArray(parsed.header) && parsed.header.length ? parsed.header : KPI_DEFAULTS.header,
+          funnel: Array.isArray(parsed.funnel) && parsed.funnel.length ? parsed.funnel : KPI_DEFAULTS.funnel,
+          performance: Array.isArray(parsed.performance) && parsed.performance.length ? parsed.performance : KPI_DEFAULTS.performance,
+        };
+      }
+    } catch {}
+    return KPI_DEFAULTS;
+  });
+  const saveKpiSel = (section: KpiSection, ids: string[]) => {
+    setKpiSel((prev) => {
+      const next = { ...prev, [section]: ids.length ? ids : KPI_DEFAULTS[section] };
+      try { localStorage.setItem(KPI_STORAGE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
     () => isManagementUser(currentUser, isSuperAdmin),
     [currentUser, isSuperAdmin]
   );
