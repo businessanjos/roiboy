@@ -149,6 +149,7 @@ export default function SalesDashboard() {
   const { currentUser, loading: userLoading } = useCurrentUser();
   const { isSuperAdmin } = useSuperAdmin();
   const [period, setPeriod] = useState<PeriodKey>("this_month");
+  const [churnDetailRep, setChurnDetailRep] = useState<{ name: string; contracts: any[] } | null>(null);
 
   const allowed = useMemo(
     () => isManagementUser(currentUser, isSuperAdmin),
