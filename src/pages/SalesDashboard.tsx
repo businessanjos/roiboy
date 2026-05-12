@@ -231,6 +231,16 @@ export default function SalesDashboard() {
     [wonDeals]
   );
 
+  // Faturamento = valor bruto vendido (independente de à vista ou parcelado)
+  const billedValue = useMemo(
+    () =>
+      (wonDeals || []).reduce(
+        (acc, d) => acc + Number(d.value ?? d.received_value ?? 0),
+        0
+      ),
+    [wonDeals]
+  );
+
   const wonCount = (wonDeals || []).length;
   const lostCount = (lostDeals || []).length;
   const allClosed = wonCount + lostCount;
@@ -276,8 +286,8 @@ export default function SalesDashboard() {
     ] ?? (annualGoal ? annualGoal / 12 : 0)
   );
   const monthlyProgress =
-    monthlyGoal > 0 ? Math.min(100, (wonValue / monthlyGoal) * 100) : 0;
-  const monthlyGap = Math.max(0, monthlyGoal - wonValue);
+    monthlyGoal > 0 ? Math.min(100, (billedValue / monthlyGoal) * 100) : 0;
+  const monthlyGap = Math.max(0, monthlyGoal - billedValue);
 
   // ----- Origin breakdown -----
   const sourceData = useMemo(() => {
@@ -435,13 +445,13 @@ export default function SalesDashboard() {
                 <CardDescription>
                   {annualGoal === 0
                     ? "Defina a meta anual em Insights → Metas para acompanhar o progresso."
-                    : "Receita recebida no mês vs. meta mensal."}
+                    : "Faturamento do mês (valor bruto vendido) vs. meta mensal."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-baseline justify-between">
                   <span className="text-2xl font-bold">
-                    {fmtBRL(period === "this_month" ? wonValue : 0)}
+                    {fmtBRL(period === "this_month" ? billedValue : 0)}
                   </span>
                   <span className="text-sm text-muted-foreground">
                     de {fmtBRL(monthlyGoal)}
@@ -462,6 +472,12 @@ export default function SalesDashboard() {
                     </span>
                   )}
                 </div>
+                {period === "this_month" && (
+                  <div className="pt-2 mt-1 border-t text-xs text-muted-foreground flex justify-between">
+                    <span>Recebido no mês (caixa)</span>
+                    <span className="font-medium text-foreground">{fmtBRL(wonValue)}</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -832,7 +848,7 @@ function YearlyGoalCard({
         .lte("won_at", yearEnd);
       if (error) throw error;
       return (data || []).reduce(
-        (acc, d) => acc + Number(d.received_value ?? d.value ?? 0),
+        (acc, d) => acc + Number(d.value ?? d.received_value ?? 0),
         0
       );
     },
