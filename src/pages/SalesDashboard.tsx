@@ -779,6 +779,204 @@ export default function SalesDashboard() {
           </Card>
         </TabsContent>
 
+        {/* ---------- PERFORMANCE ---------- */}
+        <TabsContent value="performance" className="space-y-4 mt-4">
+          {/* KPI Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard
+              icon={<CalendarCheck className="w-5 h-5" />}
+              label="Close rate"
+              value={fmtPct(closeRate)}
+              hint={`${wonCount} ganhos / ${heldMeetingsTotal} reuniões realizadas`}
+              loading={isLoading}
+            />
+            <KpiCard
+              icon={<Trophy className="w-5 h-5" />}
+              label="Vendas absolutas"
+              value={String(wonCount)}
+              hint={`${fmtBRL(billedValue)} faturados`}
+              loading={isLoading}
+            />
+            <KpiCard
+              icon={<Clock className="w-5 h-5" />}
+              label="Ciclo médio"
+              value={`${avgCycleDays.toFixed(0)} dias`}
+              hint="Da criação do deal até o ganho"
+              loading={isLoading}
+            />
+            <KpiCard
+              icon={<UserX className="w-5 h-5" />}
+              label="No-show"
+              value={String(noShowTotal)}
+              hint="Reuniões agendadas e não comparecidas"
+              loading={isLoading}
+              warn={noShowTotal > 0}
+            />
+          </div>
+
+          {/* Close rate por executivo */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarCheck className="w-5 h-5 text-primary" />
+                Close rate por executivo
+              </CardTitle>
+              <CardDescription>
+                Reuniões realizadas vs. fechamentos no período
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {closeRateByRep.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">
+                  Sem reuniões nem ganhos no período.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs uppercase text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 px-2">Executivo</th>
+                        <th className="text-right py-2 px-2">Reuniões realizadas</th>
+                        <th className="text-right py-2 px-2">Ganhos</th>
+                        <th className="text-right py-2 px-2">Close rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {closeRateByRep.map((r) => (
+                        <tr key={r.id} className="border-b hover:bg-muted/40 transition-colors">
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={r.avatar || undefined} />
+                                <AvatarFallback className="text-[10px]">
+                                  {r.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{r.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{r.held}</td>
+                          <td className="py-2 px-2 text-right">{r.won}</td>
+                          <td className="py-2 px-2 text-right">
+                            <Badge
+                              variant={r.rate >= 30 ? "default" : "secondary"}
+                              className="font-mono"
+                            >
+                              {fmtPct(r.rate)}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Conversão por origem do lead */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieIcon className="w-5 h-5 text-primary" />
+                Conversão por origem do lead
+              </CardTitle>
+              <CardDescription>
+                Cruza com canais de Marketing — leads / deals criados no período
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {sourceConversion.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">
+                  Sem deals criados no período.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs uppercase text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 px-2">Origem</th>
+                        <th className="text-right py-2 px-2">Deals</th>
+                        <th className="text-right py-2 px-2">Ganhos</th>
+                        <th className="text-right py-2 px-2">Receita</th>
+                        <th className="text-right py-2 px-2">Conversão</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sourceConversion.map((s) => (
+                        <tr key={s.name} className="border-b hover:bg-muted/40 transition-colors">
+                          <td className="py-2 px-2 font-medium truncate max-w-[260px]">{s.name}</td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{s.total}</td>
+                          <td className="py-2 px-2 text-right">{s.won}</td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{fmtBRL(s.value)}</td>
+                          <td className="py-2 px-2 text-right">
+                            <Badge variant={s.conv >= 20 ? "default" : "secondary"} className="font-mono">
+                              {fmtPct(s.conv)}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Churn por vendedor */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingDown className="w-5 h-5 text-red-500" />
+                Churn por vendedor
+              </CardTitle>
+              <CardDescription>
+                Contratos cancelados no período — atribuídos pelo vendedor que ganhou o deal
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {churnByRep.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">
+                  Nenhum cancelamento no período.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs uppercase text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 px-2">Vendedor</th>
+                        <th className="text-right py-2 px-2">Cancelamentos</th>
+                        <th className="text-right py-2 px-2">Valor cancelado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {churnByRep.map((r) => (
+                        <tr key={r.id} className="border-b hover:bg-muted/40 transition-colors">
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={r.avatar || undefined} />
+                                <AvatarFallback className="text-[10px]">
+                                  {r.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{r.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2 text-right">
+                            <Badge variant="destructive" className="font-mono">{r.count}</Badge>
+                          </td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{fmtBRL(r.value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* ---------- EQUIPE ---------- */}
         <TabsContent value="team" className="space-y-4 mt-4">
           <Card>
