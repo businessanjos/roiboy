@@ -69,17 +69,12 @@ Deno.serve(async (req) => {
     const start = new Date(today.getFullYear(), today.getMonth() - (months - 1), 1);
     const end = new Date(today.getFullYear(), today.getMonth() + 1, 0); // end of current month
 
-    // ListarContasReceber accepts data_de/data_ate with filtrar_por_data_de
-    const receberFilter = {
-      data_de: fmtBR(start),
-      data_ate: fmtBR(end),
-      filtrar_por_data_de: 'VENCIMENTO',
-    };
-    // ListarContasPagar (lcpListarRequest) usa data_vencimento_de / data_vencimento_ate
-    const pagarFilter = {
-      data_vencimento_de: fmtBR(start),
-      data_vencimento_ate: fmtBR(end),
-    };
+    // Omie tem nomenclaturas inconsistentes entre endpoints e rejeita tags desconhecidas.
+    // Estratégia: não enviar filtros de data e filtrar no cliente pelo período desejado.
+    const receberFilter: Record<string, unknown> = {};
+    const pagarFilter: Record<string, unknown> = {};
+    const periodStart = start;
+    const periodEnd = end;
 
     // Fetch all pages (receber + pagar) in parallel
     const [receber, pagar] = await Promise.all([
@@ -118,6 +113,7 @@ Deno.serve(async (req) => {
     for (const r of receber) {
       if (isCancelled(r.status_titulo)) continue;
       const due = parseBR(r.data_vencimento);
+      if (!due || due < periodStart || due > periodEnd) continue;
       const valor = Number(r.valor_documento) || 0;
       const pago = Number(r.valor_pago_soma) || 0;
       const aberto = Math.max(0, valor - pago);
@@ -144,6 +140,7 @@ Deno.serve(async (req) => {
     for (const p of pagar) {
       if (isCancelled(p.status_titulo)) continue;
       const due = parseBR(p.data_vencimento);
+      if (!due || due < periodStart || due > periodEnd) continue;
       const valor = Number(p.valor_documento) || 0;
       const pago = Number(p.valor_pago_soma) || 0;
       const aberto = Math.max(0, valor - pago);
