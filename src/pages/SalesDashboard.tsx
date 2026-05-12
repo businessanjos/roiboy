@@ -297,7 +297,7 @@ export default function SalesDashboard() {
   const sourceData = useMemo(() => {
     const map = new Map<string, { count: number; value: number }>();
     for (const d of wonDeals || []) {
-      const src = (d.source || "Sem origem").trim() || "Sem origem";
+      const src = (String(d.source ?? "") || "Sem origem").trim() || "Sem origem";
       const cur = map.get(src) || { count: 0, value: 0 };
       cur.count += 1;
       cur.value += Number(d.received_value ?? d.value ?? 0);
