@@ -55,10 +55,19 @@ async function listAllPages(
   appKey: string,
   appSecret: string,
 ) {
-  const all: any[] = [];
-  let page = 1;
-  while (page <= 30) {
-    const r = await callOmie(endpoint, call, { ...baseParam, pagina: page, registros_por_pagina: 500 }, appKey, appSecret);
+    const all: any[] = [];
+    let page = 1;
+    while (page <= 30) {
+      const r = await callOmie(endpoint, call, { ...baseParam, pagina: page, registros_por_pagina: 500 }, appKey, appSecret);
+      const items = r[listKey] || [];
+      all.push(...items);
+      const total = r.total_de_paginas || 1;
+      if (page >= total) break;
+      page++;
+      await sleep(250);
+    }
+    return all;
+  }
     const items = r[listKey] || [];
     all.push(...items);
     const total = r.total_de_paginas || 1;
