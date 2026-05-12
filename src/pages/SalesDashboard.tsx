@@ -42,6 +42,13 @@ import {
   UserX,
   Clock,
   TrendingDown,
+  Percent,
+  Users2,
+  CalendarDays,
+  Wallet,
+  Layers,
+  Award,
+  Gauge,
 } from "lucide-react";
 
 import {
