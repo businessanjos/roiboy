@@ -108,3 +108,8 @@ export function useFinancialCompany() {
   if (!ctx) throw new Error("useFinancialCompany must be used inside FinancialCompanyProvider");
   return ctx;
 }
+
+/** Safe variant: returns null when used outside the provider (e.g. global header on non-financial routes). */
+export function useFinancialCompanyOptional() {
+  return useContext(FinancialCompanyContext);
+}

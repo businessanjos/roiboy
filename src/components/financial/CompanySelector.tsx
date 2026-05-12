@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useFinancialCompany } from "@/contexts/FinancialCompanyContext";
+import { useFinancialCompanyOptional } from "@/contexts/FinancialCompanyContext";
 
 function formatCnpj(cnpj?: string | null) {
   if (!cnpj) return "";
@@ -19,7 +19,9 @@ function formatCnpj(cnpj?: string | null) {
 }
 
 export function CompanySelector({ compact = false }: { compact?: boolean }) {
-  const { companies, selectedId, setSelectedId, loading } = useFinancialCompany();
+  const ctx = useFinancialCompanyOptional();
+  if (!ctx) return null;
+  const { companies, selectedId, setSelectedId, loading } = ctx;
 
   if (loading) {
     return <div className="h-9 w-64 rounded-md bg-muted animate-pulse" />;
