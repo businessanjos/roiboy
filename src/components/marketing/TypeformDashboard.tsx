@@ -408,8 +408,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="period" label="Completados" value={funnel.completed} icon={CheckCircle2}
                       sub={`${funnel.completion_rate.toFixed(1)}% das submissões`}
-                      source="DB · typeform_responses"
-                      tip={`Subset das submissões com submitted_at preenchido (respondente chegou até a thank-you screen). Taxa = completados / submissões no período.`}
+                      source="Roy"
+                      tip="Pessoas que responderam o formulário até o final (chegaram na tela de agradecimento). A taxa mostra quantos completaram, do total de quem começou no período."
                       highlight
                       onDetails={() => setDetailsCard({
                         label: 'Completados',
