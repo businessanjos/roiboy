@@ -1040,7 +1040,11 @@ export default function SalesDashboard() {
                     </thead>
                     <tbody>
                       {churnByRep.map((r) => (
-                        <tr key={r.id} className="border-b hover:bg-muted/40 transition-colors">
+                        <tr
+                          key={r.id}
+                          className="border-b hover:bg-muted/40 transition-colors cursor-pointer"
+                          onClick={() => setChurnDetailRep({ name: r.name, contracts: r.contracts || [] })}
+                        >
                           <td className="py-2 px-2">
                             <div className="flex items-center gap-2">
                               <Avatar className="h-7 w-7">
