@@ -1,23 +1,16 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const OMIE_APP_KEY = Deno.env.get('OMIE_APP_KEY');
-const OMIE_APP_SECRET = Deno.env.get('OMIE_APP_SECRET');
-
-async function callOmie(endpoint: string, call: string, param: any) {
+async function callOmie(endpoint: string, call: string, param: any, appKey: string, appSecret: string) {
   const res = await fetch(`https://app.omie.com.br/api/v1/${endpoint}/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      call,
-      app_key: OMIE_APP_KEY,
-      app_secret: OMIE_APP_SECRET,
-      param: [param],
-    }),
+    body: JSON.stringify({ call, app_key: appKey, app_secret: appSecret, param: [param] }),
   });
   if (!res.ok) throw new Error(`Omie ${call} ${res.status}: ${await res.text()}`);
   const json = await res.json();
@@ -25,7 +18,6 @@ async function callOmie(endpoint: string, call: string, param: any) {
   return json;
 }
 
-// DD/MM/YYYY -> Date
 function parseBR(d?: string): Date | null {
   if (!d) return null;
   const [day, month, year] = d.split('/');
@@ -39,12 +31,18 @@ function fmtBR(d: Date) {
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
-async function listAllPages(endpoint: string, call: string, baseParam: any, listKey: string) {
+async function listAllPages(
+  endpoint: string,
+  call: string,
+  baseParam: any,
+  listKey: string,
+  appKey: string,
+  appSecret: string,
+) {
   const all: any[] = [];
   let page = 1;
-  // safety cap to avoid runaway pagination
   while (page <= 30) {
-    const r = await callOmie(endpoint, call, { ...baseParam, pagina: page, registros_por_pagina: 500 });
+    const r = await callOmie(endpoint, call, { ...baseParam, pagina: page, registros_por_pagina: 500 }, appKey, appSecret);
     const items = r[listKey] || [];
     all.push(...items);
     const total = r.total_de_paginas || 1;
@@ -58,28 +56,63 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    if (!OMIE_APP_KEY || !OMIE_APP_SECRET) {
-      throw new Error('Credenciais Omie não configuradas (OMIE_APP_KEY / OMIE_APP_SECRET).');
-    }
-
     const body = await req.json().catch(() => ({}));
     const months = Math.max(1, Math.min(12, Number(body.months) || 6));
+    const companyId = body.company_id as string | undefined;
+
+    // Auth: get user from JWT to discover account_id
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+
+    const authHeader = req.headers.get('Authorization') || '';
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userRes } = await admin.auth.getUser(token);
+    const user = userRes?.user;
+    if (!user) throw new Error('Não autenticado');
+
+    const { data: userRow } = await admin
+      .from('users')
+      .select('account_id')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
+    const accountId = userRow?.account_id;
+    if (!accountId) throw new Error('Account não encontrada');
+
+    // Load Omie credentials: by company_id or default for the account
+    let credQuery = admin
+      .from('omie_settings')
+      .select('id, app_key, app_secret, cnpj, legal_name, trade_name, color, is_default')
+      .eq('account_id', accountId);
+    if (companyId) credQuery = credQuery.eq('id', companyId);
+    else credQuery = credQuery.order('is_default', { ascending: false }).limit(1);
+
+    const { data: creds } = await credQuery;
+    const cred = creds && creds.length > 0 ? creds[0] : null;
+    if (!cred || !cred.app_key || !cred.app_secret) {
+      // Fallback to env vars (legacy single-account setup)
+      const envKey = Deno.env.get('OMIE_APP_KEY');
+      const envSecret = Deno.env.get('OMIE_APP_SECRET');
+      if (!envKey || !envSecret) {
+        throw new Error('Nenhum CNPJ Omie configurado. Adicione um em /financial/integracoes/omie.');
+      }
+    }
+
+    const appKey = cred?.app_key || Deno.env.get('OMIE_APP_KEY')!;
+    const appSecret = cred?.app_secret || Deno.env.get('OMIE_APP_SECRET')!;
 
     const today = new Date();
     const start = new Date(today.getFullYear(), today.getMonth() - (months - 1), 1);
-    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0); // end of current month
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-    // Omie tem nomenclaturas inconsistentes entre endpoints e rejeita tags desconhecidas.
-    // Estratégia: não enviar filtros de data e filtrar no cliente pelo período desejado.
     const receberFilter: Record<string, unknown> = {};
     const pagarFilter: Record<string, unknown> = {};
     const periodStart = start;
     const periodEnd = end;
 
-    // Fetch all pages (receber + pagar) in parallel
     const [receber, pagar] = await Promise.all([
-      listAllPages('financas/contareceber', 'ListarContasReceber', receberFilter, 'conta_receber_cadastro'),
-      listAllPages('financas/contapagar', 'ListarContasPagar', pagarFilter, 'conta_pagar_cadastro'),
+      listAllPages('financas/contareceber', 'ListarContasReceber', receberFilter, 'conta_receber_cadastro', appKey, appSecret),
+      listAllPages('financas/contapagar', 'ListarContasPagar', pagarFilter, 'conta_pagar_cadastro', appKey, appSecret),
     ]);
 
     const isPaid = (status: string) => status === 'LIQUIDADO';
@@ -87,26 +120,20 @@ Deno.serve(async (req) => {
     const isOverdue = (status: string, due: Date | null) =>
       status === 'ATRASADO' || (status !== 'LIQUIDADO' && status !== 'CANCELADO' && due !== null && due < today);
 
-    // Aggregations
     let totalReceived = 0, totalToReceive = 0, totalOverdueReceive = 0;
     let totalPaid = 0, totalToPay = 0, totalOverduePay = 0;
     let countReceivedTitles = 0;
 
-    // Monthly buckets
     const monthsMap = new Map<string, { label: string; received: number; expected: number; paid: number; toPay: number }>();
     for (let i = 0; i < months; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() - (months - 1 - i), 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       monthsMap.set(key, {
         label: d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
-        received: 0,
-        expected: 0,
-        paid: 0,
-        toPay: 0,
+        received: 0, expected: 0, paid: 0, toPay: 0,
       });
     }
 
-    // Top clients (receber) and category breakdown (pagar)
     const clientTotals = new Map<number, { name: string; total: number }>();
     const categoryTotals = new Map<string, number>();
 
@@ -117,9 +144,8 @@ Deno.serve(async (req) => {
       const valor = Number(r.valor_documento) || 0;
       const pago = Number(r.valor_pago_soma) || 0;
       const aberto = Math.max(0, valor - pago);
-      const key = due ? `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}` : null;
-      const bucket = key ? monthsMap.get(key) : null;
-
+      const key = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}`;
+      const bucket = monthsMap.get(key);
       if (isPaid(r.status_titulo)) {
         totalReceived += valor;
         countReceivedTitles++;
@@ -144,8 +170,8 @@ Deno.serve(async (req) => {
       const valor = Number(p.valor_documento) || 0;
       const pago = Number(p.valor_pago_soma) || 0;
       const aberto = Math.max(0, valor - pago);
-      const key = due ? `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}` : null;
-      const bucket = key ? monthsMap.get(key) : null;
+      const key = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}`;
+      const bucket = monthsMap.get(key);
       if (isPaid(p.status_titulo)) {
         totalPaid += valor;
         if (bucket) bucket.paid += valor;
@@ -167,23 +193,21 @@ Deno.serve(async (req) => {
 
     const result = {
       window: { months, start: fmtBR(start), end: fmtBR(end) },
+      company: cred ? {
+        id: cred.id,
+        cnpj: cred.cnpj,
+        legal_name: cred.legal_name,
+        trade_name: cred.trade_name,
+        color: cred.color,
+      } : null,
       kpis: {
-        totalReceived,
-        totalToReceive,
-        totalOverdueReceive,
+        totalReceived, totalToReceive, totalOverdueReceive,
         avgTicketReceived: countReceivedTitles > 0 ? totalReceived / countReceivedTitles : 0,
-        totalPaid,
-        totalToPay,
-        totalOverduePay,
+        totalPaid, totalToPay, totalOverduePay,
         netResult: totalReceived - totalPaid,
       },
-      monthly,
-      topClients,
-      topCategories,
-      counts: {
-        receberTitles: receber.length,
-        pagarTitles: pagar.length,
-      },
+      monthly, topClients, topCategories,
+      counts: { receberTitles: receber.length, pagarTitles: pagar.length },
       generatedAt: new Date().toISOString(),
     };
 

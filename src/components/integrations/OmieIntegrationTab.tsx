@@ -18,7 +18,11 @@ interface FieldMapping {
   customFieldId?: string;
 }
 
-export function OmieIntegrationTab() {
+interface OmieIntegrationTabProps {
+  settingsId?: string;
+}
+
+export function OmieIntegrationTab({ settingsId: propSettingsId }: OmieIntegrationTabProps = {}) {
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   
@@ -49,15 +53,18 @@ export function OmieIntegrationTab() {
   useEffect(() => {
     if (!currentUser?.account_id) return;
     loadSettings();
-  }, [currentUser?.account_id]);
+  }, [currentUser?.account_id, propSettingsId]);
 
   const loadSettings = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("omie_settings")
-      .select("*")
-      .eq("account_id", currentUser!.account_id)
-      .maybeSingle();
+    let query = supabase.from("omie_settings").select("*");
+    if (propSettingsId) {
+      query = query.eq("id", propSettingsId);
+    } else {
+      query = query.eq("account_id", currentUser!.account_id).order("is_default", { ascending: false }).limit(1);
+    }
+    const { data: rows } = await query;
+    const data = rows && rows.length > 0 ? rows[0] : null;
     
     if (data) {
       setSettingsId(data.id);
