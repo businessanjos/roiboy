@@ -45,6 +45,8 @@ import { DuplicateAlert } from "@/components/client/DuplicateAlert";
 import { useDuplicateDetection } from "@/hooks/useDuplicateDetection";
 import { MergeClientDialog } from "@/components/client/MergeClientDialog";
 import { useClientMerge } from "@/hooks/useClientMerge";
+import { useClientsFinancialStatusBatch } from "@/hooks/useClientsFinancialStatusBatch";
+import { OverdueBadge } from "@/components/client/OverdueBadge";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
