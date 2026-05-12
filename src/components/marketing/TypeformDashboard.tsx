@@ -54,12 +54,14 @@ const fmtTime = (s: number) => {
 export function TypeformDashboard() {
   const [forms, setForms] = useState<TrackedForm[]>([]);
   const [selectedForm, setSelectedForm] = useState<string>('');
-  const [period, setPeriod] = useState<'today' | '7' | '30' | 'this_year' | 'this_month' | 'custom'>('30');
+  const [period, setPeriod] = useState<'today' | '7' | '30' | 'this_year' | 'this_month' | 'custom' | 'lifetime'>('30');
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const isCustom = period === 'custom';
+  const isLifetime = period === 'lifetime';
   const customReady = isCustom && !!customRange?.from && !!customRange?.to;
   const periodPayload = useMemo(() => {
     const now = new Date();
+    if (period === 'lifetime') return { days: 36500 };
     if (period === 'today') return { since: format(startOfDay(now), 'yyyy-MM-dd'), until: format(endOfDay(now), 'yyyy-MM-dd') };
     if (period === 'this_month') return { since: format(startOfMonth(now), 'yyyy-MM-dd'), until: format(endOfMonth(now), 'yyyy-MM-dd') };
     if (period === 'this_year') return { since: format(startOfYear(now), 'yyyy-MM-dd'), until: format(endOfYear(now), 'yyyy-MM-dd') };
@@ -68,7 +70,7 @@ export function TypeformDashboard() {
     }
     return { days: Number(period) || 30 };
   }, [period, customReady, customRange]);
-  const periodLabel = period === 'today' ? 'hoje' : period === 'this_month' ? 'este mês' : period === 'this_year' ? 'este ano' : period === 'custom' && customReady ? `${format(customRange!.from!, 'dd/MM/yy')} – ${format(customRange!.to!, 'dd/MM/yy')}` : `últimos ${period}d`;
+  const periodLabel = period === 'lifetime' ? 'histórico total' : period === 'today' ? 'hoje' : period === 'this_month' ? 'este mês' : period === 'this_year' ? 'este ano' : period === 'custom' && customReady ? `${format(customRange!.from!, 'dd/MM/yy')} – ${format(customRange!.to!, 'dd/MM/yy')}` : `últimos ${period}d`;
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
   const [wonDeals, setWonDeals] = useState<any[]>([]);
   const [wonOpen, setWonOpen] = useState(false);
