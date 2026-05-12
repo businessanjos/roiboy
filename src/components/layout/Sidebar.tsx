@@ -164,6 +164,12 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       sectorItems = sectorItems.filter(item => item.to !== "/operations/instagram-ranking");
     }
 
+    // Sales Dashboard: exclusivo para gestão (Head/Gerente/Diretor/C-level/Sócio) ou admin.
+    const canSeeSalesDashboard = isManagementUser(currentUser, isSuperAdmin);
+    if (!canSeeSalesDashboard) {
+      sectorItems = sectorItems.filter(item => item.to !== "/sales-dashboard");
+    }
+
     // Admins can see all sector items. Everyone else must pass explicit permissions.
     if (showAllItems) return sectorItems;
     
