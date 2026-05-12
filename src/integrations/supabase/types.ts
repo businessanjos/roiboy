@@ -11271,6 +11271,75 @@ export type Database = {
           },
         ]
       }
+      marketing_links: {
+        Row: {
+          account_id: string
+          archived: boolean
+          created_at: string
+          created_by_user_id: string | null
+          destination_url: string
+          event_id: string | null
+          full_url: string
+          id: string
+          meta_campaign_id: string | null
+          meta_campaign_name: string | null
+          name: string
+          notes: string | null
+          seller_user_id: string | null
+          tags: string[] | null
+          updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          account_id: string
+          archived?: boolean
+          created_at?: string
+          created_by_user_id?: string | null
+          destination_url: string
+          event_id?: string | null
+          full_url: string
+          id?: string
+          meta_campaign_id?: string | null
+          meta_campaign_name?: string | null
+          name: string
+          notes?: string | null
+          seller_user_id?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          account_id?: string
+          archived?: boolean
+          created_at?: string
+          created_by_user_id?: string | null
+          destination_url?: string
+          event_id?: string | null
+          full_url?: string
+          id?: string
+          meta_campaign_id?: string | null
+          meta_campaign_name?: string | null
+          name?: string
+          notes?: string | null
+          seller_user_id?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       marketing_performance_insights: {
         Row: {
           account_id: string
