@@ -79,7 +79,10 @@ function MiniKpi({
   );
 }
 
+import { useFinancialCompany } from "@/contexts/FinancialCompanyContext";
+
 export default function OmieDashboardSection() {
+  const { selectedId, selected } = useFinancialCompany();
   const [data, setData] = useState<OmieMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +93,7 @@ export default function OmieDashboardSection() {
     setError(null);
     try {
       const { data: res, error: err } = await supabase.functions.invoke("omie-dashboard-metrics", {
-        body: { months: m },
+        body: { months: m, company_id: selectedId },
       });
       if (err) throw err;
       if ((res as any)?.error) throw new Error((res as any).error);
@@ -104,9 +107,9 @@ export default function OmieDashboardSection() {
   };
 
   useEffect(() => {
-    load(months);
+    if (selectedId) load(months);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedId]);
 
   return (
     <Card className="border-primary/20">
