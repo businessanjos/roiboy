@@ -56,6 +56,32 @@ export default function FinancialOmieIntegrationPage() {
   const { companies, selected, selectedId, setSelectedId, refresh, loading } = useFinancialCompany();
   const { toast } = useToast();
   const [pulling, setPulling] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSyncEntries = async () => {
+    if (!selectedId) {
+      toast({ title: "Selecione um CNPJ", variant: "destructive" });
+      return;
+    }
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("omie-sync-entries", {
+        body: { company_id: selectedId, months_back: 12, months_forward: 12 },
+      });
+      if (error) throw error;
+      const r = data?.results?.[0];
+      toast({
+        title: "Sincronização Omie concluída",
+        description: r
+          ? `${r.totalReceber || 0} recebíveis · ${r.totalPagar || 0} a pagar${r.errors?.length ? ` · ${r.errors.length} erros` : ""}`
+          : "Sem dados",
+      });
+    } catch (err: any) {
+      toast({ title: "Erro na sincronização", description: err.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handlePullFromOmie = async () => {
     if (!currentUser?.account_id || !selectedId) return;
