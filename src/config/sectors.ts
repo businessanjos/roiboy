@@ -48,6 +48,7 @@ import {
   Heart,
   Clock,
   ScanFace,
+  ArrowLeftRight,
   Target,
   Trophy,
   Gauge,
