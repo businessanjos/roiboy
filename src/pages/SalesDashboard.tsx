@@ -522,7 +522,7 @@ export default function SalesDashboard() {
       const uid = d.responsible_user_id as string | null;
       if (!uid) continue;
       if (d.client_id && !wonByClient.has(d.client_id)) wonByClient.set(d.client_id, uid);
-      const email = (d.contact_email || "").trim().toLowerCase();
+      const email = String(d.contact_email ?? "").trim().toLowerCase();
       if (email && !wonByEmail.has(email)) wonByEmail.set(email, uid);
       const tail = phoneTail(d.contact_phone);
       if (tail && !wonByPhoneTail.has(tail)) wonByPhoneTail.set(tail, uid);
