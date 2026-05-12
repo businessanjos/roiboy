@@ -356,7 +356,7 @@ export default function SalesDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("client_contracts")
-        .select("id, deal_id, client_id, cancelled_at, value, clients(full_name, phone_e164, emails)")
+        .select("id, deal_id, client_id, cancelled_at, value, payment_method, payment_option, installments_count, cancellation_reason, cancellation_justification, product_id, products(name, color), clients(full_name, phone_e164, emails)")
         .eq("account_id", accountId!)
         .eq("status", "cancelled")
         .not("cancelled_at", "is", null)
