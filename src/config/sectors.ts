@@ -48,6 +48,7 @@ import {
   Heart,
   Clock,
   ScanFace,
+  ArrowLeftRight,
   Target,
   Trophy,
   Gauge,
@@ -145,6 +146,8 @@ export const sectors: Sector[] = [
       { to: "/financial/balance-sheet", icon: Building2, label: "Balanço", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/aging", icon: BarChart3, label: "Aging", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/profitability", icon: DollarSign, label: "Rentabilidade", permission: PERMISSIONS.CLIENTS_VIEW },
+      // Integrações
+      { to: "/financial/integracoes/omie", icon: ArrowLeftRight, label: "Omie", permission: PERMISSIONS.CLIENTS_VIEW, group: "Integrações" },
       // Outros
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW, group: "Outros" },
       { to: "/clients", icon: Users, label: "Clientes Ativos", permission: PERMISSIONS.CLIENTS_VIEW },
