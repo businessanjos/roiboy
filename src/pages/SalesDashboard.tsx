@@ -851,43 +851,14 @@ export default function SalesDashboard() {
 
         {/* ---------- FUNIL ---------- */}
         <TabsContent value="funnel" className="space-y-4 mt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Deals criados</CardDescription>
-                <CardTitle className="text-3xl">
-                  {(deals || []).length}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-muted-foreground">
-                no período selecionado
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Conversão (Win Rate)</CardDescription>
-                <CardTitle className="text-3xl">{fmtPct(winRate)}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-muted-foreground">
-                {wonCount} ganhos sobre {allClosed} fechados
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Deals parados</CardDescription>
-                <CardTitle
-                  className={cn(
-                    "text-3xl",
-                    stagnated > 0 && "text-amber-600 dark:text-amber-400"
-                  )}
-                >
-                  {stagnated}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-muted-foreground">
-                sem mover de etapa há mais de 14 dias
-              </CardContent>
-            </Card>
+          <div className="flex items-center justify-between -mb-2">
+            <span className="text-xs text-muted-foreground">Indicadores do funil</span>
+            <Button variant="ghost" size="sm" onClick={() => setPickerOpen("funnel")}>
+              <Settings2 className="w-4 h-4 mr-1.5" /> Personalizar KPIs
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {renderKpis("funnel")}
           </div>
 
           <Card>
