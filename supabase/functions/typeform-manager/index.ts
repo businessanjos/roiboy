@@ -150,10 +150,12 @@ Deno.serve(async (req) => {
 
     // ----- GET dashboard data (funnel) -----
     if (action === "get_dashboard") {
-      const { form_id, days = 30, since: sinceArg, until: untilArg } = body;
+      const { form_id, days = 30, since: sinceArg, until: untilArg, lifetime: lifetimeFlag } = body;
       // Support either a custom range (since/until ISO date) or a rolling window in days.
       const since = sinceArg ? new Date(sinceArg).toISOString() : new Date(Date.now() - days * 86400_000).toISOString();
       const untilISO = untilArg ? new Date(new Date(untilArg).setHours(23, 59, 59, 999)).toISOString() : null;
+      // Lifetime mode = use cached snapshot (full history). Period mode = call Typeform Insights with from/to.
+      const isLifetime = !!lifetimeFlag || Number(days) >= 36500;
       const isAll = !form_id || form_id === "__all__";
 
       // Resolve form ids + titles in scope (title is needed to extract the [TAG] used as Origem da Venda)
