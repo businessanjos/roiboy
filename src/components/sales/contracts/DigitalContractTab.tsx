@@ -54,7 +54,7 @@ const FIXED_CONTRACTADA_SIGNERS: SignerDraft[] = [
     enabled: true,
     role: "representante_legal",
     name: "Everton Pieri",
-    email: "coachevertonsantos@gmail.com",
+    email: "everton@anjosbusiness.com.br",
     phone: "",
   },
   {
