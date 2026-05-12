@@ -38,6 +38,10 @@ import {
   ShieldAlert,
   Filter,
   Activity,
+  CalendarCheck,
+  UserX,
+  Clock,
+  TrendingDown,
 } from "lucide-react";
 
 import {
