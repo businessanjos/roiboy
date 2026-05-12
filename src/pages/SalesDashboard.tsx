@@ -503,27 +503,68 @@ export default function SalesDashboard() {
       .sort((a, b) => b.rate - a.rate);
   }, [teamMetrics, heldMeetingsRows]);
 
-  // Churn por vendedor
+  // Churn por vendedor (com fallback histórico p/ contratos sem deal_id)
   const churnByRep = useMemo(() => {
     const ownerMap = new Map((churnDealOwners || []).map((d: any) => [d.id, d.responsible_user_id]));
     const userInfo = new Map(teamMetrics.map((m) => [m.user_id, { name: m.user_name, avatar: m.user_avatar }]));
+
+    // Indexa won deals históricos para fallback
+    const wonByClient = new Map<string, string>();
+    const wonByEmail = new Map<string, string>();
+    const wonByPhoneTail = new Map<string, string>();
+    const phoneTail = (raw: string | null | undefined) => {
+      const digits = (raw || "").replace(/\D/g, "");
+      return digits.length >= 8 ? digits.slice(-8) : "";
+    };
+    // wonDealsForChurnMatch já vem ordenado por won_at desc → o primeiro registro
+    // por chave é o mais recente; preserva esse com setIfAbsent.
+    for (const d of wonDealsForChurnMatch || []) {
+      const uid = d.responsible_user_id as string | null;
+      if (!uid) continue;
+      if (d.client_id && !wonByClient.has(d.client_id)) wonByClient.set(d.client_id, uid);
+      const email = (d.contact_email || "").trim().toLowerCase();
+      if (email && !wonByEmail.has(email)) wonByEmail.set(email, uid);
+      const tail = phoneTail(d.contact_phone);
+      if (tail && !wonByPhoneTail.has(tail)) wonByPhoneTail.set(tail, uid);
+    }
+
+    const resolveOwner = (c: any): string | null => {
+      if (c.deal_id) {
+        const direct = ownerMap.get(c.deal_id);
+        if (direct) return direct as string;
+      }
+      // fallback por client_id
+      if (c.client_id && wonByClient.has(c.client_id)) return wonByClient.get(c.client_id)!;
+      const cl = c.clients || {};
+      // fallback por e-mail
+      const emails: string[] = Array.isArray(cl.emails) ? cl.emails : [];
+      for (const e of emails) {
+        const k = (e || "").trim().toLowerCase();
+        if (k && wonByEmail.has(k)) return wonByEmail.get(k)!;
+      }
+      // fallback por telefone (últimos 8 dígitos)
+      const tail = phoneTail(cl.phone_e164);
+      if (tail && wonByPhoneTail.has(tail)) return wonByPhoneTail.get(tail)!;
+      return null;
+    };
+
     const counts = new Map<string, { name: string; avatar: string | null; count: number; value: number }>();
     let unassigned = 0;
     let unassignedValue = 0;
     for (const c of churnContracts || []) {
-      const uid = (c as any).deal_id ? ownerMap.get((c as any).deal_id) : null;
+      const uid = resolveOwner(c);
       const val = Number((c as any).value || 0);
       if (uid) {
-        const info = userInfo.get(uid as string);
-        const cur = counts.get(uid as string) || {
-          name: info?.name || "Sem nome",
+        const info = userInfo.get(uid);
+        const cur = counts.get(uid) || {
+          name: info?.name || "Vendedor (histórico)",
           avatar: info?.avatar || null,
           count: 0,
           value: 0,
         };
         cur.count += 1;
         cur.value += val;
-        counts.set(uid as string, cur);
+        counts.set(uid, cur);
       } else {
         unassigned += 1;
         unassignedValue += val;
@@ -535,7 +576,7 @@ export default function SalesDashboard() {
       list.push({ id: "_unassigned", name: "Sem vendedor atribuído", avatar: null, count: unassigned, value: unassignedValue });
     }
     return list;
-  }, [churnContracts, churnDealOwners, teamMetrics]);
+  }, [churnContracts, churnDealOwners, wonDealsForChurnMatch, teamMetrics]);
 
 
   // ---------------------- GUARDS ----------------------
