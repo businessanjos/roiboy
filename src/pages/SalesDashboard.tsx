@@ -929,37 +929,15 @@ export default function SalesDashboard() {
 
         {/* ---------- PERFORMANCE ---------- */}
         <TabsContent value="performance" className="space-y-4 mt-4">
-          {/* KPI Row */}
+          {/* KPI Row (configurável) */}
+          <div className="flex items-center justify-between -mb-2">
+            <span className="text-xs text-muted-foreground">Indicadores de performance</span>
+            <Button variant="ghost" size="sm" onClick={() => setPickerOpen("performance")}>
+              <Settings2 className="w-4 h-4 mr-1.5" /> Personalizar KPIs
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard
-              icon={<CalendarCheck className="w-5 h-5" />}
-              label="Close rate"
-              value={fmtPct(closeRate)}
-              hint={`${wonCount} ganhos / ${heldMeetingsTotal} reuniões realizadas`}
-              loading={isLoading}
-            />
-            <KpiCard
-              icon={<Trophy className="w-5 h-5" />}
-              label="Vendas absolutas"
-              value={String(wonCount)}
-              hint={`${fmtBRL(billedValue)} faturados`}
-              loading={isLoading}
-            />
-            <KpiCard
-              icon={<Clock className="w-5 h-5" />}
-              label="Ciclo médio"
-              value={`${avgCycleDays.toFixed(0)} dias`}
-              hint="Da criação do deal até o ganho"
-              loading={isLoading}
-            />
-            <KpiCard
-              icon={<UserX className="w-5 h-5" />}
-              label="No-show"
-              value={String(noShowTotal)}
-              hint="Reuniões agendadas e não comparecidas"
-              loading={isLoading}
-              warn={noShowTotal > 0}
-            />
+            {renderKpis("performance")}
           </div>
 
           {/* Close rate por executivo */}
