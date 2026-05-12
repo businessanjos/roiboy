@@ -297,7 +297,7 @@ export default function SalesDashboard() {
   const sourceData = useMemo(() => {
     const map = new Map<string, { count: number; value: number }>();
     for (const d of wonDeals || []) {
-      const src = (d.source || "Sem origem").trim() || "Sem origem";
+      const src = (String(d.source ?? "") || "Sem origem").trim() || "Sem origem";
       const cur = map.get(src) || { count: 0, value: 0 };
       cur.count += 1;
       cur.value += Number(d.received_value ?? d.value ?? 0);
@@ -450,7 +450,7 @@ export default function SalesDashboard() {
   const sourceConversion = useMemo(() => {
     const map = new Map<string, { total: number; won: number; value: number }>();
     for (const d of deals || []) {
-      const src = ((d as any).source || "Sem origem").trim() || "Sem origem";
+      const src = (String((d as any).source ?? "") || "Sem origem").trim() || "Sem origem";
       const cur = map.get(src) || { total: 0, won: 0, value: 0 };
       cur.total += 1;
       if ((d as any).status === "won") {
