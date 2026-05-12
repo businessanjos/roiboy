@@ -634,38 +634,100 @@ export default function SalesDashboard() {
   const churnTotalCount = churnByRep.reduce((a, r) => a + r.count, 0);
   const churnTotalValue = churnByRep.reduce((a, r) => a + r.value, 0);
 
+  // Métricas derivadas extras
+  const annualProgress = annualGoal > 0 ? Math.min(100, (billedValue / annualGoal) * 100) : 0;
+  const annualGap = Math.max(0, annualGoal - billedValue);
+  const avgBilledTicket = wonCount > 0 ? billedValue / wonCount : 0;
+  const lossRate = allClosed > 0 ? (lostCount / allClosed) * 100 : 0;
+  const createdToWon = (deals || []).length > 0 ? (wonCount / (deals || []).length) * 100 : 0;
+  const meetingsPerWon = wonCount > 0 ? heldMeetingsTotal / wonCount : 0;
+  const noShowRate = (heldMeetingsTotal + noShowTotal) > 0 ? (noShowTotal / (heldMeetingsTotal + noShowTotal)) * 100 : 0;
+  const activeReps = teamMetrics.filter((m) => (m.won_deals || 0) > 0).length;
+  const avgWonPerRep = activeReps > 0 ? wonCount / activeReps : 0;
+  const avgInstallments = (() => {
+    const arr = (churnContracts || []).map((c: any) => Number(c.installments_count || 1)).filter((n) => n > 0);
+    return arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  })();
+  const avgOpenValue = (openDeals || []).length > 0 ? openValue / (openDeals || []).length : 0;
+  const stagnatedValue = useMemo(() => {
+    const limit = subDays(new Date(), 14);
+    return (openDeals || [])
+      .filter((d) => {
+        const ref = d.stage_changed_at ? new Date(d.stage_changed_at) : null;
+        return !ref || ref < limit;
+      })
+      .reduce((a, d) => a + Number(d.value || 0), 0);
+  }, [openDeals]);
+  const pipelineCoverage = monthlyGap > 0 ? (openValue / monthlyGap) : 0;
+  const churnRate = wonCount > 0 ? (churnTotalCount / wonCount) * 100 : 0;
+  const avgChurnTicket = churnTotalCount > 0 ? churnTotalValue / churnTotalCount : 0;
+  const netRevenue = wonValue - churnTotalValue;
+  const topSource = sourceConversion[0];
+  const bestRep = closeRateByRep[0];
+
   const KPI_CATALOG: Record<string, KpiOption & {
     icon: JSX.Element;
     value: string;
     hint?: string;
     warn?: boolean;
   }> = {
+    // ===== Receita =====
     received: { id: "received", label: "Receita recebida", description: "Soma de received_value das vendas ganhas", icon: <DollarSign className="w-5 h-5" />, value: fmtBRL(wonValue), hint: `${wonCount} venda${wonCount === 1 ? "" : "s"}` },
     billed: { id: "billed", label: "Faturamento", description: "Valor bruto vendido (independente de parcelamento)", icon: <DollarSign className="w-5 h-5" />, value: fmtBRL(billedValue), hint: `${wonCount} venda${wonCount === 1 ? "" : "s"}` },
-    ticket: { id: "ticket", label: "Ticket médio", description: "Receita recebida ÷ vendas", icon: <Trophy className="w-5 h-5" />, value: fmtBRL(avgTicket), hint: "Por venda ganha" },
+    ticket: { id: "ticket", label: "Ticket médio (recebido)", description: "Receita recebida ÷ vendas", icon: <Trophy className="w-5 h-5" />, value: fmtBRL(avgTicket), hint: "Por venda ganha" },
+    avg_billed_ticket: { id: "avg_billed_ticket", label: "Ticket médio (faturado)", description: "Faturamento bruto ÷ vendas", icon: <Trophy className="w-5 h-5" />, value: fmtBRL(avgBilledTicket), hint: "Por venda ganha" },
     monthly_progress: { id: "monthly_progress", label: "% da meta mensal", description: "Faturamento sobre meta do mês", icon: <Target className="w-5 h-5" />, value: fmtPct(monthlyProgress), hint: `${fmtBRL(billedValue)} de ${fmtBRL(monthlyGoal)}` },
-    monthly_gap: { id: "monthly_gap", label: "Gap p/ meta mensal", description: "Quanto falta para bater a meta", icon: <Target className="w-5 h-5" />, value: fmtBRL(monthlyGap), hint: monthlyGap > 0 ? "ainda faltam" : "meta batida", warn: monthlyGap > 0 && monthlyGoal > 0 },
+    monthly_gap: { id: "monthly_gap", label: "Gap p/ meta mensal", description: "Quanto falta para bater a meta do mês", icon: <Target className="w-5 h-5" />, value: fmtBRL(monthlyGap), hint: monthlyGap > 0 ? "ainda faltam" : "meta batida", warn: monthlyGap > 0 && monthlyGoal > 0 },
+    annual_progress: { id: "annual_progress", label: "% da meta anual", description: "Faturamento sobre meta anual", icon: <Gauge className="w-5 h-5" />, value: fmtPct(annualProgress), hint: `${fmtBRL(billedValue)} de ${fmtBRL(annualGoal)}` },
+    annual_gap: { id: "annual_gap", label: "Gap p/ meta anual", description: "Quanto falta para bater a meta anual", icon: <Gauge className="w-5 h-5" />, value: fmtBRL(annualGap), hint: annualGap > 0 ? "ainda faltam" : "meta anual batida", warn: annualGap > 0 && annualGoal > 0 },
+    net_revenue: { id: "net_revenue", label: "Receita líquida (− churn)", description: "Receita recebida menos contratos cancelados", icon: <Wallet className="w-5 h-5" />, value: fmtBRL(netRevenue), hint: `${fmtBRL(wonValue)} − ${fmtBRL(churnTotalValue)}` },
+
+    // ===== Conversão =====
     win_rate: { id: "win_rate", label: "Win rate", description: "Ganhos sobre fechados (ganhos + perdidos)", icon: <TrendingUp className="w-5 h-5" />, value: fmtPct(winRate), hint: `${wonCount} ganhos · ${lostCount} perdas` },
-    close_rate: { id: "close_rate", label: "Close rate", description: "Ganhos sobre reuniões realizadas", icon: <CalendarCheck className="w-5 h-5" />, value: fmtPct(closeRate), hint: `${wonCount} ganhos / ${heldMeetingsTotal} reuniões` },
+    loss_rate: { id: "loss_rate", label: "Loss rate", description: "Perdidos sobre fechados", icon: <TrendingDown className="w-5 h-5" />, value: fmtPct(lossRate), hint: `${lostCount} de ${allClosed}`, warn: lossRate > 50 },
+    close_rate: { id: "close_rate", label: "Close rate (reuniões)", description: "Ganhos sobre reuniões realizadas", icon: <CalendarCheck className="w-5 h-5" />, value: fmtPct(closeRate), hint: `${wonCount} / ${heldMeetingsTotal} reuniões` },
+    created_to_won: { id: "created_to_won", label: "Conversão deal → venda", description: "Ganhos sobre deals criados no período", icon: <Percent className="w-5 h-5" />, value: fmtPct(createdToWon), hint: `${wonCount} de ${(deals || []).length}` },
     won_count: { id: "won_count", label: "Vendas absolutas", description: "Total de deals ganhos no período", icon: <Trophy className="w-5 h-5" />, value: String(wonCount), hint: `${fmtBRL(billedValue)} faturados` },
-    lost_count: { id: "lost_count", label: "Deals perdidos", description: "Total de deals marcados como perdidos", icon: <TrendingDown className="w-5 h-5" />, value: String(lostCount), hint: `${fmtPct(allClosed > 0 ? (lostCount / allClosed) * 100 : 0)} dos fechados` },
+    lost_count: { id: "lost_count", label: "Deals perdidos", description: "Total de deals marcados como perdidos", icon: <TrendingDown className="w-5 h-5" />, value: String(lostCount), hint: `${fmtPct(lossRate)} dos fechados` },
+    top_source_conv: { id: "top_source_conv", label: "Melhor origem", description: "Origem com maior volume de deals", icon: <Award className="w-5 h-5" />, value: topSource?.name || "—", hint: topSource ? `${fmtPct(topSource.conv)} conv · ${topSource.won}/${topSource.total}` : "sem dados" },
+    best_rep: { id: "best_rep", label: "Melhor close rate", description: "Vendedor com maior close rate", icon: <Award className="w-5 h-5" />, value: bestRep?.name || "—", hint: bestRep ? `${fmtPct(bestRep.rate)} · ${bestRep.won}/${bestRep.held}` : "sem dados" },
+
+    // ===== Atividade =====
     avg_cycle: { id: "avg_cycle", label: "Ciclo médio de vendas", description: "Dias entre criação do deal e ganho", icon: <Clock className="w-5 h-5" />, value: `${avgCycleDays.toFixed(0)} dias`, hint: "Da criação ao ganho" },
     no_show: { id: "no_show", label: "No-show", description: "Reuniões agendadas e não comparecidas", icon: <UserX className="w-5 h-5" />, value: String(noShowTotal), hint: "no período", warn: noShowTotal > 0 },
+    no_show_rate: { id: "no_show_rate", label: "Taxa de no-show", description: "No-show ÷ (no-show + realizadas)", icon: <UserX className="w-5 h-5" />, value: fmtPct(noShowRate), hint: `${noShowTotal} de ${noShowTotal + heldMeetingsTotal}`, warn: noShowRate > 20 },
     held_meetings: { id: "held_meetings", label: "Reuniões realizadas", description: "Reuniões/calls realizadas pela equipe", icon: <CalendarCheck className="w-5 h-5" />, value: String(heldMeetingsTotal), hint: "no período" },
+    meetings_per_won: { id: "meetings_per_won", label: "Reuniões por venda", description: "Quantas reuniões em média p/ fechar uma venda", icon: <CalendarDays className="w-5 h-5" />, value: meetingsPerWon > 0 ? meetingsPerWon.toFixed(1) : "—", hint: `${heldMeetingsTotal} reuniões / ${wonCount} vendas` },
+    created: { id: "created", label: "Deals criados", description: "Novos deals no período", icon: <ArrowUpRight className="w-5 h-5" />, value: String((deals || []).length), hint: "no período" },
+    avg_won_per_rep: { id: "avg_won_per_rep", label: "Vendas por vendedor", description: "Média de vendas por vendedor ativo", icon: <Users2 className="w-5 h-5" />, value: avgWonPerRep > 0 ? avgWonPerRep.toFixed(1) : "—", hint: `${activeReps} vendedor${activeReps === 1 ? "" : "es"} ativo${activeReps === 1 ? "" : "s"}` },
+
+    // ===== Pipeline =====
     open_count: { id: "open_count", label: "Deals abertos", description: "Deals atualmente no pipeline", icon: <Activity className="w-5 h-5" />, value: String((openDeals || []).length), hint: `${stagnated} parados >14d`, warn: stagnated > 0 },
     open_value: { id: "open_value", label: "Pipeline aberto", description: "Valor total dos deals abertos", icon: <Activity className="w-5 h-5" />, value: fmtBRL(openValue), hint: `${(openDeals || []).length} deals · ${stagnated} parados >14d`, warn: stagnated > 0 },
+    avg_open_value: { id: "avg_open_value", label: "Ticket médio do pipeline", description: "Valor médio por deal aberto", icon: <Layers className="w-5 h-5" />, value: fmtBRL(avgOpenValue), hint: `${(openDeals || []).length} deals abertos` },
     stagnated: { id: "stagnated", label: "Deals parados >14d", description: "Sem mudar de etapa há mais de 14 dias", icon: <AlertTriangle className="w-5 h-5" />, value: String(stagnated), hint: "Risco de esfriar", warn: stagnated > 0 },
-    created: { id: "created", label: "Deals criados", description: "Novos deals no período", icon: <ArrowUpRight className="w-5 h-5" />, value: String((deals || []).length), hint: "no período" },
+    stagnated_value: { id: "stagnated_value", label: "Valor parado >14d", description: "Soma do valor de deals estagnados", icon: <AlertTriangle className="w-5 h-5" />, value: fmtBRL(stagnatedValue), hint: `${stagnated} deals`, warn: stagnatedValue > 0 },
+    pipeline_coverage: { id: "pipeline_coverage", label: "Cobertura do pipeline", description: "Pipeline aberto ÷ gap da meta mensal", icon: <Gauge className="w-5 h-5" />, value: monthlyGap > 0 ? `${pipelineCoverage.toFixed(1)}x` : "—", hint: monthlyGap > 0 ? `Pipeline cobre ${pipelineCoverage.toFixed(1)}x o gap` : "meta batida", warn: monthlyGap > 0 && pipelineCoverage < 3 },
+
+    // ===== Churn =====
     churn_count: { id: "churn_count", label: "Cancelamentos", description: "Contratos cancelados no período", icon: <TrendingDown className="w-5 h-5" />, value: String(churnTotalCount), hint: `${fmtBRL(churnTotalValue)} cancelados`, warn: churnTotalCount > 0 },
     churn_value: { id: "churn_value", label: "Valor cancelado", description: "Soma do valor de contratos cancelados", icon: <TrendingDown className="w-5 h-5" />, value: fmtBRL(churnTotalValue), hint: `${churnTotalCount} contrato${churnTotalCount === 1 ? "" : "s"}`, warn: churnTotalValue > 0 },
+    churn_rate: { id: "churn_rate", label: "Taxa de churn", description: "Cancelamentos ÷ vendas no período", icon: <Percent className="w-5 h-5" />, value: fmtPct(churnRate), hint: `${churnTotalCount} cancel. / ${wonCount} vendas`, warn: churnRate > 10 },
+    avg_churn_ticket: { id: "avg_churn_ticket", label: "Ticket médio cancelado", description: "Valor médio dos contratos cancelados", icon: <TrendingDown className="w-5 h-5" />, value: fmtBRL(avgChurnTicket), hint: `${churnTotalCount} contrato${churnTotalCount === 1 ? "" : "s"}` },
+    avg_installments: { id: "avg_installments", label: "Média de parcelas (churn)", description: "Parcelamento médio dos contratos cancelados", icon: <Layers className="w-5 h-5" />, value: avgInstallments > 0 ? `${avgInstallments.toFixed(1)}x` : "—", hint: "no período" },
   };
 
   const KPI_CATEGORY: Record<string, string> = {
-    received: "Receita", billed: "Receita", ticket: "Receita", monthly_progress: "Receita", monthly_gap: "Receita",
-    win_rate: "Conversão", close_rate: "Conversão", won_count: "Conversão", lost_count: "Conversão",
-    created: "Atividade", held_meetings: "Atividade", no_show: "Atividade", avg_cycle: "Atividade",
-    open_count: "Pipeline", open_value: "Pipeline", stagnated: "Pipeline",
-    churn_count: "Churn", churn_value: "Churn",
+    received: "Receita", billed: "Receita", ticket: "Receita", avg_billed_ticket: "Receita",
+    monthly_progress: "Receita", monthly_gap: "Receita", annual_progress: "Receita", annual_gap: "Receita", net_revenue: "Receita",
+    win_rate: "Conversão", loss_rate: "Conversão", close_rate: "Conversão", created_to_won: "Conversão",
+    won_count: "Conversão", lost_count: "Conversão", top_source_conv: "Conversão", best_rep: "Conversão",
+    avg_cycle: "Atividade", no_show: "Atividade", no_show_rate: "Atividade", held_meetings: "Atividade",
+    meetings_per_won: "Atividade", created: "Atividade", avg_won_per_rep: "Atividade",
+    open_count: "Pipeline", open_value: "Pipeline", avg_open_value: "Pipeline",
+    stagnated: "Pipeline", stagnated_value: "Pipeline", pipeline_coverage: "Pipeline",
+    churn_count: "Churn", churn_value: "Churn", churn_rate: "Churn",
+    avg_churn_ticket: "Churn", avg_installments: "Churn",
   };
   const KPI_OPTIONS: KpiOption[] = Object.values(KPI_CATALOG).map(({ id, label, description }) => ({ id, label, description, category: KPI_CATEGORY[id] || "Outros" }));
 
