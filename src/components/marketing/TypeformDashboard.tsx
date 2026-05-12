@@ -426,8 +426,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="period" label="Lead no Roy" value={funnel.matched_responses} icon={Users}
                       sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : 'matches no período'}
-                      source="DB · matching engine"
-                      tip="Respostas do período que conseguimos cruzar com um lead OU deal existente no Roy (por email exato ou últimos 9 dígitos do telefone). Conta cada resposta única — se ela match com lead E deal, conta apenas 1."
+                      source="Roy"
+                      tip="Respostas do período que conseguimos identificar como um lead ou uma negociação que já existia no Roy (cruzando pelo e-mail ou pelo telefone). Cada pessoa conta uma vez só."
                       onDetails={() => setDetailsCard({
                         label: 'Lead no Roy',
                         source: 'DB · matching engine',
