@@ -54,12 +54,14 @@ const fmtTime = (s: number) => {
 export function TypeformDashboard() {
   const [forms, setForms] = useState<TrackedForm[]>([]);
   const [selectedForm, setSelectedForm] = useState<string>('');
-  const [period, setPeriod] = useState<'today' | '7' | '30' | 'this_year' | 'this_month' | 'custom'>('30');
+  const [period, setPeriod] = useState<'today' | '7' | '30' | 'this_year' | 'this_month' | 'custom' | 'lifetime'>('30');
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const isCustom = period === 'custom';
+  const isLifetime = period === 'lifetime';
   const customReady = isCustom && !!customRange?.from && !!customRange?.to;
   const periodPayload = useMemo(() => {
     const now = new Date();
+    if (period === 'lifetime') return { days: 36500 };
     if (period === 'today') return { since: format(startOfDay(now), 'yyyy-MM-dd'), until: format(endOfDay(now), 'yyyy-MM-dd') };
     if (period === 'this_month') return { since: format(startOfMonth(now), 'yyyy-MM-dd'), until: format(endOfMonth(now), 'yyyy-MM-dd') };
     if (period === 'this_year') return { since: format(startOfYear(now), 'yyyy-MM-dd'), until: format(endOfYear(now), 'yyyy-MM-dd') };
@@ -68,7 +70,7 @@ export function TypeformDashboard() {
     }
     return { days: Number(period) || 30 };
   }, [period, customReady, customRange]);
-  const periodLabel = period === 'today' ? 'hoje' : period === 'this_month' ? 'este mês' : period === 'this_year' ? 'este ano' : period === 'custom' && customReady ? `${format(customRange!.from!, 'dd/MM/yy')} – ${format(customRange!.to!, 'dd/MM/yy')}` : `últimos ${period}d`;
+  const periodLabel = period === 'lifetime' ? 'histórico total' : period === 'today' ? 'hoje' : period === 'this_month' ? 'este mês' : period === 'this_year' ? 'este ano' : period === 'custom' && customReady ? `${format(customRange!.from!, 'dd/MM/yy')} – ${format(customRange!.to!, 'dd/MM/yy')}` : `últimos ${period}d`;
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
   const [wonDeals, setWonDeals] = useState<any[]>([]);
   const [wonOpen, setWonOpen] = useState(false);
@@ -190,12 +192,17 @@ export function TypeformDashboard() {
               </CardTitle>
               <CardDescription className="space-y-1">
                 <span className="block">
-                  <Badge variant="outline" className="mr-1.5 border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime</Badge>
-                  Visitas, Iniciados e Tempo médio vêm do Typeform Insights (histórico total do formulário, ignora o período).
-                </span>
-                <span className="block">
-                  <Badge variant="outline" className="mr-1.5 border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período</Badge>
-                  Submissões, Completados, Lead no Roy e Ganhos consideram apenas o intervalo selecionado.
+                  {isLifetime ? (
+                    <>
+                      <Badge variant="outline" className="mr-1.5 border-sky-500/40 text-sky-500 bg-sky-500/5">Histórico total</Badge>
+                      Mostrando todos os dados desde a criação dos formulários.
+                    </>
+                  ) : (
+                    <>
+                      <Badge variant="outline" className="mr-1.5 border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · {periodLabel}</Badge>
+                      Todos os cards consideram apenas o intervalo selecionado. Para ver Visitas, Iniciados e Tempo médio, escolha "Histórico total".
+                    </>
+                  )}
                 </span>
                 {consistency && (
                   <span className="block pt-1">
@@ -223,7 +230,7 @@ export function TypeformDashboard() {
                 </Select>
               )}
               <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
-                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="today">Hoje</SelectItem>
                   <SelectItem value="7">Últimos 7d</SelectItem>
@@ -231,6 +238,7 @@ export function TypeformDashboard() {
                   <SelectItem value="this_year">Este ano</SelectItem>
                   <SelectItem value="this_month">Este mês</SelectItem>
                   <SelectItem value="custom">Personalizado</SelectItem>
+                  <SelectItem value="lifetime">Histórico total</SelectItem>
                 </SelectContent>
               </Select>
               {isCustom && (
@@ -319,11 +327,12 @@ export function TypeformDashboard() {
                 );
               })()}
               <div className="space-y-4">
+                {isLifetime && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime · histórico total</Badge>
+                    <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">Histórico total</Badge>
                     <span className="text-xs text-muted-foreground">
-                      {selectedForm === '__all__' ? `somatório de ${forms.length} funis` : 'não muda com o filtro de período'}
+                      {selectedForm === '__all__' ? `somatório de ${forms.length} funis` : 'desde a criação do form'}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -382,10 +391,11 @@ export function TypeformDashboard() {
                     />
                   </div>
                 </div>
+                )}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · {periodLabel}</Badge>
-                    <span className="text-xs text-muted-foreground">filtrado pelo intervalo selecionado</span>
+                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">{isLifetime ? 'Histórico total' : `Período · ${periodLabel}`}</Badge>
+                    <span className="text-xs text-muted-foreground">{isLifetime ? 'todas as respostas recebidas' : 'filtrado pelo intervalo selecionado'}</span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <FunnelCard
