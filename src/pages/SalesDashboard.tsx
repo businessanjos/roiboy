@@ -604,9 +604,10 @@ export default function SalesDashboard() {
       </div>
 
       <Tabs defaultValue="goals" className="w-full">
-        <TabsList className="grid grid-cols-4 w-full md:w-fit">
+        <TabsList className="grid grid-cols-5 w-full md:w-fit">
           <TabsTrigger value="goals">Metas</TabsTrigger>
           <TabsTrigger value="funnel">Funil</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="team">Equipe</TabsTrigger>
           <TabsTrigger value="origin">Origem & Perdas</TabsTrigger>
         </TabsList>
