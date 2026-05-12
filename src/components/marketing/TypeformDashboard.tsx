@@ -330,8 +330,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="lifetime" label="Visitas" value={funnel.visits} icon={Users}
                       sub="desde a criação do form"
-                      source="Typeform Insights API"
-                      tip="Quantidade total de pessoas que abriram o link/embed do formulário, desde a criação. Vem do endpoint /insights/{form_id}/summary do Typeform (campo total_visits). Não é filtrado pelo período selecionado."
+                      source="Typeform"
+                      tip="Quantas pessoas abriram o link do formulário desde que ele foi criado. É o histórico total — não muda quando você troca o período."
                       onDetails={() => setDetailsCard({
                         label: 'Visitas',
                         source: 'Typeform Insights API',
@@ -348,8 +348,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="lifetime" label="Iniciados" value={funnel.starts} icon={TrendingUp}
                       sub={funnel.visits ? `${((funnel.starts/funnel.visits)*100).toFixed(1)}% das visitas` : 'desde a criação do form'}
-                      source="Typeform Insights API"
-                      tip="Visitas que avançaram além da welcome screen e visualizaram o primeiro campo real do form. Calculado a partir de fields[0].views do Insights (excluindo welcome/thankyou screens). Histórico total."
+                      source="Typeform"
+                      tip="Quem abriu o formulário e começou a responder, indo além da tela inicial de boas-vindas. Também é histórico total."
                       onDetails={() => setDetailsCard({
                         label: 'Iniciados',
                         source: 'Typeform Insights API',
@@ -366,8 +366,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="lifetime" label="Tempo médio" value={fmtTime(funnel.avg_time)} icon={Clock}
                       sub="por resposta (histórico)"
-                      source="Typeform Insights API"
-                      tip="Tempo médio (segundos) que cada respondente leva para completar o formulário. Vem de form.summary.average_time. Quando 'Todos os funis' está selecionado, é uma média ponderada por visitas."
+                      source="Typeform"
+                      tip="Tempo médio que cada pessoa leva para responder o formulário do começo ao fim. Quando você está vendo todos os funis juntos, é uma média que dá mais peso aos formulários com mais visitas."
                       onDetails={() => setDetailsCard({
                         label: 'Tempo médio',
                         source: 'Typeform Insights API',
@@ -391,8 +391,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="period" label="Submissões" value={funnel.submissions} icon={CheckCircle2}
                       sub={`recebidas ${periodLabel}`}
-                      source="DB · typeform_responses"
-                      tip={`Total de respostas (completas + parciais) salvas no nosso banco via webhook ${periodLabel}. Conta linhas em typeform_responses filtradas por form_id selecionado e janela: ${periodLabel}.`}
+                      source="Roy"
+                      tip={`Quantas pessoas enviaram alguma resposta (mesmo sem terminar o formulário) ${periodLabel}. Conta apenas o que chegou no Roy nesse período.`}
                       onDetails={() => setDetailsCard({
                         label: 'Submissões',
                         source: 'DB · typeform_responses',
@@ -408,8 +408,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="period" label="Completados" value={funnel.completed} icon={CheckCircle2}
                       sub={`${funnel.completion_rate.toFixed(1)}% das submissões`}
-                      source="DB · typeform_responses"
-                      tip={`Subset das submissões com submitted_at preenchido (respondente chegou até a thank-you screen). Taxa = completados / submissões no período.`}
+                      source="Roy"
+                      tip="Pessoas que responderam o formulário até o final (chegaram na tela de agradecimento). A taxa mostra quantos completaram, do total de quem começou no período."
                       highlight
                       onDetails={() => setDetailsCard({
                         label: 'Completados',
@@ -426,8 +426,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="period" label="Lead no Roy" value={funnel.matched_responses} icon={Users}
                       sub={funnel.completed ? `${((funnel.matched_responses/funnel.completed)*100).toFixed(1)}% dos completados` : 'matches no período'}
-                      source="DB · matching engine"
-                      tip="Respostas do período que conseguimos cruzar com um lead OU deal existente no Roy (por email exato ou últimos 9 dígitos do telefone). Conta cada resposta única — se ela match com lead E deal, conta apenas 1."
+                      source="Roy"
+                      tip="Respostas do período que conseguimos identificar como um lead ou uma negociação que já existia no Roy (cruzando pelo e-mail ou pelo telefone). Cada pessoa conta uma vez só."
                       onDetails={() => setDetailsCard({
                         label: 'Lead no Roy',
                         source: 'DB · matching engine',
@@ -446,8 +446,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="period" label="Ganhos" value={funnel.won} icon={Trophy}
                       sub={fmtBRL(funnel.won_value)}
-                      source="DB · deals (status=won)"
-                      tip="Quantos dos deals matched a partir das respostas do período estão atualmente com status='won' na tabela deals. Valor exibido = soma de deals.value desses deals ganhos. Deal IDs são deduplicados antes da consulta. Clique para ver a lista."
+                      source="Roy"
+                      tip="Quantas dessas respostas viraram venda fechada (status Ganho) no Roy. O valor mostrado é a soma do valor desses contratos. Clique no card para ver a lista."
                       highlight
                       onClick={funnel.won > 0 ? () => setWonOpen(true) : undefined}
                       onDetails={() => setDetailsCard({
