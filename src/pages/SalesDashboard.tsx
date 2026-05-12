@@ -548,9 +548,10 @@ export default function SalesDashboard() {
       return null;
     };
 
-    const counts = new Map<string, { name: string; avatar: string | null; count: number; value: number }>();
+    const counts = new Map<string, { name: string; avatar: string | null; count: number; value: number; contracts: any[] }>();
     let unassigned = 0;
     let unassignedValue = 0;
+    const unassignedContracts: any[] = [];
     for (const c of churnContracts || []) {
       const uid = resolveOwner(c);
       const val = Number((c as any).value || 0);
@@ -561,19 +562,22 @@ export default function SalesDashboard() {
           avatar: info?.avatar || null,
           count: 0,
           value: 0,
+          contracts: [],
         };
         cur.count += 1;
         cur.value += val;
+        cur.contracts.push(c);
         counts.set(uid, cur);
       } else {
         unassigned += 1;
         unassignedValue += val;
+        unassignedContracts.push(c);
       }
     }
     const list = Array.from(counts.entries()).map(([id, v]) => ({ id, ...v }));
     list.sort((a, b) => b.count - a.count);
     if (unassigned > 0) {
-      list.push({ id: "_unassigned", name: "Sem vendedor atribuído", avatar: null, count: unassigned, value: unassignedValue });
+      list.push({ id: "_unassigned", name: "Sem vendedor atribuído", avatar: null, count: unassigned, value: unassignedValue, contracts: unassignedContracts });
     }
     return list;
   }, [churnContracts, churnDealOwners, wonDealsForChurnMatch, teamMetrics]);
