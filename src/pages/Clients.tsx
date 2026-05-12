@@ -1393,7 +1393,16 @@ export default function Clients() {
   ];
 
   // Server-side filter handles country now; just use clients as-is
-  const filtered = clients;
+  const baseFiltered = clients;
+  const clientIdsForStatus = baseFiltered.map((c: any) => c.id);
+  const { data: financialStatusMap } = useClientsFinancialStatusBatch(clientIdsForStatus);
+  const filtered = (filterRisk === "all"
+    ? baseFiltered
+    : baseFiltered.filter((c: any) => {
+        const s = financialStatusMap?.get(c.id);
+        if (filterRisk === "ok") return !s || s.risk === "ok";
+        return s?.risk === filterRisk;
+      })) as typeof baseFiltered;
 
   const handleFieldValueChange = (clientId: string, fieldId: string, newValue: any) => {
     setFieldValues(prev => ({
