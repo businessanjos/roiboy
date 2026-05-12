@@ -192,12 +192,17 @@ export function TypeformDashboard() {
               </CardTitle>
               <CardDescription className="space-y-1">
                 <span className="block">
-                  <Badge variant="outline" className="mr-1.5 border-sky-500/40 text-sky-500 bg-sky-500/5">Lifetime</Badge>
-                  Visitas, Iniciados e Tempo médio vêm do Typeform Insights (histórico total do formulário, ignora o período).
-                </span>
-                <span className="block">
-                  <Badge variant="outline" className="mr-1.5 border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período</Badge>
-                  Submissões, Completados, Lead no Roy e Ganhos consideram apenas o intervalo selecionado.
+                  {isLifetime ? (
+                    <>
+                      <Badge variant="outline" className="mr-1.5 border-sky-500/40 text-sky-500 bg-sky-500/5">Histórico total</Badge>
+                      Mostrando todos os dados desde a criação dos formulários.
+                    </>
+                  ) : (
+                    <>
+                      <Badge variant="outline" className="mr-1.5 border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · {periodLabel}</Badge>
+                      Todos os cards consideram apenas o intervalo selecionado. Para ver Visitas, Iniciados e Tempo médio, escolha "Histórico total".
+                    </>
+                  )}
                 </span>
                 {consistency && (
                   <span className="block pt-1">
