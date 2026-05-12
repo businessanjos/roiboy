@@ -500,6 +500,26 @@ export default function SalesDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-primary" />
+                Meta do trimestre (Q{Math.floor(new Date().getMonth() / 3) + 1} {year})
+              </CardTitle>
+              <CardDescription>
+                Faturamento acumulado do trimestre atual vs. soma das metas mensais do trimestre
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <QuarterlyGoalCard
+                accountId={accountId}
+                enabled={!!accountId && allowed}
+                monthlyGoals={(goal?.monthly_goals as Record<string, number> | undefined) || {}}
+                annualGoal={annualGoal}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ---------- FUNIL ---------- */}
@@ -878,6 +898,89 @@ function YearlyGoalCard({
         <span className="text-2xl font-bold">{fmtBRL(ytd)}</span>
         <span className="text-sm text-muted-foreground">
           de {fmtBRL(annualGoal)}
+        </span>
+      </div>
+      <Progress value={pct} />
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>{pct.toFixed(0)}% atingido</span>
+        {gap > 0 && (
+          <span className="text-amber-600 dark:text-amber-400">
+            Faltam {fmtBRL(gap)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Quarterly Goal ----------
+function QuarterlyGoalCard({
+  accountId,
+  enabled,
+  monthlyGoals,
+  annualGoal,
+}: {
+  accountId?: string;
+  enabled: boolean;
+  monthlyGoals: Record<string, number>;
+  annualGoal: number;
+}) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const quarter = Math.floor(now.getMonth() / 3); // 0..3
+  const startMonth = quarter * 3;
+  const qStart = new Date(year, startMonth, 1);
+  const qEnd = new Date(year, startMonth + 3, 0, 23, 59, 59);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["sales-dashboard-quarter", accountId, year, quarter],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("deals")
+        .select("value, received_value, won_at")
+        .eq("account_id", accountId!)
+        .eq("status", "won")
+        .gte("won_at", qStart.toISOString())
+        .lte("won_at", qEnd.toISOString());
+      if (error) throw error;
+      return (data || []).reduce(
+        (acc, d) => acc + Number(d.value ?? d.received_value ?? 0),
+        0
+      );
+    },
+  });
+
+  const fallbackMonthly = annualGoal ? annualGoal / 12 : 0;
+  const quarterGoal = [0, 1, 2].reduce(
+    (acc, i) => acc + Number(monthlyGoals[String(startMonth + i)] ?? fallbackMonthly),
+    0
+  );
+
+  if (quarterGoal === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Defina as metas mensais (ou anual) em{" "}
+        <Link to="/insights" className="text-primary underline">
+          Insights → Metas da empresa
+        </Link>{" "}
+        para acompanhar o trimestre.
+      </p>
+    );
+  }
+
+  if (isLoading) return <Skeleton className="h-20 w-full" />;
+
+  const billed = data || 0;
+  const pct = quarterGoal > 0 ? Math.min(100, (billed / quarterGoal) * 100) : 0;
+  const gap = Math.max(0, quarterGoal - billed);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-baseline justify-between">
+        <span className="text-2xl font-bold">{fmtBRL(billed)}</span>
+        <span className="text-sm text-muted-foreground">
+          de {fmtBRL(quarterGoal)}
         </span>
       </div>
       <Progress value={pct} />
