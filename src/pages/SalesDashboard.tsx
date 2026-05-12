@@ -1263,6 +1263,66 @@ export default function SalesDashboard() {
       <div className="text-xs text-muted-foreground text-center pt-4">
         {" "}
       </div>
+
+      <Dialog open={!!churnDetailRep} onOpenChange={(o) => !o && setChurnDetailRep(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Cancelamentos · {churnDetailRep?.name}</DialogTitle>
+            <DialogDescription>
+              {churnDetailRep?.contracts.length || 0} contrato(s) cancelado(s) no período · Total{" "}
+              {fmtBRL((churnDetailRep?.contracts || []).reduce((a, c: any) => a + Number(c.value || 0), 0))}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-muted-foreground border-b">
+                <tr>
+                  <th className="text-left py-2 px-2">Cliente</th>
+                  <th className="text-left py-2 px-2">Produto</th>
+                  <th className="text-left py-2 px-2">Pagamento</th>
+                  <th className="text-right py-2 px-2">Valor</th>
+                  <th className="text-left py-2 px-2">Cancelado em</th>
+                  <th className="text-left py-2 px-2">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(churnDetailRep?.contracts || []).map((c: any) => {
+                  const inst = c.installments_count && c.installments_count > 1
+                    ? ` (${c.installments_count}x)`
+                    : "";
+                  const payment = [c.payment_method, c.payment_option].filter(Boolean).join(" · ") + inst;
+                  const productColor = c.products?.color || "#6b7280";
+                  return (
+                    <tr key={c.id} className="border-b">
+                      <td className="py-2 px-2 font-medium">{c.clients?.full_name || "—"}</td>
+                      <td className="py-2 px-2">
+                        {c.products?.name ? (
+                          <Badge style={{ backgroundColor: productColor, color: "white" }}>
+                            {c.products.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{payment.trim() || "—"}</td>
+                      <td className="py-2 px-2 text-right font-mono">{fmtBRL(Number(c.value || 0))}</td>
+                      <td className="py-2 px-2 text-muted-foreground">
+                        {c.cancelled_at ? format(new Date(c.cancelled_at), "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">
+                        {c.cancellation_reason || "—"}
+                        {c.cancellation_justification && (
+                          <div className="text-xs opacity-70 mt-0.5">{c.cancellation_justification}</div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
