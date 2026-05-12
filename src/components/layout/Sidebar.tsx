@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { roleNameMatches } from "@/lib/roles";
+import { isManagementUser } from "@/lib/access/managementRoles";
 import {
   DropdownMenu,
   DropdownMenuContent,
