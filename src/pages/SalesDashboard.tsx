@@ -84,6 +84,8 @@ import { useCompanyGoals } from "@/hooks/useCompanyGoals";
 import { useSalesTeamMetrics } from "@/hooks/useSalesTeamMetrics";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { cn } from "@/lib/utils";
+import { KpiPicker, type KpiOption } from "@/components/sales/KpiPicker";
+import { Settings2 } from "lucide-react";
 
 type PeriodKey =
   | "this_month"
