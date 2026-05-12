@@ -36,6 +36,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import OmieDashboardSection from "@/components/financial/OmieDashboardSection";
 
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -170,6 +171,9 @@ export default function FinancialDashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Dados Omie */}
+      <OmieDashboardSection />
 
       {/* KPIs principais */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
