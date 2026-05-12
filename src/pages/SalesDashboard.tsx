@@ -395,15 +395,29 @@ export default function SalesDashboard() {
     queryKey: ["sales-dashboard-held", accountId, period],
     enabled: !!accountId && allowed,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("internal_tasks")
-        .select("assigned_to, title, completed_at, activity_types!internal_tasks_activity_type_id_fkey(name)")
-        .eq("account_id", accountId!)
-        .not("completed_at", "is", null)
-        .gte("completed_at", start.toISOString())
-        .lte("completed_at", end.toISOString());
-      if (error) throw error;
-      return (data || []).filter((t: any) => {
+      // Paginar para evitar o limite default de 1000 linhas do PostgREST.
+      // Sem isso, períodos longos (ex.: trimestre) ficam capados em 1000 internal_tasks
+      // e o filtro JS por "reunião/agendamento" devolve menos do que existe de verdade.
+      const PAGE = 1000;
+      let from = 0;
+      const all: any[] = [];
+      // Hard cap de segurança em 50k linhas
+      while (from < 50000) {
+        const { data, error } = await supabase
+          .from("internal_tasks")
+          .select("assigned_to, title, completed_at, activity_types!internal_tasks_activity_type_id_fkey(name)")
+          .eq("account_id", accountId!)
+          .not("completed_at", "is", null)
+          .gte("completed_at", start.toISOString())
+          .lte("completed_at", end.toISOString())
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const batch = data || [];
+        all.push(...batch);
+        if (batch.length < PAGE) break;
+        from += PAGE;
+      }
+      return all.filter((t: any) => {
         const s = ((t.activity_types?.name || "") + " " + (t.title || "")).toLowerCase();
         return s.includes("agendamento") || s.includes("agendada") || s.includes("call comercial") || s.includes("reuniao") || s.includes("reunião") || s.includes("meeting");
       });
