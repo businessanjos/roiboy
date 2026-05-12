@@ -77,9 +77,14 @@ const formatCep = (v: string) => {
 
 const composeAddress = (p: AddressParts): string => {
   const street = [p.logradouro, p.numero].filter(Boolean).join(", ");
-  const tail = [p.complemento, p.bairro].filter(Boolean).join(" - ");
+  // Sempre usar " - " antes do bloco bairro/complemento para permitir
+  // que parseAddress separe corretamente ao reabrir o contrato.
+  const tailParts = [p.complemento, p.bairro].filter(Boolean);
+  const head = tailParts.length > 0 && street
+    ? `${street} - ${tailParts.join(", ")}`
+    : street || tailParts.join(", ");
   const cityUf = [p.cidade, p.uf].filter(Boolean).join("/");
-  return [street, tail, cityUf, p.cep ? `CEP ${p.cep}` : ""]
+  return [head, cityUf, p.cep ? `CEP ${p.cep}` : ""]
     .filter(Boolean)
     .join(", ");
 };
