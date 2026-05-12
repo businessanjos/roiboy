@@ -129,10 +129,10 @@ Deno.serve(async (req) => {
     const periodStart = start;
     const periodEnd = end;
 
-    const [receber, pagar] = await Promise.all([
-      listAllPages('financas/contareceber', 'ListarContasReceber', receberFilter, 'conta_receber_cadastro', appKey, appSecret),
-      listAllPages('financas/contapagar', 'ListarContasPagar', pagarFilter, 'conta_pagar_cadastro', appKey, appSecret),
-    ]);
+    // Serialize to avoid Omie REDUNDANT rate-limit triggered by parallel calls
+    const receber = await listAllPages('financas/contareceber', 'ListarContasReceber', receberFilter, 'conta_receber_cadastro', appKey, appSecret);
+    await sleep(500);
+    const pagar = await listAllPages('financas/contapagar', 'ListarContasPagar', pagarFilter, 'conta_pagar_cadastro', appKey, appSecret);
 
     const isPaid = (status: string) => status === 'LIQUIDADO';
     const isCancelled = (status: string) => status === 'CANCELADO';
