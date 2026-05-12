@@ -184,6 +184,7 @@ export default function SalesDashboard() {
     });
   };
 
+  const allowed = useMemo(
     () => isManagementUser(currentUser, isSuperAdmin),
     [currentUser, isSuperAdmin]
   );
