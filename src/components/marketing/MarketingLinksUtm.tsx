@@ -105,7 +105,9 @@ const emptyForm: FormState = {
 };
 
 export function MarketingLinksUtm() {
-  const { accountId, userId } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
+  const userId = currentUser?.id;
   const [links, setLinks] = useState<MarketingLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
