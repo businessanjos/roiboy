@@ -263,8 +263,11 @@ export default function FinancialCashFlowPage() {
                       );
                     }}
                   />
-                  <Bar dataKey="income" fill="#22c55e" name="Receitas" />
-                  <Bar dataKey="expenses" fill="#ef4444" name="Despesas" />
+                  <Legend />
+                  <Bar dataKey="incomePaid" stackId="in" fill="#16a34a" name="Receitas (recebido)" />
+                  <Bar dataKey="income" stackId="in" fill="#86efac" name="Receitas (previsto)" fillOpacity={0.6} />
+                  <Bar dataKey="expensesPaid" stackId="out" fill="#dc2626" name="Despesas (pago)" />
+                  <Bar dataKey="expenses" stackId="out" fill="#fca5a5" name="Despesas (previsto)" fillOpacity={0.6} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
