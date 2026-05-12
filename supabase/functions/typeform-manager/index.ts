@@ -150,10 +150,12 @@ Deno.serve(async (req) => {
 
     // ----- GET dashboard data (funnel) -----
     if (action === "get_dashboard") {
-      const { form_id, days = 30, since: sinceArg, until: untilArg } = body;
+      const { form_id, days = 30, since: sinceArg, until: untilArg, lifetime: lifetimeFlag } = body;
       // Support either a custom range (since/until ISO date) or a rolling window in days.
       const since = sinceArg ? new Date(sinceArg).toISOString() : new Date(Date.now() - days * 86400_000).toISOString();
       const untilISO = untilArg ? new Date(new Date(untilArg).setHours(23, 59, 59, 999)).toISOString() : null;
+      // Lifetime mode = use cached snapshot (full history). Period mode = call Typeform Insights with from/to.
+      const isLifetime = !!lifetimeFlag || Number(days) >= 36500;
       const isAll = !form_id || form_id === "__all__";
 
       // Resolve form ids + titles in scope (title is needed to extract the [TAG] used as Origem da Venda)
@@ -482,6 +484,51 @@ Deno.serve(async (req) => {
       const avgTime = aggAvgWeight ? Math.round(aggAvgWeighted / aggAvgWeight) : 0;
       const lifetimeCompletionRate = aggLifetimeCompletionWeight ? aggLifetimeCompletion / aggLifetimeCompletionWeight : 0;
 
+      // Lifetime baseline (cached snapshot)
+      let funnelVisits = isAll ? aggVisits : (stats?.total_visits || 0);
+      let funnelStarts = isAll ? aggStarts : (stats?.total_starts || 0);
+      let funnelAvgTime = isAll ? avgTime : (stats?.average_time_seconds || 0);
+      let insightsScope: "lifetime" | "period" = "lifetime";
+
+      // Period mode: hit Typeform Insights with from/to to get filtered visits/starts/avg_time.
+      // Falls back to lifetime snapshot silently on error so the dashboard never breaks.
+      if (!isLifetime && scopeFormIds.length) {
+        try {
+          const fromTs = Math.floor(new Date(since).getTime() / 1000);
+          const toTs = Math.floor((untilISO ? new Date(untilISO).getTime() : Date.now()) / 1000);
+          const results = await Promise.all(scopeFormIds.map(async (fid) => {
+            try {
+              const s = await tfFetch(`/insights/${fid}/summary?from=${fromTs}&to=${toTs}`, TOKEN);
+              const sum = s?.form?.summary || {};
+              const fields = s?.fields || [];
+              const first = fields.find((f: any) => f?.type !== "welcome_screen" && f?.type !== "thankyou_screen");
+              return {
+                visits: Number(sum?.total_visits || 0),
+                starts: Number(first?.views || sum?.unique_visits || 0),
+                avg_time: Number(sum?.average_time || 0),
+              };
+            } catch (e) {
+              console.warn(`[typeform-manager] period insights failed for ${fid}:`, (e as any)?.message);
+              return { visits: 0, starts: 0, avg_time: 0 };
+            }
+          }));
+          let pV = 0, pS = 0, pAvgW = 0, pAvgWg = 0;
+          for (const r of results) {
+            pV += r.visits;
+            pS += r.starts;
+            const w = r.visits || 1;
+            pAvgW += r.avg_time * w;
+            pAvgWg += w;
+          }
+          funnelVisits = pV;
+          funnelStarts = pS;
+          funnelAvgTime = pAvgWg ? Math.round(pAvgW / pAvgWg) : 0;
+          insightsScope = "period";
+        } catch (e) {
+          console.warn("[typeform-manager] period insights aggregation failed:", (e as any)?.message);
+        }
+      }
+
       const consistency = {
         ok: outOfScopeResponses.length === 0 && outOfScopeDeals === 0,
         scope_form_ids: scopeFormIds,
@@ -502,9 +549,10 @@ Deno.serve(async (req) => {
         scope: isAll ? { all: true, forms_count: scopeFormIds.length } : { all: false, forms_count: 1, form_id },
         consistency,
         funnel: {
-          visits: isAll ? aggVisits : (stats?.total_visits || 0),
-          starts: isAll ? aggStarts : (stats?.total_starts || 0),
-          avg_time: isAll ? avgTime : (stats?.average_time_seconds || 0),
+          visits: funnelVisits,
+          starts: funnelStarts,
+          avg_time: funnelAvgTime,
+          insights_scope: insightsScope,
           lifetime_completion_rate: isAll ? lifetimeCompletionRate : (stats?.completion_rate || 0),
           submissions,
           completed,
