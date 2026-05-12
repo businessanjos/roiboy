@@ -771,7 +771,7 @@ export default function SalesDashboard() {
       </Tabs>
 
       <div className="text-xs text-muted-foreground text-center pt-4">
-        Dashboard restrito · Gerentes, Diretores, C-Levels, Sócios e Admins
+        {" "}
       </div>
     </div>
   );
