@@ -38,6 +38,10 @@ import {
   ShieldAlert,
   Filter,
   Activity,
+  CalendarCheck,
+  UserX,
+  Clock,
+  TrendingDown,
 } from "lucide-react";
 
 import {
@@ -324,6 +328,180 @@ export default function SalesDashboard() {
       .slice(0, 8);
   }, [lostDeals, lossReasons]);
 
+  // ---------------------- NEW KPIs ----------------------
+  // Reuniões realizadas no período (internal_tasks completadas com agendamento)
+  const { data: heldMeetingsRows } = useQuery({
+    queryKey: ["sales-dashboard-held", accountId, period],
+    enabled: !!accountId && allowed,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("internal_tasks")
+        .select("assigned_to, title, completed_at, activity_types!internal_tasks_activity_type_id_fkey(name)")
+        .eq("account_id", accountId!)
+        .not("completed_at", "is", null)
+        .gte("completed_at", start.toISOString())
+        .lte("completed_at", end.toISOString());
+      if (error) throw error;
+      return (data || []).filter((t: any) => {
+        const s = ((t.activity_types?.name || "") + " " + (t.title || "")).toLowerCase();
+        return s.includes("agendamento") || s.includes("agendada") || s.includes("call comercial") || s.includes("reuniao") || s.includes("reunião") || s.includes("meeting");
+      });
+    },
+  });
+
+  // Cancelamentos no período (Churn)
+  const { data: churnContracts } = useQuery({
+    queryKey: ["sales-dashboard-churn", accountId, period],
+    enabled: !!accountId && allowed,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_contracts")
+        .select("id, deal_id, cancelled_at, value")
+        .eq("account_id", accountId!)
+        .eq("status", "cancelled")
+        .not("cancelled_at", "is", null)
+        .gte("cancelled_at", start.toISOString())
+        .lte("cancelled_at", end.toISOString());
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Mapa deal_id -> responsible_user_id para atribuir churn ao vendedor
+  const churnDealIds = useMemo(
+    () => Array.from(new Set((churnContracts || []).map((c: any) => c.deal_id).filter(Boolean))),
+    [churnContracts]
+  );
+  const { data: churnDealOwners } = useQuery({
+    queryKey: ["sales-dashboard-churn-owners", accountId, churnDealIds],
+    enabled: !!accountId && allowed && churnDealIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("deals")
+        .select("id, responsible_user_id, sdr_user_id")
+        .in("id", churnDealIds as string[]);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const heldMeetingsTotal = (heldMeetingsRows || []).length;
+  const closeRate = heldMeetingsTotal > 0 ? (wonCount / heldMeetingsTotal) * 100 : 0;
+
+  // Ciclo médio de vendas (dias entre criação e ganho)
+  const avgCycleDays = useMemo(() => {
+    const valid = (wonDeals || [])
+      .map((d: any) => {
+        if (!d.won_at) return null;
+        // created_at não está no payload de wonDeals; buscar via deals (que tem created_at)
+        const matched = (deals || []).find((x: any) => x.id === d.id);
+        if (!matched?.created_at || !d.won_at) return null;
+        const ms = new Date(d.won_at).getTime() - new Date(matched.created_at).getTime();
+        return ms > 0 ? ms / (1000 * 60 * 60 * 24) : null;
+      })
+      .filter((v): v is number => v !== null);
+    if (valid.length === 0) return 0;
+    return valid.reduce((a, b) => a + b, 0) / valid.length;
+  }, [wonDeals, deals]);
+
+  // No-show total (somar do teamMetrics)
+  const noShowTotal = useMemo(
+    () => teamMetrics.reduce((acc, m) => acc + (m.noshow_calls || 0), 0),
+    [teamMetrics]
+  );
+
+  // Conversão por origem do lead (deals: won/total por source)
+  const sourceConversion = useMemo(() => {
+    const map = new Map<string, { total: number; won: number; value: number }>();
+    for (const d of deals || []) {
+      const src = ((d as any).source || "Sem origem").trim() || "Sem origem";
+      const cur = map.get(src) || { total: 0, won: 0, value: 0 };
+      cur.total += 1;
+      if ((d as any).status === "won") {
+        cur.won += 1;
+        cur.value += Number((d as any).received_value ?? (d as any).value ?? 0);
+      }
+      map.set(src, cur);
+    }
+    return Array.from(map.entries())
+      .map(([name, v]) => ({
+        name,
+        total: v.total,
+        won: v.won,
+        value: v.value,
+        conv: v.total > 0 ? (v.won / v.total) * 100 : 0,
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 12);
+  }, [deals]);
+
+  // Close rate por executivo (won / reuniões realizadas)
+  const closeRateByRep = useMemo(() => {
+    const userMap = new Map<string, { name: string; avatar: string | null; held: number; won: number }>();
+    for (const m of teamMetrics) {
+      userMap.set(m.user_id, {
+        name: m.user_name,
+        avatar: m.user_avatar,
+        held: 0,
+        won: m.won_deals,
+      });
+    }
+    for (const t of heldMeetingsRows || []) {
+      const uid = (t as any).assigned_to;
+      if (!uid) continue;
+      const cur = userMap.get(uid);
+      if (cur) {
+        cur.held += 1;
+      }
+    }
+    return Array.from(userMap.entries())
+      .map(([id, v]) => ({
+        id,
+        name: v.name,
+        avatar: v.avatar,
+        held: v.held,
+        won: v.won,
+        rate: v.held > 0 ? (v.won / v.held) * 100 : 0,
+      }))
+      .filter((r) => r.held > 0 || r.won > 0)
+      .sort((a, b) => b.rate - a.rate);
+  }, [teamMetrics, heldMeetingsRows]);
+
+  // Churn por vendedor
+  const churnByRep = useMemo(() => {
+    const ownerMap = new Map((churnDealOwners || []).map((d: any) => [d.id, d.responsible_user_id]));
+    const userInfo = new Map(teamMetrics.map((m) => [m.user_id, { name: m.user_name, avatar: m.user_avatar }]));
+    const counts = new Map<string, { name: string; avatar: string | null; count: number; value: number }>();
+    let unassigned = 0;
+    let unassignedValue = 0;
+    for (const c of churnContracts || []) {
+      const uid = (c as any).deal_id ? ownerMap.get((c as any).deal_id) : null;
+      const val = Number((c as any).value || 0);
+      if (uid) {
+        const info = userInfo.get(uid as string);
+        const cur = counts.get(uid as string) || {
+          name: info?.name || "Sem nome",
+          avatar: info?.avatar || null,
+          count: 0,
+          value: 0,
+        };
+        cur.count += 1;
+        cur.value += val;
+        counts.set(uid as string, cur);
+      } else {
+        unassigned += 1;
+        unassignedValue += val;
+      }
+    }
+    const list = Array.from(counts.entries()).map(([id, v]) => ({ id, ...v }));
+    list.sort((a, b) => b.count - a.count);
+    if (unassigned > 0) {
+      list.push({ id: "_unassigned", name: "Sem vendedor atribuído", avatar: null, count: unassigned, value: unassignedValue });
+    }
+    return list;
+  }, [churnContracts, churnDealOwners, teamMetrics]);
+
+
   // ---------------------- GUARDS ----------------------
   if (userLoading) {
     return (
@@ -426,9 +604,10 @@ export default function SalesDashboard() {
       </div>
 
       <Tabs defaultValue="goals" className="w-full">
-        <TabsList className="grid grid-cols-4 w-full md:w-fit">
+        <TabsList className="grid grid-cols-5 w-full md:w-fit">
           <TabsTrigger value="goals">Metas</TabsTrigger>
           <TabsTrigger value="funnel">Funil</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="team">Equipe</TabsTrigger>
           <TabsTrigger value="origin">Origem & Perdas</TabsTrigger>
         </TabsList>
@@ -596,6 +775,204 @@ export default function SalesDashboard() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ---------- PERFORMANCE ---------- */}
+        <TabsContent value="performance" className="space-y-4 mt-4">
+          {/* KPI Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard
+              icon={<CalendarCheck className="w-5 h-5" />}
+              label="Close rate"
+              value={fmtPct(closeRate)}
+              hint={`${wonCount} ganhos / ${heldMeetingsTotal} reuniões realizadas`}
+              loading={isLoading}
+            />
+            <KpiCard
+              icon={<Trophy className="w-5 h-5" />}
+              label="Vendas absolutas"
+              value={String(wonCount)}
+              hint={`${fmtBRL(billedValue)} faturados`}
+              loading={isLoading}
+            />
+            <KpiCard
+              icon={<Clock className="w-5 h-5" />}
+              label="Ciclo médio"
+              value={`${avgCycleDays.toFixed(0)} dias`}
+              hint="Da criação do deal até o ganho"
+              loading={isLoading}
+            />
+            <KpiCard
+              icon={<UserX className="w-5 h-5" />}
+              label="No-show"
+              value={String(noShowTotal)}
+              hint="Reuniões agendadas e não comparecidas"
+              loading={isLoading}
+              warn={noShowTotal > 0}
+            />
+          </div>
+
+          {/* Close rate por executivo */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarCheck className="w-5 h-5 text-primary" />
+                Close rate por executivo
+              </CardTitle>
+              <CardDescription>
+                Reuniões realizadas vs. fechamentos no período
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {closeRateByRep.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">
+                  Sem reuniões nem ganhos no período.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs uppercase text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 px-2">Executivo</th>
+                        <th className="text-right py-2 px-2">Reuniões realizadas</th>
+                        <th className="text-right py-2 px-2">Ganhos</th>
+                        <th className="text-right py-2 px-2">Close rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {closeRateByRep.map((r) => (
+                        <tr key={r.id} className="border-b hover:bg-muted/40 transition-colors">
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={r.avatar || undefined} />
+                                <AvatarFallback className="text-[10px]">
+                                  {r.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{r.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{r.held}</td>
+                          <td className="py-2 px-2 text-right">{r.won}</td>
+                          <td className="py-2 px-2 text-right">
+                            <Badge
+                              variant={r.rate >= 30 ? "default" : "secondary"}
+                              className="font-mono"
+                            >
+                              {fmtPct(r.rate)}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Conversão por origem do lead */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieIcon className="w-5 h-5 text-primary" />
+                Conversão por origem do lead
+              </CardTitle>
+              <CardDescription>
+                Cruza com canais de Marketing — leads / deals criados no período
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {sourceConversion.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">
+                  Sem deals criados no período.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs uppercase text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 px-2">Origem</th>
+                        <th className="text-right py-2 px-2">Deals</th>
+                        <th className="text-right py-2 px-2">Ganhos</th>
+                        <th className="text-right py-2 px-2">Receita</th>
+                        <th className="text-right py-2 px-2">Conversão</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sourceConversion.map((s) => (
+                        <tr key={s.name} className="border-b hover:bg-muted/40 transition-colors">
+                          <td className="py-2 px-2 font-medium truncate max-w-[260px]">{s.name}</td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{s.total}</td>
+                          <td className="py-2 px-2 text-right">{s.won}</td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{fmtBRL(s.value)}</td>
+                          <td className="py-2 px-2 text-right">
+                            <Badge variant={s.conv >= 20 ? "default" : "secondary"} className="font-mono">
+                              {fmtPct(s.conv)}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Churn por vendedor */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingDown className="w-5 h-5 text-red-500" />
+                Churn por vendedor
+              </CardTitle>
+              <CardDescription>
+                Contratos cancelados no período — atribuídos pelo vendedor que ganhou o deal
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {churnByRep.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">
+                  Nenhum cancelamento no período.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs uppercase text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 px-2">Vendedor</th>
+                        <th className="text-right py-2 px-2">Cancelamentos</th>
+                        <th className="text-right py-2 px-2">Valor cancelado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {churnByRep.map((r) => (
+                        <tr key={r.id} className="border-b hover:bg-muted/40 transition-colors">
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={r.avatar || undefined} />
+                                <AvatarFallback className="text-[10px]">
+                                  {r.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{r.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2 text-right">
+                            <Badge variant="destructive" className="font-mono">{r.count}</Badge>
+                          </td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{fmtBRL(r.value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
