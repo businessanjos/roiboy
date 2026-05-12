@@ -6,8 +6,11 @@ import {
   endOfMonth,
   startOfYear,
   endOfYear,
+  startOfQuarter,
+  endOfQuarter,
   subDays,
   subMonths,
+  subQuarters,
   format,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -99,6 +102,8 @@ type PeriodKey =
   | "last_month"
   | "last_30"
   | "last_90"
+  | "this_quarter"
+  | "last_quarter"
   | "ytd"
   | "last_year";
 
@@ -107,6 +112,8 @@ const PERIOD_LABELS: Record<PeriodKey, string> = {
   last_month: "Mês passado",
   last_30: "Últimos 30 dias",
   last_90: "Últimos 90 dias",
+  this_quarter: "Este trimestre",
+  last_quarter: "Trimestre passado",
   ytd: "Ano atual",
   last_year: "Ano passado",
 };
@@ -124,6 +131,12 @@ function getRange(period: PeriodKey): { start: Date; end: Date } {
       return { start: subDays(now, 30), end: now };
     case "last_90":
       return { start: subDays(now, 90), end: now };
+    case "this_quarter":
+      return { start: startOfQuarter(now), end: endOfQuarter(now) };
+    case "last_quarter": {
+      const ref = subQuarters(now, 1);
+      return { start: startOfQuarter(ref), end: endOfQuarter(ref) };
+    }
     case "ytd":
       return { start: startOfYear(now), end: now };
     case "last_year": {
