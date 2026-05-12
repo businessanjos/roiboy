@@ -93,7 +93,7 @@ export function KpiPicker({
               );
             })}
           </div>
-        </ScrollArea>
+        </div>
         <DialogFooter className="flex-row sm:justify-between gap-2 pt-2">
           <div className="text-xs text-muted-foreground self-center">
             {draft.length} selecionado{draft.length === 1 ? "" : "s"}
