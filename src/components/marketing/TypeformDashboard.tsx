@@ -61,7 +61,7 @@ export function TypeformDashboard() {
   const customReady = isCustom && !!customRange?.from && !!customRange?.to;
   const periodPayload = useMemo(() => {
     const now = new Date();
-    if (period === 'lifetime') return { days: 36500 };
+    if (period === 'lifetime') return { lifetime: true, days: 36500 };
     if (period === 'today') return { since: format(startOfDay(now), 'yyyy-MM-dd'), until: format(endOfDay(now), 'yyyy-MM-dd') };
     if (period === 'this_month') return { since: format(startOfMonth(now), 'yyyy-MM-dd'), until: format(endOfMonth(now), 'yyyy-MM-dd') };
     if (period === 'this_year') return { since: format(startOfYear(now), 'yyyy-MM-dd'), until: format(endOfYear(now), 'yyyy-MM-dd') };
