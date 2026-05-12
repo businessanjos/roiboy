@@ -740,37 +740,15 @@ export default function SalesDashboard() {
         {format(end, "dd/MM/yyyy", { locale: ptBR })}
       </div>
 
-      {/* KPI Row */}
+      {/* KPI Row (configurável) */}
+      <div className="flex items-center justify-between -mb-2">
+        <span className="text-xs text-muted-foreground">Indicadores principais</span>
+        <Button variant="ghost" size="sm" onClick={() => setPickerOpen("header")}>
+          <Settings2 className="w-4 h-4 mr-1.5" /> Personalizar KPIs
+        </Button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          icon={<DollarSign className="w-5 h-5" />}
-          label="Receita ganha"
-          value={fmtBRL(wonValue)}
-          hint={`${wonCount} venda${wonCount === 1 ? "" : "s"} no período`}
-          loading={isLoading}
-        />
-        <KpiCard
-          icon={<Trophy className="w-5 h-5" />}
-          label="Ticket médio"
-          value={fmtBRL(avgTicket)}
-          hint="Valor recebido ÷ vendas"
-          loading={isLoading}
-        />
-        <KpiCard
-          icon={<TrendingUp className="w-5 h-5" />}
-          label="Win rate"
-          value={fmtPct(winRate)}
-          hint={`${wonCount} ganhos · ${lostCount} perdas`}
-          loading={isLoading}
-        />
-        <KpiCard
-          icon={<Activity className="w-5 h-5" />}
-          label="Pipeline aberto"
-          value={fmtBRL(openValue)}
-          hint={`${(openDeals || []).length} deals · ${stagnated} parados >14d`}
-          loading={isLoading}
-          warn={stagnated > 0}
-        />
+        {renderKpis("header")}
       </div>
 
       <Tabs defaultValue="goals" className="w-full">
