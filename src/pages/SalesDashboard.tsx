@@ -522,7 +522,7 @@ export default function SalesDashboard() {
       const uid = d.responsible_user_id as string | null;
       if (!uid) continue;
       if (d.client_id && !wonByClient.has(d.client_id)) wonByClient.set(d.client_id, uid);
-      const email = (d.contact_email || "").trim().toLowerCase();
+      const email = String(d.contact_email ?? "").trim().toLowerCase();
       if (email && !wonByEmail.has(email)) wonByEmail.set(email, uid);
       const tail = phoneTail(d.contact_phone);
       if (tail && !wonByPhoneTail.has(tail)) wonByPhoneTail.set(tail, uid);
@@ -539,7 +539,7 @@ export default function SalesDashboard() {
       // fallback por e-mail
       const emails: string[] = Array.isArray(cl.emails) ? cl.emails : [];
       for (const e of emails) {
-        const k = (e || "").trim().toLowerCase();
+        const k = String(e ?? "").trim().toLowerCase();
         if (k && wonByEmail.has(k)) return wonByEmail.get(k)!;
       }
       // fallback por telefone (últimos 8 dígitos)
