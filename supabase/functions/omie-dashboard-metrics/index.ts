@@ -69,16 +69,23 @@ Deno.serve(async (req) => {
     const start = new Date(today.getFullYear(), today.getMonth() - (months - 1), 1);
     const end = new Date(today.getFullYear(), today.getMonth() + 1, 0); // end of current month
 
-    const baseFilter = {
+    // ListarContasReceber accepts data_de/data_ate with filtrar_por_data_de
+    const receberFilter = {
       data_de: fmtBR(start),
       data_ate: fmtBR(end),
       filtrar_por_data_de: 'VENCIMENTO',
     };
+    // ListarContasPagar (lcpListarRequest) does NOT accept data_de/data_ate.
+    // Use filtrar_por_data_vencimento_de / _ate which are the supported fields.
+    const pagarFilter = {
+      filtrar_por_data_vencimento_de: fmtBR(start),
+      filtrar_por_data_vencimento_ate: fmtBR(end),
+    };
 
     // Fetch all pages (receber + pagar) in parallel
     const [receber, pagar] = await Promise.all([
-      listAllPages('financas/contareceber', 'ListarContasReceber', baseFilter, 'conta_receber_cadastro'),
-      listAllPages('financas/contapagar', 'ListarContasPagar', baseFilter, 'conta_pagar_cadastro'),
+      listAllPages('financas/contareceber', 'ListarContasReceber', receberFilter, 'conta_receber_cadastro'),
+      listAllPages('financas/contapagar', 'ListarContasPagar', pagarFilter, 'conta_pagar_cadastro'),
     ]);
 
     const isPaid = (status: string) => status === 'LIQUIDADO';
