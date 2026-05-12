@@ -225,7 +225,7 @@ export function TypeformDashboard() {
                 </Select>
               )}
               <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
-                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="today">Hoje</SelectItem>
                   <SelectItem value="7">Últimos 7d</SelectItem>
@@ -233,6 +233,7 @@ export function TypeformDashboard() {
                   <SelectItem value="this_year">Este ano</SelectItem>
                   <SelectItem value="this_month">Este mês</SelectItem>
                   <SelectItem value="custom">Personalizado</SelectItem>
+                  <SelectItem value="lifetime">Histórico total</SelectItem>
                 </SelectContent>
               </Select>
               {isCustom && (
