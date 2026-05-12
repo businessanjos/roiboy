@@ -68,14 +68,8 @@ async function listAllPages(
     }
     return all;
   }
-    const items = r[listKey] || [];
-    all.push(...items);
-    const total = r.total_de_paginas || 1;
-    if (page >= total) break;
-    page++;
-  }
-  return all;
-}
+
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
