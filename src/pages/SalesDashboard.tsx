@@ -231,6 +231,16 @@ export default function SalesDashboard() {
     [wonDeals]
   );
 
+  // Faturamento = valor bruto vendido (independente de à vista ou parcelado)
+  const billedValue = useMemo(
+    () =>
+      (wonDeals || []).reduce(
+        (acc, d) => acc + Number(d.value ?? d.received_value ?? 0),
+        0
+      ),
+    [wonDeals]
+  );
+
   const wonCount = (wonDeals || []).length;
   const lostCount = (lostDeals || []).length;
   const allClosed = wonCount + lostCount;
