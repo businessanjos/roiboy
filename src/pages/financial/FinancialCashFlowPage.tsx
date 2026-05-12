@@ -61,15 +61,26 @@ export default function FinancialCashFlowPage() {
   const days = eachDayOfInterval({ start: startDate, end: endDate });
   let runningBalance = initialBalance;
 
+  const isRealized = (s: string) => s === "paid";
+  const isForecast = (s: string) => s === "pending" || s === "overdue";
+
   const chartData = days.map((day) => {
     const dayEntries = entries.filter((e) => isSameDay(parseISO(e.due_date), day));
-    const income = dayEntries
-      .filter((e) => e.entry_type === "receivable" && e.status === "paid")
-      .reduce((acc, e) => acc + e.amount, 0);
-    const expenses = dayEntries
-      .filter((e) => e.entry_type === "payable" && e.status === "paid")
-      .reduce((acc, e) => acc + e.amount, 0);
-    
+    const incomePaid = dayEntries
+      .filter((e) => e.entry_type === "receivable" && isRealized(e.status))
+      .reduce((acc, e) => acc + Number(e.amount || 0), 0);
+    const incomeForecast = dayEntries
+      .filter((e) => e.entry_type === "receivable" && isForecast(e.status))
+      .reduce((acc, e) => acc + Number(e.amount || 0), 0);
+    const expensesPaid = dayEntries
+      .filter((e) => e.entry_type === "payable" && isRealized(e.status))
+      .reduce((acc, e) => acc + Number(e.amount || 0), 0);
+    const expensesForecast = dayEntries
+      .filter((e) => e.entry_type === "payable" && isForecast(e.status))
+      .reduce((acc, e) => acc + Number(e.amount || 0), 0);
+
+    const income = incomePaid + incomeForecast;
+    const expenses = expensesPaid + expensesForecast;
     runningBalance = runningBalance + income - expenses;
 
     return {
@@ -77,6 +88,8 @@ export default function FinancialCashFlowPage() {
       fullDate: format(day, "dd/MM", { locale: ptBR }),
       income,
       expenses,
+      incomePaid,
+      expensesPaid,
       balance: runningBalance,
       net: income - expenses,
     };
@@ -84,17 +97,17 @@ export default function FinancialCashFlowPage() {
 
   // Calculate totals
   const totalIncome = entries
-    .filter((e) => e.entry_type === "receivable")
-    .reduce((acc, e) => acc + e.amount, 0);
+    .filter((e) => e.entry_type === "receivable" && e.status !== "cancelled")
+    .reduce((acc, e) => acc + Number(e.amount || 0), 0);
   const paidIncome = entries
-    .filter((e) => e.entry_type === "receivable" && e.status === "paid")
-    .reduce((acc, e) => acc + e.amount, 0);
+    .filter((e) => e.entry_type === "receivable" && isRealized(e.status))
+    .reduce((acc, e) => acc + Number(e.amount || 0), 0);
   const totalExpenses = entries
-    .filter((e) => e.entry_type === "payable")
-    .reduce((acc, e) => acc + e.amount, 0);
+    .filter((e) => e.entry_type === "payable" && e.status !== "cancelled")
+    .reduce((acc, e) => acc + Number(e.amount || 0), 0);
   const paidExpenses = entries
-    .filter((e) => e.entry_type === "payable" && e.status === "paid")
-    .reduce((acc, e) => acc + e.amount, 0);
+    .filter((e) => e.entry_type === "payable" && isRealized(e.status))
+    .reduce((acc, e) => acc + Number(e.amount || 0), 0);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -250,8 +263,11 @@ export default function FinancialCashFlowPage() {
                       );
                     }}
                   />
-                  <Bar dataKey="income" fill="#22c55e" name="Receitas" />
-                  <Bar dataKey="expenses" fill="#ef4444" name="Despesas" />
+                  <Legend />
+                  <Bar dataKey="incomePaid" stackId="in" fill="#16a34a" name="Receitas (recebido)" />
+                  <Bar dataKey="income" stackId="in" fill="#86efac" name="Receitas (previsto)" fillOpacity={0.6} />
+                  <Bar dataKey="expensesPaid" stackId="out" fill="#dc2626" name="Despesas (pago)" />
+                  <Bar dataKey="expenses" stackId="out" fill="#fca5a5" name="Despesas (previsto)" fillOpacity={0.6} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
