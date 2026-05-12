@@ -60,7 +60,7 @@ export function KpiPicker({
             {maxItems ? ` Máximo ${maxItems}.` : ""}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-1 pr-3 -mr-3 max-h-[55vh]">
+        <div className="flex-1 overflow-y-auto pr-3 -mr-3 min-h-0">
           <div className="space-y-1">
             {catalog.map((opt) => {
               const checked = draft.includes(opt.id);
