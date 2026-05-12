@@ -6,14 +6,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function callOmie(endpoint: string, call: string, param: any, appKey: string, appSecret: string) {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function callOmie(endpoint: string, call: string, param: any, appKey: string, appSecret: string, attempt = 0): Promise<any> {
   const res = await fetch(`https://app.omie.com.br/api/v1/${endpoint}/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ call, app_key: appKey, app_secret: appSecret, param: [param] }),
   });
-  if (!res.ok) throw new Error(`Omie ${call} ${res.status}: ${await res.text()}`);
-  const json = await res.json();
+  const text = await res.text();
+  // Handle Omie redundant-call rate limit with retries
+  if (text.includes('REDUNDANT') || text.includes('Consumo redundante')) {
+    if (attempt < 2) {
+      const waitMs = 52000;
+      console.warn(`Omie REDUNDANT on ${call}, waiting ${waitMs}ms (attempt ${attempt + 1})`);
+      await sleep(waitMs);
+      return callOmie(endpoint, call, param, appKey, appSecret, attempt + 1);
+    }
+    const err: any = new Error(`Omie ${call}: rate limited (REDUNDANT)`);
+    err.code = 'OMIE_REDUNDANT';
+    throw err;
+  }
+  if (!res.ok) throw new Error(`Omie ${call} ${res.status}: ${text}`);
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error(`Omie ${call}: invalid JSON`); }
   if (json.faultstring) throw new Error(`Omie: ${json.faultstring}`);
   return json;
 }
