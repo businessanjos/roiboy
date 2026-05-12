@@ -1331,6 +1331,22 @@ export default function SalesDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <KpiPicker
+        open={pickerOpen !== null}
+        onOpenChange={(o) => !o && setPickerOpen(null)}
+        title={
+          pickerOpen === "header"
+            ? "Personalizar KPIs principais"
+            : pickerOpen === "funnel"
+            ? "Personalizar KPIs do funil"
+            : "Personalizar KPIs de performance"
+        }
+        catalog={KPI_OPTIONS}
+        selected={pickerOpen ? kpiSel[pickerOpen] : []}
+        onSave={(ids) => pickerOpen && saveKpiSel(pickerOpen, ids)}
+        maxItems={8}
+      />
     </div>
   );
 }
