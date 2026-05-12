@@ -446,8 +446,8 @@ export function TypeformDashboard() {
                     <FunnelCard
                       scope="period" label="Ganhos" value={funnel.won} icon={Trophy}
                       sub={fmtBRL(funnel.won_value)}
-                      source="DB · deals (status=won)"
-                      tip="Quantos dos deals matched a partir das respostas do período estão atualmente com status='won' na tabela deals. Valor exibido = soma de deals.value desses deals ganhos. Deal IDs são deduplicados antes da consulta. Clique para ver a lista."
+                      source="Roy"
+                      tip="Quantas dessas respostas viraram venda fechada (status Ganho) no Roy. O valor mostrado é a soma do valor desses contratos. Clique no card para ver a lista."
                       highlight
                       onClick={funnel.won > 0 ? () => setWonOpen(true) : undefined}
                       onDetails={() => setDetailsCard({
