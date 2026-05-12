@@ -214,6 +214,7 @@ const App = () => (
                             <Route path="/sales/contracts/templates" element={<SalesContractTemplates />} />
                             <Route path="/sales/contracts/defaults" element={<ContractDefaultsSettings />} />
                             <Route path="/pipeline" element={<SalesPipeline />} />
+                            <Route path="/sales-dashboard" element={<SalesDashboard />} />
                             <Route path="/sales-calendar" element={<SalesCalendar />} />
                             <Route path="/sales-team" element={<SalesTeam />} />
                             <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
