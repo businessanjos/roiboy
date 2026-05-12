@@ -424,13 +424,7 @@ export default function MarketingTrafegoPago() {
         </TabsContent>
 
         <TabsContent value="links" className="mt-4">
-          <Card className="bg-card/50 border-border/30">
-            <CardContent className="py-16 text-center text-muted-foreground">
-              <Link2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Links & UTM — em breve.</p>
-              <p className="text-xs mt-1">Geração de links de WhatsApp e atribuição UTM serão adicionados em breve.</p>
-            </CardContent>
-          </Card>
+          <MarketingLinksUtm />
         </TabsContent>
 
         <TabsContent value="typeform" className="mt-4">
