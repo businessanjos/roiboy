@@ -189,9 +189,10 @@ Deno.serve(async (req) => {
         ? { data: null }
         : await supabase.from("typeform_forms").select("*").eq("account_id", accountId).eq("form_id", form_id).maybeSingle();
 
-      // Aggregate latest stats snapshot per form
+      // Load ALL stats snapshots for the scope (used for both lifetime aggregates and period deltas).
       let stats: any = null;
       let aggVisits = 0, aggStarts = 0, aggAvgWeighted = 0, aggAvgWeight = 0, aggLifetimeCompletion = 0, aggLifetimeCompletionWeight = 0;
+      const snapshotsByForm = new Map<string, any[]>(); // desc by snapshot_date
       if (scopeFormIds.length) {
         const { data: statsRows } = await supabase
           .from("typeform_form_stats")
@@ -199,11 +200,13 @@ Deno.serve(async (req) => {
           .eq("account_id", accountId)
           .in("form_id", scopeFormIds)
           .order("snapshot_date", { ascending: false });
-        const latestPerForm = new Map<string, any>();
         for (const r of statsRows || []) {
-          if (!latestPerForm.has(r.form_id)) latestPerForm.set(r.form_id, r);
+          const arr = snapshotsByForm.get(r.form_id) || [];
+          arr.push(r);
+          snapshotsByForm.set(r.form_id, arr);
         }
-        for (const r of latestPerForm.values()) {
+        for (const arr of snapshotsByForm.values()) {
+          const r = arr[0]; // latest
           aggVisits += Number(r.total_visits || 0);
           aggStarts += Number(r.total_starts || 0);
           const w = Number(r.total_visits || 0) || 1;
@@ -212,10 +215,7 @@ Deno.serve(async (req) => {
           aggLifetimeCompletion += Number(r.completion_rate || 0) * w;
           aggLifetimeCompletionWeight += w;
         }
-        if (!isAll) stats = latestPerForm.get(form_id) || null;
-        // NOTE: dashboard reads from local DB only. Sync with Typeform happens
-        // via the explicit "Sincronizar" button (refresh_form) or via webhook.
-        // Filter changes must NOT trigger background backfills.
+        if (!isAll) stats = (snapshotsByForm.get(form_id) || [])[0] || null;
       }
 
       // Period responses across scope — paginated to bypass PostgREST default
