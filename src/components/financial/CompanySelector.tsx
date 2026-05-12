@@ -1,70 +1,70 @@
-import { useLocation, useNavigate } from "react-router-dom";
 import { Building2, Plus } from "lucide-react";
-import { useCompany } from "@/contexts/CompanyContext";
+import { Link } from "react-router-dom";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { useFinancialCompany } from "@/contexts/FinancialCompanyContext";
 
-const formatCnpj = (doc: string) => {
-  const d = (doc || "").replace(/\D/g, "");
-  if (d.length !== 14) return doc;
-  return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-};
+function formatCnpj(cnpj?: string | null) {
+  if (!cnpj) return "";
+  const d = cnpj.replace(/\D/g, "");
+  if (d.length !== 14) return cnpj;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`;
+}
 
-export function CompanySelector() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { companies, currentCompany, setCurrentCompanyId } = useCompany();
+export function CompanySelector({ compact = false }: { compact?: boolean }) {
+  const { companies, selectedId, setSelectedId, loading } = useFinancialCompany();
 
-  // Only show on financial routes
-  if (!location.pathname.startsWith("/financial")) return null;
+  if (loading) {
+    return <div className="h-9 w-64 rounded-md bg-muted animate-pulse" />;
+  }
 
-  const label = currentCompany?.trade_name || currentCompany?.legal_name || "Selecionar empresa";
+  if (companies.length === 0) {
+    return (
+      <Button asChild size="sm" variant="outline">
+        <Link to="/financial/integracoes/omie">
+          <Plus className="h-4 w-4 mr-1" /> Adicionar CNPJ
+        </Link>
+      </Button>
+    );
+  }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 gap-2 max-w-[220px]">
-          <Building2 className="h-4 w-4 shrink-0 text-primary" />
-          <span className="truncate text-sm font-medium">{label}</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuLabel className="text-xs">Empresa emissora (CNPJ)</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {companies.length === 0 ? (
-          <div className="px-2 py-3 text-xs text-muted-foreground">
-            Nenhuma empresa cadastrada.
+    <div className="flex items-center gap-2">
+      <Select value={selectedId || ""} onValueChange={(v) => setSelectedId(v)}>
+        <SelectTrigger className={compact ? "h-9 w-[260px]" : "h-9 w-[320px]"}>
+          <div className="flex items-center gap-2 min-w-0">
+            <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <SelectValue placeholder="Selecionar CNPJ" />
           </div>
-        ) : (
-          companies.map((c) => (
-            <DropdownMenuItem
-              key={c.id}
-              onClick={() => setCurrentCompanyId(c.id)}
-              className={cn("flex flex-col items-start gap-0.5", c.id === currentCompany?.id && "bg-accent")}
-            >
-              <span className="text-sm font-medium truncate w-full">
-                {c.trade_name || c.legal_name}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                {formatCnpj(c.document)}
-              </span>
-            </DropdownMenuItem>
-          ))
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate("/financial/empresas")}>
-          <Plus className="mr-2 h-4 w-4" />
-          Gerenciar empresas
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </SelectTrigger>
+        <SelectContent>
+          {companies.map((c) => (
+            <SelectItem key={c.id} value={c.id}>
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-2.5 w-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: c.color || "#3b82f6" }}
+                />
+                <span className="truncate">
+                  {c.trade_name || c.legal_name || formatCnpj(c.cnpj) || "Sem nome"}
+                </span>
+                {c.is_default && (
+                  <Badge variant="outline" className="text-[10px] py-0 px-1 ml-1">
+                    padrão
+                  </Badge>
+                )}
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
