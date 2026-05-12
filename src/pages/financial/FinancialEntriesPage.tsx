@@ -649,6 +649,7 @@ export default function FinancialEntriesPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Descrição</TableHead>
+                      <TableHead>Origem</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Vencimento</TableHead>
@@ -678,6 +679,19 @@ export default function FinancialEntriesPage() {
                                 )}
                               </div>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const src = (entry as any).source || 'manual';
+                              const map: Record<string, { label: string; cls: string }> = {
+                                manual: { label: 'Manual', cls: 'bg-slate-100 text-slate-700 border-slate-200' },
+                                omie: { label: 'Omie', cls: 'bg-blue-100 text-blue-700 border-blue-200' },
+                                contract: { label: 'Contrato', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+                                deal: { label: 'Venda', cls: 'bg-purple-100 text-purple-700 border-purple-200' },
+                              };
+                              const cfg = map[src] || map.manual;
+                              return <Badge variant="outline" className={cfg.cls}>{cfg.label}</Badge>;
+                            })()}
                           </TableCell>
                           <TableCell>
                             {entry.category ? (

@@ -6919,6 +6919,7 @@ export type Database = {
           bank_account_id: string | null
           category_id: string | null
           client_id: string | null
+          company_id: string | null
           conciliated_at: string | null
           conciliated_by: string | null
           contract_id: string | null
@@ -6926,6 +6927,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           currency: string
+          deal_id: string | null
           description: string
           document_number: string | null
           due_date: string
@@ -6937,8 +6939,10 @@ export type Database = {
           is_conciliated: boolean
           is_recurring: boolean
           issue_date: string | null
+          last_omie_sync_at: string | null
           notes: string | null
           omie_id: string | null
+          omie_payload: Json | null
           omie_sync_at: string | null
           parent_entry_id: string | null
           payment_date: string | null
@@ -6948,6 +6952,8 @@ export type Database = {
           recurrence_type: string | null
           registration_date: string | null
           seller_id: string | null
+          source: string
+          source_id: string | null
           status: string
           supplier_id: string | null
           total_installments: number | null
@@ -6961,6 +6967,7 @@ export type Database = {
           bank_account_id?: string | null
           category_id?: string | null
           client_id?: string | null
+          company_id?: string | null
           conciliated_at?: string | null
           conciliated_by?: string | null
           contract_id?: string | null
@@ -6968,6 +6975,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          deal_id?: string | null
           description: string
           document_number?: string | null
           due_date: string
@@ -6979,8 +6987,10 @@ export type Database = {
           is_conciliated?: boolean
           is_recurring?: boolean
           issue_date?: string | null
+          last_omie_sync_at?: string | null
           notes?: string | null
           omie_id?: string | null
+          omie_payload?: Json | null
           omie_sync_at?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
@@ -6990,6 +7000,8 @@ export type Database = {
           recurrence_type?: string | null
           registration_date?: string | null
           seller_id?: string | null
+          source?: string
+          source_id?: string | null
           status?: string
           supplier_id?: string | null
           total_installments?: number | null
@@ -7003,6 +7015,7 @@ export type Database = {
           bank_account_id?: string | null
           category_id?: string | null
           client_id?: string | null
+          company_id?: string | null
           conciliated_at?: string | null
           conciliated_by?: string | null
           contract_id?: string | null
@@ -7010,6 +7023,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          deal_id?: string | null
           description?: string
           document_number?: string | null
           due_date?: string
@@ -7021,8 +7035,10 @@ export type Database = {
           is_conciliated?: boolean
           is_recurring?: boolean
           issue_date?: string | null
+          last_omie_sync_at?: string | null
           notes?: string | null
           omie_id?: string | null
+          omie_payload?: Json | null
           omie_sync_at?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
@@ -7032,6 +7048,8 @@ export type Database = {
           recurrence_type?: string | null
           registration_date?: string | null
           seller_id?: string | null
+          source?: string
+          source_id?: string | null
           status?: string
           supplier_id?: string | null
           total_installments?: number | null
@@ -7071,6 +7089,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "omie_settings"
             referencedColumns: ["id"]
           },
           {
@@ -18935,6 +18960,10 @@ export type Database = {
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
       format_call_duration: { Args: { seconds: number }; Returns: string }
       generate_checkin_code: { Args: never; Returns: string }
+      generate_contract_receivables: {
+        Args: { _contract_id: string }
+        Returns: number
+      }
       generate_registration_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
       get_ai_queue_stats: { Args: never; Returns: Json }
