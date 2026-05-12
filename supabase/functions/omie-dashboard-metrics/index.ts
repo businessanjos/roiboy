@@ -113,6 +113,7 @@ Deno.serve(async (req) => {
     for (const r of receber) {
       if (isCancelled(r.status_titulo)) continue;
       const due = parseBR(r.data_vencimento);
+      if (!due || due < periodStart || due > periodEnd) continue;
       const valor = Number(r.valor_documento) || 0;
       const pago = Number(r.valor_pago_soma) || 0;
       const aberto = Math.max(0, valor - pago);
