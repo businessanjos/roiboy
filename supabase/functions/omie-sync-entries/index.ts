@@ -107,8 +107,12 @@ async function syncCompany(admin: any, accountId: string, company: any) {
     for (let i = 0; i < rows.length; i += 200) {
       const batch = rows.slice(i, i + 200);
       const { error } = await admin.from('financial_entries').upsert(batch, { onConflict: 'account_id,omie_id' });
-      if (error) errors.push(`Receber batch ${i}: ${error.message}`); console.error(`Receber batch ${i} ERROR:`, error.message, error.details, error.hint);
-      else totalReceber += batch.length;
+      if (error) {
+        errors.push(`Receber batch ${i}: ${error.message}`);
+        console.error(`Receber batch ${i} ERROR:`, error.message, (error as any).details, (error as any).hint);
+      } else {
+        totalReceber += batch.length;
+      }
     }
     console.log(`[sync] receber upserted=${totalReceber}`);
   } catch (e: any) {
