@@ -12633,6 +12633,8 @@ export type Database = {
           account_id: string
           app_key: string
           app_secret: string
+          cnpj: string | null
+          color: string | null
           created_at: string
           default_bank_account_code: string | null
           default_category_code: string | null
@@ -12643,13 +12645,18 @@ export type Database = {
           default_tax_type: string
           field_mappings: Json | null
           id: string
+          is_default: boolean
           is_enabled: boolean
+          legal_name: string | null
+          trade_name: string | null
           updated_at: string
         }
         Insert: {
           account_id: string
           app_key?: string
           app_secret?: string
+          cnpj?: string | null
+          color?: string | null
           created_at?: string
           default_bank_account_code?: string | null
           default_category_code?: string | null
@@ -12660,13 +12667,18 @@ export type Database = {
           default_tax_type?: string
           field_mappings?: Json | null
           id?: string
+          is_default?: boolean
           is_enabled?: boolean
+          legal_name?: string | null
+          trade_name?: string | null
           updated_at?: string
         }
         Update: {
           account_id?: string
           app_key?: string
           app_secret?: string
+          cnpj?: string | null
+          color?: string | null
           created_at?: string
           default_bank_account_code?: string | null
           default_category_code?: string | null
@@ -12677,14 +12689,17 @@ export type Database = {
           default_tax_type?: string
           field_mappings?: Json | null
           id?: string
+          is_default?: boolean
           is_enabled?: boolean
+          legal_name?: string | null
+          trade_name?: string | null
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "omie_settings_account_id_fkey"
             columns: ["account_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
