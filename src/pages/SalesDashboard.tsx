@@ -286,8 +286,8 @@ export default function SalesDashboard() {
     ] ?? (annualGoal ? annualGoal / 12 : 0)
   );
   const monthlyProgress =
-    monthlyGoal > 0 ? Math.min(100, (wonValue / monthlyGoal) * 100) : 0;
-  const monthlyGap = Math.max(0, monthlyGoal - wonValue);
+    monthlyGoal > 0 ? Math.min(100, (billedValue / monthlyGoal) * 100) : 0;
+  const monthlyGap = Math.max(0, monthlyGoal - billedValue);
 
   // ----- Origin breakdown -----
   const sourceData = useMemo(() => {
