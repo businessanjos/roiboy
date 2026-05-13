@@ -737,17 +737,15 @@ export default function SalesScripts() {
             </div>
 
             <Tabs value={analysisSubTab} onValueChange={setAnalysisSubTab}>
-              <div className="overflow-x-auto -mx-4 px-4">
-                <TabsList className="h-9 p-0.5 bg-muted/60 gap-0.5 inline-flex w-auto">
-                  <TabsTrigger value="analyze" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Mic className="w-3.5 h-3.5" />Analisar</TabsTrigger>
-                  <TabsTrigger value="bulk" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Upload className="w-3.5 h-3.5" />Lote</TabsTrigger>
-                  <TabsTrigger value="icp" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Target className="w-3.5 h-3.5" />ICP</TabsTrigger>
-                  <TabsTrigger value="comparative" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><TrendingUp className="w-3.5 h-3.5" />Comparativo</TabsTrigger>
-                  <TabsTrigger value="ideal-script" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Crown className="w-3.5 h-3.5" />Script Ideal</TabsTrigger>
-                  <TabsTrigger value="ranking" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Trophy className="w-3.5 h-3.5" />Ranking</TabsTrigger>
-                  <TabsTrigger value="links" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Link2 className="w-3.5 h-3.5" />Links</TabsTrigger>
-                </TabsList>
-              </div>
+              <TabsList className="h-auto p-1 bg-muted/60 gap-1 flex flex-wrap justify-start w-full">
+                <TabsTrigger value="analyze" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Mic className="w-3.5 h-3.5" />Analisar</TabsTrigger>
+                <TabsTrigger value="bulk" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Upload className="w-3.5 h-3.5" />Lote</TabsTrigger>
+                <TabsTrigger value="icp" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Target className="w-3.5 h-3.5" />ICP</TabsTrigger>
+                <TabsTrigger value="comparative" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><TrendingUp className="w-3.5 h-3.5" />Comparativo</TabsTrigger>
+                <TabsTrigger value="ideal-script" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Crown className="w-3.5 h-3.5" />Script Ideal</TabsTrigger>
+                <TabsTrigger value="ranking" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Trophy className="w-3.5 h-3.5" />Ranking</TabsTrigger>
+                <TabsTrigger value="links" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Link2 className="w-3.5 h-3.5" />Links</TabsTrigger>
+              </TabsList>
 
               <TabsContent value="analyze" className="space-y-6 mt-4">
             <Card className="overflow-hidden"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4 pt-6">
