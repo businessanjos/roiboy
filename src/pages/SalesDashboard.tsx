@@ -419,7 +419,20 @@ export default function SalesDashboard() {
       }
       return all.filter((t: any) => {
         const s = ((t.activity_types?.name || "") + " " + (t.title || "")).toLowerCase();
-        return s.includes("agendamento") || s.includes("agendada") || s.includes("call comercial") || s.includes("reuniao") || s.includes("reunião") || s.includes("meeting");
+        // Excluir explicitamente agendamentos (só marcam a agenda) e no-shows (não aconteceram)
+        if (s.includes("agendada") || s.includes("agendamento") || s.includes("no-show") || s.includes("no show") || s.includes("noshow")) {
+          return false;
+        }
+        // Considerar apenas atividades de conclusão de reunião
+        return (
+          s.includes("concluída") ||
+          s.includes("concluida") ||
+          s.includes("realizada") ||
+          s.includes("alinhamento") ||
+          s.includes("reunião") ||
+          s.includes("reuniao") ||
+          s.includes("meeting")
+        );
       });
     },
   });
