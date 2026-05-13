@@ -147,12 +147,12 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
 
   const sourceHelp =
     kind === "held"
-      ? "Tasks com activity_type/título contendo 'realizada/concluída/reunião/alinhamento' e completed_at no período. Dedupe por vendedor+cliente."
+      ? "Lista de reuniões marcadas como concluídas no período (uma por cliente)."
       : kind === "noshow"
-        ? "Tasks com 'no-show' no activity_type/título e created_at no período."
+        ? "Reuniões marcadas como no-show (cliente não compareceu) no período."
         : kind === "scheduled"
-          ? "Tasks com 'agendada/agendamento' no activity_type/título e created_at no período."
-          : "deals com status=won e won_at no período, atribuídos a este vendedor (responsible_user_id).";
+          ? "Reuniões agendadas no período (independentemente de já terem ocorrido)."
+          : "Vendas fechadas no período por este vendedor.";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
