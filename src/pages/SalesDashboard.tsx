@@ -417,7 +417,7 @@ export default function SalesDashboard() {
         if (batch.length < PAGE) break;
         from += PAGE;
       }
-      return all.filter((t: any) => {
+      const filtered = all.filter((t: any) => {
         const s = ((t.activity_types?.name || "") + " " + (t.title || "")).toLowerCase();
         // Excluir explicitamente agendamentos (só marcam a agenda) e no-shows (não aconteceram)
         if (s.includes("agendada") || s.includes("agendamento") || s.includes("no-show") || s.includes("no show") || s.includes("noshow")) {
@@ -434,6 +434,18 @@ export default function SalesDashboard() {
           s.includes("meeting")
         );
       });
+      // Dedupe: múltiplas reuniões com o mesmo cliente (por vendedor) contam como 1.
+      // Chave: assigned_to + (client_id || deal_id || lead_id || id da própria task)
+      const seen = new Set<string>();
+      const deduped: any[] = [];
+      for (const t of filtered) {
+        const entityKey = t.client_id || t.deal_id || t.lead_id || t.id;
+        const key = `${t.assigned_to || "unassigned"}|${entityKey}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(t);
+      }
+      return deduped;
     },
   });
 
