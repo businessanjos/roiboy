@@ -33,6 +33,12 @@ export interface ActiveFilter {
 // Recommended filters (predefined system filters)
 export const RECOMMENDED_FILTERS = [
   {
+    id: 'created_today',
+    name: 'Criados hoje',
+    conditions: [{ field: 'created_at', operator: 'today', value: null }],
+    match_type: 'all' as const
+  },
+  {
     id: 'created_this_week',
     name: 'Criados esta semana',
     conditions: [{ field: 'created_at', operator: 'this_week', value: null }],
