@@ -459,8 +459,11 @@ export default function CloserDashboard() {
         {/* Speedometer + Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card
+            onClick={() => openBreakdown("won", "Vendas fechadas — fonte do velocímetro")}
+            role="button"
+            tabIndex={0}
             className={cn(
-              "lg:col-span-1 relative transition-shadow",
+              "lg:col-span-1 relative transition-shadow cursor-pointer hover:ring-1 hover:ring-primary/30",
               wonDeals > MONTH_QUOTA_DEFAULT &&
                 "animate-turbo-glow border-orange-500/40 ring-1 ring-orange-500/40 overflow-visible",
             )}
