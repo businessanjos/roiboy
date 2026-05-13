@@ -55,6 +55,36 @@ export function CallLinks() {
   const [editing, setEditing] = useState<CallLink | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<CallLink | null>(null);
+  const [titleMode, setTitleMode] = useState<'lead' | 'manual'>('lead');
+  const [leadPickerOpen, setLeadPickerOpen] = useState(false);
+
+  const { data: meetingDeals = [] } = useQuery({
+    queryKey: ['call-links-meeting-deals', accountId],
+    queryFn: async () => {
+      const { data: stages, error: stErr } = await supabase
+        .from('deal_stages')
+        .select('id, name')
+        .or('name.ilike.%Reunião Agendada%,name.ilike.%Reunião Concluída%,name.ilike.%Reunião Realizada%');
+      if (stErr) throw stErr;
+      const stageIds = (stages || []).map((s) => s.id);
+      if (stageIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('deals')
+        .select('id, title, contact_name, stage_id')
+        .eq('account_id', accountId!)
+        .in('stage_id', stageIds)
+        .order('updated_at', { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      const stageMap = new Map((stages || []).map((s) => [s.id, s.name]));
+      return (data || []).map((d) => ({
+        id: d.id,
+        label: d.contact_name || d.title || 'Sem nome',
+        stageName: stageMap.get(d.stage_id) || '',
+      }));
+    },
+    enabled: !!accountId && dialogOpen,
+  });
 
   const { data: links = [], isLoading } = useQuery({
     queryKey: ['call-links', accountId],
