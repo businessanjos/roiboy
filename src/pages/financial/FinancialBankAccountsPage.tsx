@@ -95,6 +95,12 @@ interface BankAccount {
   card_last_digits: string | null;
   closing_day: number | null;
   due_day: number | null;
+  // Open Finance
+  openfinance_account_id?: string | null;
+  openfinance_connection_id?: string | null;
+  openfinance_institution?: string | null;
+  last_balance_sync_at?: string | null;
+  last_transactions_sync_at?: string | null;
 }
 
 const cardBrands = [
@@ -149,6 +155,25 @@ export default function FinancialBankAccountsPage() {
   const [bankPopoverOpen, setBankPopoverOpen] = useState(false);
   const [linkedAccountPopoverOpen, setLinkedAccountPopoverOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [linkDialogFor, setLinkDialogFor] = useState<BankAccount | null>(null);
+
+  const unlinkMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("bank_accounts")
+        .update({
+          openfinance_account_id: null,
+          openfinance_connection_id: null,
+          openfinance_institution: null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bank-accounts-all"] });
+      toast({ title: "Conta desvinculada do Open Finance" });
+    },
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -489,6 +514,23 @@ export default function FinancialBankAccountsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <RouterLink to={`/financial/bank-accounts/${account.id}/extrato`}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Ver extrato
+                            </RouterLink>
+                          </DropdownMenuItem>
+                          {account.openfinance_account_id ? (
+                            <DropdownMenuItem onClick={() => unlinkMutation.mutate(account.id)}>
+                              <Unlink className="h-4 w-4 mr-2" />
+                              Desvincular Open Finance
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => setLinkDialogFor(account)}>
+                              <LinkIcon className="h-4 w-4 mr-2" />
+                              Conectar Open Finance
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleEdit(account)}>
                             <Edit2 className="h-4 w-4 mr-2" />
                             Editar
