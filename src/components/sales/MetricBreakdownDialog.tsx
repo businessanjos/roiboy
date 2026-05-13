@@ -45,6 +45,14 @@ async function fetchClientNames(ids: string[]): Promise<Map<string, string>> {
   return map;
 }
 
+async function fetchLeadNames(ids: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!ids.length) return map;
+  const { data } = await supabase.from("leads").select("id, full_name").in("id", ids);
+  (data || []).forEach((l: any) => map.set(l.id, l.full_name));
+  return map;
+}
+
 export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accountId, startDate, endDate, title }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
