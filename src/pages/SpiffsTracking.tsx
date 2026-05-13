@@ -10,6 +10,7 @@ import { RouletteSpinsPanel, CustomSpinsPanel } from "@/components/sales/quotas/
 import { PaymentMethodSpiffPanel } from "@/components/sales/quotas/PaymentMethodSpiffPanel";
 import { SpiffSpinsHistory } from "@/components/sales/quotas/SpiffSpinsHistory";
 import { SpiffSpinsCompactMonth } from "@/components/sales/quotas/SpiffSpinsCompactMonth";
+import { RouletteApprovalsQueue } from "@/components/sales/quotas/RouletteApprovalsQueue";
 
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
 
@@ -42,6 +43,8 @@ export default function SpiffsTracking() {
             Acompanhe em tempo real o progresso das campanhas e o histórico de prêmios sorteados.
           </p>
         </div>
+
+        <RouletteApprovalsQueue />
 
           <Tabs value={view} onValueChange={(v) => setView(v as "tracking" | "history")} className="space-y-4">
             <TabsList>
