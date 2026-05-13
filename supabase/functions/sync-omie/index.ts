@@ -479,7 +479,10 @@ Deno.serve(async (req) => {
 
     console.log('Omie sync completed:', results);
 
-    return new Response(JSON.stringify(results), {
+    const nextOffset = offset + clientsToSync.length;
+    const hasMore = sync_all ? nextOffset < totalCount : false;
+
+    return new Response(JSON.stringify({ ...results, offset, limit, total: totalCount, next_offset: nextOffset, has_more: hasMore }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
