@@ -26,8 +26,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Link2, Plus, ExternalLink, Edit2, Trash2, Copy, Calendar, Search } from 'lucide-react';
+import { Link2, Plus, ExternalLink, Edit2, Trash2, Copy, Calendar, Search, ChevronsUpDown, Check, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 interface CallLink {
   id: string;
