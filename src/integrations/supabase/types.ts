@@ -15630,6 +15630,73 @@ export type Database = {
           },
         ]
       }
+      spiff_spin_requests: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          rejection_reason: string | null
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          spiff_id: string
+          spin_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          rejection_reason?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          spiff_id: string
+          spin_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          rejection_reason?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          spiff_id?: string
+          spin_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spiff_spin_requests_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spiff_spin_requests_spiff_id_fkey"
+            columns: ["spiff_id"]
+            isOneToOne: false
+            referencedRelation: "sales_spiffs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spiff_spin_requests_spin_id_fkey"
+            columns: ["spin_id"]
+            isOneToOne: false
+            referencedRelation: "spiff_spins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spiff_spins: {
         Row: {
           account_id: string
