@@ -47,17 +47,18 @@ const TIER_COLORS: Record<string, string> = {
   Elite: "from-fuchsia-500 via-purple-600 to-indigo-700",
 };
 
-// Override fixo de vendas por nível (definido pelo time comercial)
-const TIER_SALES_OVERRIDE: Record<string, number> = {
-  Latão: 4,
-  Níquel: 4,
-  Bronze: 5,
-  Prata: 6,
-  Ouro: 7,
-  Platinum: 8,
-  Diamond: 9,
-  Black: 10,
-  Elite: 11,
+// Override fixo de vendas por nível (definido pelo time comercial).
+// Latão = 0 a 3 vendas (sem bônus). Níquel começa em 4, e cada venda sobe um nível.
+const TIER_SALES_OVERRIDE: Record<string, string> = {
+  Latão: "0–3",
+  Níquel: "4",
+  Bronze: "5",
+  Prata: "6",
+  Ouro: "7",
+  Platinum: "8",
+  Diamond: "9",
+  Black: "10",
+  Elite: "11",
 };
 
 export default function IncentivePresentation() {
