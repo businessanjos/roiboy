@@ -356,6 +356,7 @@ export function DealDetailSheet({
   const [valueDraft, setValueDraft] = useState<string>("");
   const [receivedEditOpen, setReceivedEditOpen] = useState(false);
   const [receivedDraft, setReceivedDraft] = useState<string>("");
+  const [localReceivedValue, setLocalReceivedValue] = useState<number | null>(null);
   
   const { isAdmin } = usePermissions();
 
@@ -370,6 +371,9 @@ export function DealDetailSheet({
       setSecondSeatName((deal as any)?.second_seat_name || "");
       setValueDraft(String(deal.value ?? 0));
       setReceivedDraft(toReceivedDraft((deal as any).received_value));
+      setLocalReceivedValue(
+        (deal as any).received_value != null ? Number((deal as any).received_value) : null
+      );
     }
   }, [deal?.id, open]);
 
@@ -1233,8 +1237,8 @@ export function DealDetailSheet({
                         className="text-2xl font-bold text-emerald-600 hover:underline text-left w-full"
                         title="Editar valor recebido"
                       >
-                        {(deal as any).received_value != null
-                          ? formatCurrency(Number((deal as any).received_value))
+                        {localReceivedValue != null
+                          ? formatCurrency(localReceivedValue)
                           : <span className="text-muted-foreground text-sm font-normal italic">Clique para informar o valor recebido</span>}
                       </button>
                     </PopoverTrigger>
@@ -1275,6 +1279,8 @@ export function DealDetailSheet({
                               return;
                             }
                             toast.success("Valor recebido atualizado");
+                            setLocalReceivedValue(v);
+                            (deal as any).received_value = v;
                             setReceivedEditOpen(false);
                             onDealUpdated?.();
                           }}
