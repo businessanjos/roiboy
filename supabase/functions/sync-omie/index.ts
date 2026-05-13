@@ -276,23 +276,33 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
     const body = await req.json();
-    const { client_id, account_id, sync_all, enrich_data = true, use_cpf_cnpj = true } = body;
-    
-    console.log('Starting Omie sync...', { client_id, account_id, sync_all, enrich_data, use_cpf_cnpj });
+    const {
+      client_id,
+      account_id,
+      sync_all,
+      enrich_data = true,
+      use_cpf_cnpj = true,
+      limit = 25,
+      offset = 0,
+    } = body;
+
+    console.log('Starting Omie sync...', { client_id, account_id, sync_all, enrich_data, use_cpf_cnpj, limit, offset });
 
     let clientsToSync: any[] = [];
+    let totalCount = 0;
 
     if (sync_all && account_id) {
-      // Sync all clients from account
-      const { data: clients, error } = await supabase
+      const { data: clients, error, count } = await supabase
         .from('clients')
-        .select('id, full_name, phone_e164, cpf, cnpj, emails, additional_phones, account_id')
-        .eq('account_id', account_id);
+        .select('id, full_name, phone_e164, cpf, cnpj, emails, additional_phones, account_id', { count: 'exact' })
+        .eq('account_id', account_id)
+        .order('id', { ascending: true })
+        .range(offset, offset + limit - 1);
 
       if (error) throw error;
       clientsToSync = clients || [];
+      totalCount = count || 0;
     } else if (client_id) {
-      // Sync single client
       const { data: client, error } = await supabase
         .from('clients')
         .select('id, full_name, phone_e164, cpf, cnpj, emails, additional_phones, account_id')
@@ -301,6 +311,7 @@ Deno.serve(async (req) => {
 
       if (error) throw error;
       if (client) clientsToSync = [client];
+      totalCount = clientsToSync.length;
     }
 
     const results = {
