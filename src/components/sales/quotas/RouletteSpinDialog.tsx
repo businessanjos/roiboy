@@ -317,6 +317,8 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
 
   // ───────────── Modal padrão ─────────────
   return (
+    <>
+    {approvalDialog}
     <Dialog open={open} onOpenChange={(o) => !o && handleCancel()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
