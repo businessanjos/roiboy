@@ -138,13 +138,36 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
 
-        // Scheduling tasks (agendamentos + no-show) via activity_types AND title
+        // Scheduling/no-show tasks (criadas no período) via activity_types AND title
         supabase
           .from("internal_tasks")
-          .select("assigned_to, title, activity_types!internal_tasks_activity_type_id_fkey(name)")
+          .select("id, assigned_to, title, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
+
+        // Reuniões realizadas (concluídas no período) — paginado para evitar limite de 1000
+        (async () => {
+          const PAGE = 1000;
+          let from = 0;
+          const all: any[] = [];
+          while (from < 50000) {
+            const { data, error } = await supabase
+              .from("internal_tasks")
+              .select("id, assigned_to, title, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
+              .eq("account_id", currentUser.account_id)
+              .not("completed_at", "is", null)
+              .gte("completed_at", dateFilter.start)
+              .lte("completed_at", dateFilter.end)
+              .range(from, from + PAGE - 1);
+            if (error) return { data: all, error };
+            const batch = data || [];
+            all.push(...batch);
+            if (batch.length < PAGE) break;
+            from += PAGE;
+          }
+          return { data: all, error: null };
+        })(),
       ]);
 
       // Process metrics for each user
