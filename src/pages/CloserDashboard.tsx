@@ -500,9 +500,9 @@ export default function CloserDashboard() {
                   label="No-Show"
                   value={noShows}
                   hint={
-                    (me?.scheduled_calls ?? 0) > 0
-                      ? `${Math.round((noShows / (me!.scheduled_calls || 1)) * 100)}% das agendadas`
-                      : "Sem agendadas"
+                    (noShows + meetingsHeld) > 0
+                      ? `${Math.round((noShows / (noShows + meetingsHeld)) * 100)}% (no-show ÷ no-show + realizadas)`
+                      : "Sem reuniões"
                   }
                   variant={noShows > 0 ? "warning" : "default"}
                 />
