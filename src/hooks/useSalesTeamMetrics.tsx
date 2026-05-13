@@ -109,13 +109,16 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
         
-        // Deals
+        // Deals abertos criados no período
         supabase
           .from("deals")
-          .select("id, responsible_user_id, status, value, received_value")
+          .select("id, responsible_user_id, status, value, received_value, won_at, lost_at")
           .eq("account_id", currentUser.account_id)
-          .gte("created_at", dateFilter.start)
-          .lte("created_at", dateFilter.end),
+          .or(
+            `and(status.eq.open,created_at.gte.${dateFilter.start},created_at.lte.${dateFilter.end}),` +
+            `and(status.eq.won,won_at.gte.${dateFilter.start},won_at.lte.${dateFilter.end}),` +
+            `and(status.eq.lost,lost_at.gte.${dateFilter.start},lost_at.lte.${dateFilter.end})`
+          ),
         
         // Tasks
         supabase
