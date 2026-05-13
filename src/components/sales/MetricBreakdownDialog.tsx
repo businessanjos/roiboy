@@ -117,22 +117,17 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
             const dk = meetingDedupeKey(userId, t as any);
             if (seen.has(dk)) continue;
             seen.add(dk);
-            const dateField = useCompletedAt ? "internal_tasks.completed_at" : "internal_tasks.created_at";
+            const dateLabel = useCompletedAt ? "Concluída em" : "Criada em";
             const clientName = t.client_id ? nameMap.get(t.client_id) : null;
+            const activity = (t.activity_types as any)?.name || "Reunião";
             result.push({
               id: t.id,
-              label: t.title || "(sem título)",
+              label: clientName || t.title || "Sem cliente vinculado",
               date: useCompletedAt ? t.completed_at : t.created_at,
-              dateField,
-              source: `internal_tasks · ${(t.activity_types as any)?.name || "—"}`,
+              dateField: dateLabel,
+              source: activity,
               link: t.deal_id ? `/sales/deals/${t.deal_id}` : t.client_id ? `/clients/${t.client_id}` : undefined,
-              meta: [
-                clientName ? `Cliente: ${clientName}` : null,
-                t.deal_id ? `Deal: ${t.deal_id.slice(0, 8)}` : null,
-                t.lead_id ? `Lead: ${t.lead_id.slice(0, 8)}` : null,
-              ]
-                .filter(Boolean)
-                .join(" · "),
+              meta: t.title && clientName && t.title !== clientName ? t.title : undefined,
             });
           }
           result.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
