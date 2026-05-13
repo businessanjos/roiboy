@@ -307,12 +307,81 @@ export function CallLinks() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Título *</Label>
-              <Input
-                placeholder="Ex: Call Maria Silva — 12/05"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
+              <div className="flex items-center justify-between">
+                <Label>Título *</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1"
+                  onClick={() => setTitleMode(titleMode === 'lead' ? 'manual' : 'lead')}
+                >
+                  {titleMode === 'lead' ? (
+                    <><Pencil className="w-3 h-3" /> Digitar manualmente</>
+                  ) : (
+                    <><Search className="w-3 h-3" /> Buscar lead</>
+                  )}
+                </Button>
+              </div>
+              {titleMode === 'lead' ? (
+                <Popover open={leadPickerOpen} onOpenChange={setLeadPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        'w-full justify-between font-normal',
+                        !form.title && 'text-muted-foreground'
+                      )}
+                    >
+                      <span className="truncate">
+                        {form.title || 'Buscar lead em Reunião Agendada / Concluída...'}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar lead..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum lead encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {meetingDeals.map((d) => (
+                            <CommandItem
+                              key={d.id}
+                              value={`${d.label} ${d.stageName}`}
+                              onSelect={() => {
+                                setForm({ ...form, title: d.label });
+                                setLeadPickerOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  form.title === d.label ? 'opacity-100' : 'opacity-0'
+                                )}
+                              />
+                              <div className="flex flex-col min-w-0">
+                                <span className="truncate">{d.label}</span>
+                                <span className="text-[10px] text-muted-foreground truncate">
+                                  {d.stageName}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <Input
+                  placeholder="Ex: Call Maria Silva — 12/05"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label>URL *</Label>
