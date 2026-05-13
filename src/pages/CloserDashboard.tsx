@@ -323,7 +323,9 @@ export default function CloserDashboard() {
     [metrics, effectiveUserId],
   );
 
-  const meetingsHeld = Math.max(0, (me?.scheduled_calls ?? 0) - (me?.noshow_calls ?? 0));
+  // Reuniões realizadas vêm do mesmo agregador usado no Dashboard de Vendas
+  // (internal_tasks com `completed_at` no período + dedupe por cliente).
+  const meetingsHeld = me?.meetings_held ?? 0;
   const noShows = me?.noshow_calls ?? 0;
   const wonValue = me?.won_value ?? 0;
 
