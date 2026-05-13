@@ -35,6 +35,7 @@ import { SalesRecordCard } from "@/components/sales/quotas/SalesRecordCard";
 import { useUserMonthlyTier } from "@/hooks/useUserMonthlyTier";
 import { useCloserPersonalStats } from "@/hooks/useCloserPersonalStats";
 import { cn } from "@/lib/utils";
+import { MetricBreakdownDialog, type BreakdownKind } from "@/components/sales/MetricBreakdownDialog";
 
 // Líderes que enxergam o acelerômetro de seus liderados
 const MANAGER_IDS = new Set<string>([
@@ -187,12 +188,14 @@ function MetricCard({
   value,
   hint,
   variant,
+  onClick,
 }: {
   icon: React.ElementType;
   label: string;
   value: string | number;
   hint?: string;
   variant?: "default" | "success" | "warning" | "danger";
+  onClick?: () => void;
 }) {
   const colorClass =
     variant === "success"
@@ -212,7 +215,25 @@ function MetricCard({
           : "bg-muted";
 
   return (
-    <Card className="border-0 shadow-sm">
+    <Card
+      className={cn(
+        "border-0 shadow-sm",
+        onClick && "cursor-pointer hover:shadow-md hover:ring-1 hover:ring-primary/30 transition",
+      )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+    >
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center gap-3">
           <div className={`p-2.5 rounded-lg ${bgClass}`}>
@@ -222,6 +243,9 @@ function MetricCard({
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
             <p className={`text-2xl font-semibold ${colorClass}`}>{value}</p>
             {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+            {onClick && (
+              <p className="text-[10px] text-primary/70 mt-1">clique para auditar fonte dos dados</p>
+            )}
           </div>
         </div>
       </CardContent>
@@ -342,7 +366,8 @@ export default function CloserDashboard() {
   const closeRate = meetingsHeld > 0 ? Math.round((wonDeals / meetingsHeld) * 100) : 0;
   const { record, recordMonthLabel, piggyValue, loading: statsLoading } =
     useCloserPersonalStats(selYear, selMonth, effectiveUserId);
-
+  const [breakdown, setBreakdown] = useState<{ kind: BreakdownKind; title: string } | null>(null);
+  const openBreakdown = (kind: BreakdownKind, title: string) => setBreakdown({ kind, title });
 
 
   return (
@@ -434,8 +459,11 @@ export default function CloserDashboard() {
         {/* Speedometer + Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card
+            onClick={() => openBreakdown("won", "Vendas fechadas — fonte do velocímetro")}
+            role="button"
+            tabIndex={0}
             className={cn(
-              "lg:col-span-1 relative transition-shadow",
+              "lg:col-span-1 relative transition-shadow cursor-pointer hover:ring-1 hover:ring-primary/30",
               wonDeals > MONTH_QUOTA_DEFAULT &&
                 "animate-turbo-glow border-orange-500/40 ring-1 ring-orange-500/40 overflow-visible",
             )}
@@ -494,6 +522,15 @@ export default function CloserDashboard() {
                   value={meetingsHeld}
                   hint={`${me?.scheduled_calls ?? 0} agendadas`}
                   variant="default"
+                  onClick={() => openBreakdown("held", "Reuniões realizadas — fonte dos dados")}
+                />
+                <MetricCard
+                  icon={CalendarX}
+                  label="Agendadas"
+                  value={me?.scheduled_calls ?? 0}
+                  hint="tasks de agendamento criadas no período"
+                  variant="default"
+                  onClick={() => openBreakdown("scheduled", "Agendamentos — fonte dos dados")}
                 />
                 <MetricCard
                   icon={CalendarX}
@@ -505,6 +542,7 @@ export default function CloserDashboard() {
                       : "Sem reuniões"
                   }
                   variant={noShows > 0 ? "warning" : "default"}
+                  onClick={() => openBreakdown("noshow", "No-show — fonte dos dados")}
                 />
                 <MetricCard
                   icon={Percent}
@@ -512,6 +550,7 @@ export default function CloserDashboard() {
                   value={`${closeRate}%`}
                   hint={`${wonDeals} fechadas / ${meetingsHeld} reuniões`}
                   variant={closeRate >= 30 ? "success" : closeRate >= 15 ? "warning" : "danger"}
+                  onClick={() => openBreakdown("won", "Vendas fechadas — fonte do close rate")}
                 />
               </>
             )}
@@ -592,6 +631,16 @@ export default function CloserDashboard() {
         </div>
       </div>
       </div>
+      <MetricBreakdownDialog
+        open={!!breakdown}
+        onOpenChange={(v) => !v && setBreakdown(null)}
+        kind={breakdown?.kind ?? "held"}
+        title={breakdown?.title ?? ""}
+        userId={effectiveUserId}
+        accountId={currentUser?.account_id}
+        startDate={startOfMonth}
+        endDate={endOfMonth}
+      />
     </TooltipProvider>
   );
 }
