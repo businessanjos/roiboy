@@ -15633,6 +15633,8 @@ export type Database = {
       spiff_spins: {
         Row: {
           account_id: string
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -15650,6 +15652,8 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -15667,6 +15671,8 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           created_by?: string | null
           id?: string

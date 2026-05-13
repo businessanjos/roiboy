@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dice5, Trophy, Volume2, VolumeX, Tv, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dice5, Trophy, Volume2, VolumeX, Tv, X, ShieldCheck, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -76,6 +78,13 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
   const [tvMode, setTvMode] = useState(false);
   const optionsRef = useRef<ShuffleCard[]>([]);
 
+  // Aprovação do gestor
+  const [approvalOpen, setApprovalOpen] = useState(false);
+  const [approvalEmail, setApprovalEmail] = useState("");
+  const [approvalPassword, setApprovalPassword] = useState("");
+  const [approvalLoading, setApprovalLoading] = useState(false);
+  const [approver, setApprover] = useState<{ id: string; name: string } | null>(null);
+
   const min = Number(spiff.roulette_min_prize ?? 0);
   const max = Number(spiff.roulette_max_prize ?? 100);
   const usingPool = !!spiff.roulette_pool_id;
@@ -85,6 +94,10 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
       setPhase("idle");
       setFinalOption(null);
       setTvMode(false);
+      setApprover(null);
+      setApprovalOpen(false);
+      setApprovalEmail("");
+      setApprovalPassword("");
     }
   }, [open]);
 
@@ -99,24 +112,59 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     return options.length - 1;
   };
 
-  const startSpin = () => {
+  const requestApproval = () => {
     if (phase !== "idle" || pendingSpins <= 0) return;
-    const baseData: { weight?: number }[] = spiff.roulette_pool_id
-      ? (prizesQuery.data ?? []).map((p: any) => ({ weight: Number(p.weight ?? 1) }))
-      : [];
-    const options = buildOptions();
-    if (options.length === 0) {
+    if (usingPool && (prizesQuery.data?.length ?? 0) === 0) {
       toast.error("Nenhum prêmio configurado nesta roleta.");
       return;
     }
-    optionsRef.current = options;
-    const winnerIdx = pickWeighted(spiff.roulette_pool_id ? baseData : options.map(() => ({ weight: 1 })));
-    setFinalOption(options[winnerIdx]);
-    setPhase("spinning");
+    setApprovalEmail("");
+    setApprovalPassword("");
+    setApprovalOpen(true);
+  };
+
+  const submitApproval = async () => {
+    if (!approvalEmail || !approvalPassword) {
+      toast.error("Informe email e senha do gestor");
+      return;
+    }
+    setApprovalLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-manager-approval", {
+        body: { email: approvalEmail.trim(), password: approvalPassword },
+      });
+      if (error || !data?.ok) {
+        toast.error(data?.error || error?.message || "Aprovação falhou");
+        return;
+      }
+      setApprover(data.manager);
+      setApprovalOpen(false);
+      setApprovalPassword("");
+      toast.success(`Aprovado por ${data.manager.name}`);
+      // Inicia o giro
+      const baseData: { weight?: number }[] = spiff.roulette_pool_id
+        ? (prizesQuery.data ?? []).map((p: any) => ({ weight: Number(p.weight ?? 1) }))
+        : [];
+      const options = buildOptions();
+      if (options.length === 0) {
+        toast.error("Nenhum prêmio configurado nesta roleta.");
+        return;
+      }
+      optionsRef.current = options;
+      const winnerIdx = pickWeighted(spiff.roulette_pool_id ? baseData : options.map(() => ({ weight: 1 })));
+      setFinalOption(options[winnerIdx]);
+      setPhase("spinning");
+    } finally {
+      setApprovalLoading(false);
+    }
   };
 
   const handleSave = async () => {
     if (!finalOption || !currentUser?.account_id) return;
+    if (!approver) {
+      toast.error("Aprovação do gestor é obrigatória");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from("spiff_spins").insert({
       account_id: currentUser.account_id,
@@ -126,7 +174,9 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
       prize_id: finalOption.id,
       prize_label: finalOption.label,
       created_by: currentUser.id,
-    });
+      approved_by: approver.id,
+      approved_at: new Date().toISOString(),
+    } as any);
     setSaving(false);
     if (error) {
       toast.error("Erro ao registrar giro: " + error.message);
@@ -142,9 +192,62 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     onOpenChange(false);
   };
 
+  const approvalDialog = (
+    <Dialog open={approvalOpen} onOpenChange={(o) => !approvalLoading && setApprovalOpen(o)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-amber-500" />
+            Aprovação do Gestor
+          </DialogTitle>
+          <DialogDescription>
+            Para girar a roleta de <strong>{user.name}</strong>, um gestor (Head, Gerente, Diretor, Sócio ou Admin) precisa aprovar com suas credenciais.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="approver-email" className="text-xs">Email do gestor</Label>
+            <Input
+              id="approver-email"
+              type="email"
+              autoComplete="off"
+              value={approvalEmail}
+              onChange={(e) => setApprovalEmail(e.target.value)}
+              placeholder="gestor@empresa.com"
+              disabled={approvalLoading}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="approver-pass" className="text-xs">Senha</Label>
+            <Input
+              id="approver-pass"
+              type="password"
+              autoComplete="new-password"
+              value={approvalPassword}
+              onChange={(e) => setApprovalPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitApproval(); }}
+              disabled={approvalLoading}
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setApprovalOpen(false)} disabled={approvalLoading}>
+            Cancelar
+          </Button>
+          <Button onClick={submitApproval} disabled={approvalLoading} className="gap-1.5">
+            <Lock className="h-4 w-4" />
+            {approvalLoading ? "Verificando..." : "Aprovar e Girar"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   // ───────────── TV Mode (fullscreen) ─────────────
   if (tvMode && open) {
     return (
+      <>
+      {approvalDialog}
       <div className="fixed inset-0 z-[200] bg-gradient-to-br from-background via-background to-primary/10 flex flex-col items-center justify-center p-8">
         <Button
           variant="ghost"
@@ -176,7 +279,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
             />
           ) : phase === "idle" ? (
             <Button
-              onClick={startSpin}
+              onClick={requestApproval}
               size="lg"
               className="h-24 px-12 text-3xl gap-3 bg-amber-500 hover:bg-amber-600 text-white"
               disabled={pendingSpins <= 0 || (usingPool && prizesQuery.isLoading)}
@@ -208,11 +311,14 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
           </div>
         )}
       </div>
+      </>
     );
   }
 
   // ───────────── Modal padrão ─────────────
   return (
+    <>
+    {approvalDialog}
     <Dialog open={open} onOpenChange={(o) => !o && handleCancel()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -279,7 +385,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
           <div className="flex flex-col gap-2">
             {phase === "idle" && (
               <Button
-                onClick={startSpin}
+                onClick={requestApproval}
                 size="lg"
                 className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white"
                 disabled={pendingSpins <= 0 || (usingPool && prizesQuery.isLoading)}
@@ -315,5 +421,6 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
