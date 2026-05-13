@@ -521,7 +521,15 @@ export default function SalesDashboard() {
     },
   });
 
-  const heldMeetingsTotal = (heldMeetingsRows || []).length;
+  // Total de reuniões realizadas no período: agora vem direto do hook
+  // useSalesTeamMetrics (mesmo classificador + dedupe por vendedor+entidade
+  // usado no Acelerômetro e na tabela do time), garantindo consistência.
+  const heldMeetingsFromTeam = useMemo(
+    () => teamMetrics.reduce((acc, m) => acc + (m.meetings_held || 0), 0),
+    [teamMetrics]
+  );
+  // Mantém o fallback (query global) caso o time não esteja carregado ainda
+  const heldMeetingsTotal = heldMeetingsFromTeam || (heldMeetingsRows || []).length;
   const closeRate = heldMeetingsTotal > 0 ? (wonCount / heldMeetingsTotal) * 100 : 0;
 
   // Ciclo médio de vendas (dias entre criação e ganho)
