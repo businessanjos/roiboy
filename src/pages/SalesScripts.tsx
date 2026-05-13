@@ -743,6 +743,7 @@ export default function SalesScripts() {
                   <TabsTrigger value="comparative" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><TrendingUp className="w-3.5 h-3.5" />Comparativo</TabsTrigger>
                   <TabsTrigger value="ideal-script" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Crown className="w-3.5 h-3.5" />Script Ideal</TabsTrigger>
                   <TabsTrigger value="ranking" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Trophy className="w-3.5 h-3.5" />Ranking</TabsTrigger>
+                  <TabsTrigger value="links" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Link2 className="w-3.5 h-3.5" />Links</TabsTrigger>
                 </TabsList>
               </div>
 
