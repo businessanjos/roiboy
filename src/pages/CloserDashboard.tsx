@@ -187,12 +187,14 @@ function MetricCard({
   value,
   hint,
   variant,
+  onClick,
 }: {
   icon: React.ElementType;
   label: string;
   value: string | number;
   hint?: string;
   variant?: "default" | "success" | "warning" | "danger";
+  onClick?: () => void;
 }) {
   const colorClass =
     variant === "success"
@@ -212,7 +214,25 @@ function MetricCard({
           : "bg-muted";
 
   return (
-    <Card className="border-0 shadow-sm">
+    <Card
+      className={cn(
+        "border-0 shadow-sm",
+        onClick && "cursor-pointer hover:shadow-md hover:ring-1 hover:ring-primary/30 transition",
+      )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+    >
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center gap-3">
           <div className={`p-2.5 rounded-lg ${bgClass}`}>
@@ -222,6 +242,9 @@ function MetricCard({
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
             <p className={`text-2xl font-semibold ${colorClass}`}>{value}</p>
             {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+            {onClick && (
+              <p className="text-[10px] text-primary/70 mt-1">clique para auditar fonte dos dados</p>
+            )}
           </div>
         </div>
       </CardContent>
