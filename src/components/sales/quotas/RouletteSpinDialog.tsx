@@ -311,6 +311,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
           </div>
         )}
       </div>
+      </>
     );
   }
 
