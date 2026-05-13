@@ -502,9 +502,16 @@ export default function FinancialBankAccountsPage() {
                       {formatCurrency(account.current_balance)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={account.is_active ? "default" : "secondary"}>
-                        {account.is_active ? "Ativa" : "Inativa"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={account.is_active ? "default" : "secondary"}>
+                          {account.is_active ? "Ativa" : "Inativa"}
+                        </Badge>
+                        {account.openfinance_account_id && (
+                          <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-600">
+                            Open Finance
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
