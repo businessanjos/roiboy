@@ -1237,8 +1237,8 @@ export function DealDetailSheet({
                         className="text-2xl font-bold text-emerald-600 hover:underline text-left w-full"
                         title="Editar valor recebido"
                       >
-                        {(deal as any).received_value != null
-                          ? formatCurrency(Number((deal as any).received_value))
+                        {localReceivedValue != null
+                          ? formatCurrency(localReceivedValue)
                           : <span className="text-muted-foreground text-sm font-normal italic">Clique para informar o valor recebido</span>}
                       </button>
                     </PopoverTrigger>
