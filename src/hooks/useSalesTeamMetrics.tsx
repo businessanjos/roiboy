@@ -383,6 +383,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         assigned_leads: acc.assigned_leads + m.assigned_leads,
         scheduled_calls: acc.scheduled_calls + m.scheduled_calls,
         noshow_calls: acc.noshow_calls + m.noshow_calls,
+        meetings_held: acc.meetings_held + m.meetings_held,
       }),
       {
         total_calls: 0,
@@ -396,6 +397,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         assigned_leads: 0,
         scheduled_calls: 0,
         noshow_calls: 0,
+        meetings_held: 0,
       }
     );
   }, [metrics]);
