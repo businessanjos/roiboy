@@ -45,6 +45,14 @@ async function fetchClientNames(ids: string[]): Promise<Map<string, string>> {
   return map;
 }
 
+async function fetchLeadNames(ids: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!ids.length) return map;
+  const { data } = await supabase.from("leads").select("id, full_name").in("id", ids);
+  (data || []).forEach((l: any) => map.set(l.id, l.full_name));
+  return map;
+}
+
 export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accountId, startDate, endDate, title }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
@@ -109,7 +117,11 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
             (t: any) => classifyMeetingTask((t.activity_types as any)?.name, t.title) === kind,
           );
           const clientIds = Array.from(new Set(filtered.map((t: any) => t.client_id).filter(Boolean)));
-          const nameMap = await fetchClientNames(clientIds);
+          const leadIds = Array.from(new Set(filtered.map((t: any) => t.lead_id).filter(Boolean)));
+          const [clientMap, leadMap] = await Promise.all([
+            fetchClientNames(clientIds),
+            fetchLeadNames(leadIds),
+          ]);
 
           const seen = new Set<string>();
           const result: Row[] = [];
@@ -118,16 +130,19 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
             if (seen.has(dk)) continue;
             seen.add(dk);
             const dateLabel = useCompletedAt ? "Concluída em" : "Criada em";
-            const clientName = t.client_id ? nameMap.get(t.client_id) : null;
+            const clientName = t.client_id ? clientMap.get(t.client_id) : null;
+            const leadName = t.lead_id ? leadMap.get(t.lead_id) : null;
+            const personName = clientName || leadName;
+            const personPrefix = clientName ? "" : leadName ? "Lead: " : "";
             const activity = (t.activity_types as any)?.name || "Reunião";
             result.push({
               id: t.id,
-              label: clientName || t.title || "Sem cliente vinculado",
+              label: personName ? `${personPrefix}${personName}` : t.title || "Sem contato vinculado",
               date: useCompletedAt ? t.completed_at : t.created_at,
               dateField: dateLabel,
               source: activity,
               link: t.deal_id ? `/sales/deals/${t.deal_id}` : t.client_id ? `/clients/${t.client_id}` : undefined,
-              meta: t.title && clientName && t.title !== clientName ? t.title : undefined,
+              meta: t.title && personName && t.title !== personName ? t.title : undefined,
             });
           }
           result.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
