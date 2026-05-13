@@ -129,6 +129,7 @@ const FinancialDashboardPage = lazyRetry(() => import("./pages/financial/Financi
 const FinancialEntriesPage = lazyRetry(() => import("./pages/financial/FinancialEntriesPage"));
 const FinancialCashFlowPage = lazyRetry(() => import("./pages/financial/FinancialCashFlowPage"));
 const FinancialBankAccountsPage = lazyRetry(() => import("./pages/financial/FinancialBankAccountsPage"));
+const FinancialBankAccountStatementPage = lazyRetry(() => import("./pages/financial/FinancialBankAccountStatementPage"));
 const FinancialCategoriesPage = lazyRetry(() => import("./pages/financial/FinancialCategoriesPage"));
 const FinancialCostCentersPage = lazyRetry(() => import("./pages/financial/FinancialCostCentersPage"));
 const FinancialSuppliersPage = lazyRetry(() => import("./pages/financial/FinancialSuppliersPage"));
@@ -228,6 +229,7 @@ const App = () => (
                               <Route path="entries" element={<FinancialEntriesPage />} />
                               <Route path="cash-flow" element={<FinancialCashFlowPage />} />
                               <Route path="bank-accounts" element={<FinancialBankAccountsPage />} />
+                              <Route path="bank-accounts/:id/extrato" element={<FinancialBankAccountStatementPage />} />
                               <Route path="categories" element={<FinancialCategoriesPage />} />
                               <Route path="cost-centers" element={<FinancialCostCentersPage />} />
                               <Route path="suppliers" element={<FinancialSuppliersPage />} />

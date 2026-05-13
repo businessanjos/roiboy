@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MoreHorizontal, Building2, Check, ChevronsUpDown, MapPin, Calendar } from "lucide-react";
+import { Plus, Edit2, Trash2, MoreHorizontal, Building2, Check, ChevronsUpDown, MapPin, Calendar, FileText, Link as LinkIcon, Unlink } from "lucide-react";
+import { Link as RouterLink } from "react-router-dom";
+import { OpenFinanceLinkDialog } from "@/components/financial/OpenFinanceLinkDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,6 +95,12 @@ interface BankAccount {
   card_last_digits: string | null;
   closing_day: number | null;
   due_day: number | null;
+  // Open Finance
+  openfinance_account_id?: string | null;
+  openfinance_connection_id?: string | null;
+  openfinance_institution?: string | null;
+  last_balance_sync_at?: string | null;
+  last_transactions_sync_at?: string | null;
 }
 
 const cardBrands = [
@@ -147,6 +155,25 @@ export default function FinancialBankAccountsPage() {
   const [bankPopoverOpen, setBankPopoverOpen] = useState(false);
   const [linkedAccountPopoverOpen, setLinkedAccountPopoverOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [linkDialogFor, setLinkDialogFor] = useState<BankAccount | null>(null);
+
+  const unlinkMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("bank_accounts")
+        .update({
+          openfinance_account_id: null,
+          openfinance_connection_id: null,
+          openfinance_institution: null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bank-accounts-all"] });
+      toast({ title: "Conta desvinculada do Open Finance" });
+    },
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -475,9 +502,16 @@ export default function FinancialBankAccountsPage() {
                       {formatCurrency(account.current_balance)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={account.is_active ? "default" : "secondary"}>
-                        {account.is_active ? "Ativa" : "Inativa"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={account.is_active ? "default" : "secondary"}>
+                          {account.is_active ? "Ativa" : "Inativa"}
+                        </Badge>
+                        {account.openfinance_account_id && (
+                          <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-600">
+                            Open Finance
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -487,6 +521,23 @@ export default function FinancialBankAccountsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <RouterLink to={`/financial/bank-accounts/${account.id}/extrato`}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Ver extrato
+                            </RouterLink>
+                          </DropdownMenuItem>
+                          {account.openfinance_account_id ? (
+                            <DropdownMenuItem onClick={() => unlinkMutation.mutate(account.id)}>
+                              <Unlink className="h-4 w-4 mr-2" />
+                              Desvincular Open Finance
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => setLinkDialogFor(account)}>
+                              <LinkIcon className="h-4 w-4 mr-2" />
+                              Conectar Open Finance
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleEdit(account)}>
                             <Edit2 className="h-4 w-4 mr-2" />
                             Editar
@@ -966,6 +1017,15 @@ export default function FinancialBankAccountsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {linkDialogFor && (
+        <OpenFinanceLinkDialog
+          open={!!linkDialogFor}
+          onOpenChange={(v) => !v && setLinkDialogFor(null)}
+          bankAccountId={linkDialogFor.id}
+          bankAccountName={linkDialogFor.name}
+        />
+      )}
     </div>
   );
 }
