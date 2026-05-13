@@ -37,6 +37,15 @@ interface Row {
 const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
 
+async function fetchClientNames(ids: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!ids.length) return map;
+  const { data } = await supabase.from("clients").select("id, name").in("id", ids);
+  (data || []).forEach((c: any) => map.set(c.id, c.name));
+  return map;
+}
+const _ignored = 
+
 export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accountId, startDate, endDate, title }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
