@@ -19,3 +19,5 @@ export function FinancialLayout() {
     </FinancialCompanyProvider>
   );
 }
+
+export default FinancialLayout;
