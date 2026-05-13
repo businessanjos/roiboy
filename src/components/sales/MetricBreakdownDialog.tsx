@@ -44,7 +44,6 @@ async function fetchClientNames(ids: string[]): Promise<Map<string, string>> {
   (data || []).forEach((c: any) => map.set(c.id, c.name));
   return map;
 }
-const _ignored = 
 
 export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accountId, startDate, endDate, title }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
