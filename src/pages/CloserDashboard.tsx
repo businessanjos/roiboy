@@ -519,6 +519,15 @@ export default function CloserDashboard() {
                   value={meetingsHeld}
                   hint={`${me?.scheduled_calls ?? 0} agendadas`}
                   variant="default"
+                  onClick={() => openBreakdown("held", "Reuniões realizadas — fonte dos dados")}
+                />
+                <MetricCard
+                  icon={CalendarX}
+                  label="Agendadas"
+                  value={me?.scheduled_calls ?? 0}
+                  hint="tasks de agendamento criadas no período"
+                  variant="default"
+                  onClick={() => openBreakdown("scheduled", "Agendamentos — fonte dos dados")}
                 />
                 <MetricCard
                   icon={CalendarX}
@@ -530,6 +539,7 @@ export default function CloserDashboard() {
                       : "Sem reuniões"
                   }
                   variant={noShows > 0 ? "warning" : "default"}
+                  onClick={() => openBreakdown("noshow", "No-show — fonte dos dados")}
                 />
                 <MetricCard
                   icon={Percent}
@@ -537,6 +547,7 @@ export default function CloserDashboard() {
                   value={`${closeRate}%`}
                   hint={`${wonDeals} fechadas / ${meetingsHeld} reuniões`}
                   variant={closeRate >= 30 ? "success" : closeRate >= 15 ? "warning" : "danger"}
+                  onClick={() => openBreakdown("won", "Vendas fechadas — fonte do close rate")}
                 />
               </>
             )}
