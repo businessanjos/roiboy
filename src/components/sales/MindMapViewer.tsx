@@ -379,14 +379,16 @@ function MindMapNodeComponent({ node, depth, isRoot = false, onEditNode }: NodeP
               !isRoot && "hover:shadow-md hover:brightness-110",
             )}
             style={isRoot ? {
-              background: 'linear-gradient(135deg, hsl(240 10% 8%) 0%, hsl(240 10% 14%) 100%)',
+              background: 'linear-gradient(135deg, #ffffff 0%, #faf6ec 100%)',
               borderColor: '#C5A053',
-              boxShadow: '0 0 24px rgba(197, 160, 83, 0.2)',
-              color: '#C5A053',
+              boxShadow: '0 4px 18px rgba(197, 160, 83, 0.22)',
+              color: '#8a6d2a',
             } : {
-              backgroundColor: `${node.color}14`,
-              borderColor: `${node.color}40`,
-              color: node.color,
+              backgroundColor: '#ffffff',
+              borderColor: `${node.color}66`,
+              borderLeft: `4px solid ${node.color}`,
+              color: '#1f2937',
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.06)',
             }}
             onDoubleClick={handleDoubleClick}
           >
@@ -406,9 +408,9 @@ function MindMapNodeComponent({ node, depth, isRoot = false, onEditNode }: NodeP
               <span
                 className={cn(
                   "leading-snug",
-                  isRoot ? "" : "text-foreground/90",
                   depth >= 3 && "max-w-[320px] whitespace-normal"
                 )}
+                style={{ color: isRoot ? '#8a6d2a' : '#1f2937' }}
               >
                 {node.label}
               </span>
@@ -584,7 +586,7 @@ export default function MindMapViewer({ open, onOpenChange, content, title, scri
     try {
       toast.info('Gerando PDF do mapa mental...');
       const canvas = await html2canvas(contentRef.current, {
-        backgroundColor: '#0a0a12',
+        backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
         logging: false,
@@ -665,7 +667,7 @@ export default function MindMapViewer({ open, onOpenChange, content, title, scri
           style={{ 
             height: 'calc(92vh - 90px)', 
             cursor: isPanning ? 'grabbing' : 'grab',
-            background: 'radial-gradient(ellipse at center, hsl(240 10% 6%) 0%, hsl(240 10% 3%) 100%)',
+            background: 'radial-gradient(ellipse at center, #fafaf7 0%, #eef0f3 100%)',
           }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
@@ -675,9 +677,9 @@ export default function MindMapViewer({ open, onOpenChange, content, title, scri
         >
           {/* Subtle grid pattern */}
           <div 
-            className="absolute inset-0 opacity-[0.03] pointer-events-none"
+            className="absolute inset-0 opacity-[0.18] pointer-events-none"
             style={{
-              backgroundImage: 'radial-gradient(circle, hsl(43 50% 55%) 1px, transparent 1px)',
+              backgroundImage: 'radial-gradient(circle, #94a3b8 1px, transparent 1px)',
               backgroundSize: '30px 30px',
             }}
           />
