@@ -33,9 +33,10 @@ export interface SalesRepMetrics {
   converted_leads: number;
   entry_value_total: number;
 
-  // Scheduling metrics
+  // Scheduling metrics — todos com dedupe por (vendedor + entidade)
   scheduled_calls: number;
   noshow_calls: number;
+  meetings_held: number;
 }
 
 interface UseSalesTeamMetricsOptions {
