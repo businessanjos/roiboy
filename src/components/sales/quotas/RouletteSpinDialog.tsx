@@ -78,6 +78,13 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
   const [tvMode, setTvMode] = useState(false);
   const optionsRef = useRef<ShuffleCard[]>([]);
 
+  // Aprovação do gestor
+  const [approvalOpen, setApprovalOpen] = useState(false);
+  const [approvalEmail, setApprovalEmail] = useState("");
+  const [approvalPassword, setApprovalPassword] = useState("");
+  const [approvalLoading, setApprovalLoading] = useState(false);
+  const [approver, setApprover] = useState<{ id: string; name: string } | null>(null);
+
   const min = Number(spiff.roulette_min_prize ?? 0);
   const max = Number(spiff.roulette_max_prize ?? 100);
   const usingPool = !!spiff.roulette_pool_id;
@@ -87,6 +94,10 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
       setPhase("idle");
       setFinalOption(null);
       setTvMode(false);
+      setApprover(null);
+      setApprovalOpen(false);
+      setApprovalEmail("");
+      setApprovalPassword("");
     }
   }, [open]);
 
