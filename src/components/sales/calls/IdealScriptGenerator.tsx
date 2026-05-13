@@ -20,6 +20,7 @@ export function IdealScriptGenerator() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [idealScript, setIdealScript] = useState<string | null>(null);
   const [scriptProductName, setScriptProductName] = useState<string>('');
+  const [scriptStats, setScriptStats] = useState<{ analyzed: number; champions: number; rate: number } | null>(null);
   const [customInstructions, setCustomInstructions] = useState('');
   const [mindMapOpen, setMindMapOpen] = useState(false);
 
@@ -39,6 +40,33 @@ export function IdealScriptGenerator() {
     },
     enabled: !!accountId,
   });
+
+  // All analyses (any outcome) — used to compute success rate per product
+  const { data: allAnalyses = [] } = useQuery({
+    queryKey: ['all-call-analyses-for-stats', accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sales_call_analyses')
+        .select('id, product_id, call_outcome')
+        .eq('account_id', accountId!)
+        .limit(1000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!accountId,
+  });
+
+  const productStats = useMemo(() => {
+    const map = new Map<string, { analyzed: number; champions: number }>();
+    for (const a of allAnalyses) {
+      if (!a.product_id) continue;
+      const cur = map.get(a.product_id) || { analyzed: 0, champions: 0 };
+      cur.analyzed += 1;
+      if (a.call_outcome === 'success') cur.champions += 1;
+      map.set(a.product_id, cur);
+    }
+    return map;
+  }, [allAnalyses]);
 
   // Products in the account (with color for badges)
   const { data: products = [] } = useQuery({
@@ -146,6 +174,9 @@ Seja EXTREMAMENTE ESPECÍFICO. Use exemplos reais extraídos das análises. Cada
       setIdealScript(script);
       const productName = selectedProduct?.name || '';
       setScriptProductName(productName);
+      const stats = productStats.get(selectedProductId!) || { analyzed: productChampionCalls.length, champions: productChampionCalls.length };
+      const rate = stats.analyzed > 0 ? Math.round((stats.champions / stats.analyzed) * 100) : 0;
+      setScriptStats({ analyzed: stats.analyzed, champions: stats.champions, rate });
       // Strip any AI preamble before the first markdown heading so the card
       // preview shows the actual script — not "Com certeza! Analisarei...".
       const firstHeading = script.search(/^#{1,3}\s/m);
@@ -286,7 +317,7 @@ Seja EXTREMAMENTE ESPECÍFICO. Use exemplos reais extraídos das análises. Cada
 
       {idealScript && (
         <Card className="border-primary/30 shadow-sm">
-          <CardHeader className="pb-3 border-b bg-gradient-to-r from-primary/5 to-transparent">
+          <CardHeader className="pb-3 border-b bg-gradient-to-r from-primary/5 to-transparent space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <CardTitle className="text-base flex items-center gap-2">
                 <Crown className="w-5 h-5 text-primary" />
@@ -301,6 +332,31 @@ Seja EXTREMAMENTE ESPECÍFICO. Use exemplos reais extraídos das análises. Cada
                 </Button>
               </div>
             </div>
+            {scriptStats && (
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant="secondary" className="text-[10px] gap-1 h-5">
+                  <FileText className="w-2.5 h-2.5" />
+                  {scriptStats.analyzed} call{scriptStats.analyzed === 1 ? '' : 's'} analisada{scriptStats.analyzed === 1 ? '' : 's'}
+                </Badge>
+                <Badge variant="secondary" className="text-[10px] gap-1 h-5 bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  <Trophy className="w-2.5 h-2.5" />
+                  {scriptStats.champions} campeã{scriptStats.champions === 1 ? '' : 's'}
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className={`text-[10px] gap-1 h-5 border ${
+                    scriptStats.rate >= 50
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                      : scriptStats.rate >= 25
+                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                        : 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30'
+                  }`}
+                >
+                  <Sparkles className="w-2.5 h-2.5" />
+                  {scriptStats.rate}% de sucesso
+                </Badge>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="pt-4">
             <div className="max-w-3xl mx-auto">
