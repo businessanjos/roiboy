@@ -79,12 +79,12 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
           setRows(
             (data || []).map((d: any) => ({
               id: d.id,
-              label: d.title || nameMap.get(d.client_id) || "Negócio sem título",
+              label: nameMap.get(d.client_id) || d.title || "Cliente sem nome",
               date: d.won_at,
-              dateField: "deals.won_at",
-              source: "deals (status=won)",
+              dateField: "Fechada em",
+              source: "Venda fechada",
               link: `/sales/deals/${d.id}`,
-              meta: nameMap.get(d.client_id) ? `Cliente: ${nameMap.get(d.client_id)}` : undefined,
+              meta: d.title && nameMap.get(d.client_id) && d.title !== nameMap.get(d.client_id) ? d.title : undefined,
             })),
           );
         } else {
