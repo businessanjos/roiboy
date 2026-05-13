@@ -1326,6 +1326,42 @@ export type Database = {
           },
         ]
       }
+      call_links: {
+        Row: {
+          account_id: string
+          call_date: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          title: string
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          call_date?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          title: string
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          call_date?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          title?: string
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       churn_analysis_reports: {
         Row: {
           account_id: string

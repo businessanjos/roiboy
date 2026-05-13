@@ -28,6 +28,7 @@ import { CallComparative } from '@/components/sales/calls/CallComparative';
 import { IdealScriptGenerator } from '@/components/sales/calls/IdealScriptGenerator';
 import { CloserRanking } from '@/components/sales/calls/CloserRanking';
 import { BulkCallUpload } from '@/components/sales/calls/BulkCallUpload';
+import { CallLinks } from '@/components/sales/calls/CallLinks';
 import { clearGoogleDriveOAuthPending, getGoogleDriveCallbackMessage, getGoogleDriveOAuthErrorMessage, getGoogleDriveOAuthPending, startGoogleDriveOAuth } from '@/lib/googleDriveOAuth';
 
 const OBJECTION_TYPES = [
@@ -742,6 +743,7 @@ export default function SalesScripts() {
                   <TabsTrigger value="comparative" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><TrendingUp className="w-3.5 h-3.5" />Comparativo</TabsTrigger>
                   <TabsTrigger value="ideal-script" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Crown className="w-3.5 h-3.5" />Script Ideal</TabsTrigger>
                   <TabsTrigger value="ranking" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Trophy className="w-3.5 h-3.5" />Ranking</TabsTrigger>
+                  <TabsTrigger value="links" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Link2 className="w-3.5 h-3.5" />Links</TabsTrigger>
                 </TabsList>
               </div>
 
@@ -1219,6 +1221,10 @@ export default function SalesScripts() {
 
               <TabsContent value="ranking" className="mt-4">
                 <CloserRanking />
+              </TabsContent>
+
+              <TabsContent value="links" className="mt-4">
+                <CallLinks />
               </TabsContent>
             </Tabs>
           </div>
