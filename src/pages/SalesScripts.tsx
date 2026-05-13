@@ -367,7 +367,7 @@ export default function SalesScripts() {
 
   const generateScriptMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('generate-sales-script', { body: { accountId, scriptType: selectedScriptType, meetingType, customPrompt: customPrompt || undefined } });
+      const { data, error } = await supabase.functions.invoke('generate-sales-script', { body: { userId: currentUser?.id, accountId, scriptType: selectedScriptType, meetingType, customPrompt: customPrompt || undefined } });
       if (error) throw error;
       return data;
     },
