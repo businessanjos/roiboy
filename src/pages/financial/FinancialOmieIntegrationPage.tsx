@@ -40,6 +40,7 @@ import {
   Trash2,
   XCircle,
   ArrowDownToLine,
+  Pencil,
 } from "lucide-react";
 
 function formatCnpj(cnpj?: string | null) {
