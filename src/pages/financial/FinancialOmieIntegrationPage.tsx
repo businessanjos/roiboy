@@ -59,6 +59,12 @@ export default function FinancialOmieIntegrationPage() {
   const [pulling, setPulling] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
+  useEffect(() => {
+    const h = () => refresh();
+    window.addEventListener("omie-companies-refresh", h);
+    return () => window.removeEventListener("omie-companies-refresh", h);
+  }, [refresh]);
+
   const handleSyncEntries = async () => {
     if (!selectedId) {
       toast({ title: "Selecione um CNPJ", variant: "destructive" });
