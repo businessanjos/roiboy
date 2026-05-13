@@ -635,7 +635,7 @@ export default function SalesScripts() {
   const materialCountByType = MATERIAL_TYPES.map(mt => ({ ...mt, count: materials.filter(m => m.material_type === mt.value).length }));
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 space-y-6 max-w-[1400px] mx-auto pb-20 md:pb-12">
+    <div className="px-4 md:px-8 py-6 md:py-8 space-y-6 max-w-[1400px] mx-auto pb-20 md:pb-12 w-full min-w-0 overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/60">
         <div className="flex items-center gap-4">
