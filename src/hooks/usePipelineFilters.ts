@@ -348,6 +348,11 @@ function evaluateDateCondition(fieldValue: string | null | undefined, operator: 
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
   switch (operator) {
+    case 'today': {
+      const endOfToday = new Date(today);
+      endOfToday.setHours(23, 59, 59, 999);
+      return date >= today && date <= endOfToday;
+    }
     case 'this_week':
       return date >= startOfWeek && date <= today;
     
