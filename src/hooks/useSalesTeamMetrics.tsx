@@ -311,20 +311,42 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         }
       }
 
-      // Aggregate scheduling metrics (agendamentos x no-show)
+      // Aggregate scheduling metrics (agendamentos x no-show) com dedupe por
+      // (vendedor + entidade) — duas tasks no mesmo cliente contam como uma.
+      const seenScheduled = new Set<string>();
+      const seenNoshow = new Set<string>();
       if (schedulingData.data) {
         for (const task of schedulingData.data as any[]) {
-          const activityName = (task.activity_types as any)?.name?.toLowerCase() || "";
-          const taskTitle = (task.title || "").toLowerCase();
-          const combined = activityName + " " + taskTitle;
-          if (task.assigned_to && metricsMap[task.assigned_to]) {
-            if (combined.includes("call comercial agendada") || combined.includes("agendamento") || combined.includes("agendada")) {
-              metricsMap[task.assigned_to].scheduled_calls++;
-            }
-            if (combined.includes("no-show") || combined.includes("no show") || combined.includes("noshow")) {
-              metricsMap[task.assigned_to].noshow_calls++;
-            }
+          if (!task.assigned_to || !metricsMap[task.assigned_to]) continue;
+          const kind = classifyMeetingTask(
+            (task.activity_types as any)?.name,
+            task.title,
+          );
+          const key = meetingDedupeKey(task.assigned_to, task);
+          if (kind === "scheduled" && !seenScheduled.has(key)) {
+            seenScheduled.add(key);
+            metricsMap[task.assigned_to].scheduled_calls++;
+          } else if (kind === "noshow" && !seenNoshow.has(key)) {
+            seenNoshow.add(key);
+            metricsMap[task.assigned_to].noshow_calls++;
           }
+        }
+      }
+
+      // Aggregate "reuniões realizadas" (completed_at no período) com dedupe
+      const seenHeld = new Set<string>();
+      if ((heldData as any)?.data) {
+        for (const task of (heldData as any).data as any[]) {
+          if (!task.assigned_to || !metricsMap[task.assigned_to]) continue;
+          const kind = classifyMeetingTask(
+            (task.activity_types as any)?.name,
+            task.title,
+          );
+          if (kind !== "held") continue;
+          const key = meetingDedupeKey(task.assigned_to, task);
+          if (seenHeld.has(key)) continue;
+          seenHeld.add(key);
+          metricsMap[task.assigned_to].meetings_held++;
         }
       }
 
