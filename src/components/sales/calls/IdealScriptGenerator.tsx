@@ -174,6 +174,9 @@ Seja EXTREMAMENTE ESPECÍFICO. Use exemplos reais extraídos das análises. Cada
       setIdealScript(script);
       const productName = selectedProduct?.name || '';
       setScriptProductName(productName);
+      const stats = productStats.get(selectedProductId!) || { analyzed: productChampionCalls.length, champions: productChampionCalls.length };
+      const rate = stats.analyzed > 0 ? Math.round((stats.champions / stats.analyzed) * 100) : 0;
+      setScriptStats({ analyzed: stats.analyzed, champions: stats.champions, rate });
       // Strip any AI preamble before the first markdown heading so the card
       // preview shows the actual script — not "Com certeza! Analisarei...".
       const firstHeading = script.search(/^#{1,3}\s/m);
