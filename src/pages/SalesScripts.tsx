@@ -15,6 +15,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3, Crown, ThumbsDown, PhoneOff, CalendarClock, UserCheck, TrendingUp, ChevronsUpDown, Check, Cloud, Link2, FolderOpen, Folder, ArrowLeft, Home, FileType2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -735,462 +737,455 @@ export default function SalesScripts() {
             </div>
 
             <Tabs value={analysisSubTab} onValueChange={setAnalysisSubTab}>
-              <div className="overflow-x-auto -mx-4 px-4">
-                <TabsList className="h-9 p-0.5 bg-muted/60 gap-0.5 inline-flex w-auto">
-                  <TabsTrigger value="analyze" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Mic className="w-3.5 h-3.5" />Analisar</TabsTrigger>
-                  <TabsTrigger value="bulk" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Upload className="w-3.5 h-3.5" />Lote</TabsTrigger>
-                  <TabsTrigger value="icp" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Target className="w-3.5 h-3.5" />ICP</TabsTrigger>
-                  <TabsTrigger value="comparative" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><TrendingUp className="w-3.5 h-3.5" />Comparativo</TabsTrigger>
-                  <TabsTrigger value="ideal-script" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Crown className="w-3.5 h-3.5" />Script Ideal</TabsTrigger>
-                  <TabsTrigger value="ranking" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Trophy className="w-3.5 h-3.5" />Ranking</TabsTrigger>
-                  <TabsTrigger value="links" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Link2 className="w-3.5 h-3.5" />Links</TabsTrigger>
-                </TabsList>
-              </div>
+              <TabsList className="h-auto p-1 bg-muted/60 gap-1 flex flex-wrap justify-start w-full">
+                <TabsTrigger value="analyze" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Mic className="w-3.5 h-3.5" />Analisar</TabsTrigger>
+                <TabsTrigger value="bulk" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Upload className="w-3.5 h-3.5" />Lote</TabsTrigger>
+                <TabsTrigger value="icp" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Target className="w-3.5 h-3.5" />ICP</TabsTrigger>
+                <TabsTrigger value="comparative" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><TrendingUp className="w-3.5 h-3.5" />Comparativo</TabsTrigger>
+                <TabsTrigger value="ideal-script" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Crown className="w-3.5 h-3.5" />Script Ideal</TabsTrigger>
+                <TabsTrigger value="ranking" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Trophy className="w-3.5 h-3.5" />Ranking</TabsTrigger>
+                <TabsTrigger value="links" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Link2 className="w-3.5 h-3.5" />Links</TabsTrigger>
+              </TabsList>
 
-              <TabsContent value="analyze" className="space-y-6 mt-4">
-            <Card className="overflow-hidden"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4 pt-6">
-              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <div className="space-y-2 rounded-lg border bg-card p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium flex items-center gap-2"><Cloud className="w-4 h-4 text-primary" />Google Drive</p>
-                      <p className="text-xs text-muted-foreground">Conecte sua conta, escolha um arquivo e traga a transcrição para análise.</p>
+              <TabsContent value="analyze" className="space-y-5 mt-4">
+                {/* ===== STEP 1: CONTEXTO ===== */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center justify-center shrink-0">1</div>
+                      <div>
+                        <CardTitle className="text-base">Contexto da call</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-0.5">Defina produto, vendedor e resultado para uma análise mais precisa.</p>
+                      </div>
                     </div>
-                    {driveConnection?.is_active ? (
-                      <Badge variant="secondary" className="gap-1"><Link2 className="w-3 h-3" />{driveConnection.google_email}</Badge>
-                    ) : null}
-                  </div>
-
-                  {!driveConnection?.is_active ? (
-                    <Button onClick={handleConnectDrive} disabled={isConnectingDrive} className="w-full gap-2">
-                      {isConnectingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
-                      Conectar Google Drive
-                    </Button>
-                  ) : (
-                    <>
-                      {/* Breadcrumb / navigation */}
-                      {(() => {
-                        // Build full path: Drives > [stack levels] > current folder
-                        const scopeLabel = (s: DriveScope, fallback?: string) => {
-                          if (s === 'my-drive') return 'Meu Drive';
-                          if (s === 'shared-with-me') return 'Compartilhados comigo';
-                          if (s === 'shared-drive') return fallback || 'Drive Compartilhado';
-                          return 'Drives';
-                        };
-                        // Crumbs from the stack (older levels), each clickable
-                        const stackCrumbs = driveFolderStack.map((level, idx) => ({
-                          key: `stack-${idx}-${level.folderId}`,
-                          label: level.folderName || scopeLabel(level.scope),
-                          onClick: () => handleNavigateToStackIndex(idx),
-                          clickable: true,
-                        }));
-                        // If current scope isn't represented yet at the top of the stack,
-                        // synthesize a "scope root" crumb so user can see e.g. "Meu Drive" or "Compartilhados comigo".
-                        const topOfStack = driveFolderStack[driveFolderStack.length - 1];
-                        const scopeRootAlreadyShown =
-                          topOfStack &&
-                          topOfStack.scope === driveScope &&
-                          (driveScope !== 'shared-drive' || topOfStack.driveId === driveCurrentDriveId);
-                        const scopeCrumb =
-                          driveScope !== 'drives-root' && !scopeRootAlreadyShown && currentDriveFolder
-                            ? null // current folder name already conveys it
-                            : null;
-                        return (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
-                            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1" onClick={handleNavigateRoot} disabled={isImportingDriveFile}>
-                              <Home className="w-3.5 h-3.5" />Drives
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="flex items-center gap-1.5 text-xs font-medium"><Package className="w-3.5 h-3.5 text-primary" />Produto <span className="text-destructive">*</span></Label>
+                        <Select value={selectedProductId || ''} onValueChange={(value) => setSelectedProductId(value || null)}>
+                          <SelectTrigger><SelectValue placeholder="Selecione o produto" /></SelectTrigger>
+                          <SelectContent>{products.map((product: any) => (<SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>))}</SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="flex items-center gap-1.5 text-xs font-medium"><Users className="w-3.5 h-3.5 text-primary" />Vendedor</Label>
+                        <Popover open={sellerComboOpen} onOpenChange={setSellerComboOpen}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" aria-expanded={sellerComboOpen} className="w-full justify-between font-normal">
+                              {selectedSellerId ? (() => { const u = teamUsers.find((u: any) => u.id === selectedSellerId); return u ? u.name : 'Selecione...'; })() : 'Eu mesmo'}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
-                            {stackCrumbs.map(crumb => (
-                              <span key={crumb.key} className="flex items-center gap-1">
-                                <span>/</span>
-                                <button
-                                  type="button"
-                                  onClick={crumb.onClick}
-                                  disabled={isImportingDriveFile}
-                                  className="truncate max-w-[160px] hover:text-foreground hover:underline underline-offset-2 transition-colors"
-                                >
-                                  {crumb.label}
-                                </button>
-                              </span>
-                            ))}
-                            {scopeCrumb}
-                            {currentDriveFolder && driveScope !== 'drives-root' && (
-                              <span className="flex items-center gap-1">
-                                <span>/</span>
-                                <span className="font-medium text-foreground truncate max-w-[200px]">
-                                  {currentDriveFolder.name}
-                                </span>
-                              </span>
-                            )}
-                            {driveScope !== 'drives-root' && (
-                              <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1 ml-auto" onClick={handleNavigateBack} disabled={isImportingDriveFile}>
-                                <ArrowLeft className="w-3.5 h-3.5" />Voltar
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })()}
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                            <Command shouldFilter={false}>
+                              <CommandInput placeholder="Buscar vendedor..." value={sellerSearch} onValueChange={setSellerSearch} />
+                              <CommandList>
+                                <CommandEmpty>Nenhum vendedor encontrado.</CommandEmpty>
+                                <CommandGroup>
+                                  <CommandItem onSelect={() => { setSelectedSellerId(null); setSellerComboOpen(false); setSellerSearch(''); }}>
+                                    <Check className={cn("mr-2 h-4 w-4", !selectedSellerId ? "opacity-100" : "opacity-0")} />Eu mesmo
+                                  </CommandItem>
+                                  {teamUsers.filter((u: any) => !sellerSearch || u.name?.toLowerCase().includes(sellerSearch.toLowerCase())).map((u: any) => (
+                                    <CommandItem key={u.id} onSelect={() => { setSelectedSellerId(u.id); setSellerComboOpen(false); setSellerSearch(''); }}>
+                                      <Check className={cn("mr-2 h-4 w-4", selectedSellerId === u.id ? "opacity-100" : "opacity-0")} />{u.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
 
-                      {driveScope !== 'drives-root' && (
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-muted-foreground">Mostrar:</span>
-                          <div className="inline-flex rounded-md border bg-background p-0.5">
-                            {([
-                              { value: 'all', label: 'Tudo' },
-                              { value: 'folders', label: 'Pastas' },
-                              { value: 'files', label: 'Arquivos' },
-                            ] as const).map(opt => (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                onClick={() => setDriveFilter(opt.value)}
-                                disabled={isImportingDriveFile}
-                                className={cn(
-                                  "h-6 px-2 rounded-sm text-xs transition-colors",
-                                  driveFilter === opt.value
-                                    ? "bg-primary text-primary-foreground"
-                                    : "text-muted-foreground hover:bg-muted"
-                                )}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1.5 text-xs font-medium"><Crown className="w-3.5 h-3.5 text-primary" />Resultado da call</Label>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                        {CALL_OUTCOMES.map(outcome => {
+                          const Icon = outcome.icon;
+                          const isSelected = callOutcome === outcome.value;
+                          return (
+                            <button
+                              key={outcome.value}
+                              type="button"
+                              onClick={() => setCallOutcome(isSelected ? null : outcome.value)}
+                              className={cn(
+                                "rounded-lg border-2 px-3 py-2.5 text-left transition-all flex items-center gap-2",
+                                isSelected ? `${outcome.borderColor} ${outcome.bgColor}` : "border-border/60 hover:border-border bg-card"
+                              )}
+                            >
+                              <Icon className={cn("w-4 h-4 shrink-0", isSelected ? outcome.color : "text-muted-foreground")} />
+                              <div className="min-w-0">
+                                <p className={cn("text-xs font-medium truncate", isSelected && outcome.color)}>{outcome.label}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <Collapsible>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-full justify-between text-xs h-8 -mx-1">
+                          <span className="text-muted-foreground">Detalhes adicionais (deal, cliente, observações)</span>
+                          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-3 pt-3">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Card do pipeline</Label>
+                            <Popover open={dealComboOpen} onOpenChange={setDealComboOpen}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" aria-expanded={dealComboOpen} className="w-full justify-between font-normal">
+                                  <span className="truncate">{selectedDealId ? (() => { const d = deals.find((d: any) => d.id === selectedDealId); return d ? `${d.title}${d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}` : 'Selecione...'; })() : 'Nenhum'}</span>
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                <Command shouldFilter={false}>
+                                  <CommandInput placeholder="Buscar deal..." value={dealSearch} onValueChange={setDealSearch} />
+                                  <CommandList>
+                                    <CommandEmpty>Nenhum deal encontrado.</CommandEmpty>
+                                    <CommandGroup>
+                                      <CommandItem onSelect={() => { setSelectedDealId(null); setDealComboOpen(false); setDealSearch(''); }}>
+                                        <Check className={cn("mr-2 h-4 w-4", !selectedDealId ? "opacity-100" : "opacity-0")} />Nenhum
+                                      </CommandItem>
+                                      {deals.filter((d: any) => { if (!dealSearch) return true; const s = dealSearch.toLowerCase(); return d.title?.toLowerCase().includes(s) || d.lead?.full_name?.toLowerCase().includes(s); }).slice(0, 100).map((d: any) => (
+                                        <CommandItem key={d.id} onSelect={() => { setSelectedDealId(d.id); setDealComboOpen(false); setDealSearch(''); }}>
+                                          <Check className={cn("mr-2 h-4 w-4", selectedDealId === d.id ? "opacity-100" : "opacity-0")} />{d.title}{d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Cliente (perfil ICP)</Label>
+                            <Popover open={clientComboOpen} onOpenChange={setClientComboOpen}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" aria-expanded={clientComboOpen} className="w-full justify-between font-normal">
+                                  <span className="truncate">{selectedClientId ? (() => { const c = clients.find((c: any) => c.id === selectedClientId); return c ? `${c.full_name}${c.company_name ? ` — ${c.company_name}` : ''}` : 'Selecione...'; })() : 'Nenhum'}</span>
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                <Command shouldFilter={false}>
+                                  <CommandInput placeholder="Buscar cliente..." value={clientSearch} onValueChange={setClientSearch} />
+                                  <CommandList>
+                                    <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                                    <CommandGroup>
+                                      <CommandItem onSelect={() => { setSelectedClientId(null); setClientComboOpen(false); setClientSearch(''); }}>
+                                        <Check className={cn("mr-2 h-4 w-4", !selectedClientId ? "opacity-100" : "opacity-0")} />Nenhum
+                                      </CommandItem>
+                                      {clients.filter((c: any) => { if (!clientSearch) return true; const s = clientSearch.toLowerCase(); return c.full_name?.toLowerCase().includes(s) || c.company_name?.toLowerCase().includes(s) || c.city?.toLowerCase().includes(s); }).slice(0, 100).map((c: any) => (
+                                        <CommandItem key={c.id} onSelect={() => { setSelectedClientId(c.id); setClientComboOpen(false); setClientSearch(''); }}>
+                                          <Check className={cn("mr-2 h-4 w-4", selectedClientId === c.id ? "opacity-100" : "opacity-0")} />{c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
                         </div>
-                      )}
-
-                      <div className="max-h-80 overflow-y-auto rounded-md border">
-                        {loadingDriveFiles ? (
-                          <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando...</div>
-                        ) : driveItems.length === 0 ? (
-                          <div className="p-4 text-sm text-muted-foreground">Pasta vazia. Use o botão "Voltar" ou "Meu Drive" para navegar.</div>
-                        ) : (
-                          <div className="divide-y">
-                            {driveItems.map(item => {
-                              if (item.isFolder) {
-                                return (
-                                  <button key={item.id} type="button" className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/50" onClick={() => handleEnterFolder(item)} disabled={isImportingDriveFile}>
-                                    <Folder className="w-4 h-4 shrink-0 text-primary" />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="truncate text-sm font-medium">{item.name}</p>
-                                      <p className="text-xs text-muted-foreground">Pasta</p>
-                                    </div>
-                                    <ArrowRight className="w-4 h-4 shrink-0 text-muted-foreground" />
-                                  </button>
-                                );
-                              }
-                              const isSelected = selectedDriveFileIds.has(item.id);
-                              const isImporting = isImportingDriveFile && driveImportedFileId === item.id;
-                              return (
-                                <label
-                                  key={item.id}
-                                  className={cn(
-                                    "flex w-full items-center gap-3 p-3 cursor-pointer hover:bg-muted/50",
-                                    isSelected && "bg-primary/10"
-                                  )}
-                                >
-                                  <Checkbox
-                                    checked={isSelected}
-                                    onCheckedChange={() => toggleDriveFileSelection(item.id)}
-                                    disabled={isImportingDriveFile}
-                                  />
-                                  <FileType2 className="w-4 h-4 shrink-0 text-muted-foreground" />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm font-medium">{item.name}</p>
-                                    <p className="text-xs text-muted-foreground">{new Date(item.modifiedTime).toLocaleDateString('pt-BR')}</p>
-                                  </div>
-                                  {isImporting && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
-                                </label>
-                              );
-                            })}
+                        {callOutcome && (
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Observações sobre o resultado</Label>
+                            <Input placeholder="Ex: Vendeu plano premium, cliente muito engajado..." value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} />
                           </div>
                         )}
-                        {hasMoreDriveFiles && driveScope !== 'drives-root' && (
-                          <div className="border-t p-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="w-full gap-2 text-xs"
-                              onClick={() => fetchMoreDriveFiles()}
-                              disabled={loadingMoreDriveFiles || isImportingDriveFile}
-                            >
-                              {loadingMoreDriveFiles ? (
-                                <><Loader2 className="w-3.5 h-3.5 animate-spin" />Carregando mais...</>
-                              ) : (
-                                <>Carregar mais</>
-                              )}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {selectedDriveFileIds.size > 0 ? `${selectedDriveFileIds.size} arquivo(s) selecionado(s)` : 'Selecione um ou mais arquivos para análise comparativa'}
-                        </span>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={handleImportSelectedDriveFiles}
-                          disabled={selectedDriveFileIds.size === 0 || isImportingDriveFile}
-                          className="gap-2"
-                        >
-                          {isImportingDriveFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                          Importar selecionados
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="space-y-2 rounded-lg border bg-card p-4">
-                  <Label className="flex items-center gap-2"><Package className="w-4 h-4 text-primary" />Produto da análise</Label>
-                  <Select value={selectedProductId || ''} onValueChange={(value) => setSelectedProductId(value || null)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((product: any) => (
-                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">A inteligência será gerada já vinculada ao produto escolhido.</p>
-
-                  {importedDriveFileNames.length > 0 ? (
-                    <div className="rounded-md border bg-muted/40 p-3 space-y-1">
-                      <p className="text-sm font-medium">{importedDriveFileNames.length === 1 ? 'Arquivo importado' : `${importedDriveFileNames.length} arquivos importados`}</p>
-                      <ul className="text-xs text-muted-foreground space-y-0.5 max-h-24 overflow-y-auto">
-                        {importedDriveFileNames.map((name, idx) => (
-                          <li key={idx} className="truncate">• {name}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : selectedDriveFile ? (
-                    <div className="rounded-md border bg-muted/40 p-3">
-                      <p className="text-sm font-medium">Arquivo importado</p>
-                      <p className="text-xs text-muted-foreground truncate">{selectedDriveFile.name}</p>
-                    </div>
-                  ) : (
-                    <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Selecione um ou mais arquivos do Drive para análise comparativa, ou cole/envie a transcrição manualmente abaixo.</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Vincular a um card do pipeline (opcional)</Label>
-                <Popover open={dealComboOpen} onOpenChange={setDealComboOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={dealComboOpen} className="w-full justify-between font-normal">
-                      {selectedDealId ? (() => { const d = deals.find((d: any) => d.id === selectedDealId); return d ? `${d.title}${d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}` : 'Selecione um card...'; })() : 'Nenhum (sem vínculo)'}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput placeholder="Buscar deal..." value={dealSearch} onValueChange={setDealSearch} />
-                      <CommandList>
-                        <CommandEmpty>Nenhum deal encontrado.</CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem onSelect={() => { setSelectedDealId(null); setDealComboOpen(false); setDealSearch(''); }}>
-                            <Check className={cn("mr-2 h-4 w-4", !selectedDealId ? "opacity-100" : "opacity-0")} />
-                            Nenhum (sem vínculo)
-                          </CommandItem>
-                          {deals.filter((d: any) => {
-                            if (!dealSearch) return true;
-                            const s = dealSearch.toLowerCase();
-                            return d.title?.toLowerCase().includes(s) || d.lead?.full_name?.toLowerCase().includes(s);
-                          }).slice(0, 100).map((d: any) => (
-                            <CommandItem key={d.id} onSelect={() => { setSelectedDealId(d.id); setDealComboOpen(false); setDealSearch(''); }}>
-                              <Check className={cn("mr-2 h-4 w-4", selectedDealId === d.id ? "opacity-100" : "opacity-0")} />
-                              {d.title}{d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Call Outcome Selector */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><Crown className="w-4 h-4 text-primary" />Resultado da Call</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {CALL_OUTCOMES.map(outcome => {
-                    const Icon = outcome.icon;
-                    const isSelected = callOutcome === outcome.value;
-                    return (
-                      <Card 
-                        key={outcome.value} 
-                        className={cn(
-                          "cursor-pointer transition-all border-2",
-                          isSelected ? `${outcome.borderColor} ${outcome.bgColor}` : "border-transparent hover:border-border"
-                        )} 
-                        onClick={() => setCallOutcome(isSelected ? null : outcome.value)}
-                      >
-                        <CardContent className="p-3 flex items-center gap-2">
-                          <Icon className={cn("w-4 h-4 shrink-0", isSelected ? outcome.color : "text-muted-foreground")} />
-                          <div className="min-w-0">
-                            <p className={cn("text-sm font-medium", isSelected ? outcome.color : "")}>{outcome.label}</p>
-                            <p className="text-xs text-muted-foreground">{outcome.description}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Client Selector (for ICP profiling) */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><UserCheck className="w-4 h-4 text-primary" />Vincular ao cliente (para perfil ICP)</Label>
-                <Popover open={clientComboOpen} onOpenChange={setClientComboOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={clientComboOpen} className="w-full justify-between font-normal">
-                      {selectedClientId ? (() => { const c = clients.find((c: any) => c.id === selectedClientId); return c ? `${c.full_name}${c.company_name ? ` — ${c.company_name}` : ''}` : 'Selecione o cliente...'; })() : 'Nenhum'}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput placeholder="Buscar cliente..." value={clientSearch} onValueChange={setClientSearch} />
-                      <CommandList>
-                        <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem onSelect={() => { setSelectedClientId(null); setClientComboOpen(false); setClientSearch(''); }}>
-                            <Check className={cn("mr-2 h-4 w-4", !selectedClientId ? "opacity-100" : "opacity-0")} />
-                            Nenhum
-                          </CommandItem>
-                          {clients.filter((c: any) => {
-                            if (!clientSearch) return true;
-                            const s = clientSearch.toLowerCase();
-                            return c.full_name?.toLowerCase().includes(s) || c.company_name?.toLowerCase().includes(s) || c.city?.toLowerCase().includes(s);
-                          }).slice(0, 100).map((c: any) => (
-                            <CommandItem key={c.id} onSelect={() => { setSelectedClientId(c.id); setClientComboOpen(false); setClientSearch(''); }}>
-                              <Check className={cn("mr-2 h-4 w-4", selectedClientId === c.id ? "opacity-100" : "opacity-0")} />
-                              {c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}{c.city ? ` (${c.city}/${c.state || ''})` : ''}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Seller Selector */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><Users className="w-4 h-4 text-primary" />Vendedor da Call</Label>
-                <Popover open={sellerComboOpen} onOpenChange={setSellerComboOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={sellerComboOpen} className="w-full justify-between font-normal">
-                      {selectedSellerId ? (() => { const u = teamUsers.find((u: any) => u.id === selectedSellerId); return u ? u.name : 'Selecione...'; })() : 'Nenhum (eu mesmo)'}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput placeholder="Buscar vendedor..." value={sellerSearch} onValueChange={setSellerSearch} />
-                      <CommandList>
-                        <CommandEmpty>Nenhum vendedor encontrado.</CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem onSelect={() => { setSelectedSellerId(null); setSellerComboOpen(false); setSellerSearch(''); }}>
-                            <Check className={cn("mr-2 h-4 w-4", !selectedSellerId ? "opacity-100" : "opacity-0")} />
-                            Nenhum (eu mesmo)
-                          </CommandItem>
-                          {teamUsers.filter((u: any) => {
-                            if (!sellerSearch) return true;
-                            return u.name?.toLowerCase().includes(sellerSearch.toLowerCase());
-                          }).map((u: any) => (
-                            <CommandItem key={u.id} onSelect={() => { setSelectedSellerId(u.id); setSellerComboOpen(false); setSellerSearch(''); }}>
-                              <Check className={cn("mr-2 h-4 w-4", selectedSellerId === u.id ? "opacity-100" : "opacity-0")} />
-                              {u.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Outcome Notes */}
-              {callOutcome && (
-                <div className="space-y-2">
-                  <Label>Observações sobre o resultado</Label>
-                  <Input placeholder="Ex: Vendeu plano premium, cliente muito engajado..." value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} />
-                </div>
-              )}
-
-              {/* Multi-transcript entries */}
-              {transcriptEntries.map((entry, idx) => (
-                <div key={entry.id} className="space-y-2">
-                  {transcriptEntries.length > 1 && (
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Call {idx + 1}</Label>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => setTranscriptEntries(prev => prev.filter(e => e.id !== entry.id))}>
-                        <Trash2 className="w-3 h-3 mr-1" />Remover
-                      </Button>
-                    </div>
-                  )}
-                  <div className="border border-dashed border-border rounded-lg p-4">
-                    {entry.file ? (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm truncate">{entry.file.name}</span></div>
-                        <Button variant="ghost" size="sm" onClick={() => setTranscriptEntries(prev => prev.map(e => e.id === entry.id ? { ...e, file: null } : e))}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    ) : (
-                      <label htmlFor={`transcript-file-${entry.id}`} className="flex flex-col items-center gap-2 cursor-pointer py-2">
-                        <Upload className="w-8 h-8 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Clique para enviar</span>
-                        <span className="text-xs text-muted-foreground">TXT, PDF, Word</span>
-                        <input id={`transcript-file-${entry.id}`} type="file" className="hidden" accept=".txt,.pdf,.doc,.docx" onChange={e => { if (e.target.files?.[0]) setTranscriptEntries(prev => prev.map(en => en.id === entry.id ? { ...en, file: e.target.files![0] } : en)); }} />
-                      </label>
-                    )}
-                  </div>
-                  <Textarea placeholder="Ou cole a transcrição aqui..." value={entry.text} onChange={e => setTranscriptEntries(prev => prev.map(en => en.id === entry.id ? { ...en, text: e.target.value } : en))} className="min-h-[150px] font-mono text-sm" />
-                </div>
-              ))}
-              <Button variant="outline" size="sm" className="w-full" onClick={() => setTranscriptEntries(prev => [...prev, { id: Date.now(), text: '', file: null }])}>
-                <Plus className="w-4 h-4 mr-2" />Adicionar outra call
-              </Button>
-              <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || !selectedProductId || transcriptEntries.every(e => !e.text.trim() && !e.file)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call{transcriptEntries.length > 1 ? 's' : ''}</>}</Button>
-            </CardContent></Card>
-            {transcriptAnalysis && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-primary" />Resultado da Análise</CardTitle></CardHeader><CardContent><MarkdownRenderer content={transcriptAnalysis} /><div className="flex gap-2 mt-4"><Button variant="outline" size="sm" onClick={() => handleCopy(transcriptAnalysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-4 h-4 mr-2" />PDF</Button></div></CardContent></Card>}
-            
-            {/* Saved Analyses with outcome badges */}
-            {savedAnalyses.length > 0 && <div><h3 className="text-base font-semibold mb-3">Análises Salvas ({savedAnalyses.length})</h3><div className="space-y-2">{savedAnalyses.map(a => {
-              const outcomeConf = getOutcomeConfig(a.call_outcome);
-              const OutcomeIcon = outcomeConf?.icon;
-              return (
-                <Card key={a.id} className="cursor-pointer hover:border-primary/30" onClick={() => setViewingAnalysis(a)}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium">{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-                        {outcomeConf && (
-                          <Badge variant="secondary" className={cn("text-xs", outcomeConf.bgColor, outcomeConf.color)}>
-                            {OutcomeIcon && <OutcomeIcon className="w-3 h-3 mr-1" />}
-                            {outcomeConf.label}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap mt-1">
-                        {a.seller_name && <Badge variant="outline" className="text-xs"><Users className="w-3 h-3 mr-1" />{a.seller_name}</Badge>}
-                        {a.deal_name && <Badge variant="secondary" className="text-xs"><Target className="w-3 h-3 mr-1" />{a.deal_name}</Badge>}
-                        {a.client_name && <Badge variant="outline" className="text-xs"><UserCheck className="w-3 h-3 mr-1" />{a.client_name}</Badge>}
-                      </div>
-                      {a.transcript_preview && <p className="text-xs text-muted-foreground truncate mt-1">{a.transcript_preview}</p>}
-                    </div>
-                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteAnalysisDialog(a)}><Trash2 className="w-4 h-4" /></Button>
-                    </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   </CardContent>
                 </Card>
-              );
-            })}</div></div>}
+
+                {/* ===== STEP 2: FONTE DA TRANSCRIÇÃO ===== */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center justify-center shrink-0">2</div>
+                      <div className="flex-1">
+                        <CardTitle className="text-base">Transcrição da call</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-0.5">Importe do Google Drive, faça upload de arquivos ou cole o texto.</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Google Drive — collapsible */}
+                    <Collapsible defaultOpen={false}>
+                      <div className="rounded-lg border bg-muted/20">
+                        <CollapsibleTrigger asChild>
+                          <button type="button" className="flex w-full items-center justify-between gap-3 p-3 hover:bg-muted/40 rounded-lg transition-colors">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Cloud className="w-4 h-4 text-primary shrink-0" />
+                              <span className="text-sm font-medium">Google Drive</span>
+                              {driveConnection?.is_active ? (
+                                <Badge variant="secondary" className="gap-1 text-[10px] h-5 truncate max-w-[200px]">
+                                  <Link2 className="w-2.5 h-2.5" />
+                                  <span className="truncate">{driveConnection.google_email}</span>
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] h-5">Não conectado</Badge>
+                              )}
+                              {importedDriveFileNames.length > 0 && (
+                                <Badge className="text-[10px] h-5 bg-primary/10 text-primary border-primary/20">
+                                  {importedDriveFileNames.length} importado{importedDriveFileNames.length > 1 ? 's' : ''}
+                                </Badge>
+                              )}
+                            </div>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 transition-transform data-[state=open]:rotate-180" />
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="p-3 pt-0 space-y-3">
+                          {!driveConnection?.is_active ? (
+                            <Button onClick={handleConnectDrive} disabled={isConnectingDrive} className="w-full gap-2" size="sm">
+                              {isConnectingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
+                              Conectar Google Drive
+                            </Button>
+                          ) : (
+                            <>
+                              {(() => {
+                                const scopeLabel = (s: DriveScope, fallback?: string) => {
+                                  if (s === 'my-drive') return 'Meu Drive';
+                                  if (s === 'shared-with-me') return 'Compartilhados comigo';
+                                  if (s === 'shared-drive') return fallback || 'Drive Compartilhado';
+                                  return 'Drives';
+                                };
+                                const stackCrumbs = driveFolderStack.map((level, idx) => ({
+                                  key: `stack-${idx}-${level.folderId}`,
+                                  label: level.folderName || scopeLabel(level.scope),
+                                  onClick: () => handleNavigateToStackIndex(idx),
+                                  clickable: true,
+                                }));
+                                return (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+                                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1" onClick={handleNavigateRoot} disabled={isImportingDriveFile}>
+                                      <Home className="w-3.5 h-3.5" />Drives
+                                    </Button>
+                                    {stackCrumbs.map(crumb => (
+                                      <span key={crumb.key} className="flex items-center gap-1">
+                                        <span>/</span>
+                                        <button type="button" onClick={crumb.onClick} disabled={isImportingDriveFile} className="truncate max-w-[160px] hover:text-foreground hover:underline underline-offset-2 transition-colors">
+                                          {crumb.label}
+                                        </button>
+                                      </span>
+                                    ))}
+                                    {currentDriveFolder && driveScope !== 'drives-root' && (
+                                      <span className="flex items-center gap-1">
+                                        <span>/</span>
+                                        <span className="font-medium text-foreground truncate max-w-[200px]">{currentDriveFolder.name}</span>
+                                      </span>
+                                    )}
+                                    {driveScope !== 'drives-root' && (
+                                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1 ml-auto" onClick={handleNavigateBack} disabled={isImportingDriveFile}>
+                                        <ArrowLeft className="w-3.5 h-3.5" />Voltar
+                                      </Button>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+
+                              {driveScope !== 'drives-root' && (
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="text-muted-foreground">Mostrar:</span>
+                                  <div className="inline-flex rounded-md border bg-background p-0.5">
+                                    {([
+                                      { value: 'all', label: 'Tudo' },
+                                      { value: 'folders', label: 'Pastas' },
+                                      { value: 'files', label: 'Arquivos' },
+                                    ] as const).map(opt => (
+                                      <button key={opt.value} type="button" onClick={() => setDriveFilter(opt.value)} disabled={isImportingDriveFile} className={cn("h-6 px-2 rounded-sm text-xs transition-colors", driveFilter === opt.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
+                                        {opt.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="max-h-72 overflow-y-auto rounded-md border bg-background">
+                                {loadingDriveFiles ? (
+                                  <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando...</div>
+                                ) : driveItems.length === 0 ? (
+                                  <div className="p-4 text-sm text-muted-foreground">Pasta vazia.</div>
+                                ) : (
+                                  <div className="divide-y">
+                                    {driveItems.map(item => {
+                                      if (item.isFolder) {
+                                        return (
+                                          <button key={item.id} type="button" className="flex w-full items-center gap-3 p-2.5 text-left hover:bg-muted/50" onClick={() => handleEnterFolder(item)} disabled={isImportingDriveFile}>
+                                            <Folder className="w-4 h-4 shrink-0 text-primary" />
+                                            <div className="min-w-0 flex-1">
+                                              <p className="truncate text-sm font-medium">{item.name}</p>
+                                            </div>
+                                            <ArrowRight className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                          </button>
+                                        );
+                                      }
+                                      const isSelected = selectedDriveFileIds.has(item.id);
+                                      const isImporting = isImportingDriveFile && driveImportedFileId === item.id;
+                                      return (
+                                        <label key={item.id} className={cn("flex w-full items-center gap-3 p-2.5 cursor-pointer hover:bg-muted/50", isSelected && "bg-primary/5")}>
+                                          <Checkbox checked={isSelected} onCheckedChange={() => toggleDriveFileSelection(item.id)} disabled={isImportingDriveFile} />
+                                          <FileType2 className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                          <div className="min-w-0 flex-1">
+                                            <p className="truncate text-sm">{item.name}</p>
+                                            <p className="text-xs text-muted-foreground">{new Date(item.modifiedTime).toLocaleDateString('pt-BR')}</p>
+                                          </div>
+                                          {isImporting && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {hasMoreDriveFiles && driveScope !== 'drives-root' && (
+                                  <div className="border-t p-2">
+                                    <Button type="button" variant="ghost" size="sm" className="w-full gap-2 text-xs" onClick={() => fetchMoreDriveFiles()} disabled={loadingMoreDriveFiles || isImportingDriveFile}>
+                                      {loadingMoreDriveFiles ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" />Carregando mais...</>) : (<>Carregar mais</>)}
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs text-muted-foreground">
+                                  {selectedDriveFileIds.size > 0 ? `${selectedDriveFileIds.size} selecionado(s)` : 'Selecione um ou mais arquivos'}
+                                </span>
+                                <Button type="button" size="sm" onClick={handleImportSelectedDriveFiles} disabled={selectedDriveFileIds.size === 0 || isImportingDriveFile} className="gap-2">
+                                  {isImportingDriveFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                  Importar
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                        </CollapsibleContent>
+                      </div>
+                    </Collapsible>
+
+                    {/* Imported files summary (always visible if there are any) */}
+                    {importedDriveFileNames.length > 0 && (
+                      <div className="rounded-md border bg-primary/5 border-primary/20 p-3">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-primary" />
+                          <p className="text-sm font-medium">{importedDriveFileNames.length === 1 ? 'Arquivo importado do Drive' : `${importedDriveFileNames.length} arquivos importados do Drive`}</p>
+                        </div>
+                        <ul className="text-xs text-muted-foreground space-y-0.5 max-h-20 overflow-y-auto pl-6">
+                          {importedDriveFileNames.map((name, idx) => (<li key={idx} className="truncate">• {name}</li>))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Manual entries */}
+                    <div className="space-y-3">
+                      {transcriptEntries.map((entry, idx) => (
+                        <div key={entry.id} className="space-y-2">
+                          {transcriptEntries.length > 1 && (
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs font-medium text-muted-foreground">Call {idx + 1}</Label>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => setTranscriptEntries(prev => prev.filter(e => e.id !== entry.id))}>
+                                <Trash2 className="w-3 h-3 mr-1" />Remover
+                              </Button>
+                            </div>
+                          )}
+                          {entry.file ? (
+                            <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
+                              <div className="flex items-center gap-2 min-w-0"><FileText className="w-4 h-4 text-primary shrink-0" /><span className="text-sm truncate">{entry.file.name}</span></div>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setTranscriptEntries(prev => prev.map(e => e.id === entry.id ? { ...e, file: null } : e))}><Trash2 className="w-4 h-4" /></Button>
+                            </div>
+                          ) : (
+                            <label htmlFor={`transcript-file-${entry.id}`} className="flex flex-col items-center gap-1.5 cursor-pointer py-4 rounded-lg border border-dashed hover:border-primary/50 hover:bg-muted/30 transition-colors">
+                              <Upload className="w-6 h-6 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">Clique para enviar arquivo <span className="text-xs">(TXT, PDF, Word)</span></span>
+                              <input id={`transcript-file-${entry.id}`} type="file" className="hidden" accept=".txt,.pdf,.doc,.docx" onChange={e => { if (e.target.files?.[0]) setTranscriptEntries(prev => prev.map(en => en.id === entry.id ? { ...en, file: e.target.files![0] } : en)); }} />
+                            </label>
+                          )}
+                          <Textarea placeholder="...ou cole a transcrição aqui" value={entry.text} onChange={e => setTranscriptEntries(prev => prev.map(en => en.id === entry.id ? { ...en, text: e.target.value } : en))} className="min-h-[140px] font-mono text-sm" />
+                        </div>
+                      ))}
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => setTranscriptEntries(prev => [...prev, { id: Date.now(), text: '', file: null }])}>
+                        <Plus className="w-4 h-4 mr-2" />Adicionar outra call (comparativo)
+                      </Button>
+                    </div>
+
+                    <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || !selectedProductId || transcriptEntries.every(e => !e.text.trim() && !e.file)} className="w-full" size="lg">
+                      {analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><Sparkles className="w-4 h-4 mr-2" />Analisar call{transcriptEntries.length > 1 ? 's' : ''}</>}
+                    </Button>
+                    {!selectedProductId && (
+                      <p className="text-xs text-muted-foreground text-center">Selecione um produto na etapa 1 para começar.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* ===== RESULT ===== */}
+                {transcriptAnalysis && (
+                  <Card className="border-primary/30 shadow-sm">
+                    <div className="flex items-center justify-between gap-3 px-6 py-4 border-b bg-gradient-to-r from-primary/5 to-transparent sticky top-0 z-10 backdrop-blur-sm rounded-t-lg">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                          <Sparkles className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-semibold leading-tight">Análise gerada</h3>
+                          <p className="text-xs text-muted-foreground">Resultado pronto para revisão</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button variant="outline" size="sm" onClick={() => handleCopy(transcriptAnalysis)}><Copy className="w-3.5 h-3.5 mr-1.5" />Copiar</Button>
+                        <Button variant="outline" size="sm" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-3.5 h-3.5 mr-1.5" />PDF</Button>
+                      </div>
+                    </div>
+                    <CardContent className="pt-2">
+                      <div className="max-w-3xl mx-auto">
+                        <MarkdownRenderer content={transcriptAnalysis} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* ===== SAVED ANALYSES ===== */}
+                {savedAnalyses.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base flex items-center gap-2"><BookOpen className="w-4 h-4 text-primary" />Análises salvas</CardTitle>
+                        <Badge variant="secondary" className="text-xs">{savedAnalyses.length}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {savedAnalyses.map(a => {
+                          const outcomeConf = getOutcomeConfig(a.call_outcome);
+                          const OutcomeIcon = outcomeConf?.icon;
+                          return (
+                            <div key={a.id} className="group flex items-center justify-between gap-3 p-3 rounded-lg border hover:border-primary/30 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setViewingAnalysis(a)}>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-sm font-medium">{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                  {outcomeConf && (
+                                    <Badge variant="secondary" className={cn("text-[10px] h-5", outcomeConf.bgColor, outcomeConf.color)}>
+                                      {OutcomeIcon && <OutcomeIcon className="w-2.5 h-2.5 mr-1" />}
+                                      {outcomeConf.label}
+                                    </Badge>
+                                  )}
+                                  {a.seller_name && <Badge variant="outline" className="text-[10px] h-5"><Users className="w-2.5 h-2.5 mr-1" />{a.seller_name}</Badge>}
+                                  {a.client_name && <Badge variant="outline" className="text-[10px] h-5"><UserCheck className="w-2.5 h-2.5 mr-1" />{a.client_name}</Badge>}
+                                </div>
+                                {a.transcript_preview && <p className="text-xs text-muted-foreground truncate mt-1">{a.transcript_preview}</p>}
+                              </div>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); setDeleteAnalysisDialog(a); }}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="bulk" className="mt-4">
