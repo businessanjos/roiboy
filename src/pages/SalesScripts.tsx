@@ -1222,6 +1222,10 @@ export default function SalesScripts() {
               <TabsContent value="ranking" className="mt-4">
                 <CloserRanking />
               </TabsContent>
+
+              <TabsContent value="links" className="mt-4">
+                <CallLinks />
+              </TabsContent>
             </Tabs>
           </div>
         </TabsContent>
