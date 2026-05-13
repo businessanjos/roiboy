@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export type TierKey =
-  | "Nenhum"
   | "Latão"
   | "Níquel"
   | "Bronze"
@@ -28,21 +27,13 @@ export type TierDef = {
   emoji: string;
 };
 
-// Progressive tier ladder: 1 sale = next level. Closer cota = 8 vendas (Black).
+// Tier ladder: Latão (0–3 vendas, sem bônus). A partir de 4 vendas começa Níquel,
+// e cada venda adicional sobe um nível. Closer cota = 8 vendas (Platinum).
 export const TIER_LADDER: TierDef[] = [
-  {
-    key: "Nenhum",
-    label: "Aquecendo",
-    minSales: 0,
-    gradient: "from-slate-700 to-slate-900",
-    accent: "text-slate-300",
-    pageBg: "from-slate-50 via-background to-background dark:from-slate-950 dark:via-background dark:to-background",
-    emoji: "🌱",
-  },
   {
     key: "Latão",
     label: "Latão",
-    minSales: 1,
+    minSales: 0,
     gradient: "from-amber-700 to-yellow-900",
     accent: "text-amber-200",
     pageBg: "from-amber-50/60 via-background to-background dark:from-amber-950/30 dark:via-background dark:to-background",
@@ -51,7 +42,7 @@ export const TIER_LADDER: TierDef[] = [
   {
     key: "Níquel",
     label: "Níquel",
-    minSales: 2,
+    minSales: 4,
     gradient: "from-slate-400 to-slate-600",
     accent: "text-slate-100",
     pageBg: "from-slate-100/70 via-background to-background dark:from-slate-800/40 dark:via-background dark:to-background",
@@ -60,7 +51,7 @@ export const TIER_LADDER: TierDef[] = [
   {
     key: "Bronze",
     label: "Bronze",
-    minSales: 3,
+    minSales: 5,
     gradient: "from-orange-600 to-amber-800",
     accent: "text-orange-100",
     pageBg: "from-orange-50/70 via-background to-background dark:from-orange-950/30 dark:via-background dark:to-background",
@@ -69,7 +60,7 @@ export const TIER_LADDER: TierDef[] = [
   {
     key: "Prata",
     label: "Prata",
-    minSales: 4,
+    minSales: 6,
     gradient: "from-slate-300 to-slate-500",
     accent: "text-white",
     pageBg: "from-slate-100/80 via-background to-background dark:from-slate-700/30 dark:via-background dark:to-background",
@@ -78,7 +69,7 @@ export const TIER_LADDER: TierDef[] = [
   {
     key: "Ouro",
     label: "Ouro",
-    minSales: 5,
+    minSales: 7,
     gradient: "from-yellow-300 via-amber-400 to-amber-600",
     accent: "text-amber-950",
     pageBg: "from-amber-100/80 via-background to-background dark:from-amber-900/30 dark:via-background dark:to-background",
@@ -87,7 +78,7 @@ export const TIER_LADDER: TierDef[] = [
   {
     key: "Platinum",
     label: "Platinum",
-    minSales: 6,
+    minSales: 8,
     gradient: "from-cyan-200 via-sky-300 to-blue-500",
     accent: "text-blue-950",
     pageBg: "from-sky-100/80 via-background to-background dark:from-sky-900/30 dark:via-background dark:to-background",
@@ -96,7 +87,7 @@ export const TIER_LADDER: TierDef[] = [
   {
     key: "Diamond",
     label: "Diamond",
-    minSales: 7,
+    minSales: 9,
     gradient: "from-sky-300 via-indigo-400 to-violet-600",
     accent: "text-white",
     pageBg: "from-indigo-100/80 via-background to-background dark:from-indigo-900/30 dark:via-background dark:to-background",
@@ -105,7 +96,7 @@ export const TIER_LADDER: TierDef[] = [
   {
     key: "Black",
     label: "Black",
-    minSales: 8,
+    minSales: 10,
     gradient: "from-zinc-800 via-zinc-900 to-black",
     accent: "text-amber-300",
     pageBg: "from-zinc-100 via-background to-background dark:from-zinc-900 dark:via-background dark:to-background",
@@ -114,7 +105,7 @@ export const TIER_LADDER: TierDef[] = [
   {
     key: "Elite",
     label: "Elite",
-    minSales: 9,
+    minSales: 11,
     gradient: "from-fuchsia-500 via-purple-600 to-indigo-700",
     accent: "text-white",
     pageBg: "from-fuchsia-100/80 via-background to-background dark:from-fuchsia-950/40 dark:via-background dark:to-background",
