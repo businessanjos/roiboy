@@ -1279,6 +1279,8 @@ export function DealDetailSheet({
                               return;
                             }
                             toast.success("Valor recebido atualizado");
+                            setLocalReceivedValue(v);
+                            (deal as any).received_value = v;
                             setReceivedEditOpen(false);
                             onDealUpdated?.();
                           }}
