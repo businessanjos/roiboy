@@ -26,8 +26,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Link2, Plus, ExternalLink, Edit2, Trash2, Copy, Calendar, Search } from 'lucide-react';
+import { Link2, Plus, ExternalLink, Edit2, Trash2, Copy, Calendar, Search, ChevronsUpDown, Check, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 interface CallLink {
   id: string;
@@ -52,6 +55,36 @@ export function CallLinks() {
   const [editing, setEditing] = useState<CallLink | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<CallLink | null>(null);
+  const [titleMode, setTitleMode] = useState<'lead' | 'manual'>('lead');
+  const [leadPickerOpen, setLeadPickerOpen] = useState(false);
+
+  const { data: meetingDeals = [] } = useQuery({
+    queryKey: ['call-links-meeting-deals', accountId],
+    queryFn: async () => {
+      const { data: stages, error: stErr } = await supabase
+        .from('deal_stages')
+        .select('id, name')
+        .or('name.ilike.%Reunião Agendada%,name.ilike.%Reunião Concluída%,name.ilike.%Reunião Realizada%');
+      if (stErr) throw stErr;
+      const stageIds = (stages || []).map((s) => s.id);
+      if (stageIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('deals')
+        .select('id, title, contact_name, stage_id')
+        .eq('account_id', accountId!)
+        .in('stage_id', stageIds)
+        .order('updated_at', { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      const stageMap = new Map((stages || []).map((s) => [s.id, s.name]));
+      return (data || []).map((d) => ({
+        id: d.id,
+        label: d.contact_name || d.title || 'Sem nome',
+        stageName: stageMap.get(d.stage_id) || '',
+      }));
+    },
+    enabled: !!accountId && dialogOpen,
+  });
 
   const { data: links = [], isLoading } = useQuery({
     queryKey: ['call-links', accountId],
@@ -113,6 +146,7 @@ export function CallLinks() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
+    setTitleMode('lead');
     setDialogOpen(true);
   };
 
@@ -124,6 +158,7 @@ export function CallLinks() {
       notes: link.notes || '',
       call_date: link.call_date || '',
     });
+    setTitleMode('manual');
     setDialogOpen(true);
   };
 
@@ -272,12 +307,81 @@ export function CallLinks() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Título *</Label>
-              <Input
-                placeholder="Ex: Call Maria Silva — 12/05"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
+              <div className="flex items-center justify-between">
+                <Label>Título *</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1"
+                  onClick={() => setTitleMode(titleMode === 'lead' ? 'manual' : 'lead')}
+                >
+                  {titleMode === 'lead' ? (
+                    <><Pencil className="w-3 h-3" /> Digitar manualmente</>
+                  ) : (
+                    <><Search className="w-3 h-3" /> Buscar lead</>
+                  )}
+                </Button>
+              </div>
+              {titleMode === 'lead' ? (
+                <Popover open={leadPickerOpen} onOpenChange={setLeadPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        'w-full justify-between font-normal',
+                        !form.title && 'text-muted-foreground'
+                      )}
+                    >
+                      <span className="truncate">
+                        {form.title || 'Buscar lead em Reunião Agendada / Concluída...'}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar lead..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum lead encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {meetingDeals.map((d) => (
+                            <CommandItem
+                              key={d.id}
+                              value={`${d.label} ${d.stageName}`}
+                              onSelect={() => {
+                                setForm({ ...form, title: d.label });
+                                setLeadPickerOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  form.title === d.label ? 'opacity-100' : 'opacity-0'
+                                )}
+                              />
+                              <div className="flex flex-col min-w-0">
+                                <span className="truncate">{d.label}</span>
+                                <span className="text-[10px] text-muted-foreground truncate">
+                                  {d.stageName}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <Input
+                  placeholder="Ex: Call Maria Silva — 12/05"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label>URL *</Label>
