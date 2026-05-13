@@ -586,7 +586,7 @@ export default function MindMapViewer({ open, onOpenChange, content, title, scri
     try {
       toast.info('Gerando PDF do mapa mental...');
       const canvas = await html2canvas(contentRef.current, {
-        backgroundColor: '#0a0a12',
+        backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
         logging: false,
