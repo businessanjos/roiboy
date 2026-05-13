@@ -408,9 +408,9 @@ function MindMapNodeComponent({ node, depth, isRoot = false, onEditNode }: NodeP
               <span
                 className={cn(
                   "leading-snug",
-                  isRoot ? "" : "text-foreground/90",
                   depth >= 3 && "max-w-[320px] whitespace-normal"
                 )}
+                style={{ color: isRoot ? '#8a6d2a' : '#1f2937' }}
               >
                 {node.label}
               </span>
