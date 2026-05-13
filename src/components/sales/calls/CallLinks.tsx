@@ -146,6 +146,7 @@ export function CallLinks() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
+    setTitleMode('lead');
     setDialogOpen(true);
   };
 
@@ -157,6 +158,7 @@ export function CallLinks() {
       notes: link.notes || '',
       call_date: link.call_date || '',
     });
+    setTitleMode('manual');
     setDialogOpen(true);
   };
 
