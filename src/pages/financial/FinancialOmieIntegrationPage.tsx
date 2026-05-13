@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,7 @@ import {
   Trash2,
   XCircle,
   ArrowDownToLine,
+  Pencil,
 } from "lucide-react";
 
 function formatCnpj(cnpj?: string | null) {
@@ -57,6 +58,12 @@ export default function FinancialOmieIntegrationPage() {
   const { toast } = useToast();
   const [pulling, setPulling] = useState(false);
   const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    const h = () => refresh();
+    window.addEventListener("omie-companies-refresh", h);
+    return () => window.removeEventListener("omie-companies-refresh", h);
+  }, [refresh]);
 
   const handleSyncEntries = async () => {
     if (!selectedId) {
@@ -233,6 +240,29 @@ function CompanyRow({
   onSetDefault: () => void;
   onDelete: () => void;
 }) {
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [trade, setTrade] = useState(company.trade_name || "");
+  const [legal, setLegal] = useState(company.legal_name || "");
+  const [savingName, setSavingName] = useState(false);
+
+  const saveName = async () => {
+    setSavingName(true);
+    const { error } = await supabase
+      .from("omie_settings")
+      .update({ trade_name: trade || null, legal_name: legal || null })
+      .eq("id", company.id);
+    setSavingName(false);
+    if (error) {
+      toast({ title: "Erro ao renomear", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Nome atualizado" });
+    setEditing(false);
+    // refresh handled by parent via realtime/refetch on next interaction; trigger via custom event
+    window.dispatchEvent(new CustomEvent("omie-companies-refresh"));
+  };
+
   return (
     <div
       className={`flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors cursor-pointer hover:bg-muted/50 ${
@@ -240,42 +270,68 @@ function CompanyRow({
       }`}
       onClick={onSelect}
     >
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <div
           className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
           style={{ backgroundColor: (company.color || "#3b82f6") + "20" }}
         >
           <Building2 className="h-4 w-4" style={{ color: company.color || "#3b82f6" }} />
         </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-medium truncate">
-              {company.trade_name || company.legal_name || "Sem nome"}
-            </span>
-            {company.is_default && (
-              <Badge variant="outline" className="text-[10px] py-0 px-1.5">
-                <Star className="h-2.5 w-2.5 mr-0.5 fill-current" /> padrão
-              </Badge>
-            )}
-            {company.has_credentials ? (
-              <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 text-[10px] py-0 px-1.5">
-                <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> conectado
-              </Badge>
-            ) : (
-              <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
-                <XCircle className="h-2.5 w-2.5 mr-0.5" /> sem credenciais
-              </Badge>
-            )}
-            {company.is_enabled && (
-              <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
-                automação ativa
-              </Badge>
-            )}
-          </div>
+        <div className="min-w-0 flex-1">
+          {editing ? (
+            <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <Input
+                value={trade}
+                onChange={(e) => setTrade(e.target.value)}
+                placeholder="Nome fantasia"
+                className="h-8 w-40"
+              />
+              <Input
+                value={legal}
+                onChange={(e) => setLegal(e.target.value)}
+                placeholder="Razão social"
+                className="h-8 w-56"
+              />
+              <Button size="sm" onClick={saveName} disabled={savingName}>
+                {savingName ? <Loader2 className="h-3 w-3 animate-spin" /> : "Salvar"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancelar</Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="font-medium truncate">
+                {company.trade_name || company.legal_name || formatCnpj(company.cnpj) || "Sem nome"}
+              </span>
+              {company.is_default && (
+                <Badge variant="outline" className="text-[10px] py-0 px-1.5">
+                  <Star className="h-2.5 w-2.5 mr-0.5 fill-current" /> padrão
+                </Badge>
+              )}
+              {company.has_credentials ? (
+                <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 text-[10px] py-0 px-1.5">
+                  <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> conectado
+                </Badge>
+              ) : (
+                <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
+                  <XCircle className="h-2.5 w-2.5 mr-0.5" /> sem credenciais
+                </Badge>
+              )}
+              {company.is_enabled && (
+                <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                  automação ativa
+                </Badge>
+              )}
+            </div>
+          )}
           <div className="text-xs text-muted-foreground">{formatCnpj(company.cnpj)}</div>
         </div>
       </div>
       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        {!editing && (
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)} title="Renomear">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
         {!company.is_default && (
           <Button size="sm" variant="ghost" onClick={onSetDefault} title="Definir como padrão">
             <Star className="h-4 w-4" />
