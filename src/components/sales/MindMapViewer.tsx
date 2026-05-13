@@ -667,7 +667,7 @@ export default function MindMapViewer({ open, onOpenChange, content, title, scri
           style={{ 
             height: 'calc(92vh - 90px)', 
             cursor: isPanning ? 'grabbing' : 'grab',
-            background: 'radial-gradient(ellipse at center, hsl(240 10% 6%) 0%, hsl(240 10% 3%) 100%)',
+            background: 'radial-gradient(ellipse at center, #fafaf7 0%, #eef0f3 100%)',
           }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
@@ -677,9 +677,9 @@ export default function MindMapViewer({ open, onOpenChange, content, title, scri
         >
           {/* Subtle grid pattern */}
           <div 
-            className="absolute inset-0 opacity-[0.03] pointer-events-none"
+            className="absolute inset-0 opacity-[0.18] pointer-events-none"
             style={{
-              backgroundImage: 'radial-gradient(circle, hsl(43 50% 55%) 1px, transparent 1px)',
+              backgroundImage: 'radial-gradient(circle, #94a3b8 1px, transparent 1px)',
               backgroundSize: '30px 30px',
             }}
           />
