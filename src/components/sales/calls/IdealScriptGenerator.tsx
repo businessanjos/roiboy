@@ -142,10 +142,30 @@ Seja EXTREMAMENTE ESPECÍFICO. Use exemplos reais extraídos das análises. Cada
       if (error) throw error;
       return data.analysis as string;
     },
-    onSuccess: (script) => {
+    onSuccess: async (script) => {
       setIdealScript(script);
-      setScriptProductName(selectedProduct?.name || '');
-      toast.success('Script ideal gerado!');
+      const productName = selectedProduct?.name || '';
+      setScriptProductName(productName);
+      // Auto-save into the Scripts tab (sales_scripts table)
+      try {
+        const { error } = await supabase.from('sales_scripts').insert({
+          account_id: accountId!,
+          title: `Script Ideal — ${productName}`,
+          content: script,
+          objection_type: null,
+          funnel_stage: null,
+          tags: ['script-ideal', productName].filter(Boolean),
+          is_active: true,
+          created_by: currentUser?.id!,
+        });
+        if (error) throw error;
+        queryClient.invalidateQueries({ queryKey: ['sales-scripts'] });
+        toast.success('Script ideal gerado e salvo na aba Scripts!');
+      } catch (e: any) {
+        console.error('Erro ao salvar script ideal:', e);
+        toast.success('Script ideal gerado!');
+        toast.error('Não foi possível salvar automaticamente na aba Scripts');
+      }
     },
     onError: (e: any) => toast.error(e?.message || 'Erro ao gerar script'),
   });
