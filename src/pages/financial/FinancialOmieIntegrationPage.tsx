@@ -94,19 +94,40 @@ export default function FinancialOmieIntegrationPage() {
     if (!currentUser?.account_id || !selectedId) return;
     setPulling(true);
     try {
-      const { data, error } = await supabase.functions.invoke("sync-omie", {
-        body: {
-          account_id: currentUser.account_id,
-          company_id: selectedId,
-          sync_all: true,
-          enrich_data: true,
-          use_cpf_cnpj: true,
-        },
-      });
-      if (error) throw error;
+      let offset = 0;
+      const limit = 25;
+      let total = 0;
+      let synced = 0;
+      let enriched = 0;
+      let errors = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase.functions.invoke("sync-omie", {
+          body: {
+            account_id: currentUser.account_id,
+            company_id: selectedId,
+            sync_all: true,
+            enrich_data: true,
+            use_cpf_cnpj: true,
+            limit,
+            offset,
+          },
+        });
+        if (error) throw error;
+        synced += data?.synced || 0;
+        enriched += data?.enriched || 0;
+        errors += data?.errors || 0;
+        total = data?.total || total;
+        offset = data?.next_offset ?? offset + limit;
+        hasMore = !!data?.has_more;
+        toast({
+          title: "Importando do Omie...",
+          description: `${offset}/${total} processados · ${synced} sincronizados · ${errors} erros`,
+        });
+      }
       toast({
         title: "Importação concluída",
-        description: `${data?.synced || 0} sincronizados · ${data?.enriched || 0} enriquecidos · ${data?.errors || 0} erros`,
+        description: `${synced} sincronizados · ${enriched} enriquecidos · ${errors} erros (de ${total})`,
       });
     } catch (err: any) {
       toast({ title: "Erro ao importar do Omie", description: err.message, variant: "destructive" });
