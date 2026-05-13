@@ -33,6 +33,12 @@ export interface ActiveFilter {
 // Recommended filters (predefined system filters)
 export const RECOMMENDED_FILTERS = [
   {
+    id: 'created_today',
+    name: 'Criados hoje',
+    conditions: [{ field: 'created_at', operator: 'today', value: null }],
+    match_type: 'all' as const
+  },
+  {
     id: 'created_this_week',
     name: 'Criados esta semana',
     conditions: [{ field: 'created_at', operator: 'this_week', value: null }],
@@ -342,6 +348,11 @@ function evaluateDateCondition(fieldValue: string | null | undefined, operator: 
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
   switch (operator) {
+    case 'today': {
+      const endOfToday = new Date(today);
+      endOfToday.setHours(23, 59, 59, 999);
+      return date >= today && date <= endOfToday;
+    }
     case 'this_week':
       return date >= startOfWeek && date <= today;
     
