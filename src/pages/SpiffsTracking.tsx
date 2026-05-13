@@ -44,6 +44,8 @@ export default function SpiffsTracking() {
           </p>
         </div>
 
+        <RouletteApprovalsQueue />
+
           <Tabs value={view} onValueChange={(v) => setView(v as "tracking" | "history")} className="space-y-4">
             <TabsList>
               <TabsTrigger value="tracking" className="gap-1.5">
