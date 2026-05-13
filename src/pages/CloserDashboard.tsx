@@ -366,7 +366,8 @@ export default function CloserDashboard() {
   const closeRate = meetingsHeld > 0 ? Math.round((wonDeals / meetingsHeld) * 100) : 0;
   const { record, recordMonthLabel, piggyValue, loading: statsLoading } =
     useCloserPersonalStats(selYear, selMonth, effectiveUserId);
-
+  const [breakdown, setBreakdown] = useState<{ kind: BreakdownKind; title: string } | null>(null);
+  const openBreakdown = (kind: BreakdownKind, title: string) => setBreakdown({ kind, title });
 
 
   return (
