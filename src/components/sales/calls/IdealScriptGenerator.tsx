@@ -20,6 +20,7 @@ export function IdealScriptGenerator() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [idealScript, setIdealScript] = useState<string | null>(null);
   const [scriptProductName, setScriptProductName] = useState<string>('');
+  const [scriptStats, setScriptStats] = useState<{ analyzed: number; champions: number; rate: number } | null>(null);
   const [customInstructions, setCustomInstructions] = useState('');
   const [mindMapOpen, setMindMapOpen] = useState(false);
 
@@ -39,6 +40,33 @@ export function IdealScriptGenerator() {
     },
     enabled: !!accountId,
   });
+
+  // All analyses (any outcome) — used to compute success rate per product
+  const { data: allAnalyses = [] } = useQuery({
+    queryKey: ['all-call-analyses-for-stats', accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sales_call_analyses')
+        .select('id, product_id, call_outcome')
+        .eq('account_id', accountId!)
+        .limit(1000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!accountId,
+  });
+
+  const productStats = useMemo(() => {
+    const map = new Map<string, { analyzed: number; champions: number }>();
+    for (const a of allAnalyses) {
+      if (!a.product_id) continue;
+      const cur = map.get(a.product_id) || { analyzed: 0, champions: 0 };
+      cur.analyzed += 1;
+      if (a.call_outcome === 'success') cur.champions += 1;
+      map.set(a.product_id, cur);
+    }
+    return map;
+  }, [allAnalyses]);
 
   // Products in the account (with color for badges)
   const { data: products = [] } = useQuery({
