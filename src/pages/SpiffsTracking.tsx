@@ -10,6 +10,7 @@ import { RouletteSpinsPanel, CustomSpinsPanel } from "@/components/sales/quotas/
 import { PaymentMethodSpiffPanel } from "@/components/sales/quotas/PaymentMethodSpiffPanel";
 import { SpiffSpinsHistory } from "@/components/sales/quotas/SpiffSpinsHistory";
 import { SpiffSpinsCompactMonth } from "@/components/sales/quotas/SpiffSpinsCompactMonth";
+import { RouletteApprovalsQueue } from "@/components/sales/quotas/RouletteApprovalsQueue";
 
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
 
