@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { classifyMeetingTask, meetingDedupeKey } from "@/lib/sales/meetingMetrics";
 import {
   startOfMonth,
   endOfMonth,
@@ -418,29 +419,14 @@ export default function SalesDashboard() {
         from += PAGE;
       }
       const filtered = all.filter((t: any) => {
-        const s = ((t.activity_types?.name || "") + " " + (t.title || "")).toLowerCase();
-        // Excluir explicitamente agendamentos (só marcam a agenda) e no-shows (não aconteceram)
-        if (s.includes("agendada") || s.includes("agendamento") || s.includes("no-show") || s.includes("no show") || s.includes("noshow")) {
-          return false;
-        }
-        // Considerar apenas atividades de conclusão de reunião
-        return (
-          s.includes("concluída") ||
-          s.includes("concluida") ||
-          s.includes("realizada") ||
-          s.includes("alinhamento") ||
-          s.includes("reunião") ||
-          s.includes("reuniao") ||
-          s.includes("meeting")
-        );
+        const kind = classifyMeetingTask(t.activity_types?.name, t.title);
+        return kind === "held";
       });
       // Dedupe: múltiplas reuniões com o mesmo cliente (por vendedor) contam como 1.
-      // Chave: assigned_to + (client_id || deal_id || lead_id || id da própria task)
       const seen = new Set<string>();
       const deduped: any[] = [];
       for (const t of filtered) {
-        const entityKey = t.client_id || t.deal_id || t.lead_id || t.id;
-        const key = `${t.assigned_to || "unassigned"}|${entityKey}`;
+        const key = meetingDedupeKey(t.assigned_to, t);
         if (seen.has(key)) continue;
         seen.add(key);
         deduped.push(t);
@@ -521,7 +507,15 @@ export default function SalesDashboard() {
     },
   });
 
-  const heldMeetingsTotal = (heldMeetingsRows || []).length;
+  // Total de reuniões realizadas no período: agora vem direto do hook
+  // useSalesTeamMetrics (mesmo classificador + dedupe por vendedor+entidade
+  // usado no Acelerômetro e na tabela do time), garantindo consistência.
+  const heldMeetingsFromTeam = useMemo(
+    () => teamMetrics.reduce((acc, m) => acc + (m.meetings_held || 0), 0),
+    [teamMetrics]
+  );
+  // Mantém o fallback (query global) caso o time não esteja carregado ainda
+  const heldMeetingsTotal = heldMeetingsFromTeam || (heldMeetingsRows || []).length;
   const closeRate = heldMeetingsTotal > 0 ? (wonCount / heldMeetingsTotal) * 100 : 0;
 
   // Ciclo médio de vendas (dias entre criação e ganho)

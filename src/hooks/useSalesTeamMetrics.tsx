@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { classifyMeetingTask, meetingDedupeKey } from "@/lib/sales/meetingMetrics";
 
 export interface SalesRepMetrics {
   user_id: string;
@@ -32,9 +33,10 @@ export interface SalesRepMetrics {
   converted_leads: number;
   entry_value_total: number;
 
-  // Scheduling metrics
+  // Scheduling metrics — todos com dedupe por (vendedor + entidade)
   scheduled_calls: number;
   noshow_calls: number;
+  meetings_held: number;
 }
 
 interface UseSalesTeamMetricsOptions {
@@ -100,7 +102,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       }
 
       // Fetch all metrics in parallel
-      const [callsData, dealsData, tasksData, leadsData, schedulingData] = await Promise.all([
+      const [callsData, dealsData, tasksData, leadsData, schedulingData, heldData] = await Promise.all([
         // Calls - from threecplus_call_logs (3C Plus telephony)
         supabase
           .from("threecplus_call_logs")
@@ -136,13 +138,36 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
 
-        // Scheduling tasks (agendamentos + no-show) via activity_types AND title
+        // Scheduling/no-show tasks (criadas no período) via activity_types AND title
         supabase
           .from("internal_tasks")
-          .select("assigned_to, title, activity_types!internal_tasks_activity_type_id_fkey(name)")
+          .select("id, assigned_to, title, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
+
+        // Reuniões realizadas (concluídas no período) — paginado para evitar limite de 1000
+        (async () => {
+          const PAGE = 1000;
+          let from = 0;
+          const all: any[] = [];
+          while (from < 50000) {
+            const { data, error } = await supabase
+              .from("internal_tasks")
+              .select("id, assigned_to, title, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
+              .eq("account_id", currentUser.account_id)
+              .not("completed_at", "is", null)
+              .gte("completed_at", dateFilter.start)
+              .lte("completed_at", dateFilter.end)
+              .range(from, from + PAGE - 1);
+            if (error) return { data: all, error };
+            const batch = data || [];
+            all.push(...batch);
+            if (batch.length < PAGE) break;
+            from += PAGE;
+          }
+          return { data: all, error: null };
+        })(),
       ]);
 
       // Process metrics for each user
@@ -173,6 +198,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           entry_value_total: 0,
           scheduled_calls: 0,
           noshow_calls: 0,
+          meetings_held: 0,
         };
       }
 
@@ -285,20 +311,42 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         }
       }
 
-      // Aggregate scheduling metrics (agendamentos x no-show)
+      // Aggregate scheduling metrics (agendamentos x no-show) com dedupe por
+      // (vendedor + entidade) — duas tasks no mesmo cliente contam como uma.
+      const seenScheduled = new Set<string>();
+      const seenNoshow = new Set<string>();
       if (schedulingData.data) {
         for (const task of schedulingData.data as any[]) {
-          const activityName = (task.activity_types as any)?.name?.toLowerCase() || "";
-          const taskTitle = (task.title || "").toLowerCase();
-          const combined = activityName + " " + taskTitle;
-          if (task.assigned_to && metricsMap[task.assigned_to]) {
-            if (combined.includes("call comercial agendada") || combined.includes("agendamento") || combined.includes("agendada")) {
-              metricsMap[task.assigned_to].scheduled_calls++;
-            }
-            if (combined.includes("no-show") || combined.includes("no show") || combined.includes("noshow")) {
-              metricsMap[task.assigned_to].noshow_calls++;
-            }
+          if (!task.assigned_to || !metricsMap[task.assigned_to]) continue;
+          const kind = classifyMeetingTask(
+            (task.activity_types as any)?.name,
+            task.title,
+          );
+          const key = meetingDedupeKey(task.assigned_to, task);
+          if (kind === "scheduled" && !seenScheduled.has(key)) {
+            seenScheduled.add(key);
+            metricsMap[task.assigned_to].scheduled_calls++;
+          } else if (kind === "noshow" && !seenNoshow.has(key)) {
+            seenNoshow.add(key);
+            metricsMap[task.assigned_to].noshow_calls++;
           }
+        }
+      }
+
+      // Aggregate "reuniões realizadas" (completed_at no período) com dedupe
+      const seenHeld = new Set<string>();
+      if ((heldData as any)?.data) {
+        for (const task of (heldData as any).data as any[]) {
+          if (!task.assigned_to || !metricsMap[task.assigned_to]) continue;
+          const kind = classifyMeetingTask(
+            (task.activity_types as any)?.name,
+            task.title,
+          );
+          if (kind !== "held") continue;
+          const key = meetingDedupeKey(task.assigned_to, task);
+          if (seenHeld.has(key)) continue;
+          seenHeld.add(key);
+          metricsMap[task.assigned_to].meetings_held++;
         }
       }
 
@@ -335,6 +383,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         assigned_leads: acc.assigned_leads + m.assigned_leads,
         scheduled_calls: acc.scheduled_calls + m.scheduled_calls,
         noshow_calls: acc.noshow_calls + m.noshow_calls,
+        meetings_held: acc.meetings_held + m.meetings_held,
       }),
       {
         total_calls: 0,
@@ -348,6 +397,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         assigned_leads: 0,
         scheduled_calls: 0,
         noshow_calls: 0,
+        meetings_held: 0,
       }
     );
   }, [metrics]);
