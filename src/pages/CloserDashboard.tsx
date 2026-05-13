@@ -631,6 +631,16 @@ export default function CloserDashboard() {
         </div>
       </div>
       </div>
+      <MetricBreakdownDialog
+        open={!!breakdown}
+        onOpenChange={(v) => !v && setBreakdown(null)}
+        kind={breakdown?.kind ?? "held"}
+        title={breakdown?.title ?? ""}
+        userId={effectiveUserId}
+        accountId={currentUser?.account_id}
+        startDate={startOfMonth}
+        endDate={endOfMonth}
+      />
     </TooltipProvider>
   );
 }
