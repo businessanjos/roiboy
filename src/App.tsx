@@ -15,6 +15,24 @@ import { CompanyProvider } from "@/contexts/CompanyContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
+function reloadWithFreshAssets() {
+  try {
+    if ("caches" in window) {
+      caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
+    }
+  } catch {
+    // Best-effort cache clear only.
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.set("app_reload", Date.now().toString());
+  window.setTimeout(() => window.location.replace(url.toString()), 0);
+}
+
+function LazyReloadFallback() {
+  return <LoadingScreen message="Atualizando aplicação..." fullScreen={false} />;
+}
+
 // Retry wrapper for lazy imports to handle stale chunk errors after deploys
 function lazyRetry<P extends object>(
   factory: () => Promise<{ default: ComponentType<P> }>,
@@ -41,9 +59,9 @@ function lazyRetry<P extends object>(
         // Last resort: full page reload to get fresh asset manifest
         if (!sessionStorage.getItem("chunk-reload")) {
           sessionStorage.setItem("chunk-reload", "1");
-          window.location.reload();
+          reloadWithFreshAssets();
         }
-        return factory();
+        return { default: LazyReloadFallback as ComponentType<P> };
       });
 
   return lazy(() => retryFactory(retries));
