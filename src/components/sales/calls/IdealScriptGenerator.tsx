@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 export function IdealScriptGenerator() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const queryClient = useQueryClient();
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [idealScript, setIdealScript] = useState<string | null>(null);
   const [scriptProductName, setScriptProductName] = useState<string>('');
