@@ -35,6 +35,7 @@ import { SalesRecordCard } from "@/components/sales/quotas/SalesRecordCard";
 import { useUserMonthlyTier } from "@/hooks/useUserMonthlyTier";
 import { useCloserPersonalStats } from "@/hooks/useCloserPersonalStats";
 import { cn } from "@/lib/utils";
+import { MetricBreakdownDialog, type BreakdownKind } from "@/components/sales/MetricBreakdownDialog";
 
 // Líderes que enxergam o acelerômetro de seus liderados
 const MANAGER_IDS = new Set<string>([
