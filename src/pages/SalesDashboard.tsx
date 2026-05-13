@@ -405,7 +405,7 @@ export default function SalesDashboard() {
       while (from < 50000) {
         const { data, error } = await supabase
           .from("internal_tasks")
-          .select("assigned_to, title, completed_at, activity_types!internal_tasks_activity_type_id_fkey(name)")
+          .select("id, assigned_to, title, completed_at, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
           .eq("account_id", accountId!)
           .not("completed_at", "is", null)
           .gte("completed_at", start.toISOString())
