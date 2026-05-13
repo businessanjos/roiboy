@@ -1,93 +1,51 @@
+## Integração Open Finance (banco.mcp.ai) — Saldos + Extrato CNPJ
 
-# Fase 2 — Popular Financeiro com dados reais (Vendas + Operações + Omie)
+Vamos sincronizar **saldo** e **todas as movimentações** das contas do CNPJ Eternum, transformando cada transação em um `financial_entry` automaticamente.
 
-Hoje o `financial_entries` está praticamente vazio. As páginas (Fluxo de Caixa, Lançamentos, Parcelas, Recorrentes, DRE, Aging, Comissões etc.) leem dessa tabela, então só vão "ganhar vida" quando ela for populada. A estratégia é tratar `financial_entries` como **tabela‑espelho única** alimentada por 3 fontes:
+### Pré-requisitos (você faz)
 
-```
-[Operações: client_contracts] ──► gera parcelas (receivable)
-[Vendas: deals won]           ──► gera receivable se ainda não houver contrato
-[Omie: contas pagar/receber]  ──► sincroniza tudo (payable + receivable) por CNPJ
-                                    │
-                                    ▼
-                          public.financial_entries
-                                    │
-                ┌───────────────────┼─────────────────────┐
-                ▼                   ▼                     ▼
-        Fluxo de Caixa        Lançamentos /         Operações:
-        / DRE / Aging         Parcelas /            badge inadimplente
-                              Recorrentes           + cheques pendentes
-```
+1. Criar conta em `https://banco.mcp.ai`
+2. Conectar as contas do CNPJ Eternum via Open Finance (consentimento por banco)
+3. Gerar o **MCP token / API key** no painel
+4. Me passar o token quando eu pedir (vou usar o `add_secret` para guardar como `BANCO_MCP_TOKEN`)
 
-## 1. Schema (uma migration)
+### O que vou construir
 
-Adicionar em `financial_entries`:
-- `company_id uuid` → fk `omie_settings(id)` (qual CNPJ)
-- `source text` check in `manual|omie|contract|deal` default `manual`
-- `source_id uuid` (deal_id, contract_id, etc.)
-- `deal_id uuid` (atalho para Vendas)
-- `omie_payload jsonb`
-- `last_omie_sync_at timestamptz`
-- índice único parcial `(account_id, omie_id) where omie_id is not null`
-- índice `(account_id, source, source_id)`
+**1. Schema (migration)**
+- Adicionar em `bank_accounts`:
+  - `openfinance_connection_id` (text) — ID da conexão no banco.mcp.ai
+  - `openfinance_account_id` (text) — ID da conta específica
+  - `last_balance_sync_at`, `last_transactions_sync_at` (timestamptz)
+- Nova tabela `openfinance_sync_log` para auditoria (account_id, started_at, finished_at, transactions_imported, status, error)
+- Em `financial_entries` adicionar `openfinance_transaction_id` (text, unique por account) para deduplicação
 
-Em `client_contracts`:
-- (sem mudança de schema — já tem `receivables_generated`, `installments_detail`, `installments_count`, `first_due_date`, `payment_method`)
+**2. Edge functions**
+- `openfinance-list-accounts` — chama `openfinance_list_connections` + lista contas disponíveis para o usuário linkar manualmente em cada `bank_account`
+- `sync-openfinance-balances` — atualiza `current_balance` de todas as contas linkadas (rápido, ~5s)
+- `sync-openfinance-transactions` — busca transações desde `last_transactions_sync_at` (ou últimos 90 dias na 1ª vez), cria `financial_entries` com `status='paid'`, `paid_at` = data da transação, sinal correto (crédito = receita, débito = despesa), categorização básica por descrição
 
-## 2. Geração automática de parcelas a partir de contratos (Operações)
+**3. UI em `/financial/bank-accounts`**
+- Botão **"Conectar Open Finance"** por conta → abre dialog que lista contas do banco.mcp.ai e linka
+- Badge "Open Finance ativo" + `last_synced_at` na linha
+- Botão **"Sincronizar agora"** (saldos + transações)
+- Nova aba/página **"Movimentações"** por conta exibindo o extrato (já vem de graça pois vira `financial_entries`)
 
-Trigger `AFTER INSERT OR UPDATE` em `client_contracts`:
-- Quando `receivables_generated = true` e ainda não existe nenhum `financial_entry` com `source='contract' AND source_id = contract.id`:
-  - Criar N entries (`entry_type='receivable'`, `source='contract'`, `installment_number`, `total_installments`, `installment_group_id`, `due_date` calculada por mês, `client_id`, `contract_id`, `deal_id`, valor = `value / installments_count` ou `installments_detail[i].amount`).
-- Quando contrato é cancelado/suspenso: marcar entries futuros pendentes como `cancelled` (sem deletar histórico).
-- Backfill: rodar uma query única que cria entries para contratos antigos com `receivables_generated=true` e sem entries.
+**4. Cron diário**
+- `pg_cron` rodando `sync-openfinance-balances` a cada 1h e `sync-openfinance-transactions` 2x/dia (manhã e noite)
 
-## 3. Sincronização Omie → financial_entries
+### Pontos de atenção
 
-Nova edge function `omie-sync-entries`:
-- Aceita `{ company_id }`. Busca credenciais via `omie_settings`.
-- Pagina `ListarContasReceber` e `ListarContasPagar` por mês (ex.: últimos 12m + próximos 12m), 500 ms entre chamadas (anti‑flood Omie 5001).
-- Para cada título: upsert em `financial_entries` por `(account_id, omie_id)`:
-  - mapeia status, valor, vencimento, pagamento, descrição, número doc, payload completo.
-  - tenta ligar `client_id` por `clients.cpf_cnpj` normalizado; se falhar, fica órfão.
-- Atualiza `last_omie_sync_at`. Loga erros sem abortar batch.
+- Transações importadas ficam **marcadas como Open Finance** (não-editáveis no valor/data) para preservar a fonte da verdade
+- Conciliação automática: se já existe um `financial_entry` `pending` com mesmo valor/data próxima, sugiro merge ao invés de duplicar
+- Categorização: deixo manual no início (campo `category` vazio); depois podemos usar IA pra sugerir
 
-Cron job (pg_cron + pg_net) a cada 30 min para cada `company_id` com `is_default=true` (depois liberamos manual por CNPJ via botão "Sincronizar agora" na página de integração).
+### Ordem de execução
 
-Botão "Sincronizar agora" em `/financial/integracoes/omie` por CNPJ + último sync visível.
+1. Migration do schema
+2. Pedir o `BANCO_MCP_TOKEN`
+3. Edge functions + UI de linkagem
+4. Sync de saldos (testar)
+5. Sync de transações + página de extrato
+6. Cron
 
-## 4. Conexão com Vendas (deals won)
-
-Já existe atribuição via contrato. Para deals "won" que ainda não têm contrato:
-- Botão "Gerar contrato + parcelas" na ficha do deal (já existe parcialmente). Sem schema novo — apenas garantir `deal_id` no entry.
-- Hook `useDealFinancialStatus(dealId)` para mostrar status no Pipeline ("3 parcelas em atraso").
-
-## 5. Páginas que ganham dados automaticamente
-
-Sem mudança de UI (já leem de `financial_entries`):
-- Fluxo de Caixa, Lançamentos, Parcelas, Recorrentes, Aging, DRE, DRF, Comissões (via `seller_id`), Centros de Custo, Conciliação.
-
-Adicionar pequenos filtros já existentes:
-- `company_id` aplicado globalmente via `FinancialCompanyContext` (já temos o seletor — passar para as queries).
-- Selo "Origem" (Manual / Contrato / Omie / Deal) na tabela de Lançamentos.
-
-## 6. Operações ganha sinalização (preparação Fase 3)
-
-View materializada `client_financial_status` (overdue_amount, overdue_count, oldest_overdue_days) lida em Operações por badge vermelho. Será só plugada na Fase 3, mas já é populada agora porque os entries existem.
-
-## Ordem de execução
-
-1. Migration (colunas + índices + trigger de geração de parcelas a partir de contratos + backfill).
-2. Edge function `omie-sync-entries` + cron + botão manual.
-3. `FinancialCompanyContext` aplicado nas queries das páginas (filtro por `company_id`).
-4. Coluna "Origem" na página de Lançamentos.
-
-Depois (Fase 3): badge inadimplente em Operações/RoyZapp e controle de cheques.
-
-## Riscos / pontos de atenção
-
-- Backfill de contratos pode criar muitos entries de uma vez — vou rodar em chunks com `installments_detail` quando existir.
-- Match por CPF/CNPJ depende de `clients.cpf_cnpj` preenchido; órfãos viram lista "Sem cliente".
-- Anti‑flood Omie: 500 ms entre chamadas e `LIMIT` por página = 50.
-- `installments_*` columns têm triggers de imutabilidade — ao gerar via trigger uso bypass server‑side (security definer).
-
-Pronto para executar a migration + edge function + cron na sequência.
+Posso começar pela migration agora?
