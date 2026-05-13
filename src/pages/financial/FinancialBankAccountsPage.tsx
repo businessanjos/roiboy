@@ -1017,6 +1017,15 @@ export default function FinancialBankAccountsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {linkDialogFor && (
+        <OpenFinanceLinkDialog
+          open={!!linkDialogFor}
+          onOpenChange={(v) => !v && setLinkDialogFor(null)}
+          bankAccountId={linkDialogFor.id}
+          bankAccountName={linkDialogFor.name}
+        />
+      )}
     </div>
   );
 }
