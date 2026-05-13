@@ -102,7 +102,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       }
 
       // Fetch all metrics in parallel
-      const [callsData, dealsData, tasksData, leadsData, schedulingData] = await Promise.all([
+      const [callsData, dealsData, tasksData, leadsData, schedulingData, heldData] = await Promise.all([
         // Calls - from threecplus_call_logs (3C Plus telephony)
         supabase
           .from("threecplus_call_logs")
