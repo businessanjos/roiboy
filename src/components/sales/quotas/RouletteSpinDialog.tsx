@@ -226,7 +226,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
             />
           ) : phase === "idle" ? (
             <Button
-              onClick={startSpin}
+              onClick={requestApproval}
               size="lg"
               className="h-24 px-12 text-3xl gap-3 bg-amber-500 hover:bg-amber-600 text-white"
               disabled={pendingSpins <= 0 || (usingPool && prizesQuery.isLoading)}
@@ -329,7 +329,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
           <div className="flex flex-col gap-2">
             {phase === "idle" && (
               <Button
-                onClick={startSpin}
+                onClick={requestApproval}
                 size="lg"
                 className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white"
                 disabled={pendingSpins <= 0 || (usingPool && prizesQuery.isLoading)}
