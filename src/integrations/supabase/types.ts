@@ -1081,6 +1081,8 @@ export type Database = {
           initial_balance: number
           initial_balance_date: string | null
           is_active: boolean
+          last_balance_sync_at: string | null
+          last_transactions_sync_at: string | null
           linked_account_id: string | null
           logo_url: string | null
           manager_email: string | null
@@ -1088,6 +1090,9 @@ export type Database = {
           manager_phone: string | null
           name: string
           notes: string | null
+          openfinance_account_id: string | null
+          openfinance_connection_id: string | null
+          openfinance_institution: string | null
           updated_at: string
         }
         Insert: {
@@ -1120,6 +1125,8 @@ export type Database = {
           initial_balance?: number
           initial_balance_date?: string | null
           is_active?: boolean
+          last_balance_sync_at?: string | null
+          last_transactions_sync_at?: string | null
           linked_account_id?: string | null
           logo_url?: string | null
           manager_email?: string | null
@@ -1127,6 +1134,9 @@ export type Database = {
           manager_phone?: string | null
           name: string
           notes?: string | null
+          openfinance_account_id?: string | null
+          openfinance_connection_id?: string | null
+          openfinance_institution?: string | null
           updated_at?: string
         }
         Update: {
@@ -1159,6 +1169,8 @@ export type Database = {
           initial_balance?: number
           initial_balance_date?: string | null
           is_active?: boolean
+          last_balance_sync_at?: string | null
+          last_transactions_sync_at?: string | null
           linked_account_id?: string | null
           logo_url?: string | null
           manager_email?: string | null
@@ -1166,6 +1178,9 @@ export type Database = {
           manager_phone?: string | null
           name?: string
           notes?: string | null
+          openfinance_account_id?: string | null
+          openfinance_connection_id?: string | null
+          openfinance_institution?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -6944,6 +6959,7 @@ export type Database = {
           omie_id: string | null
           omie_payload: Json | null
           omie_sync_at: string | null
+          openfinance_transaction_id: string | null
           parent_entry_id: string | null
           payment_date: string | null
           payment_forecast_date: string | null
@@ -6992,6 +7008,7 @@ export type Database = {
           omie_id?: string | null
           omie_payload?: Json | null
           omie_sync_at?: string | null
+          openfinance_transaction_id?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
           payment_forecast_date?: string | null
@@ -7040,6 +7057,7 @@ export type Database = {
           omie_id?: string | null
           omie_payload?: Json | null
           omie_sync_at?: string | null
+          openfinance_transaction_id?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
           payment_forecast_date?: string | null
@@ -12726,6 +12744,53 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      openfinance_sync_logs: {
+        Row: {
+          account_id: string
+          bank_account_id: string | null
+          created_at: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          started_at: string
+          status: string
+          sync_type: string
+          transactions_imported: number
+        }
+        Insert: {
+          account_id: string
+          bank_account_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          sync_type: string
+          transactions_imported?: number
+        }
+        Update: {
+          account_id?: string
+          bank_account_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          sync_type?: string
+          transactions_imported?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openfinance_sync_logs_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
             referencedColumns: ["id"]
           },
         ]
