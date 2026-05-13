@@ -317,7 +317,7 @@ Seja EXTREMAMENTE ESPECÍFICO. Use exemplos reais extraídos das análises. Cada
 
       {idealScript && (
         <Card className="border-primary/30 shadow-sm">
-          <CardHeader className="pb-3 border-b bg-gradient-to-r from-primary/5 to-transparent">
+          <CardHeader className="pb-3 border-b bg-gradient-to-r from-primary/5 to-transparent space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <CardTitle className="text-base flex items-center gap-2">
                 <Crown className="w-5 h-5 text-primary" />
@@ -332,6 +332,31 @@ Seja EXTREMAMENTE ESPECÍFICO. Use exemplos reais extraídos das análises. Cada
                 </Button>
               </div>
             </div>
+            {scriptStats && (
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant="secondary" className="text-[10px] gap-1 h-5">
+                  <FileText className="w-2.5 h-2.5" />
+                  {scriptStats.analyzed} call{scriptStats.analyzed === 1 ? '' : 's'} analisada{scriptStats.analyzed === 1 ? '' : 's'}
+                </Badge>
+                <Badge variant="secondary" className="text-[10px] gap-1 h-5 bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  <Trophy className="w-2.5 h-2.5" />
+                  {scriptStats.champions} campeã{scriptStats.champions === 1 ? '' : 's'}
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className={`text-[10px] gap-1 h-5 border ${
+                    scriptStats.rate >= 50
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                      : scriptStats.rate >= 25
+                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                        : 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30'
+                  }`}
+                >
+                  <Sparkles className="w-2.5 h-2.5" />
+                  {scriptStats.rate}% de sucesso
+                </Badge>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="pt-4">
             <div className="max-w-3xl mx-auto">
