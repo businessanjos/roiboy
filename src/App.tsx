@@ -21,16 +21,30 @@ function lazyRetry<P extends object>(
   retries = 2
 ): React.LazyExoticComponent<ComponentType<P>> {
   const retryFactory = (attempt: number): Promise<{ default: ComponentType<P> }> =>
-    factory().catch((err) => {
-      if (attempt > 0) {
-        return new Promise<{ default: ComponentType<P> }>((resolve) => {
-          setTimeout(() => resolve(retryFactory(attempt - 1)), 500);
-        });
-      }
-      // Last resort: full page reload to get fresh asset manifest
-      window.location.reload();
-      return factory();
-    });
+    factory()
+      .then((mod) => {
+        // Stale chunks after redeploy can resolve to a module without a
+        // valid `default` export, which makes React.lazy throw
+        // "Cannot read properties of undefined (reading 'default')".
+        // Treat that as a chunk failure and retry / reload.
+        if (!mod || typeof (mod as any).default === "undefined") {
+          throw new Error("Lazy module missing default export (stale chunk?)");
+        }
+        return mod;
+      })
+      .catch((err) => {
+        if (attempt > 0) {
+          return new Promise<{ default: ComponentType<P> }>((resolve) => {
+            setTimeout(() => resolve(retryFactory(attempt - 1)), 500);
+          });
+        }
+        // Last resort: full page reload to get fresh asset manifest
+        if (!sessionStorage.getItem("chunk-reload")) {
+          sessionStorage.setItem("chunk-reload", "1");
+          window.location.reload();
+        }
+        return factory();
+      });
 
   return lazy(() => retryFactory(retries));
 }
