@@ -79,12 +79,12 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
           setRows(
             (data || []).map((d: any) => ({
               id: d.id,
-              label: d.title || nameMap.get(d.client_id) || "Negócio sem título",
+              label: nameMap.get(d.client_id) || d.title || "Cliente sem nome",
               date: d.won_at,
-              dateField: "deals.won_at",
-              source: "deals (status=won)",
+              dateField: "Fechada em",
+              source: "Venda fechada",
               link: `/sales/deals/${d.id}`,
-              meta: nameMap.get(d.client_id) ? `Cliente: ${nameMap.get(d.client_id)}` : undefined,
+              meta: d.title && nameMap.get(d.client_id) && d.title !== nameMap.get(d.client_id) ? d.title : undefined,
             })),
           );
         } else {
@@ -117,22 +117,17 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
             const dk = meetingDedupeKey(userId, t as any);
             if (seen.has(dk)) continue;
             seen.add(dk);
-            const dateField = useCompletedAt ? "internal_tasks.completed_at" : "internal_tasks.created_at";
+            const dateLabel = useCompletedAt ? "Concluída em" : "Criada em";
             const clientName = t.client_id ? nameMap.get(t.client_id) : null;
+            const activity = (t.activity_types as any)?.name || "Reunião";
             result.push({
               id: t.id,
-              label: t.title || "(sem título)",
+              label: clientName || t.title || "Sem cliente vinculado",
               date: useCompletedAt ? t.completed_at : t.created_at,
-              dateField,
-              source: `internal_tasks · ${(t.activity_types as any)?.name || "—"}`,
+              dateField: dateLabel,
+              source: activity,
               link: t.deal_id ? `/sales/deals/${t.deal_id}` : t.client_id ? `/clients/${t.client_id}` : undefined,
-              meta: [
-                clientName ? `Cliente: ${clientName}` : null,
-                t.deal_id ? `Deal: ${t.deal_id.slice(0, 8)}` : null,
-                t.lead_id ? `Lead: ${t.lead_id.slice(0, 8)}` : null,
-              ]
-                .filter(Boolean)
-                .join(" · "),
+              meta: t.title && clientName && t.title !== clientName ? t.title : undefined,
             });
           }
           result.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -152,12 +147,12 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
 
   const sourceHelp =
     kind === "held"
-      ? "Tasks com activity_type/título contendo 'realizada/concluída/reunião/alinhamento' e completed_at no período. Dedupe por vendedor+cliente."
+      ? "Lista de reuniões marcadas como concluídas no período (uma por cliente)."
       : kind === "noshow"
-        ? "Tasks com 'no-show' no activity_type/título e created_at no período."
+        ? "Reuniões marcadas como no-show (cliente não compareceu) no período."
         : kind === "scheduled"
-          ? "Tasks com 'agendada/agendamento' no activity_type/título e created_at no período."
-          : "deals com status=won e won_at no período, atribuídos a este vendedor (responsible_user_id).";
+          ? "Reuniões agendadas no período (independentemente de já terem ocorrido)."
+          : "Vendas fechadas no período por este vendedor.";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -185,7 +180,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
           <>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
-                <Badge variant="secondary">{rows.length}</Badge> registros (após dedupe)
+                <Badge variant="secondary">{rows.length}</Badge> {rows.length === 1 ? "registro" : "registros"}
               </span>
             </div>
             <ScrollArea className="max-h-[60vh] pr-3">
@@ -196,12 +191,12 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
                       <div className="min-w-0">
                         <p className="font-medium truncate">{r.label}</p>
                         {r.meta && <p className="text-xs text-muted-foreground truncate">{r.meta}</p>}
-                        <p className="text-[10px] text-muted-foreground/80 mt-0.5">
-                          {r.source} · {r.dateField}
-                        </p>
+                        <p className="text-[11px] text-muted-foreground/80 mt-0.5">{r.source}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-xs text-muted-foreground">{fmtDate(r.date)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {r.dateField}: {fmtDate(r.date)}
+                        </p>
                         {r.link && (
                           <a
                             href={r.link}
