@@ -180,7 +180,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
           <>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
-                <Badge variant="secondary">{rows.length}</Badge> registros (após dedupe)
+                <Badge variant="secondary">{rows.length}</Badge> {rows.length === 1 ? "registro" : "registros"}
               </span>
             </div>
             <ScrollArea className="max-h-[60vh] pr-3">
@@ -191,12 +191,12 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
                       <div className="min-w-0">
                         <p className="font-medium truncate">{r.label}</p>
                         {r.meta && <p className="text-xs text-muted-foreground truncate">{r.meta}</p>}
-                        <p className="text-[10px] text-muted-foreground/80 mt-0.5">
-                          {r.source} · {r.dateField}
-                        </p>
+                        <p className="text-[11px] text-muted-foreground/80 mt-0.5">{r.source}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-xs text-muted-foreground">{fmtDate(r.date)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {r.dateField}: {fmtDate(r.date)}
+                        </p>
                         {r.link && (
                           <a
                             href={r.link}
