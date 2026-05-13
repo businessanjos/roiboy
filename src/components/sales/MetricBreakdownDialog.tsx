@@ -1,0 +1,211 @@
+import { useEffect, useMemo, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  classifyMeetingTask,
+  meetingDedupeKey,
+  type MeetingTaskKind,
+} from "@/lib/sales/meetingMetrics";
+import { ExternalLink } from "lucide-react";
+
+export type BreakdownKind = "held" | "noshow" | "scheduled" | "won";
+
+interface Props {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  kind: BreakdownKind;
+  userId?: string | null;
+  accountId?: string | null;
+  startDate: Date;
+  endDate: Date;
+  title: string;
+}
+
+interface Row {
+  id: string;
+  label: string;
+  date: string | null;
+  dateField: string;
+  source: string;
+  link?: string;
+  meta?: string;
+}
+
+const fmtDate = (d: string | null) =>
+  d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
+
+export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accountId, startDate, endDate, title }: Props) {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const start = useMemo(() => startDate.toISOString(), [startDate]);
+  const end = useMemo(() => endDate.toISOString(), [endDate]);
+
+  useEffect(() => {
+    if (!open || !userId || !accountId) return;
+    let cancel = false;
+    setLoading(true);
+    setError(null);
+    setRows([]);
+
+    (async () => {
+      try {
+        if (kind === "won") {
+          const { data, error } = await supabase
+            .from("deals")
+            .select("id, title, value, won_at, client:clients(name)")
+            .eq("account_id", accountId)
+            .eq("responsible_user_id", userId)
+            .eq("status", "won")
+            .gte("won_at", start)
+            .lte("won_at", end)
+            .order("won_at", { ascending: false });
+          if (error) throw error;
+          if (cancel) return;
+          setRows(
+            (data || []).map((d: any) => ({
+              id: d.id,
+              label: d.title || (d.client?.name ?? "Negócio sem título"),
+              date: d.won_at,
+              dateField: "deals.won_at",
+              source: "deals (status=won)",
+              link: `/sales/deals/${d.id}`,
+              meta: d.client?.name ? `Cliente: ${d.client.name}` : undefined,
+            })),
+          );
+        } else {
+          // held usa completed_at; scheduled e noshow usam created_at
+          const useCompletedAt = kind === "held";
+          let query = supabase
+            .from("internal_tasks")
+            .select(
+              "id, title, created_at, completed_at, client_id, deal_id, lead_id, client:clients(name), activity_types!internal_tasks_activity_type_id_fkey(name)",
+            )
+            .eq("account_id", accountId)
+            .eq("assigned_to", userId);
+          if (useCompletedAt) {
+            query = query.not("completed_at", "is", null).gte("completed_at", start).lte("completed_at", end);
+          } else {
+            query = query.gte("created_at", start).lte("created_at", end);
+          }
+          const { data, error } = await query.limit(2000);
+          if (error) throw error;
+          if (cancel) return;
+
+          const seen = new Set<string>();
+          const result: Row[] = [];
+          for (const t of data || []) {
+            const k = classifyMeetingTask((t.activity_types as any)?.name, t.title);
+            if (k !== kind) continue;
+            const dk = meetingDedupeKey(userId, t as any);
+            if (seen.has(dk)) continue;
+            seen.add(dk);
+            const dateField = useCompletedAt ? "internal_tasks.completed_at" : "internal_tasks.created_at";
+            result.push({
+              id: t.id,
+              label: t.title || "(sem título)",
+              date: useCompletedAt ? t.completed_at : t.created_at,
+              dateField,
+              source: `internal_tasks · ${(t.activity_types as any)?.name || "—"}`,
+              link: t.deal_id ? `/sales/deals/${t.deal_id}` : t.client_id ? `/clients/${t.client_id}` : undefined,
+              meta: [
+                (t as any).client?.name ? `Cliente: ${(t as any).client.name}` : null,
+                t.deal_id ? `Deal: ${t.deal_id.slice(0, 8)}` : null,
+                t.lead_id ? `Lead: ${t.lead_id.slice(0, 8)}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            });
+          }
+          // Ordena por data desc
+          result.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+          setRows(result);
+        }
+      } catch (e: any) {
+        if (!cancel) setError(e?.message || "Erro ao carregar dados");
+      } finally {
+        if (!cancel) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancel = true;
+    };
+  }, [open, kind, userId, accountId, start, end]);
+
+  const sourceHelp =
+    kind === "held"
+      ? "Tasks com activity_type/título contendo 'realizada/concluída/reunião/alinhamento' e completed_at no período. Dedupe por vendedor+cliente."
+      : kind === "noshow"
+        ? "Tasks com 'no-show' no activity_type/título e created_at no período."
+        : kind === "scheduled"
+          ? "Tasks com 'agendada/agendamento' no activity_type/título e created_at no período."
+          : "deals com status=won e won_at no período, atribuídos a este vendedor (responsible_user_id).";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="text-xs">
+            {sourceHelp}
+            <br />
+            Período: {startDate.toLocaleDateString("pt-BR")} → {endDate.toLocaleDateString("pt-BR")}
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : error ? (
+          <p className="text-sm text-destructive">{error}</p>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum registro encontrado para esta métrica no período.</p>
+        ) : (
+          <>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                <Badge variant="secondary">{rows.length}</Badge> registros (após dedupe)
+              </span>
+            </div>
+            <ScrollArea className="max-h-[60vh] pr-3">
+              <ul className="divide-y divide-border">
+                {rows.map((r) => (
+                  <li key={r.id} className="py-2 text-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{r.label}</p>
+                        {r.meta && <p className="text-xs text-muted-foreground truncate">{r.meta}</p>}
+                        <p className="text-[10px] text-muted-foreground/80 mt-0.5">
+                          {r.source} · {r.dateField}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-muted-foreground">{fmtDate(r.date)}</p>
+                        {r.link && (
+                          <a
+                            href={r.link}
+                            className="text-xs text-primary inline-flex items-center gap-1 hover:underline"
+                          >
+                            abrir <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
