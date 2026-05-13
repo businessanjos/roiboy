@@ -143,8 +143,8 @@ export default function FinancialCashFlowPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(paidIncome)}</div>
-            <p className="text-xs text-muted-foreground">de {formatCurrency(totalIncome)} previsto</p>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</div>
+            <p className="text-xs text-muted-foreground">{formatCurrency(paidIncome)} já recebido</p>
           </CardContent>
         </Card>
         <Card>
@@ -155,8 +155,8 @@ export default function FinancialCashFlowPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(paidExpenses)}</div>
-            <p className="text-xs text-muted-foreground">de {formatCurrency(totalExpenses)} previsto</p>
+            <div className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</div>
+            <p className="text-xs text-muted-foreground">{formatCurrency(paidExpenses)} já pago</p>
           </CardContent>
         </Card>
         <Card>
@@ -164,10 +164,10 @@ export default function FinancialCashFlowPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Resultado do Mês</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${paidIncome - paidExpenses >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {formatCurrency(paidIncome - paidExpenses)}
+            <div className={`text-2xl font-bold ${totalIncome - totalExpenses >= 0 ? "text-green-600" : "text-red-600"}`}>
+              {formatCurrency(totalIncome - totalExpenses)}
             </div>
-            <p className="text-xs text-muted-foreground">receitas - despesas</p>
+            <p className="text-xs text-muted-foreground">previsto: receitas − despesas</p>
           </CardContent>
         </Card>
         <Card>
