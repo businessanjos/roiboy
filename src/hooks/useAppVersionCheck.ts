@@ -42,8 +42,10 @@ export function hardReloadApp() {
   } catch {
     /* ignore */
   }
-  // Reload bypassing the bfcache/disk cache.
-  window.location.reload();
+  // Reload with a fresh URL so the browser/CDN cannot reuse stale HTML/chunks.
+  const url = new URL(window.location.href);
+  url.searchParams.set("app_reload", Date.now().toString());
+  window.location.replace(url.toString());
 }
 
 /** Version recorded the first time the app booted in this session, if any. */
