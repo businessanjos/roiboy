@@ -112,24 +112,59 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     return options.length - 1;
   };
 
-  const startSpin = () => {
+  const requestApproval = () => {
     if (phase !== "idle" || pendingSpins <= 0) return;
-    const baseData: { weight?: number }[] = spiff.roulette_pool_id
-      ? (prizesQuery.data ?? []).map((p: any) => ({ weight: Number(p.weight ?? 1) }))
-      : [];
-    const options = buildOptions();
-    if (options.length === 0) {
+    if (usingPool && (prizesQuery.data?.length ?? 0) === 0) {
       toast.error("Nenhum prêmio configurado nesta roleta.");
       return;
     }
-    optionsRef.current = options;
-    const winnerIdx = pickWeighted(spiff.roulette_pool_id ? baseData : options.map(() => ({ weight: 1 })));
-    setFinalOption(options[winnerIdx]);
-    setPhase("spinning");
+    setApprovalEmail("");
+    setApprovalPassword("");
+    setApprovalOpen(true);
+  };
+
+  const submitApproval = async () => {
+    if (!approvalEmail || !approvalPassword) {
+      toast.error("Informe email e senha do gestor");
+      return;
+    }
+    setApprovalLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-manager-approval", {
+        body: { email: approvalEmail.trim(), password: approvalPassword },
+      });
+      if (error || !data?.ok) {
+        toast.error(data?.error || error?.message || "Aprovação falhou");
+        return;
+      }
+      setApprover(data.manager);
+      setApprovalOpen(false);
+      setApprovalPassword("");
+      toast.success(`Aprovado por ${data.manager.name}`);
+      // Inicia o giro
+      const baseData: { weight?: number }[] = spiff.roulette_pool_id
+        ? (prizesQuery.data ?? []).map((p: any) => ({ weight: Number(p.weight ?? 1) }))
+        : [];
+      const options = buildOptions();
+      if (options.length === 0) {
+        toast.error("Nenhum prêmio configurado nesta roleta.");
+        return;
+      }
+      optionsRef.current = options;
+      const winnerIdx = pickWeighted(spiff.roulette_pool_id ? baseData : options.map(() => ({ weight: 1 })));
+      setFinalOption(options[winnerIdx]);
+      setPhase("spinning");
+    } finally {
+      setApprovalLoading(false);
+    }
   };
 
   const handleSave = async () => {
     if (!finalOption || !currentUser?.account_id) return;
+    if (!approver) {
+      toast.error("Aprovação do gestor é obrigatória");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from("spiff_spins").insert({
       account_id: currentUser.account_id,
@@ -139,7 +174,9 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
       prize_id: finalOption.id,
       prize_label: finalOption.label,
       created_by: currentUser.id,
-    });
+      approved_by: approver.id,
+      approved_at: new Date().toISOString(),
+    } as any);
     setSaving(false);
     if (error) {
       toast.error("Erro ao registrar giro: " + error.message);
