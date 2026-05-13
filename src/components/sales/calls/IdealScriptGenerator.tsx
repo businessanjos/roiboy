@@ -146,15 +146,26 @@ Seja EXTREMAMENTE ESPECÍFICO. Use exemplos reais extraídos das análises. Cada
       setIdealScript(script);
       const productName = selectedProduct?.name || '';
       setScriptProductName(productName);
+      // Strip any AI preamble before the first markdown heading so the card
+      // preview shows the actual script — not "Com certeza! Analisarei...".
+      const firstHeading = script.search(/^#{1,3}\s/m);
+      const cleanedContent = firstHeading > 0 ? script.slice(firstHeading).trim() : script.trim();
+      const callsUsed = Math.min(productChampionCalls.length, 8);
+      const tags = [
+        `🏆 ${productName}`,
+        `${callsUsed} call${callsUsed === 1 ? '' : 's'} campeã${callsUsed === 1 ? '' : 's'}`,
+        'Gerado por IA',
+        'Script Ideal',
+      ];
       // Auto-save into the Scripts tab (sales_scripts table)
       try {
         const { error } = await supabase.from('sales_scripts').insert({
           account_id: accountId!,
           title: `Script Ideal — ${productName}`,
-          content: script,
+          content: cleanedContent,
           objection_type: null,
-          funnel_stage: null,
-          tags: ['script-ideal', productName].filter(Boolean),
+          funnel_stage: 'presentation',
+          tags,
           is_active: true,
           created_by: currentUser?.id!,
         });
