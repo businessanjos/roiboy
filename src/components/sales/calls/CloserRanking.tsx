@@ -56,6 +56,7 @@ export function CloserRanking() {
 
       for (const a of (analyses || [])) {
         if (!a.user_id) continue;
+        if (!closerUserIds.has(a.user_id)) continue;
         if (!statsMap.has(a.user_id)) {
           statsMap.set(a.user_id, {
             userId: a.user_id,
