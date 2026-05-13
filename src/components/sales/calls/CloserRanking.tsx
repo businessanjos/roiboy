@@ -32,11 +32,24 @@ export function CloserRanking() {
         .not('call_outcome', 'is', null);
       if (error) throw error;
 
-      // Get users
+      // Get users that are Closers (exclude SDRs and other roles)
+      const { data: closerRoles } = await supabase
+        .from('team_roles')
+        .select('id')
+        .ilike('name', '%closer%');
+      const closerRoleIds = (closerRoles || []).map(r => r.id);
+
+      const { data: closerLinks } = await supabase
+        .from('user_team_roles')
+        .select('user_id')
+        .in('team_role_id', closerRoleIds.length ? closerRoleIds : ['00000000-0000-0000-0000-000000000000']);
+      const closerUserIds = new Set((closerLinks || []).map(l => l.user_id));
+
       const { data: users } = await supabase
         .from('users')
         .select('id, name')
-        .eq('account_id', accountId!);
+        .eq('account_id', accountId!)
+        .in('id', Array.from(closerUserIds).length ? Array.from(closerUserIds) : ['00000000-0000-0000-0000-000000000000']);
 
       const userMap = new Map((users || []).map(u => [u.id, u.name]));
       const statsMap = new Map<string, SellerStats>();
