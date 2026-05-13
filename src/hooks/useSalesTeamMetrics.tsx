@@ -198,6 +198,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           entry_value_total: 0,
           scheduled_calls: 0,
           noshow_calls: 0,
+          meetings_held: 0,
         };
       }
 
