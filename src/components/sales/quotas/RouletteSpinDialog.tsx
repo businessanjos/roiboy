@@ -192,9 +192,62 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     onOpenChange(false);
   };
 
+  const approvalDialog = (
+    <Dialog open={approvalOpen} onOpenChange={(o) => !approvalLoading && setApprovalOpen(o)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-amber-500" />
+            Aprovação do Gestor
+          </DialogTitle>
+          <DialogDescription>
+            Para girar a roleta de <strong>{user.name}</strong>, um gestor (Head, Gerente, Diretor, Sócio ou Admin) precisa aprovar com suas credenciais.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="approver-email" className="text-xs">Email do gestor</Label>
+            <Input
+              id="approver-email"
+              type="email"
+              autoComplete="off"
+              value={approvalEmail}
+              onChange={(e) => setApprovalEmail(e.target.value)}
+              placeholder="gestor@empresa.com"
+              disabled={approvalLoading}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="approver-pass" className="text-xs">Senha</Label>
+            <Input
+              id="approver-pass"
+              type="password"
+              autoComplete="new-password"
+              value={approvalPassword}
+              onChange={(e) => setApprovalPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitApproval(); }}
+              disabled={approvalLoading}
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setApprovalOpen(false)} disabled={approvalLoading}>
+            Cancelar
+          </Button>
+          <Button onClick={submitApproval} disabled={approvalLoading} className="gap-1.5">
+            <Lock className="h-4 w-4" />
+            {approvalLoading ? "Verificando..." : "Aprovar e Girar"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   // ───────────── TV Mode (fullscreen) ─────────────
   if (tvMode && open) {
     return (
+      <>
+      {approvalDialog}
       <div className="fixed inset-0 z-[200] bg-gradient-to-br from-background via-background to-primary/10 flex flex-col items-center justify-center p-8">
         <Button
           variant="ghost"
