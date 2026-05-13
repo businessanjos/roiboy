@@ -37,6 +37,14 @@ interface Row {
 const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
 
+async function fetchClientNames(ids: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!ids.length) return map;
+  const { data } = await supabase.from("clients").select("id, name").in("id", ids);
+  (data || []).forEach((c: any) => map.set(c.id, c.name));
+  return map;
+}
+
 export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accountId, startDate, endDate, title }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,7 +65,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
         if (kind === "won") {
           const { data, error } = await supabase
             .from("deals")
-            .select("id, title, value, won_at, client:clients(name)")
+            .select("id, title, value, won_at, client_id")
             .eq("account_id", accountId)
             .eq("responsible_user_id", userId)
             .eq("status", "won")
@@ -66,24 +74,25 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
             .order("won_at", { ascending: false });
           if (error) throw error;
           if (cancel) return;
+          const clientIds = Array.from(new Set((data || []).map((d: any) => d.client_id).filter(Boolean)));
+          const nameMap = await fetchClientNames(clientIds);
           setRows(
             (data || []).map((d: any) => ({
               id: d.id,
-              label: d.title || (d.client?.name ?? "Negócio sem título"),
+              label: d.title || nameMap.get(d.client_id) || "Negócio sem título",
               date: d.won_at,
               dateField: "deals.won_at",
               source: "deals (status=won)",
               link: `/sales/deals/${d.id}`,
-              meta: d.client?.name ? `Cliente: ${d.client.name}` : undefined,
+              meta: nameMap.get(d.client_id) ? `Cliente: ${nameMap.get(d.client_id)}` : undefined,
             })),
           );
         } else {
-          // held usa completed_at; scheduled e noshow usam created_at
           const useCompletedAt = kind === "held";
           let query = supabase
             .from("internal_tasks")
             .select(
-              "id, title, created_at, completed_at, client_id, deal_id, lead_id, client:clients(name), activity_types!internal_tasks_activity_type_id_fkey(name)",
+              "id, title, created_at, completed_at, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)",
             )
             .eq("account_id", accountId)
             .eq("assigned_to", userId);
@@ -96,15 +105,20 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
           if (error) throw error;
           if (cancel) return;
 
+          const filtered = (data || []).filter(
+            (t: any) => classifyMeetingTask((t.activity_types as any)?.name, t.title) === kind,
+          );
+          const clientIds = Array.from(new Set(filtered.map((t: any) => t.client_id).filter(Boolean)));
+          const nameMap = await fetchClientNames(clientIds);
+
           const seen = new Set<string>();
           const result: Row[] = [];
-          for (const t of data || []) {
-            const k = classifyMeetingTask((t.activity_types as any)?.name, t.title);
-            if (k !== kind) continue;
+          for (const t of filtered) {
             const dk = meetingDedupeKey(userId, t as any);
             if (seen.has(dk)) continue;
             seen.add(dk);
             const dateField = useCompletedAt ? "internal_tasks.completed_at" : "internal_tasks.created_at";
+            const clientName = t.client_id ? nameMap.get(t.client_id) : null;
             result.push({
               id: t.id,
               label: t.title || "(sem título)",
@@ -113,7 +127,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
               source: `internal_tasks · ${(t.activity_types as any)?.name || "—"}`,
               link: t.deal_id ? `/sales/deals/${t.deal_id}` : t.client_id ? `/clients/${t.client_id}` : undefined,
               meta: [
-                (t as any).client?.name ? `Cliente: ${(t as any).client.name}` : null,
+                clientName ? `Cliente: ${clientName}` : null,
                 t.deal_id ? `Deal: ${t.deal_id.slice(0, 8)}` : null,
                 t.lead_id ? `Lead: ${t.lead_id.slice(0, 8)}` : null,
               ]
@@ -121,7 +135,6 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
                 .join(" · "),
             });
           }
-          // Ordena por data desc
           result.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
           setRows(result);
         }
