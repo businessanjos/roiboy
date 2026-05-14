@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Instagram, Users2, Heart, MessageCircle, BadgeCheck, ExternalLink, Trophy, Medal, Award, Search, TrendingUp, RefreshCw, Loader2, Clock } from "lucide-react";
+import { Instagram, Users2, Heart, MessageCircle, BadgeCheck, ExternalLink, Trophy, Medal, Award, Search, TrendingUp, RefreshCw, Loader2, Clock, Images } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -104,15 +104,20 @@ function InstagramAvatar({
 function RankRow({ rank, row, metric, value, sublabel }: {
   rank: number;
   row: Row;
-  metric: "followers" | "likes" | "comments";
+  metric: "followers" | "likes" | "comments" | "posts";
   value: number;
   sublabel?: string;
 }) {
-  const Icon = metric === "followers" ? Users2 : metric === "likes" ? Heart : MessageCircle;
+  const Icon =
+    metric === "followers" ? Users2 :
+    metric === "likes" ? Heart :
+    metric === "comments" ? MessageCircle :
+    Images;
   const accent =
     metric === "followers" ? "text-fuchsia-500" :
     metric === "likes" ? "text-rose-500" :
-    "text-sky-500";
+    metric === "comments" ? "text-sky-500" :
+    "text-emerald-500";
 
   return (
     <Link
@@ -150,7 +155,7 @@ function RankRow({ rank, row, metric, value, sublabel }: {
 
 function RankList({ rows, metric, getValue, getSub }: {
   rows: Row[];
-  metric: "followers" | "likes" | "comments";
+  metric: "followers" | "likes" | "comments" | "posts";
   getValue: (r: Row) => number;
   getSub?: (r: Row) => string | undefined;
 }) {
@@ -314,8 +319,12 @@ export default function InstagramRanking() {
     const totalFollowers = filtered.reduce((a, r) => a + (r.followers_count || 0), 0);
     const totalLikes = filtered.reduce((a, r) => a + r.total_likes, 0);
     const totalComments = filtered.reduce((a, r) => a + r.total_comments, 0);
-    return { totalClients, totalFollowers, totalLikes, totalComments };
-  }, [filtered]);
+    const totalPosts = filtered.reduce(
+      (a, r) => a + (period === "all" ? (r.media_count || 0) : r.posts_considered),
+      0,
+    );
+    return { totalClients, totalFollowers, totalLikes, totalComments, totalPosts };
+  }, [filtered, period]);
 
   if (userLoading) {
     return (
@@ -380,7 +389,7 @@ export default function InstagramRanking() {
           </div>
         </div>
 
-        <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        <div className="relative grid grid-cols-2 md:grid-cols-5 gap-3 mt-6">
           <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
             <div className="text-xs text-muted-foreground">Perfis</div>
             <div className="text-xl font-semibold tabular-nums">{fmt(stats.totalClients)}</div>
@@ -388,6 +397,10 @@ export default function InstagramRanking() {
           <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Users2 className="h-3 w-3" /> Seguidores</div>
             <div className="text-xl font-semibold tabular-nums text-fuchsia-600 dark:text-fuchsia-400">{fmt(stats.totalFollowers)}</div>
+          </div>
+          <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
+            <div className="text-xs text-muted-foreground flex items-center gap-1"><Images className="h-3 w-3" /> Posts</div>
+            <div className="text-xl font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{fmt(stats.totalPosts)}</div>
           </div>
           <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Heart className="h-3 w-3" /> Curtidas</div>
@@ -462,8 +475,9 @@ export default function InstagramRanking() {
         </CardContent></Card>
       ) : (
         <Tabs defaultValue="followers" className="w-full">
-          <TabsList className="grid grid-cols-3 w-full md:w-auto md:inline-flex">
+          <TabsList className="grid grid-cols-4 w-full md:w-auto md:inline-flex">
             <TabsTrigger value="followers" className="gap-2"><Users2 className="h-4 w-4" /> Seguidores</TabsTrigger>
+            <TabsTrigger value="posts" className="gap-2"><Images className="h-4 w-4" /> Posts</TabsTrigger>
             <TabsTrigger value="likes" className="gap-2"><Heart className="h-4 w-4" /> Curtidas</TabsTrigger>
             <TabsTrigger value="comments" className="gap-2"><MessageCircle className="h-4 w-4" /> Comentários</TabsTrigger>
           </TabsList>
@@ -480,6 +494,29 @@ export default function InstagramRanking() {
                   metric="followers"
                   getValue={(r) => r.followers_count || 0}
                   getSub={(r) => `${fmt(r.media_count || 0)} posts`}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="posts" className="mt-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2"><Images className="h-4 w-4 text-emerald-500" /> Mais posts</CardTitle>
+                <CardDescription>
+                  {period === "all"
+                    ? "Total de publicações no perfil (snapshot mais recente)."
+                    : `Publicações feitas nos últimos ${period} dias.`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <RankList
+                  rows={filtered}
+                  metric="posts"
+                  getValue={(r) => period === "all" ? (r.media_count || 0) : r.posts_considered}
+                  getSub={(r) => period === "all"
+                    ? `${fmt(r.followers_count || 0)} seguidores`
+                    : `média ${fmt(r.avg_likes)} curtidas/post`}
                 />
               </CardContent>
             </Card>
