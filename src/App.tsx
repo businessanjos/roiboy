@@ -105,6 +105,7 @@ const PublicEventFeedback = lazyRetry(() => import("./pages/PublicEventFeedback"
 const Admin = lazyRetry(() => import("./pages/Admin"));
 const EventCheckin = lazyRetry(() => import("./pages/EventCheckin"));
 const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
+const ClientOnboardingHub = lazyRetry(() => import("./pages/ClientOnboardingHub"));
 
 const TermsOfService = lazyRetry(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
@@ -238,6 +239,7 @@ const App = () => (
                             <Route path="/clients/new" element={<Clients />} />
                             <Route path="/clients/:id" element={<ClientDetail />} />
                             <Route path="/renewals" element={<Renewals />} />
+                            <Route path="/operations/onboarding" element={<ClientOnboardingHub />} />
                             <Route path="/operations/consultant-bonus" element={<ConsultantBonus />} />
                             <Route path="/operations/cs-incentive-presentation" element={<CsIncentivePresentation />} />
                             <Route path="/operations/scripts" element={<OperationsScripts />} />

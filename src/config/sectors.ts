@@ -55,6 +55,7 @@ import {
   Handshake,
   Crown,
   Gift,
+  Rocket,
   
   type LucideIcon,
 } from "lucide-react";
@@ -94,6 +95,7 @@ export const sectors: Sector[] = [
     navItems: [
       { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", permission: PERMISSIONS.REPORTS_VIEW },
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/operations/onboarding", icon: Rocket, label: "Onboarding", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/vips", icon: Crown, label: "VIPs", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/renewals", icon: Repeat, label: "Renovações", permission: PERMISSIONS.CLIENTS_VIEW },
