@@ -54,6 +54,41 @@ export async function invokeWhatsAppManager(
   return invokeWithRetry(functionName, body);
 }
 
+async function normalizeFunctionError(err: any): Promise<any> {
+  const response = err?.context instanceof Response
+    ? err.context
+    : err?.context?.response instanceof Response
+      ? err.context.response
+      : null;
+  const status = response?.status ?? err?.context?.status ?? err?.status;
+  let bodyText = typeof err?.context?.body === "string" ? err.context.body : "";
+
+  if (response && !bodyText) {
+    try {
+      bodyText = await response.clone().text();
+    } catch {
+      bodyText = "";
+    }
+  }
+
+  let parsedMessage = "";
+  if (bodyText) {
+    try {
+      const parsed = JSON.parse(bodyText);
+      parsedMessage = parsed?.error || parsed?.message || parsed?.data?.error || "";
+    } catch {
+      parsedMessage = bodyText;
+    }
+  }
+
+  const message = parsedMessage || err?.message || "Erro ao chamar o WhatsApp";
+  const enriched: any = new Error(message);
+  enriched.name = err?.name || "FunctionsHttpError";
+  enriched.status = status;
+  enriched.context = { original: err?.context, status, body: bodyText };
+  return enriched;
+}
+
 /**
  * Invoke a Supabase edge function with automatic retry on transient 503 errors
  * (SUPABASE_EDGE_RUNTIME_ERROR / boot failures). Uses exponential backoff.
@@ -66,7 +101,7 @@ async function invokeWithRetry(
   let lastError: any = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const result = await supabase.functions.invoke(functionName, { body });
-    const err = result.error;
+    const err = result.error ? await normalizeFunctionError(result.error) : null;
     if (!err) return result;
 
     // Detect transient edge-runtime errors (503 cold-start / boot failure)
@@ -81,7 +116,7 @@ async function invokeWithRetry(
       msg.includes("Failed to fetch");
 
     if (!isTransient || attempt === maxAttempts) {
-      return result;
+      return { ...result, error: err };
     }
 
     lastError = err;
