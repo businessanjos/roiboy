@@ -31,14 +31,18 @@ export function usePendingOnboardingCount() {
         .filter(s => s.display_order < ONBOARDING_DONE_ORDER)
         .map(s => s.id);
 
-      // 2. Count "new" clients: active, no stage assigned OR in the very first stage
+      // Janela de "recém-chegado": últimos 30 dias (evita contar legado)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      // 2. "Novo" = ativo + (sem etapa OU na primeira etapa) + criado nos últimos 30 dias
       let newCount = 0;
       const { count: noStageCount } = await supabase
         .from("clients")
         .select("id", { count: "exact", head: true })
         .eq("account_id", accountId!)
         .eq("status", "active")
-        .is("stage_id", null);
+        .is("stage_id", null)
+        .gte("created_at", thirtyDaysAgo);
       newCount += noStageCount ?? 0;
 
       if (firstStageId) {
@@ -47,11 +51,12 @@ export function usePendingOnboardingCount() {
           .select("id", { count: "exact", head: true })
           .eq("account_id", accountId!)
           .eq("status", "active")
-          .eq("stage_id", firstStageId);
+          .eq("stage_id", firstStageId)
+          .gte("created_at", thirtyDaysAgo);
         newCount += firstStageCount ?? 0;
       }
 
-      // 3. Count "in progress" clients: active and stage in onboarding range
+      // 3. "Em andamento" = ativo em qualquer etapa de onboarding (sem janela de tempo)
       let inProgressCount = newCount;
       if (inProgressStageIds.length > 0) {
         const { count } = await supabase
@@ -60,8 +65,7 @@ export function usePendingOnboardingCount() {
           .eq("account_id", accountId!)
           .eq("status", "active")
           .in("stage_id", inProgressStageIds);
-        // already counted firstStage above via newCount; recompute total cleanly
-        inProgressCount = (count ?? 0) + (noStageCount ?? 0);
+        inProgressCount = count ?? 0;
       }
 
       return { newCount, inProgressCount };

@@ -67,7 +67,10 @@ export default function ClientOnboardingHub() {
         .filter(s => s.display_order < ONBOARDING_DONE_ORDER)
         .map(s => s.id);
 
-      // Active clients in onboarding stages OR with no stage at all
+      // Janela de 30 dias para clientes sem etapa (evita arrastar legado)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      // Active clients in onboarding stages OR (sem etapa AND criado nos últimos 30 dias)
       const { data, error } = await supabase
         .from("clients")
         .select(`
@@ -76,7 +79,7 @@ export default function ClientOnboardingHub() {
         `)
         .eq("account_id", accountId)
         .eq("status", "active")
-        .or(`stage_id.is.null,stage_id.in.(${onboardingStageIds.join(",")})`)
+        .or(`and(stage_id.is.null,created_at.gte.${thirtyDaysAgo}),stage_id.in.(${onboardingStageIds.join(",")})`)
         .order("created_at", { ascending: false })
         .limit(500);
 
