@@ -19,8 +19,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
-import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorManager";
 import { WebhooksTab } from "./webhooks/WebhooksTab";
 import { ThreeCPlusAgentConfig } from "./ThreeCPlusAgentConfig";
 import { OmieIntegrationTab } from "./OmieIntegrationTab";
