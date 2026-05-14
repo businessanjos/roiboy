@@ -18,6 +18,7 @@ interface ZappSidebarNavProps {
   totalQueueConversations: number;
   sectorId?: string | null;
   userRole?: string | null;
+  isAdmin?: boolean;
 }
 
 export const ZappSidebarNav = memo(function ZappSidebarNav({
