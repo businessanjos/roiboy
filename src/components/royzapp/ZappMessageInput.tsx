@@ -547,6 +547,23 @@ export const ZappMessageInput = memo(function ZappMessageInput({
             <TooltipContent side="top">Playbook</TooltipContent>
           </Tooltip>
         )}
+
+        {/* Meta templates button - only on Meta Cloud API channel */}
+        {isMetaChannel && onOpenTemplates && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="flex text-emerald-500 hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
+                onClick={onOpenTemplates}
+              >
+                <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Template aprovado (Meta)</TooltipContent>
+          </Tooltip>
+        )}
         
         {imagePreview ? (
           // Image preview UI
