@@ -51,6 +51,7 @@ import type { ConversationAssignment, Agent, ZappTag, Department } from "./types
 
 interface ZappConversationPanelProps {
   currentUser: { name: string; avatar_url: string | null; role?: string } | null;
+  isAdmin?: boolean;
   activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin";
   setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin") => void;
   inboxTab: "mine" | "queue";
