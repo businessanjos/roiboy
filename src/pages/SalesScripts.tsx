@@ -1178,9 +1178,14 @@ export default function SalesScripts() {
                                 </div>
                                 {a.transcript_preview && <p className="text-xs text-muted-foreground truncate mt-1">{a.transcript_preview}</p>}
                               </div>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); setDeleteAnalysisDialog(a); }}>
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => { e.stopPropagation(); setViewingAnalysis(a); }} title="Editar">
+                                  <Edit2 className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={e => { e.stopPropagation(); setDeleteAnalysisDialog(a); }}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
                           );
                         })}
