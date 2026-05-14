@@ -1058,6 +1058,7 @@ export default function RoyZapp() {
       >
         <ZappConversationPanel
           currentUser={currentUser}
+          isAdmin={isAdmin}
           activeView={activeView}
           setActiveView={setActiveView}
           inboxTab={inboxTab}
