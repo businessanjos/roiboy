@@ -181,6 +181,21 @@ export function AddMetaInstanceDialog({
             </p>
           </div>
 
+          {/* WABA ID */}
+          <div className="space-y-2">
+            <Label htmlFor="wabaId">WhatsApp Business Account ID (opcional, para templates)</Label>
+            <Input
+              id="wabaId"
+              value={wabaId}
+              onChange={(e) => setWabaId(e.target.value)}
+              placeholder="Ex: 987654321098765"
+              className="font-mono"
+            />
+            <p className="text-xs text-muted-foreground">
+              Necessário para listar e enviar templates aprovados. Encontre em Meta Business Settings → Contas do WhatsApp.
+            </p>
+          </div>
+
           {/* Display name */}
           <div className="space-y-2">
             <Label htmlFor="metaDisplayName">Nome de exibição (opcional)</Label>
