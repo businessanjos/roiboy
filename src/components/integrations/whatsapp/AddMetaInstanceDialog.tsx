@@ -51,9 +51,7 @@ export function AddMetaInstanceDialog({
       const { data, error } = await supabase.functions.invoke("meta-manager", {
         body: {
           action: "status",
-          integration_id: "__test__",
-          sector_id: sectorId,
-          // The edge function falls back to env vars for token/phone_number_id
+          test_phone_number_id: phoneNumberId.trim(),
         },
       });
 
