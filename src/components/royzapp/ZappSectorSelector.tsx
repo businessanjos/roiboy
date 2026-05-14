@@ -24,6 +24,20 @@ import {
 // Setores que têm WhatsApp configurável
 const WHATSAPP_SECTOR_IDS: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing"];
 
+function formatRelative(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!then) return "";
+  const diff = Date.now() - then;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "agora";
+  if (m < 60) return `${m}min atrás`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h atrás`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d atrás`;
+  return new Date(iso).toLocaleDateString("pt-BR");
+}
+
 interface SectorInstance {
   id: string;
   status: string;
