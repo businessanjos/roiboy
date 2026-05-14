@@ -210,6 +210,14 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           // If instance doesn't have its own PIN but sector does, use sector PIN
           const useSectorPin = !instanceHasPin && sectorHasPin;
           
+          const rawProvider = (config?.provider || "").toString().toLowerCase();
+          const provider: SectorInstance["provider"] =
+            rawProvider === "meta_official" || rawProvider === "meta" ? "meta_official"
+            : rawProvider === "uazapi" ? "uazapi"
+            : (config?.phone_number_id || config?.waba_id) ? "meta_official"
+            : (config?.instance_name || config?.token) ? "uazapi"
+            : "unknown";
+
           instancesBySector[sectorId].push({
             id: integration.id,
             status: integration.status,
@@ -221,7 +229,16 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
             has_pin: effectiveHasPin,
             pin_hash: integration.pin_hash || config?.pin_hash || null,
             use_sector_pin: useSectorPin,
+            provider,
           });
+        });
+
+        // Last event per sector (lastEvents already sorted desc)
+        const lastEventBySector: Record<string, string> = {};
+        (lastEvents || []).forEach((c: any) => {
+          if (c.sector_id && !lastEventBySector[c.sector_id]) {
+            lastEventBySector[c.sector_id] = c.last_message_at;
+          }
         });
 
         // Mapear para setores
@@ -232,7 +249,11 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           
           // A instância "principal" é a primeira conectada ou a primeira da lista
           const primaryInstance = instances.find(i => i.connected) || instances[0];
-          
+
+          const providers = Array.from(new Set(
+            instances.map(i => i.provider).filter(p => p !== "unknown")
+          )) as Array<"uazapi" | "meta_official">;
+
           return {
             sectorId,
             connected: instances.some(i => i.connected),
@@ -240,6 +261,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
             profileName: primaryInstance?.display_name || null,
             unreadCount,
             instances,
+            lastEventAt: lastEventBySector[sectorId] || null,
+            providers,
           };
         });
 
