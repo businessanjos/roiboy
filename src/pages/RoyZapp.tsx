@@ -1633,6 +1633,19 @@ export default function RoyZapp() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Meta templates dialog (only meaningful when current channel is Meta) */}
+      <ZappMetaTemplatesDialog
+        open={templatesDialogOpen}
+        onOpenChange={setTemplatesDialogOpen}
+        integrationId={
+          selectedConversation?.zapp_conversation?.integration_id ||
+          selectedIntegrationId ||
+          null
+        }
+        phone={selectedContactInfo?.phone || null}
+        contactName={selectedContactInfo?.name || null}
+      />
     </div>
   );
 }
