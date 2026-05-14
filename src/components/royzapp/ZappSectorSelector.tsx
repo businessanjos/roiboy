@@ -136,8 +136,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
       
       setLoading(true);
       try {
-        const [integrations, sectorSettings, departments, conversations] = await withRetry(async () => {
-          const [intRes, settingsRes, deptsRes, convsRes] = await Promise.all([
+        const [integrations, sectorSettings, departments, conversations, lastEvents] = await withRetry(async () => {
+          const [intRes, settingsRes, deptsRes, convsRes, lastRes] = await Promise.all([
             supabase
               .from("integrations")
               .select("id, sector_id, status, config, pin_hash")
@@ -159,11 +159,19 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
               .select("department_id, zapp_conversation:zapp_conversations(unread_count)")
               .eq("account_id", currentUser.account_id)
               .neq("status", "closed"),
+            supabase
+              .from("zapp_conversations")
+              .select("sector_id, last_message_at")
+              .eq("account_id", currentUser.account_id)
+              .in("sector_id", WHATSAPP_SECTOR_IDS)
+              .not("last_message_at", "is", null)
+              .order("last_message_at", { ascending: false })
+              .limit(500),
           ]);
 
           if (intRes.error) throw intRes.error;
 
-          return [intRes.data, settingsRes.data, deptsRes.data, convsRes.data] as const;
+          return [intRes.data, settingsRes.data, deptsRes.data, convsRes.data, lastRes.data] as const;
         }, 3, 1500);
         
         console.log("[ZappSectorSelector] Integrations loaded:", integrations);
