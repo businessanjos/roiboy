@@ -325,6 +325,7 @@ Deno.serve(async (req) => {
     } else {
       return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    } // end outer placeholder else
 
     // Normalize response to match uazapi-manager format
     const normalizedResult: any = { ...result };
