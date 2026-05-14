@@ -91,7 +91,7 @@ export function ZappChannelPills({
   return (
     <div className="border-b border-zapp-border bg-zapp-bg">
       <ScrollArea className="w-full">
-        <div className="flex items-center gap-1.5 px-3 py-2 min-w-max">
+        <div className="flex items-center gap-1.5 pl-3 pr-6 py-2 min-w-max">
           {/* Todos os canais */}
           <button
             type="button"
