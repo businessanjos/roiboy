@@ -36,6 +36,7 @@ interface SectorInstance {
   pin_hash: string | null;
   // NEW: Indicates if this instance inherits sector-level PIN protection
   use_sector_pin: boolean;
+  provider: "uazapi" | "meta_official" | "unknown";
 }
 
 interface WhatsAppSectorStatus {
@@ -45,6 +46,8 @@ interface WhatsAppSectorStatus {
   profileName: string | null;
   unreadCount: number;
   instances: SectorInstance[];
+  lastEventAt: string | null;
+  providers: Array<"uazapi" | "meta_official">;
 }
 
 interface ZappSectorSelectorProps {
