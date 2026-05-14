@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageSquare, Wifi, WifiOff, ArrowLeft, Lock, ChevronDown, Check } from "lucide-react";
+import { Loader2, MessageSquare, Wifi, WifiOff, ArrowLeft, Lock, ChevronDown, Check, Settings, Plug } from "lucide-react";
 import { SectorId, sectors } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { withRetry } from "@/lib/retryFetch";
 import { useNavigate } from "react-router-dom";
 import { ZappPinDialog } from "./dialogs/ZappPinDialog";
+import { ZappConnectionsSection } from "./settings/ZappConnectionsSection";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
