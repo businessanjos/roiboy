@@ -28,10 +28,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { ZappConnectionsSection } from "./settings/ZappConnectionsSection";
 
 import type { NotificationPermissionStatus } from "@/hooks/useZappNotifications";
 
 interface ZappSettingsPanelProps {
+  sectorId?: string | null;
+  sectorName?: string;
   whatsappConnected: boolean;
   whatsappConnecting: boolean;
   whatsappInstanceName: string | null;
@@ -59,6 +62,8 @@ interface ZappSettingsPanelProps {
 }
 
 export const ZappSettingsPanel = memo(function ZappSettingsPanel({
+  sectorId = null,
+  sectorName = "",
   whatsappConnected,
   whatsappConnecting,
   whatsappInstanceName,
@@ -86,11 +91,14 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
     <div className="p-4 space-y-6">
       <h3 className="text-zapp-text font-medium">Configurações</h3>
 
-      {/* WhatsApp Connection */}
-      <div className="space-y-3">
+      {/* Connections (UAZAPI / Meta) */}
+      <ZappConnectionsSection sectorId={sectorId} sectorName={sectorName || "este setor"} />
+
+      {/* WhatsApp Connection (user toggle) */}
+      <div className="space-y-3 pt-4 border-t border-zapp-border">
         <div>
-          <p className="text-zapp-text text-sm font-medium">Conexão WhatsApp</p>
-          <p className="text-zapp-text-muted text-xs">Ative para receber e enviar mensagens pelo zAPP</p>
+          <p className="text-zapp-text text-sm font-medium">Minha conexão</p>
+          <p className="text-zapp-text-muted text-xs">Liga/desliga o recebimento de mensagens em tempo real para você</p>
         </div>
         
         <div className={cn(

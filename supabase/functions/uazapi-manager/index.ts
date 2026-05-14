@@ -929,6 +929,7 @@ Deno.serve(async (req) => {
             raw_state: liveStatus?.state || integration.status || "unknown",
             display_name: integration.display_name,
             has_pin: !!integration.pin_hash,
+            provider: getString(config.provider) || "uazapi",
             phone_number: getString(config.phone_number) || liveStatus?.owner || getString(config.owner) || "",
             profile_name: getString(config.profile_name) || getString(config.profileName) || "",
             profile_pic_url: getString(config.profile_pic_url) || getString(config.profilePicUrl) || "",

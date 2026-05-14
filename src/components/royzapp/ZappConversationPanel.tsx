@@ -824,6 +824,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         )}
         {activeView === "settings" && (
           <ZappSettingsPanel
+            sectorId={sectorId}
+            sectorName={sectorId ? (sectorId.charAt(0).toUpperCase() + sectorId.slice(1)) : ""}
             whatsappConnected={whatsappConnected}
             whatsappConnecting={whatsappConnecting}
             whatsappInstanceName={whatsappInstanceName}

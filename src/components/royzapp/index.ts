@@ -23,3 +23,5 @@ export * from "./ZappLeadDataEditor";
 export * from "./ZappNotificationToast";
 export * from "./ZappMessageSearchBar";
 export * from "./ZappInstanceSwitcher";
+export * from "./settings/ZappConnectionsSection";
+export * from "./settings/ZappConnectionWizard";

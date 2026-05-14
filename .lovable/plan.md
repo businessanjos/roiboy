@@ -1,85 +1,82 @@
 ## Objetivo
+Unificar a gestão de conexões WhatsApp dentro do painel de Configurações do RoyZapp (engrenagem do chat), substituindo a navegação para `/integrations/whatsapp`. O usuário cria/gerencia conexões via um **wizard em etapas** direto no painel lateral.
 
-Transformar `/operations/onboarding` num cockpit operacional inteligente: visão Kanban + Pipeline + Dashboard, com SLA por etapa, alertas automáticos de gargalo e IA generativa que orienta o consultor cliente-a-cliente.
+## O que muda
 
-## Entregáveis
+### 1. Novo componente: `ZappConnectionsSection`
+Arquivo: `src/components/royzapp/settings/ZappConnectionsSection.tsx`
 
-### 1. Schema (migração)
-Adições ao banco para destravar SLA, rastreio temporal e cache de IA:
+Renderiza, dentro do `ZappSettingsPanel`, uma seção "Conexões WhatsApp" com:
+- Lista das instâncias do setor atual (reaproveitando `SectorInstanceCard` com tema escuro do zApp)
+- Status de cada uma (conectada/desconectada, tipo: UAZAPI ou Meta Cloud)
+- Botão "+ Nova conexão" que abre o wizard
+- Filtro por setor (admins veem todos os setores num accordion compacto; usuários comuns veem só o seu)
 
-- `client_stages`:
-  - `sla_hours INT` — prazo esperado nessa etapa (default 72h, configurável por etapa).
-  - `description TEXT` — explica o que precisa ser feito.
-  - `icon TEXT` — ícone lucide opcional por etapa.
+### 2. Novo wizard: `ZappConnectionWizard`
+Arquivo: `src/components/royzapp/settings/ZappConnectionWizard.tsx`
 
-- `clients`:
-  - `onboarding_started_at TIMESTAMPTZ` — quando entrou no onboarding (preenchido na transição "ganho → cliente").
-  - `stage_changed_at TIMESTAMPTZ` — quando mudou para a etapa atual (trigger atualiza).
-  - `onboarding_health TEXT` — `on_track | at_risk | overdue | done` (calculado por trigger comparando `now() - stage_changed_at` vs `sla_hours`).
-  - `ai_next_step TEXT` + `ai_next_step_at TIMESTAMPTZ` — cache do próximo passo sugerido pela IA.
+Dialog com 3 etapas usando `Stepper` visual:
 
-- Trigger `update_client_stage_changed_at`: atualiza `stage_changed_at` em qualquer UPDATE de `stage_id`.
-- Trigger `compute_onboarding_health`: roda no UPDATE/INSERT e em job pg_cron a cada hora para recalcular saúde de toda a base ativa.
-- Função `set_onboarding_started_when_won()`: dispara quando deal vira `won` e cria/atualiza `clients.onboarding_started_at` se ainda nulo.
+```text
+Etapa 1: Tipo         Etapa 2: Dados        Etapa 3: Conectar
+┌──────────┐         ┌──────────────┐     ┌────────────────┐
+│ UAZAPI   │   →     │ Nome instância│  →  │ QR Code (UAZAPI)│
+│ (QR Code)│         │ Setor         │     │   ou           │
+├──────────┤         │ ...           │     │ Webhook URL +   │
+│ Meta API │         │               │     │ verificação Meta│
+│ (Oficial)│         │               │     │                 │
+└──────────┘         └──────────────┘     └────────────────┘
+```
 
-### 2. Edge function `onboarding-ai-coach`
-Nova função em `supabase/functions/onboarding-ai-coach/index.ts` usando Lovable AI Gateway (`google/gemini-3-flash-preview`):
+**Etapa 1 — Escolha do tipo**: dois cards grandes lado a lado:
+- **UAZAPI (QR Code)**: rápido, ideal para números pessoais/operacionais
+- **Meta Cloud API (Oficial)**: oficial, requer verificação Meta, sem ban risk
 
-- **Inputs**: `clientId`, `mode` ∈ `next_step | risk_analysis | welcome_message | summary`.
-- **Coleta server-side**: dados do cliente, briefing operacional, deal ganho, produto, timeline (últimas 30 entradas), checklist da etapa atual, dias parado.
-- **Output (tool calling)**: JSON estruturado com `action`, `priority`, `message`, `risks[]`, `confidence`.
-- Salva resultado em `clients.ai_next_step` (TTL 24h) para evitar re-chamadas.
-- Trata 429/402 e devolve toast amigável.
+**Etapa 2 — Dados**: form que muda conforme o tipo:
+- UAZAPI: reaproveita campos do `AddInstanceDialog` (nome, setor, PIN opcional)
+- Meta: reaproveita campos do `AddMetaInstanceDialog` (Phone Number ID, Business Account ID, Access Token, App Secret, Verify Token)
 
-### 3. UI: novo Hub `/operations/onboarding`
-Reescrita de `ClientOnboardingHub.tsx` com 3 modos via tabs internas (sub-nav vertical não cabe aqui, então tabs de view):
+**Etapa 3 — Conectar**:
+- UAZAPI: chama `uazapi-manager` action `create_instance`, exibe QR code com polling de status
+- Meta: salva integração, mostra Webhook URL e Verify Token pra colar no Meta Developer Console, com botão "Testar webhook"
 
-#### a. **Visão Kanban** (default)
-- 13 colunas (uma por etapa) com header colorido (`stage.color`), contador, SLA médio e barra de saúde verde/âmbar/vermelho.
-- Cards ricos: avatar, nome (+VipBadge), produto (badge colorido), consultor responsável, dias na etapa com cor (verde <50% SLA, âmbar 50-100%, vermelho >100%), mini-progress do checklist, ícone alerta IA se `at_risk`.
-- Drag-and-drop entre colunas (`@dnd-kit/core` já presente) → atualiza `stage_id` e dispara automação existente.
-- Click no card abre **Drawer lateral** com: progresso, checklist interativo, painel "🧠 Coach IA" (próximo passo, riscos), botão para gerar mensagem de boas-vindas e ações rápidas (abrir cliente, WhatsApp, agendar).
+Botões: `Voltar` / `Próximo` / `Concluir`. Cada etapa valida antes de avançar.
 
-#### b. **Visão Pipeline (atual orquestrado)**
-- Mantém `OnboardingOrchestrated` para quem prefere tabela densa, mas com colunas extras: Saúde, Dias na etapa, Consultor.
+### 3. Integração no `ZappSettingsPanel`
+- Adicionar nova seção "Conexões" no topo do painel (acima de "Conexão WhatsApp" atual)
+- Manter o toggle de ligar/desligar conexão **ativa** do usuário separado, mas remover duplicação visual
+- Adicionar link discreto "Configuração avançada por setor" que continua levando à página `/integrations/whatsapp` (preserva backup)
 
-#### c. **Dashboard de Saúde**
-- KPIs no topo: novos (7d), em andamento, atrasados, tempo médio de onboarding completo, taxa de conclusão (ganhou contrato → chegou em "Plano de Ação 1") nos últimos 90 dias.
-- Funil horizontal mostrando quantos clientes em cada etapa + tempo médio.
-- Top 3 gargalos (etapas com maior tempo médio).
-- Ranking de consultores (média de dias até concluir, conclusões no mês).
+### 4. Reaproveitamento
+- `AddInstanceDialog` e `AddMetaInstanceDialog` viram **componentes internos** do wizard (extrai-se a lógica de submit e os formulários ficam em `ZappConnectionWizard`).
+- `SectorInstanceCard` ganha variante `theme="zapp"` (cores escuras `bg-zapp-panel`).
 
-### 4. Sidebar: badge inteligente
-- Atualizar `usePendingOnboardingCount` para retornar também `overdueCount`.
-- Em `Sidebar.tsx`, badge âmbar para `newCount` + dot vermelho extra se houver `overdueCount > 0`.
-
-### 5. Notificações
-- Trigger no banco: quando `onboarding_health` virar `overdue`, insere notificação para `responsible_user_id` com tipo `onboarding_overdue`. Reaproveita sistema de notificações existente.
+### 5. RBAC
+- Não-admin: vê apenas conexões do próprio setor, não pode criar/excluir (botões ocultos), pode reconectar QR
+- Admin: tudo liberado, pode trocar setor via filtro
 
 ## Detalhes técnicos
+- Reusa edge function `uazapi-manager` (actions: `list_sector_instances`, `create_instance`, `unlink_instance`)
+- Reusa `meta-whatsapp-manager` para Meta Cloud
+- Estado do wizard via `useState` local; ao completar, faz `onRefresh()` e fecha
+- Tema escuro: classes `bg-zapp-panel`, `border-zapp-border`, `text-zapp-text`, `text-zapp-accent`
+- Sem mudanças de schema (DB intacto)
 
-- **Drag-and-drop**: usa `@dnd-kit/core`+`@dnd-kit/sortable` (já em uso em outros Kanbans do projeto).
-- **Drawer lateral**: shadcn `Sheet` `side="right"` `className="w-[480px]"`.
-- **IA cache**: `ai_next_step_at` é checado no front; só re-chama se >24h ou se `stage_id` mudou desde então.
-- **RLS**: novas colunas herdam policies de `clients`/`client_stages` (já account-scoped). Cron job roda como `service_role`.
-- **Defaults da migração**: `sla_hours` por etapa será preenchido com sugestões iniciais (Boas-vindas: 24h, Cadastro: 48h, Agendamentos: 72h, Onboardings com consultor/ferramentas: 120h, Plano de Ação: sem SLA).
-- **Performance**: Kanban usa React Query com `staleTime: 30s` e realtime no `clients` para refletir drag-drop entre usuários.
+## Arquivos
+**Novos:**
+- `src/components/royzapp/settings/ZappConnectionsSection.tsx`
+- `src/components/royzapp/settings/ZappConnectionWizard.tsx`
+- `src/components/royzapp/settings/ZappConnectionTypeStep.tsx`
+- `src/components/royzapp/settings/ZappConnectionDataStep.tsx`
+- `src/components/royzapp/settings/ZappConnectionConnectStep.tsx`
+
+**Editados:**
+- `src/components/royzapp/ZappSettingsPanel.tsx` — adiciona nova seção
+- `src/components/royzapp/index.ts` — exporta novo componente
+- `src/components/integrations/whatsapp/SectorInstanceCard.tsx` — variante de tema (opcional, se UI escura precisar)
 
 ## Fora do escopo
-
-- Atribuição automática round-robin (mantém atual).
-- Pesquisa de NPS ao final do onboarding (fica para fase 2).
-- Integração com Daily.co para call de onboarding (fica para fase 2 — já discutido em mensagem anterior).
-
-## Ordem de execução
-
-1. Migração (schema + triggers + cron) — pede aprovação.
-2. Edge function `onboarding-ai-coach`.
-3. Hook `useOnboardingHub` (queries + realtime).
-4. Componente `OnboardingKanban.tsx` + `ClientOnboardingDrawer.tsx`.
-5. Componente `OnboardingDashboard.tsx`.
-6. Reescrita de `ClientOnboardingHub.tsx` com Tabs (Kanban / Pipeline / Saúde).
-7. Update `usePendingOnboardingCount` + Sidebar badge.
-8. Memória `mem://features/operations/onboarding-hub-pt.md` atualizada para v2.
-
-Estimativa: entrega grande (5-7 turnos), cada bloco testado isoladamente antes do próximo.
+- Mudanças no roteamento WhatsApp (`whatsappRouting.ts`) — não tocar
+- Reescrita das edge functions
+- Mudanças no schema do banco
+- Remoção da página `/integrations/whatsapp` (mantida como backup admin)
