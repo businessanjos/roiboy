@@ -97,6 +97,27 @@ export default function RoyZapp() {
   // Sector selection state - initialize from URL if provided
   const [selectedSectorId, setSelectedSectorId] = useState<SectorId | null>(sectorFromUrl);
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | undefined>(integrationFromUrl || undefined);
+
+  // Map of integration_id -> provider ('uazapi' | 'meta_official') for the account
+  const [integrationProviders, setIntegrationProviders] = useState<Record<string, string>>({});
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser?.account_id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("integrations")
+        .select("id, config")
+        .eq("account_id", currentUser.account_id)
+        .eq("type", "whatsapp");
+      const map: Record<string, string> = {};
+      for (const row of data || []) {
+        const cfg = (row as any).config || {};
+        map[(row as any).id] = cfg.provider || "uazapi";
+      }
+      setIntegrationProviders(map);
+    })();
+  }, [currentUser?.account_id]);
   
   // Auto-fetch user's preferred instance when sector is selected but integrationId is missing
   useEffect(() => {
