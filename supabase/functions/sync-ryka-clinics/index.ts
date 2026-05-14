@@ -184,12 +184,14 @@ Deno.serve(async (req) => {
     const rykaStatus = rykaMatch.status ?? (typeof rykaMatch.is_active === "boolean" ? (rykaMatch.is_active ? "active" : "inactive") : null);
 
     matched.push({ client_id: c.id, name: c.full_name, clinic_id: rykaClinicId, matched_by: matchedBy });
+    const responseEmail = rykaMatch.email || (emails[0] ?? null);
+    const responsePhone = rykaMatch.phone || c.phone_e164 || null;
 
     const payload = {
       account_id: c.account_id,
       client_id: c.id,
-      email: rykaMatch.email || (emails[0] ?? null),
-      phone: rykaMatch.phone || c.phone_e164 || null,
+      email: responseEmail,
+      phone: responsePhone,
       status: "success",
       error: null,
       whatsapp_status: null,
