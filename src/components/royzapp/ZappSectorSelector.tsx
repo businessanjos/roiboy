@@ -483,7 +483,52 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                   </div>
                 </CardHeader>
                 
-                <CardContent className="pt-2">
+                <CardContent className="pt-2 space-y-2">
+                  {/* Summary: provider + health + last event */}
+                  {status && status.instances.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                      {status.providers.map(p => (
+                        <Badge
+                          key={p}
+                          variant="outline"
+                          className={cn(
+                            "px-1.5 py-0 h-5 font-medium border",
+                            p === "meta_official"
+                              ? "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          )}
+                        >
+                          {p === "meta_official" ? "Meta API" : "UAZAPI"}
+                        </Badge>
+                      ))}
+                      {(() => {
+                        const total = status.instances.length;
+                        const online = status.instances.filter(i => i.connected).length;
+                        const allOn = online === total;
+                        const noneOn = online === 0;
+                        return (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "px-1.5 py-0 h-5 font-medium border",
+                              allOn
+                                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                : noneOn
+                                ? "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400"
+                                : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            )}
+                          >
+                            {online}/{total} online
+                          </Badge>
+                        );
+                      })()}
+                      {status.lastEventAt && (
+                        <span className="text-muted-foreground">
+                          · últ. evento {formatRelative(status.lastEventAt)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-2">
                     {/* Connection status */}
                     <div className="flex items-center gap-2">
