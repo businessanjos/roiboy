@@ -155,7 +155,7 @@ function RankRow({ rank, row, metric, value, sublabel }: {
 
 function RankList({ rows, metric, getValue, getSub }: {
   rows: Row[];
-  metric: "followers" | "likes" | "comments";
+  metric: "followers" | "likes" | "comments" | "posts";
   getValue: (r: Row) => number;
   getSub?: (r: Row) => string | undefined;
 }) {
