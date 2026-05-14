@@ -647,6 +647,23 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         isAdmin={isAdmin}
       />
 
+      {/* Channel pills (UAZAPI vs Meta) — appears when sector has 2+ instances */}
+      {activeView === "inbox" && sectorId && onSelectIntegration && (
+        <ZappChannelPills
+          accountId={accountId}
+          sectorId={sectorId}
+          selectedIntegrationId={selectedIntegrationId}
+          onChange={(id) => {
+            if (id) {
+              onSelectIntegration(id);
+            } else if (onClearIntegration) {
+              onClearIntegration();
+            }
+          }}
+          totalCount={filteredAssignments.length}
+        />
+      )}
+
       {/* Conversation list */}
       <ScrollArea className="flex-1">
         {activeView === "inbox" && (
