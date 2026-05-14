@@ -389,7 +389,7 @@ export default function InstagramRanking() {
           </div>
         </div>
 
-        <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        <div className="relative grid grid-cols-2 md:grid-cols-5 gap-3 mt-6">
           <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
             <div className="text-xs text-muted-foreground">Perfis</div>
             <div className="text-xl font-semibold tabular-nums">{fmt(stats.totalClients)}</div>
@@ -397,6 +397,10 @@ export default function InstagramRanking() {
           <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Users2 className="h-3 w-3" /> Seguidores</div>
             <div className="text-xl font-semibold tabular-nums text-fuchsia-600 dark:text-fuchsia-400">{fmt(stats.totalFollowers)}</div>
+          </div>
+          <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
+            <div className="text-xs text-muted-foreground flex items-center gap-1"><Images className="h-3 w-3" /> Posts</div>
+            <div className="text-xl font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{fmt(stats.totalPosts)}</div>
           </div>
           <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Heart className="h-3 w-3" /> Curtidas</div>
