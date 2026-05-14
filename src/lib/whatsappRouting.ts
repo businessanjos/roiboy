@@ -54,14 +54,23 @@ export async function invokeWhatsAppManager(
   return invokeWithRetry(functionName, body);
 }
 
-async function normalizeFunctionError(err: any): Promise<any> {
+type FunctionInvokeError = Error & {
+  status?: number;
+  context?: unknown;
+};
+
+function hasStatusContext(context: unknown): context is { status?: number; response?: Response; body?: string } {
+  return typeof context === "object" && context !== null;
+}
+
+async function normalizeFunctionError(err: FunctionInvokeError): Promise<FunctionInvokeError> {
   const response = err?.context instanceof Response
     ? err.context
-    : err?.context?.response instanceof Response
+    : hasStatusContext(err?.context) && err.context.response instanceof Response
       ? err.context.response
       : null;
-  const status = response?.status ?? err?.context?.status ?? err?.status;
-  let bodyText = typeof err?.context?.body === "string" ? err.context.body : "";
+  const status = response?.status ?? (hasStatusContext(err?.context) ? err.context.status : undefined) ?? err?.status;
+  let bodyText = hasStatusContext(err?.context) && typeof err.context.body === "string" ? err.context.body : "";
 
   if (response && !bodyText) {
     try {
@@ -82,7 +91,7 @@ async function normalizeFunctionError(err: any): Promise<any> {
   }
 
   const message = parsedMessage || err?.message || "Erro ao chamar o WhatsApp";
-  const enriched: any = new Error(message);
+  const enriched = new Error(message) as FunctionInvokeError;
   enriched.name = err?.name || "FunctionsHttpError";
   enriched.status = status;
   enriched.context = { original: err?.context, status, body: bodyText };
