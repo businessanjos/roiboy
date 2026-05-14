@@ -66,6 +66,7 @@ export default function ClinicaRyka() {
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [provisioningId, setProvisioningId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const clientsQuery = useQuery({
     queryKey: ["ryka-eligible-clients", accountId],
