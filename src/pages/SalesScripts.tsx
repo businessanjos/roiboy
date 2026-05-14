@@ -436,15 +436,15 @@ export default function SalesScripts() {
   });
 
   const updateAnalysisOutcomeMutation = useMutation({
-    mutationFn: async ({ id, call_outcome, client_id, outcome_notes }: { id: string; call_outcome: string | null; client_id: string | null; outcome_notes: string | null }) => {
-      const { error } = await supabase.from('sales_call_analyses').update({ call_outcome, client_id, outcome_notes } as any).eq('id', id);
+    mutationFn: async ({ id, ...patch }: { id: string; call_outcome?: string | null; client_id?: string | null; outcome_notes?: string | null; deal_id?: string | null; seller_user_id?: string | null; product_id?: string | null }) => {
+      const { error } = await supabase.from('sales_call_analyses').update(patch as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] });
-      toast.success('Resultado da call atualizado!');
+      toast.success('Análise atualizada!');
     },
-    onError: () => toast.error('Erro ao atualizar resultado'),
+    onError: () => toast.error('Erro ao atualizar análise'),
   });
 
   const getOutcomeConfig = (outcome: string | null) => CALL_OUTCOMES.find(o => o.value === outcome);
