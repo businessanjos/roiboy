@@ -1330,7 +1330,7 @@ export default function SalesScripts() {
                       if (!viewingAnalysis) return;
                       const newOutcome = isSelected ? null : outcome.value;
                       setViewingAnalysis({ ...viewingAnalysis, call_outcome: newOutcome });
-                      updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, call_outcome: newOutcome, client_id: viewingAnalysis.client_id || null, outcome_notes: viewingAnalysis.outcome_notes || null });
+                      updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, call_outcome: newOutcome });
                     }}
                   >
                     <CardContent className="p-2.5 flex items-center gap-2">
