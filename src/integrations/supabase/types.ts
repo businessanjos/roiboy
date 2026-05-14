@@ -2458,6 +2458,83 @@ export type Database = {
           },
         ]
       }
+      client_ryka_provisions: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          email: string | null
+          error: string | null
+          id: string
+          phone: string | null
+          ryka_response: Json | null
+          status: string
+          triggered_by: string | null
+          updated_at: string
+          whatsapp_error: string | null
+          whatsapp_status: string | null
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          email?: string | null
+          error?: string | null
+          id?: string
+          phone?: string | null
+          ryka_response?: Json | null
+          status?: string
+          triggered_by?: string | null
+          updated_at?: string
+          whatsapp_error?: string | null
+          whatsapp_status?: string | null
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          email?: string | null
+          error?: string | null
+          id?: string
+          phone?: string | null
+          ryka_response?: Json | null
+          status?: string
+          triggered_by?: string | null
+          updated_at?: string
+          whatsapp_error?: string | null
+          whatsapp_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_ryka_provisions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_ryka_provisions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_ryka_provisions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_ryka_provisions_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_service_history: {
         Row: {
           account_id: string
