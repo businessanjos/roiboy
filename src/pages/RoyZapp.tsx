@@ -21,6 +21,7 @@ import {
 } from "@/components/royzapp";
 import { normalizeSearchText, normalizePhone, matchesSearchQuery } from "@/components/royzapp/types";
 import { ZappSectorSelector } from "@/components/royzapp/ZappSectorSelector";
+import { ZappWhatsAppAdminPanel } from "@/components/royzapp/ZappWhatsAppAdminPanel";
 
 import {
   ZappDepartmentDialog,
@@ -76,6 +77,10 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   closed: { label: "Finalizado", color: "text-muted-foreground", bgColor: "bg-muted-foreground" },
 };
 
+type ZappView = "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin";
+
+const ZAPP_VIEWS = new Set<ZappView>(["inbox", "team", "departments", "tags", "settings", "playbook", "marketing", "sector", "meetings", "whatsapp-admin"]);
+
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
@@ -87,6 +92,7 @@ export default function RoyZapp() {
   // Get sector and integrationId from URL if provided
   const sectorFromUrl = searchParams.get('sector') as SectorId | null;
   const integrationFromUrl = searchParams.get('integrationId');
+  const viewFromUrl = searchParams.get('view');
   
   // Sector selection state - initialize from URL if provided
   const [selectedSectorId, setSelectedSectorId] = useState<SectorId | null>(sectorFromUrl);
@@ -194,7 +200,15 @@ export default function RoyZapp() {
   }, [departments, selectedSectorId]);
 
   // UI state
-  const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin">("inbox");
+  const [activeView, setActiveView] = useState<ZappView>(
+    viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView) ? (viewFromUrl as ZappView) : "inbox"
+  );
+
+  useEffect(() => {
+    if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
+      setActiveView(viewFromUrl as ZappView);
+    }
+  }, [viewFromUrl]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUnread, setFilterUnread] = useState(false);
@@ -990,7 +1004,7 @@ export default function RoyZapp() {
   // Check access permission — admin panel "royzapp" sector toggle is the source of truth.
   const hasZappAccess = isAdmin || hasSectorAccess("royzapp") || hasPermission(PERMISSIONS.ROYZAPP_ACCESS);
 
-  if (permissionsLoading || loading) {
+  if (permissionsLoading || (loading && selectedSectorId)) {
     return (
       <div className="flex items-center justify-center h-full bg-zapp-bg">
         <div className="text-center space-y-4">
@@ -1036,6 +1050,10 @@ export default function RoyZapp() {
         </div>
       </div>
     );
+  }
+
+  if (!selectedSectorId && activeView === "whatsapp-admin" && isAdmin) {
+    return <ZappWhatsAppAdminPanel />;
   }
 
   // If no sector selected, show selector

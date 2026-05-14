@@ -4,6 +4,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Loader2 } from "lucide-react";
 import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorManager";
 import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
+import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Integration = Tables<"integrations">;
@@ -54,6 +55,7 @@ export function ZappWhatsAppAdminPanel({ sectorId }: Props) {
         onRefresh={fetchIntegrations}
         sectorId={sectorId || null}
       />
+      <SectorPinSettings />
     </div>
   );
 }
