@@ -90,10 +90,7 @@ Deno.serve(async (req) => {
   // 1) Buscar lista de clínicas no Ryka
   let rykaList: any[] = [];
   try {
-    const authValue = API_KEY.startsWith("Bearer ") || API_KEY.startsWith("Basic ")
-      ? API_KEY
-      : `Bearer ${API_KEY}`;
-    const r = await fetchRykaWithRedirects(LIST_URL, rykaHeaders(API_KEY, authValue));
+    const r = await fetchRykaWithRedirects(LIST_URL, rykaHeaders(API_KEY));
     const txt = await r.text();
     if (!r.ok) {
       console.error("[sync-ryka-clinics] Ryka request failed", {
