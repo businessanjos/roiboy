@@ -83,18 +83,18 @@ async function buildContext(supa: any, clientId: string) {
 
   if (!client) throw new Error("Cliente não encontrado");
 
-  const [{ data: products }, { data: timeline }, { data: deals }, { data: checklist }, { data: progress }] =
+  const [{ data: products }, { data: followups }, { data: deals }, { data: checklist }, { data: progress }] =
     await Promise.all([
       supa.from("client_products").select("products(name, color)").eq("client_id", clientId),
       supa
-        .from("client_timeline")
-        .select("type, content, created_at")
+        .from("client_followups")
+        .select("note, created_at")
         .eq("client_id", clientId)
         .order("created_at", { ascending: false })
-        .limit(20),
+        .limit(10),
       supa
         .from("deals")
-        .select("title, value, status, won_at, briefing")
+        .select("title, value, status, won_at")
         .eq("client_id", clientId)
         .eq("status", "won")
         .order("won_at", { ascending: false })
@@ -107,7 +107,7 @@ async function buildContext(supa: any, clientId: string) {
             .order("display_order")
         : Promise.resolve({ data: [] }),
       supa
-        .from("client_checklist_progress")
+        .from("client_stage_checklist")
         .select("checklist_item_id, completed_at")
         .eq("client_id", clientId),
     ]);
