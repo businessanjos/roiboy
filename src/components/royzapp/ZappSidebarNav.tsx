@@ -10,8 +10,8 @@ import {
 import { cn } from "@/lib/utils";
 
 interface ZappSidebarNavProps {
-  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings";
-  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings") => void;
+  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin";
+  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin") => void;
   filterConversationType: "all" | "individual" | "group";
   setFilterConversationType: (type: "all" | "individual" | "group") => void;
   onlineAgents: number;
