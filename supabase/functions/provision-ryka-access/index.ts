@@ -92,7 +92,78 @@ Deno.serve(async (req) => {
   let body: any = {};
   try { body = await req.json(); } catch { return jsonResp({ error: "Body inválido" }, 400); }
   const clientId = typeof body.client_id === "string" ? body.client_id : "";
-  if (!clientId) return jsonResp({ error: "client_id é obrigatório" }, 400);
+  const isTestMode = body.test_mode === true;
+  if (!clientId && !isTestMode) return jsonResp({ error: "client_id é obrigatório" }, 400);
+
+  // ===== TEST MODE: accepts email/phone/name directly, skips client/product validation =====
+  if (isTestMode) {
+    const email = String(body.email || "").trim();
+    const phone = String(body.phone || "").trim();
+    const name = String(body.name || "Teste Ryka").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return jsonResp({ error: "email inválido" }, 400);
+    if (!phone) return jsonResp({ error: "phone obrigatório (E.164, ex: 5511999999999)" }, 400);
+
+    const tempPassword = generateTempPassword(12);
+    const rykaPayload = {
+      event: "client.created",
+      roy_client_id: `test-${crypto.randomUUID()}`,
+      timestamp: new Date().toISOString(),
+      data: {
+        name, responsible_name: name, email, phone,
+        product: "Rykas Mentoring",
+        contract_status: "active", contract_amount: 0,
+        temp_password: tempPassword,
+      },
+    };
+
+    let rykaOk = false; let rykaResponse: any = null; let rykaError: string | null = null;
+    try {
+      const r = await fetch(RYKA_WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": RYKA_API_KEY },
+        body: JSON.stringify(rykaPayload),
+      });
+      const txt = await r.text();
+      try { rykaResponse = JSON.parse(txt); } catch { rykaResponse = { raw: txt }; }
+      rykaOk = r.ok;
+      if (!r.ok) rykaError = `Ryka ${r.status}: ${txt.slice(0, 300)}`;
+    } catch (e: any) { rykaError = `Falha Ryka: ${e.message || e}`; }
+
+    if (!rykaOk) return jsonResp({ test_mode: true, error: rykaError, ryka_response: rykaResponse }, 502);
+
+    let whatsappStatus = "skipped"; let whatsappError: string | null = null;
+    try {
+      const { data: integrations } = await admin
+        .from("whatsapp_integrations")
+        .select("api_url, api_key, instance_name, instance_token, sector_id, is_active")
+        .eq("account_id", userRow.account_id)
+        .eq("is_active", true);
+      const integration =
+        integrations?.find((i: any) => (i.sector_id || "").toLowerCase().includes("opera")) ||
+        integrations?.[0];
+      if (!integration) { whatsappStatus = "failed"; whatsappError = "Sem instância WhatsApp ativa"; }
+      else {
+        const cleanPhone = phone.replace(/\D/g, "");
+        const message = buildWhatsAppMessage(name, email, tempPassword);
+        const baseUrl = (integration.api_url || "").replace(/\/$/, "");
+        const token = integration.instance_token || integration.api_key;
+        const resp = await fetch(`${baseUrl}/send/text`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", token: token || "" },
+          body: JSON.stringify({ number: cleanPhone, text: message }),
+        });
+        if (resp.ok) whatsappStatus = "sent";
+        else { const t = await resp.text(); whatsappStatus = "failed"; whatsappError = `WA ${resp.status}: ${t.slice(0,200)}`; }
+      }
+    } catch (e: any) { whatsappStatus = "failed"; whatsappError = `Erro WA: ${e.message || e}`; }
+
+    return jsonResp({
+      test_mode: true, success: true,
+      email, phone, temp_password: tempPassword, login_url: RYKA_LOGIN_URL,
+      whatsapp_status: whatsappStatus, whatsapp_error: whatsappError,
+      ryka_response: rykaResponse,
+    });
+  }
 
   // Load client + products
   const { data: client, error: clientErr } = await admin
