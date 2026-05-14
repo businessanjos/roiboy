@@ -40,7 +40,6 @@ interface UserIntegration {
 }
 
 const integrations_list = [
-  { id: "whatsapp", name: "WhatsApp", description: "Conexão WhatsApp via UAZAPI", icon: MessageSquare },
   { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video },
   { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar },
   { id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone },
