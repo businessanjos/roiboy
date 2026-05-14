@@ -389,6 +389,8 @@ export function ZappChatView({
         hasSignature={hasSignature}
         onToggleSignature={onToggleSignature}
         onOpenPlaybook={onOpenPlaybook}
+        isMetaChannel={isMetaChannel}
+        onOpenTemplates={onOpenTemplates}
       />
 
       {/* Media Gallery */}
