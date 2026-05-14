@@ -133,28 +133,8 @@ Deno.serve(async (req) => {
 
     let whatsappStatus = "skipped"; let whatsappError: string | null = null;
     try {
-      const { data: integrations } = await admin
-        .from("whatsapp_integrations")
-        .select("api_url, api_key, instance_name, instance_token, sector_id, is_active")
-        .eq("account_id", userRow.account_id)
-        .eq("is_active", true);
-      const integration =
-        integrations?.find((i: any) => (i.sector_id || "").toLowerCase().includes("opera")) ||
-        integrations?.[0];
-      if (!integration) { whatsappStatus = "failed"; whatsappError = "Sem instância WhatsApp ativa"; }
-      else {
-        const cleanPhone = phone.replace(/\D/g, "");
-        const message = buildWhatsAppMessage(name, email, tempPassword);
-        const baseUrl = (integration.api_url || "").replace(/\/$/, "");
-        const token = integration.instance_token || integration.api_key;
-        const resp = await fetch(`${baseUrl}/send/text`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", token: token || "" },
-          body: JSON.stringify({ number: cleanPhone, text: message }),
-        });
-        if (resp.ok) whatsappStatus = "sent";
-        else { const t = await resp.text(); whatsappStatus = "failed"; whatsappError = `WA ${resp.status}: ${t.slice(0,200)}`; }
-      }
+      const wa = await sendRykaWhatsApp(admin, userRow.account_id, phone, buildWhatsAppMessage(name, email, tempPassword));
+      whatsappStatus = wa.status; whatsappError = wa.error;
     } catch (e: any) { whatsappStatus = "failed"; whatsappError = `Erro WA: ${e.message || e}`; }
 
     return jsonResp({
