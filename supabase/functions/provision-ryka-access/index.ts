@@ -251,40 +251,8 @@ Deno.serve(async (req) => {
   let whatsappStatus = "skipped";
   let whatsappError: string | null = null;
   try {
-    const { data: integrations } = await admin
-      .from("whatsapp_integrations")
-      .select("api_url, api_key, instance_name, instance_token, provider, sector_id, is_active")
-      .eq("account_id", client.account_id)
-      .eq("is_active", true)
-      .order("sector_id", { ascending: true });
-
-    const integration =
-      integrations?.find((i: any) => (i.sector_id || "").toLowerCase().includes("opera")) ||
-      integrations?.[0];
-
-    if (!integration) {
-      whatsappStatus = "failed";
-      whatsappError = "Nenhuma instância WhatsApp ativa encontrada na conta.";
-    } else {
-      const phone = client.phone_e164.replace(/\D/g, "");
-      const message = buildWhatsAppMessage(client.full_name, email, tempPassword);
-
-      const baseUrl = (integration.api_url || "").replace(/\/$/, "");
-      const token = integration.instance_token || integration.api_key;
-
-      const resp = await fetch(`${baseUrl}/send/text`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", token: token || "" },
-        body: JSON.stringify({ number: phone, text: message }),
-      });
-      if (resp.ok) {
-        whatsappStatus = "sent";
-      } else {
-        const t = await resp.text();
-        whatsappStatus = "failed";
-        whatsappError = `WhatsApp ${resp.status}: ${t.slice(0, 200)}`;
-      }
-    }
+    const wa = await sendRykaWhatsApp(admin, client.account_id, client.phone_e164, buildWhatsAppMessage(client.full_name, email, tempPassword));
+    whatsappStatus = wa.status; whatsappError = wa.error;
   } catch (e: any) {
     whatsappStatus = "failed";
     whatsappError = `Erro envio WhatsApp: ${e.message || e}`;
