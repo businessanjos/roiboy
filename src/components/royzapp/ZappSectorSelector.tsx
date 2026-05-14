@@ -24,6 +24,20 @@ import {
 // Setores que têm WhatsApp configurável
 const WHATSAPP_SECTOR_IDS: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing"];
 
+function formatRelative(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!then) return "";
+  const diff = Date.now() - then;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "agora";
+  if (m < 60) return `${m}min atrás`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h atrás`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d atrás`;
+  return new Date(iso).toLocaleDateString("pt-BR");
+}
+
 interface SectorInstance {
   id: string;
   status: string;
@@ -36,6 +50,7 @@ interface SectorInstance {
   pin_hash: string | null;
   // NEW: Indicates if this instance inherits sector-level PIN protection
   use_sector_pin: boolean;
+  provider: "uazapi" | "meta_official" | "unknown";
 }
 
 interface WhatsAppSectorStatus {
@@ -45,6 +60,8 @@ interface WhatsAppSectorStatus {
   profileName: string | null;
   unreadCount: number;
   instances: SectorInstance[];
+  lastEventAt: string | null;
+  providers: Array<"uazapi" | "meta_official">;
 }
 
 interface ZappSectorSelectorProps {
@@ -133,8 +150,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
       
       setLoading(true);
       try {
-        const [integrations, sectorSettings, departments, conversations] = await withRetry(async () => {
-          const [intRes, settingsRes, deptsRes, convsRes] = await Promise.all([
+        const [integrations, sectorSettings, departments, conversations, lastEvents] = await withRetry(async () => {
+          const [intRes, settingsRes, deptsRes, convsRes, lastRes] = await Promise.all([
             supabase
               .from("integrations")
               .select("id, sector_id, status, config, pin_hash")
@@ -156,11 +173,19 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
               .select("department_id, zapp_conversation:zapp_conversations(unread_count)")
               .eq("account_id", currentUser.account_id)
               .neq("status", "closed"),
+            supabase
+              .from("zapp_conversations")
+              .select("sector_id, last_message_at")
+              .eq("account_id", currentUser.account_id)
+              .in("sector_id", WHATSAPP_SECTOR_IDS)
+              .not("last_message_at", "is", null)
+              .order("last_message_at", { ascending: false })
+              .limit(500),
           ]);
 
           if (intRes.error) throw intRes.error;
 
-          return [intRes.data, settingsRes.data, deptsRes.data, convsRes.data] as const;
+          return [intRes.data, settingsRes.data, deptsRes.data, convsRes.data, lastRes.data] as const;
         }, 3, 1500);
         
         console.log("[ZappSectorSelector] Integrations loaded:", integrations);
@@ -199,6 +224,14 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           // If instance doesn't have its own PIN but sector does, use sector PIN
           const useSectorPin = !instanceHasPin && sectorHasPin;
           
+          const rawProvider = (config?.provider || "").toString().toLowerCase();
+          const provider: SectorInstance["provider"] =
+            rawProvider === "meta_official" || rawProvider === "meta" ? "meta_official"
+            : rawProvider === "uazapi" ? "uazapi"
+            : (config?.phone_number_id || config?.waba_id) ? "meta_official"
+            : (config?.instance_name || config?.token) ? "uazapi"
+            : "unknown";
+
           instancesBySector[sectorId].push({
             id: integration.id,
             status: integration.status,
@@ -210,7 +243,16 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
             has_pin: effectiveHasPin,
             pin_hash: integration.pin_hash || config?.pin_hash || null,
             use_sector_pin: useSectorPin,
+            provider,
           });
+        });
+
+        // Last event per sector (lastEvents already sorted desc)
+        const lastEventBySector: Record<string, string> = {};
+        (lastEvents || []).forEach((c: any) => {
+          if (c.sector_id && !lastEventBySector[c.sector_id]) {
+            lastEventBySector[c.sector_id] = c.last_message_at;
+          }
         });
 
         // Mapear para setores
@@ -221,7 +263,11 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           
           // A instância "principal" é a primeira conectada ou a primeira da lista
           const primaryInstance = instances.find(i => i.connected) || instances[0];
-          
+
+          const providers = Array.from(new Set(
+            instances.map(i => i.provider).filter(p => p !== "unknown")
+          )) as Array<"uazapi" | "meta_official">;
+
           return {
             sectorId,
             connected: instances.some(i => i.connected),
@@ -229,6 +275,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
             profileName: primaryInstance?.display_name || null,
             unreadCount,
             instances,
+            lastEventAt: lastEventBySector[sectorId] || null,
+            providers,
           };
         });
 
@@ -449,7 +497,52 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                   </div>
                 </CardHeader>
                 
-                <CardContent className="pt-2">
+                <CardContent className="pt-2 space-y-2">
+                  {/* Summary: provider + health + last event */}
+                  {status && status.instances.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                      {status.providers.map(p => (
+                        <Badge
+                          key={p}
+                          variant="outline"
+                          className={cn(
+                            "px-1.5 py-0 h-5 font-medium border",
+                            p === "meta_official"
+                              ? "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          )}
+                        >
+                          {p === "meta_official" ? "Meta API" : "UAZAPI"}
+                        </Badge>
+                      ))}
+                      {(() => {
+                        const total = status.instances.length;
+                        const online = status.instances.filter(i => i.connected).length;
+                        const allOn = online === total;
+                        const noneOn = online === 0;
+                        return (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "px-1.5 py-0 h-5 font-medium border",
+                              allOn
+                                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                : noneOn
+                                ? "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400"
+                                : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            )}
+                          >
+                            {online}/{total} online
+                          </Badge>
+                        );
+                      })()}
+                      {status.lastEventAt && (
+                        <span className="text-muted-foreground">
+                          · últ. evento {formatRelative(status.lastEventAt)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-2">
                     {/* Connection status */}
                     <div className="flex items-center gap-2">
