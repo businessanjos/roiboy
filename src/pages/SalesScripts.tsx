@@ -1343,23 +1343,105 @@ export default function SalesScripts() {
                 );
               })}
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Vincular cliente</Label>
-              <Select value={viewingAnalysis?.client_id || 'none'} onValueChange={v => {
-                if (!viewingAnalysis) return;
-                const newClientId = v === 'none' ? null : v;
-                const newClientName = newClientId ? clients.find((c: any) => c.id === newClientId)?.full_name || null : null;
-                setViewingAnalysis({ ...viewingAnalysis, client_id: newClientId, client_name: newClientName });
-                updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, call_outcome: viewingAnalysis.call_outcome || null, client_id: newClientId, outcome_notes: viewingAnalysis.outcome_notes || null });
-              }}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  {clients.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs">Vincular cliente</Label>
+                <Select value={viewingAnalysis?.client_id || 'none'} onValueChange={v => {
+                  if (!viewingAnalysis) return;
+                  const newClientId = v === 'none' ? null : v;
+                  const newClientName = newClientId ? clients.find((c: any) => c.id === newClientId)?.full_name || null : null;
+                  setViewingAnalysis({ ...viewingAnalysis, client_id: newClientId, client_name: newClientName });
+                  updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, client_id: newClientId });
+                }}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {clients.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Vendedor</Label>
+                <Select value={viewingAnalysis?.seller_user_id || 'none'} onValueChange={v => {
+                  if (!viewingAnalysis) return;
+                  const newId = v === 'none' ? null : v;
+                  const newName = newId ? teamUsers.find((u: any) => u.id === newId)?.name || null : null;
+                  setViewingAnalysis({ ...viewingAnalysis, seller_user_id: newId, seller_name: newName });
+                  updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, seller_user_id: newId });
+                }}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {teamUsers.map((u: any) => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Produto</Label>
+                <Select value={viewingAnalysis?.product_id || 'none'} onValueChange={v => {
+                  if (!viewingAnalysis) return;
+                  const newId = v === 'none' ? null : v;
+                  const newName = newId ? (products as any[]).find((p: any) => p.id === newId)?.name || null : null;
+                  setViewingAnalysis({ ...viewingAnalysis, product_id: newId, product_name: newName });
+                  updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, product_id: newId });
+                }}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {(products as any[]).map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Negociação (Deal)</Label>
+                <Popover open={editAnalysisDealOpen} onOpenChange={setEditAnalysisDealOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" className="w-full justify-between h-9 font-normal">
+                      <span className="truncate text-xs">
+                        {viewingAnalysis?.deal_id
+                          ? (deals.find((d: any) => d.id === viewingAnalysis.deal_id)?.title || viewingAnalysis.deal_name || 'Selecionado')
+                          : 'Nenhum'}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-3.5 w-3.5 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar deal..." value={editAnalysisDealSearch} onValueChange={setEditAnalysisDealSearch} />
+                      <CommandList>
+                        <CommandEmpty>Nenhum deal encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem onSelect={() => {
+                            if (!viewingAnalysis) return;
+                            setViewingAnalysis({ ...viewingAnalysis, deal_id: null, deal_name: null });
+                            updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, deal_id: null });
+                            setEditAnalysisDealOpen(false);
+                          }}>
+                            <Check className={cn("mr-2 h-4 w-4", !viewingAnalysis?.deal_id ? "opacity-100" : "opacity-0")} />Nenhum
+                          </CommandItem>
+                          {deals.filter((d: any) => { if (!editAnalysisDealSearch) return true; const s = editAnalysisDealSearch.toLowerCase(); return d.title?.toLowerCase().includes(s) || d.lead?.full_name?.toLowerCase().includes(s); }).slice(0, 100).map((d: any) => (
+                            <CommandItem key={d.id} value={`${d.title} ${d.lead?.full_name || ''}`} onSelect={() => {
+                              if (!viewingAnalysis) return;
+                              setViewingAnalysis({ ...viewingAnalysis, deal_id: d.id, deal_name: d.title });
+                              updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, deal_id: d.id });
+                              setEditAnalysisDealOpen(false);
+                            }}>
+                              <Check className={cn("mr-2 h-4 w-4", viewingAnalysis?.deal_id === d.id ? "opacity-100" : "opacity-0")} />
+                              <span className="truncate">{d.title}{d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
 
