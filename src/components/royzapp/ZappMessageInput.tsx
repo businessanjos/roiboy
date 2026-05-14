@@ -239,6 +239,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onMentionInsert,
   onToggleSignature,
   onOpenPlaybook,
+  isMetaChannel,
+  onOpenTemplates,
 }: ZappMessageInputProps) {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
