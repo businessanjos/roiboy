@@ -57,7 +57,14 @@ Deno.serve(async (req) => {
   // 1) Buscar lista de clínicas no Ryka
   let rykaList: any[] = [];
   try {
-    const r = await fetch(LIST_URL, { method: "GET", headers: { "x-api-key": API_KEY } });
+    const r = await fetch(LIST_URL, {
+      method: "GET",
+      headers: {
+        "x-api-key": API_KEY,
+        "Authorization": `Bearer ${API_KEY}`,
+        "apikey": API_KEY,
+      },
+    });
     const txt = await r.text();
     if (!r.ok) return jsonResp({ error: `Ryka ${r.status}: ${txt.slice(0, 300)}` }, 502);
     let parsed: any = null;
