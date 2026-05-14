@@ -32,6 +32,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
+import { usePendingOnboardingCount } from "@/hooks/usePendingOnboardingCount";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useTheme } from "next-themes";
@@ -106,6 +107,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const { pendingCount: pendingTasksCount, overdueCount } = usePendingTasksCount();
+  const { newCount: pendingOnboardingCount } = usePendingOnboardingCount();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { isImpersonating } = useImpersonation();
   const { setTheme, theme } = useTheme();
@@ -335,7 +337,18 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
                 )}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && <span className="flex-1">{item.label}</span>}
+                {item.to === "/operations/onboarding" && pendingOnboardingCount > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "h-5 min-w-5 px-1.5 text-[10px] font-semibold bg-amber-500 text-white hover:bg-amber-500",
+                      collapsed && "absolute top-1 right-1 h-4 min-w-4 px-1"
+                    )}
+                  >
+                    {pendingOnboardingCount > 99 ? "99+" : pendingOnboardingCount}
+                  </Badge>
+                )}
               </NavLink>
               {isHighlighted && <div className={cn("my-1.5 border-t border-border/50", collapsed && "mx-1")} />}
             </div>
