@@ -56,7 +56,7 @@ export function IntegrationsContent() {
   const [copied, setCopied] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [newIntegrationOpen, setNewIntegrationOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("whatsapp");
+  const [activeTab, setActiveTab] = useState("zoom");
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   
   // Zoom config state
