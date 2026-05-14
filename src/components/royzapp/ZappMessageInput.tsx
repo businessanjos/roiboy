@@ -559,7 +559,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 className="flex text-emerald-500 hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
                 onClick={onOpenTemplates}
               >
-                <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                <BadgeCheck className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">Template aprovado (Meta)</TooltipContent>
