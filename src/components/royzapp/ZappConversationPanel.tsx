@@ -38,6 +38,7 @@ import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
 import { ZappTeamList } from "./ZappTeamList";
 import { ZappTagsList } from "./ZappTagsList";
 import { ZappSettingsPanel } from "./ZappSettingsPanel";
+import { ZappWhatsAppAdminPanel } from "./ZappWhatsAppAdminPanel";
 import { ZappDepartmentList } from "./ZappDepartmentList";
 import { ZappSidebarNav } from "./ZappSidebarNav";
 import { ZappPlaybookList } from "./ZappPlaybookList";
@@ -51,8 +52,9 @@ import type { ConversationAssignment, Agent, ZappTag, Department } from "./types
 
 interface ZappConversationPanelProps {
   currentUser: { name: string; avatar_url: string | null; role?: string } | null;
-  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings";
-  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings") => void;
+  isAdmin?: boolean;
+  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin";
+  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin") => void;
   inboxTab: "mine" | "queue";
   setInboxTab: (tab: "mine" | "queue") => void;
   searchQuery: string;
@@ -158,6 +160,7 @@ interface ZappConversationPanelProps {
 
 export const ZappConversationPanel = memo(function ZappConversationPanel({
   currentUser,
+  isAdmin,
   activeView,
   setActiveView,
   inboxTab,
@@ -638,6 +641,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         totalQueueConversations={totalQueueConversations}
         sectorId={sectorId}
         userRole={currentUser?.role}
+        isAdmin={isAdmin}
       />
 
       {/* Conversation list */}
@@ -847,6 +851,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             onSpellingChange={onSpellingChange}
             onRequestNotificationPermission={onRequestNotificationPermission}
           />
+        )}
+        {activeView === "whatsapp-admin" && isAdmin && (
+          <ZappWhatsAppAdminPanel sectorId={sectorId} />
         )}
         {activeView === "playbook" && (
           <ZappPlaybookList sectorId={sectorId} />

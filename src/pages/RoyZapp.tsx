@@ -194,7 +194,7 @@ export default function RoyZapp() {
   }, [departments, selectedSectorId]);
 
   // UI state
-  const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings">("inbox");
+  const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin">("inbox");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUnread, setFilterUnread] = useState(false);
@@ -1058,6 +1058,7 @@ export default function RoyZapp() {
       >
         <ZappConversationPanel
           currentUser={currentUser}
+          isAdmin={isAdmin}
           activeView={activeView}
           setActiveView={setActiveView}
           inboxTab={inboxTab}

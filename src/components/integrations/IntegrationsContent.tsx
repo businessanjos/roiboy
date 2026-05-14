@@ -19,8 +19,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
-import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorManager";
 import { WebhooksTab } from "./webhooks/WebhooksTab";
 import { ThreeCPlusAgentConfig } from "./ThreeCPlusAgentConfig";
 import { OmieIntegrationTab } from "./OmieIntegrationTab";
@@ -40,7 +38,6 @@ interface UserIntegration {
 }
 
 const integrations_list = [
-  { id: "whatsapp", name: "WhatsApp", description: "Conexão WhatsApp via UAZAPI", icon: MessageSquare },
   { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video },
   { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar },
   { id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone },
@@ -57,7 +54,7 @@ export function IntegrationsContent() {
   const [copied, setCopied] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [newIntegrationOpen, setNewIntegrationOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("whatsapp");
+  const [activeTab, setActiveTab] = useState("zoom");
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   
   // Zoom config state
@@ -477,10 +474,6 @@ export function IntegrationsContent() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto">
           <TabsList className="inline-flex h-auto gap-1 p-1">
-            <TabsTrigger value="whatsapp" className="gap-2 px-3 py-2">
-              <MessageSquare className="h-4 w-4" />
-              <span>WhatsApp</span>
-            </TabsTrigger>
             <TabsTrigger value="zoom" className="gap-2 px-3 py-2">
               <Video className="h-4 w-4" />
               <span>Zoom</span>
@@ -507,16 +500,6 @@ export function IntegrationsContent() {
             </TabsTrigger>
           </TabsList>
         </div>
-
-        {/* WhatsApp Tab */}
-        <TabsContent value="whatsapp" className="space-y-4">
-          <WhatsAppSectorManager 
-            integrations={integrations} 
-            accountId={accountId} 
-            onRefresh={fetchIntegrations} 
-          />
-          <WhatsAppIntegrationCard integrations={integrations} onRefresh={fetchIntegrations} sectorId={null} />
-        </TabsContent>
 
         {/* Zoom Tab */}
         <TabsContent value="zoom" className="space-y-4">
