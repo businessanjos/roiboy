@@ -180,7 +180,10 @@ Deno.serve(async (req) => {
     }
     if (!rykaMatch) { unmatched.push({ client_id: c.id, name: c.full_name }); continue; }
 
-    matched.push({ client_id: c.id, name: c.full_name, clinic_id: rykaMatch.clinic_id, matched_by: matchedBy });
+    const rykaClinicId = rykaMatch.clinic_id ?? rykaMatch.id ?? null;
+    const rykaStatus = rykaMatch.status ?? (typeof rykaMatch.is_active === "boolean" ? (rykaMatch.is_active ? "active" : "inactive") : null);
+
+    matched.push({ client_id: c.id, name: c.full_name, clinic_id: rykaClinicId, matched_by: matchedBy });
 
     const payload = {
       account_id: c.account_id,
@@ -194,8 +197,8 @@ Deno.serve(async (req) => {
       ryka_response: {
         source: "sync-ryka-clinics",
         matched_by: matchedBy,
-        clinic_id: rykaMatch.clinic_id ?? null,
-        ryka_status: rykaMatch.status ?? null,
+        clinic_id: rykaClinicId,
+        ryka_status: rykaStatus,
         last_login_at: rykaMatch.last_login_at ?? null,
         created_at: rykaMatch.created_at ?? null,
       },
