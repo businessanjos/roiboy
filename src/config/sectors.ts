@@ -10,6 +10,7 @@ import {
   Bell,
   
   MessageSquare,
+  Tags,
   
   Package,
   CreditCard,
@@ -55,6 +56,7 @@ import {
   Handshake,
   Crown,
   Gift,
+  Plug,
   Rocket,
   
   type LucideIcon,
@@ -166,7 +168,14 @@ export const sectors: Sector[] = [
     bgColor: "bg-amber-500/10",
     defaultRoute: "/roy-zapp",
     navItems: [
-      { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP" },
+      { to: "/roy-zapp", icon: MessageSquare, label: "Conversas" },
+      { to: "/roy-zapp?view=team", icon: Users, label: "Equipe" },
+      { to: "/roy-zapp?view=departments", icon: Building2, label: "Departamentos" },
+      { to: "/roy-zapp?view=tags", icon: Tags, label: "Tags" },
+      { to: "/roy-zapp?view=settings", icon: Settings, label: "Configurações" },
+      { to: "/roy-zapp?view=whatsapp-admin", icon: Plug, label: "Conexões WhatsApp" },
+      { to: "/roy-zapp?view=playbook", icon: BookOpen, label: "Playbook" },
+      { to: "/roy-zapp?view=marketing", icon: Megaphone, label: "Eventos" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
