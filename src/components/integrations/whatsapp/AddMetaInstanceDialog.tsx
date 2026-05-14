@@ -35,6 +35,7 @@ export function AddMetaInstanceDialog({
   const [testResult, setTestResult] = useState<{ success: boolean; phone?: string; name?: string } | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
+  const [wabaId, setWabaId] = useState("");
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-webhook`;
 
