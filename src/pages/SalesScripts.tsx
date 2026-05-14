@@ -130,7 +130,9 @@ export default function SalesScripts() {
   const [sellerComboOpen, setSellerComboOpen] = useState(false);
   const [sellerSearch, setSellerSearch] = useState('');
   const [outcomeNotes, setOutcomeNotes] = useState('');
-  const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null; seller_user_id?: string | null; seller_name?: string | null } | null>(null);
+  const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null; seller_user_id?: string | null; seller_name?: string | null; product_id?: string | null; product_name?: string | null } | null>(null);
+  const [editAnalysisDealOpen, setEditAnalysisDealOpen] = useState(false);
+  const [editAnalysisDealSearch, setEditAnalysisDealSearch] = useState('');
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
   const [analysisSubTab, setAnalysisSubTab] = useState('analyze');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
