@@ -54,6 +54,38 @@ function jsonResp(body: unknown, status = 200) {
   });
 }
 
+async function sendRykaWhatsApp(admin: any, accountId: string, phone: string, message: string): Promise<{ status: string; error: string | null }> {
+  const rawUrl = Deno.env.get("UAZAPI_URL") || "";
+  const UAZAPI_URL = (rawUrl.startsWith("http://") ? rawUrl.replace("http://", "https://") : rawUrl).replace(/\/$/, "");
+  if (!UAZAPI_URL) return { status: "failed", error: "UAZAPI_URL não configurado" };
+
+  const { data: integrations } = await admin
+    .from("integrations")
+    .select("sector_id, config")
+    .eq("account_id", accountId)
+    .eq("type", "whatsapp")
+    .eq("status", "connected");
+
+  const integration =
+    integrations?.find((i: any) => (i.sector_id || "").toLowerCase().includes("opera")) ||
+    integrations?.[0];
+  if (!integration) return { status: "failed", error: "Nenhuma instância WhatsApp conectada" };
+
+  const cfg = (integration.config || {}) as Record<string, any>;
+  const token = cfg.instance_token;
+  if (!token) return { status: "failed", error: "Instância sem instance_token" };
+
+  const cleanPhone = phone.replace(/\D/g, "");
+  const resp = await fetch(`${UAZAPI_URL}/send/text`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", token },
+    body: JSON.stringify({ number: cleanPhone, text: message }),
+  });
+  if (resp.ok) return { status: "sent", error: null };
+  const t = await resp.text();
+  return { status: "failed", error: `WA ${resp.status}: ${t.slice(0, 200)}` };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return jsonResp({ error: "Method not allowed" }, 405);
