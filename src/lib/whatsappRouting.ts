@@ -7,10 +7,11 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 min
 export type WhatsAppProvider = "uazapi" | "meta_official";
 
 type WhatsAppManagerPayload = Record<string, unknown> & {
-  data?: Record<string, unknown>;
+  data?: Record<string, unknown> & { id?: string; messageid?: string; message?: string; error?: string };
   error?: string;
   id?: string;
   messageid?: string;
+  message?: string;
 };
 
 /**
