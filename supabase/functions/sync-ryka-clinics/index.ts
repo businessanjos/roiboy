@@ -22,12 +22,13 @@ function jsonResp(body: unknown, status = 200) {
   });
 }
 
-function rykaHeaders(apiKey: string, authorization: string) {
+function rykaHeaders(apiKey: string) {
+  // Ryka aceita apenas x-api-key. Enviar Authorization: Bearer faz o middleware
+  // tentar decodificar como JWT e retornar UNAUTHORIZED_INVALID_JWT_FORMAT.
+  const clean = apiKey.replace(/^Bearer\s+/i, "").trim();
   return {
     Accept: "application/json",
-    Authorization: authorization,
-    "x-api-key": apiKey,
-    apikey: apiKey,
+    "x-api-key": clean,
   };
 }
 
