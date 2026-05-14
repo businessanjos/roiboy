@@ -66,6 +66,7 @@ export default function ClinicaRyka() {
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [provisioningId, setProvisioningId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const clientsQuery = useQuery({
     queryKey: ["ryka-eligible-clients", accountId],
@@ -183,6 +184,27 @@ export default function ClinicaRyka() {
     queryClient.invalidateQueries({ queryKey: ["ryka-provisions", accountId] });
   };
 
+  const handleSyncFromRyka = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-ryka-clinics", { body: {} });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || "Falha na sincronização");
+      const matched = data.matched_count ?? 0;
+      const inserted = data.inserted ?? 0;
+      const updated = data.updated ?? 0;
+      const unmatched = data.unmatched_count ?? 0;
+      toast.success(
+        `Sync Ryka: ${matched} clientes com acesso (novos: ${inserted}, atualizados: ${updated}). ${unmatched} elegíveis sem conta no Ryka.`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["ryka-provisions", accountId] });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao sincronizar com Ryka");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const loading = clientsQuery.isLoading || provisionsQuery.isLoading;
 
   return (
@@ -197,10 +219,20 @@ export default function ClinicaRyka() {
             Clientes com produto Rykas Mentoring ou Eternum Club e o status do acesso ao sistema Ryka.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleSyncFromRyka} disabled={syncing || loading}>
+            {syncing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-2" />
+            )}
+            Sincronizar com Ryka
+          </Button>
+          <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
