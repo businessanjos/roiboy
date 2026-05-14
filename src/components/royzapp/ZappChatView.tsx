@@ -92,6 +92,9 @@ interface ZappChatViewProps {
   onToggleSignature?: () => void;
   // Playbook
   onOpenPlaybook?: () => void;
+  // Meta templates
+  isMetaChannel?: boolean;
+  onOpenTemplates?: () => void;
 }
 
 export function ZappChatView({
@@ -161,6 +164,8 @@ export function ZappChatView({
   hasSignature,
   onToggleSignature,
   onOpenPlaybook,
+  isMetaChannel,
+  onOpenTemplates,
 }: ZappChatViewProps) {
   // Search state
   const [showSearch, setShowSearch] = useState(false);
@@ -384,6 +389,8 @@ export function ZappChatView({
         hasSignature={hasSignature}
         onToggleSignature={onToggleSignature}
         onOpenPlaybook={onOpenPlaybook}
+        isMetaChannel={isMetaChannel}
+        onOpenTemplates={onOpenTemplates}
       />
 
       {/* Media Gallery */}

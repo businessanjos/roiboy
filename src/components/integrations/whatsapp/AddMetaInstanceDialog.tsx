@@ -35,6 +35,7 @@ export function AddMetaInstanceDialog({
   const [testResult, setTestResult] = useState<{ success: boolean; phone?: string; name?: string } | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
+  const [wabaId, setWabaId] = useState("");
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-webhook`;
 
@@ -109,6 +110,7 @@ export function AddMetaInstanceDialog({
         config: {
           provider: "meta_official",
           phone_number_id: phoneNumberId.trim(),
+          ...(wabaId.trim() ? { waba_id: wabaId.trim() } : {}),
         },
       });
 
@@ -135,6 +137,7 @@ export function AddMetaInstanceDialog({
 
   const handleClose = () => {
     setPhoneNumberId("");
+    setWabaId("");
     setDisplayName("");
     setTestResult(null);
     onOpenChange(false);
@@ -175,6 +178,21 @@ export function AddMetaInstanceDialog({
                 developers.facebook.com <ExternalLink className="h-3 w-3" />
               </a>
               {" "}→ Seu App → WhatsApp → API Setup
+            </p>
+          </div>
+
+          {/* WABA ID */}
+          <div className="space-y-2">
+            <Label htmlFor="wabaId">WhatsApp Business Account ID (opcional, para templates)</Label>
+            <Input
+              id="wabaId"
+              value={wabaId}
+              onChange={(e) => setWabaId(e.target.value)}
+              placeholder="Ex: 987654321098765"
+              className="font-mono"
+            />
+            <p className="text-xs text-muted-foreground">
+              Necessário para listar e enviar templates aprovados. Encontre em Meta Business Settings → Contas do WhatsApp.
             </p>
           </div>
 

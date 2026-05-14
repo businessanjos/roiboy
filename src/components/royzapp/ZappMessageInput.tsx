@@ -23,6 +23,7 @@ import {
   Reply,
   Contrast,
   Check,
+  BadgeCheck,
 } from "lucide-react";
 import { SECURITY_LIMITS } from "@/lib/security-validators";
 import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
@@ -191,6 +192,8 @@ interface ZappMessageInputProps {
   onMentionInsert?: (mention: MentionData) => void;
   onToggleSignature?: () => void;
   onOpenPlaybook?: () => void;
+  isMetaChannel?: boolean;
+  onOpenTemplates?: () => void;
 }
 
 const formatRecordingDuration = (seconds: number): string => {
@@ -237,6 +240,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onMentionInsert,
   onToggleSignature,
   onOpenPlaybook,
+  isMetaChannel,
+  onOpenTemplates,
 }: ZappMessageInputProps) {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -541,6 +546,23 @@ export const ZappMessageInput = memo(function ZappMessageInput({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">Playbook</TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Meta templates button - only on Meta Cloud API channel */}
+        {isMetaChannel && onOpenTemplates && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="flex text-emerald-500 hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
+                onClick={onOpenTemplates}
+              >
+                <BadgeCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Template aprovado (Meta)</TooltipContent>
           </Tooltip>
         )}
         
