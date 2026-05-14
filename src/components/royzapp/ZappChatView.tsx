@@ -92,6 +92,9 @@ interface ZappChatViewProps {
   onToggleSignature?: () => void;
   // Playbook
   onOpenPlaybook?: () => void;
+  // Meta templates
+  isMetaChannel?: boolean;
+  onOpenTemplates?: () => void;
 }
 
 export function ZappChatView({
