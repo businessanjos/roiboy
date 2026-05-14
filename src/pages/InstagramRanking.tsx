@@ -104,15 +104,20 @@ function InstagramAvatar({
 function RankRow({ rank, row, metric, value, sublabel }: {
   rank: number;
   row: Row;
-  metric: "followers" | "likes" | "comments";
+  metric: "followers" | "likes" | "comments" | "posts";
   value: number;
   sublabel?: string;
 }) {
-  const Icon = metric === "followers" ? Users2 : metric === "likes" ? Heart : MessageCircle;
+  const Icon =
+    metric === "followers" ? Users2 :
+    metric === "likes" ? Heart :
+    metric === "comments" ? MessageCircle :
+    Images;
   const accent =
     metric === "followers" ? "text-fuchsia-500" :
     metric === "likes" ? "text-rose-500" :
-    "text-sky-500";
+    metric === "comments" ? "text-sky-500" :
+    "text-emerald-500";
 
   return (
     <Link
