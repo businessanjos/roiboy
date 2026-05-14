@@ -88,9 +88,12 @@ Deno.serve(async (req) => {
 
     console.log(`[meta-manager] Action: ${action}, integration_id: ${integration_id}, sector_id: ${sector_id}`);
 
-    // Find integration
+    // Test mode: bypass integration lookup, use provided phone_number_id + env token
+    const testPhoneNumberId = payload.test_phone_number_id;
     let intData: any = null;
-    if (integration_id) {
+    if (testPhoneNumberId) {
+      intData = { id: null, config: { provider: "meta_official", phone_number_id: testPhoneNumberId }, status: "disconnected" };
+    } else if (integration_id) {
       const { data } = await supabase.from("integrations").select("id, config, status")
         .eq("id", integration_id).eq("account_id", accountId)
         .single();
