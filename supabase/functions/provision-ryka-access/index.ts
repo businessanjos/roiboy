@@ -54,10 +54,22 @@ function jsonResp(body: unknown, status = 200) {
   });
 }
 
+async function resolveSectorHost(admin: any, accountId: string, sectorId: string | null): Promise<string | null> {
+  if (!sectorId) return null;
+  try {
+    const { data } = await admin
+      .from("sector_settings")
+      .select("royzapp_host")
+      .eq("account_id", accountId)
+      .eq("sector_id", sectorId)
+      .maybeSingle();
+    const host = (data?.royzapp_host || "").trim().replace(/\/$/, "");
+    return host || null;
+  } catch { return null; }
+}
+
 async function sendRykaWhatsApp(admin: any, accountId: string, phone: string, message: string): Promise<{ status: string; error: string | null }> {
-  const rawUrl = Deno.env.get("UAZAPI_URL") || "";
-  const UAZAPI_URL = (rawUrl.startsWith("http://") ? rawUrl.replace("http://", "https://") : rawUrl).replace(/\/$/, "");
-  if (!UAZAPI_URL) return { status: "failed", error: "UAZAPI_URL não configurado" };
+  const globalUrl = (Deno.env.get("UAZAPI_URL") || "").replace(/^http:\/\//, "https://").replace(/\/$/, "");
 
   const { data: integrations } = await admin
     .from("integrations")
@@ -75,15 +87,19 @@ async function sendRykaWhatsApp(admin: any, accountId: string, phone: string, me
   const token = cfg.instance_token;
   if (!token) return { status: "failed", error: "Instância sem instance_token" };
 
+  const sectorHost = await resolveSectorHost(admin, accountId, integration.sector_id);
+  const baseUrl = (sectorHost ? sectorHost : globalUrl).replace(/^http:\/\//, "https://").replace(/\/$/, "");
+  if (!baseUrl) return { status: "failed", error: "UAZAPI host não resolvido" };
+
   const cleanPhone = phone.replace(/\D/g, "");
-  const resp = await fetch(`${UAZAPI_URL}/send/text`, {
+  const resp = await fetch(`${baseUrl}/send/text`, {
     method: "POST",
     headers: { "Content-Type": "application/json", token },
     body: JSON.stringify({ number: cleanPhone, text: message }),
   });
   if (resp.ok) return { status: "sent", error: null };
   const t = await resp.text();
-  return { status: "failed", error: `WA ${resp.status}: ${t.slice(0, 200)}` };
+  return { status: "failed", error: `WA ${resp.status} via ${baseUrl}: ${t.slice(0, 200)}` };
 }
 
 Deno.serve(async (req) => {
