@@ -62,6 +62,8 @@ interface ZappSettingsPanelProps {
 }
 
 export const ZappSettingsPanel = memo(function ZappSettingsPanel({
+  sectorId = null,
+  sectorName = "",
   whatsappConnected,
   whatsappConnecting,
   whatsappInstanceName,
