@@ -17,11 +17,17 @@ import {
   ArrowRight,
   Clock,
   CheckCircle2,
+  KeyRound,
+  Loader2,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { OnboardingClient, OnboardingStage, computeHealth, daysInStage } from "@/hooks/useOnboardingHub";
 import { useOnboardingCoach, CoachInsight } from "@/hooks/useOnboardingCoach";
+import { supabase } from "@/integrations/supabase/client";
+
+const RYKA_ELIGIBLE = ["rykas mentoring", "eternum club"];
 
 interface Props {
   client: OnboardingClient | null;
@@ -63,6 +69,15 @@ function HealthBadge({ client, stage }: { client: OnboardingClient; stage: Onboa
 export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Props) {
   const { insight, loading, ask, setInsight } = useOnboardingCoach();
   const [tab, setTab] = useState("coach");
+  const [rykaLoading, setRykaLoading] = useState(false);
+  const [rykaResult, setRykaResult] = useState<{
+    email: string;
+    temp_password: string;
+    login_url: string;
+    whatsapp_status: string;
+    whatsapp_error?: string | null;
+  } | null>(null);
+  const [lastProvisionAt, setLastProvisionAt] = useState<string | null>(null);
 
   // Carrega insight ao abrir (usa cache da edge function)
   useEffect(() => {
@@ -77,6 +92,18 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Pr
       } else {
         ask(client.id, "next_step");
       }
+      // Reset estado da liberação Ryka entre clientes
+      setRykaResult(null);
+      // Buscar última liberação para esse cliente
+      supabase
+        .from("client_ryka_provisions")
+        .select("created_at, status")
+        .eq("client_id", client.id)
+        .eq("status", "success")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => setLastProvisionAt(data?.created_at ?? null));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, client?.id]);
@@ -88,9 +115,43 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Pr
   const initials = client.full_name?.split(" ").slice(0, 2).map(n => n[0]).join("").toUpperCase();
   const photoUrl = client.logo_url || client.avatar_url || undefined;
 
+  const isRykaEligible = (client.client_products || []).some(
+    (cp) => RYKA_ELIGIBLE.includes((cp.products?.name || "").toLowerCase()),
+  );
+
   const copyMessage = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Mensagem copiada!");
+  };
+
+  const handleProvisionRyka = async () => {
+    if (!client) return;
+    setRykaLoading(true);
+    setRykaResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("provision-ryka-access", {
+        body: { client_id: client.id },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || "Falha desconhecida");
+      setRykaResult({
+        email: data.email,
+        temp_password: data.temp_password,
+        login_url: data.login_url,
+        whatsapp_status: data.whatsapp_status,
+        whatsapp_error: data.whatsapp_error,
+      });
+      setLastProvisionAt(new Date().toISOString());
+      if (data.whatsapp_status === "sent") {
+        toast.success("Acesso Ryka criado e WhatsApp enviado!");
+      } else {
+        toast.warning("Acesso Ryka criado, mas WhatsApp falhou. Use 'copiar' abaixo.");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao liberar acesso Ryka");
+    } finally {
+      setRykaLoading(false);
+    }
   };
 
   return (
@@ -270,6 +331,103 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Pr
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Liberar acesso Clínica Ryka */}
+        {isRykaEligible && (
+          <div className="px-6 mt-6">
+            <div className="rounded-xl border bg-gradient-to-br from-violet-500/5 to-transparent p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2 min-w-0">
+                  <div className="rounded-lg bg-violet-500/15 p-1.5 mt-0.5">
+                    <ShieldCheck className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">Acesso Clínica Ryka</div>
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+                      Cria conta no rykasystem.com com senha aleatória e envia ao cliente via WhatsApp.
+                    </p>
+                    {lastProvisionAt && !rykaResult && (
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Último envio: {new Date(lastProvisionAt).toLocaleString("pt-BR")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {!rykaResult ? (
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={handleProvisionRyka}
+                  disabled={rykaLoading}
+                >
+                  {rykaLoading ? (
+                    <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Liberando…</>
+                  ) : (
+                    <><KeyRound className="h-3.5 w-3.5 mr-1.5" />
+                      {lastProvisionAt ? "Reenviar acesso Ryka" : "Liberar acesso Ryka"}
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="rounded-lg bg-background border p-3 text-xs space-y-1.5">
+                    <div><span className="text-muted-foreground">Link:</span>{" "}
+                      <a className="text-primary underline" href={rykaResult.login_url} target="_blank" rel="noreferrer">
+                        {rykaResult.login_url}
+                      </a>
+                    </div>
+                    <div><span className="text-muted-foreground">E-mail:</span> {rykaResult.email}</div>
+                    <div className="font-mono">
+                      <span className="text-muted-foreground font-sans">Senha:</span> {rykaResult.temp_password}
+                    </div>
+                    <div className="pt-1">
+                      <Badge
+                        variant="outline"
+                        className={
+                          rykaResult.whatsapp_status === "sent"
+                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-0"
+                            : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-0"
+                        }
+                      >
+                        WhatsApp: {rykaResult.whatsapp_status}
+                      </Badge>
+                      {rykaResult.whatsapp_error && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                          {rykaResult.whatsapp_error}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline" size="sm" className="flex-1"
+                      onClick={() => copyMessage(
+                        `Link: ${rykaResult.login_url}\nE-mail: ${rykaResult.email}\nSenha: ${rykaResult.temp_password}`
+                      )}
+                    >
+                      <Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar credenciais
+                    </Button>
+                    {client.phone_e164 && rykaResult.whatsapp_status !== "sent" && (
+                      <Button size="sm" asChild className="flex-1">
+                        <a
+                          href={`https://wa.me/${client.phone_e164.replace(/\D/g, "")}?text=${encodeURIComponent(
+                            `Olá! Seu acesso ao sistema Clínica Ryka:\n\nLink: ${rykaResult.login_url}\nE-mail: ${rykaResult.email}\nSenha temporária: ${rykaResult.temp_password}\n\nRecomendamos alterar a senha no primeiro acesso.`
+                          )}`}
+                          target="_blank" rel="noreferrer"
+                        >
+                          <ArrowRight className="h-3.5 w-3.5 mr-1.5" /> WhatsApp manual
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
 
         {/* Etapa atual info */}
         {stage && (
