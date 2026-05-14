@@ -28,10 +28,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { ZappConnectionsSection } from "./settings/ZappConnectionsSection";
 
 import type { NotificationPermissionStatus } from "@/hooks/useZappNotifications";
 
 interface ZappSettingsPanelProps {
+  sectorId?: string | null;
+  sectorName?: string;
   whatsappConnected: boolean;
   whatsappConnecting: boolean;
   whatsappInstanceName: string | null;
