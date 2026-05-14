@@ -346,6 +346,9 @@ export function useZappMessaging({
             if (errorBody.error) errorMsg = errorBody.error;
           } catch { /* ignore */ }
         }
+        if (error.status === 429 && errorMsg.includes("non-2xx")) {
+          errorMsg = "Envio bloqueado temporariamente para proteger o número. Aguarde alguns minutos e personalize a mensagem.";
+        }
         
         const isWhatsAppDisconnected = errorMsg.includes("WHATSAPP_DISCONNECTED") || 
                                         errorMsg.includes("desconectado") ||
@@ -463,6 +466,7 @@ export function useZappMessaging({
         if (isWhatsAppDisconnected) userErrorMessage = "WhatsApp desconectado";
         else if (isLidNotFound) userErrorMessage = "Número não encontrado no WhatsApp";
         else if (isInvalidNumber) userErrorMessage = "Número de telefone inválido ou não registrado no WhatsApp";
+        else if (error.status === 429) userErrorMessage = errorMsg;
         
         setMessages(prev => prev.map(m => 
           m.id === tempMessageId 

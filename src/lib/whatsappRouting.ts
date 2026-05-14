@@ -6,6 +6,14 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 min
 
 export type WhatsAppProvider = "uazapi" | "meta_official";
 
+type WhatsAppManagerPayload = Record<string, unknown> & {
+  data?: Record<string, unknown> & { id?: string; messageid?: string; message?: string; error?: string };
+  error?: string;
+  id?: string;
+  messageid?: string;
+  message?: string;
+};
+
 /**
  * Determine which provider an integration uses.
  * Returns "meta_official" for Meta Cloud API, "uazapi" for legacy.
@@ -36,7 +44,7 @@ export async function getIntegrationProvider(integrationId: string): Promise<Wha
 export async function invokeWhatsAppManager(
   integrationId: string | undefined,
   body: Record<string, unknown>
-): Promise<{ data: any; error: any }> {
+): Promise<{ data: WhatsAppManagerPayload | null; error: FunctionInvokeError | null }> {
   let functionName = "uazapi-manager";
 
   if (integrationId) {
@@ -54,6 +62,50 @@ export async function invokeWhatsAppManager(
   return invokeWithRetry(functionName, body);
 }
 
+type FunctionInvokeError = Error & {
+  status?: number;
+  context?: unknown;
+};
+
+function hasStatusContext(context: unknown): context is { status?: number; response?: Response; body?: string } {
+  return typeof context === "object" && context !== null;
+}
+
+async function normalizeFunctionError(err: FunctionInvokeError): Promise<FunctionInvokeError> {
+  const response = err?.context instanceof Response
+    ? err.context
+    : hasStatusContext(err?.context) && err.context.response instanceof Response
+      ? err.context.response
+      : null;
+  const status = response?.status ?? (hasStatusContext(err?.context) ? err.context.status : undefined) ?? err?.status;
+  let bodyText = hasStatusContext(err?.context) && typeof err.context.body === "string" ? err.context.body : "";
+
+  if (response && !bodyText) {
+    try {
+      bodyText = await response.clone().text();
+    } catch {
+      bodyText = "";
+    }
+  }
+
+  let parsedMessage = "";
+  if (bodyText) {
+    try {
+      const parsed = JSON.parse(bodyText);
+      parsedMessage = parsed?.error || parsed?.message || parsed?.data?.error || "";
+    } catch {
+      parsedMessage = bodyText;
+    }
+  }
+
+  const message = parsedMessage || err?.message || "Erro ao chamar o WhatsApp";
+  const enriched = new Error(message) as FunctionInvokeError;
+  enriched.name = err?.name || "FunctionsHttpError";
+  enriched.status = status;
+  enriched.context = { original: err?.context, status, body: bodyText };
+  return enriched;
+}
+
 /**
  * Invoke a Supabase edge function with automatic retry on transient 503 errors
  * (SUPABASE_EDGE_RUNTIME_ERROR / boot failures). Uses exponential backoff.
@@ -62,17 +114,17 @@ async function invokeWithRetry(
   functionName: string,
   body: Record<string, unknown>,
   maxAttempts = 3,
-): Promise<{ data: any; error: any }> {
-  let lastError: any = null;
+): Promise<{ data: WhatsAppManagerPayload | null; error: FunctionInvokeError | null }> {
+  let lastError: FunctionInvokeError | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const result = await supabase.functions.invoke(functionName, { body });
-    const err = result.error;
+    const err = result.error ? await normalizeFunctionError(result.error) : null;
     if (!err) return result;
 
     // Detect transient edge-runtime errors (503 cold-start / boot failure)
     const msg = String(err?.message || "");
-    const ctx: any = (err as any)?.context;
-    const status = ctx?.status ?? ctx?.response?.status;
+    const ctx = err.context;
+    const status = hasStatusContext(ctx) ? ctx.status ?? ctx.response?.status : undefined;
     const isTransient =
       status === 503 ||
       msg.includes("503") ||
@@ -81,7 +133,7 @@ async function invokeWithRetry(
       msg.includes("Failed to fetch");
 
     if (!isTransient || attempt === maxAttempts) {
-      return result;
+      return { data: (result.data as WhatsAppManagerPayload | null) ?? null, error: err };
     }
 
     lastError = err;
