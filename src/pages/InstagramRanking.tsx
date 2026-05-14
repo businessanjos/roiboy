@@ -475,8 +475,9 @@ export default function InstagramRanking() {
         </CardContent></Card>
       ) : (
         <Tabs defaultValue="followers" className="w-full">
-          <TabsList className="grid grid-cols-3 w-full md:w-auto md:inline-flex">
+          <TabsList className="grid grid-cols-4 w-full md:w-auto md:inline-flex">
             <TabsTrigger value="followers" className="gap-2"><Users2 className="h-4 w-4" /> Seguidores</TabsTrigger>
+            <TabsTrigger value="posts" className="gap-2"><Images className="h-4 w-4" /> Posts</TabsTrigger>
             <TabsTrigger value="likes" className="gap-2"><Heart className="h-4 w-4" /> Curtidas</TabsTrigger>
             <TabsTrigger value="comments" className="gap-2"><MessageCircle className="h-4 w-4" /> Comentários</TabsTrigger>
           </TabsList>
