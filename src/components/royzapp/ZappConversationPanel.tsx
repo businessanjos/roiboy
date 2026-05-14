@@ -640,6 +640,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         totalQueueConversations={totalQueueConversations}
         sectorId={sectorId}
         userRole={currentUser?.role}
+        isAdmin={isAdmin}
       />
 
       {/* Conversation list */}
