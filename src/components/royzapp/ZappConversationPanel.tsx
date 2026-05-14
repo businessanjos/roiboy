@@ -852,7 +852,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             onRequestNotificationPermission={onRequestNotificationPermission}
           />
         )}
-        {activeView === "playbook" && (
+        {activeView === "whatsapp-admin" && isAdmin && (
+          <ZappWhatsAppAdminPanel sectorId={sectorId} />
+        )}
           <ZappPlaybookList sectorId={sectorId} />
         )}
         {activeView === "marketing" && (
