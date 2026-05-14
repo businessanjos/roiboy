@@ -6,6 +6,13 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 min
 
 export type WhatsAppProvider = "uazapi" | "meta_official";
 
+type WhatsAppManagerPayload = Record<string, unknown> & {
+  data?: Record<string, unknown>;
+  error?: string;
+  id?: string;
+  messageid?: string;
+};
+
 /**
  * Determine which provider an integration uses.
  * Returns "meta_official" for Meta Cloud API, "uazapi" for legacy.
@@ -36,7 +43,7 @@ export async function getIntegrationProvider(integrationId: string): Promise<Wha
 export async function invokeWhatsAppManager(
   integrationId: string | undefined,
   body: Record<string, unknown>
-): Promise<{ data: any; error: any }> {
+): Promise<{ data: WhatsAppManagerPayload | null; error: FunctionInvokeError | null }> {
   let functionName = "uazapi-manager";
 
   if (integrationId) {
@@ -106,8 +113,8 @@ async function invokeWithRetry(
   functionName: string,
   body: Record<string, unknown>,
   maxAttempts = 3,
-): Promise<{ data: any; error: any }> {
-  let lastError: any = null;
+): Promise<{ data: WhatsAppManagerPayload | null; error: FunctionInvokeError | null }> {
+  let lastError: FunctionInvokeError | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const result = await supabase.functions.invoke(functionName, { body });
     const err = result.error ? await normalizeFunctionError(result.error) : null;
@@ -115,8 +122,8 @@ async function invokeWithRetry(
 
     // Detect transient edge-runtime errors (503 cold-start / boot failure)
     const msg = String(err?.message || "");
-    const ctx: any = (err as any)?.context;
-    const status = ctx?.status ?? ctx?.response?.status;
+    const ctx = err.context;
+    const status = hasStatusContext(ctx) ? ctx.status ?? ctx.response?.status : undefined;
     const isTransient =
       status === 503 ||
       msg.includes("503") ||
@@ -125,7 +132,7 @@ async function invokeWithRetry(
       msg.includes("Failed to fetch");
 
     if (!isTransient || attempt === maxAttempts) {
-      return { ...result, error: err };
+      return { data: (result.data as WhatsAppManagerPayload | null) ?? null, error: err };
     }
 
     lastError = err;
