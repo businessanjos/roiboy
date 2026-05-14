@@ -477,10 +477,6 @@ export function IntegrationsContent() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto">
           <TabsList className="inline-flex h-auto gap-1 p-1">
-            <TabsTrigger value="whatsapp" className="gap-2 px-3 py-2">
-              <MessageSquare className="h-4 w-4" />
-              <span>WhatsApp</span>
-            </TabsTrigger>
             <TabsTrigger value="zoom" className="gap-2 px-3 py-2">
               <Video className="h-4 w-4" />
               <span>Zoom</span>
@@ -507,16 +503,6 @@ export function IntegrationsContent() {
             </TabsTrigger>
           </TabsList>
         </div>
-
-        {/* WhatsApp Tab */}
-        <TabsContent value="whatsapp" className="space-y-4">
-          <WhatsAppSectorManager 
-            integrations={integrations} 
-            accountId={accountId} 
-            onRefresh={fetchIntegrations} 
-          />
-          <WhatsAppIntegrationCard integrations={integrations} onRefresh={fetchIntegrations} sectorId={null} />
-        </TabsContent>
 
         {/* Zoom Tab */}
         <TabsContent value="zoom" className="space-y-4">
