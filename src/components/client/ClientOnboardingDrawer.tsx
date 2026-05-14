@@ -17,11 +17,17 @@ import {
   ArrowRight,
   Clock,
   CheckCircle2,
+  KeyRound,
+  Loader2,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { OnboardingClient, OnboardingStage, computeHealth, daysInStage } from "@/hooks/useOnboardingHub";
 import { useOnboardingCoach, CoachInsight } from "@/hooks/useOnboardingCoach";
+import { supabase } from "@/integrations/supabase/client";
+
+const RYKA_ELIGIBLE = ["rykas mentoring", "eternum club"];
 
 interface Props {
   client: OnboardingClient | null;
