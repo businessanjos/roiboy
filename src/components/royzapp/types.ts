@@ -147,6 +147,8 @@ export interface ConversationAssignment {
     is_favorite?: boolean;
     is_blocked?: boolean;
     avatar_url?: string | null;
+    integration_id?: string | null;
+    sector_id?: string | null;
     client?: {
       id: string;
       full_name: string;
