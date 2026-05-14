@@ -191,6 +191,8 @@ interface ZappMessageInputProps {
   onMentionInsert?: (mention: MentionData) => void;
   onToggleSignature?: () => void;
   onOpenPlaybook?: () => void;
+  isMetaChannel?: boolean;
+  onOpenTemplates?: () => void;
 }
 
 const formatRecordingDuration = (seconds: number): string => {
