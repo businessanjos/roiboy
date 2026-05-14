@@ -203,6 +203,12 @@ export default function RoyZapp() {
   const [activeView, setActiveView] = useState<ZappView>(
     viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView) ? (viewFromUrl as ZappView) : "inbox"
   );
+
+  useEffect(() => {
+    if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
+      setActiveView(viewFromUrl as ZappView);
+    }
+  }, [viewFromUrl]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUnread, setFilterUnread] = useState(false);
