@@ -113,12 +113,70 @@ Deno.serve(async (req) => {
 
     const metaToken = intData.config?.meta_token || Deno.env.get("META_WHATSAPP_TOKEN");
     const phoneNumberId = intData.config?.phone_number_id || Deno.env.get("META_WHATSAPP_PHONE_NUMBER_ID");
+    const wabaId = intData.config?.waba_id || Deno.env.get("META_WHATSAPP_WABA_ID");
 
     if (!metaToken || !phoneNumberId) {
       return new Response(JSON.stringify({ error: "Meta API credentials not configured" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     let result: any = { success: true };
+
+    // ============================================
+    // UPDATE CONFIG (e.g. set waba_id)
+    // ============================================
+    if (action === "update_config") {
+      if (!intData.id) {
+        return new Response(JSON.stringify({ error: "Cannot update test integration" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const patch = payload.config_patch || {};
+      const newConfig = { ...(intData.config || {}), ...patch };
+      const { error: upErr } = await supabase.from("integrations").update({ config: newConfig }).eq("id", intData.id);
+      if (upErr) throw new Error(`Failed to update config: ${upErr.message}`);
+      result = { success: true, config: newConfig };
+
+    // ============================================
+    // LIST TEMPLATES
+    // ============================================
+    } else if (action === "list_templates") {
+      if (!wabaId) {
+        return new Response(JSON.stringify({ error: "WABA ID não configurado. Informe o WhatsApp Business Account ID na integração." , code: "missing_waba_id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const tplResp = await metaApi(`/${wabaId}/message_templates?limit=100&fields=name,language,status,category,components`, "GET", metaToken);
+      const approved = (tplResp.data || []).filter((t: any) => t.status === "APPROVED");
+      result = { templates: approved };
+
+    // ============================================
+    // SEND TEMPLATE
+    // ============================================
+    } else if (action === "send_template") {
+      const cleanPhone = phone?.replace(/\D/g, "");
+      if (!cleanPhone || cleanPhone.length < 10) {
+        return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { template_name, template_language, body_params } = payload;
+      if (!template_name || !template_language) {
+        return new Response(JSON.stringify({ error: "template_name e template_language são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const components: any[] = [];
+      if (Array.isArray(body_params) && body_params.length > 0) {
+        components.push({
+          type: "body",
+          parameters: body_params.map((v: string) => ({ type: "text", text: String(v) })),
+        });
+      }
+      const messageBody: any = {
+        messaging_product: "whatsapp",
+        to: cleanPhone,
+        type: "template",
+        template: {
+          name: template_name,
+          language: { code: template_language },
+          ...(components.length > 0 ? { components } : {}),
+        },
+      };
+      result = await metaApi(`/${phoneNumberId}/messages`, "POST", metaToken, messageBody);
+
+    } else { const _placeholder = true;
 
     // ============================================
     // STATUS CHECK
