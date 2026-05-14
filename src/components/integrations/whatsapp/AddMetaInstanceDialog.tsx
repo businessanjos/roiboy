@@ -137,6 +137,7 @@ export function AddMetaInstanceDialog({
 
   const handleClose = () => {
     setPhoneNumberId("");
+    setWabaId("");
     setDisplayName("");
     setTestResult(null);
     onOpenChange(false);
