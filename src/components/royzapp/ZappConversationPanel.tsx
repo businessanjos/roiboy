@@ -156,6 +156,7 @@ interface ZappConversationPanelProps {
   accountId?: string | null;
   selectedIntegrationId?: string;
   onSelectIntegration?: (integrationId: string) => void;
+  onClearIntegration?: () => void;
 }
 
 export const ZappConversationPanel = memo(function ZappConversationPanel({
