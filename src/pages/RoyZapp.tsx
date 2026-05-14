@@ -1345,6 +1345,11 @@ export default function RoyZapp() {
              }
              messaging.setFilePreview(preview);
            }}
+           isMetaChannel={(() => {
+             const intId = selectedConversation?.zapp_conversation?.integration_id || selectedIntegrationId;
+             return intId ? integrationProviders[intId] === "meta_official" : false;
+           })()}
+           onOpenTemplates={() => setTemplatesDialogOpen(true)}
         />
         )}
       </div>
