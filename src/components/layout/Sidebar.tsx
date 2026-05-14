@@ -309,13 +309,17 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
         {filteredNavItems.map((item, idx) => {
           const [itemPath, itemSearch = ""] = item.to.split("?");
           const itemSearchValue = itemSearch ? `?${itemSearch}` : "";
+          const hasSearchSibling = filteredNavItems.some(other => {
+            const [otherPath, otherSearch = ""] = other.to.split("?");
+            return otherPath === itemPath && !!otherSearch;
+          });
           const hasMoreSpecificMatch = filteredNavItems.some(other => {
             const [otherPath] = other.to.split("?");
             return other.to !== item.to && otherPath.startsWith(itemPath + "/") && (location.pathname === otherPath || location.pathname.startsWith(otherPath + "/"));
           });
           const isActive = itemSearchValue
             ? location.pathname === itemPath && location.search === itemSearchValue
-            : location.pathname === itemPath || (itemPath !== "/" && location.pathname.startsWith(itemPath + "/") && !hasMoreSpecificMatch);
+            : (location.pathname === itemPath && (!hasSearchSibling || !location.search)) || (itemPath !== "/" && location.pathname.startsWith(itemPath + "/") && !hasMoreSpecificMatch);
           const isHighlighted = item.to === "/sales-team";
           const showGroupHeader = item.group && !collapsed;
           return (
