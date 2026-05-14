@@ -38,6 +38,7 @@ import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
 import { ZappTeamList } from "./ZappTeamList";
 import { ZappTagsList } from "./ZappTagsList";
 import { ZappSettingsPanel } from "./ZappSettingsPanel";
+import { ZappWhatsAppAdminPanel } from "./ZappWhatsAppAdminPanel";
 import { ZappDepartmentList } from "./ZappDepartmentList";
 import { ZappSidebarNav } from "./ZappSidebarNav";
 import { ZappPlaybookList } from "./ZappPlaybookList";
