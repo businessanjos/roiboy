@@ -23,6 +23,7 @@ import {
   Reply,
   Contrast,
   Check,
+  BadgeCheck,
 } from "lucide-react";
 import { SECURITY_LIMITS } from "@/lib/security-validators";
 import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
