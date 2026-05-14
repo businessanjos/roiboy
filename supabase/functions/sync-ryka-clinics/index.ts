@@ -1,10 +1,11 @@
 // Sync de clientes do Clínica Ryka → preenche client_ryka_provisions com matches
-// Espera que o projeto Ryka exponha um endpoint GET protegido por Authorization/x-api-key:
+// Espera que o projeto Ryka exponha um endpoint GET protegido por JWT do projeto + x-api-key:
 //
 //   GET <CLINICA_RYKA_LIST_URL>
-//   Header: Authorization: Bearer <CLINICA_RYKA_API_KEY>
-//   Header alternativo: x-api-key: <CLINICA_RYKA_API_KEY>
-//   Resposta: { clinics: [{ clinic_id, name, email, phone, status?, last_login_at?, created_at? }, ...] }
+//   Header: Authorization: Bearer <CLINICA_RYKA_AUTH_JWT ou anon key pública Ryka>
+//   Header: apikey: <CLINICA_RYKA_AUTH_JWT ou anon key pública Ryka>
+//   Header: x-api-key: <CLINICA_RYKA_API_KEY>
+//   Resposta: { clients: [{ id, name, email, phone, is_active?, created_at? }, ...] }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { canonicalEmail } from "../_shared/email-normalize.ts";
@@ -22,14 +23,26 @@ function jsonResp(body: unknown, status = 200) {
   });
 }
 
-function rykaHeaders(apiKey: string) {
-  // Ryka aceita apenas x-api-key. Enviar Authorization: Bearer faz o middleware
-  // tentar decodificar como JWT e retornar UNAUTHORIZED_INVALID_JWT_FORMAT.
+const RYKA_PUBLIC_ANON_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjcWF6cGRxdmRraXJieHV5bXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NDQ4MTEsImV4cCI6MjA4NTQyMDgxMX0.tiMIUsvR93Rr8M5UdZQjPjZEfYzgFhPrlXHA-D7KM5o";
+
+function rykaHeaders(apiKey: string, authJwt: string) {
+  // O gateway do projeto Ryka exige um JWT válido no Authorization; a função
+  // exposta valida a integração com x-api-key separadamente.
   const clean = apiKey.replace(/^Bearer\s+/i, "").trim();
+  const cleanJwt = authJwt.replace(/^Bearer\s+/i, "").trim();
   return {
     Accept: "application/json",
+    Authorization: `Bearer ${cleanJwt}`,
+    apikey: cleanJwt,
     "x-api-key": clean,
   };
+}
+
+function listClientsUrl(url: string) {
+  const u = new URL(url);
+  if (!u.searchParams.has("action")) u.searchParams.set("action", "list_clients");
+  return u.toString();
 }
 
 async function fetchRykaWithRedirects(url: string, headers: Record<string, string>) {
@@ -63,6 +76,7 @@ Deno.serve(async (req) => {
   const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
   const LIST_URL = Deno.env.get("CLINICA_RYKA_LIST_URL");
   const API_KEY = Deno.env.get("CLINICA_RYKA_API_KEY");
+  const RYKA_AUTH_JWT = Deno.env.get("CLINICA_RYKA_AUTH_JWT") || RYKA_PUBLIC_ANON_JWT;
 
   if (!LIST_URL || !API_KEY) {
     return jsonResp({ error: "Integração Ryka não configurada (CLINICA_RYKA_LIST_URL/API_KEY)" }, 500);
@@ -90,12 +104,13 @@ Deno.serve(async (req) => {
   // 1) Buscar lista de clínicas no Ryka
   let rykaList: any[] = [];
   try {
-    const r = await fetchRykaWithRedirects(LIST_URL, rykaHeaders(API_KEY));
+    const rykaUrl = listClientsUrl(LIST_URL);
+    const r = await fetchRykaWithRedirects(rykaUrl, rykaHeaders(API_KEY, RYKA_AUTH_JWT));
     const txt = await r.text();
     if (!r.ok) {
       console.error("[sync-ryka-clinics] Ryka request failed", {
         status: r.status,
-        url: LIST_URL,
+        url: rykaUrl,
         hasAuthorization: true,
         hasXApiKey: true,
         body: txt.slice(0, 300),
@@ -104,7 +119,7 @@ Deno.serve(async (req) => {
     }
     let parsed: any = null;
     try { parsed = JSON.parse(txt); } catch { return jsonResp({ error: "Resposta Ryka não é JSON", raw: txt.slice(0, 300) }, 502); }
-    rykaList = Array.isArray(parsed?.clinics) ? parsed.clinics : Array.isArray(parsed) ? parsed : [];
+    rykaList = Array.isArray(parsed?.clients) ? parsed.clients : Array.isArray(parsed?.clinics) ? parsed.clinics : Array.isArray(parsed) ? parsed : [];
   } catch (e: any) {
     return jsonResp({ error: `Falha ao chamar Ryka: ${e?.message || e}` }, 502);
   }
