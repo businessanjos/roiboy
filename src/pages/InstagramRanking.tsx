@@ -319,8 +319,12 @@ export default function InstagramRanking() {
     const totalFollowers = filtered.reduce((a, r) => a + (r.followers_count || 0), 0);
     const totalLikes = filtered.reduce((a, r) => a + r.total_likes, 0);
     const totalComments = filtered.reduce((a, r) => a + r.total_comments, 0);
-    return { totalClients, totalFollowers, totalLikes, totalComments };
-  }, [filtered]);
+    const totalPosts = filtered.reduce(
+      (a, r) => a + (period === "all" ? (r.media_count || 0) : r.posts_considered),
+      0,
+    );
+    return { totalClients, totalFollowers, totalLikes, totalComments, totalPosts };
+  }, [filtered, period]);
 
   if (userLoading) {
     return (
