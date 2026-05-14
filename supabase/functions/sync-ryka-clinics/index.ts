@@ -22,12 +22,13 @@ function jsonResp(body: unknown, status = 200) {
   });
 }
 
-function rykaHeaders(apiKey: string, authorization: string) {
+function rykaHeaders(apiKey: string) {
+  // Ryka aceita apenas x-api-key. Enviar Authorization: Bearer faz o middleware
+  // tentar decodificar como JWT e retornar UNAUTHORIZED_INVALID_JWT_FORMAT.
+  const clean = apiKey.replace(/^Bearer\s+/i, "").trim();
   return {
     Accept: "application/json",
-    Authorization: authorization,
-    "x-api-key": apiKey,
-    apikey: apiKey,
+    "x-api-key": clean,
   };
 }
 
@@ -89,10 +90,7 @@ Deno.serve(async (req) => {
   // 1) Buscar lista de clínicas no Ryka
   let rykaList: any[] = [];
   try {
-    const authValue = API_KEY.startsWith("Bearer ") || API_KEY.startsWith("Basic ")
-      ? API_KEY
-      : `Bearer ${API_KEY}`;
-    const r = await fetchRykaWithRedirects(LIST_URL, rykaHeaders(API_KEY, authValue));
+    const r = await fetchRykaWithRedirects(LIST_URL, rykaHeaders(API_KEY));
     const txt = await r.text();
     if (!r.ok) {
       console.error("[sync-ryka-clinics] Ryka request failed", {
