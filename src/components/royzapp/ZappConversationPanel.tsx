@@ -855,6 +855,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         {activeView === "whatsapp-admin" && isAdmin && (
           <ZappWhatsAppAdminPanel sectorId={sectorId} />
         )}
+        {activeView === "playbook" && (
           <ZappPlaybookList sectorId={sectorId} />
         )}
         {activeView === "marketing" && (
