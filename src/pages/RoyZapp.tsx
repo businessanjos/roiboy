@@ -21,6 +21,7 @@ import {
 } from "@/components/royzapp";
 import { normalizeSearchText, normalizePhone, matchesSearchQuery } from "@/components/royzapp/types";
 import { ZappSectorSelector } from "@/components/royzapp/ZappSectorSelector";
+import { ZappWhatsAppAdminPanel } from "@/components/royzapp/ZappWhatsAppAdminPanel";
 
 import {
   ZappDepartmentDialog,
