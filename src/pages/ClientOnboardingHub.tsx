@@ -71,7 +71,7 @@ export default function ClientOnboardingHub() {
               </Badge>
             </h1>
             <p className="text-sm text-muted-foreground">
-              Cockpit operacional inteligente — SLA por etapa, alertas de gargalo e Coach IA por cliente.
+              Cockpit operacional inteligente — SLA por etapa, alertas de gargalo por cliente.
             </p>
           </div>
         </div>
