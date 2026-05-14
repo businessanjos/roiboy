@@ -155,13 +155,11 @@ async function buildContext(supa: any, clientId: string) {
           titulo: deals[0].title,
           valor: deals[0].value,
           ganho_em: deals[0].won_at,
-          briefing: deals[0].briefing,
         }
       : null,
-    timeline_recente: (timeline ?? []).slice(0, 10).map((t: any) => ({
-      tipo: t.type,
-      data: t.created_at,
-      conteudo: typeof t.content === "string" ? t.content.slice(0, 200) : null,
+    followups_recentes: (followups ?? []).slice(0, 8).map((f: any) => ({
+      data: f.created_at,
+      nota: typeof f.note === "string" ? f.note.slice(0, 240) : null,
     })),
   };
 }
