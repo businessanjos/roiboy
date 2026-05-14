@@ -110,6 +110,7 @@ const ClinicaRyka = lazyRetry(() => import("./pages/ClinicaRyka"));
 
 const TermsOfService = lazyRetry(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
+const DataDeletion = lazyRetry(() => import("./pages/DataDeletion"));
 
 const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
@@ -229,7 +230,10 @@ const App = () => (
                           <Route path="/contrato/:token" element={<PublicDigitalContract />} />
                           
                           <Route path="/termos" element={<TermsOfService />} />
+                          <Route path="/terms-of-service" element={<TermsOfService />} />
                           <Route path="/privacidade" element={<PrivacyPolicy />} />
+                          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                          <Route path="/data-deletion" element={<DataDeletion />} />
                           
                           <Route element={<AppLayout />}>
                             <Route path="/setores" element={<Sectors />} />
