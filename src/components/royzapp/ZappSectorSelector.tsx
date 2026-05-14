@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageSquare, Wifi, WifiOff, ArrowLeft, Lock, ChevronDown, Check } from "lucide-react";
+import { Loader2, MessageSquare, Wifi, WifiOff, ArrowLeft, Lock, ChevronDown, Check, Settings, Plug } from "lucide-react";
 import { SectorId, sectors } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { withRetry } from "@/lib/retryFetch";
 import { useNavigate } from "react-router-dom";
 import { ZappPinDialog } from "./dialogs/ZappPinDialog";
+import { ZappConnectionsSection } from "./settings/ZappConnectionsSection";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,6 +74,9 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
   const [pinVerifiedInstances, setPinVerifiedInstances] = useState<Set<string>>(new Set());
   // NEW: Track which sectors have been verified (for sector-level PINs)
   const [pinVerifiedSectors, setPinVerifiedSectors] = useState<Set<string>>(new Set());
+
+  // Manage connections sheet
+  const [manageSector, setManageSector] = useState<{ id: SectorId; name: string } | null>(null);
 
   // Buscar preferências do usuário
   const fetchUserPreferences = async () => {
@@ -378,10 +383,21 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-semibold">ROY zAPP</h1>
             <p className="text-sm text-muted-foreground">Escolha o setor para atender</p>
           </div>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => navigate("/integrations/whatsapp")}
+            >
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">Configurações avançadas</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -524,6 +540,37 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                         )}
                       </DropdownMenu>
                     )}
+
+                    {/* Configure / Connect button */}
+                    {isAdmin && (
+                      instances.length === 0 ? (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-7 px-2 text-xs gap-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setManageSector({ id: sectorId, name: sector.name });
+                          }}
+                        >
+                          <Plug className="h-3 w-3" />
+                          Conectar
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Gerenciar conexões"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setManageSector({ id: sectorId, name: sector.name });
+                          }}
+                        >
+                          <Settings className="h-3.5 w-3.5" />
+                        </Button>
+                      )
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -531,6 +578,23 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           })}
         </div>
       </div>
+
+      {/* Manage connections sheet */}
+      <Sheet open={!!manageSector} onOpenChange={(o) => !o && setManageSector(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Conexões — {manageSector?.name}</SheetTitle>
+            <SheetDescription>
+              Gerencie números de WhatsApp conectados a este setor (UAZAPI ou Meta Cloud API).
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">
+            {manageSector && (
+              <ZappConnectionsSection sectorId={manageSector.id} sectorName={manageSector.name} />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
       
       {/* PIN Dialog - supports both instance and sector PINs */}
       <ZappPinDialog
