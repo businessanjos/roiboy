@@ -37,13 +37,13 @@ function buildWhatsAppMessage(name: string, email: string, password: string) {
 
 Seu acesso ao *sistema Clínica Ryka* está pronto. Use as credenciais abaixo para entrar:
 
-🌐 *Link:* ${RYKA_LOGIN_URL}
+🌐 *Link de acesso:* ${RYKA_LOGIN_URL}
 📧 *E-mail:* ${email}
 🔑 *Senha temporária:* ${password}
 
-⚠️ Recomendamos alterar a senha no primeiro acesso.
+⚠️ Você deverá alterar a senha no primeiro acesso.
 
-Qualquer dúvida estou por aqui. Bons estudos! 🚀`
+Qualquer dúvida estou por aqui. Rumo à Vida Ryka! 🚀`
   );
 }
 
