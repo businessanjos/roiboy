@@ -22,6 +22,7 @@ import {
 import { normalizeSearchText, normalizePhone, matchesSearchQuery } from "@/components/royzapp/types";
 import { ZappSectorSelector } from "@/components/royzapp/ZappSectorSelector";
 import { ZappWhatsAppAdminPanel } from "@/components/royzapp/ZappWhatsAppAdminPanel";
+import { ZappMetaTemplatesDialog } from "@/components/royzapp/ZappMetaTemplatesDialog";
 
 import {
   ZappDepartmentDialog,
