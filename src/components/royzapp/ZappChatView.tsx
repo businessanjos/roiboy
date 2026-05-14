@@ -164,6 +164,8 @@ export function ZappChatView({
   hasSignature,
   onToggleSignature,
   onOpenPlaybook,
+  isMetaChannel,
+  onOpenTemplates,
 }: ZappChatViewProps) {
   // Search state
   const [showSearch, setShowSearch] = useState(false);
