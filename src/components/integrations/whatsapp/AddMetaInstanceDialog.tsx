@@ -110,6 +110,7 @@ export function AddMetaInstanceDialog({
         config: {
           provider: "meta_official",
           phone_number_id: phoneNumberId.trim(),
+          ...(wabaId.trim() ? { waba_id: wabaId.trim() } : {}),
         },
       });
 
