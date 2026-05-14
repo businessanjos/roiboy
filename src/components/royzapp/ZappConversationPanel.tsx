@@ -35,6 +35,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ZappConversationItem } from "./ZappConversationItem";
 import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
+import { ZappChannelPills } from "./ZappChannelPills";
 import { ZappTeamList } from "./ZappTeamList";
 import { ZappTagsList } from "./ZappTagsList";
 import { ZappSettingsPanel } from "./ZappSettingsPanel";
@@ -156,6 +157,7 @@ interface ZappConversationPanelProps {
   accountId?: string | null;
   selectedIntegrationId?: string;
   onSelectIntegration?: (integrationId: string) => void;
+  onClearIntegration?: () => void;
 }
 
 export const ZappConversationPanel = memo(function ZappConversationPanel({
@@ -244,6 +246,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   accountId,
   selectedIntegrationId,
   onSelectIntegration,
+  onClearIntegration,
 }: ZappConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
@@ -643,6 +646,23 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         userRole={currentUser?.role}
         isAdmin={isAdmin}
       />
+
+      {/* Channel pills (UAZAPI vs Meta) — appears when sector has 2+ instances */}
+      {activeView === "inbox" && sectorId && onSelectIntegration && (
+        <ZappChannelPills
+          accountId={accountId}
+          sectorId={sectorId}
+          selectedIntegrationId={selectedIntegrationId}
+          onChange={(id) => {
+            if (id) {
+              onSelectIntegration(id);
+            } else if (onClearIntegration) {
+              onClearIntegration();
+            }
+          }}
+          totalCount={filteredAssignments.length}
+        />
+      )}
 
       {/* Conversation list */}
       <ScrollArea className="flex-1">

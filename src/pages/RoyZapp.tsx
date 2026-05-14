@@ -1211,6 +1211,14 @@ export default function RoyZapp() {
                 });
             }
           }}
+          onClearIntegration={() => {
+            setSelectedIntegrationId(undefined);
+            setSelectedConversation(null);
+            setSearchParams(prev => {
+              prev.delete('integrationId');
+              return prev;
+            }, { replace: true });
+          }}
         />
       </div>
 
