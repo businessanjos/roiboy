@@ -69,6 +69,15 @@ function HealthBadge({ client, stage }: { client: OnboardingClient; stage: Onboa
 export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Props) {
   const { insight, loading, ask, setInsight } = useOnboardingCoach();
   const [tab, setTab] = useState("coach");
+  const [rykaLoading, setRykaLoading] = useState(false);
+  const [rykaResult, setRykaResult] = useState<{
+    email: string;
+    temp_password: string;
+    login_url: string;
+    whatsapp_status: string;
+    whatsapp_error?: string | null;
+  } | null>(null);
+  const [lastProvisionAt, setLastProvisionAt] = useState<string | null>(null);
 
   // Carrega insight ao abrir (usa cache da edge function)
   useEffect(() => {
@@ -83,6 +92,18 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Pr
       } else {
         ask(client.id, "next_step");
       }
+      // Reset estado da liberação Ryka entre clientes
+      setRykaResult(null);
+      // Buscar última liberação para esse cliente
+      supabase
+        .from("client_ryka_provisions")
+        .select("created_at, status")
+        .eq("client_id", client.id)
+        .eq("status", "success")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => setLastProvisionAt(data?.created_at ?? null));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, client?.id]);
@@ -94,9 +115,43 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Pr
   const initials = client.full_name?.split(" ").slice(0, 2).map(n => n[0]).join("").toUpperCase();
   const photoUrl = client.logo_url || client.avatar_url || undefined;
 
+  const isRykaEligible = (client.client_products || []).some(
+    (cp) => RYKA_ELIGIBLE.includes((cp.products?.name || "").toLowerCase()),
+  );
+
   const copyMessage = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Mensagem copiada!");
+  };
+
+  const handleProvisionRyka = async () => {
+    if (!client) return;
+    setRykaLoading(true);
+    setRykaResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("provision-ryka-access", {
+        body: { client_id: client.id },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || "Falha desconhecida");
+      setRykaResult({
+        email: data.email,
+        temp_password: data.temp_password,
+        login_url: data.login_url,
+        whatsapp_status: data.whatsapp_status,
+        whatsapp_error: data.whatsapp_error,
+      });
+      setLastProvisionAt(new Date().toISOString());
+      if (data.whatsapp_status === "sent") {
+        toast.success("Acesso Ryka criado e WhatsApp enviado!");
+      } else {
+        toast.warning("Acesso Ryka criado, mas WhatsApp falhou. Use 'copiar' abaixo.");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao liberar acesso Ryka");
+    } finally {
+      setRykaLoading(false);
+    }
   };
 
   return (
