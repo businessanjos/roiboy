@@ -75,6 +75,9 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
   // NEW: Track which sectors have been verified (for sector-level PINs)
   const [pinVerifiedSectors, setPinVerifiedSectors] = useState<Set<string>>(new Set());
 
+  // Manage connections sheet
+  const [manageSector, setManageSector] = useState<{ id: SectorId; name: string } | null>(null);
+
   // Buscar preferências do usuário
   const fetchUserPreferences = async () => {
     if (!currentUser?.auth_user_id || !currentUser?.account_id) return;
