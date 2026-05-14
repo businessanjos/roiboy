@@ -1,8 +1,9 @@
 // Sync de clientes do Clínica Ryka → preenche client_ryka_provisions com matches
-// Espera que o projeto Ryka exponha um endpoint GET protegido por x-api-key:
+// Espera que o projeto Ryka exponha um endpoint GET protegido por Authorization/x-api-key:
 //
 //   GET <CLINICA_RYKA_LIST_URL>
-//   Header: x-api-key: <CLINICA_RYKA_API_KEY>
+//   Header: Authorization: Bearer <CLINICA_RYKA_API_KEY>
+//   Header alternativo: x-api-key: <CLINICA_RYKA_API_KEY>
 //   Resposta: { clinics: [{ clinic_id, name, email, phone, status?, last_login_at?, created_at? }, ...] }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -19,6 +20,37 @@ function jsonResp(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function rykaHeaders(apiKey: string, authorization: string) {
+  return {
+    Accept: "application/json",
+    Authorization: authorization,
+    "x-api-key": apiKey,
+    apikey: apiKey,
+  };
+}
+
+async function fetchRykaWithRedirects(url: string, headers: Record<string, string>) {
+  let currentUrl = url;
+  for (let i = 0; i < 5; i += 1) {
+    const response = await fetch(currentUrl, {
+      method: "GET",
+      headers,
+      redirect: "manual",
+    });
+
+    if (![301, 302, 303, 307, 308].includes(response.status)) {
+      return response;
+    }
+
+    const location = response.headers.get("location");
+    response.body?.cancel();
+    if (!location) return response;
+    currentUrl = new URL(location, currentUrl).toString();
+  }
+
+  throw new Error("Ryka redirecionou muitas vezes");
 }
 
 Deno.serve(async (req) => {
@@ -57,16 +89,21 @@ Deno.serve(async (req) => {
   // 1) Buscar lista de clínicas no Ryka
   let rykaList: any[] = [];
   try {
-    const r = await fetch(LIST_URL, {
-      method: "GET",
-      headers: {
-        "x-api-key": API_KEY,
-        "Authorization": `Bearer ${API_KEY}`,
-        "apikey": API_KEY,
-      },
-    });
+    const authValue = API_KEY.startsWith("Bearer ") || API_KEY.startsWith("Basic ")
+      ? API_KEY
+      : `Bearer ${API_KEY}`;
+    const r = await fetchRykaWithRedirects(LIST_URL, rykaHeaders(API_KEY, authValue));
     const txt = await r.text();
-    if (!r.ok) return jsonResp({ error: `Ryka ${r.status}: ${txt.slice(0, 300)}` }, 502);
+    if (!r.ok) {
+      console.error("[sync-ryka-clinics] Ryka request failed", {
+        status: r.status,
+        url: LIST_URL,
+        hasAuthorization: true,
+        hasXApiKey: true,
+        body: txt.slice(0, 300),
+      });
+      return jsonResp({ error: `Ryka ${r.status}: ${txt.slice(0, 300)}` }, 502);
+    }
     let parsed: any = null;
     try { parsed = JSON.parse(txt); } catch { return jsonResp({ error: "Resposta Ryka não é JSON", raw: txt.slice(0, 300) }, 502); }
     rykaList = Array.isArray(parsed?.clinics) ? parsed.clinics : Array.isArray(parsed) ? parsed : [];
