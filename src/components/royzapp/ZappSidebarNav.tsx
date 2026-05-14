@@ -139,6 +139,9 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
           <TooltipContent side="bottom">Conexões WhatsApp</TooltipContent>
         </Tooltip>
       )}
+
+      <Tooltip>
+        <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
