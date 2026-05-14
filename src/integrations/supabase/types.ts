@@ -2635,30 +2635,36 @@ export type Database = {
           account_id: string
           color: string
           created_at: string
+          description: string | null
           display_order: number
           id: string
           is_active: boolean
           name: string
+          sla_hours: number | null
           updated_at: string
         }
         Insert: {
           account_id: string
           color?: string
           created_at?: string
+          description?: string | null
           display_order?: number
           id?: string
           is_active?: boolean
           name: string
+          sla_hours?: number | null
           updated_at?: string
         }
         Update: {
           account_id?: string
           color?: string
           created_at?: string
+          description?: string | null
           display_order?: number
           id?: string
           is_active?: boolean
           name?: string
+          sla_hours?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2750,6 +2756,8 @@ export type Database = {
           additional_bank_accounts: Json | null
           additional_phones: Json | null
           additional_pix_keys: Json | null
+          ai_next_step: string | null
+          ai_next_step_at: string | null
           avatar_url: string | null
           bank_account: string | null
           bank_account_type: string | null
@@ -2789,12 +2797,14 @@ export type Database = {
           mls_level: string | null
           neighborhood: string | null
           notes: string | null
+          onboarding_started_at: string | null
           phone_e164: string
           pix_key: string | null
           pix_key_type: string | null
           responsible_user_id: string | null
           rg: string | null
           sales_user_id: string | null
+          stage_changed_at: string | null
           stage_id: string | null
           state: string | null
           status: Database["public"]["Enums"]["client_status"]
@@ -2809,6 +2819,8 @@ export type Database = {
           additional_bank_accounts?: Json | null
           additional_phones?: Json | null
           additional_pix_keys?: Json | null
+          ai_next_step?: string | null
+          ai_next_step_at?: string | null
           avatar_url?: string | null
           bank_account?: string | null
           bank_account_type?: string | null
@@ -2848,12 +2860,14 @@ export type Database = {
           mls_level?: string | null
           neighborhood?: string | null
           notes?: string | null
+          onboarding_started_at?: string | null
           phone_e164: string
           pix_key?: string | null
           pix_key_type?: string | null
           responsible_user_id?: string | null
           rg?: string | null
           sales_user_id?: string | null
+          stage_changed_at?: string | null
           stage_id?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
@@ -2868,6 +2882,8 @@ export type Database = {
           additional_bank_accounts?: Json | null
           additional_phones?: Json | null
           additional_pix_keys?: Json | null
+          ai_next_step?: string | null
+          ai_next_step_at?: string | null
           avatar_url?: string | null
           bank_account?: string | null
           bank_account_type?: string | null
@@ -2907,12 +2923,14 @@ export type Database = {
           mls_level?: string | null
           neighborhood?: string | null
           notes?: string | null
+          onboarding_started_at?: string | null
           phone_e164?: string
           pix_key?: string | null
           pix_key_type?: string | null
           responsible_user_id?: string | null
           rg?: string | null
           sales_user_id?: string | null
+          stage_changed_at?: string | null
           stage_id?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
