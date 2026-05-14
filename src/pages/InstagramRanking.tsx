@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Instagram, Users2, Heart, MessageCircle, BadgeCheck, ExternalLink, Trophy, Medal, Award, Search, TrendingUp, RefreshCw, Loader2, Clock } from "lucide-react";
+import { Instagram, Users2, Heart, MessageCircle, BadgeCheck, ExternalLink, Trophy, Medal, Award, Search, TrendingUp, RefreshCw, Loader2, Clock, Images } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
