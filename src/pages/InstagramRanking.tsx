@@ -499,6 +499,29 @@ export default function InstagramRanking() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="posts" className="mt-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2"><Images className="h-4 w-4 text-emerald-500" /> Mais posts</CardTitle>
+                <CardDescription>
+                  {period === "all"
+                    ? "Total de publicações no perfil (snapshot mais recente)."
+                    : `Publicações feitas nos últimos ${period} dias.`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <RankList
+                  rows={filtered}
+                  metric="posts"
+                  getValue={(r) => period === "all" ? (r.media_count || 0) : r.posts_considered}
+                  getSub={(r) => period === "all"
+                    ? `${fmt(r.followers_count || 0)} seguidores`
+                    : `média ${fmt(r.avg_likes)} curtidas/post`}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="likes" className="mt-4">
             <Card>
               <CardHeader className="pb-3">
