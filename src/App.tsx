@@ -120,6 +120,7 @@ const SalesDigitalContracts = lazyRetry(() => import("./pages/SalesDigitalContra
 const SalesContractTemplates = lazyRetry(() => import("./pages/SalesContractTemplates"));
 
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
+const RoyZappAttendanceMetrics = lazyRetry(() => import("./pages/RoyZappAttendanceMetrics"));
 const EverIA = lazyRetry(() => import("./pages/EverIA"));
 
 const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
@@ -306,6 +307,7 @@ const App = () => (
                             <Route path="/reminders" element={<Reminders />} />
                             
                             <Route path="/roy-zapp" element={<ZappErrorBoundary><RoyZapp /></ZappErrorBoundary>} />
+                            <Route path="/roy-zapp/atendimentos" element={<RoyZappAttendanceMetrics />} />
                             <Route path="/ever-ia" element={<EverIA />} />
                             
                             <Route path="/billing" element={<BillingPortal />} />
