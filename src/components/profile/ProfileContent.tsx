@@ -20,6 +20,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { ZappPreferencesCard } from "@/components/profile/ZappPreferencesCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { roleNameMatches } from "@/lib/roles";
 
@@ -476,6 +477,8 @@ export function ProfileContent() {
           </Card>
         </>
       )}
+
+      <ZappPreferencesCard />
     </div>
   );
 }

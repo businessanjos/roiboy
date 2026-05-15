@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     const { data: authData, error: authError } = await supabase.auth.getUser(tokenJwt);
     if (authError || !authData?.user) return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { data: userData } = await supabase.from("users").select("id, name, account_id").eq("auth_user_id", authData.user.id).single();
+    const { data: userData } = await supabase.from("users").select("id, name, account_id, zapp_signature_enabled").eq("auth_user_id", authData.user.id).single();
     if (!userData) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const payload = await req.json();
@@ -87,6 +87,17 @@ Deno.serve(async (req) => {
     const accountId = userData.account_id;
 
     console.log(`[meta-manager] Action: ${action}, integration_id: ${integration_id}, sector_id: ${sector_id}`);
+
+    // Signature: prepend "*Name | Eternum*\n" on free-text outbound messages.
+    const signatureEnabled = userData.zapp_signature_enabled !== false && payload.add_signature !== false;
+    const applySignature = (txt: string | undefined | null): string => {
+      const t = (txt ?? "").toString();
+      if (!signatureEnabled) return t;
+      const header = `*${userData.name || "Consultor"} | Eternum*`;
+      if (!t) return header;
+      if (/^\*[^*\n]+\|\s*Eternum\*/.test(t)) return t;
+      return `${header}\n${t}`;
+    };
 
     // Test mode: bypass integration lookup, use provided phone_number_id + env token
     const testPhoneNumberId = payload.test_phone_number_id;
@@ -334,7 +345,7 @@ Deno.serve(async (req) => {
         messaging_product: "whatsapp",
         to: cleanPhone,
         type: "text",
-        text: { body: message },
+        text: { body: applySignature(message) },
       };
 
       // Reply context
@@ -365,7 +376,7 @@ Deno.serve(async (req) => {
 
       // For media, Meta accepts either a media ID or a link
       const mediaContent: any = { link: media_url };
-      if (caption) mediaContent.caption = caption;
+      if (caption) mediaContent.caption = applySignature(caption);
       if (file_name) mediaContent.filename = file_name;
 
       messageBody[metaMediaType] = mediaContent;

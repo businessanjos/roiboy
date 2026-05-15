@@ -8,7 +8,7 @@ import { invokeWhatsAppManager } from "@/lib/whatsappRouting";
 
 interface UseZappMessagingProps {
   selectedConversation: ConversationAssignment | null;
-  currentUser: { id: string; account_id: string; auth_user_id: string } | null;
+  currentUser: { id: string; account_id: string; auth_user_id: string; name?: string | null } | null;
   selectedSectorId: string | null;
   selectedIntegrationId: string | undefined;
   messages: Message[];
@@ -310,6 +310,7 @@ export function useZappMessaging({
             sent_at: now,
             external_message_id: externalId,
             sender_user_id: currentUser?.id || null,
+            sender_name: currentUser?.name || null,
             quoted_message_id: replyContext?.external_message_id || null,
             quoted_content: replyContext?.content || null,
             quoted_sender_name: replyContext?.is_from_client 
@@ -430,6 +431,7 @@ export function useZappMessaging({
                 message_type: "text",
                 sent_at: now,
                 sender_user_id: currentUser?.id || null,
+                sender_name: currentUser?.name || null,
                 quoted_message_id: replyContext?.external_message_id || null,
                 quoted_content: replyContext?.content || null,
                 quoted_sender_name: replyContext?.is_from_client 
@@ -588,6 +590,7 @@ export function useZappMessaging({
           sent_at: now,
           external_message_id: externalId,
           sender_user_id: currentUser?.id || null,
+          sender_name: currentUser?.name || null,
         }).select("id").single();
 
         if (insertError) {
@@ -791,6 +794,7 @@ export function useZappMessaging({
           media_download_status: "completed",
           sent_at: now,
           sender_user_id: currentUser?.id || null,
+          sender_name: currentUser?.name || null,
         }).select("id").single();
         
         if (insertError) throw insertError;
@@ -1084,6 +1088,7 @@ export function useZappMessaging({
           sent_at: now,
           external_message_id: contactExternalId,
           sender_user_id: currentUser?.id || null,
+          sender_name: currentUser?.name || null,
         }).select("id").single();
 
         if (contactInsertErr) {

@@ -524,12 +524,26 @@ Deno.serve(async (req) => {
     if (authError || !authData?.user) return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const userId = authData.user.id;
 
-    const { data: userData } = await supabase.from("users").select("id, name, account_id, role, is_also_admin").eq("auth_user_id", userId).single();
+    const { data: userData } = await supabase.from("users").select("id, name, account_id, role, is_also_admin, zapp_signature_enabled").eq("auth_user_id", userId).single();
     if (!userData) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const payload = await req.json();
     const { action, sector_id, phone, message, group_id, integration_id } = payload;
     const accountId = userData.account_id;
+
+    // Signature helper: prepends "*Name | Eternum*\n" to outbound human messages.
+    // Skipped when payload.add_signature === false (used by automations/playbook) or when user disabled it.
+    const firstName = (userData.name || "").trim().split(/\s+/)[0] || userData.name || "Consultor";
+    const signatureEnabled = userData.zapp_signature_enabled !== false && payload.add_signature !== false;
+    const applySignature = (txt: string | undefined | null): string => {
+      const t = (txt ?? "").toString();
+      if (!signatureEnabled) return t;
+      const header = `*${userData.name || firstName} | Eternum*`;
+      if (!t) return header;
+      // Avoid double-signing if already starts with our header pattern
+      if (/^\*[^*\n]+\|\s*Eternum\*/.test(t)) return t;
+      return `${header}\n${t}`;
+    };
 
     console.log(`[uazapi-manager] Action: ${action}, integration_id: ${integration_id}, sector_id: ${sector_id}`);
 
@@ -761,7 +775,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       
-      const textBody: Record<string, unknown> = { number: cleanPhone, text: message };
+      const textBody: Record<string, unknown> = { number: cleanPhone, text: applySignature(message) };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) {
         textBody.replyid = normalizedQuotedMessageId;
@@ -783,7 +797,7 @@ Deno.serve(async (req) => {
         number: cleanPhone, 
         type: payload.media_type || "image",
         file: payload.media_url,
-        text: payload.caption || ""
+        text: applySignature(payload.caption || "")
       };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
@@ -803,7 +817,7 @@ Deno.serve(async (req) => {
       // ✅ CORRIGIDO: Usar /send/text para grupos
       const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
       
-      const groupBody: Record<string, unknown> = { number: jid, text: message };
+      const groupBody: Record<string, unknown> = { number: jid, text: applySignature(message) };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) { groupBody.replyid = normalizedQuotedMessageId; }
       if (payload.mentions) groupBody.mentions = payload.mentions;
@@ -820,7 +834,7 @@ Deno.serve(async (req) => {
         number: jid, 
         type: payload.media_type || "image",
         file: payload.media_url,
-        text: payload.caption || ""
+        text: applySignature(payload.caption || "")
       };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }

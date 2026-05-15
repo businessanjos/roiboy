@@ -1,0 +1,1 @@
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS zapp_signature_enabled boolean NOT NULL DEFAULT true;
