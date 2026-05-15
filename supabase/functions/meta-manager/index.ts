@@ -139,11 +139,17 @@ Deno.serve(async (req) => {
     // ============================================
     } else if (action === "list_templates") {
       if (!wabaId) {
-        return new Response(JSON.stringify({ error: "WABA ID não configurado. Informe o WhatsApp Business Account ID na integração." , code: "missing_waba_id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        result = {
+          templates: [],
+          needs_waba_id: true,
+          code: "missing_waba_id",
+          message: "WABA ID não configurado. Informe o WhatsApp Business Account ID na integração.",
+        };
+      } else {
+        const tplResp = await metaApi(`/${wabaId}/message_templates?limit=100&fields=name,language,status,category,components`, "GET", metaToken);
+        const approved = (tplResp.data || []).filter((t: any) => t.status === "APPROVED");
+        result = { templates: approved };
       }
-      const tplResp = await metaApi(`/${wabaId}/message_templates?limit=100&fields=name,language,status,category,components`, "GET", metaToken);
-      const approved = (tplResp.data || []).filter((t: any) => t.status === "APPROVED");
-      result = { templates: approved };
 
     // ============================================
     // SEND TEMPLATE
