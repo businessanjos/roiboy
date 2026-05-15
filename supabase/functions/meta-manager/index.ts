@@ -345,7 +345,7 @@ Deno.serve(async (req) => {
         messaging_product: "whatsapp",
         to: cleanPhone,
         type: "text",
-        text: { body: message },
+        text: { body: applySignature(message) },
       };
 
       // Reply context
@@ -376,7 +376,7 @@ Deno.serve(async (req) => {
 
       // For media, Meta accepts either a media ID or a link
       const mediaContent: any = { link: media_url };
-      if (caption) mediaContent.caption = caption;
+      if (caption) mediaContent.caption = applySignature(caption);
       if (file_name) mediaContent.filename = file_name;
 
       messageBody[metaMediaType] = mediaContent;
