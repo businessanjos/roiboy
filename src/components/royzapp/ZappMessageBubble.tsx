@@ -713,6 +713,12 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             "flex items-center justify-end gap-1 mt-1",
             message.is_from_client ? "text-zapp-text-muted" : "opacity-70"
           )}>
+            {/* Author label for outbound messages (which consultant sent it) */}
+            {!message.is_from_client && message.sender_name && (
+              <span className="text-[10px] font-medium text-zapp-accent/90 mr-1 truncate max-w-[100px]">
+                {message.sender_name.split(" ")[0]}
+              </span>
+            )}
             <span className="text-[10px]">
               {format(new Date(message.created_at), "HH:mm")}
             </span>
