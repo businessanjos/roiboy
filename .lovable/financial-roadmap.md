@@ -200,6 +200,33 @@ Selector no header global (dropdown ao lado do avatar) filtra todo o financeiro 
 
 ---
 
+## 📋 Demandas do time financeiro (15/05/2026 — Renata)
+
+### Contas a Receber
+- [ ] **Importador Cielo** — upload de relatório (CSV/Excel) → conciliação automática das parcelas de cartão (match por valor/data/NSU/bandeira) → baixa em massa
+- [ ] **Taxa de cartão nos lançamentos** — campo `card_fee` por parcela; valor líquido recebido vs bruto vendido; alimenta DRE
+- [ ] **Importador de cheques** — upload do relatório bancário (compensação) → baixa automática por número/valor
+- [ ] **Automação de baixa** — cartão (Cielo), cheque (banco), boleto (retorno CNAB/PIX webhook) → status atualizado sem ação manual
+- [ ] **Status granular do pagamento** — enum por método: cheque (`requested | in_transit | received | deposited | cleared | bounced`), cartão (`charged | settled | refunded | chargeback`), boleto (`registered | paid | overdue`). Já previsto no schema (`installments.check_status` / `card_status`); precisa expor na UI com filtros.
+
+### Governança e imutabilidade
+- [ ] **Botão Renegociar** — gera novo borderô (`invoices.parent_invoice_id`), original fica `renegotiated`, **nada é deletado**. Auditoria completa de quem renegociou e por quê
+- [ ] **Trava de exclusão global** — nenhuma operação `DELETE` no financeiro. Só transições de estado: `baixa`, `renegociação`, `perda`, `desconto`. RLS + trigger bloqueando delete pós-`locked=true`
+- [ ] **CRM/Pipeline de cobrança** — Kanban dedicado ("Inadimplência leve / em negociação / promessa de pagamento / quebrada / jurídico") com atendente humano responsável, SLAs e histórico via `installment_events`
+
+### Faturamento fiscal
+- [ ] **Trava pós-NF** — após emitir nota, parcela trava número da NF e bloqueia edição (campo `invoice_number`, `invoiced_at`). Edição só por estorno explícito + nova NF
+- [ ] **Régua personalizada por método** — cartão pago = silêncio total; cheque = silêncio até data de depósito; boleto/PIX = régua agressiva. Configurável por `billing_rules.applies_to_methods`
+
+### Plano de contas e categorização
+- [ ] **Plano de contas hierárquico** (`chart_accounts`) — receitas, despesas operacionais, impostos, fornecedores. Categorização obrigatória em todo lançamento. Alinhado com contabilidade externa
+- [ ] **Status automatizado em campos customizados e histórico** — `installment_events` alimenta timeline visível em Comercial, Operações e Financeiro
+
+### Ciclo do contrato
+- [ ] **Quitação automática** — ao baixar a última parcela do contrato, status do contrato vai para `quitado` automaticamente. Sinal visível para Operações/CS no contexto de **renovação** (cliente quitado = pronto pra renovar sem fricção)
+
+---
+
 ## ⚠️ Pontos de atenção
 
 - **Não criar nada do financeiro enquanto o RoyZapp Operações estiver instável** (palavra do Maikol).
