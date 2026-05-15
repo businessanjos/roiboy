@@ -161,8 +161,10 @@ Deno.serve(async (req) => {
         };
       } else {
         const tplResp = await metaApi(`/${wabaId}/message_templates?limit=100&fields=name,language,status,category,components`, "GET", metaToken);
-        const approved = (tplResp.data || []).filter((t: any) => t.status === "APPROVED");
-        result = { templates: approved };
+        const all = tplResp.data || [];
+        const approved = all.filter((t: any) => t.status === "APPROVED");
+        const others = all.filter((t: any) => t.status !== "APPROVED").map((t: any) => ({ name: t.name, status: t.status, language: t.language }));
+        result = { templates: approved, all_count: all.length, non_approved: others };
       }
 
     // ============================================
