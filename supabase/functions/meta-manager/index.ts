@@ -135,6 +135,20 @@ Deno.serve(async (req) => {
       result = { success: true, config: newConfig };
 
     // ============================================
+    // REGISTER PHONE NUMBER ON CLOUD API
+    // ============================================
+    } else if (action === "register_phone") {
+      const pin = payload.pin;
+      if (!pin || !/^\d{6}$/.test(String(pin))) {
+        return new Response(JSON.stringify({ error: "PIN deve ter exatamente 6 dígitos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const regResp = await metaApi(`/${phoneNumberId}/register`, "POST", metaToken, {
+        messaging_product: "whatsapp",
+        pin: String(pin),
+      });
+      result = { success: true, response: regResp };
+
+    // ============================================
     // LIST TEMPLATES
     // ============================================
     } else if (action === "list_templates") {
