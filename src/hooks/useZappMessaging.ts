@@ -8,7 +8,7 @@ import { invokeWhatsAppManager } from "@/lib/whatsappRouting";
 
 interface UseZappMessagingProps {
   selectedConversation: ConversationAssignment | null;
-  currentUser: { id: string; account_id: string; auth_user_id: string } | null;
+  currentUser: { id: string; account_id: string; auth_user_id: string; name?: string | null } | null;
   selectedSectorId: string | null;
   selectedIntegrationId: string | undefined;
   messages: Message[];
