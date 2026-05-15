@@ -183,7 +183,15 @@ Deno.serve(async (req) => {
       if (Array.isArray(body_params) && body_params.length > 0) {
         components.push({
           type: "body",
-          parameters: body_params.map((v: string) => ({ type: "text", text: String(v) })),
+          parameters: body_params.map((v: any) => {
+            // Support: string (positional), { text }, or { name, text } (named)
+            if (typeof v === "string") return { type: "text", text: v };
+            if (v && typeof v === "object") {
+              if (v.name) return { type: "text", parameter_name: String(v.name), text: String(v.text ?? "") };
+              return { type: "text", text: String(v.text ?? "") };
+            }
+            return { type: "text", text: String(v ?? "") };
+          }),
         });
       }
       const messageBody: any = {
@@ -253,7 +261,9 @@ Deno.serve(async (req) => {
 
         if (conv) {
           const previewText = `[Template: ${template_name}]${
-            Array.isArray(body_params) && body_params.length > 0 ? " " + body_params.join(" | ") : ""
+            Array.isArray(body_params) && body_params.length > 0
+              ? " " + body_params.map((p: any) => typeof p === "string" ? p : (p?.text ?? "")).join(" | ")
+              : ""
           }`;
           await supabase.from("zapp_messages").insert({
             account_id: accountId,

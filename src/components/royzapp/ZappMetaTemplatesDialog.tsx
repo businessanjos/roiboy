@@ -46,19 +46,25 @@ function extractBodyText(t: MetaTemplate): string {
   return t.components.find((c) => c.type.toUpperCase() === "BODY")?.text || "";
 }
 
-function countVariables(text: string): number {
-  const matches = text.match(/\{\{\s*\d+\s*\}\}/g);
-  if (!matches) return 0;
-  const max = Math.max(
-    ...matches.map((m) => parseInt(m.replace(/[^0-9]/g, ""), 10))
-  );
-  return max;
+function extractVariables(text: string): string[] {
+  // Captures both {{1}} (positional) and {{customer_name}} (named) in order, deduplicated
+  const re = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (!seen.has(m[1])) {
+      seen.add(m[1]);
+      out.push(m[1]);
+    }
+  }
+  return out;
 }
 
-function renderPreview(text: string, params: string[]): string {
-  return text.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, idx) => {
-    const i = parseInt(idx, 10) - 1;
-    return params[i] || `{{${idx}}}`;
+function renderPreview(text: string, vars: string[], values: string[]): string {
+  return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
+    const i = vars.indexOf(key);
+    return values[i] || `{{${key}}}`;
   });
 }
 
@@ -72,6 +78,7 @@ export function ZappMetaTemplatesDialog({
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [varNames, setVarNames] = useState<string[]>([]);
   const [templates, setTemplates] = useState<MetaTemplate[]>([]);
   const [search, setSearch] = useState("");
   const [needsWabaId, setNeedsWabaId] = useState(false);
@@ -143,8 +150,9 @@ export function ZappMetaTemplatesDialog({
 
   const handleSelect = (t: MetaTemplate) => {
     setSelected(t);
-    const n = countVariables(extractBodyText(t));
-    setParams(Array(n).fill(""));
+    const names = extractVariables(extractBodyText(t));
+    setVarNames(names);
+    setParams(Array(names.length).fill(""));
   };
 
   const handleSaveWaba = async () => {
@@ -186,7 +194,10 @@ export function ZappMetaTemplatesDialog({
             phone,
             template_name: selected.name,
             template_language: selected.language,
-            body_params: params,
+            body_params: params.map((text, i) => {
+              const name = varNames[i];
+              return name && !/^\d+$/.test(name) ? { name, text } : text;
+            }),
           },
         }
       );
@@ -272,28 +283,32 @@ export function ZappMetaTemplatesDialog({
                 {params.length > 0 && (
                   <div className="space-y-3">
                     <Label className="text-sm">Variáveis</Label>
-                    {params.map((v, i) => (
-                      <div key={i} className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">
-                          {`{{${i + 1}}}`}
-                        </Label>
-                        <Input
-                          value={v}
-                          onChange={(e) => {
-                            const next = [...params];
-                            next[i] = e.target.value;
-                            setParams(next);
-                          }}
-                          placeholder={`Valor para variável ${i + 1}`}
-                        />
-                      </div>
-                    ))}
+                    {params.map((v, i) => {
+                      const name = varNames[i] ?? String(i + 1);
+                      const isNamed = !/^\d+$/.test(name);
+                      return (
+                        <div key={i} className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">
+                            {isNamed ? name : `{{${name}}}`}
+                          </Label>
+                          <Input
+                            value={v}
+                            onChange={(e) => {
+                              const next = [...params];
+                              next[i] = e.target.value;
+                              setParams(next);
+                            }}
+                            placeholder={isNamed ? `Valor para ${name}` : `Valor para variável ${name}`}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 <div className="space-y-2">
                   <Label className="text-sm">Pré-visualização</Label>
                   <div className="rounded-lg border bg-muted/50 p-3 text-sm whitespace-pre-wrap">
-                    {renderPreview(extractBodyText(selected), params)}
+                    {renderPreview(extractBodyText(selected), varNames, params)}
                   </div>
                 </div>
               </div>
