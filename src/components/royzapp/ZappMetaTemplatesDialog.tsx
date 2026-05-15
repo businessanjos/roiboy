@@ -150,8 +150,9 @@ export function ZappMetaTemplatesDialog({
 
   const handleSelect = (t: MetaTemplate) => {
     setSelected(t);
-    const n = countVariables(extractBodyText(t));
-    setParams(Array(n).fill(""));
+    const names = extractVariables(extractBodyText(t));
+    setVarNames(names);
+    setParams(Array(names.length).fill(""));
   };
 
   const handleSaveWaba = async () => {
