@@ -10014,6 +10014,11 @@ export type Database = {
           paid_amount: number | null
           paid_at: string | null
           payment_method: string
+          payment_status: string | null
+          payment_status_updated_at: string | null
+          renegotiated_at: string | null
+          renegotiated_from_id: string | null
+          renegotiation_reason: string | null
           status: string
           updated_at: string
         }
@@ -10036,6 +10041,11 @@ export type Database = {
           paid_amount?: number | null
           paid_at?: string | null
           payment_method: string
+          payment_status?: string | null
+          payment_status_updated_at?: string | null
+          renegotiated_at?: string | null
+          renegotiated_from_id?: string | null
+          renegotiation_reason?: string | null
           status?: string
           updated_at?: string
         }
@@ -10058,6 +10068,11 @@ export type Database = {
           paid_amount?: number | null
           paid_at?: string | null
           payment_method?: string
+          payment_status?: string | null
+          payment_status_updated_at?: string | null
+          renegotiated_at?: string | null
+          renegotiated_from_id?: string | null
+          renegotiation_reason?: string | null
           status?: string
           updated_at?: string
         }
@@ -10067,6 +10082,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installments_renegotiated_from_id_fkey"
+            columns: ["renegotiated_from_id"]
+            isOneToOne: false
+            referencedRelation: "installments"
             referencedColumns: ["id"]
           },
         ]
@@ -19634,6 +19656,14 @@ export type Database = {
           p_name: string
           p_phone: string
           p_rg?: string
+        }
+        Returns: Json
+      }
+      renegotiate_installment: {
+        Args: {
+          p_installment_id: string
+          p_new_installments: Json
+          p_reason: string
         }
         Returns: Json
       }

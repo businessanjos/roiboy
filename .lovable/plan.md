@@ -1,91 +1,78 @@
+## Roadmap Financeiro ROY — Implementação Completa
 
-## Objetivo
-Cada conversa do RoyZapp passa a ter um **dono claro** (consultor responsável), o cliente sabe **com quem está falando** (assinatura no topo de toda mensagem) e a gestão consegue medir **quem fez o quê**.
-
-A visibilidade continua aberta — todo mundo vê tudo e qualquer um pode responder. A diferença é que agora cada mensagem fica marcada com o autor, e cada conversa tem um responsável visível.
+Escopo grande (15 demandas). Vou entregar em **4 fases** sequenciais para não travar o sistema atual e permitir validação do time financeiro a cada etapa.
 
 ---
 
-## 1. Identificação ao cliente (assinatura)
+### FASE 1 — Fundação & Governança (rápido, alto impacto)
+1. **Status granular de pagamento** por método em `installments`:
+   - Enum novo `payment_status`: `cheque_enviado`, `cheque_pendente`, `cheque_recebido`, `cheque_devolvido`, `boleto_emitido`, `boleto_registrado`, `cartao_autorizado`, `cartao_capturado`, `cartao_estornado`, `pix_aguardando`, `pix_confirmado`, `transferencia_pendente`, `transferencia_confirmada`
+   - Campo `payment_status` separado do `status` lógico (paid/overdue/etc)
+   - Histórico automático em `installment_events` a cada mudança
+2. **Trava global de exclusão**: triggers em `contracts`, `invoices`, `installments` bloqueando DELETE (apenas soft-update via renegociação/baixa/perda)
+3. **Botão Renegociar** na timeline da parcela:
+   - Marca original como `renegotiated` (mantém registro)
+   - Gera novo borderô (novas parcelas) vinculado por `renegotiated_from_id`
+   - Modal pede: motivo, novo plano (qtd parcelas, valor, vencimento), método
 
-Toda mensagem enviada por um humano sai com cabeçalho:
+### FASE 2 — Importadores & Baixa Automática
+4. **Importador Cielo** (CSV/Excel): edge function parseia relatório e auto-concilia por valor + data + bandeira + NSU; baixa em massa com preview
+5. **Taxa de cartão por parcela**: campo `card_fee_amount` e `card_fee_percent` em `installments`; entra no DRE/conciliação
+6. **Importador Cheque** (CSV/manual): registra cheques, vincula a parcelas, atualiza `payment_status`
+7. **Baixa automatizada**:
+   - Cartão: via importador Cielo
+   - Boleto: webhook bancário (CNAB ou API banco) → marca paga
+   - PIX: webhook → marca paga
+   - Cheque: ao mudar status para `cheque_recebido` → baixa automática
 
-```
-*Maria Souza | Eternum*
-[texto da mensagem]
-```
+### FASE 3 — Plano de Contas, Cobrança & NF
+8. **Plano de Contas**: tabela `chart_accounts` hierárquica (categoria → subcategoria → conta); campo `chart_account_id` obrigatório em `installments` e `financial_entries`
+9. **Régua de cobrança personalizada por método**: tabela `dunning_rules` com filtros (`payment_method`, dias antes/depois vencimento, canal: WhatsApp/email/SMS, template); cartão e cheque desligados por padrão, boleto ativo
+10. **CRM/Pipeline de Cobrança**: novo Kanban em `/financial/cobranca` com colunas (A vencer 7d → Vencida → Negociando → Promessa de pagamento → Quebrou promessa → Judicial → Recuperada); cada parcela vencida vira card; agente humano move e registra interação
+11. **Faturamento Fiscal com trava**: botão "Faturar NF" em invoice/parcela → após emissão grava `nf_number` + `nf_issued_at` → trava edição do valor (campo `locked_by_invoice = true`)
 
-- Vale para **texto, legenda de mídia, áudio (legenda do encaminhamento), template** (quando o template tiver corpo livre).
-- Mensagens **automáticas** (boas-vindas, playbook) e **encaminhamentos de áudio cru sem caption** ficam sem assinatura.
-- Templates Meta com variáveis fixas **não** ganham prefixo (Meta rejeita modificação do corpo).
-- Toggle por consultor em `Configurações > Preferências`: "Adicionar assinatura nas mensagens" (ligado por padrão).
-- O nome usado é `users.name`. "Eternum" sai fixo (no futuro pode virar nome do setor).
-
-## 2. Atribuição híbrida (cliente fixo + lead manual)
-
-Reaproveita a tabela existente `zapp_conversation_assignments` (já tem `agent_id`, `status`, `assigned_at`).
-
-Regra na criação de uma conversa nova (`uazapi-webhook` e `meta-webhook`):
-
-1. Se a conversa for vinculada a um `client_id` que tem `responsible_user_id` → cria assignment automático para esse usuário, status `active`.
-2. Se for lead novo (sem cliente/sem responsável) → fica **sem dono**, status `unassigned`, aparece numa fila "Sem dono" no topo da lista.
-
-Ações na UI:
-- Botão **"Pegar conversa"** (em conversas sem dono) → cria assignment para o usuário atual.
-- Botão **"Transferir"** (em conversas com dono) → escolhe outro consultor, registra em `zapp_transfers` (já existe).
-- Qualquer um pode responder mesmo sem ser dono — o envio fica registrado em `sender_user_id`, mas o **dono da conversa** não muda automaticamente.
-
-Visualização:
-- Avatar pequeno do dono no canto da linha da conversa (lista lateral).
-- Badge "Sem dono" em âmbar para fila aberta.
-
-## 3. Histórico: quem enviou cada mensagem
-
-`zapp_messages.sender_user_id` já existe e já é gravado nos envios via UI. Vamos:
-
-- Garantir gravação também em: envio de template (Meta), playbook multi-send, áudio, mídia.
-- Na bolha de saída exibir, em letrinha pequena acima do texto: avatar (16px) + primeiro nome do consultor.
-- Hover/tap mostra nome completo e horário.
-
-## 4. Métricas por consultor
-
-Nova aba **"Atendimentos"** em `/roy-zapp` (ou card no topo do dashboard de operações), com os indicadores dos últimos 7/30 dias por consultor:
-
-- Conversas atendidas (distinct conversation_id onde sender_user_id = X)
-- Mensagens enviadas
-- Tempo médio de 1ª resposta (usa `first_response_at` do assignment)
-- Conversas atualmente em aberto sob responsabilidade
-- Ranking simples por mensagens enviadas
-
-Gráfico de linha simples com volume diário, tabela ordenável.
+### FASE 4 — Ciclo Final & Sinalização
+12. **Quitação automática do contrato**: trigger ao marcar última parcela como paga → `contracts.status = 'quitado'` + `quitado_at`
+13. **Sinal de quitação para Operações/CS**: badge âmbar "Quitado — pronto para renovação" no `/clients` e dentro do client drawer (lê `contracts.status = 'quitado'` AND `end_date > now() - 90d`)
+14. **Status automatizado em campos customizados**: ao mudar `payment_status` ou `status`, hook escreve no histórico do client e no campo customizado correspondente (mesmo padrão do briefing de operação)
+15. **Métrica "Última parcela quitada"** visível no header do contrato e no card do cliente
 
 ---
 
-## Arquivos / mudanças técnicas
+### Detalhes técnicos
 
-### Banco
-- `zapp_conversations`: nada novo (assignment vive em `zapp_conversation_assignments`).
-- `users`: novo campo `zapp_signature_enabled boolean default true`.
-- Trigger `auto_assign_conversation_on_create()` em `zapp_conversations` (AFTER INSERT): se `client_id` tem `responsible_user_id` e usuário tem `zapp_agents` ativo, insere assignment ativo.
+**Migrations (Fase 1):**
+- `payment_status` enum + coluna em `installments`
+- `installment_events` (já existe? se sim, adiciona evento `payment_status_changed`)
+- Triggers DELETE bloqueando em `contracts`, `invoices`, `installments`
+- Coluna `renegotiated_from_id` (self-FK) em `installments`
 
-### Edge functions
-- `uazapi-manager` e `meta-manager` (envio): aplicar prefixo de assinatura no `text` quando `add_signature !== false` no payload e o usuário tiver `zapp_signature_enabled=true`. Resolver nome via `users.name` do `userData` já carregado.
-- Garantir `sender_user_id` no insert em `zapp_messages` (template e mídia).
+**Edge functions novas:**
+- `import-cielo-report` (Fase 2)
+- `import-cheques` (Fase 2)
+- `bank-webhook-receiver` (Fase 2)
+- `issue-fiscal-invoice` (Fase 3) — integra Notazz já mapeado no roadmap
+- `dunning-engine-cron` (Fase 3) — processa régua diariamente
+- `auto-quitar-contract` trigger SQL (Fase 4)
 
-### Frontend
-- `src/components/royzapp/MessageBubble.tsx` (ou equivalente): mostrar autor humano em bolhas outbound.
-- `src/components/royzapp/ConversationListItem.tsx`: avatar do dono + badge "Sem dono".
-- Novo componente `ClaimConversationButton` + `TransferConversationButton`.
-- Novo `src/pages/RoyZappAttendanceMetrics.tsx` + rota `/roy-zapp/atendimentos` com filtro de período e tabela.
-- `Settings > Preferências` → toggle `zapp_signature_enabled`.
+**UI nova:**
+- Modal Renegociar (Fase 1)
+- Página `/financial/importar` com 2 abas: Cielo / Cheques (Fase 2)
+- Página `/financial/plano-de-contas` (Fase 3)
+- Página `/financial/cobranca` Kanban (Fase 3)
+- Página `/financial/regua-cobranca` (Fase 3)
+- Botão "Faturar NF" + lock visual (Fase 3)
+- Badge "Quitado" em ClientCard, ContractList (Fase 4)
+
+**Memória de projeto:** atualizar `mem://features/financial/roy-financial-roadmap-pt` ao final de cada fase com o que foi entregue.
 
 ---
 
-## Sequência de entrega
+### Confirmações antes de começar
 
-1. **Banco + assinatura no envio** (toggle + prefixo em uazapi/meta) — efeito imediato na percepção do cliente.
-2. **Autor por bolha + dono visível na lista** (UI).
-3. **Atribuição automática + botões pegar/transferir + fila "sem dono"**.
-4. **Aba de métricas por consultor**.
+1. **Fase 1 agora?** (1-2 dias de build, migrations + 1 modal + triggers — baixo risco)
+2. **Régua de cobrança WhatsApp** vai usar RoyZapp (já temos compliance/limits) — ok?
+3. **Webhook bancário** — qual banco? (Itaú, Bradesco, Santander, Inter têm APIs diferentes; CNAB 240 funciona para todos mas é arquivo, não realtime)
+4. **NF Fiscal** — Notazz já está no roadmap. Confirmar que é Notazz mesmo?
 
-Posso começar pelo passo 1 já. Confirma a sequência ou quer reordenar?
+Posso começar pela **Fase 1** assim que você confirmar.

@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InstallmentTimelineDialog } from "@/components/financial/InstallmentTimelineDialog";
+import { PaymentStatusBadge } from "@/components/financial/PaymentStatusSelect";
 
 type InstallmentRow = {
   id: string;
@@ -47,6 +48,7 @@ type InstallmentRow = {
   amount: number;
   payment_method: string | null;
   status: string;
+  payment_status: string | null;
   paid_at: string | null;
   locked: boolean;
 };
@@ -84,7 +86,7 @@ export default function FinancialInstallmentsPage() {
       let query = supabase
         .from("installments")
         .select(
-          "id, invoice_id, number, due_date, amount, payment_method, status, paid_at, locked, invoices!inner(id, company_id, account_id)"
+          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id)"
         )
         .order("due_date", { ascending: true })
         .limit(500);
@@ -217,6 +219,7 @@ export default function FinancialInstallmentsPage() {
                 <TableHead>Vencimento</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Forma</TableHead>
+                <TableHead>Status detalhado</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Pago em</TableHead>
                 <TableHead>Fatura</TableHead>
@@ -227,14 +230,14 @@ export default function FinancialInstallmentsPage() {
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={8}>
+                    <TableCell colSpan={9}>
                       <Skeleton className="h-8 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
                     Nenhuma parcela encontrada para esta empresa.
                   </TableCell>
                 </TableRow>
@@ -255,6 +258,9 @@ export default function FinancialInstallmentsPage() {
                       <TableCell>{formatCurrency(Number(r.amount))}</TableCell>
                       <TableCell className="capitalize text-muted-foreground">
                         {r.payment_method ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <PaymentStatusBadge value={r.payment_status} />
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={meta.className}>
