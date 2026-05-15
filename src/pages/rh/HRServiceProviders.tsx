@@ -216,14 +216,6 @@ export default function HRServiceProviders() {
                     )}
                   </div>
                 </div>
-                {provider.fee_amount && (
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Fee mensal</p>
-                    <p className="font-semibold text-foreground">
-                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(provider.fee_amount)}
-                    </p>
-                  </div>
-                )}
               </div>
             );
           })}
