@@ -341,7 +341,61 @@ Deno.serve(async (req) => {
       });
     }
 
-    return error(`Ação "${action}" não reconhecida. Ações: list_pending, get_contract, confirm_access, create_access`);
+    // ─── POST: report_client_stats — Ryka envia faturamento e nº de pacientes do mês ───
+    if (action === "report_client_stats" && req.method === "POST") {
+      const body = await req.json().catch(() => ({}));
+      const { client_id, period_month, revenue_brl, patients_count, raw } = body;
+
+      if (!client_id || !period_month) {
+        return error("client_id e period_month (YYYY-MM-01) são obrigatórios");
+      }
+
+      // Resolve account_id do cliente
+      const { data: client, error: cErr } = await supabase
+        .from("clients")
+        .select("id, account_id")
+        .eq("id", client_id)
+        .maybeSingle();
+
+      if (cErr || !client) return error("Cliente não encontrado", 404);
+
+      // Normaliza para dia 01 do mês
+      const monthDate = String(period_month).slice(0, 7) + "-01";
+
+      const { data: upserted, error: upErr } = await supabase
+        .from("client_ryka_stats")
+        .upsert(
+          {
+            account_id: client.account_id,
+            client_id,
+            period_month: monthDate,
+            revenue_brl: Number(revenue_brl) || 0,
+            patients_count: Number(patients_count) || 0,
+            raw_payload: raw ?? body,
+            source: "clinica_ryka",
+          },
+          { onConflict: "client_id,period_month" }
+        )
+        .select()
+        .single();
+
+      if (upErr) {
+        console.error("[clinica-ryka-api] upsert stats error:", upErr);
+        return error("Erro ao registrar estatísticas", 500);
+      }
+
+      // Marcos detectados pelo trigger:
+      const { data: milestones } = await supabase
+        .from("client_milestones")
+        .select("id, milestone_type, title, achieved_at, value_label")
+        .eq("client_id", client_id)
+        .eq("auto_detected", true)
+        .order("achieved_at", { ascending: false });
+
+      return json({ success: true, stat: upserted, milestones: milestones || [] });
+    }
+
+    return error(`Ação "${action}" não reconhecida. Ações: list_pending, get_contract, confirm_access, create_access, report_client_stats`);
   } catch (err: any) {
     console.error("[clinica-ryka-api] Unexpected error:", err);
     return error("Erro interno do servidor", 500);
