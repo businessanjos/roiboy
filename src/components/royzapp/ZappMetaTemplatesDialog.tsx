@@ -78,6 +78,7 @@ export function ZappMetaTemplatesDialog({
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [varNames, setVarNames] = useState<string[]>([]);
   const [templates, setTemplates] = useState<MetaTemplate[]>([]);
   const [search, setSearch] = useState("");
   const [needsWabaId, setNeedsWabaId] = useState(false);
