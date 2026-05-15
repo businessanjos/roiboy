@@ -775,7 +775,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       
-      const textBody: Record<string, unknown> = { number: cleanPhone, text: message };
+      const textBody: Record<string, unknown> = { number: cleanPhone, text: applySignature(message) };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) {
         textBody.replyid = normalizedQuotedMessageId;
@@ -797,7 +797,7 @@ Deno.serve(async (req) => {
         number: cleanPhone, 
         type: payload.media_type || "image",
         file: payload.media_url,
-        text: payload.caption || ""
+        text: applySignature(payload.caption || "")
       };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
@@ -817,7 +817,7 @@ Deno.serve(async (req) => {
       // ✅ CORRIGIDO: Usar /send/text para grupos
       const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
       
-      const groupBody: Record<string, unknown> = { number: jid, text: message };
+      const groupBody: Record<string, unknown> = { number: jid, text: applySignature(message) };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) { groupBody.replyid = normalizedQuotedMessageId; }
       if (payload.mentions) groupBody.mentions = payload.mentions;
@@ -834,7 +834,7 @@ Deno.serve(async (req) => {
         number: jid, 
         type: payload.media_type || "image",
         file: payload.media_url,
-        text: payload.caption || ""
+        text: applySignature(payload.caption || "")
       };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
