@@ -80,9 +80,9 @@ export default function ClinicaRyka() {
            client_products(products(id, name, color))`,
         )
         .eq("account_id", accountId!)
-        .eq("status", "active")
+        .not("status", "in", "(cancelled,dismissed,ended,inactive,lead)")
         .order("created_at", { ascending: false })
-        .limit(2000);
+        .limit(3000);
       if (error) throw error;
       const rows = (data ?? []) as unknown as ClientRow[];
       return rows.filter((c) =>
