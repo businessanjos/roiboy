@@ -108,6 +108,11 @@ export function ZappMetaTemplatesDialog({
         setTemplates([]);
         return;
       }
+      if (data?.error) {
+        setTemplates([]);
+        setError(data.error);
+        return;
+      }
       setTemplates(data?.data?.templates || []);
     } catch (e) {
       setError((e as Error).message);
