@@ -310,6 +310,7 @@ export function useZappMessaging({
             sent_at: now,
             external_message_id: externalId,
             sender_user_id: currentUser?.id || null,
+            sender_name: currentUser?.name || null,
             quoted_message_id: replyContext?.external_message_id || null,
             quoted_content: replyContext?.content || null,
             quoted_sender_name: replyContext?.is_from_client 
