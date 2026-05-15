@@ -46,19 +46,25 @@ function extractBodyText(t: MetaTemplate): string {
   return t.components.find((c) => c.type.toUpperCase() === "BODY")?.text || "";
 }
 
-function countVariables(text: string): number {
-  const matches = text.match(/\{\{\s*\d+\s*\}\}/g);
-  if (!matches) return 0;
-  const max = Math.max(
-    ...matches.map((m) => parseInt(m.replace(/[^0-9]/g, ""), 10))
-  );
-  return max;
+function extractVariables(text: string): string[] {
+  // Captures both {{1}} (positional) and {{customer_name}} (named) in order, deduplicated
+  const re = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (!seen.has(m[1])) {
+      seen.add(m[1]);
+      out.push(m[1]);
+    }
+  }
+  return out;
 }
 
-function renderPreview(text: string, params: string[]): string {
-  return text.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, idx) => {
-    const i = parseInt(idx, 10) - 1;
-    return params[i] || `{{${idx}}}`;
+function renderPreview(text: string, vars: string[], values: string[]): string {
+  return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
+    const i = vars.indexOf(key);
+    return values[i] || `{{${key}}}`;
   });
 }
 
