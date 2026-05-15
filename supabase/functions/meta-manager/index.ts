@@ -261,7 +261,9 @@ Deno.serve(async (req) => {
 
         if (conv) {
           const previewText = `[Template: ${template_name}]${
-            Array.isArray(body_params) && body_params.length > 0 ? " " + body_params.join(" | ") : ""
+            Array.isArray(body_params) && body_params.length > 0
+              ? " " + body_params.map((p: any) => typeof p === "string" ? p : (p?.text ?? "")).join(" | ")
+              : ""
           }`;
           await supabase.from("zapp_messages").insert({
             account_id: accountId,
