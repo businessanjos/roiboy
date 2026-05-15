@@ -194,7 +194,10 @@ export function ZappMetaTemplatesDialog({
             phone,
             template_name: selected.name,
             template_language: selected.language,
-            body_params: params,
+            body_params: params.map((text, i) => {
+              const name = varNames[i];
+              return name && !/^\d+$/.test(name) ? { name, text } : text;
+            }),
           },
         }
       );
