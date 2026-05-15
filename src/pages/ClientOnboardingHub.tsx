@@ -123,8 +123,21 @@ export default function ClientOnboardingHub() {
             />
           </div>
 
-          {/* Lista enriquecida com botão Coach IA */}
-          <SmartClientList clients={filtered} stageById={stageById} onOpenCoach={setDrawerClient} />
+          {/* Lista enriquecida com botão Iniciar Onboarding / Continuar */}
+          <SmartClientList
+            clients={filtered}
+            stages={stages}
+            stageById={stageById}
+            onOpenClient={setDrawerClient}
+            onStart={async (clientId, stageId) => {
+              try {
+                await moveClient(clientId, stageId);
+                toast.success("Onboarding iniciado");
+              } catch (e) {
+                toast.error("Erro ao iniciar onboarding");
+              }
+            }}
+          />
 
           {/* Orquestrador completo (mantido para gerenciar checklist) */}
           <details className="rounded-lg border p-4">
