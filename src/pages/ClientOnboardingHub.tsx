@@ -7,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import {
   Rocket, Search, Sparkles, Users, AlertCircle, RefreshCw, Settings2,
-  Brain, Activity, AlertTriangle, Timer, TrendingUp,
+  Brain, Activity, AlertTriangle, Timer, TrendingUp, Play, ArrowRight,
 } from "lucide-react";
+import { toast } from "sonner";
 import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
 import { StageChecklistEditor } from "@/components/client/StageChecklistEditor";
 import { ClientOnboardingDrawer } from "@/components/client/ClientOnboardingDrawer";
