@@ -22,6 +22,7 @@ import { SalesPerformance } from "@/components/client/SalesPerformance";
 import { ClientAgenda } from "@/components/client/ClientAgenda";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditionalPhones } from "@/components/client/ClientInfoForm";
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
+import { ClientMilestones } from "@/components/client/ClientMilestones";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
 import { ClientChurnSignals } from "@/components/client/ClientChurnSignals";
 import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
@@ -2493,20 +2494,27 @@ export default function ClientDetail() {
             );
           case "cx":
             return (
-              <Card className="shadow-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Heart className="h-4 w-4" />
-                    Momentos CX
-                  </CardTitle>
-                  <CardDescription>
-                    Eventos importantes da vida do cliente para um atendimento humanizado
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <ClientLifeEvents clientId={id!} />
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                <Card className="shadow-card">
+                  <CardContent className="pt-6">
+                    <ClientMilestones clientId={id!} />
+                  </CardContent>
+                </Card>
+                <Card className="shadow-card">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Heart className="h-4 w-4" />
+                      Momentos CX
+                    </CardTitle>
+                    <CardDescription>
+                      Eventos importantes da vida do cliente para um atendimento humanizado
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <ClientLifeEvents clientId={id!} />
+                  </CardContent>
+                </Card>
+              </div>
             );
           case "vinculos":
             return accountId ? (
