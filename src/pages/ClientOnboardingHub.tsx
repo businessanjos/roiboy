@@ -255,12 +255,20 @@ function KpiCard({
 }
 
 function SmartClientList({
-  clients, stageById, onOpenCoach,
+  clients, stages, stageById, onOpenClient, onStart,
 }: {
   clients: OnboardingClient[];
+  stages: { id: string; display_order: number; name: string }[];
   stageById: Map<string, any>;
-  onOpenCoach: (c: OnboardingClient) => void;
+  onOpenClient: (c: OnboardingClient) => void;
+  onStart: (clientId: string, stageId: string) => Promise<void>;
 }) {
+  // Primeira etapa "ativa" da jornada (display_order = 1, ou a menor > 0; fallback: a primeira)
+  const firstActiveStage = useMemo(() => {
+    const sorted = [...stages].sort((a, b) => a.display_order - b.display_order);
+    return sorted.find(s => s.display_order >= 1) ?? sorted[0] ?? null;
+  }, [stages]);
+
   if (clients.length === 0) {
     return (
       <Card>
@@ -275,10 +283,13 @@ function SmartClientList({
     <div className="grid gap-2">
       {clients.slice(0, 50).map(c => {
         const stage = c.stage_id ? stageById.get(c.stage_id) : null;
+        const notStarted = !stage || stage.display_order === 0;
         const health = computeHealth(c.stage_changed_at, stage?.sla_hours ?? null);
         const days = daysInStage(c.stage_changed_at);
         const product = c.client_products?.[0]?.products;
-        const healthColor = health === "overdue" ? "border-l-red-500"
+        const healthColor = notStarted
+          ? "border-l-amber-500"
+          : health === "overdue" ? "border-l-red-500"
           : health === "at_risk" ? "border-l-amber-500"
           : health === "on_track" ? "border-l-emerald-500"
           : "border-l-muted-foreground/30";
@@ -301,6 +312,11 @@ function SmartClientList({
                       {product.name}
                     </Badge>
                   )}
+                  {notStarted && (
+                    <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700 dark:text-amber-400">
+                      Aguardando início
+                    </Badge>
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
                   <span>{stage?.name || "Sem etapa"}</span>
@@ -315,9 +331,19 @@ function SmartClientList({
                   {c.ai_next_step && <Badge variant="outline" className="text-[9px] gap-0.5"><Brain className="h-2.5 w-2.5" />IA</Badge>}
                 </div>
               </div>
-              <Button size="sm" variant="outline" onClick={() => onOpenCoach(c)} className="gap-1.5">
-                <Brain className="h-3.5 w-3.5" /> Coach
-              </Button>
+              {notStarted && firstActiveStage ? (
+                <Button
+                  size="sm"
+                  onClick={() => onStart(c.id, firstActiveStage.id)}
+                  className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-white"
+                >
+                  <Play className="h-3.5 w-3.5" /> Iniciar Onboarding
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => onOpenClient(c)} className="gap-1.5">
+                  Continuar <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </CardContent>
           </Card>
         );
