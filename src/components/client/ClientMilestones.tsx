@@ -135,7 +135,7 @@ interface Props {
 }
 
 export function ClientMilestones({ clientId }: Props) {
-  const { user } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
   const [items, setItems] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Milestone | null>(null);
@@ -352,7 +352,7 @@ export function ClientMilestones({ clientId }: Props) {
         open={!!editing || creating}
         milestone={editing}
         clientId={clientId}
-        accountId={user?.account_id || null}
+        accountId={currentUser?.account_id || null}
         onClose={() => {
           setEditing(null);
           setCreating(false);
