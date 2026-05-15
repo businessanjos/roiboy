@@ -186,6 +186,7 @@ const FinancialInvoicesPage = lazyRetry(() => import("./pages/financial/Financia
 const FinancialInstallmentsPage = lazyRetry(() => import("./pages/financial/FinancialInstallmentsPage"));
 const FinancialPaymentMethodsPage = lazyRetry(() => import("./pages/financial/FinancialPaymentMethodsPage"));
 const FinancialOmieIntegrationPage = lazyRetry(() => import("./pages/financial/FinancialOmieIntegrationPage"));
+const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -291,6 +292,7 @@ const App = () => (
                               <Route path="balance-sheet" element={<FinancialBalanceSheetPage />} />
                               <Route path="payment-methods" element={<FinancialPaymentMethodsPage />} />
                               <Route path="integracoes/omie" element={<FinancialOmieIntegrationPage />} />
+                              <Route path="importar" element={<FinancialImportPage />} />
                             </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
