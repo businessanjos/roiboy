@@ -347,8 +347,13 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error("[meta-manager] Error:", err);
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500,
+    const message = (err as Error).message || "Unknown error";
+    let code: string | undefined;
+    const m = message.match(/\(#(\d+)\)/);
+    if (m) code = `meta_${m[1]}`;
+    if (/Account not registered/i.test(message)) code = "phone_not_registered";
+    return new Response(JSON.stringify({ error: message, code }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
