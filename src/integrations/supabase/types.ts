@@ -1200,6 +1200,62 @@ export type Database = {
           },
         ]
       }
+      bank_webhook_events: {
+        Row: {
+          account_id: string | null
+          amount: number | null
+          created_at: string
+          error_message: string | null
+          event_type: string | null
+          external_id: string | null
+          id: string
+          installment_id: string | null
+          occurred_at: string | null
+          payload: Json
+          processed_at: string | null
+          source: string
+          status: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string | null
+          external_id?: string | null
+          id?: string
+          installment_id?: string | null
+          occurred_at?: string | null
+          payload: Json
+          processed_at?: string | null
+          source: string
+          status?: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string | null
+          external_id?: string | null
+          id?: string
+          installment_id?: string | null
+          occurred_at?: string | null
+          payload?: Json
+          processed_at?: string | null
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_webhook_events_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "installments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boletos: {
         Row: {
           account_id: string
@@ -7557,6 +7613,144 @@ export type Database = {
           },
         ]
       }
+      financial_import_batches: {
+        Row: {
+          account_id: string
+          applied_at: string | null
+          created_at: string
+          created_by: string | null
+          duplicate_rows: number | null
+          filename: string | null
+          id: string
+          matched_rows: number | null
+          notes: string | null
+          settled_rows: number | null
+          source: string
+          status: string
+          total_amount: number | null
+          total_fee_amount: number | null
+          total_rows: number | null
+          unmatched_rows: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string
+          applied_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          duplicate_rows?: number | null
+          filename?: string | null
+          id?: string
+          matched_rows?: number | null
+          notes?: string | null
+          settled_rows?: number | null
+          source: string
+          status?: string
+          total_amount?: number | null
+          total_fee_amount?: number | null
+          total_rows?: number | null
+          unmatched_rows?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          applied_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          duplicate_rows?: number | null
+          filename?: string | null
+          id?: string
+          matched_rows?: number | null
+          notes?: string | null
+          settled_rows?: number | null
+          source?: string
+          status?: string
+          total_amount?: number | null
+          total_fee_amount?: number | null
+          total_rows?: number | null
+          unmatched_rows?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      financial_import_rows: {
+        Row: {
+          account_id: string
+          batch_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          installment_id: string | null
+          match_score: number | null
+          parsed_amount: number | null
+          parsed_auth_code: string | null
+          parsed_brand: string | null
+          parsed_date: string | null
+          parsed_doc: string | null
+          parsed_fee_amount: number | null
+          parsed_net_amount: number | null
+          parsed_nsu: string | null
+          parsed_payer_name: string | null
+          raw: Json
+          status: string
+        }
+        Insert: {
+          account_id?: string
+          batch_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          installment_id?: string | null
+          match_score?: number | null
+          parsed_amount?: number | null
+          parsed_auth_code?: string | null
+          parsed_brand?: string | null
+          parsed_date?: string | null
+          parsed_doc?: string | null
+          parsed_fee_amount?: number | null
+          parsed_net_amount?: number | null
+          parsed_nsu?: string | null
+          parsed_payer_name?: string | null
+          raw: Json
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          batch_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          installment_id?: string | null
+          match_score?: number | null
+          parsed_amount?: number | null
+          parsed_auth_code?: string | null
+          parsed_brand?: string | null
+          parsed_date?: string | null
+          parsed_doc?: string | null
+          parsed_fee_amount?: number | null
+          parsed_net_amount?: number | null
+          parsed_nsu?: string | null
+          parsed_payer_name?: string | null
+          raw?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "financial_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_import_rows_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "installments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_pending_classifications: {
         Row: {
           account_id: string
@@ -9998,6 +10192,12 @@ export type Database = {
         Row: {
           account_id: string
           amount: number
+          card_acquirer: string | null
+          card_authorization_code: string | null
+          card_brand: string | null
+          card_fee_amount: number | null
+          card_fee_percent: number | null
+          card_nsu: string | null
           card_status: string | null
           check_status: string | null
           created_at: string
@@ -10009,6 +10209,7 @@ export type Database = {
           invoice_id: string
           locked: boolean
           locked_at: string | null
+          net_amount: number | null
           notes: string | null
           number: number
           paid_amount: number | null
@@ -10025,6 +10226,12 @@ export type Database = {
         Insert: {
           account_id: string
           amount: number
+          card_acquirer?: string | null
+          card_authorization_code?: string | null
+          card_brand?: string | null
+          card_fee_amount?: number | null
+          card_fee_percent?: number | null
+          card_nsu?: string | null
           card_status?: string | null
           check_status?: string | null
           created_at?: string
@@ -10036,6 +10243,7 @@ export type Database = {
           invoice_id: string
           locked?: boolean
           locked_at?: string | null
+          net_amount?: number | null
           notes?: string | null
           number: number
           paid_amount?: number | null
@@ -10052,6 +10260,12 @@ export type Database = {
         Update: {
           account_id?: string
           amount?: number
+          card_acquirer?: string | null
+          card_authorization_code?: string | null
+          card_brand?: string | null
+          card_fee_amount?: number | null
+          card_fee_percent?: number | null
+          card_nsu?: string | null
           card_status?: string | null
           check_status?: string | null
           created_at?: string
@@ -10063,6 +10277,7 @@ export type Database = {
           invoice_id?: string
           locked?: boolean
           locked_at?: string | null
+          net_amount?: number | null
           notes?: string | null
           number?: number
           paid_amount?: number | null
@@ -19666,6 +19881,10 @@ export type Database = {
           p_reason: string
         }
         Returns: Json
+      }
+      settle_installment_from_import: {
+        Args: { p_payment_status?: string; p_row_id: string }
+        Returns: string
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
