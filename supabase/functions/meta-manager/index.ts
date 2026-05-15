@@ -196,6 +196,87 @@ Deno.serve(async (req) => {
       };
       result = await metaApi(`/${phoneNumberId}/messages`, "POST", metaToken, messageBody);
 
+      // Persist outbound template message into conversation history
+      try {
+        const externalMessageId = result?.messages?.[0]?.id || null;
+        const chatJid = `${cleanPhone}@s.whatsapp.net`;
+
+        // Find or create conversation
+        let { data: conv } = await supabase
+          .from("zapp_conversations")
+          .select("id")
+          .eq("account_id", accountId)
+          .eq("phone_jid", chatJid)
+          .eq("integration_id", intData.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (!conv && intData.id) {
+          // Try to match client/lead by phone
+          let clientId: string | null = null;
+          let leadId: string | null = null;
+          const phoneVariants = [cleanPhone, cleanPhone.replace(/^55/, "")];
+          for (const pv of phoneVariants) {
+            const { data: c } = await supabase.from("clients").select("id")
+              .eq("account_id", accountId).or(`phone.eq.${pv},phone.eq.+${pv}`).limit(1).maybeSingle();
+            if (c) { clientId = c.id; break; }
+          }
+          if (!clientId) {
+            for (const pv of phoneVariants) {
+              const { data: l } = await supabase.from("leads").select("id")
+                .eq("account_id", accountId).or(`phone.eq.${pv},phone.eq.+${pv}`).limit(1).maybeSingle();
+              if (l) { leadId = l.id; break; }
+            }
+          }
+
+          const { data: newConv } = await supabase
+            .from("zapp_conversations")
+            .insert({
+              account_id: accountId,
+              phone_jid: chatJid,
+              phone_e164: cleanPhone,
+              contact_name: cleanPhone,
+              integration_id: intData.id,
+              client_id: clientId,
+              lead_id: leadId,
+              last_message_at: new Date().toISOString(),
+              last_message_preview: `[Template] ${template_name}`,
+              unread_count: 0,
+              is_group: false,
+            })
+            .select("id")
+            .single();
+          conv = newConv;
+        }
+
+        if (conv) {
+          const previewText = `[Template: ${template_name}]${
+            Array.isArray(body_params) && body_params.length > 0 ? " " + body_params.join(" | ") : ""
+          }`;
+          await supabase.from("zapp_messages").insert({
+            account_id: accountId,
+            zapp_conversation_id: conv.id,
+            direction: "outbound",
+            content: previewText,
+            message_type: "template",
+            external_message_id: externalMessageId,
+            sender_phone: cleanPhone,
+            sender_name: userData.name,
+            sender_user_id: userData.id,
+            delivery_status: "sent",
+            sent_at: new Date().toISOString(),
+          });
+          await supabase.from("zapp_conversations")
+            .update({
+              last_message_at: new Date().toISOString(),
+              last_message_preview: previewText.substring(0, 100),
+            })
+            .eq("id", conv.id);
+        }
+      } catch (persistErr) {
+        console.error("[meta-manager] Failed to persist template message:", persistErr);
+      }
+
     } else { const _placeholder = true;
 
     // ============================================
