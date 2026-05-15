@@ -80,7 +80,7 @@ export default function ClinicaRyka() {
            client_products(products(id, name, color))`,
         )
         .eq("account_id", accountId!)
-        .not("status", "in", "(cancelled,dismissed,ended,inactive,lead)")
+        .in("status", ["active", "churn_risk", "paused"])
         .order("created_at", { ascending: false })
         .limit(3000);
       if (error) throw error;
