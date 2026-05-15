@@ -2266,6 +2266,104 @@ export type Database = {
           },
         ]
       }
+      client_milestones: {
+        Row: {
+          account_id: string
+          achieved_at: string
+          auto_detected: boolean
+          client_id: string
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          done_experience: boolean
+          done_post: boolean
+          done_prize: boolean
+          done_recognition: boolean
+          done_status: boolean
+          done_symbol: boolean
+          id: string
+          milestone_type: string
+          notes: string | null
+          title: string
+          updated_at: string
+          value: number | null
+          value_label: string | null
+        }
+        Insert: {
+          account_id: string
+          achieved_at: string
+          auto_detected?: boolean
+          client_id: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          done_experience?: boolean
+          done_post?: boolean
+          done_prize?: boolean
+          done_recognition?: boolean
+          done_status?: boolean
+          done_symbol?: boolean
+          id?: string
+          milestone_type: string
+          notes?: string | null
+          title: string
+          updated_at?: string
+          value?: number | null
+          value_label?: string | null
+        }
+        Update: {
+          account_id?: string
+          achieved_at?: string
+          auto_detected?: boolean
+          client_id?: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          done_experience?: boolean
+          done_post?: boolean
+          done_prize?: boolean
+          done_recognition?: boolean
+          done_status?: boolean
+          done_symbol?: boolean
+          id?: string
+          milestone_type?: string
+          notes?: string | null
+          title?: string
+          updated_at?: string
+          value?: number | null
+          value_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_milestones_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_milestones_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_milestones_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_milestones_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_payers: {
         Row: {
           account_id: string
@@ -2531,6 +2629,67 @@ export type Database = {
             columns: ["triggered_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_ryka_stats: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          id: string
+          patients_count: number
+          period_month: string
+          raw_payload: Json | null
+          revenue_brl: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          patients_count?: number
+          period_month: string
+          raw_payload?: Json | null
+          revenue_brl?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          patients_count?: number
+          period_month?: string
+          raw_payload?: Json | null
+          revenue_brl?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_ryka_stats_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_ryka_stats_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_ryka_stats_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
