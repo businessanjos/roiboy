@@ -280,28 +280,32 @@ export function ZappMetaTemplatesDialog({
                 {params.length > 0 && (
                   <div className="space-y-3">
                     <Label className="text-sm">Variáveis</Label>
-                    {params.map((v, i) => (
-                      <div key={i} className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">
-                          {`{{${i + 1}}}`}
-                        </Label>
-                        <Input
-                          value={v}
-                          onChange={(e) => {
-                            const next = [...params];
-                            next[i] = e.target.value;
-                            setParams(next);
-                          }}
-                          placeholder={`Valor para variável ${i + 1}`}
-                        />
-                      </div>
-                    ))}
+                    {params.map((v, i) => {
+                      const name = varNames[i] ?? String(i + 1);
+                      const isNamed = !/^\d+$/.test(name);
+                      return (
+                        <div key={i} className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">
+                            {isNamed ? name : `{{${name}}}`}
+                          </Label>
+                          <Input
+                            value={v}
+                            onChange={(e) => {
+                              const next = [...params];
+                              next[i] = e.target.value;
+                              setParams(next);
+                            }}
+                            placeholder={isNamed ? `Valor para ${name}` : `Valor para variável ${name}`}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 <div className="space-y-2">
                   <Label className="text-sm">Pré-visualização</Label>
                   <div className="rounded-lg border bg-muted/50 p-3 text-sm whitespace-pre-wrap">
-                    {renderPreview(extractBodyText(selected), params)}
+                    {renderPreview(extractBodyText(selected), varNames, params)}
                   </div>
                 </div>
               </div>
