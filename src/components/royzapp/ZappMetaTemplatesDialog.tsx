@@ -103,6 +103,11 @@ export function ZappMetaTemplatesDialog({
         }
         return;
       }
+      if (data?.data?.needs_waba_id || data?.data?.code === "missing_waba_id") {
+        setNeedsWabaId(true);
+        setTemplates([]);
+        return;
+      }
       setTemplates(data?.data?.templates || []);
     } catch (e) {
       setError((e as Error).message);
