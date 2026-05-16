@@ -6,29 +6,35 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Loader2,
   RefreshCw,
   CheckCircle2,
   AlertCircle,
   Clock,
-  Link as LinkIcon,
+  Building2,
+  Wallet,
+  Activity,
+  Info,
+  Copy,
+  Check,
+  ArrowDownToLine,
+  Plus,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 
 interface BankAccountRow {
   id: string;
@@ -58,9 +64,9 @@ interface SyncLogRow {
 }
 
 const formatRelative = (iso: string | null) => {
-  if (!iso) return "Nunca";
+  if (!iso) return "Nunca sincronizado";
   try {
-    return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: ptBR });
+    return `Há ${formatDistanceToNow(new Date(iso), { locale: ptBR })}`;
   } catch {
     return "—";
   }
@@ -69,36 +75,90 @@ const formatRelative = (iso: string | null) => {
 const formatFull = (iso: string | null) => {
   if (!iso) return "—";
   try {
-    return format(new Date(iso), "dd/MM/yyyy HH:mm:ss", { locale: ptBR });
+    return format(new Date(iso), "dd 'de' MMM 'às' HH:mm", { locale: ptBR });
   } catch {
     return "—";
   }
 };
 
-const StatusBadge = ({ status }: { status: string }) => {
-  if (status === "success")
-    return (
-      <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/30">
-        <CheckCircle2 className="h-3 w-3 mr-1" /> Sucesso
-      </Badge>
-    );
-  if (status === "error")
-    return (
-      <Badge variant="destructive">
-        <AlertCircle className="h-3 w-3 mr-1" /> Erro
-      </Badge>
-    );
+const friendlySyncType = (type: string) =>
+  type === "balances" ? "Saldo" : type === "transactions" ? "Movimentações" : type;
+
+const friendlyError = (msg: string | null): string => {
+  if (!msg) return "";
+  const m = msg.toLowerCase();
+  if (m.includes("token") || m.includes("auth") || m.includes("unauthor"))
+    return "Conexão expirou. Reconecte o banco para continuar.";
+  if (m.includes("timeout") || m.includes("timed out"))
+    return "O banco demorou para responder. Tente novamente em instantes.";
+  if (m.includes("rate") || m.includes("429"))
+    return "Muitas tentativas em pouco tempo. Aguarde alguns minutos.";
+  if (m.includes("network") || m.includes("fetch"))
+    return "Falha de comunicação com o banco. Verifique sua internet.";
+  return msg.length > 140 ? msg.slice(0, 137) + "…" : msg;
+};
+
+const HealthPill = ({
+  state,
+}: {
+  state: "ok" | "warn" | "error" | "idle";
+}) => {
+  const map = {
+    ok: {
+      label: "Funcionando",
+      icon: CheckCircle2,
+      cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
+    },
+    warn: {
+      label: "Atenção",
+      icon: Clock,
+      cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    },
+    error: {
+      label: "Com problema",
+      icon: AlertCircle,
+      cls: "bg-destructive/15 text-destructive border-destructive/30",
+    },
+    idle: {
+      label: "Aguardando",
+      icon: Clock,
+      cls: "bg-muted text-muted-foreground border-border",
+    },
+  } as const;
+  const cfg = map[state];
+  const Icon = cfg.icon;
   return (
-    <Badge variant="secondary">
-      <Clock className="h-3 w-3 mr-1" /> {status}
+    <Badge variant="outline" className={`${cfg.cls} font-medium`}>
+      <Icon className="h-3 w-3 mr-1" /> {cfg.label}
     </Badge>
+  );
+};
+
+const CopyButton = ({ value }: { value: string }) => {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-7 w-7"
+      aria-label="Copiar identificador"
+      onClick={() => {
+        navigator.clipboard.writeText(value);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    </Button>
   );
 };
 
 export default function FinancialPluggyStatusPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [showTechnical, setShowTechnical] = useState(false);
 
   const { data: accounts, isLoading: loadingAccounts } = useQuery({
     queryKey: ["pluggy-status-accounts"],
@@ -145,18 +205,35 @@ export default function FinancialPluggyStatusPage() {
     return map;
   }, [logs]);
 
+  const getAccountHealth = (
+    a: BankAccountRow,
+    accLogs: SyncLogRow[]
+  ): "ok" | "warn" | "error" | "idle" => {
+    const last = accLogs[0];
+    if (!last) return "idle";
+    if (last.status === "error") return "error";
+    const lastSync = a.last_transactions_sync_at || a.last_balance_sync_at;
+    if (!lastSync) return "warn";
+    const hours = (Date.now() - new Date(lastSync).getTime()) / 36e5;
+    if (hours > 36) return "warn";
+    return "ok";
+  };
+
   const totals = useMemo(() => {
     const all = logs ?? [];
     const last24h = all.filter(
       (l) => new Date(l.started_at).getTime() > Date.now() - 24 * 60 * 60 * 1000
     );
+    const withProblem = (accounts ?? []).filter((a) => {
+      const lgs = logsByAccount.get(a.id) ?? [];
+      return getAccountHealth(a, lgs) === "error";
+    }).length;
     return {
       connections: accounts?.length ?? 0,
-      success24: last24h.filter((l) => l.status === "success").length,
-      errors24: last24h.filter((l) => l.status === "error").length,
+      withProblem,
       imported24: last24h.reduce((s, l) => s + (l.transactions_imported || 0), 0),
     };
-  }, [logs, accounts]);
+  }, [logs, accounts, logsByAccount]);
 
   const syncMutation = useMutation({
     mutationFn: async ({
@@ -175,266 +252,382 @@ export default function FinancialPluggyStatusPage() {
       return data;
     },
     onSuccess: () => {
-      toast({ title: "Sincronização concluída" });
       queryClient.invalidateQueries({ queryKey: ["pluggy-status-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["pluggy-status-logs"] });
     },
     onError: (err: Error) => {
       toast({
-        title: "Erro ao sincronizar",
-        description: err.message,
+        title: "Não foi possível atualizar agora",
+        description: friendlyError(err.message),
         variant: "destructive",
       });
     },
-    onSettled: () => setSyncingId(null),
   });
 
   const handleSync = async (id: string) => {
     setSyncingId(id);
-    await syncMutation.mutateAsync({ bankAccountId: id, type: "balances" });
-    await syncMutation.mutateAsync({ bankAccountId: id, type: "transactions" });
+    try {
+      await syncMutation.mutateAsync({ bankAccountId: id, type: "balances" });
+      await syncMutation.mutateAsync({ bankAccountId: id, type: "transactions" });
+      toast({
+        title: "Dados atualizados",
+        description: "Saldo e movimentações foram trazidos do seu banco.",
+      });
+    } finally {
+      setSyncingId(null);
+    }
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Status Pluggy</h1>
-        <p className="text-sm text-muted-foreground">
-          Monitoramento das conexões Open Finance via Pluggy.
-        </p>
-      </div>
+    <TooltipProvider delayDuration={150}>
+      <div className="space-y-6 p-4 md:p-6 max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Meus bancos conectados
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Aqui você vê se cada banco está trazendo os dados corretamente. Sem
+              jargão técnico.
+            </p>
+          </div>
+          <Button onClick={() => navigate("/financial/bank-accounts")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Conectar um banco
+          </Button>
+        </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">
-              Conexões
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{totals.connections}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">
-              Sucessos (24h)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-emerald-600">
-              {totals.success24}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">
-              Erros (24h)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-destructive">
-              {totals.errors24}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">
-              Registros importados (24h)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{totals.imported24}</div>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Summary cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Bancos conectados</div>
+                  <div className="text-2xl font-semibold">{totals.connections}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                    totals.withProblem > 0
+                      ? "bg-destructive/10"
+                      : "bg-emerald-500/10"
+                  }`}
+                >
+                  {totals.withProblem > 0 ? (
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                  ) : (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    Precisam de atenção
+                  </div>
+                  <div className="text-2xl font-semibold">{totals.withProblem}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <ArrowDownToLine className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    Movimentações trazidas (24h)
+                  </div>
+                  <div className="text-2xl font-semibold">{totals.imported24}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Conexões ativas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingAccounts ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : !accounts || accounts.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-6 text-center">
-              Nenhuma conta conectada via Pluggy. Vá em Contas Bancárias para
-              conectar.
-            </div>
-          ) : (
-            <Accordion type="multiple" className="w-full">
-              {accounts.map((a) => {
-                const accLogs = logsByAccount.get(a.id) ?? [];
-                const lastLog = accLogs[0];
-                return (
-                  <AccordionItem key={a.id} value={a.id}>
-                    <AccordionTrigger className="hover:no-underline">
-                      <div className="flex flex-1 items-center gap-3 pr-4">
-                        {a.logo_url ? (
-                          <img
-                            src={a.logo_url}
-                            alt=""
-                            className="h-8 w-8 rounded object-contain bg-muted"
-                          />
+        {/* Help banner */}
+        <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-4 text-sm">
+          <Info className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+          <div className="text-muted-foreground">
+            Sempre que um banco aparecer com{" "}
+            <span className="text-destructive font-medium">Com problema</span>,
+            clique em <span className="font-medium">Atualizar agora</span>. Se o
+            erro continuar, é provável que a conexão tenha expirado — basta
+            reconectar o banco.
+          </div>
+        </div>
+
+        {/* Accounts list */}
+        {loadingAccounts ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : !accounts || accounts.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center space-y-4">
+              <div className="h-12 w-12 rounded-full bg-muted mx-auto flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div>
+                <div className="font-medium">
+                  Você ainda não conectou nenhum banco
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Conecte uma conta para acompanhar saldo e movimentações automaticamente.
+                </div>
+              </div>
+              <Button onClick={() => navigate("/financial/bank-accounts")}>
+                <Plus className="h-4 w-4 mr-2" /> Conectar um banco
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Accordion type="multiple" className="space-y-3">
+            {accounts.map((a) => {
+              const accLogs = logsByAccount.get(a.id) ?? [];
+              const lastLog = accLogs[0];
+              const health = getAccountHealth(a, accLogs);
+              const lastSync =
+                a.last_transactions_sync_at || a.last_balance_sync_at;
+              return (
+                <AccordionItem
+                  key={a.id}
+                  value={a.id}
+                  className="border rounded-lg bg-card overflow-hidden data-[state=open]:shadow-sm"
+                >
+                  <AccordionTrigger className="hover:no-underline px-4 py-3">
+                    <div className="flex flex-1 items-center gap-3 pr-2">
+                      {a.logo_url ? (
+                        <img
+                          src={a.logo_url}
+                          alt=""
+                          className="h-10 w-10 rounded-lg object-contain bg-muted p-1"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                          <Building2 className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="text-left flex-1 min-w-0">
+                        <div className="font-medium truncate">{a.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {a.openfinance_institution || a.bank_name} ·{" "}
+                          {formatRelative(lastSync)}
+                        </div>
+                      </div>
+                      <HealthPill state={health} />
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
+                    <div className="space-y-5 pt-2">
+                      {/* Quick stats */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="rounded-lg border p-3">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Wallet className="h-3.5 w-3.5" /> Saldo atual
+                          </div>
+                          <div className="text-lg font-semibold mt-1">
+                            {a.current_balance.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            Atualizado em {formatFull(a.last_balance_sync_at)}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border p-3">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Activity className="h-3.5 w-3.5" /> Movimentações
+                          </div>
+                          <div className="text-lg font-semibold mt-1">
+                            {accLogs
+                              .filter((l) => l.sync_type === "transactions")
+                              .reduce(
+                                (s, l) => s + (l.transactions_imported || 0),
+                                0
+                              )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            Trazidas nos últimos dias
+                          </div>
+                        </div>
+                        <div className="rounded-lg border p-3">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Clock className="h-3.5 w-3.5" /> Última atualização
+                          </div>
+                          <div className="text-lg font-semibold mt-1">
+                            {formatRelative(lastSync).replace("Há ", "")}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            {formatFull(lastSync)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Error helper */}
+                      {health === "error" && lastLog?.error_message && (
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                            <div>
+                              <div className="font-medium text-destructive">
+                                Algo deu errado na última atualização
+                              </div>
+                              <div className="text-muted-foreground mt-1">
+                                {friendlyError(lastLog.error_message)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          onClick={() => handleSync(a.id)}
+                          disabled={syncingId === a.id}
+                        >
+                          {syncingId === a.id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Atualizando…
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Atualizar agora
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            navigate(`/financial/bank-accounts/${a.id}/extrato`)
+                          }
+                        >
+                          Ver extrato
+                        </Button>
+                      </div>
+
+                      {/* History timeline */}
+                      <div>
+                        <div className="text-sm font-medium mb-2">
+                          Últimas atualizações
+                        </div>
+                        {loadingLogs ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : accLogs.length === 0 ? (
+                          <div className="text-sm text-muted-foreground rounded-lg border border-dashed p-4 text-center">
+                            Ainda não houve nenhuma atualização.
+                          </div>
                         ) : (
-                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                            <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                          <ol className="relative border-l border-border ml-2 space-y-3">
+                            {accLogs.slice(0, 8).map((l) => {
+                              const ok = l.status === "success";
+                              const err = l.status === "error";
+                              return (
+                                <li key={l.id} className="ml-4">
+                                  <span
+                                    className={`absolute -left-1.5 h-3 w-3 rounded-full border-2 border-background ${
+                                      ok
+                                        ? "bg-emerald-500"
+                                        : err
+                                        ? "bg-destructive"
+                                        : "bg-muted-foreground"
+                                    }`}
+                                  />
+                                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                                    <span className="text-sm font-medium">
+                                      {friendlySyncType(l.sync_type)}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {formatFull(l.started_at)}
+                                    </span>
+                                    {ok && l.transactions_imported > 0 && (
+                                      <Badge
+                                        variant="outline"
+                                        className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                                      >
+                                        {l.transactions_imported} novas
+                                      </Badge>
+                                    )}
+                                    {err && (
+                                      <Badge variant="destructive">Falhou</Badge>
+                                    )}
+                                  </div>
+                                  {err && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      {friendlyError(l.error_message)}
+                                    </div>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ol>
+                        )}
+                      </div>
+
+                      {/* Technical details (collapsible) */}
+                      <div className="pt-2 border-t">
+                        <button
+                          type="button"
+                          onClick={() => setShowTechnical((v) => !v)}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {showTechnical ? "Ocultar" : "Mostrar"} detalhes técnicos
+                        </button>
+                        {showTechnical && (
+                          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <div className="rounded border p-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">
+                                  ID da conexão
+                                </span>
+                                {a.openfinance_connection_id && (
+                                  <CopyButton
+                                    value={a.openfinance_connection_id}
+                                  />
+                                )}
+                              </div>
+                              <div className="font-mono break-all">
+                                {a.openfinance_connection_id || "—"}
+                              </div>
+                            </div>
+                            <div className="rounded border p-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">
+                                  ID da conta
+                                </span>
+                                {a.openfinance_account_id && (
+                                  <CopyButton value={a.openfinance_account_id} />
+                                )}
+                              </div>
+                              <div className="font-mono break-all">
+                                {a.openfinance_account_id || "—"}
+                              </div>
+                            </div>
                           </div>
                         )}
-                        <div className="text-left flex-1 min-w-0">
-                          <div className="font-medium truncate">{a.name}</div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {a.openfinance_institution || a.bank_name}
-                          </div>
-                        </div>
-                        <div className="hidden md:flex flex-col items-end text-xs">
-                          <span className="text-muted-foreground">
-                            Última sync
-                          </span>
-                          <span>
-                            {formatRelative(
-                              a.last_transactions_sync_at ||
-                                a.last_balance_sync_at
-                            )}
-                          </span>
-                        </div>
-                        {lastLog && <StatusBadge status={lastLog.status} />}
                       </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="space-y-4 pt-2">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                          <div>
-                            <div className="text-xs text-muted-foreground">
-                              Item ID
-                            </div>
-                            <div className="font-mono text-xs break-all">
-                              {a.openfinance_connection_id || "—"}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-muted-foreground">
-                              Account ID
-                            </div>
-                            <div className="font-mono text-xs break-all">
-                              {a.openfinance_account_id || "—"}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-muted-foreground">
-                              Saldo atual
-                            </div>
-                            <div>
-                              {a.current_balance.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              })}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-muted-foreground">
-                              Última sync de saldo
-                            </div>
-                            <div>{formatFull(a.last_balance_sync_at)}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-muted-foreground">
-                              Última sync de transações
-                            </div>
-                            <div>{formatFull(a.last_transactions_sync_at)}</div>
-                          </div>
-                          <div className="flex items-end">
-                            <Button
-                              size="sm"
-                              onClick={() => handleSync(a.id)}
-                              disabled={syncingId === a.id}
-                            >
-                              {syncingId === a.id ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              ) : (
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                              )}
-                              Sincronizar agora
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-xs font-medium text-muted-foreground mb-2">
-                            Histórico recente
-                          </div>
-                          {loadingLogs ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : accLogs.length === 0 ? (
-                            <div className="text-xs text-muted-foreground">
-                              Nenhuma execução registrada.
-                            </div>
-                          ) : (
-                            <div className="border rounded-md overflow-hidden">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Início</TableHead>
-                                    <TableHead>Tipo</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">
-                                      Registros
-                                    </TableHead>
-                                    <TableHead>Duração</TableHead>
-                                    <TableHead>Erro</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {accLogs.slice(0, 15).map((l) => {
-                                    const duration =
-                                      l.finished_at && l.started_at
-                                        ? `${Math.round(
-                                            (new Date(l.finished_at).getTime() -
-                                              new Date(l.started_at).getTime()) /
-                                              1000
-                                          )}s`
-                                        : "—";
-                                    return (
-                                      <TableRow key={l.id}>
-                                        <TableCell className="text-xs whitespace-nowrap">
-                                          {formatFull(l.started_at)}
-                                        </TableCell>
-                                        <TableCell className="text-xs capitalize">
-                                          {l.sync_type}
-                                        </TableCell>
-                                        <TableCell>
-                                          <StatusBadge status={l.status} />
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                          {l.transactions_imported}
-                                        </TableCell>
-                                        <TableCell className="text-xs">
-                                          {duration}
-                                        </TableCell>
-                                        <TableCell className="text-xs text-destructive max-w-[280px] truncate">
-                                          {l.error_message || "—"}
-                                        </TableCell>
-                                      </TableRow>
-                                    );
-                                  })}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
-            </Accordion>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
