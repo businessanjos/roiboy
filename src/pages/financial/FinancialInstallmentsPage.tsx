@@ -98,7 +98,7 @@ export default function FinancialInstallmentsPage() {
       let query = supabase
         .from("installments")
         .select(
-          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id)"
+          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
         )
         .order("due_date", { ascending: true })
         .limit(500);
