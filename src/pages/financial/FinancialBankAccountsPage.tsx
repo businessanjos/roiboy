@@ -5,7 +5,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit2, Trash2, MoreHorizontal, Building2, Check, ChevronsUpDown, MapPin, Calendar, FileText, Link as LinkIcon, Unlink } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
-import { OpenFinanceLinkDialog } from "@/components/financial/OpenFinanceLinkDialog";
+import { PluggyConnectDialog } from "@/components/financial/PluggyConnectDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -165,6 +165,7 @@ export default function FinancialBankAccountsPage() {
           openfinance_account_id: null,
           openfinance_connection_id: null,
           openfinance_institution: null,
+          openfinance_provider: null,
         })
         .eq("id", id);
       if (error) throw error;
@@ -508,7 +509,7 @@ export default function FinancialBankAccountsPage() {
                         </Badge>
                         {account.openfinance_account_id && (
                           <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-600">
-                            Open Finance
+                            Pluggy
                           </Badge>
                         )}
                       </div>
@@ -530,12 +531,12 @@ export default function FinancialBankAccountsPage() {
                           {account.openfinance_account_id ? (
                             <DropdownMenuItem onClick={() => unlinkMutation.mutate(account.id)}>
                               <Unlink className="h-4 w-4 mr-2" />
-                              Desvincular Open Finance
+                              Desvincular Pluggy
                             </DropdownMenuItem>
                           ) : (
                             <DropdownMenuItem onClick={() => setLinkDialogFor(account)}>
                               <LinkIcon className="h-4 w-4 mr-2" />
-                              Conectar Open Finance
+                              Conectar via Pluggy
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => handleEdit(account)}>
@@ -1019,7 +1020,7 @@ export default function FinancialBankAccountsPage() {
       </Dialog>
 
       {linkDialogFor && (
-        <OpenFinanceLinkDialog
+        <PluggyConnectDialog
           open={!!linkDialogFor}
           onOpenChange={(v) => !v && setLinkDialogFor(null)}
           bankAccountId={linkDialogFor.id}
