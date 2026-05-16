@@ -117,6 +117,33 @@ export default function FinancialCategoriesPage() {
     enabled: !!accountId,
   });
 
+  // Build hierarchical sorted list (parents first, children indented)
+  const hierarchicalCategories = (() => {
+    const byParent = new Map<string | null, FinancialCategory[]>();
+    for (const c of categories) {
+      const key = c.parent_id || null;
+      if (!byParent.has(key)) byParent.set(key, []);
+      byParent.get(key)!.push(c);
+    }
+    const sortFn = (a: FinancialCategory, b: FinancialCategory) =>
+      (a.code || "").localeCompare(b.code || "") || a.name.localeCompare(b.name);
+    const result: Array<FinancialCategory & { depth: number }> = [];
+    const walk = (parent: string | null, depth: number) => {
+      const children = (byParent.get(parent) || []).slice().sort(sortFn);
+      for (const c of children) {
+        result.push({ ...c, depth });
+        walk(c.id, depth + 1);
+      }
+    };
+    walk(null, 0);
+    // Append orphans (parent_id references missing category)
+    const seen = new Set(result.map((c) => c.id));
+    for (const c of categories) {
+      if (!seen.has(c.id)) result.push({ ...c, depth: 0 });
+    }
+    return result;
+  })();
+
   const {
     paginatedItems: paginatedCategories,
     currentPage: catPage,
@@ -125,7 +152,8 @@ export default function FinancialCategoriesPage() {
     totalItems: catTotalItems,
     handlePageChange: handleCatPageChange,
     handlePageSizeChange: handleCatPageSizeChange,
-  } = useTablePagination(categories);
+  } = useTablePagination(hierarchicalCategories);
+
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
