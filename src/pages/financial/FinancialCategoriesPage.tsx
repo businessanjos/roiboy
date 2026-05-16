@@ -185,6 +185,8 @@ export default function FinancialCategoriesPage() {
       color: defaultColors[Math.floor(Math.random() * defaultColors.length)],
       is_active: true,
       dre_group: "",
+      parent_id: "",
+      code: "",
     });
     setEditingCategory(null);
   };
@@ -197,6 +199,8 @@ export default function FinancialCategoriesPage() {
       color: category.color,
       is_active: category.is_active,
       dre_group: category.dre_group || "",
+      parent_id: category.parent_id || "",
+      code: category.code || "",
     });
     setIsDialogOpen(true);
   };
