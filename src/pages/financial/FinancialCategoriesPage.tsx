@@ -265,6 +265,7 @@ export default function FinancialCategoriesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[110px]">Código</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Grupo DRE</TableHead>
@@ -275,10 +276,19 @@ export default function FinancialCategoriesPage() {
               <TableBody>
                 {paginatedCategories.map((category) => (
                   <TableRow key={category.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {category.code || "—"}
+                    </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div
+                        className="flex items-center gap-2"
+                        style={{ paddingLeft: `${(category.depth || 0) * 20}px` }}
+                      >
+                        {category.depth > 0 && (
+                          <span className="text-muted-foreground">└</span>
+                        )}
                         <div
-                          className="w-3 h-3 rounded-full"
+                          className="w-3 h-3 rounded-full shrink-0"
                           style={{ backgroundColor: category.color }}
                         />
                         <span className="font-medium">{category.name}</span>
