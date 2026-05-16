@@ -39,6 +39,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { InstallmentTimelineDialog } from "@/components/financial/InstallmentTimelineDialog";
 import { PaymentStatusBadge } from "@/components/financial/PaymentStatusSelect";
+import { IssueFiscalInvoiceDialog } from "@/components/financial/IssueFiscalInvoiceDialog";
+import { FileCheck, FilePlus2 } from "lucide-react";
 
 type InstallmentRow = {
   id: string;
@@ -51,6 +53,16 @@ type InstallmentRow = {
   payment_status: string | null;
   paid_at: string | null;
   locked: boolean;
+  invoices?: {
+    id: string;
+    company_id: string | null;
+    account_id: string;
+    nf_number: string | null;
+    nf_series: string | null;
+    nf_status: string | null;
+    nf_issued_at: string | null;
+    nf_url: string | null;
+  };
 };
 
 const STATUS_META: Record<string, { label: string; className: string; icon: any }> = {
@@ -78,6 +90,8 @@ export default function FinancialInstallmentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [nfInvoice, setNfInvoice] = useState<InstallmentRow["invoices"] | null>(null);
+  const [nfOpen, setNfOpen] = useState(false);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["financial-installments", accountId, currentCompanyId],
@@ -86,7 +100,7 @@ export default function FinancialInstallmentsPage() {
       let query = supabase
         .from("installments")
         .select(
-          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id)"
+          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
         )
         .order("due_date", { ascending: true })
         .limit(500);
@@ -222,7 +236,7 @@ export default function FinancialInstallmentsPage() {
                 <TableHead>Status detalhado</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Pago em</TableHead>
-                <TableHead>Fatura</TableHead>
+                <TableHead>NF Fiscal</TableHead>
                 <TableHead className="text-right">Histórico</TableHead>
               </TableRow>
             </TableHeader>
@@ -276,8 +290,39 @@ export default function FinancialInstallmentsPage() {
                           ? format(new Date(r.paid_at), "dd/MM/yyyy", { locale: ptBR })
                           : "—"}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {r.invoice_id.slice(0, 8)}
+                      <TableCell>
+                        {r.invoices?.nf_number && r.invoices?.nf_status === "issued" ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNfInvoice(r.invoices!);
+                              setNfOpen(true);
+                            }}
+                          >
+                            <Badge variant="default" className="font-mono text-xs gap-1">
+                              <FileCheck className="h-3 w-3" />
+                              NF {r.invoices.nf_series ? `${r.invoices.nf_series}-` : ""}
+                              {r.invoices.nf_number}
+                            </Badge>
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNfInvoice(r.invoices!);
+                              setNfOpen(true);
+                            }}
+                          >
+                            <FilePlus2 className="h-3 w-3 mr-1" />
+                            Faturar
+                          </Button>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -305,6 +350,12 @@ export default function FinancialInstallmentsPage() {
         installmentId={selectedId}
         open={open}
         onOpenChange={setOpen}
+      />
+      <IssueFiscalInvoiceDialog
+        invoiceId={nfInvoice?.id ?? null}
+        open={nfOpen}
+        onOpenChange={setNfOpen}
+        existing={nfInvoice}
       />
     </div>
   );
