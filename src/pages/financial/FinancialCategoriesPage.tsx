@@ -98,6 +98,8 @@ export default function FinancialCategoriesPage() {
     color: defaultColors[0],
     is_active: true,
     dre_group: "" as string,
+    parent_id: "" as string,
+    code: "" as string,
   });
 
   const { data: categories = [], isLoading } = useQuery({
