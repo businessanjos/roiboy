@@ -7161,6 +7161,7 @@ export type Database = {
       financial_categories: {
         Row: {
           account_id: string
+          code: string | null
           color: string
           created_at: string
           display_order: number
@@ -7169,11 +7170,13 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          parent_id: string | null
           type: string
           updated_at: string
         }
         Insert: {
           account_id: string
+          code?: string | null
           color?: string
           created_at?: string
           display_order?: number
@@ -7182,11 +7185,13 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          parent_id?: string | null
           type?: string
           updated_at?: string
         }
         Update: {
           account_id?: string
+          code?: string | null
           color?: string
           created_at?: string
           display_order?: number
@@ -7195,6 +7200,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          parent_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -7204,6 +7210,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
             referencedColumns: ["id"]
           },
         ]
