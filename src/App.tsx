@@ -187,6 +187,7 @@ const FinancialInstallmentsPage = lazyRetry(() => import("./pages/financial/Fina
 const FinancialPaymentMethodsPage = lazyRetry(() => import("./pages/financial/FinancialPaymentMethodsPage"));
 const FinancialOmieIntegrationPage = lazyRetry(() => import("./pages/financial/FinancialOmieIntegrationPage"));
 const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
+const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
