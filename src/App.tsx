@@ -294,6 +294,7 @@ const App = () => (
                               <Route path="payment-methods" element={<FinancialPaymentMethodsPage />} />
                               <Route path="integracoes/omie" element={<FinancialOmieIntegrationPage />} />
                               <Route path="importar" element={<FinancialImportPage />} />
+                              <Route path="cobranca" element={<FinancialDunningKanbanPage />} />
                             </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
