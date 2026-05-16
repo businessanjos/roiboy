@@ -290,8 +290,39 @@ export default function FinancialInstallmentsPage() {
                           ? format(new Date(r.paid_at), "dd/MM/yyyy", { locale: ptBR })
                           : "—"}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {r.invoice_id.slice(0, 8)}
+                      <TableCell>
+                        {r.invoices?.nf_number && r.invoices?.nf_status === "issued" ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNfInvoice(r.invoices!);
+                              setNfOpen(true);
+                            }}
+                          >
+                            <Badge variant="default" className="font-mono text-xs gap-1">
+                              <FileCheck className="h-3 w-3" />
+                              NF {r.invoices.nf_series ? `${r.invoices.nf_series}-` : ""}
+                              {r.invoices.nf_number}
+                            </Badge>
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNfInvoice(r.invoices!);
+                              setNfOpen(true);
+                            }}
+                          >
+                            <FilePlus2 className="h-3 w-3 mr-1" />
+                            Faturar
+                          </Button>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -319,6 +350,12 @@ export default function FinancialInstallmentsPage() {
         installmentId={selectedId}
         open={open}
         onOpenChange={setOpen}
+      />
+      <IssueFiscalInvoiceDialog
+        invoiceId={nfInvoice?.id ?? null}
+        open={nfOpen}
+        onOpenChange={setNfOpen}
+        existing={nfInvoice}
       />
     </div>
   );
