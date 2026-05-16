@@ -186,6 +186,7 @@ const FinancialInvoicesPage = lazyRetry(() => import("./pages/financial/Financia
 const FinancialInstallmentsPage = lazyRetry(() => import("./pages/financial/FinancialInstallmentsPage"));
 const FinancialPaymentMethodsPage = lazyRetry(() => import("./pages/financial/FinancialPaymentMethodsPage"));
 const FinancialOmieIntegrationPage = lazyRetry(() => import("./pages/financial/FinancialOmieIntegrationPage"));
+const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/FinancialPluggyStatusPage"));
 const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
 const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
 
@@ -293,6 +294,7 @@ const App = () => (
                               <Route path="balance-sheet" element={<FinancialBalanceSheetPage />} />
                               <Route path="payment-methods" element={<FinancialPaymentMethodsPage />} />
                               <Route path="integracoes/omie" element={<FinancialOmieIntegrationPage />} />
+                              <Route path="integracoes/pluggy" element={<FinancialPluggyStatusPage />} />
                               <Route path="importar" element={<FinancialImportPage />} />
                               <Route path="cobranca" element={<FinancialDunningKanbanPage />} />
                             </Route>
