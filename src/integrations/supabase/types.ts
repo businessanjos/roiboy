@@ -10802,6 +10802,13 @@ export type Database = {
           id: string
           locked: boolean
           locked_at: string | null
+          nf_cancellation_reason: string | null
+          nf_cancelled_at: string | null
+          nf_issued_at: string | null
+          nf_number: string | null
+          nf_series: string | null
+          nf_status: string | null
+          nf_url: string | null
           notes: string | null
           opened_at: string | null
           parent_invoice_id: string | null
@@ -10827,6 +10834,13 @@ export type Database = {
           id?: string
           locked?: boolean
           locked_at?: string | null
+          nf_cancellation_reason?: string | null
+          nf_cancelled_at?: string | null
+          nf_issued_at?: string | null
+          nf_number?: string | null
+          nf_series?: string | null
+          nf_status?: string | null
+          nf_url?: string | null
           notes?: string | null
           opened_at?: string | null
           parent_invoice_id?: string | null
@@ -10852,6 +10866,13 @@ export type Database = {
           id?: string
           locked?: boolean
           locked_at?: string | null
+          nf_cancellation_reason?: string | null
+          nf_cancelled_at?: string | null
+          nf_issued_at?: string | null
+          nf_number?: string | null
+          nf_series?: string | null
+          nf_status?: string | null
+          nf_url?: string | null
           notes?: string | null
           opened_at?: string | null
           parent_invoice_id?: string | null
@@ -19731,6 +19752,10 @@ export type Database = {
         Args: { _auth_user_id: string }
         Returns: boolean
       }
+      cancel_fiscal_invoice: {
+        Args: { p_invoice_id: string; p_reason: string }
+        Returns: string
+      }
       check_force_relogin: {
         Args: { p_session_issued_at: string }
         Returns: boolean
@@ -19977,6 +20002,16 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
+      issue_fiscal_invoice: {
+        Args: {
+          p_invoice_id: string
+          p_issued_at?: string
+          p_nf_number: string
+          p_nf_series?: string
+          p_nf_url?: string
+        }
+        Returns: string
+      }
       next_digital_contract_number: {
         Args: { p_account_id: string }
         Returns: string
