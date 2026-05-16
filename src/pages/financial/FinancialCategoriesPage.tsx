@@ -366,14 +366,51 @@ export default function FinancialCategoriesPage() {
             }}
             className="space-y-4"
           >
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2 col-span-2">
+                <Label>Nome *</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Ex: Salários"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Código</Label>
+                <Input
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  placeholder="3.1.01"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label>Nome *</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Salários"
-                required
-              />
+              <Label>Categoria-pai</Label>
+              <Select
+                value={formData.parent_id || "_root_"}
+                onValueChange={(v) => setFormData({ ...formData, parent_id: v === "_root_" ? "" : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria-pai" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_root_">— Nenhuma (categoria raiz) —</SelectItem>
+                  {hierarchicalCategories
+                    .filter((c) => c.id !== editingCategory?.id)
+                    .map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {"— ".repeat(c.depth)}
+                        {c.code ? `[${c.code}] ` : ""}
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Deixe vazio para criar uma categoria-raiz (grupo de contas)
+              </p>
             </div>
 
             <div className="space-y-2">
