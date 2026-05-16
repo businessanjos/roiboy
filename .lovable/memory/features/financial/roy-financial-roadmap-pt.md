@@ -10,7 +10,7 @@ type: feature
 
 - ✅ **Fase 1** — Governança: enum `payment_status`, trava global de DELETE, botão Renegociar (RPC `renegotiate_installment`), histórico em `installment_events`.
 - ✅ **Fase 2** — Importadores: edge functions `import-cielo-report`, `import-cheques`, `bank-webhook-receiver`. Tabelas `financial_import_batches`, `financial_import_rows`, `bank_webhook_events`. Campos de taxa de cartão em `installments` (`card_fee_amount`, `card_fee_percent`, `card_acquirer`, `card_brand`, `card_nsu`, `card_authorization_code`, `net_amount`). Página `/financial/importar` com abas Cielo/Cheques (upload XLSX/CSV → preview → aplicar baixa em massa via RPC `settle_installment_from_import`).
-- ⏳ **Fase 3** — Plano de contas, régua de cobrança por método, CRM de cobrança Kanban, NF fiscal com trava (Notazz).
+- 🟡 **Fase 3 (parcial)** — Plano de contas hierárquico entregue: `financial_categories` ganhou `parent_id` + `code`, trigger `prevent_financial_category_cycle`, e categoria virou obrigatória em `financial_entries` via trigger `require_financial_entry_category`. UI `/financial/plano-de-contas` (`FinancialCategoriesPage`) renderiza árvore indentada com coluna Código e selector de categoria-pai. Falta ainda: régua de cobrança por método, CRM de cobrança Kanban, NF fiscal com trava (Notazz).
 - ⏳ **Fase 4** — Quitação automática de contrato, badge "Quitado — pronto para renovação", status automatizado em campos customizados.
 
 ## Importadores (Fase 2) — detalhes

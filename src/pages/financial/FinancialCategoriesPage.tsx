@@ -51,6 +51,8 @@ interface FinancialCategory {
   icon?: string;
   display_order?: number;
   dre_group?: string;
+  parent_id?: string | null;
+  code?: string | null;
 }
 
 const dreGroupLabels: Record<string, string> = {
@@ -96,6 +98,8 @@ export default function FinancialCategoriesPage() {
     color: defaultColors[0],
     is_active: true,
     dre_group: "" as string,
+    parent_id: "" as string,
+    code: "" as string,
   });
 
   const { data: categories = [], isLoading } = useQuery({
@@ -113,6 +117,33 @@ export default function FinancialCategoriesPage() {
     enabled: !!accountId,
   });
 
+  // Build hierarchical sorted list (parents first, children indented)
+  const hierarchicalCategories = (() => {
+    const byParent = new Map<string | null, FinancialCategory[]>();
+    for (const c of categories) {
+      const key = c.parent_id || null;
+      if (!byParent.has(key)) byParent.set(key, []);
+      byParent.get(key)!.push(c);
+    }
+    const sortFn = (a: FinancialCategory, b: FinancialCategory) =>
+      (a.code || "").localeCompare(b.code || "") || a.name.localeCompare(b.name);
+    const result: Array<FinancialCategory & { depth: number }> = [];
+    const walk = (parent: string | null, depth: number) => {
+      const children = (byParent.get(parent) || []).slice().sort(sortFn);
+      for (const c of children) {
+        result.push({ ...c, depth });
+        walk(c.id, depth + 1);
+      }
+    };
+    walk(null, 0);
+    // Append orphans (parent_id references missing category)
+    const seen = new Set(result.map((c) => c.id));
+    for (const c of categories) {
+      if (!seen.has(c.id)) result.push({ ...c, depth: 0 });
+    }
+    return result;
+  })();
+
   const {
     paginatedItems: paginatedCategories,
     currentPage: catPage,
@@ -121,7 +152,8 @@ export default function FinancialCategoriesPage() {
     totalItems: catTotalItems,
     handlePageChange: handleCatPageChange,
     handlePageSizeChange: handleCatPageSizeChange,
-  } = useTablePagination(categories);
+  } = useTablePagination(hierarchicalCategories);
+
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -132,6 +164,8 @@ export default function FinancialCategoriesPage() {
         color: data.color,
         is_active: data.is_active,
         dre_group: data.dre_group || null,
+        parent_id: data.parent_id || null,
+        code: data.code?.trim() || null,
       };
 
       if (editingCategory) {
@@ -179,6 +213,8 @@ export default function FinancialCategoriesPage() {
       color: defaultColors[Math.floor(Math.random() * defaultColors.length)],
       is_active: true,
       dre_group: "",
+      parent_id: "",
+      code: "",
     });
     setEditingCategory(null);
   };
@@ -191,6 +227,8 @@ export default function FinancialCategoriesPage() {
       color: category.color,
       is_active: category.is_active,
       dre_group: category.dre_group || "",
+      parent_id: category.parent_id || "",
+      code: category.code || "",
     });
     setIsDialogOpen(true);
   };
@@ -227,6 +265,7 @@ export default function FinancialCategoriesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[110px]">Código</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Grupo DRE</TableHead>
@@ -237,10 +276,19 @@ export default function FinancialCategoriesPage() {
               <TableBody>
                 {paginatedCategories.map((category) => (
                   <TableRow key={category.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {category.code || "—"}
+                    </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div
+                        className="flex items-center gap-2"
+                        style={{ paddingLeft: `${(category.depth || 0) * 20}px` }}
+                      >
+                        {category.depth > 0 && (
+                          <span className="text-muted-foreground">└</span>
+                        )}
                         <div
-                          className="w-3 h-3 rounded-full"
+                          className="w-3 h-3 rounded-full shrink-0"
                           style={{ backgroundColor: category.color }}
                         />
                         <span className="font-medium">{category.name}</span>
@@ -318,14 +366,51 @@ export default function FinancialCategoriesPage() {
             }}
             className="space-y-4"
           >
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2 col-span-2">
+                <Label>Nome *</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Ex: Salários"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Código</Label>
+                <Input
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  placeholder="3.1.01"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label>Nome *</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Salários"
-                required
-              />
+              <Label>Categoria-pai</Label>
+              <Select
+                value={formData.parent_id || "_root_"}
+                onValueChange={(v) => setFormData({ ...formData, parent_id: v === "_root_" ? "" : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria-pai" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_root_">— Nenhuma (categoria raiz) —</SelectItem>
+                  {hierarchicalCategories
+                    .filter((c) => c.id !== editingCategory?.id)
+                    .map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {"— ".repeat(c.depth)}
+                        {c.code ? `[${c.code}] ` : ""}
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Deixe vazio para criar uma categoria-raiz (grupo de contas)
+              </p>
             </div>
 
             <div className="space-y-2">
