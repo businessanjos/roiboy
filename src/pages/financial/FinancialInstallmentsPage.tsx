@@ -90,6 +90,8 @@ export default function FinancialInstallmentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [nfInvoice, setNfInvoice] = useState<InstallmentRow["invoices"] | null>(null);
+  const [nfOpen, setNfOpen] = useState(false);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["financial-installments", accountId, currentCompanyId],
