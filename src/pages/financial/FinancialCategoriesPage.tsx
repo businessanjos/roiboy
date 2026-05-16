@@ -136,6 +136,8 @@ export default function FinancialCategoriesPage() {
         color: data.color,
         is_active: data.is_active,
         dre_group: data.dre_group || null,
+        parent_id: data.parent_id || null,
+        code: data.code?.trim() || null,
       };
 
       if (editingCategory) {
