@@ -840,10 +840,10 @@ export default function FinancialEntriesPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select value={formData.category_id} onValueChange={(v) => setFormData({ ...formData, category_id: v })}>
+                <Label>Categoria *</Label>
+                <Select value={formData.category_id} onValueChange={(v) => setFormData({ ...formData, category_id: v })} required>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
+                    <SelectValue placeholder="Classifique no plano de contas" />
                   </SelectTrigger>
                   <SelectContent>
                     {filteredCategories.map((cat) => (
@@ -851,6 +851,11 @@ export default function FinancialEntriesPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {!formData.category_id && (
+                  <p className="text-xs text-muted-foreground">
+                    Obrigatório classificar o lançamento no plano de contas
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Cliente</Label>
