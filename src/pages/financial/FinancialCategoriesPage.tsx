@@ -51,6 +51,8 @@ interface FinancialCategory {
   icon?: string;
   display_order?: number;
   dre_group?: string;
+  parent_id?: string | null;
+  code?: string | null;
 }
 
 const dreGroupLabels: Record<string, string> = {
