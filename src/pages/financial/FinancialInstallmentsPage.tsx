@@ -39,6 +39,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { InstallmentTimelineDialog } from "@/components/financial/InstallmentTimelineDialog";
 import { PaymentStatusBadge } from "@/components/financial/PaymentStatusSelect";
+import { IssueFiscalInvoiceDialog } from "@/components/financial/IssueFiscalInvoiceDialog";
+import { FileCheck, FilePlus2 } from "lucide-react";
 
 type InstallmentRow = {
   id: string;
@@ -51,6 +53,16 @@ type InstallmentRow = {
   payment_status: string | null;
   paid_at: string | null;
   locked: boolean;
+  invoices?: {
+    id: string;
+    company_id: string | null;
+    account_id: string;
+    nf_number: string | null;
+    nf_series: string | null;
+    nf_status: string | null;
+    nf_issued_at: string | null;
+    nf_url: string | null;
+  };
 };
 
 const STATUS_META: Record<string, { label: string; className: string; icon: any }> = {
