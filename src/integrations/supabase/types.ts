@@ -5837,6 +5837,129 @@ export type Database = {
           },
         ]
       }
+      dunning_case_events: {
+        Row: {
+          account_id: string
+          case_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          event_type: string
+          from_stage: string | null
+          id: string
+          metadata: Json | null
+          to_stage: string | null
+        }
+        Insert: {
+          account_id: string
+          case_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_type: string
+          from_stage?: string | null
+          id?: string
+          metadata?: Json | null
+          to_stage?: string | null
+        }
+        Update: {
+          account_id?: string
+          case_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_type?: string
+          from_stage?: string | null
+          id?: string
+          metadata?: Json | null
+          to_stage?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dunning_case_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "dunning_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dunning_cases: {
+        Row: {
+          account_id: string
+          assigned_to: string | null
+          client_id: string | null
+          closed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          installment_id: string
+          last_contact_at: string | null
+          notes: string | null
+          promise_amount: number | null
+          promise_date: string | null
+          sla_due_at: string | null
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          assigned_to?: string | null
+          client_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          installment_id: string
+          last_contact_at?: string | null
+          notes?: string | null
+          promise_amount?: number | null
+          promise_date?: string | null
+          sla_due_at?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          assigned_to?: string | null
+          client_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          installment_id?: string
+          last_contact_at?: string | null
+          notes?: string | null
+          promise_amount?: number | null
+          promise_date?: string | null
+          sla_due_at?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dunning_cases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "dunning_cases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dunning_cases_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: true
+            referencedRelation: "installments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_queue: {
         Row: {
           account_id: string
@@ -19636,10 +19759,15 @@ export type Database = {
       }
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
+      dunning_default_sla: { Args: { p_stage: string }; Returns: string }
       format_call_duration: { Args: { seconds: number }; Returns: string }
       generate_checkin_code: { Args: never; Returns: string }
       generate_contract_receivables: {
         Args: { _contract_id: string }
+        Returns: number
+      }
+      generate_dunning_cases: {
+        Args: { p_account_id: string }
         Returns: number
       }
       generate_registration_code: { Args: never; Returns: string }

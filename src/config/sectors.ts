@@ -146,6 +146,7 @@ export const sectors: Sector[] = [
       { to: "/financial/commissions", icon: Percent, label: "Comissões", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/alerts", icon: Bell, label: "Alertas", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/importar", icon: ArrowLeftRight, label: "Importar (Cielo/Cheque)", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/financial/cobranca", icon: LayoutGrid, label: "CRM de Cobrança", permission: PERMISSIONS.CLIENTS_VIEW },
       // Relatórios
       { to: "/financial/dre", icon: FileText, label: "DRE", permission: PERMISSIONS.CLIENTS_VIEW, group: "Relatórios" },
       { to: "/financial/drf", icon: Receipt, label: "DRF", permission: PERMISSIONS.CLIENTS_VIEW },
