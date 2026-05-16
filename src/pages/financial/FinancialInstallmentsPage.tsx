@@ -236,7 +236,7 @@ export default function FinancialInstallmentsPage() {
                 <TableHead>Status detalhado</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Pago em</TableHead>
-                <TableHead>Fatura</TableHead>
+                <TableHead>NF Fiscal</TableHead>
                 <TableHead className="text-right">Histórico</TableHead>
               </TableRow>
             </TableHeader>
