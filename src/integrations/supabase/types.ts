@@ -1093,6 +1093,7 @@ export type Database = {
           openfinance_account_id: string | null
           openfinance_connection_id: string | null
           openfinance_institution: string | null
+          openfinance_provider: string | null
           updated_at: string
         }
         Insert: {
@@ -1137,6 +1138,7 @@ export type Database = {
           openfinance_account_id?: string | null
           openfinance_connection_id?: string | null
           openfinance_institution?: string | null
+          openfinance_provider?: string | null
           updated_at?: string
         }
         Update: {
@@ -1181,6 +1183,7 @@ export type Database = {
           openfinance_account_id?: string | null
           openfinance_connection_id?: string | null
           openfinance_institution?: string | null
+          openfinance_provider?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -13440,6 +13443,7 @@ export type Database = {
           error_message: string | null
           finished_at: string | null
           id: string
+          provider: string | null
           started_at: string
           status: string
           sync_type: string
@@ -13452,6 +13456,7 @@ export type Database = {
           error_message?: string | null
           finished_at?: string | null
           id?: string
+          provider?: string | null
           started_at?: string
           status?: string
           sync_type: string
@@ -13464,6 +13469,7 @@ export type Database = {
           error_message?: string | null
           finished_at?: string | null
           id?: string
+          provider?: string | null
           started_at?: string
           status?: string
           sync_type?: string

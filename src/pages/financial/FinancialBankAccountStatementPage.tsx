@@ -77,8 +77,8 @@ export default function FinancialBankAccountStatementPage() {
   const syncMutation = useMutation({
     mutationFn: async () => {
       const [b, t] = await Promise.all([
-        supabase.functions.invoke("sync-openfinance-balances", { body: { bank_account_id: id } }),
-        supabase.functions.invoke("sync-openfinance-transactions", { body: { bank_account_id: id } }),
+        supabase.functions.invoke("pluggy-sync-balances", { body: { bank_account_id: id } }),
+        supabase.functions.invoke("pluggy-sync-transactions", { body: { bank_account_id: id } }),
       ]);
       if (b.error) throw b.error;
       if (t.error) throw t.error;
