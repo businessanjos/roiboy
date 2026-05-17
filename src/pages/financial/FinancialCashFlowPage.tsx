@@ -4,16 +4,13 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, LineChart as LineChartIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend, BarChart, Bar } from "recharts";
+import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
+import { formatBRL, formatAxisBRL } from "@/lib/financial-format";
 
 export default function FinancialCashFlowPage() {
   const { currentUser } = useCurrentUser();
