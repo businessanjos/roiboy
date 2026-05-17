@@ -185,7 +185,7 @@ export default function FinancialCashFlowPage() {
       {/* Balance Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Evolução do Saldo</CardTitle>
+          <CardTitle className="text-base">Evolução do saldo</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -193,25 +193,38 @@ export default function FinancialCashFlowPage() {
           ) : (
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 8, bottom: 0 }}>
                   <defs>
                     <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="date" className="text-xs" />
-                  <YAxis tickFormatter={(v) => formatCurrency(v).replace("R$", "")} className="text-xs" />
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    tickFormatter={(v) => formatAxisBRL(v)}
+                    tick={{ fontSize: 11 }}
+                    width={70}
+                  />
                   <Tooltip
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
-                      const data = payload[0].payload;
+                      const d = payload[0].payload;
                       return (
                         <div className="bg-background border rounded-lg p-3 shadow-lg">
-                          <p className="font-medium">{data.fullDate}</p>
+                          <p className="font-medium">{d.fullDate}</p>
                           <p className="text-sm text-muted-foreground">
-                            Saldo: <span className={data.balance >= 0 ? "text-green-600" : "text-red-600"}>{formatCurrency(data.balance)}</span>
+                            Saldo:{" "}
+                            <span
+                              className={
+                                d.balance >= 0
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-red-600 dark:text-red-400"
+                              }
+                            >
+                              {formatBRL(d.balance)}
+                            </span>
                           </p>
                         </div>
                       );
@@ -234,7 +247,7 @@ export default function FinancialCashFlowPage() {
       {/* Income vs Expenses Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Receitas vs Despesas</CardTitle>
+          <CardTitle className="text-base">Receitas vs Despesas</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -242,28 +255,36 @@ export default function FinancialCashFlowPage() {
           ) : (
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="date" className="text-xs" />
-                  <YAxis tickFormatter={(v) => formatCurrency(v).replace("R$", "")} className="text-xs" />
+                <BarChart data={chartData} margin={{ top: 10, right: 20, left: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    tickFormatter={(v) => formatAxisBRL(v)}
+                    tick={{ fontSize: 11 }}
+                    width={70}
+                  />
                   <Tooltip
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
-                      const data = payload[0].payload;
+                      const d = payload[0].payload;
                       return (
-                        <div className="bg-background border rounded-lg p-3 shadow-lg">
-                          <p className="font-medium">{data.fullDate}</p>
-                          <p className="text-sm text-green-600">Receitas: {formatCurrency(data.income)}</p>
-                          <p className="text-sm text-red-600">Despesas: {formatCurrency(data.expenses)}</p>
+                        <div className="bg-background border rounded-lg p-3 shadow-lg space-y-0.5">
+                          <p className="font-medium">{d.fullDate}</p>
+                          <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                            Receitas: {formatBRL(d.income)}
+                          </p>
+                          <p className="text-sm text-red-600 dark:text-red-400">
+                            Despesas: {formatBRL(d.expenses)}
+                          </p>
                         </div>
                       );
                     }}
                   />
-                  <Legend />
-                  <Bar dataKey="incomePaid" stackId="in" fill="#16a34a" name="Receitas (recebido)" />
-                  <Bar dataKey="income" stackId="in" fill="#86efac" name="Receitas (previsto)" fillOpacity={0.6} />
-                  <Bar dataKey="expensesPaid" stackId="out" fill="#dc2626" name="Despesas (pago)" />
-                  <Bar dataKey="expenses" stackId="out" fill="#fca5a5" name="Despesas (previsto)" fillOpacity={0.6} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="incomePaid" stackId="in" fill="hsl(142 71% 45%)" name="Receitas (recebido)" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="income" stackId="in" fill="hsl(142 71% 75%)" name="Receitas (previsto)" fillOpacity={0.7} />
+                  <Bar dataKey="expensesPaid" stackId="out" fill="hsl(0 70% 55%)" name="Despesas (pago)" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="expenses" stackId="out" fill="hsl(0 70% 80%)" name="Despesas (previsto)" fillOpacity={0.7} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
