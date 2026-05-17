@@ -106,81 +106,80 @@ export default function FinancialCashFlowPage() {
     .filter((e) => e.entry_type === "payable" && isRealized(e.status))
     .reduce((acc, e) => acc + Number(e.amount || 0), 0);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-  };
+  const netResult = totalIncome - totalExpenses;
+  const finalBalance = chartData[chartData.length - 1]?.balance || 0;
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Fluxo de Caixa</h1>
-          <p className="text-muted-foreground">Acompanhe entradas e saídas do período</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))}>
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <span className="text-lg font-medium min-w-[180px] text-center">
-            {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-          </span>
-          <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))}>
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+      <FinancialPageHeader
+        icon={LineChartIcon}
+        title="Fluxo de Caixa"
+        description="Acompanhe entradas, saídas e projeção do período selecionado."
+        actions={
+          <div className="flex items-center gap-1 rounded-lg border bg-card px-1 py-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() =>
+                setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))
+              }
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[140px] text-center capitalize">
+              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() =>
+                setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))
+              }
+              aria-label="Próximo mês"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        }
+      />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-600" />
-              Receitas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</div>
-            <p className="text-xs text-muted-foreground">{formatCurrency(paidIncome)} já recebido</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingDown className="h-4 w-4 text-red-600" />
-              Despesas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</div>
-            <p className="text-xs text-muted-foreground">{formatCurrency(paidExpenses)} já pago</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Resultado do Mês</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${totalIncome - totalExpenses >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {formatCurrency(totalIncome - totalExpenses)}
-            </div>
-            <p className="text-xs text-muted-foreground">previsto: receitas − despesas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
-              Saldo Final
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${chartData[chartData.length - 1]?.balance >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {formatCurrency(chartData[chartData.length - 1]?.balance || 0)}
-            </div>
-            <p className="text-xs text-muted-foreground">projeção fim do mês</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <FinancialKpiCard
+          icon={TrendingUp}
+          label="Receitas"
+          value={formatBRL(totalIncome)}
+          hint={`${formatBRL(paidIncome)} já recebido`}
+          tone="success"
+          loading={isLoading}
+        />
+        <FinancialKpiCard
+          icon={TrendingDown}
+          label="Despesas"
+          value={formatBRL(totalExpenses)}
+          hint={`${formatBRL(paidExpenses)} já pago`}
+          tone="danger"
+          loading={isLoading}
+        />
+        <FinancialKpiCard
+          icon={netResult >= 0 ? TrendingUp : TrendingDown}
+          label="Resultado do mês"
+          value={formatBRL(netResult)}
+          hint="Receitas − despesas (previsto)"
+          tone={netResult >= 0 ? "success" : "danger"}
+          loading={isLoading}
+        />
+        <FinancialKpiCard
+          icon={Wallet}
+          label="Saldo projetado"
+          value={formatBRL(finalBalance)}
+          hint="Estimativa para o fim do mês"
+          tone={finalBalance >= 0 ? "info" : "danger"}
+          loading={isLoading}
+        />
       </div>
 
       {/* Balance Chart */}
