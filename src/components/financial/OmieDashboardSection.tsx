@@ -163,6 +163,22 @@ export default function OmieDashboardSection() {
           </div>
         )}
 
+        {!loading && !data && !error && (
+          <div className="flex flex-col items-center justify-center text-center py-8 px-4">
+            <div className="rounded-full bg-muted p-3 mb-3">
+              <ArrowLeftRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">
+              {selectedId ? "Sem dados da Omie no período" : "Selecione uma empresa"}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+              {selectedId
+                ? "Tente um período maior ou verifique a integração em /financial/integracoes/omie."
+                : "Escolha uma empresa no seletor acima para carregar os dados da Omie."}
+            </p>
+          </div>
+        )}
+
         {error && (
           <div className="rounded-md border border-red-200 bg-red-50 dark:bg-red-950/30 p-3 text-sm text-red-700 dark:text-red-300">
             {error}

@@ -4,16 +4,13 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, LineChart as LineChartIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend, BarChart, Bar } from "recharts";
+import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
+import { formatBRL, formatBRLCompact, formatAxisBRL } from "@/lib/financial-format";
 
 export default function FinancialCashFlowPage() {
   const { currentUser } = useCurrentUser();
@@ -109,87 +106,86 @@ export default function FinancialCashFlowPage() {
     .filter((e) => e.entry_type === "payable" && isRealized(e.status))
     .reduce((acc, e) => acc + Number(e.amount || 0), 0);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-  };
+  const netResult = totalIncome - totalExpenses;
+  const finalBalance = chartData[chartData.length - 1]?.balance || 0;
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Fluxo de Caixa</h1>
-          <p className="text-muted-foreground">Acompanhe entradas e saídas do período</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))}>
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <span className="text-lg font-medium min-w-[180px] text-center">
-            {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-          </span>
-          <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))}>
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+      <FinancialPageHeader
+        icon={LineChartIcon}
+        title="Fluxo de Caixa"
+        description="Acompanhe entradas, saídas e projeção do período selecionado."
+        actions={
+          <div className="flex items-center gap-1 rounded-lg border bg-card px-1 py-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() =>
+                setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))
+              }
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[140px] text-center capitalize">
+              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() =>
+                setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))
+              }
+              aria-label="Próximo mês"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        }
+      />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-600" />
-              Receitas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</div>
-            <p className="text-xs text-muted-foreground">{formatCurrency(paidIncome)} já recebido</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingDown className="h-4 w-4 text-red-600" />
-              Despesas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</div>
-            <p className="text-xs text-muted-foreground">{formatCurrency(paidExpenses)} já pago</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Resultado do Mês</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${totalIncome - totalExpenses >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {formatCurrency(totalIncome - totalExpenses)}
-            </div>
-            <p className="text-xs text-muted-foreground">previsto: receitas − despesas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
-              Saldo Final
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${chartData[chartData.length - 1]?.balance >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {formatCurrency(chartData[chartData.length - 1]?.balance || 0)}
-            </div>
-            <p className="text-xs text-muted-foreground">projeção fim do mês</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <FinancialKpiCard
+          icon={TrendingUp}
+          label="Receitas"
+          value={formatBRLCompact(totalIncome)}
+          hint={`${formatBRLCompact(paidIncome)} já recebido`}
+          tone="success"
+          loading={isLoading}
+        />
+        <FinancialKpiCard
+          icon={TrendingDown}
+          label="Despesas"
+          value={formatBRLCompact(totalExpenses)}
+          hint={`${formatBRLCompact(paidExpenses)} já pago`}
+          tone="danger"
+          loading={isLoading}
+        />
+        <FinancialKpiCard
+          icon={netResult >= 0 ? TrendingUp : TrendingDown}
+          label="Resultado do mês"
+          value={formatBRLCompact(netResult)}
+          hint="Receitas − despesas (previsto)"
+          tone={netResult >= 0 ? "success" : "danger"}
+          loading={isLoading}
+        />
+        <FinancialKpiCard
+          icon={Wallet}
+          label="Saldo projetado"
+          value={formatBRLCompact(finalBalance)}
+          hint="Estimativa para o fim do mês"
+          tone={finalBalance >= 0 ? "info" : "danger"}
+          loading={isLoading}
+        />
       </div>
 
       {/* Balance Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Evolução do Saldo</CardTitle>
+          <CardTitle className="text-base">Evolução do saldo</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -197,25 +193,38 @@ export default function FinancialCashFlowPage() {
           ) : (
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 8, bottom: 0 }}>
                   <defs>
                     <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="date" className="text-xs" />
-                  <YAxis tickFormatter={(v) => formatCurrency(v).replace("R$", "")} className="text-xs" />
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    tickFormatter={(v) => formatAxisBRL(v)}
+                    tick={{ fontSize: 11 }}
+                    width={70}
+                  />
                   <Tooltip
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
-                      const data = payload[0].payload;
+                      const d = payload[0].payload;
                       return (
                         <div className="bg-background border rounded-lg p-3 shadow-lg">
-                          <p className="font-medium">{data.fullDate}</p>
+                          <p className="font-medium">{d.fullDate}</p>
                           <p className="text-sm text-muted-foreground">
-                            Saldo: <span className={data.balance >= 0 ? "text-green-600" : "text-red-600"}>{formatCurrency(data.balance)}</span>
+                            Saldo:{" "}
+                            <span
+                              className={
+                                d.balance >= 0
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-red-600 dark:text-red-400"
+                              }
+                            >
+                              {formatBRL(d.balance)}
+                            </span>
                           </p>
                         </div>
                       );
@@ -238,7 +247,7 @@ export default function FinancialCashFlowPage() {
       {/* Income vs Expenses Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Receitas vs Despesas</CardTitle>
+          <CardTitle className="text-base">Receitas vs Despesas</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -246,28 +255,36 @@ export default function FinancialCashFlowPage() {
           ) : (
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="date" className="text-xs" />
-                  <YAxis tickFormatter={(v) => formatCurrency(v).replace("R$", "")} className="text-xs" />
+                <BarChart data={chartData} margin={{ top: 10, right: 20, left: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    tickFormatter={(v) => formatAxisBRL(v)}
+                    tick={{ fontSize: 11 }}
+                    width={70}
+                  />
                   <Tooltip
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
-                      const data = payload[0].payload;
+                      const d = payload[0].payload;
                       return (
-                        <div className="bg-background border rounded-lg p-3 shadow-lg">
-                          <p className="font-medium">{data.fullDate}</p>
-                          <p className="text-sm text-green-600">Receitas: {formatCurrency(data.income)}</p>
-                          <p className="text-sm text-red-600">Despesas: {formatCurrency(data.expenses)}</p>
+                        <div className="bg-background border rounded-lg p-3 shadow-lg space-y-0.5">
+                          <p className="font-medium">{d.fullDate}</p>
+                          <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                            Receitas: {formatBRL(d.income)}
+                          </p>
+                          <p className="text-sm text-red-600 dark:text-red-400">
+                            Despesas: {formatBRL(d.expenses)}
+                          </p>
                         </div>
                       );
                     }}
                   />
-                  <Legend />
-                  <Bar dataKey="incomePaid" stackId="in" fill="#16a34a" name="Receitas (recebido)" />
-                  <Bar dataKey="income" stackId="in" fill="#86efac" name="Receitas (previsto)" fillOpacity={0.6} />
-                  <Bar dataKey="expensesPaid" stackId="out" fill="#dc2626" name="Despesas (pago)" />
-                  <Bar dataKey="expenses" stackId="out" fill="#fca5a5" name="Despesas (previsto)" fillOpacity={0.6} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="incomePaid" stackId="in" fill="hsl(142 71% 45%)" name="Receitas (recebido)" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="income" stackId="in" fill="hsl(142 71% 75%)" name="Receitas (previsto)" fillOpacity={0.7} />
+                  <Bar dataKey="expensesPaid" stackId="out" fill="hsl(0 70% 55%)" name="Despesas (pago)" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="expenses" stackId="out" fill="hsl(0 70% 80%)" name="Despesas (previsto)" fillOpacity={0.7} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
