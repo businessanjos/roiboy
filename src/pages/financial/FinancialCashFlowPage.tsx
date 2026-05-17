@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend, BarChart, Bar } from "recharts";
 import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
-import { formatBRL, formatAxisBRL } from "@/lib/financial-format";
+import { formatBRL, formatBRLCompact, formatAxisBRL } from "@/lib/financial-format";
 
 export default function FinancialCashFlowPage() {
   const { currentUser } = useCurrentUser();
@@ -151,23 +151,23 @@ export default function FinancialCashFlowPage() {
         <FinancialKpiCard
           icon={TrendingUp}
           label="Receitas"
-          value={formatBRL(totalIncome)}
-          hint={`${formatBRL(paidIncome)} já recebido`}
+          value={formatBRLCompact(totalIncome)}
+          hint={`${formatBRLCompact(paidIncome)} já recebido`}
           tone="success"
           loading={isLoading}
         />
         <FinancialKpiCard
           icon={TrendingDown}
           label="Despesas"
-          value={formatBRL(totalExpenses)}
-          hint={`${formatBRL(paidExpenses)} já pago`}
+          value={formatBRLCompact(totalExpenses)}
+          hint={`${formatBRLCompact(paidExpenses)} já pago`}
           tone="danger"
           loading={isLoading}
         />
         <FinancialKpiCard
           icon={netResult >= 0 ? TrendingUp : TrendingDown}
           label="Resultado do mês"
-          value={formatBRL(netResult)}
+          value={formatBRLCompact(netResult)}
           hint="Receitas − despesas (previsto)"
           tone={netResult >= 0 ? "success" : "danger"}
           loading={isLoading}
@@ -175,7 +175,7 @@ export default function FinancialCashFlowPage() {
         <FinancialKpiCard
           icon={Wallet}
           label="Saldo projetado"
-          value={formatBRL(finalBalance)}
+          value={formatBRLCompact(finalBalance)}
           hint="Estimativa para o fim do mês"
           tone={finalBalance >= 0 ? "info" : "danger"}
           loading={isLoading}
