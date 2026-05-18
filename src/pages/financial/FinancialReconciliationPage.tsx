@@ -447,19 +447,14 @@ export default function FinancialReconciliationPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <FinancialPageHeader
+        icon={Link2}
+        title="Conciliação Bancária"
+        description="Compare seus lançamentos pagos com o extrato do banco e marque o que confere. Em caso de dúvida, deixe pendente e revise depois."
+      />
+
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Link2 className="h-5 w-5" />
-            <div>
-              <CardTitle>Conciliação Bancária</CardTitle>
-              <CardDescription>
-                Concilie os lançamentos pagos com o extrato bancário
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="p-6 space-y-6">
           {/* Bank Account Selector */}
           <div className="flex items-center gap-4 pb-4 border-b">
             <div className="flex-1">
@@ -485,33 +480,24 @@ export default function FinancialReconciliationPage() {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <AlertCircle className="h-4 w-4" />
-                  Pendentes
-                </div>
-                <div className="text-2xl font-bold">{summary.total}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-green-600 text-sm">
-                  <ArrowDownCircle className="h-4 w-4" />
-                  A Receber
-                </div>
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(summary.income)}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-red-600 text-sm">
-                  <ArrowUpCircle className="h-4 w-4" />
-                  A Pagar
-                </div>
-                <div className="text-2xl font-bold text-red-600">{formatCurrency(summary.expense)}</div>
-              </CardContent>
-            </Card>
+            <FinancialKpiCard
+              icon={AlertCircle}
+              label="Pendentes de conciliação"
+              value={String(summary.total)}
+              hint="lançamentos aguardando confirmação"
+            />
+            <FinancialKpiCard
+              icon={ArrowDownCircle}
+              label="A receber"
+              value={formatBRLCompact(summary.income)}
+              tone="success"
+            />
+            <FinancialKpiCard
+              icon={ArrowUpCircle}
+              label="A pagar"
+              value={formatBRLCompact(summary.expense)}
+              tone="danger"
+            />
           </div>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
