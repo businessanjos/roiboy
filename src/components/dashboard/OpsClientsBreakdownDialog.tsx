@@ -144,12 +144,13 @@ export function OpsClientsBreakdownDialog({
                         <AvatarFallback className="text-xs">{initials(c.client_name)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <a
-                          href={`/clients/${c.client_id}`}
-                          className="font-medium text-sm hover:underline truncate block"
+                        <button
+                          type="button"
+                          onClick={() => openZappConversation({ clientId: c.client_id, name: c.client_name })}
+                          className="font-medium text-sm hover:underline truncate block text-left w-full"
                         >
                           {c.client_name}
-                        </a>
+                        </button>
                         <div className="text-xs text-muted-foreground">
                           Sem mensagens recebidas neste período
                           {c.outbound_msgs > 0 && ` · ${c.outbound_msgs} enviadas pela consultora`}
