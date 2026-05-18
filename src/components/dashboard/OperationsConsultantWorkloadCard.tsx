@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Users, MessageSquare, Clock, MessagesSquare, Loader2, PhoneIncoming, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Users, MessageSquare, Clock, MessagesSquare, Loader2, PhoneIncoming, Info, CalendarIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { DateRange } from "react-day-picker";
 
 interface Row {
   user_id: string;
@@ -22,7 +29,17 @@ interface Row {
   total_inbound_with_window: number;
 }
 
-const RANGES = [7, 15, 30, 60, 90];
+type PresetKey = "today" | "7" | "15" | "30" | "60" | "90" | "custom";
+
+const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: "today", label: "Hoje" },
+  { key: "7", label: "Últimos 7 dias" },
+  { key: "15", label: "Últimos 15 dias" },
+  { key: "30", label: "Últimos 30 dias" },
+  { key: "60", label: "Últimos 60 dias" },
+  { key: "90", label: "Últimos 90 dias" },
+  { key: "custom", label: "Personalizado" },
+];
 
 function initials(n: string) {
   return n.split(" ").filter(Boolean).slice(0, 2).map(s => s[0]?.toUpperCase() || "").join("");
@@ -36,18 +53,43 @@ function fmtDuration(min: number) {
   return m === 0 ? `${h}h` : `${h}h ${m}min`;
 }
 
+function startOfDay(d: Date) { const x = new Date(d); x.setHours(0,0,0,0); return x; }
+function endOfDay(d: Date) { const x = new Date(d); x.setHours(23,59,59,999); return x; }
+
 export function OperationsConsultantWorkloadCard() {
-  const [days, setDays] = useState<number>(7);
+  const [preset, setPreset] = useState<PresetKey>("7");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const { params, label } = useMemo(() => {
+    if (preset === "today") {
+      const s = startOfDay(new Date());
+      const e = endOfDay(new Date());
+      return { params: { p_start: s.toISOString(), p_end: e.toISOString() }, label: "hoje" };
+    }
+    if (preset === "custom") {
+      if (customRange?.from) {
+        const s = startOfDay(customRange.from);
+        const e = endOfDay(customRange.to || customRange.from);
+        return {
+          params: { p_start: s.toISOString(), p_end: e.toISOString() },
+          label: `${format(s, "dd/MM/yy", { locale: ptBR })} – ${format(e, "dd/MM/yy", { locale: ptBR })}`,
+        };
+      }
+      return { params: null, label: "selecione um período" };
+    }
+    return { params: { p_days: Number(preset) }, label: `últimos ${preset} dias` };
+  }, [preset, customRange]);
+
   useEffect(() => {
     let cancelled = false;
+    if (!params) { setRows([]); return; }
     (async () => {
       setLoading(true);
       setErr(null);
-      const { data, error } = await supabase.rpc("get_ops_consultant_workload", { p_days: days });
+      const { data, error } = await supabase.rpc("get_ops_consultant_workload", params as any);
       if (cancelled) return;
       if (error) {
         console.error("[OpsConsultantWorkload]", error);
@@ -59,7 +101,7 @@ export function OperationsConsultantWorkloadCard() {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [days]);
+  }, [params]);
 
   const totals = useMemo(() => rows.reduce(
     (a, r) => ({
