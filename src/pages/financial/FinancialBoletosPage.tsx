@@ -525,38 +525,29 @@ export default function FinancialBoletosPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pendentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(stats.pending)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pagos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.paid)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Vencidos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.overdue)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Emitido</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.total)}</div>
-          </CardContent>
-        </Card>
+        <FinancialKpiCard
+          icon={Clock}
+          label="Pendentes"
+          value={formatBRLCompact(stats.pending)}
+          tone="warning"
+        />
+        <FinancialKpiCard
+          icon={CheckCircle2}
+          label="Pagos"
+          value={formatBRLCompact(stats.paid)}
+          tone="success"
+        />
+        <FinancialKpiCard
+          icon={AlertCircle}
+          label="Vencidos"
+          value={formatBRLCompact(stats.overdue)}
+          tone="danger"
+        />
+        <FinancialKpiCard
+          icon={DollarSign}
+          label="Total emitido"
+          value={formatBRLCompact(stats.total)}
+        />
       </div>
 
       {/* Filters */}
