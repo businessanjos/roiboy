@@ -52,6 +52,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
+import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
+import { formatBRLCompact } from "@/lib/financial-format";
 
 interface Contract {
   id: string;
