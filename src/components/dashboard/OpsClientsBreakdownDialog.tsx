@@ -36,6 +36,7 @@ export function OpsClientsBreakdownDialog({
   open, onOpenChange, consultantId, consultantName, periodLabel, rpcParams,
 }: Props) {
   const [rows, setRows] = useState<ClientRow[]>([]);
+  const { openZappConversation } = useZappNavigationContext();
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
