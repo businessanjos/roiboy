@@ -272,6 +272,14 @@ export function OperationsConsultantWorkloadCard() {
           )}
         </CardContent>
       </Card>
+      <OpsClientsBreakdownDialog
+        open={!!selected}
+        onOpenChange={(v) => !v && setSelected(null)}
+        consultantId={selected?.id || null}
+        consultantName={selected?.name || ""}
+        periodLabel={label}
+        rpcParams={params}
+      />
     </TooltipProvider>
   );
 }
