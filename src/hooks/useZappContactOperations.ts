@@ -121,7 +121,6 @@ export function useZappContactOperations({
       .from("zapp_conversation_assignments")
       .select("id, agent_id, status, department_id")
       .eq("zapp_conversation_id", zappConvId)
-      .eq("department_id", currentSectorDepartmentId)
       .order("created_at", { ascending: false });
 
     const activeAssignment = existingAssignments?.find(a => a.status !== 'closed');
