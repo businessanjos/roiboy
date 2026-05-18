@@ -59,6 +59,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { brazilianBanks, findBankByName } from "@/data/brazilian-banks";
 import { format, parseISO } from "date-fns";
+import { FinancialPageHeader, FinancialKpiCard, FinancialEmptyState } from "@/components/financial/_shared";
+import { formatBRLCompact } from "@/lib/financial-format";
+import { Landmark } from "lucide-react";
 
 interface BankAccount {
   id: string;
@@ -411,28 +414,25 @@ export default function FinancialBankAccountsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Contas Bancárias</h1>
-          <p className="text-muted-foreground">Gerencie suas contas e saldos</p>
-        </div>
-        <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Conta
-        </Button>
-      </div>
+      <FinancialPageHeader
+        icon={Landmark}
+        title="Contas Bancárias"
+        description="Gerencie suas contas, cartões e saldos consolidados."
+        actions={
+          <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova conta
+          </Button>
+        }
+      />
 
-      {/* Summary */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Saldo Total</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`text-3xl font-bold ${totalBalance >= 0 ? "text-green-600" : "text-red-600"}`}>
-            {formatCurrency(totalBalance)}
-          </div>
-        </CardContent>
-      </Card>
+      <FinancialKpiCard
+        icon={Landmark}
+        label="Saldo total (contas ativas)"
+        value={formatBRLCompact(totalBalance)}
+        hint={`${bankAccounts.filter(a => a.is_active).length} contas ativas`}
+        tone={totalBalance >= 0 ? "success" : "danger"}
+      />
 
       <Card>
         <CardContent className="p-0">
@@ -441,13 +441,16 @@ export default function FinancialBankAccountsPage() {
               {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
             </div>
           ) : bankAccounts.length === 0 ? (
-            <div className="p-12 text-center text-muted-foreground">
-              <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhuma conta cadastrada</p>
-              <Button variant="link" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
-                Criar primeira conta
-              </Button>
-            </div>
+            <FinancialEmptyState
+              icon={Building2}
+              title="Nenhuma conta cadastrada"
+              description="Cadastre suas contas bancárias e cartões para começar a acompanhar saldos e movimentações."
+              action={{
+                label: "Criar primeira conta",
+                onClick: () => { resetForm(); setIsDialogOpen(true); },
+                icon: Plus,
+              }}
+            />
           ) : (
             <Table>
               <TableHeader>

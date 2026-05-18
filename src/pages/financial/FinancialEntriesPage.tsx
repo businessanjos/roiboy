@@ -83,7 +83,9 @@ import {
   DropdownMenuItem as ImportDropdownItem,
   DropdownMenuTrigger as ImportDropdownTrigger,
 } from "@/components/ui/dropdown-menu";
-
+import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
+import { formatBRLCompact } from "@/lib/financial-format";
+import { Receipt as ReceiptIcon, Wallet as WalletIcon } from "lucide-react";
 interface FinancialEntry {
   id: string;
   entry_type: "payable" | "receivable";
@@ -466,43 +468,44 @@ export default function FinancialEntriesPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Lançamentos</h1>
-          <p className="text-muted-foreground">Gerencie contas a pagar e receber</p>
-        </div>
-        <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Sheet className="h-4 w-4 mr-2" />
-                Importar
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsCreditCardImportOpen(true)}>
-                <CreditCard className="h-4 w-4 mr-2" />
-                Fatura de Cartão (IA)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsGoogleSheetsOpen(true)}>
-                <Sheet className="h-4 w-4 mr-2" />
-                Google Sheets / BTG
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button onClick={() => { 
-            resetForm(); 
-            if (activeTab === "payable") {
-              setIsMethodSelectorOpen(true);
-            } else {
-              setIsReceivableMethodSelectorOpen(true);
-            }
-          }} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Lançamento
-          </Button>
-        </div>
-      </div>
+      <FinancialPageHeader
+        icon={ReceiptIcon}
+        title="Lançamentos"
+        description="Gerencie suas contas a pagar e a receber do mês."
+        actions={
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Sheet className="h-4 w-4 mr-2" />
+                  Importar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsCreditCardImportOpen(true)}>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Fatura de Cartão (IA)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsGoogleSheetsOpen(true)}>
+                  <Sheet className="h-4 w-4 mr-2" />
+                  Google Sheets / BTG
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button onClick={() => {
+              resetForm();
+              if (activeTab === "payable") {
+                setIsMethodSelectorOpen(true);
+              } else {
+                setIsReceivableMethodSelectorOpen(true);
+              }
+            }} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Lançamento
+            </Button>
+          </>
+        }
+      />
 
       {/* Month Navigation */}
       <div className="flex items-center justify-center gap-4">
@@ -533,33 +536,24 @@ export default function FinancialEntriesPage() {
         <TabsContent value={activeTab} className="space-y-4 mt-4">
           {/* Summary Cards + Templates */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(totals.total)}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {activeTab === "receivable" ? "Recebido" : "Pago"}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{formatCurrency(totals.paid)}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Pendente</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-yellow-600">{formatCurrency(totals.pending)}</div>
-                </CardContent>
-              </Card>
+            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <FinancialKpiCard
+                icon={WalletIcon}
+                label="Total no mês"
+                value={formatBRLCompact(totals.total)}
+              />
+              <FinancialKpiCard
+                icon={CheckCircle2}
+                label={activeTab === "receivable" ? "Recebido" : "Pago"}
+                value={formatBRLCompact(totals.paid)}
+                tone="success"
+              />
+              <FinancialKpiCard
+                icon={Clock}
+                label="Pendente"
+                value={formatBRLCompact(totals.pending)}
+                tone="warning"
+              />
             </div>
             <EntryTemplatesManager
               activeTab={activeTab === "receivable" ? "income" : "expense"}
