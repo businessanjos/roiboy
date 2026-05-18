@@ -37,6 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FinancialPageHeader, FinancialEmptyState } from "@/components/financial/_shared";
 
 interface RecurringTemplate {
   id: string;
