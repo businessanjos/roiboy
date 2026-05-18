@@ -726,43 +726,34 @@ export default function FinancialNotasFiscaisPage() {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">NFSe Emitidas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(stats.nfse)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">NFe Emitidas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{formatCurrency(stats.nfe)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Faturado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.total)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Notas Emitidas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.count}</div>
-          </CardContent>
-        </Card>
+        <FinancialKpiCard
+          icon={Receipt}
+          label="NFSe emitidas"
+          value={formatBRLCompact(stats.nfse)}
+          tone="info"
+          hint="serviços"
+        />
+        <FinancialKpiCard
+          icon={FileCode}
+          label="NFe emitidas"
+          value={formatBRLCompact(stats.nfe)}
+          hint="produtos"
+        />
+        <FinancialKpiCard
+          icon={DollarSign}
+          label="Total faturado"
+          value={formatBRLCompact(stats.total)}
+          tone="success"
+        />
+        <FinancialKpiCard
+          icon={Hash}
+          label="Notas emitidas"
+          value={String(stats.count)}
+        />
       </div>
 
       {/* Filters */}
