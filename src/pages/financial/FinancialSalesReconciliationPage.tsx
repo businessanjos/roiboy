@@ -52,6 +52,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
+import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
+import { formatBRLCompact } from "@/lib/financial-format";
 
 interface Contract {
   id: string;
@@ -380,51 +382,34 @@ export default function FinancialSalesReconciliationPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <FileCheck className="h-6 w-6" />
-          Conciliação de Vendas
-        </h1>
-        <p className="text-muted-foreground">
-          Gerencie contratos fechados e gere os recebíveis para o fluxo financeiro
-        </p>
-      </div>
+      <FinancialPageHeader
+        icon={FileCheck}
+        title="Conciliação de Vendas"
+        description="Confirme os contratos fechados e gere as parcelas a receber no fluxo financeiro."
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingContracts.length}</div>
-            <p className="text-xs text-muted-foreground">contratos aguardando</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalPendingValue)}</div>
-            <p className="text-xs text-muted-foreground">a receber</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Processados (30d)</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{processedContracts.length}</div>
-            <p className="text-xs text-muted-foreground">contratos conciliados</p>
-          </CardContent>
-        </Card>
+        <FinancialKpiCard
+          icon={Clock}
+          label="Pendentes"
+          value={String(pendingContracts.length)}
+          hint="contratos aguardando conciliação"
+          tone="warning"
+        />
+        <FinancialKpiCard
+          icon={DollarSign}
+          label="Valor a conciliar"
+          value={formatBRLCompact(totalPendingValue)}
+          hint="total dos pendentes"
+        />
+        <FinancialKpiCard
+          icon={CheckCircle2}
+          label="Processados (30d)"
+          value={String(processedContracts.length)}
+          hint="contratos já conciliados"
+          tone="success"
+        />
       </div>
 
       {/* Tabs */}

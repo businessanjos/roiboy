@@ -23,7 +23,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sparkles, AlertTriangle, Clock, RefreshCw } from "lucide-react";
+import { Sparkles, AlertTriangle, Clock, RefreshCw, Headset, TrendingDown, TrendingUp, HandCoins } from "lucide-react";
+import {
+  FinancialPageHeader,
+  FinancialKpiCard,
+  FinancialEmptyState,
+} from "@/components/financial/_shared";
+import { formatBRLCompact } from "@/lib/financial-format";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -328,23 +334,63 @@ export default function FinancialDunningKanbanPage() {
     moveMutation.mutate({ id, stage: newStage });
   };
 
+  const totals = useMemo(() => {
+    const sum = (keys: Stage[]) =>
+      cases
+        .filter((c) => keys.includes(c.stage))
+        .reduce((s, c) => s + Number(c.installment?.amount ?? 0), 0);
+    return {
+      overdue: sum(["vencida", "quebrou", "judicial"]),
+      negotiating: sum(["negociando", "promessa"]),
+      recovered: sum(["recuperada"]),
+      lost: sum(["perdida"]),
+    };
+  }, [cases]);
+
   return (
-    <div className="p-6 space-y-4 h-full flex flex-col">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">CRM de Cobrança</h1>
-          <p className="text-muted-foreground text-sm">
-            Pipeline de atendimento humano com SLA por etapa
-          </p>
-        </div>
-        <Button
-          onClick={() => generateMutation.mutate()}
-          disabled={generateMutation.isPending}
-          size="sm"
-        >
-          <Sparkles className="h-4 w-4 mr-2" />
-          {generateMutation.isPending ? "Gerando..." : "Gerar casos de parcelas vencidas"}
-        </Button>
+    <div className="p-6 space-y-6 h-full flex flex-col">
+      <FinancialPageHeader
+        icon={Headset}
+        title="CRM de Cobrança"
+        description="Atendimento humano às parcelas vencidas, com SLA por etapa e histórico de contato."
+        actions={
+          <Button
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+            size="sm"
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            {generateMutation.isPending ? "Gerando..." : "Gerar casos de vencidas"}
+          </Button>
+        }
+      />
+
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <FinancialKpiCard
+          icon={AlertTriangle}
+          label="Em cobrança (vencidas)"
+          value={formatBRLCompact(totals.overdue)}
+          tone="danger"
+          hint="Vencida, promessa quebrada e judicial"
+        />
+        <FinancialKpiCard
+          icon={HandCoins}
+          label="Em negociação"
+          value={formatBRLCompact(totals.negotiating)}
+          tone="warning"
+          hint="Negociando e com promessa de pagamento"
+        />
+        <FinancialKpiCard
+          icon={TrendingUp}
+          label="Recuperado"
+          value={formatBRLCompact(totals.recovered)}
+          tone="success"
+        />
+        <FinancialKpiCard
+          icon={TrendingDown}
+          label="Perdido"
+          value={formatBRLCompact(totals.lost)}
+        />
       </div>
 
       {isLoading ? (
@@ -353,6 +399,17 @@ export default function FinancialDunningKanbanPage() {
             <Skeleton key={s.key} className="w-72 h-96 shrink-0" />
           ))}
         </div>
+      ) : cases.length === 0 ? (
+        <FinancialEmptyState
+          icon={Headset}
+          title="Nenhum caso de cobrança no momento"
+          description="Quando houver parcelas vencidas, clique em 'Gerar casos de vencidas' para criar o pipeline automaticamente."
+          action={{
+            label: generateMutation.isPending ? "Gerando..." : "Gerar casos agora",
+            onClick: () => generateMutation.mutate(),
+            icon: Sparkles,
+          }}
+        />
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="flex gap-3 overflow-x-auto flex-1 pb-4">
