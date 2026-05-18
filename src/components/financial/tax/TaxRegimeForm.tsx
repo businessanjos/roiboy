@@ -102,7 +102,7 @@ export function TaxRegimeForm({ omieSettingsId }: { omieSettingsId: string }) {
       };
       const { error } = await supabase
         .from("financial_tax_profile")
-        .upsert(payload, { onConflict: "omie_settings_id" });
+        .upsert([payload as any], { onConflict: "omie_settings_id" });
       if (error) throw error;
       toast({ title: "Perfil tributário salvo." });
       qc.invalidateQueries({ queryKey: ["tax-profile", omieSettingsId] });
