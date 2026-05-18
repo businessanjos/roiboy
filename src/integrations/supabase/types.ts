@@ -20313,6 +20313,23 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_ops_consultant_clients_breakdown: {
+        Args: {
+          p_days?: number
+          p_end?: string
+          p_start?: string
+          p_user_id: string
+        }
+        Returns: {
+          client_id: string
+          client_name: string
+          conversations: number
+          inbound_msgs: number
+          last_inbound_at: string
+          logo_url: string
+          outbound_msgs: number
+        }[]
+      }
       get_ops_consultant_workload:
         | {
             Args: { p_days?: number }

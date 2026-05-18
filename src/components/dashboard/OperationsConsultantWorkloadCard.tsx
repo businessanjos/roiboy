@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
+import { OpsClientsBreakdownDialog } from "./OpsClientsBreakdownDialog";
 
 interface Row {
   user_id: string;
@@ -62,6 +63,7 @@ export function OperationsConsultantWorkloadCard() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
 
   const { params, label } = useMemo(() => {
     if (preset === "today") {
@@ -233,7 +235,14 @@ export function OperationsConsultantWorkloadCard() {
                             <Badge variant={heavy ? "destructive" : "secondary"}>{r.active_clients}</Badge>
                           </td>
                           <td className="py-2 px-2 text-right">
-                            {r.clients_who_messaged}
+                            <button
+                              type="button"
+                              onClick={() => setSelected({ id: r.user_id, name: r.name })}
+                              className="hover:underline underline-offset-2 decoration-dotted text-primary font-medium"
+                              title="Ver clientes que chamaram e que estão em silêncio"
+                            >
+                              {r.clients_who_messaged}
+                            </button>
                             <span className="text-xs text-muted-foreground ml-1">
                               ({r.active_clients > 0 ? Math.round((r.clients_who_messaged / r.active_clients) * 100) : 0}%)
                             </span>
@@ -263,6 +272,14 @@ export function OperationsConsultantWorkloadCard() {
           )}
         </CardContent>
       </Card>
+      <OpsClientsBreakdownDialog
+        open={!!selected}
+        onOpenChange={(v) => !v && setSelected(null)}
+        consultantId={selected?.id || null}
+        consultantName={selected?.name || ""}
+        periodLabel={label}
+        rpcParams={params}
+      />
     </TooltipProvider>
   );
 }
