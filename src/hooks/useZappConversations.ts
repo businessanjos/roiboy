@@ -167,7 +167,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
       currentDepartmentIdRef.current = result.deptId;
       console.log(`[ZappConversations] Fetched ${result.assignments.length} assignments for department ${result.deptId}`);
-      setAssignments(result.assignments);
+      setAssignments(dedupeAssignments(result.assignments));
 
       await fetchSupplementaryData(result.assignments);
     } catch (error) {
