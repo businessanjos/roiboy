@@ -190,6 +190,8 @@ const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/Fina
 const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
 const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
 const FinancialTaxPage = lazyRetry(() => import("./pages/financial/FinancialTaxPage"));
+const FinancialProvidersPortalPage = lazyRetry(() => import("./pages/financial/FinancialProvidersPortalPage"));
+const PublicProviderPortal = lazyRetry(() => import("./pages/public/PublicProviderPortal"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -233,6 +235,7 @@ const App = () => (
                           <Route path="/vagas/:id/aplicar" element={<PublicJobApplication />} />
                           <Route path="/onboarding" element={<Onboarding />} />
                           <Route path="/contrato/:token" element={<PublicDigitalContract />} />
+                          <Route path="/portal/prestador/:token" element={<PublicProviderPortal />} />
                           
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/terms-of-service" element={<TermsOfService />} />
@@ -299,6 +302,7 @@ const App = () => (
                               <Route path="importar" element={<FinancialImportPage />} />
                               <Route path="cobranca" element={<FinancialDunningKanbanPage />} />
                               <Route path="tributario" element={<FinancialTaxPage />} />
+                              <Route path="prestadores" element={<FinancialProvidersPortalPage />} />
                             </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />

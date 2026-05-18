@@ -9646,6 +9646,77 @@ export type Database = {
           },
         ]
       }
+      hr_provider_invoices: {
+        Row: {
+          account_id: string
+          amount: number | null
+          competence_month: string
+          created_at: string
+          file_name: string | null
+          file_url: string
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          paid_at: string | null
+          payment_due_date: string | null
+          provider_id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          uploaded_at: string
+        }
+        Insert: {
+          account_id: string
+          amount?: number | null
+          competence_month: string
+          created_at?: string
+          file_name?: string | null
+          file_url: string
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_due_date?: string | null
+          provider_id: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          uploaded_at?: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number | null
+          competence_month?: string
+          created_at?: string
+          file_name?: string | null
+          file_url?: string
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_due_date?: string | null
+          provider_id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_provider_invoices_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "hr_service_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_salary_history: {
         Row: {
           account_id: string
@@ -9763,7 +9834,9 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           phone: string | null
+          portal_token: string | null
           position: string | null
+          preferred_payment_day: number | null
           rg: string | null
           service_type: string | null
           state: string | null
@@ -9811,7 +9884,9 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           phone?: string | null
+          portal_token?: string | null
           position?: string | null
+          preferred_payment_day?: number | null
           rg?: string | null
           service_type?: string | null
           state?: string | null
@@ -9859,7 +9934,9 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           phone?: string | null
+          portal_token?: string | null
           position?: string | null
+          preferred_payment_day?: number | null
           rg?: string | null
           service_type?: string | null
           state?: string | null
