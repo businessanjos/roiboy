@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
+import { OpsClientsBreakdownDialog } from "./OpsClientsBreakdownDialog";
 
 interface Row {
   user_id: string;
