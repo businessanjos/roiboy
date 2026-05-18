@@ -13,6 +13,7 @@ import { CsIncentivePlanSection } from "@/components/operations/CsIncentivePlanS
 import { ConsultantPayoutTable } from "@/components/operations/ConsultantPayoutTable";
 import { useConsultantGoals } from "@/hooks/useConsultantGoals";
 import { fetchActiveConsultants } from "@/lib/consultants";
+import { FinancialPageHeader } from "@/components/financial/_shared";
 
 function initials(name: string) {
   return name
