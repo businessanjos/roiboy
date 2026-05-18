@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare, PhoneOff, Flame } from "lucide-react";
-import { useZappNavigationContext } from "@/contexts/ZappNavigationContext";
+import { useZappNavigation } from "@/hooks/useZappNavigation";
 
 interface ClientRow {
   client_id: string;
@@ -36,7 +36,7 @@ export function OpsClientsBreakdownDialog({
   open, onOpenChange, consultantId, consultantName, periodLabel, rpcParams,
 }: Props) {
   const [rows, setRows] = useState<ClientRow[]>([]);
-  const { openZappConversation } = useZappNavigationContext();
+  const { openZappConversation, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -62,6 +62,7 @@ export function OpsClientsBreakdownDialog({
   const totalIn = messaged.reduce((a, r) => a + r.inbound_msgs, 0);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
@@ -168,5 +169,8 @@ export function OpsClientsBreakdownDialog({
         )}
       </DialogContent>
     </Dialog>
+    {PinDialog}
+    {InstanceSelectorDialog}
+    </>
   );
 }
