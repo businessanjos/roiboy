@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.get_ops_consultant_workload(integer);
