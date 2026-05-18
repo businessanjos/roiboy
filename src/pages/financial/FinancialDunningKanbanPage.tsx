@@ -390,7 +390,6 @@ export default function FinancialDunningKanbanPage() {
           icon={TrendingDown}
           label="Perdido"
           value={formatBRLCompact(totals.lost)}
-          tone="muted"
         />
       </div>
 
