@@ -49,6 +49,19 @@ export function TaxRegimeForm({ omieSettingsId }: { omieSettingsId: string }) {
   const qc = useQueryClient();
   const [form, setForm] = useState<Form>(empty);
   const [saving, setSaving] = useState(false);
+  const [fetchingCnpj, setFetchingCnpj] = useState(false);
+
+  const { data: company } = useQuery({
+    queryKey: ["tax-company-cnpj", omieSettingsId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("omie_settings")
+        .select("cnpj, legal_name, trade_name")
+        .eq("id", omieSettingsId)
+        .maybeSingle();
+      return data;
+    },
+  });
 
   const { data } = useQuery({
     queryKey: ["tax-profile-full", omieSettingsId],
