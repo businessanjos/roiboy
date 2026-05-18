@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare, PhoneOff, Flame } from "lucide-react";
+import { useZappNavigationContext } from "@/contexts/ZappNavigationContext";
 
 interface ClientRow {
   client_id: string;
@@ -35,6 +36,7 @@ export function OpsClientsBreakdownDialog({
   open, onOpenChange, consultantId, consultantName, periodLabel, rpcParams,
 }: Props) {
   const [rows, setRows] = useState<ClientRow[]>([]);
+  const { openZappConversation } = useZappNavigationContext();
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -102,12 +104,13 @@ export function OpsClientsBreakdownDialog({
                         <AvatarFallback className="text-xs">{initials(c.client_name)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <a
-                          href={`/clients/${c.client_id}`}
-                          className="font-medium text-sm hover:underline truncate block"
+                        <button
+                          type="button"
+                          onClick={() => openZappConversation({ clientId: c.client_id, name: c.client_name })}
+                          className="font-medium text-sm hover:underline truncate block text-left w-full"
                         >
                           {c.client_name}
-                        </a>
+                        </button>
                         <div className="text-xs text-muted-foreground">
                           {c.conversations} conv · última msg{" "}
                           {c.last_inbound_at
@@ -141,12 +144,13 @@ export function OpsClientsBreakdownDialog({
                         <AvatarFallback className="text-xs">{initials(c.client_name)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <a
-                          href={`/clients/${c.client_id}`}
-                          className="font-medium text-sm hover:underline truncate block"
+                        <button
+                          type="button"
+                          onClick={() => openZappConversation({ clientId: c.client_id, name: c.client_name })}
+                          className="font-medium text-sm hover:underline truncate block text-left w-full"
                         >
                           {c.client_name}
-                        </a>
+                        </button>
                         <div className="text-xs text-muted-foreground">
                           Sem mensagens recebidas neste período
                           {c.outbound_msgs > 0 && ` · ${c.outbound_msgs} enviadas pela consultora`}
