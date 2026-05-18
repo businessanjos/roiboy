@@ -23,7 +23,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sparkles, AlertTriangle, Clock, RefreshCw } from "lucide-react";
+import { Sparkles, AlertTriangle, Clock, RefreshCw, Headset, TrendingDown, TrendingUp, HandCoins } from "lucide-react";
+import {
+  FinancialPageHeader,
+  FinancialKpiCard,
+  FinancialEmptyState,
+} from "@/components/financial/_shared";
+import { formatBRLCompact } from "@/lib/financial-format";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
