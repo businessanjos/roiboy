@@ -128,12 +128,43 @@ export function OperationsConsultantWorkloadCard() {
               Mensagens, conversas e clientes contados sobre conversas vinculadas ao cliente do consultor.
             </CardDescription>
           </div>
-          <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
-            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {RANGES.map(d => <SelectItem key={d} value={String(d)}>Últimos {d} dias</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={preset} onValueChange={(v) => setPreset(v as PresetKey)}>
+              <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PRESETS.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {preset === "custom" && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("justify-start text-left font-normal min-w-[220px]",
+                      !customRange?.from && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customRange?.from
+                      ? customRange.to
+                        ? `${format(customRange.from, "dd/MM/yy")} – ${format(customRange.to, "dd/MM/yy")}`
+                        : format(customRange.from, "dd/MM/yy")
+                      : "Selecionar período"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={customRange}
+                    onSelect={setCustomRange}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
