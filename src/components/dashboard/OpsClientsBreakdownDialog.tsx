@@ -169,5 +169,8 @@ export function OpsClientsBreakdownDialog({
         )}
       </DialogContent>
     </Dialog>
+    {PinDialog}
+    {InstanceSelectorDialog}
+    </>
   );
 }
