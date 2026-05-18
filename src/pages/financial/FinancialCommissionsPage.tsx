@@ -62,19 +62,14 @@ export default function FinancialCommissionsPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <FinancialPageHeader
+        icon={Percent}
+        title="Gestão de Comissões"
+        description="Regras vindas dos planos de incentivo de Vendas e Operações. Os pagamentos são calculados a partir dos negócios ganhos no pipeline."
+      />
+
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Percent className="h-5 w-5" />
-            <div>
-              <CardTitle>Gestão de Comissões</CardTitle>
-              <CardDescription>
-                Regras vindas dos planos de incentivo de Vendas e Operações, com pagamentos baseados nos negócios ganhos do pipeline.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <Tabs defaultValue="sales" className="space-y-4">
             <TabsList>
               <TabsTrigger value="sales" className="gap-1.5">
