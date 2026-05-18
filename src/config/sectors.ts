@@ -31,6 +31,7 @@ import {
   PiggyBank,
   Repeat,
   Landmark,
+  Scale,
   Percent,
   DollarSign,
   Bot,
