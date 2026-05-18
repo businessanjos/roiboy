@@ -20313,6 +20313,23 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_ops_consultant_workload: {
+        Args: { p_days?: number }
+        Returns: {
+          active_clients: number
+          avatar_url: string
+          avg_first_response_min: number
+          clients_who_messaged: number
+          conversations: number
+          email: string
+          inbound_msgs: number
+          name: string
+          outbound_msgs: number
+          responded_inbound: number
+          total_inbound_with_window: number
+          user_id: string
+        }[]
+      }
       get_participant_by_rsvp_token: {
         Args: { p_token: string }
         Returns: {
