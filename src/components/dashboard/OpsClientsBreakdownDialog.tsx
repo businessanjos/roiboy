@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare, PhoneOff, Flame } from "lucide-react";
+import { useZappNavigationContext } from "@/contexts/ZappNavigationContext";
 
 interface ClientRow {
   client_id: string;
