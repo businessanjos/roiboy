@@ -195,7 +195,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
         return data;
       }, 3, 1500);
 
-      const result = data || [];
+      const result = dedupeAssignments(data || []);
       setAssignments(result);
       await fetchSupplementaryData(result);
       return result;
