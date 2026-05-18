@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "@/hooks/use-toast";
-import { Save } from "lucide-react";
+import { Save, Search, Loader2 } from "lucide-react";
 
 const REGIMES = [
   { value: "mei", label: "MEI" },
