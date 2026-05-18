@@ -40,7 +40,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { InstallmentTimelineDialog } from "@/components/financial/InstallmentTimelineDialog";
 import { PaymentStatusBadge } from "@/components/financial/PaymentStatusSelect";
 import { IssueFiscalInvoiceDialog } from "@/components/financial/IssueFiscalInvoiceDialog";
-import { FileCheck, FilePlus2 } from "lucide-react";
+import { FileCheck, FilePlus2, Wallet, CheckCircle, Clock as ClockIcon } from "lucide-react";
+import { FinancialPageHeader, FinancialKpiCard, FinancialEmptyState } from "@/components/financial/_shared";
+import { formatBRLCompact } from "@/lib/financial-format";
 
 type InstallmentRow = {
   id: string;
@@ -152,51 +154,31 @@ export default function FinancialInstallmentsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Receipt className="h-6 w-6" />
-          Parcelas
-        </h1>
-        <p className="text-muted-foreground">
-          Todas as parcelas das faturas. Clique em uma linha para ver o histórico
-          completo da régua e renegociações.
-        </p>
-      </div>
+      <FinancialPageHeader
+        icon={Receipt}
+        title="Parcelas"
+        description="Todas as parcelas das faturas. Clique em uma linha para ver o histórico da régua e renegociações."
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totals.total)}</div>
-            <p className="text-xs text-muted-foreground">
-              {filtered.length} parcelas
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-emerald-600">
-              Pago
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totals.paid)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-amber-600">
-              Em aberto
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totals.open)}</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <FinancialKpiCard
+          icon={Wallet}
+          label="Total no filtro atual"
+          value={formatBRLCompact(totals.total)}
+          hint={`${filtered.length} parcelas`}
+        />
+        <FinancialKpiCard
+          icon={CheckCircle}
+          label="Pago"
+          value={formatBRLCompact(totals.paid)}
+          tone="success"
+        />
+        <FinancialKpiCard
+          icon={ClockIcon}
+          label="Em aberto"
+          value={formatBRLCompact(totals.open)}
+          tone="warning"
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
