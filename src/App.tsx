@@ -190,6 +190,8 @@ const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/Fina
 const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
 const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
 const FinancialTaxPage = lazyRetry(() => import("./pages/financial/FinancialTaxPage"));
+const FinancialProvidersPortalPage = lazyRetry(() => import("./pages/financial/FinancialProvidersPortalPage"));
+const PublicProviderPortal = lazyRetry(() => import("./pages/public/PublicProviderPortal"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
