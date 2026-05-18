@@ -17,7 +17,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, Search, FileText, Trash2, Edit, ExternalLink, Copy, Check, Barcode } from "lucide-react";
+import { Plus, Search, FileText, Trash2, Edit, ExternalLink, Copy, Check, Barcode, Clock, CheckCircle2, AlertCircle, DollarSign } from "lucide-react";
+import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
+import { formatBRLCompact } from "@/lib/financial-format";
 
 interface Boleto {
   id: string;
