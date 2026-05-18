@@ -312,15 +312,11 @@ export default function FinancialBoletosPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Barcode className="h-6 w-6" />
-            Boletos
-          </h1>
-          <p className="text-muted-foreground">Gerencie boletos bancários</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <FinancialPageHeader
+        icon={Barcode}
+        title="Boletos"
+        description="Emita e acompanhe boletos bancários enviados aos seus clientes."
+        actions={
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
