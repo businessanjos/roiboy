@@ -82,11 +82,6 @@ export default function ConsultantBonus() {
   const [editing, setEditing] = useState<ConsultantGoal | null>(null);
   const [activeConsultant, setActiveConsultant] = useState<string | null>(null);
 
-  if (userLoading) return null;
-  if (!canViewBonusArea(currentUser?.name, currentUser?.email)) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   const goalsByConsultant = useMemo(() => {
     const map = new Map<string, ConsultantGoal[]>();
     for (const g of goals) {
@@ -96,6 +91,11 @@ export default function ConsultantBonus() {
     }
     return map;
   }, [goals]);
+
+  if (userLoading) return null;
+  if (!canViewBonusArea(currentUser?.name, currentUser?.email)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const totalBonusBudget = goals.reduce((sum, g) => sum + Number(g.bonus_amount || 0), 0);
 
