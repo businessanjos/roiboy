@@ -139,6 +139,20 @@ export function useZappContactOperations({
         return true;
       }
 
+      // If assignment is in a different department, migrate it to current sector
+      if (currentSectorDepartmentId && activeAssignment.department_id !== currentSectorDepartmentId) {
+        await supabase
+          .from("zapp_conversation_assignments")
+          .update({ department_id: currentSectorDepartmentId, updated_at: new Date().toISOString() })
+          .eq("id", activeAssignment.id);
+        if (selectedSectorId) {
+          await supabase
+            .from("zapp_conversations")
+            .update({ sector_id: selectedSectorId, integration_id: selectedIntegrationId })
+            .eq("id", zappConvId);
+        }
+      }
+
       await selectAndAddAssignment(activeAssignment.id);
       toast.info("Abrindo conversa existente");
       options?.closeDialog?.();
