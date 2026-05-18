@@ -807,7 +807,19 @@ export const ContractWizard = ({
         effectiveList = list.filter((v) => {
           const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
           const isContractorCpf = /^cpf$|cpf_/i.test(v.key);
-          return !isContractorCnpj && !isContractorCpf;
+          if (isContractorCnpj || isContractorCpf) return false;
+          // Complemento de endereço é sempre opcional
+          const ku = v.key.toUpperCase();
+          if (/COMPLEMENTO/.test(ku)) return false;
+          // Em modo CPF (pessoa física) escondemos Nome Fantasia / IE / IM,
+          // então também não devem contar como obrigatórios.
+          if (docType === "cpf") {
+            const isHidden =
+              /FANTASIA/.test(ku) ||
+              /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(ku);
+            if (isHidden) return false;
+          }
+          return true;
         });
       }
       if (k === "payment") {
