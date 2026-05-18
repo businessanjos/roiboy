@@ -1,81 +1,93 @@
-## Diagnóstico inicial (Dashboard + Fluxo de Caixa já abertos)
+## Nova área: Tributário & Contador
 
-**Bugs visuais confirmados:**
-- **Gráfico "Evolução do Saldo"** (Fluxo de Caixa): o eixo Y está cortando os números — mostra `50.000,00`, `30.000,00`, `50.000,00`, `0,00`, `50.000,00` quando deveria ser `150.000`, `130.000`, `250.000` etc. Largura insuficiente para o tick.
-- **Card "Dados Omie"** (Dashboard): bloco gigante e vazio (~300px de altura desperdiçada) quando não há retorno.
-- **"Carregando…" full screen** entre cada navegação interna — quebra a sensação de SPA. Causa: Suspense fallback global engole o layout.
-- **"EMPRESA / CNPJ"** no breadcrumb — label técnico de programador, deveria ser apenas "Empresa".
-- **"ROY zAPP"** cortado no rodapé do sidebar (overflow não tratado).
+Criar uma seção dedicada dentro de Financeiro para centralizar tudo que hoje não tem casa: regime tributário, contador, recomendações de IA fiscal e alertas estruturais (classificação de produtos, pró-labore/distribuição de lucros, etc.).
 
-**Problemas de UX recorrentes (suspeitos, a confirmar nas demais telas):**
-- KPIs com cores fortes demais (verde berrante, vermelho gritante) sem hierarquia visual.
-- Métricas críticas sem contexto (ex.: `Inadimplência R$ 64,7M / 78,1%` em vermelho enorme, sem explicação ou ação).
-- `Taxa de Cobrança 0,0%` provavelmente é cálculo quebrado, não realidade.
+### Rota e navegação
 
----
+- Nova rota: `/financial/tributario`
+- Entrada no sidebar do Financeiro, abaixo de "Conciliação" e antes de "DRE/DRF"
+- Ícone: `Scale` (lucide) — neutro, evita conotação só de "imposto"
 
-## Escopo aprovado
+### Layout (4 abas dentro da página)
 
-**Onda 1 — 7 telas de uso diário** (4.700 linhas no total):
-Dashboard, Fluxo de Caixa, Lançamentos, Contas Bancárias, Parcelas, CRM de Cobrança, Conciliação.
+```text
+[ Visão geral ] [ Regime & Empresa ] [ Contador ] [ Alertas & IA ]
+```
 
-**Profundidade**: redesign profundo (pode reagrupar fluxos, fundir telas, repensar IA).
-**Testes**: liberdade total, inclusive escrita no banco.
+**1. Visão geral**
+- KPIs (FinancialKpiCard): Regime atual, Faturamento 12m vs teto do regime, Pró-labore do mês, Alertas abertos
+- Card "Próximas obrigações" (DAS, DCTF, etc.) — manual por ora, integrável depois
+- Card "Última conversa com contador"
 
----
+**2. Regime & Empresa (por CNPJ — usa CompanySelector já existente)**
+- Regime: Simples Nacional / Lucro Presumido / Lucro Real / MEI
+- Anexo (quando Simples): I, II, III, IV, V
+- CNAE principal + secundários
+- Inscrição estadual / municipal
+- Atividade preponderante (serviços, comércio, indústria, misto)
+- Data de início, data da última opção/troca de regime
+- Observações livres
 
-## Plano em 4 fases
+**3. Contador**
+- Nome, escritório, CRC, telefone, e-mail, WhatsApp
+- Honorário mensal (vinculável a um lançamento recorrente já existente)
+- Frequência de contato esperada (mensal/trimestral)
+- Histórico de interações (timeline simples: data + nota + anexo)
+- Botão "Abrir conversa no RoyZapp" se telefone bater com contato existente
 
-Cada fase é uma rodada separada com PR pequeno e revisável. Faço uma fase por mensagem; você aprova e seguimos.
+**4. Alertas & IA**
+- Lista de alertas gerados (status: aberto / lido / resolvido / dispensado)
+  - Tipos: classificação de produto/serviço, pró-labore não retirado, distribuição de lucro acima do isento, faturamento aproximando teto do Simples, despesa pessoal em conta PJ, falta de NF emitida vs entrada bancária, mudança de anexo sugerida
+- Botão "Rodar análise agora" → chama edge function com Lovable AI (gemini-2.5-pro)
+  - Contexto enviado: regime, faturamento 12m, mix de receitas (products/categories), pró-labore registrado, despesas categorizadas, distribuição de lucro registrada
+  - Retorno estruturado: `[{tipo, severidade, titulo, descricao, acao_sugerida}]`
+- Recomendações persistidas em tabela, com "última análise em DD/MM"
+- Frequência sugerida: rodar mensalmente (cron opcional numa fase futura)
 
-### Fase 1 — Fundação visual + correções críticas (esta rodada)
-Aplica-se a **todas as 7 telas** de uma vez, sem reescrever lógica:
+### Dados (migration)
 
-1. **Componente `FinancialPageHeader`** padronizado (título, descrição, ações, period picker) — substitui 7 cabeçalhos divergentes.
-2. **Componente `FinancialKpiCard`** padronizado com:
-   - Hierarquia: label pequeno → valor grande → contexto/delta abaixo.
-   - Cores sutis no fundo, valor em `text-foreground`, sinal de tendência em verde/vermelho do design system (não hardcoded).
-   - Estado vazio ("—") e skeleton.
-3. **Corrigir gráfico do Fluxo de Caixa**: largura mínima do eixo Y (`width={80}`), formatador `R$ XX mil / XX M`.
-4. **Remover full-screen "Carregando…"** entre rotas: trocar Suspense global por skeleton de página.
-5. **Esconder card "Dados Omie" vazio** + estado vazio amigável quando sem dados.
-6. **Breadcrumb**: "EMPRESA / CNPJ" → "Empresa".
-7. **Sidebar**: corrigir corte do "ROY zAPP" (padding-bottom + overflow).
+Tabelas novas (todas com `account_id` + RLS por account):
 
-### Fase 2 — Redesign do Dashboard e Fluxo de Caixa
-1. Dashboard: novo layout em seções com narrativa ("Saúde do Mês" → "Recebíveis" → "Inadimplência" → "Tendências"), cada métrica vermelha com **CTA acionável** ("Ver inadimplentes", "Abrir CRM de Cobrança").
-2. Fluxo de Caixa: tabs claras Realizado / Previsto / Projeção, drill-down por categoria, exportar CSV.
-3. Validar todas as fórmulas (Taxa de Cobrança, Inadimplência %, MRR vs ARR) com queries no banco.
+- `financial_tax_profile` — 1 por `omie_settings.id` (CNPJ): regime, anexo, cnae_principal, cnaes_secundarios[], ie, im, atividade, opcao_em, observacoes
+- `financial_accountant` — 1 por `omie_settings.id`: nome, escritorio, crc, telefone, email, whatsapp, honorario_brl, frequencia, observacoes
+- `financial_accountant_interactions` — N por contador: data, nota, anexo_url
+- `financial_tax_alerts` — N por empresa: tipo (enum), severidade (info/warning/critical), titulo, descricao, acao_sugerida, status (open/read/resolved/dismissed), origem (manual/ai), created_at, resolved_at, resolved_by
+- `financial_tax_ai_runs` — log de cada análise: input_summary jsonb, output jsonb, model, tokens, created_by
 
-### Fase 3 — Operação diária: Lançamentos, Parcelas, Contas Bancárias
-1. **Lançamentos** (1.180 linhas — campeão de complexidade): filtros persistentes, colunas amigáveis, ações em massa, modal de criação simplificado em wizard de 2 passos.
-2. **Parcelas**: agrupamento por cliente/contrato, badges de status com ícone, ação "Renegociar" em destaque.
-3. **Contas Bancárias**: card por banco com saldo grande + último sync + CTA único "Atualizar", esconder IDs técnicos.
+RLS: padrão do projeto — `account_id = current_account_id()`.
 
-### Fase 4 — Cobrança e Conciliação
-1. **CRM de Cobrança** (kanban): colunas claras, cards com avatar do cliente, valor em destaque, dias em atraso colorido, WhatsApp direto.
-2. **Conciliação**: split view (movimentação bancária ↔ lançamento sugerido), match com 1 clique, confiança em %.
+### IA
 
----
+- Edge function `financial-tax-ai-analyze`
+  - Recebe `omie_settings_id`
+  - Junta tax_profile + agregados financeiros (12 meses) + retiradas de sócios + mix de produtos
+  - Prompt em PT-BR pedindo análise tributária objetiva e alertas estruturados em JSON
+  - Modelo: `google/gemini-2.5-pro` (raciocínio + contexto longo)
+  - Persiste em `financial_tax_alerts` e `financial_tax_ai_runs`
 
-## Detalhes técnicos (para quem lê código)
+### Componentes
 
-- Criar `src/components/financial/_shared/` com `FinancialPageHeader.tsx`, `FinancialKpiCard.tsx`, `FinancialEmptyState.tsx`, `FinancialPageSkeleton.tsx`.
-- Centralizar formatadores em `src/lib/financial-format.ts` (`formatBRL`, `formatBRLCompact`, `formatPct`, `formatPeriod`).
-- Suspense por rota usando `<Suspense fallback={<FinancialPageSkeleton/>}>` dentro do `FinancialLayout` em vez de fallback global.
-- Tokens HSL já existentes em `index.css` — sem cores hardcoded.
-- Testes manuais por tela documentados ao final de cada fase (o que cliquei, o que escrevi no banco, o que reverti).
+- `src/pages/financial/FinancialTaxPage.tsx` (página com tabs)
+- `src/components/financial/tax/TaxOverviewTab.tsx`
+- `src/components/financial/tax/TaxRegimeForm.tsx`
+- `src/components/financial/tax/AccountantTab.tsx`
+- `src/components/financial/tax/TaxAlertsTab.tsx`
+- `src/components/financial/tax/AlertCard.tsx`
+- Reusa `FinancialPageHeader`, `FinancialKpiCard`, `FinancialEmptyState`, `FinancialPageSkeleton`
 
----
+### O que **não** entra agora
 
-## O que eu **não** vou fazer sem perguntar
+- Integração direta com sistemas contábeis (Domínio, Alterdata, eContador) — fica para fase futura
+- Geração/envio de obrigações acessórias
+- Cálculo automático de DAS — só **alerta** sobre proximidade de teto, sem calcular guia
+- Cron de análise — por ora botão manual; deixo gancho pronto
 
-- Não vou apagar/fundir telas (ex.: juntar Boletos+Parcelas) sem confirmar.
-- Não vou mexer em RLS, edge functions, ou contratos de dados.
-- Não vou alterar a lógica de cálculo financeiro antes de validar no banco e te mostrar o resultado.
+### Ordem de execução (1 rodada)
 
----
+1. Migration (5 tabelas + RLS + enum de severidade/tipo)
+2. Edge function de análise
+3. Página + 4 abas + componentes
+4. Item no sidebar do Financeiro
+5. Atualizar memory `mem://features/financial/roy-financial-roadmap-pt` mencionando a nova área
 
-## Próximo passo
-
-Aprovando este plano, começo **agora pela Fase 1** (fundação visual + 5 bugs críticos). Estimativa: 1 rodada. Depois te chamo para revisar e seguimos para Fase 2.
+Posso seguir?
