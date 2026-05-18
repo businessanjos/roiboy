@@ -57,6 +57,20 @@ export function OpsClientsBreakdownDialog({
     return () => { cancelled = true; };
   }, [open, consultantId, rpcParams]);
 
+  const handleOpenConversation = async (c: ClientRow) => {
+    const { data } = await supabase
+      .from("clients")
+      .select("phone_e164, additional_phones")
+      .eq("id", c.client_id)
+      .maybeSingle();
+    let phone = (data?.phone_e164 || "").trim();
+    if (!phone && Array.isArray(data?.additional_phones) && data!.additional_phones.length > 0) {
+      const first = data!.additional_phones[0] as any;
+      phone = (typeof first === "string" ? first : first?.number || first?.phone || "").trim();
+    }
+    openZappConversation({ clientId: c.client_id, name: c.client_name, phone: phone || undefined });
+  };
+
   const messaged = rows.filter(r => r.inbound_msgs > 0);
   const silent = rows.filter(r => r.inbound_msgs === 0);
   const totalIn = messaged.reduce((a, r) => a + r.inbound_msgs, 0);
