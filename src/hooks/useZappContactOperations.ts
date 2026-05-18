@@ -177,7 +177,7 @@ export function useZappContactOperations({
     }
 
     return false;
-  }, [currentUser, isAdmin, currentAgent, agents, currentSectorDepartmentId, selectAndAddAssignment, setInboxTab]);
+  }, [currentUser, isAdmin, currentAgent, agents, currentSectorDepartmentId, selectedSectorId, selectedIntegrationId, selectAndAddAssignment, setInboxTab]);
 
   // Create assignment in queue for a conversation
   const createQueueAssignment = useCallback(async (zappConvId: string) => {
