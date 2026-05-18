@@ -62,6 +62,7 @@ export function OpsClientsBreakdownDialog({
   const totalIn = messaged.reduce((a, r) => a + r.inbound_msgs, 0);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
