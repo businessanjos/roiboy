@@ -357,21 +357,19 @@ export default function FinancialNotasFiscaisPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Receipt className="h-6 w-6" />
-            Notas Fiscais
-          </h1>
-          <p className="text-muted-foreground">Gerencie NFSe e NFe</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Nota Fiscal
-            </Button>
-          </DialogTrigger>
+      <FinancialPageHeader
+        icon={Receipt}
+        title="Notas Fiscais"
+        description="Emita e acompanhe NFSe (serviços) e NFe (produtos) enviadas aos seus clientes."
+        actions={
+          <Button onClick={() => setDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova nota fiscal
+          </Button>
+        }
+      />
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingNota ? "Editar Nota Fiscal" : "Nova Nota Fiscal"}</DialogTitle>
