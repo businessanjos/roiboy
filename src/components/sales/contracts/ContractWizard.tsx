@@ -899,7 +899,7 @@ export const ContractWizard = ({
       });
     }
     return counts;
-  }, [groupedVars, placeholderValues, menteeData, onMenteeChange]);
+  }, [groupedVars, placeholderValues, menteeData, onMenteeChange, docType]);
 
   const totalFilled = Object.values(filledCounts).reduce((a, b) => a + b.filled, 0);
   const totalAll = Object.values(filledCounts).reduce((a, b) => a + b.total, 0);
