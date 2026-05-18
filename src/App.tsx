@@ -189,6 +189,7 @@ const FinancialOmieIntegrationPage = lazyRetry(() => import("./pages/financial/F
 const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/FinancialPluggyStatusPage"));
 const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
 const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
+const FinancialTaxPage = lazyRetry(() => import("./pages/financial/FinancialTaxPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -297,6 +298,7 @@ const App = () => (
                               <Route path="integracoes/pluggy" element={<FinancialPluggyStatusPage />} />
                               <Route path="importar" element={<FinancialImportPage />} />
                               <Route path="cobranca" element={<FinancialDunningKanbanPage />} />
+                              <Route path="tributario" element={<FinancialTaxPage />} />
                             </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
