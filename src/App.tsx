@@ -189,6 +189,7 @@ const FinancialOmieIntegrationPage = lazyRetry(() => import("./pages/financial/F
 const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/FinancialPluggyStatusPage"));
 const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
 const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
+const FinancialTaxPage = lazyRetry(() => import("./pages/financial/FinancialTaxPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
