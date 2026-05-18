@@ -452,7 +452,6 @@ export default function FinancialBankAccountsPage() {
               }}
             />
           ) : (
-          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
