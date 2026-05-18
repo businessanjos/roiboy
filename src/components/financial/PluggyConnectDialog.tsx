@@ -23,7 +23,7 @@ declare global {
   }
 }
 
-const PLUGGY_CDN = "https://cdn.pluggy.ai/web-connect/v2.10.0/pluggy-connect.js";
+const PLUGGY_CDN = "https://cdn.pluggy.ai/pluggy-connect/v2.10.0/pluggy-connect.js";
 
 interface PluggyAccount {
   account_id: string;
