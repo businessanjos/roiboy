@@ -1814,12 +1814,12 @@ Deno.serve(async (req) => {
           } else {
             const { error: assignmentError } = await supabase
               .from("zapp_conversation_assignments")
-              .insert({
+              .upsert({
                 account_id: accountId,
                 zapp_conversation_id: zappConversationId,
                 status: "triage", // New conversations start in triage
                 department_id: sectorDepartmentId, // Associate with sector's department
-              });
+              }, { onConflict: "zapp_conversation_id", ignoreDuplicates: true });
 
             if (assignmentError) {
               console.error("Error creating zapp assignment:", assignmentError);

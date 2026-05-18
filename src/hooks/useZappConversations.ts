@@ -9,6 +9,30 @@ import { withRetry } from "@/lib/retryFetch";
 const REALTIME_DEBOUNCE_MS = 5000; // Increased for high-volume (was 3s)
 const MIN_FETCH_INTERVAL_MS = 5000; // Increased for high-volume (was 3s)
 
+// Defensive dedupe: keep ONE assignment per zapp_conversation_id.
+// DB has a unique index, but legacy duplicates or transitional rows can sneak in.
+// Priority: active > waiting > pending > triage > open > closed; tiebreak by most recent updated_at.
+const STATUS_PRIORITY: Record<string, number> = {
+  active: 1, waiting: 2, pending: 3, triage: 4, open: 5, closed: 6,
+};
+function dedupeAssignments(rows: ConversationAssignment[]): ConversationAssignment[] {
+  const byConv = new Map<string, ConversationAssignment>();
+  for (const a of rows) {
+    const key = (a as any).zapp_conversation_id || a.id;
+    const existing = byConv.get(key);
+    if (!existing) { byConv.set(key, a); continue; }
+    const pNew = STATUS_PRIORITY[(a as any).status] ?? 99;
+    const pOld = STATUS_PRIORITY[(existing as any).status] ?? 99;
+    if (pNew < pOld) { byConv.set(key, a); continue; }
+    if (pNew === pOld) {
+      const tNew = new Date((a as any).updated_at || (a as any).created_at || 0).getTime();
+      const tOld = new Date((existing as any).updated_at || (existing as any).created_at || 0).getTime();
+      if (tNew > tOld) byConv.set(key, a);
+    }
+  }
+  return Array.from(byConv.values());
+}
+
 interface UseZappConversationsOptions {
   accountId?: string;
   sectorId?: SectorId;
@@ -143,7 +167,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
       currentDepartmentIdRef.current = result.deptId;
       console.log(`[ZappConversations] Fetched ${result.assignments.length} assignments for department ${result.deptId}`);
-      setAssignments(result.assignments);
+      setAssignments(dedupeAssignments(result.assignments));
 
       await fetchSupplementaryData(result.assignments);
     } catch (error) {
@@ -171,7 +195,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
         return data;
       }, 3, 1500);
 
-      const result = data || [];
+      const result = dedupeAssignments(data || []);
       setAssignments(result);
       await fetchSupplementaryData(result);
       return result;

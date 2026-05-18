@@ -389,12 +389,12 @@ Deno.serve(async (req) => {
                 .limit(1)
                 .maybeSingle();
               if (!assignment) {
-                const { error } = await supabase.from("zapp_conversation_assignments").insert({
+                const { error } = await supabase.from("zapp_conversation_assignments").upsert({
                   account_id: integration.account_id,
                   zapp_conversation_id: conversationId,
                   status: "triage",
                   department_id: departmentId,
-                });
+                }, { onConflict: "zapp_conversation_id", ignoreDuplicates: true });
                 if (!error) stats.assignmentsCreated++;
               }
             }
