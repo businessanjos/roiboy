@@ -404,16 +404,11 @@ export default function FinancialDunningKanbanPage() {
           icon={Headset}
           title="Nenhum caso de cobrança no momento"
           description="Quando houver parcelas vencidas, clique em 'Gerar casos de vencidas' para criar o pipeline automaticamente."
-          action={
-            <Button
-              onClick={() => generateMutation.mutate()}
-              disabled={generateMutation.isPending}
-              size="sm"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Gerar casos agora
-            </Button>
-          }
+          action={{
+            label: generateMutation.isPending ? "Gerando..." : "Gerar casos agora",
+            onClick: () => generateMutation.mutate(),
+            icon: Sparkles,
+          }}
         />
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
