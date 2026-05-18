@@ -37,6 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FinancialPageHeader, FinancialEmptyState } from "@/components/financial/_shared";
 
 interface RecurringTemplate {
   id: string;
@@ -138,28 +139,24 @@ export default function FinancialRecurringPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <FinancialPageHeader
+        icon={Repeat}
+        title="Lançamentos Recorrentes"
+        description="Modelos de contas que se repetem automaticamente (aluguel, assinaturas, mensalidades). Clique em 'Gerar próximos' para criar as parcelas que já venceram a próxima data."
+        actions={
+          <Button
+            onClick={() => processMutation.mutate()}
+            disabled={processMutation.isPending}
+            size="sm"
+          >
+            <PlayCircle className="h-4 w-4 mr-2" />
+            {processMutation.isPending ? "Processando..." : "Gerar próximos"}
+          </Button>
+        }
+      />
+
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Repeat className="h-5 w-5" />
-              <div>
-                <CardTitle>Lançamentos Recorrentes</CardTitle>
-                <CardDescription>
-                  Gerencie lançamentos que se repetem automaticamente
-                </CardDescription>
-              </div>
-            </div>
-            <Button
-              onClick={() => processMutation.mutate()}
-              disabled={processMutation.isPending}
-            >
-              <PlayCircle className="h-4 w-4 mr-2" />
-              {processMutation.isPending ? "Processando..." : "Gerar Próximos"}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
@@ -167,13 +164,11 @@ export default function FinancialRecurringPage() {
               ))}
             </div>
           ) : templates.length === 0 ? (
-            <div className="p-12 text-center text-muted-foreground">
-              <Repeat className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhum lançamento recorrente configurado</p>
-              <p className="text-sm mt-2">
-                Crie um novo lançamento e marque como "recorrente" para aparecer aqui.
-              </p>
-            </div>
+            <FinancialEmptyState
+              icon={Repeat}
+              title="Nenhuma recorrência configurada"
+              description="Crie um lançamento marcado como 'recorrente' (mensal, semanal, etc.) e ele aparecerá aqui para ser gerado automaticamente."
+            />
           ) : (
             <Table>
               <TableHeader>

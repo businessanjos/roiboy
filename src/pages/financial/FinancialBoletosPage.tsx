@@ -17,7 +17,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, Search, FileText, Trash2, Edit, ExternalLink, Copy, Check, Barcode } from "lucide-react";
+import { Plus, Search, FileText, Trash2, Edit, ExternalLink, Copy, Check, Barcode, Clock, CheckCircle2, AlertCircle, DollarSign } from "lucide-react";
+import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
+import { formatBRLCompact } from "@/lib/financial-format";
 
 interface Boleto {
   id: string;
@@ -310,21 +312,19 @@ export default function FinancialBoletosPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Barcode className="h-6 w-6" />
-            Boletos
-          </h1>
-          <p className="text-muted-foreground">Gerencie boletos bancários</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Boleto
-            </Button>
-          </DialogTrigger>
+      <FinancialPageHeader
+        icon={Barcode}
+        title="Boletos"
+        description="Emita e acompanhe boletos bancários enviados aos seus clientes."
+        actions={
+          <Button onClick={() => setDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo boleto
+          </Button>
+        }
+      />
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingBoleto ? "Editar Boleto" : "Novo Boleto"}</DialogTitle>
@@ -521,43 +521,33 @@ export default function FinancialBoletosPage() {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pendentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(stats.pending)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pagos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.paid)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Vencidos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.overdue)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Emitido</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.total)}</div>
-          </CardContent>
-        </Card>
+        <FinancialKpiCard
+          icon={Clock}
+          label="Pendentes"
+          value={formatBRLCompact(stats.pending)}
+          tone="warning"
+        />
+        <FinancialKpiCard
+          icon={CheckCircle2}
+          label="Pagos"
+          value={formatBRLCompact(stats.paid)}
+          tone="success"
+        />
+        <FinancialKpiCard
+          icon={AlertCircle}
+          label="Vencidos"
+          value={formatBRLCompact(stats.overdue)}
+          tone="danger"
+        />
+        <FinancialKpiCard
+          icon={DollarSign}
+          label="Total emitido"
+          value={formatBRLCompact(stats.total)}
+        />
       </div>
 
       {/* Filters */}

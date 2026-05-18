@@ -33,6 +33,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CreditCardInvoiceImport } from "@/components/financial/CreditCardInvoiceImport";
+import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
+import { formatBRLCompact } from "@/lib/financial-format";
 
 interface InvoiceEntry {
   id: string;
@@ -251,22 +253,17 @@ export default function FinancialInvoicesPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <CreditCard className="h-6 w-6" />
-            Faturas de Cartão
-          </h1>
-          <p className="text-muted-foreground">
-            Gerencie e concilie faturas de cartão de crédito da empresa
-          </p>
-        </div>
-        <Button onClick={() => setImportDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Importar Fatura
-        </Button>
-      </div>
+      <FinancialPageHeader
+        icon={CreditCard}
+        title="Faturas de Cartão"
+        description="Importe e concilie as faturas dos cartões de crédito corporativos, lançamento a lançamento."
+        actions={
+          <Button onClick={() => setImportDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Importar fatura
+          </Button>
+        }
+      />
 
       {/* Month Navigation */}
       <div className="flex items-center justify-center gap-4">
@@ -286,31 +283,24 @@ export default function FinancialInvoicesPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total do Mês</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totals.total)}</div>
-            <p className="text-xs text-muted-foreground">{filteredEntries.length} lançamentos</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-600">Pago</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totals.paid)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-orange-600">Pendente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatCurrency(totals.pending)}</div>
-          </CardContent>
-        </Card>
+        <FinancialKpiCard
+          icon={CreditCard}
+          label="Total do mês"
+          value={formatBRLCompact(totals.total)}
+          hint={`${filteredEntries.length} lançamentos`}
+        />
+        <FinancialKpiCard
+          icon={CheckCircle2}
+          label="Pago"
+          value={formatBRLCompact(totals.paid)}
+          tone="success"
+        />
+        <FinancialKpiCard
+          icon={Clock}
+          label="Pendente"
+          value={formatBRLCompact(totals.pending)}
+          tone="warning"
+        />
       </div>
 
       {/* Filters */}
