@@ -317,12 +317,14 @@ export default function FinancialBoletosPage() {
         title="Boletos"
         description="Emita e acompanhe boletos bancários enviados aos seus clientes."
         actions={
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Boleto
-            </Button>
-          </DialogTrigger>
+          <Button onClick={() => setDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo boleto
+          </Button>
+        }
+      />
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingBoleto ? "Editar Boleto" : "Novo Boleto"}</DialogTitle>
