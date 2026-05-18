@@ -107,7 +107,7 @@ export function OpsClientsBreakdownDialog({
                       <div className="flex-1 min-w-0">
                         <button
                           type="button"
-                          onClick={() => openZappConversation({ clientId: c.client_id, name: c.client_name })}
+                          onClick={() => handleOpenConversation(c)}
                           className="font-medium text-sm hover:underline truncate block text-left w-full"
                         >
                           {c.client_name}
