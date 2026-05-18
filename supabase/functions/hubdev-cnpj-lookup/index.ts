@@ -53,9 +53,27 @@ Deno.serve(async (req) => {
     }
 
     const r = data.result || data;
+
+    // Extract CNAEs - HubDev may return as string, object or array
+    const extractCnae = (item: any): string | null => {
+      if (!item) return null;
+      if (typeof item === "string") return item;
+      if (typeof item === "object") {
+        const code = item.code || item.codigo || item.cnae || "";
+        const desc = item.text || item.descricao || item.description || "";
+        return code && desc ? `${code} - ${desc}` : (code || desc || null);
+      }
+      return null;
+    };
+
+    const cnaesSecundariosRaw = r.atividades_secundarias || r.cnaes_secundarios || r.atividade_secundaria || [];
+    const cnaesSecundarios = Array.isArray(cnaesSecundariosRaw)
+      ? cnaesSecundariosRaw.map(extractCnae).filter(Boolean)
+      : [];
+
     const normalized = {
       razao_social: r.razao_social || r.nome || null,
-      nome_fantasia: r.nome_fantasia || null,
+      nome_fantasia: r.nome_fantasia || r.fantasia || null,
       email: r.email || null,
       telefone: r.telefone || r.telefone_1 || null,
       logradouro: r.logradouro || null,
@@ -67,7 +85,11 @@ Deno.serve(async (req) => {
       cep: r.cep || null,
       situacao: r.situacao_cadastral || r.situacao || null,
       abertura: r.data_abertura || r.abertura || null,
-      atividade_principal: r.atividade_principal || null,
+      atividade_principal: extractCnae(r.atividade_principal) || r.atividade_principal || null,
+      cnaes_secundarios: cnaesSecundarios,
+      porte: r.porte || null,
+      natureza_juridica: r.natureza_juridica || null,
+      capital_social: r.capital_social || null,
     };
 
     return new Response(JSON.stringify(normalized), {

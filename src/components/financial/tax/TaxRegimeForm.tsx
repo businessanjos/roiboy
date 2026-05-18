@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "@/hooks/use-toast";
-import { Save } from "lucide-react";
+import { Save, Search, Loader2 } from "lucide-react";
 
 const REGIMES = [
   { value: "mei", label: "MEI" },
@@ -49,6 +49,19 @@ export function TaxRegimeForm({ omieSettingsId }: { omieSettingsId: string }) {
   const qc = useQueryClient();
   const [form, setForm] = useState<Form>(empty);
   const [saving, setSaving] = useState(false);
+  const [fetchingCnpj, setFetchingCnpj] = useState(false);
+
+  const { data: company } = useQuery({
+    queryKey: ["tax-company-cnpj", omieSettingsId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("omie_settings")
+        .select("cnpj, legal_name, trade_name")
+        .eq("id", omieSettingsId)
+        .maybeSingle();
+      return data;
+    },
+  });
 
   const { data } = useQuery({
     queryKey: ["tax-profile-full", omieSettingsId],
@@ -116,10 +129,61 @@ export function TaxRegimeForm({ omieSettingsId }: { omieSettingsId: string }) {
 
   const set = (k: keyof Form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  const suggestRegimeFromPorte = (porte: string | null): string => {
+    if (!porte) return form.regime;
+    const p = porte.toLowerCase();
+    if (p.includes("mei") || p.includes("microempreendedor")) return "mei";
+    if (p.includes("me") || p.includes("epp") || p.includes("micro") || p.includes("pequeno")) return "simples_nacional";
+    if (p.includes("demais") || p.includes("grande") || p.includes("medio") || p.includes("médio")) return "lucro_presumido";
+    return form.regime;
+  };
+
+  const fetchFromCnpj = async () => {
+    if (!company?.cnpj) {
+      toast({ title: "CNPJ não cadastrado", description: "Cadastre o CNPJ da empresa em Empresas/Omie primeiro.", variant: "destructive" });
+      return;
+    }
+    setFetchingCnpj(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("hubdev-cnpj-lookup", {
+        body: { cnpj: company.cnpj },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setForm((f) => ({
+        ...f,
+        cnae_principal: data.atividade_principal || f.cnae_principal,
+        cnaes_secundarios: Array.isArray(data.cnaes_secundarios) && data.cnaes_secundarios.length
+          ? data.cnaes_secundarios.join(", ")
+          : f.cnaes_secundarios,
+        regime: f.regime || suggestRegimeFromPorte(data.porte),
+        observacoes: [
+          f.observacoes,
+          data.razao_social && `Razão social: ${data.razao_social}`,
+          data.nome_fantasia && `Nome fantasia: ${data.nome_fantasia}`,
+          data.porte && `Porte: ${data.porte}`,
+          data.natureza_juridica && `Natureza jurídica: ${data.natureza_juridica}`,
+          data.situacao && `Situação: ${data.situacao}`,
+          data.abertura && `Abertura: ${data.abertura}`,
+        ].filter(Boolean).join("\n"),
+      }));
+      toast({ title: "Dados preenchidos pela Receita", description: "Revise e clique em Salvar." });
+    } catch (e: any) {
+      toast({ title: "Erro na consulta CNPJ", description: e.message, variant: "destructive" });
+    } finally {
+      setFetchingCnpj(false);
+    }
+  };
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">Regime tributário & dados da empresa</CardTitle>
+        <Button variant="outline" size="sm" onClick={fetchFromCnpj} disabled={fetchingCnpj || !company?.cnpj}>
+          {fetchingCnpj ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Search className="h-4 w-4 mr-1.5" />}
+          Buscar pelo CNPJ {company?.cnpj ? `(${company.cnpj})` : ""}
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
