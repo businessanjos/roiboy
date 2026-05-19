@@ -1,13 +1,66 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeftRight, RefreshCw, TrendingUp, TrendingDown, Wallet, AlertTriangle, Receipt } from "lucide-react";
+import { ArrowLeftRight, RefreshCw, TrendingUp, TrendingDown, Wallet, AlertTriangle, Receipt, CalendarDays } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+type PeriodPreset = "today" | "this_month" | "this_quarter" | "this_year" | "last_90" | "custom";
+
+const PRESET_LABELS: Record<PeriodPreset, string> = {
+  today: "Hoje",
+  this_month: "Este mês",
+  this_quarter: "Este trimestre",
+  this_year: "Este ano",
+  last_90: "Últimos 90 dias",
+  custom: "Personalizado",
+};
+
+function toISO(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function resolvePreset(preset: PeriodPreset, custom?: { start?: Date; end?: Date }): { start: Date; end: Date } | null {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  switch (preset) {
+    case "today":
+      return { start: today, end: today };
+    case "this_month":
+      return {
+        start: new Date(today.getFullYear(), today.getMonth(), 1),
+        end: new Date(today.getFullYear(), today.getMonth() + 1, 0),
+      };
+    case "this_quarter": {
+      const q = Math.floor(today.getMonth() / 3);
+      return {
+        start: new Date(today.getFullYear(), q * 3, 1),
+        end: new Date(today.getFullYear(), q * 3 + 3, 0),
+      };
+    }
+    case "this_year":
+      return {
+        start: new Date(today.getFullYear(), 0, 1),
+        end: new Date(today.getFullYear(), 11, 31),
+      };
+    case "last_90": {
+      const start = new Date(today);
+      start.setDate(start.getDate() - 89);
+      return { start, end: today };
+    }
+    case "custom":
+      if (custom?.start && custom?.end) return { start: custom.start, end: custom.end };
+      return null;
+  }
+}
 
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
