@@ -135,14 +135,33 @@ export default function RoyZapp() {
           .maybeSingle();
         
         if (preference?.integration_id) {
-          console.log(`[RoyZapp] Auto-selecting preferred instance: ${preference.integration_id}`);
-          setSelectedIntegrationId(preference.integration_id);
-          setSearchParams(prev => {
-            prev.set('integrationId', preference.integration_id);
-            return prev;
-          }, { replace: true });
-          return;
+          // CRITICAL: validate the preferred integration actually belongs to the selected sector.
+          // Without this check, a stale/cross-sector preference could route messages through
+          // the wrong WhatsApp number (e.g. Operações enviando pelo número da Comercial).
+          const { data: prefIntegration } = await supabase
+            .from("integrations")
+            .select("id, sector_id, status")
+            .eq("id", preference.integration_id)
+            .eq("account_id", currentUser.account_id)
+            .maybeSingle();
+
+          if (prefIntegration && prefIntegration.sector_id === selectedSectorId) {
+            console.log(`[RoyZapp] Auto-selecting preferred instance: ${preference.integration_id}`);
+            setSelectedIntegrationId(preference.integration_id);
+            setSearchParams(prev => {
+              prev.set('integrationId', preference.integration_id);
+              return prev;
+            }, { replace: true });
+            return;
+          }
+
+          console.warn(
+            `[RoyZapp] Ignoring stale preference ${preference.integration_id} ` +
+            `(belongs to sector ${prefIntegration?.sector_id ?? "unknown"}, current sector is ${selectedSectorId}). ` +
+            `Falling back to first connected integration of the current sector.`
+          );
         }
+        
         
         // No preference saved - fallback to first connected integration for this sector
         const { data: integrations } = await supabase
