@@ -594,7 +594,7 @@ Deno.serve(async (req) => {
     }
 
     // Ações que requerem token
-    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message"];
+    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message", "check_number"];
     if (tokenRequiredActions.includes(action) && !token) {
       console.error(`[uazapi-manager] Token required but missing for action: ${action}`);
       return new Response(JSON.stringify({ error: "WhatsApp não configurado para este setor." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -656,7 +656,63 @@ Deno.serve(async (req) => {
     }
     // ========== END ANTI-SPAM ==========
 
+    // ========== INSTANCE HEALTH CHECK ==========
+    // Bloqueia envios se a instância está sabidamente desconectada — evita falhas silenciosas.
+    const sendActions = ["send_text", "send_media", "send_to_group", "send_media_to_group"];
+    if (sendActions.includes(action)) {
+      if (intData?.status === "disconnected") {
+        console.warn(`[uazapi-manager] ⛔ Send bloqueado: instância ${intData?.config?.instance_name} está disconnected`);
+        return new Response(JSON.stringify({
+          error: "WHATSAPP_DISCONNECTED: a instância de WhatsApp deste setor está desconectada. Reconecte em Configurações → WhatsApp antes de enviar.",
+          code: "WHATSAPP_DISCONNECTED",
+          instance_name: intData?.config?.instance_name,
+        }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    // ========== AUTO NUMBER VALIDATION (first send to new contact) ==========
+    // Só para envios individuais: se não temos histórico com este número, valida no uazapi antes
+    // pra evitar "envio fantasma" para número sem WhatsApp.
+    if (["send_text", "send_media"].includes(action) && phone) {
+      const cleanPhoneAuto = phone.replace(/\D/g, "");
+      try {
+        const { data: existingConv } = await supabase
+          .from("zapp_conversations")
+          .select("id")
+          .eq("account_id", accountId)
+          .or(`phone_e164.eq.+${cleanPhoneAuto},phone_e164.eq.${cleanPhoneAuto}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (!existingConv) {
+          console.log(`[uazapi-manager] 🔎 Primeiro envio para ${cleanPhoneAuto} — validando no uazapi`);
+          const checkRes: any = await uazapiInstance("/chat/check", "POST", token!, { numbers: [cleanPhoneAuto] }, sectorServer).catch((e) => {
+            console.warn(`[uazapi-manager] check falhou (seguindo mesmo assim):`, (e as Error).message);
+            return null;
+          });
+          if (checkRes) {
+            const arr = Array.isArray(checkRes) ? checkRes : (checkRes?.numbers || checkRes?.data || []);
+            const entry = Array.isArray(arr) ? arr.find((x: any) => String(x?.query || x?.number || "").replace(/\D/g, "").endsWith(cleanPhoneAuto.slice(-8))) : null;
+            const exists = entry?.exists ?? entry?.isInWhatsapp ?? entry?.valid;
+            if (exists === false) {
+              console.warn(`[uazapi-manager] ⛔ Número ${cleanPhoneAuto} não tem WhatsApp`);
+              return new Response(JSON.stringify({
+                error: "NUMBER_HAS_NO_WHATSAPP: este número não possui WhatsApp ativo. Confirme o número com o cliente antes de tentar novamente.",
+                code: "NUMBER_HAS_NO_WHATSAPP",
+                phone: cleanPhoneAuto,
+              }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`[uazapi-manager] auto-validation falhou (não-fatal):`, (e as Error).message);
+      }
+    }
+    // ========== END HEALTH CHECK ==========
+
     let result: unknown = { success: true };
+
+
 
     if (action === "status") {
       const storedConnected = intData?.status === "connected";
@@ -1082,6 +1138,24 @@ Deno.serve(async (req) => {
       }
       
       result = { success: true, webhook_url: webhookUrl, events: webhookConfig.events };
+    
+    } else if (action === "check_number") {
+      // Valida se um número (ou lista) possui WhatsApp ativo via uazapi /chat/check
+      const rawNumbers = payload.numbers || (payload.phone ? [payload.phone] : []);
+      const numbers = (Array.isArray(rawNumbers) ? rawNumbers : [rawNumbers])
+        .map((n: any) => String(n).replace(/\D/g, ""))
+        .filter((n: string) => n.length >= 10);
+      if (numbers.length === 0) {
+        return new Response(JSON.stringify({ error: "Informe ao menos um número válido em 'numbers' ou 'phone'." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const checkRaw: any = await uazapiInstance("/chat/check", "POST", token!, { numbers }, sectorServer);
+      const arr = Array.isArray(checkRaw) ? checkRaw : (checkRaw?.numbers || checkRaw?.data || []);
+      const normalized = (Array.isArray(arr) ? arr : []).map((x: any) => ({
+        number: String(x?.query || x?.number || "").replace(/\D/g, ""),
+        exists: x?.exists ?? x?.isInWhatsapp ?? x?.valid ?? null,
+        jid: x?.jid || x?.lid || null,
+      }));
+      result = { numbers: normalized, raw: checkRaw };
     
     } else if (action === "delete_message") {
       const messageId = payload.message_id;
