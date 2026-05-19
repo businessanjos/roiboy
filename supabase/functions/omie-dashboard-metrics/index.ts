@@ -278,6 +278,7 @@ Deno.serve(async (req) => {
       generatedAt: new Date().toISOString(),
     };
 
+    METRICS_CACHE.set(cacheKey, { at: Date.now(), data: result });
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
