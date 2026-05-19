@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
       if (!signatureEnabled) return t;
       const header = `*${userData.name || "Consultor"} | Eternum*`;
       if (!t) return header;
-      if (/^\*[^*\n]+\|\s*Eternum\*/.test(t)) return t;
+      if (/^\*[^*\n]+\|\s*Eternum\*/.test(t) || /^\*[^*\n]{2,80}:\*\s*\n/.test(t)) return t;
       return `${header}\n${t}`;
     };
 
