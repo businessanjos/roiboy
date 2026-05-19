@@ -594,7 +594,7 @@ Deno.serve(async (req) => {
     }
 
     // Ações que requerem token
-    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message"];
+    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message", "check_number"];
     if (tokenRequiredActions.includes(action) && !token) {
       console.error(`[uazapi-manager] Token required but missing for action: ${action}`);
       return new Response(JSON.stringify({ error: "WhatsApp não configurado para este setor." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
