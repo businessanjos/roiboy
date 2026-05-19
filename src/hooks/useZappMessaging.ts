@@ -20,6 +20,19 @@ interface UseZappMessagingProps {
   onConversationUpdated?: (conversationId: string, lastMessageAt: string, lastMessagePreview: string) => void;
 }
 
+const normalizeSignature = (signature: string) => signature.trim().replace(/:+$/, "").trim();
+
+const buildSignatureHeader = (signature: string) => {
+  const cleanSignature = normalizeSignature(signature);
+  return cleanSignature ? `*${cleanSignature}:*` : "";
+};
+
+const hasSameSignatureHeader = (text: string, signature: string) => {
+  const firstLine = text.trim().split(/\r?\n/, 1)[0]?.trim();
+  if (!firstLine || !signature) return false;
+  return firstLine === `*${signature}:*` || firstLine === `*${signature}*`;
+};
+
 export function useZappMessaging({
   selectedConversation,
   currentUser,
@@ -118,6 +131,15 @@ export function useZappMessaging({
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
   const [sendingContact, setSendingContact] = useState(false);
+
+  const buildSignedText = useCallback((text: string) => {
+    const baseText = text.trim();
+    const cleanSignature = normalizeSignature(userSignature);
+    if (!signatureEnabled || !cleanSignature || !baseText || hasSameSignatureHeader(baseText, cleanSignature)) {
+      return baseText;
+    }
+    return `${buildSignatureHeader(cleanSignature)}\n${baseText}`;
+  }, [signatureEnabled, userSignature]);
 
   // Quick replies state
   const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
@@ -270,11 +292,7 @@ export function useZappMessaging({
     }
     
     const baseMessage = messageInput.trim();
-    const cleanSignature = userSignature.trim().replace(/:+$/, "").trim();
-    const formattedSignature = cleanSignature ? `*${cleanSignature}:*` : "";
-    const messageContent = signatureEnabled && formattedSignature 
-      ? `${formattedSignature}\n${baseMessage}`
-      : baseMessage;
+    const messageContent = buildSignedText(baseMessage);
     const tempMessageId = `temp-${Date.now()}`;
     const now = new Date().toISOString();
     const conversationId = selectedConversation.zapp_conversation_id;
@@ -581,10 +599,11 @@ export function useZappMessaging({
     setUploadingMedia(true);
     const tempMessageId = `temp-media-${Date.now()}`;
     const now = new Date().toISOString();
+    const signedCaption = caption ? buildSignedText(caption) : "";
     
     const optimisticMessage: Message = {
       id: tempMessageId,
-      content: caption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
+      content: signedCaption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
       is_from_client: false,
       created_at: now,
       message_type: mediaType,
@@ -617,14 +636,15 @@ export function useZappMessaging({
       const mediaUrl = urlData.publicUrl;
       
       const action = isGroup && groupJid ? "send_media_to_group" : "send_media";
-      const payload: Record<string, string> = {
+      const payload: Record<string, string | boolean> = {
         action,
         media_url: mediaUrl,
         media_type: mediaType,
-        caption: caption || "",
+        caption: signedCaption,
         file_name: file.name,
         sector_id: selectedSectorId || "",
         integration_id: effectiveIntegrationId || "",
+        add_signature: false,
       };
       
       if (isGroup && groupJid) {
@@ -651,7 +671,7 @@ export function useZappMessaging({
           account_id: currentUser!.account_id,
           zapp_conversation_id: selectedConversation.zapp_conversation_id,
           direction: "outbound",
-          content: caption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
+          content: signedCaption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
           message_type: mediaType,
           media_url: mediaUrl,
           media_type: mediaType,
@@ -900,7 +920,7 @@ export function useZappMessaging({
         }
         
         const action = isGroup && groupJid ? "send_media_to_group" : "send_media";
-        const payload: Record<string, string> = {
+        const payload: Record<string, string | boolean> = {
           action,
           media_url: mediaUrl,
           media_type: "ptt",
@@ -908,6 +928,7 @@ export function useZappMessaging({
           file_name: `audio_${Date.now()}.${extension}`,
           sector_id: selectedSectorId || "",
           integration_id: effectiveIntegrationId || "",
+          add_signature: false,
         };
         
         if (isGroup && groupJid) {
