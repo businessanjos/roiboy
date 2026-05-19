@@ -1,13 +1,66 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeftRight, RefreshCw, TrendingUp, TrendingDown, Wallet, AlertTriangle, Receipt } from "lucide-react";
+import { ArrowLeftRight, RefreshCw, TrendingUp, TrendingDown, Wallet, AlertTriangle, Receipt, CalendarDays } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+type PeriodPreset = "today" | "this_month" | "this_quarter" | "this_year" | "last_90" | "custom";
+
+const PRESET_LABELS: Record<PeriodPreset, string> = {
+  today: "Hoje",
+  this_month: "Este mês",
+  this_quarter: "Este trimestre",
+  this_year: "Este ano",
+  last_90: "Últimos 90 dias",
+  custom: "Personalizado",
+};
+
+function toISO(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function resolvePreset(preset: PeriodPreset, custom?: { start?: Date; end?: Date }): { start: Date; end: Date } | null {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  switch (preset) {
+    case "today":
+      return { start: today, end: today };
+    case "this_month":
+      return {
+        start: new Date(today.getFullYear(), today.getMonth(), 1),
+        end: new Date(today.getFullYear(), today.getMonth() + 1, 0),
+      };
+    case "this_quarter": {
+      const q = Math.floor(today.getMonth() / 3);
+      return {
+        start: new Date(today.getFullYear(), q * 3, 1),
+        end: new Date(today.getFullYear(), q * 3 + 3, 0),
+      };
+    }
+    case "this_year":
+      return {
+        start: new Date(today.getFullYear(), 0, 1),
+        end: new Date(today.getFullYear(), 11, 31),
+      };
+    case "last_90": {
+      const start = new Date(today);
+      start.setDate(start.getDate() - 89);
+      return { start, end: today };
+    }
+    case "custom":
+      if (custom?.start && custom?.end) return { start: custom.start, end: custom.end };
+      return null;
+  }
+}
 
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -18,7 +71,7 @@ const fmtBRLcompact = (n: number) => {
 };
 
 interface OmieMetrics {
-  window: { months: number; start: string; end: string };
+  window: { start: string; end: string; startISO?: string; endISO?: string };
   kpis: {
     totalReceived: number;
     totalToReceive: number;
@@ -86,14 +139,22 @@ export default function OmieDashboardSection() {
   const [data, setData] = useState<OmieMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [months, setMonths] = useState<number>(6);
+  const [preset, setPreset] = useState<PeriodPreset>("this_month");
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [customOpen, setCustomOpen] = useState(false);
 
-  const load = async (m = months) => {
+  const activeRange = useMemo(
+    () => resolvePreset(preset, { start: customRange.from, end: customRange.to }),
+    [preset, customRange]
+  );
+
+  const load = async (range = activeRange) => {
+    if (!range) return;
     setLoading(true);
     setError(null);
     try {
       const { data: res, error: err } = await supabase.functions.invoke("omie-dashboard-metrics", {
-        body: { months: m, company_id: selectedId },
+        body: { start: toISO(range.start), end: toISO(range.end), company_id: selectedId },
       });
       if (err) throw err;
       if ((res as any)?.error) throw new Error((res as any).error);
@@ -107,9 +168,9 @@ export default function OmieDashboardSection() {
   };
 
   useEffect(() => {
-    if (selectedId) load(months);
+    if (selectedId && activeRange) load(activeRange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId]);
+  }, [selectedId, preset, customRange.from?.getTime(), customRange.to?.getTime()]);
 
   return (
     <Card className="border-primary/20">
@@ -132,23 +193,48 @@ export default function OmieDashboardSection() {
           </div>
           <div className="flex items-center gap-2">
             <Select
-              value={String(months)}
+              value={preset}
               onValueChange={(v) => {
-                const m = Number(v);
-                setMonths(m);
-                load(m);
+                const p = v as PeriodPreset;
+                setPreset(p);
+                if (p === "custom") setCustomOpen(true);
               }}
             >
-              <SelectTrigger className="h-8 w-[130px] text-xs">
+              <SelectTrigger className="h-8 w-[170px] text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="3">Últimos 3 meses</SelectItem>
-                <SelectItem value="6">Últimos 6 meses</SelectItem>
-                <SelectItem value="12">Últimos 12 meses</SelectItem>
+                {(Object.keys(PRESET_LABELS) as PeriodPreset[]).map((k) => (
+                  <SelectItem key={k} value={k}>{PRESET_LABELS[k]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Button size="sm" variant="outline" onClick={() => load(months)} disabled={loading}>
+            {preset === "custom" && (
+              <Popover open={customOpen} onOpenChange={setCustomOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {customRange.from && customRange.to
+                      ? `${format(customRange.from, "dd/MM/yy", { locale: ptBR })} → ${format(customRange.to, "dd/MM/yy", { locale: ptBR })}`
+                      : "Escolher datas"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    locale={ptBR}
+                    selected={{ from: customRange.from, to: customRange.to } as any}
+                    onSelect={(r: any) => {
+                      setCustomRange({ from: r?.from, to: r?.to });
+                      if (r?.from && r?.to) setCustomOpen(false);
+                    }}
+                    numberOfMonths={2}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+            <Button size="sm" variant="outline" onClick={() => load()} disabled={loading || !activeRange}>
               <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
             </Button>
           </div>
