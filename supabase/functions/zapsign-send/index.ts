@@ -164,7 +164,7 @@ serve(async (req) => {
     };
 
     const zapSignPayload: any = {
-      sandbox: sandbox !== false,
+      sandbox: sandbox === true,
       name: contract_name || "Contrato de Prestação de Serviços",
       base64_pdf: contract_pdf_base64,
       lang: "pt-br",
