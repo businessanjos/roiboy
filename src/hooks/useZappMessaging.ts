@@ -212,7 +212,8 @@ export function useZappMessaging({
     }
     
     const baseMessage = messageInput.trim();
-    const formattedSignature = userSignature.trim() ? `*${userSignature.trim()}:*` : "";
+    const cleanSignature = userSignature.trim().replace(/:+$/, "").trim();
+    const formattedSignature = cleanSignature ? `*${cleanSignature}:*` : "";
     const messageContent = signatureEnabled && formattedSignature 
       ? `${formattedSignature}\n${baseMessage}`
       : baseMessage;
