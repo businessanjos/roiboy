@@ -540,8 +540,8 @@ Deno.serve(async (req) => {
       if (!signatureEnabled) return t;
       const header = `*${userData.name || firstName} | Eternum*`;
       if (!t) return header;
-      // Avoid double-signing if already starts with our header pattern
-      if (/^\*[^*\n]+\|\s*Eternum\*/.test(t)) return t;
+      // Avoid double-signing if the frontend already prepended a custom signature.
+      if (/^\*[^*\n]+\|\s*Eternum\*/.test(t) || /^\*[^*\n]{2,80}:\*\s*\n/.test(t)) return t;
       return `${header}\n${t}`;
     };
 
