@@ -287,6 +287,9 @@ export function useZappMessaging({
       toast.error("WhatsApp não configurado", { description: "Esta conversa não está vinculada a nenhuma instância do WhatsApp. Peça ao administrador para verificar." });
       return;
     }
+
+    // Safety check: never route through a WhatsApp number from another sector
+    if (!(await assertIntegrationMatchesSector(effectiveIntegrationId))) return;
     
     const replyContext = replyingTo ? { ...replyingTo } : null;
     
