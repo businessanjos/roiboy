@@ -672,6 +672,12 @@ export function useZappMessaging({
       }
       const externalId = data?.data?.id || data?.data?.messageid || data?.id || data?.messageid || null;
       console.log("[ZAPP-MEDIA] Edge function OK, externalId:", externalId);
+
+      // 🚨 CRÍTICO: sem ID externo = WhatsApp NÃO confirmou a entrega.
+      if (!externalId) {
+        console.error("[ZAPP-MEDIA] Resposta sem messageid — provável falha silenciosa:", JSON.stringify(data)?.substring(0, 500));
+        throw new Error("WhatsApp não confirmou o envio da mídia. Verifique a conexão da instância e tente novamente.");
+      }
       
       if (selectedConversation.zapp_conversation_id) {
         const { data: insertedMessage, error: insertError } = await supabase.from("zapp_messages").insert({
