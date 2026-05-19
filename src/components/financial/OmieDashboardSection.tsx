@@ -71,7 +71,7 @@ const fmtBRLcompact = (n: number) => {
 };
 
 interface OmieMetrics {
-  window: { months: number; start: string; end: string };
+  window: { start: string; end: string; startISO?: string; endISO?: string };
   kpis: {
     totalReceived: number;
     totalToReceive: number;
