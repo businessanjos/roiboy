@@ -19446,7 +19446,7 @@ export type Database = {
           {
             foreignKeyName: "zapp_conversation_assignments_conversation_id_fkey"
             columns: ["conversation_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
