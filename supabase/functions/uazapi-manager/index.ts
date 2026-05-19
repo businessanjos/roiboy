@@ -656,7 +656,63 @@ Deno.serve(async (req) => {
     }
     // ========== END ANTI-SPAM ==========
 
+    // ========== INSTANCE HEALTH CHECK ==========
+    // Bloqueia envios se a instância está sabidamente desconectada — evita falhas silenciosas.
+    const sendActions = ["send_text", "send_media", "send_to_group", "send_media_to_group"];
+    if (sendActions.includes(action)) {
+      if (intData?.status === "disconnected") {
+        console.warn(`[uazapi-manager] ⛔ Send bloqueado: instância ${intData?.config?.instance_name} está disconnected`);
+        return new Response(JSON.stringify({
+          error: "WHATSAPP_DISCONNECTED: a instância de WhatsApp deste setor está desconectada. Reconecte em Configurações → WhatsApp antes de enviar.",
+          code: "WHATSAPP_DISCONNECTED",
+          instance_name: intData?.config?.instance_name,
+        }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    // ========== AUTO NUMBER VALIDATION (first send to new contact) ==========
+    // Só para envios individuais: se não temos histórico com este número, valida no uazapi antes
+    // pra evitar "envio fantasma" para número sem WhatsApp.
+    if (["send_text", "send_media"].includes(action) && phone) {
+      const cleanPhoneAuto = phone.replace(/\D/g, "");
+      try {
+        const { data: existingConv } = await supabase
+          .from("zapp_conversations")
+          .select("id")
+          .eq("account_id", accountId)
+          .or(`phone_e164.eq.+${cleanPhoneAuto},phone_e164.eq.${cleanPhoneAuto}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (!existingConv) {
+          console.log(`[uazapi-manager] 🔎 Primeiro envio para ${cleanPhoneAuto} — validando no uazapi`);
+          const checkRes: any = await uazapiInstance("/chat/check", "POST", token!, { numbers: [cleanPhoneAuto] }, sectorServer).catch((e) => {
+            console.warn(`[uazapi-manager] check falhou (seguindo mesmo assim):`, (e as Error).message);
+            return null;
+          });
+          if (checkRes) {
+            const arr = Array.isArray(checkRes) ? checkRes : (checkRes?.numbers || checkRes?.data || []);
+            const entry = Array.isArray(arr) ? arr.find((x: any) => String(x?.query || x?.number || "").replace(/\D/g, "").endsWith(cleanPhoneAuto.slice(-8))) : null;
+            const exists = entry?.exists ?? entry?.isInWhatsapp ?? entry?.valid;
+            if (exists === false) {
+              console.warn(`[uazapi-manager] ⛔ Número ${cleanPhoneAuto} não tem WhatsApp`);
+              return new Response(JSON.stringify({
+                error: "NUMBER_HAS_NO_WHATSAPP: este número não possui WhatsApp ativo. Confirme o número com o cliente antes de tentar novamente.",
+                code: "NUMBER_HAS_NO_WHATSAPP",
+                phone: cleanPhoneAuto,
+              }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`[uazapi-manager] auto-validation falhou (não-fatal):`, (e as Error).message);
+      }
+    }
+    // ========== END HEALTH CHECK ==========
+
     let result: unknown = { success: true };
+
+
 
     if (action === "status") {
       const storedConnected = intData?.status === "connected";
