@@ -197,18 +197,29 @@ serve(async (req) => {
     try {
       data = JSON.parse(responseText);
     } catch {
-      return json(
-        { success: false, error: `ZapSign error [${response.status}]: ${responseText.substring(0, 500)}` },
-        500,
-      );
+      // Return 200 with success:false so supabase-js doesn't mask the body
+      return json({
+        success: false,
+        error: `ZapSign respondeu com status ${response.status}: ${responseText.substring(0, 500)}`,
+      });
     }
 
     if (!response.ok) {
-      return json(
-        { success: false, error: `ZapSign API error [${response.status}]: ${JSON.stringify(data)}` },
-        500,
-      );
+      // Friendly mapping for common ZapSign account/billing errors
+      let friendly = `ZapSign API error [${response.status}]: ${typeof data === "string" ? data : JSON.stringify(data)}`;
+      const msg = (data?.detail || data?.message || (typeof data === "string" ? data : "")) as string;
+      if (response.status === 402 || /Plano de API|plano da API|contratar um Plano/i.test(msg)) {
+        friendly =
+          "A conta ZapSign não tem um Plano de API ativo. Acesse o painel do ZapSign → API → contrate um plano (ou ative o modo sandbox para testes).";
+      } else if (response.status === 401 || response.status === 403) {
+        friendly = "Token do ZapSign inválido ou sem permissão. Verifique o ZAPSIGN_API_TOKEN.";
+      } else if (msg) {
+        friendly = `ZapSign: ${msg}`;
+      }
+      // 200 so the client receives `data.success === false` with the real reason
+      return json({ success: false, error: friendly, zapsign_status: response.status, zapsign_body: data });
     }
+
 
     const signerLinks = (data.signers || []).map((s: any) => ({
       name: s.name,

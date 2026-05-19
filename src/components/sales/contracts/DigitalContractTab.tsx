@@ -640,7 +640,7 @@ export const DigitalContractTab = ({
         return;
       }
 
-      const { error } = await supabase.functions.invoke("zapsign-send", {
+      const { data: invokeData, error } = await supabase.functions.invoke("zapsign-send", {
         body: {
           contract_id: contract.id,
           contract_name: documentName.trim() || undefined,
@@ -652,7 +652,10 @@ export const DigitalContractTab = ({
           })),
         },
       });
-      if (error) throw error;
+      if (error) throw new Error((invokeData as any)?.error || error.message);
+      if (invokeData && (invokeData as any).success === false) {
+        throw new Error((invokeData as any).error || "Falha ao enviar para ZapSign");
+      }
       toast.success("Enviado para assinatura via ZapSign");
       setSignerDialogOpen(false);
       const { data: updated } = await supabase
