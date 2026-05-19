@@ -22,6 +22,11 @@ interface UseZappMessagingProps {
 
 const normalizeSignature = (signature: string) => signature.trim().replace(/:+$/, "").trim();
 
+const buildSignatureHeader = (signature: string) => {
+  const cleanSignature = normalizeSignature(signature);
+  return cleanSignature ? `*${cleanSignature}:*` : "";
+};
+
 const hasSameSignatureHeader = (text: string, signature: string) => {
   const firstLine = text.trim().split(/\r?\n/, 1)[0]?.trim();
   if (!firstLine || !signature) return false;
@@ -133,7 +138,7 @@ export function useZappMessaging({
     if (!signatureEnabled || !cleanSignature || !baseText || hasSameSignatureHeader(baseText, cleanSignature)) {
       return baseText;
     }
-    return `*${cleanSignature}:*\n${baseText}`;
+    return `${buildSignatureHeader(cleanSignature)}\n${baseText}`;
   }, [signatureEnabled, userSignature]);
 
   // Quick replies state
