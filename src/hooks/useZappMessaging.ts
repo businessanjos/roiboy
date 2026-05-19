@@ -573,6 +573,11 @@ export function useZappMessaging({
       return;
     }
 
+    // Safety check: never route through a WhatsApp number from another sector
+    if (!(await assertIntegrationMatchesSector(effectiveIntegrationId))) {
+      return;
+    }
+
     setUploadingMedia(true);
     const tempMessageId = `temp-media-${Date.now()}`;
     const now = new Date().toISOString();
