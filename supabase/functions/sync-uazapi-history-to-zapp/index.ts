@@ -394,7 +394,7 @@ Deno.serve(async (req) => {
                   zapp_conversation_id: conversationId,
                   status: "triage",
                   department_id: departmentId,
-                }, { onConflict: "zapp_conversation_id", ignoreDuplicates: true });
+                }, { onConflict: "account_id,zapp_conversation_id,department_id", ignoreDuplicates: true });
                 if (!error) stats.assignmentsCreated++;
               }
             }
