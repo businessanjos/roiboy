@@ -1009,6 +1009,7 @@ export function useZappMessaging({
       
       if (message.external_message_id) {
         const intId = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
+        if (!(await assertIntegrationMatchesSector(intId))) return;
         const { data, error } = await invokeWhatsAppManager(intId, {
             action: "delete_message",
             message_id: message.external_message_id,
