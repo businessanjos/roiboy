@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
       .slice(0, 8);
 
     const result = {
-      window: { months, start: fmtBR(start), end: fmtBR(end) },
+      window: { start: fmtBR(start), end: fmtBR(end), startISO: `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`, endISO: `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}` },
       company: cred ? {
         id: cred.id,
         cnpj: cred.cnpj,
