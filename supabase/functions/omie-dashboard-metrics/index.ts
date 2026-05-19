@@ -143,15 +143,34 @@ Deno.serve(async (req) => {
     }
     if (end < start) { const t = start; start = end; end = t; }
 
-    const receberFilter: Record<string, unknown> = {};
-    const pagarFilter: Record<string, unknown> = {};
+    const dataDe = fmtBR(start);
+    const dataAte = fmtBR(end);
+    // Server-side date filters dramatically reduce payload size & pagination
+    const receberFilter: Record<string, unknown> = {
+      filtrar_por_data_de: dataDe,
+      filtrar_por_data_ate: dataAte,
+    };
+    const pagarFilter: Record<string, unknown> = {
+      filtrar_por_data_de: dataDe,
+      filtrar_por_data_ate: dataAte,
+    };
     const periodStart = start;
     const periodEnd = end;
 
+    // Cache key per company + range (in-memory, per function instance)
+    const cacheKey = `${cred?.id || 'env'}:${dataDe}:${dataAte}`;
+    const cached = METRICS_CACHE.get(cacheKey);
+    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+      return new Response(JSON.stringify(cached.data), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Serialize to avoid Omie REDUNDANT rate-limit triggered by parallel calls
     const receber = await listAllPages('financas/contareceber', 'ListarContasReceber', receberFilter, 'conta_receber_cadastro', appKey, appSecret);
-    await sleep(500);
+    await sleep(300);
     const pagar = await listAllPages('financas/contapagar', 'ListarContasPagar', pagarFilter, 'conta_pagar_cadastro', appKey, appSecret);
+
 
     const isPaid = (status: string) => status === 'LIQUIDADO';
     const isCancelled = (status: string) => status === 'CANCELADO';
