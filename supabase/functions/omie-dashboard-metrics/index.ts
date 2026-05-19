@@ -8,6 +8,10 @@ const corsHeaders = {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// In-memory cache (per warm function instance) to avoid hammering Omie on repeated filter clicks
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+const METRICS_CACHE = new Map<string, { at: number; data: unknown }>();
+
 async function callOmie(endpoint: string, call: string, param: any, appKey: string, appSecret: string, attempt = 0): Promise<any> {
   const res = await fetch(`https://app.omie.com.br/api/v1/${endpoint}/`, {
     method: 'POST',
