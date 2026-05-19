@@ -151,9 +151,9 @@ export const ZappConversationList = memo(function ZappConversationList({
     });
   }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, showClosed]);
 
-  // Separate pinned groups from regular items when viewing groups
+  // Separate pinned groups from regular items when viewing groups OR all conversations
   const { pinnedGroups, regularItems } = useMemo(() => {
-    if (filterConversationType !== "group") {
+    if (filterConversationType === "individual") {
       return { pinnedGroups: [], regularItems: filteredAssignments };
     }
     
@@ -285,7 +285,7 @@ export const ZappConversationList = memo(function ZappConversationList({
               {pinnedGroups.length > 0 && regularItems.length > 0 && (
                 <div className="px-3 py-2 bg-zapp-panel/30 border-b border-zapp-border">
                   <span className="text-xs font-medium text-zapp-text-muted">
-                    OUTROS GRUPOS
+                    {filterConversationType === "group" ? "OUTROS GRUPOS" : "OUTRAS CONVERSAS"}
                   </span>
                 </div>
               )}
