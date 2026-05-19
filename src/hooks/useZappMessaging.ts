@@ -268,6 +268,8 @@ export function useZappMessaging({
           message: messageContent,
           sector_id: selectedSectorId,
           integration_id: effectiveIntegrationId,
+          // Frontend já prepende a assinatura do usuário — evita dupla assinatura no servidor
+          add_signature: false,
         };
         
         if (isGroup && groupJid) {
@@ -397,6 +399,7 @@ export function useZappMessaging({
               message: messageContent,
               sector_id: selectedSectorId,
               integration_id: effectiveIntegrationId,
+              add_signature: false,
             };
             
             if (isGroup && groupJid) {
