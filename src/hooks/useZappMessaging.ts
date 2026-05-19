@@ -287,11 +287,7 @@ export function useZappMessaging({
     }
     
     const baseMessage = messageInput.trim();
-    const cleanSignature = userSignature.trim().replace(/:+$/, "").trim();
-    const formattedSignature = cleanSignature ? `*${cleanSignature}:*` : "";
-    const messageContent = signatureEnabled && formattedSignature 
-      ? `${formattedSignature}\n${baseMessage}`
-      : baseMessage;
+    const messageContent = buildSignedText(baseMessage);
     const tempMessageId = `temp-${Date.now()}`;
     const now = new Date().toISOString();
     const conversationId = selectedConversation.zapp_conversation_id;
@@ -634,14 +630,15 @@ export function useZappMessaging({
       const mediaUrl = urlData.publicUrl;
       
       const action = isGroup && groupJid ? "send_media_to_group" : "send_media";
-      const payload: Record<string, string> = {
+        const payload: Record<string, string | boolean> = {
         action,
         media_url: mediaUrl,
         media_type: mediaType,
-        caption: caption || "",
+          caption: caption ? buildSignedText(caption) : "",
         file_name: file.name,
         sector_id: selectedSectorId || "",
         integration_id: effectiveIntegrationId || "",
+          add_signature: false,
       };
       
       if (isGroup && groupJid) {
@@ -668,7 +665,7 @@ export function useZappMessaging({
           account_id: currentUser!.account_id,
           zapp_conversation_id: selectedConversation.zapp_conversation_id,
           direction: "outbound",
-          content: caption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
+          content: caption ? buildSignedText(caption) : (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
           message_type: mediaType,
           media_url: mediaUrl,
           media_type: mediaType,
