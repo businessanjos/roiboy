@@ -322,10 +322,18 @@ export function useZappConversations(options: UseZappConversationsOptions) {
         const convSectorId = zappConv?.sector_id;
 
         const matchesIntegration = convIntegrationId === integrationId;
+        // Legacy fallback: conversation has no integration_id at all (pre-multi-instance data)
         const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
-        const isMultiSectorGroup = zappConv?.is_group && currentSectorDeptId && a.department_id === currentSectorDeptId;
+        // Multi-sector group bypass ONLY for legacy groups without integration_id.
+        // If the group already has an integration_id, it must match the selected instance —
+        // otherwise UAZAPI groups would leak into the Meta Cloud instance view (and vice-versa).
+        const isLegacyMultiSectorGroup =
+          zappConv?.is_group &&
+          !convIntegrationId &&
+          currentSectorDeptId &&
+          a.department_id === currentSectorDeptId;
 
-        return matchesIntegration || isLegacySameSector || isMultiSectorGroup;
+        return matchesIntegration || isLegacySameSector || isLegacyMultiSectorGroup;
       });
 
       if (filtered.length !== beforeCount) {
