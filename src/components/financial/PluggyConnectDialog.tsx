@@ -81,6 +81,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
   const [accounts, setAccounts] = useState<PluggyAccount[] | null>(null);
   const [selected, setSelected] = useState<PluggyAccount | null>(null);
   const [itemId, setItemId] = useState<string | null>(null);
+  const [pendingItems, setPendingItems] = useState<PendingItem[] | null>(null);
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -88,6 +90,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       setSelected(null);
       setItemId(null);
       setError(null);
+      setPendingItems(null);
+      setRecovering(false);
     }
   }, [open]);
 
