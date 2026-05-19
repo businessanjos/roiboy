@@ -103,6 +103,31 @@ export default function RoyZapp() {
   const [integrationProviders, setIntegrationProviders] = useState<Record<string, string>>({});
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
 
+  // Guard: if URL provides integrationId but it doesn't belong to the selected sector,
+  // clear it so we don't accidentally send via the wrong WhatsApp number.
+  useEffect(() => {
+    if (!selectedIntegrationId || !selectedSectorId || !currentUser?.account_id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("integrations")
+        .select("sector_id")
+        .eq("id", selectedIntegrationId)
+        .eq("account_id", currentUser.account_id)
+        .maybeSingle();
+      if (data && data.sector_id !== selectedSectorId) {
+        console.warn(
+          `[RoyZapp] Clearing integrationId ${selectedIntegrationId} — belongs to sector ${data.sector_id}, not ${selectedSectorId}.`
+        );
+        setSelectedIntegrationId(undefined);
+        setSearchParams(prev => {
+          prev.delete('integrationId');
+          return prev;
+        }, { replace: true });
+      }
+    })();
+  }, [selectedIntegrationId, selectedSectorId, currentUser?.account_id, setSearchParams]);
+
+
   useEffect(() => {
     if (!currentUser?.account_id) return;
     (async () => {
@@ -135,14 +160,33 @@ export default function RoyZapp() {
           .maybeSingle();
         
         if (preference?.integration_id) {
-          console.log(`[RoyZapp] Auto-selecting preferred instance: ${preference.integration_id}`);
-          setSelectedIntegrationId(preference.integration_id);
-          setSearchParams(prev => {
-            prev.set('integrationId', preference.integration_id);
-            return prev;
-          }, { replace: true });
-          return;
+          // CRITICAL: validate the preferred integration actually belongs to the selected sector.
+          // Without this check, a stale/cross-sector preference could route messages through
+          // the wrong WhatsApp number (e.g. Operações enviando pelo número da Comercial).
+          const { data: prefIntegration } = await supabase
+            .from("integrations")
+            .select("id, sector_id, status")
+            .eq("id", preference.integration_id)
+            .eq("account_id", currentUser.account_id)
+            .maybeSingle();
+
+          if (prefIntegration && prefIntegration.sector_id === selectedSectorId) {
+            console.log(`[RoyZapp] Auto-selecting preferred instance: ${preference.integration_id}`);
+            setSelectedIntegrationId(preference.integration_id);
+            setSearchParams(prev => {
+              prev.set('integrationId', preference.integration_id);
+              return prev;
+            }, { replace: true });
+            return;
+          }
+
+          console.warn(
+            `[RoyZapp] Ignoring stale preference ${preference.integration_id} ` +
+            `(belongs to sector ${prefIntegration?.sector_id ?? "unknown"}, current sector is ${selectedSectorId}). ` +
+            `Falling back to first connected integration of the current sector.`
+          );
         }
+        
         
         // No preference saved - fallback to first connected integration for this sector
         const { data: integrations } = await supabase
