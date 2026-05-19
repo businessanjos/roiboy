@@ -71,12 +71,18 @@ async function listAllPages(
 
 
 
+function parseISO(s?: string): Date | null {
+  if (!s) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
     const body = await req.json().catch(() => ({}));
-    const months = Math.max(1, Math.min(12, Number(body.months) || 6));
     const companyId = body.company_id as string | undefined;
 
     // Auth: get user from JWT to discover account_id
@@ -109,7 +115,6 @@ Deno.serve(async (req) => {
     const { data: creds } = await credQuery;
     const cred = creds && creds.length > 0 ? creds[0] : null;
     if (!cred || !cred.app_key || !cred.app_secret) {
-      // Fallback to env vars (legacy single-account setup)
       const envKey = Deno.env.get('OMIE_APP_KEY');
       const envSecret = Deno.env.get('OMIE_APP_SECRET');
       if (!envKey || !envSecret) {
@@ -121,8 +126,22 @@ Deno.serve(async (req) => {
     const appSecret = cred?.app_secret || Deno.env.get('OMIE_APP_SECRET')!;
 
     const today = new Date();
-    const start = new Date(today.getFullYear(), today.getMonth() - (months - 1), 1);
-    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    today.setHours(0, 0, 0, 0);
+
+    // Resolve period: prefer explicit start/end (YYYY-MM-DD); fallback to legacy `months`
+    let start: Date;
+    let end: Date;
+    const reqStart = parseISO(body.start);
+    const reqEnd = parseISO(body.end);
+    if (reqStart && reqEnd) {
+      start = reqStart;
+      end = reqEnd;
+    } else {
+      const months = Math.max(1, Math.min(24, Number(body.months) || 6));
+      start = new Date(today.getFullYear(), today.getMonth() - (months - 1), 1);
+      end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    }
+    if (end < start) { const t = start; start = end; end = t; }
 
     const receberFilter: Record<string, unknown> = {};
     const pagarFilter: Record<string, unknown> = {};
@@ -143,15 +162,21 @@ Deno.serve(async (req) => {
     let totalPaid = 0, totalToPay = 0, totalOverduePay = 0;
     let countReceivedTitles = 0;
 
+    // Build monthly buckets between start and end (inclusive)
     const monthsMap = new Map<string, { label: string; received: number; expected: number; paid: number; toPay: number }>();
-    for (let i = 0; i < months; i++) {
-      const d = new Date(today.getFullYear(), today.getMonth() - (months - 1 - i), 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      monthsMap.set(key, {
-        label: d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
-        received: 0, expected: 0, paid: 0, toPay: 0,
-      });
+    {
+      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      const last = new Date(end.getFullYear(), end.getMonth(), 1);
+      while (cursor <= last) {
+        const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+        monthsMap.set(key, {
+          label: cursor.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+          received: 0, expected: 0, paid: 0, toPay: 0,
+        });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
     }
+
 
     const clientTotals = new Map<number, { name: string; total: number }>();
     const categoryTotals = new Map<string, number>();
