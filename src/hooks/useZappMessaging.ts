@@ -915,7 +915,7 @@ export function useZappMessaging({
         }
         
         const action = isGroup && groupJid ? "send_media_to_group" : "send_media";
-        const payload: Record<string, string> = {
+        const payload: Record<string, string | boolean> = {
           action,
           media_url: mediaUrl,
           media_type: "ptt",
@@ -923,6 +923,7 @@ export function useZappMessaging({
           file_name: `audio_${Date.now()}.${extension}`,
           sector_id: selectedSectorId || "",
           integration_id: effectiveIntegrationId || "",
+          add_signature: false,
         };
         
         if (isGroup && groupJid) {
