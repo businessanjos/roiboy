@@ -705,8 +705,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               );
             })() : (
               <>
-                {/* Pinned Groups Section - Only show when viewing groups */}
-                {filterConversationType === "group" && (() => {
+                {/* Pinned Groups Section - show in Groups and Todas */}
+                {filterConversationType !== "individual" && (() => {
                   const pinnedGroups = filteredAssignments.filter(a => {
                     const contact = getContactInfo(a);
                     return contact.isGroup && contact.isPinned;
@@ -770,7 +770,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                         <>
                           <div className="px-4 py-2 bg-zapp-panel/30 border-b border-zapp-border">
                             <span className="text-xs font-medium text-zapp-text-muted">
-                              OUTROS GRUPOS
+                              {filterConversationType === "group" ? "OUTROS GRUPOS" : "OUTRAS CONVERSAS"}
                             </span>
                           </div>
                           {regularItems.map((assignment) => (
@@ -797,8 +797,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   );
                 })()}
                 
-                {/* Regular rendering for non-group views */}
-                {filterConversationType !== "group" && filteredAssignments.map((assignment) => (
+                {/* Regular rendering for individual view */}
+                {filterConversationType === "individual" && filteredAssignments.map((assignment) => (
                   <ZappConversationItem
                     key={assignment.id}
                     assignment={assignment}

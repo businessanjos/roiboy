@@ -896,10 +896,11 @@ export default function RoyZapp() {
       // Closed conversations filter
       // When filterStatus is "closed", show only closed
       // Otherwise, HIDE closed conversations by default
-      // EXCEPTION: Pinned groups ALWAYS show in the groups tab, even if closed
+      // EXCEPTION: Pinned groups ALWAYS show in the groups tab and in "Todas", even if closed
       const isClosed = a.status === "closed";
       const isPinned = contact.isPinned;
-      const skipClosedFilterForPinnedGroups = isGroup && isPinned && filterConversationType === "group";
+      const isPinnedGroupInAllOrGroups = isGroup && isPinned && (filterConversationType === "all" || filterConversationType === "group");
+      const skipClosedFilterForPinnedGroups = isPinnedGroupInAllOrGroups;
       
       if (!skipClosedFilterForPinnedGroups) {
         if (filterStatus === "closed") {
@@ -914,8 +915,9 @@ export default function RoyZapp() {
       // Admins e Gestores podem ver TODAS as conversas em ambas as abas (para monitoramento)
       // Atendentes comuns só veem suas próprias conversas na aba "mine" e apenas não atribuídas na "queue"
       // Skip tab filter when viewing archived or closed (show all regardless of assignment)
-      // EXCEPTION: Groups skip tab filter when viewing groups tab (they're permanent, not tickets)
+      // EXCEPTION: Groups skip tab filter when viewing groups tab; pinned groups also skip it in "Todas"
       const skipTabFilterForGroups = filterConversationType === "group" && isGroup;
+      const skipTabFilterForPinnedGroups = isPinnedGroupInAllOrGroups;
       
       // Checar se o usuário tem visibilidade total (Admin ou Gestor)
       const isManager = currentUser?.team_role_name === "Gestor";
@@ -925,7 +927,7 @@ export default function RoyZapp() {
       // This catches orphaned "waiting" conversations with no agent assigned
       const isUnassigned = a.agent_id === null;
       
-      const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups) ? true : (
+      const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups || skipTabFilterForPinnedGroups) ? true : (
         inboxTab === "mine" 
           ? (hasFullVisibility ? a.agent_id !== null : a.agent_id === currentAgent?.id) // Admin/Gestor veem todas as ATRIBUÍDAS; demais veem só as suas
           : isUnassigned // Fila SEMPRE mostra apenas conversas sem agente atribuído (igual para todos)
