@@ -1139,6 +1139,24 @@ Deno.serve(async (req) => {
       
       result = { success: true, webhook_url: webhookUrl, events: webhookConfig.events };
     
+    } else if (action === "check_number") {
+      // Valida se um número (ou lista) possui WhatsApp ativo via uazapi /chat/check
+      const rawNumbers = payload.numbers || (payload.phone ? [payload.phone] : []);
+      const numbers = (Array.isArray(rawNumbers) ? rawNumbers : [rawNumbers])
+        .map((n: any) => String(n).replace(/\D/g, ""))
+        .filter((n: string) => n.length >= 10);
+      if (numbers.length === 0) {
+        return new Response(JSON.stringify({ error: "Informe ao menos um número válido em 'numbers' ou 'phone'." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const checkRaw: any = await uazapiInstance("/chat/check", "POST", token!, { numbers }, sectorServer);
+      const arr = Array.isArray(checkRaw) ? checkRaw : (checkRaw?.numbers || checkRaw?.data || []);
+      const normalized = (Array.isArray(arr) ? arr : []).map((x: any) => ({
+        number: String(x?.query || x?.number || "").replace(/\D/g, ""),
+        exists: x?.exists ?? x?.isInWhatsapp ?? x?.valid ?? null,
+        jid: x?.jid || x?.lid || null,
+      }));
+      result = { numbers: normalized, raw: checkRaw };
+    
     } else if (action === "delete_message") {
       const messageId = payload.message_id;
       if (!messageId) {
