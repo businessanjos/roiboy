@@ -412,9 +412,18 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             // Search match highlight
             searchHighlight && "ring-1 ring-amber-400/70 bg-amber-400/10"
           )}>
-          {/* Sender name for group messages */}
+          {/* Sender name for group messages (inbound) */}
           {message.is_from_client && isGroup && message.sender_name && (
             <p 
+              className="text-xs font-medium mb-1"
+              style={{ color: getSenderColor(message.sender_name) }}
+            >
+              {message.sender_name}
+            </p>
+          )}
+          {/* Sender name for outbound messages — shows which agent sent it */}
+          {!message.is_from_client && message.sender_name && (
+            <p
               className="text-xs font-medium mb-1"
               style={{ color: getSenderColor(message.sender_name) }}
             >
