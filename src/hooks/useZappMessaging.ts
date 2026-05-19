@@ -20,6 +20,14 @@ interface UseZappMessagingProps {
   onConversationUpdated?: (conversationId: string, lastMessageAt: string, lastMessagePreview: string) => void;
 }
 
+const normalizeSignature = (signature: string) => signature.trim().replace(/:+$/, "").trim();
+
+const hasSameSignatureHeader = (text: string, signature: string) => {
+  const firstLine = text.trim().split(/\r?\n/, 1)[0]?.trim();
+  if (!firstLine || !signature) return false;
+  return firstLine === `*${signature}:*` || firstLine === `*${signature}*`;
+};
+
 export function useZappMessaging({
   selectedConversation,
   currentUser,
@@ -118,6 +126,15 @@ export function useZappMessaging({
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
   const [sendingContact, setSendingContact] = useState(false);
+
+  const buildSignedText = useCallback((text: string) => {
+    const baseText = text.trim();
+    const cleanSignature = normalizeSignature(userSignature);
+    if (!signatureEnabled || !cleanSignature || !baseText || hasSameSignatureHeader(baseText, cleanSignature)) {
+      return baseText;
+    }
+    return `*${cleanSignature}:*\n${baseText}`;
+  }, [signatureEnabled, userSignature]);
 
   // Quick replies state
   const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
