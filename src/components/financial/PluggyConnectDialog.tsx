@@ -12,7 +12,19 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Link as LinkIcon, AlertCircle } from "lucide-react";
+import { Loader2, Link as LinkIcon, AlertCircle, RefreshCw } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface PendingItem {
+  id: string;
+  status: string;
+  executionStatus: string;
+  createdAt: string;
+  updatedAt: string;
+  institution: string;
+  institutionImage: string | null;
+}
 
 declare global {
   interface Window {
