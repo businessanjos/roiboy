@@ -381,6 +381,12 @@ export function useZappMessaging({
         console.log("[ZAPP-SEND] Edge function OK");
         
         const externalId = sendResult?.data?.id || sendResult?.data?.messageid || sendResult?.id || sendResult?.messageid || null;
+
+        // 🚨 CRÍTICO: sem ID externo = WhatsApp NÃO confirmou a entrega (falha silenciosa do uazapi).
+        if (!externalId) {
+          console.error("[ZAPP-SEND] Resposta sem messageid — provável falha silenciosa:", JSON.stringify(sendResult)?.substring(0, 500));
+          throw new Error("WhatsApp não confirmou o envio. Verifique a conexão da instância e tente novamente.");
+        }
         
         if (conversationId) {
           const { data: insertedMessage, error: insertErr } = await supabase.from("zapp_messages").insert({
@@ -391,6 +397,7 @@ export function useZappMessaging({
             message_type: "text",
             sent_at: now,
             external_message_id: externalId,
+            delivery_status: "sent",
             sender_user_id: currentUser?.id || null,
             sender_name: currentUser?.name || null,
             quoted_message_id: replyContext?.external_message_id || null,
@@ -406,7 +413,7 @@ export function useZappMessaging({
           
           if (insertedMessage) {
             setMessages(prev => prev.map(m => 
-              m.id === tempMessageId ? { ...m, id: insertedMessage.id, send_status: "sent" as const, external_message_id: externalId } : m
+              m.id === tempMessageId ? { ...m, id: insertedMessage.id, send_status: "sent" as const, delivery_status: "sent" as const, external_message_id: externalId } : m
             ));
           }
           
