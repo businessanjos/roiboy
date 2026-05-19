@@ -1193,6 +1193,12 @@ export function useZappMessaging({
       }
       
       const contactExternalId = contactSendResult?.data?.id || contactSendResult?.data?.messageid || contactSendResult?.id || contactSendResult?.messageid || null;
+
+      // 🚨 CRÍTICO: sem ID externo = WhatsApp NÃO confirmou a entrega.
+      if (!contactExternalId) {
+        console.error("[ZAPP-CONTACT] Resposta sem messageid — provável falha silenciosa:", JSON.stringify(contactSendResult)?.substring(0, 500));
+        throw new Error("WhatsApp não confirmou o envio do contato. Verifique a conexão da instância e tente novamente.");
+      }
       
       if (selectedConversation.zapp_conversation_id) {
         const { data: insertedMessage, error: contactInsertErr } = await supabase.from("zapp_messages").insert({
