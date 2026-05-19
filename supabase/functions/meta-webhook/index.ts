@@ -317,7 +317,7 @@ Deno.serve(async (req) => {
                   zapp_conversation_id: conversation.id,
                   department_id: departmentId,
                   status: "open",
-                }, { onConflict: "zapp_conversation_id" });
+                }, { onConflict: "account_id,zapp_conversation_id,department_id" });
               }
             }
 
