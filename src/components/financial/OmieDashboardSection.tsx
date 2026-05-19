@@ -139,14 +139,22 @@ export default function OmieDashboardSection() {
   const [data, setData] = useState<OmieMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [months, setMonths] = useState<number>(6);
+  const [preset, setPreset] = useState<PeriodPreset>("this_month");
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [customOpen, setCustomOpen] = useState(false);
 
-  const load = async (m = months) => {
+  const activeRange = useMemo(
+    () => resolvePreset(preset, { start: customRange.from, end: customRange.to }),
+    [preset, customRange]
+  );
+
+  const load = async (range = activeRange) => {
+    if (!range) return;
     setLoading(true);
     setError(null);
     try {
       const { data: res, error: err } = await supabase.functions.invoke("omie-dashboard-metrics", {
-        body: { months: m, company_id: selectedId },
+        body: { start: toISO(range.start), end: toISO(range.end), company_id: selectedId },
       });
       if (err) throw err;
       if ((res as any)?.error) throw new Error((res as any).error);
@@ -160,9 +168,9 @@ export default function OmieDashboardSection() {
   };
 
   useEffect(() => {
-    if (selectedId) load(months);
+    if (selectedId && activeRange) load(activeRange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId]);
+  }, [selectedId, preset, customRange.from?.getTime(), customRange.to?.getTime()]);
 
   return (
     <Card className="border-primary/20">
@@ -185,23 +193,48 @@ export default function OmieDashboardSection() {
           </div>
           <div className="flex items-center gap-2">
             <Select
-              value={String(months)}
+              value={preset}
               onValueChange={(v) => {
-                const m = Number(v);
-                setMonths(m);
-                load(m);
+                const p = v as PeriodPreset;
+                setPreset(p);
+                if (p === "custom") setCustomOpen(true);
               }}
             >
-              <SelectTrigger className="h-8 w-[130px] text-xs">
+              <SelectTrigger className="h-8 w-[170px] text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="3">Últimos 3 meses</SelectItem>
-                <SelectItem value="6">Últimos 6 meses</SelectItem>
-                <SelectItem value="12">Últimos 12 meses</SelectItem>
+                {(Object.keys(PRESET_LABELS) as PeriodPreset[]).map((k) => (
+                  <SelectItem key={k} value={k}>{PRESET_LABELS[k]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Button size="sm" variant="outline" onClick={() => load(months)} disabled={loading}>
+            {preset === "custom" && (
+              <Popover open={customOpen} onOpenChange={setCustomOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {customRange.from && customRange.to
+                      ? `${format(customRange.from, "dd/MM/yy", { locale: ptBR })} → ${format(customRange.to, "dd/MM/yy", { locale: ptBR })}`
+                      : "Escolher datas"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    locale={ptBR}
+                    selected={{ from: customRange.from, to: customRange.to } as any}
+                    onSelect={(r: any) => {
+                      setCustomRange({ from: r?.from, to: r?.to });
+                      if (r?.from && r?.to) setCustomOpen(false);
+                    }}
+                    numberOfMonths={2}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+            <Button size="sm" variant="outline" onClick={() => load()} disabled={loading || !activeRange}>
               <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
             </Button>
           </div>
