@@ -1819,7 +1819,7 @@ Deno.serve(async (req) => {
                 zapp_conversation_id: zappConversationId,
                 status: "triage", // New conversations start in triage
                 department_id: sectorDepartmentId, // Associate with sector's department
-              }, { onConflict: "zapp_conversation_id", ignoreDuplicates: true });
+              }, { onConflict: "account_id,zapp_conversation_id,department_id", ignoreDuplicates: true });
 
             if (assignmentError) {
               console.error("Error creating zapp assignment:", assignmentError);
