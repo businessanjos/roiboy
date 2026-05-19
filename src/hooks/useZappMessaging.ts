@@ -1110,6 +1110,11 @@ export function useZappMessaging({
       return;
     }
 
+    // Safety check: never route through a WhatsApp number from another sector
+    if (!(await assertIntegrationMatchesSector(effectiveIntegrationId))) {
+      return;
+    }
+
     setSendingContact(true);
     const contactMessage = `📇 *Contato*\n*Nome:* ${client.full_name}\n*Telefone:* ${client.phone_e164}`;
     const tempMessageId = `temp-contact-${Date.now()}`;
