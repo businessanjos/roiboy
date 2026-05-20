@@ -76,6 +76,10 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { VipBadge } from "@/components/client/VipBadge";
+import { ClientOverdueBadge } from "@/components/client/ClientOverdueBadge";
+import { ContractRenewalBadge } from "@/components/client/ContractRenewalBadge";
+import { HandCoins } from "lucide-react";
+import { useNavigate as useNavigateForRenego } from "react-router-dom";
 
 interface Client {
   id: string;
