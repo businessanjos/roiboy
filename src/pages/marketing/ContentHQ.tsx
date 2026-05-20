@@ -25,6 +25,7 @@ type Section = "overview" | "ideas" | "strategy" | "pillars" | "calendar" | "bri
 
 const SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "overview", label: "Visão por Plataforma", icon: LayoutGrid },
+  { id: "ideas", label: "Banco de Ideias (IA)", icon: Lightbulb },
   { id: "calendar", label: "Calendário", icon: CalendarRange },
   { id: "kanban", label: "Produção", icon: KanbanSquare },
   { id: "briefings", label: "Pautas & Briefings", icon: FileText },
