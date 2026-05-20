@@ -76,6 +76,9 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { VipBadge } from "@/components/client/VipBadge";
+import { ClientOverdueBadge } from "@/components/client/ClientOverdueBadge";
+import { ContractRenewalBadge } from "@/components/client/ContractRenewalBadge";
+import { HandCoins } from "lucide-react";
 
 interface Client {
   id: string;
@@ -1849,6 +1852,8 @@ export default function ClientDetail() {
               <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate flex items-center gap-2">
                 <span className="truncate">{client.full_name}</span>
                 <VipBadge clientId={client.id} size="md" />
+                <ClientOverdueBadge clientId={client.id} />
+                <ContractRenewalBadge clientId={client.id} />
               </h1>
               
               <Button 
@@ -1858,6 +1863,17 @@ export default function ClientDetail() {
                 onClick={openEditInfoDialog}
               >
                 <Edit2 className="h-3.5 w-3.5" />
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={() => navigate(`/financial/installments?client_id=${client.id}`)}
+                title="Renegociar parcelas em aberto"
+              >
+                <HandCoins className="h-3.5 w-3.5" />
+                Renegociar
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground mt-1">

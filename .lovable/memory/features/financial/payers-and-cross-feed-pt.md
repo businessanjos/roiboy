@@ -31,8 +31,9 @@ Pagador (`payers`) é quem paga; Cliente (`clients`) é quem usa. Tabela `client
 
 ## Badges na ficha do cliente
 
-- `<ContractRenewalBadge clientId>` (verde-âmbar com Crown): aparece quando há contract com `payment_status='quitado'`. Em `src/components/client/`.
-- `<OverdueBadge>` já existe; usar `get_client_overdue_summary(client_id)` se precisar de dados isolados (count, valor, dias).
+- `<ContractRenewalBadge clientId>` (verde com Crown): aparece quando há contract com `payment_status='quitado'`. Em `src/components/client/`.
+- `<ClientOverdueBadge clientId>` (vermelho/laranja): wrapper de `useClientFinancialStatus` para o header da ficha individual. Difere do `<OverdueBadge status>` (batch, usado na tabela `/clients`).
+- Botão "Renegociar" no header → navega para `/financial/installments?client_id=<id>`.
 
 ## Schema novo
 
@@ -42,10 +43,12 @@ Pagador (`payers`) é quem paga; Cliente (`clients`) é quem usa. Tabela `client
 - `client_contracts.payment_status` text NOT NULL default 'ativo' — check: ativo|quitado|inadimplente|cancelado|renegociado
 - `installment_events.event_type` agora aceita: invoice_settled, contract_settled, cancellation_writeoff
 
+## Wizard "Marcar como Ganha"
+
+- `RequiredFieldsModal` já cria/atualiza `payers` + vínculo `client_payers` (is_default=true) a partir de `BillingMentoreeSection` quando `outcomeType !== 'lost'`. Erros de payer não bloqueiam o ganho (apenas logam).
+
 ## Pendente (próximas rodadas)
 
-- Etapa Faturamento no wizard "Marcar como Ganha" (usar PayerSelector)
-- Aba "Pagadores" na ficha do cliente
-- Badge inadimplência no header da ficha do cliente
+- Aba "Pagadores" dedicada na ficha do cliente
 - Bloqueio operacional quando `block_overdue_days` configurado
-- Atalho de renegociação na aba Financeiro da ficha
+- Migração de dados legados clients→payers (script de backfill)
