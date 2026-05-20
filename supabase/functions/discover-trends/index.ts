@@ -93,7 +93,7 @@ Retorne 6 tendências em JSON. No campo "ai_adaptation", adapte ESPECIFICAMENTE 
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -104,14 +104,26 @@ Retorne 6 tendências em JSON. No campo "ai_adaptation", adapte ESPECIFICAMENTE 
 
     if (!aiRes.ok) {
       const txt = await aiRes.text();
+      console.error("AI gateway error", aiRes.status, txt);
       if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Limite atingido. Tente em 1 minuto." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       if (aiRes.status === 402) return new Response(JSON.stringify({ error: "Créditos esgotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(txt);
+      throw new Error(`AI gateway ${aiRes.status}: ${txt.slice(0, 200)}`);
     }
 
     const aiData = await aiRes.json();
-    const parsed = JSON.parse(aiData.choices?.[0]?.message?.content);
+    const raw: string = aiData.choices?.[0]?.message?.content ?? "";
+    let parsed: any;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+      const start = cleaned.search(/[\{\[]/);
+      const end = cleaned.lastIndexOf("}");
+      if (start === -1 || end === -1) throw new Error("Resposta da IA sem JSON válido");
+      parsed = JSON.parse(cleaned.substring(start, end + 1).replace(/,\s*}/g, "}").replace(/,\s*]/g, "]"));
+    }
     const trends: DiscoveredTrend[] = parsed.trends || [];
+    if (!trends.length) throw new Error("IA retornou 0 tendências. Tente novamente.");
 
     const authHeader = req.headers.get("Authorization");
     let capturedBy: string | null = null;
