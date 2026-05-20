@@ -20388,6 +20388,10 @@ export type Database = {
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
       dunning_default_sla: { Args: { p_stage: string }; Returns: string }
+      ensure_default_contratada: {
+        Args: { p_account_id: string }
+        Returns: string
+      }
       ensure_payer_from_client: {
         Args: { p_client_id: string }
         Returns: string
