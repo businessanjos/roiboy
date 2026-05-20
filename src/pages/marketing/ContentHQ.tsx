@@ -19,8 +19,9 @@ import { ContentHQLibrary } from "@/components/marketing/content-hq/ContentHQLib
 import { ContentHQPerformance } from "@/components/marketing/content-hq/ContentHQPerformance";
 import { ContentHQPlatformBoard } from "@/components/marketing/content-hq/ContentHQPlatformBoard";
 import { ContentHQPieceDrawer } from "@/components/marketing/content-hq/ContentHQPieceDrawer";
+import { ContentHQIdeasLab } from "@/components/marketing/content-hq/ContentHQIdeasLab";
 
-type Section = "overview" | "strategy" | "pillars" | "calendar" | "briefings" | "kanban" | "library" | "performance";
+type Section = "overview" | "ideas" | "strategy" | "pillars" | "calendar" | "briefings" | "kanban" | "library" | "performance";
 
 const SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "overview", label: "Visão por Plataforma", icon: LayoutGrid },
