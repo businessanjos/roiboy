@@ -73,7 +73,7 @@ export default function ContentHQ() {
     platformCounts[p.platform] = (platformCounts[p.platform] || 0) + 1;
   }
 
-  const needsTalent = ["strategy", "pillars", "briefings", "library", "performance"].includes(section);
+  const needsTalent = ["ideas", "strategy", "pillars", "briefings", "library", "performance"].includes(section);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
