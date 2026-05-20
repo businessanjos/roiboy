@@ -20,6 +20,16 @@ type: feature
 - `content_pillars` (mix_percentage, platforms text[], `reference_links` jsonb — coluna `references` é palavra reservada, NÃO usar)
 - `content_pieces` (platform, status, scheduled_date, hook/script/cta/caption/hashtags/thumbnail_brief, briefing jsonb, ai_generated)
 - `content_library_items` (hook|cta|hashtag|reference|idea)
+- `content_platform_accounts` (talent_id+platform UNIQUE, external_id, access_token, status pending|connected|error|revoked, last_sync_at)
+- `content_platform_posts` (posts reais sincronizados por plataforma; UNIQUE platform_account_id+external_id)
+- `content_platform_metrics` (snapshot histórico por post: views, reach, likes, comments, shares, saves, engagement_rate, avg_watch_seconds)
+- `content_platform_metric_snapshots` (snapshot diário por canal: followers, total_views; UNIQUE platform_account_id+snapshot_date)
+
+**Edge function `content-metrics-sync`:** lê accounts conectadas e busca posts+métricas em:
+- Instagram: Meta Graph v20 `/me/media` + `/insights` (requer IG Business User ID + long-lived access token)
+- YouTube: Data API v3 (Channel ID + API Key)
+- TikTok: Display API `/v2/video/list` (access_token OAuth)
+Dispara via `syncPlatformAccount([accountId])` da UI Performance. Sem cron por padrão.
 
 **RLS:** Acesso por `account_id` via `public.users` (auth_user_id = auth.uid()).
 
