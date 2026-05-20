@@ -42,14 +42,21 @@ export function useMarketingTrends() {
         .select("*")
         .eq("account_id", accountId)
         .eq("is_archived", false)
-        .order("hype_score", { ascending: false, nullsFirst: false })
         .order("captured_at", { ascending: false })
-        .limit(80);
+        .order("hype_score", { ascending: false, nullsFirst: false })
+        .limit(200);
       if (error) throw error;
       return data as MarketingTrend[];
     },
     enabled: !!accountId,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
+
+  const refreshTrends = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["marketing-trends"] });
+    await queryClient.refetchQueries({ queryKey: ["marketing-trends", accountId], type: "active" });
+  };
 
   const discover = useMutation({
     mutationFn: async (input: { niche?: string; platform?: string; customQuery?: string; extraContext?: string }) => {
@@ -61,8 +68,8 @@ export function useMarketingTrends() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["marketing-trends", accountId] });
+    onSuccess: async (data) => {
+      await refreshTrends();
       toast.success(`${data.count} tendências descobertas`);
     },
     onError: (e: any) => toast.error(e.message),
@@ -78,12 +85,13 @@ export function useMarketingTrends() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["marketing-trends", accountId] });
+    onSuccess: async (data) => {
+      await refreshTrends();
       toast.success(`${data.count} virais capturados via Apify`);
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   const archiveTrend = useMutation({
     mutationFn: async (id: string) => {
