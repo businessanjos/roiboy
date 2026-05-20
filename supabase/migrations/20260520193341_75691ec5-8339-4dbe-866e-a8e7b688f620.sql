@@ -1,0 +1,2 @@
+ALTER TABLE public.content_talents ALTER COLUMN niche SET DEFAULT 'mentoria-para-profissionais-de-estetica';
+UPDATE public.content_talents SET niche = 'mentoria-para-profissionais-de-estetica' WHERE niche = 'estetica' OR niche IS NULL;
