@@ -36,7 +36,8 @@ const formatDoc = (doc: string, type: string) => {
 };
 
 export function PayerSelector({ value, onChange, clientId, allowCreateFromClient = true, disabled }: Props) {
-  const { accountId } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);

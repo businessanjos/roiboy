@@ -30,7 +30,8 @@ const formatDoc = (doc: string, type: string) => {
 };
 
 export default function FinancialPayersPage() {
-  const { accountId } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
   const [payers, setPayers] = useState<Payer[]>([]);
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);

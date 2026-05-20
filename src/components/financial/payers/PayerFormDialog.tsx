@@ -42,7 +42,8 @@ const onlyDigits = (s: string) => s.replace(/\D/g, "");
 
 export function PayerFormDialog({ open, onOpenChange, payer, defaultClientId, onSaved }: Props) {
   const { toast } = useToast();
-  const { accountId } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Payer>({
     document_type: "cpf",
