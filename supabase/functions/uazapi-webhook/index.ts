@@ -1161,50 +1161,31 @@ Deno.serve(async (req) => {
         if (cachedConvo !== undefined) {
           existingZappConvo = cachedConvo;
         } else if (isGroupMessage && groupJid) {
-          // For groups, search by group_jid + integration_id for multi-instance isolation
+          // GROUPS: dedupe by group_jid + sector_id (NOT integration_id).
+          // When 2+ instances of the same sector are members of the same WhatsApp group,
+          // each instance receives its own webhook for the same group message.
+          // If we scoped by integration_id, we'd get N parallel conversations AND
+          // N duplicated messages per inbound/outbound event. Scoping by sector keeps
+          // a single shared conversation per group per sector. Cross-sector groups
+          // still get separate conversations (sector isolation preserved).
           let groupQuery = supabase
             .from("zapp_conversations")
             .select("id, unread_count, integration_id, contact_name, client_id, lead_id")
             .eq("account_id", accountId)
             .eq("group_jid", groupJid);
-          
-          // CRITICAL: Filter by integration_id for multi-instance isolation within same sector
-          if (integrationId) {
-            groupQuery = groupQuery.eq("integration_id", integrationId);
-          } else if (sectorId) {
-            // Fallback to sector_id if no integration_id (legacy support)
+
+          if (sectorId) {
             groupQuery = groupQuery.eq("sector_id", sectorId);
+          } else if (integrationId) {
+            groupQuery = groupQuery.eq("integration_id", integrationId);
           }
-          
-          const { data } = await groupQuery.maybeSingle();
+
+          const { data } = await groupQuery
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
           existingZappConvo = data;
-          
-          // FALLBACK: If not found with integration_id filter, search without it
-          // This handles multi-sector groups (e.g., group created by Diretoria but messages arriving via Operações)
-          // SECURITY: Only reuse if the existing conversation belongs to the SAME sector
-          if (!existingZappConvo && integrationId) {
-            const { data: fallbackData } = await supabase
-              .from("zapp_conversations")
-              .select("id, unread_count, integration_id, contact_name, client_id, lead_id, sector_id")
-              .eq("account_id", accountId)
-              .eq("group_jid", groupJid)
-              .maybeSingle();
-            if (fallbackData) {
-              const fallbackSectorId = (fallbackData as Record<string, unknown>).sector_id as string | null;
-              if (fallbackSectorId === sectorId) {
-                // Same sector, safe to reuse (e.g., instance migration within same sector)
-                console.log(`[ZAPP] Group fallback match (same sector): ${groupJid} found with integration_id=${fallbackData.integration_id} (webhook integration=${integrationId})`);
-                existingZappConvo = fallbackData;
-                // Migrate to current integration
-                await supabase.from("zapp_conversations").update({ integration_id: integrationId }).eq("id", fallbackData.id);
-              } else {
-                // DIFFERENT sector - do NOT reuse! Create a new conversation for this sector.
-                console.warn(`[ZAPP] ⚠️ Group fallback BLOCKED: ${groupJid} exists in sector "${fallbackSectorId}" but webhook is for sector "${sectorId}". Creating new conversation to prevent cross-sector leak.`);
-                // existingZappConvo stays null → new conversation will be created
-              }
-            }
-          }
-          
+
           // Cache result (even null = no conversation found)
           setCache(conversationCache, convCacheKey, existingZappConvo || data);
         } else {
