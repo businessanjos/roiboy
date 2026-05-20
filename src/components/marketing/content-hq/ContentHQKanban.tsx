@@ -6,12 +6,12 @@ import { ContentHQPieceDrawer } from "./ContentHQPieceDrawer";
 import { STAGE_CHECKLISTS } from "./contentHQTemplates";
 import { CheckCircle2 } from "lucide-react";
 
-export function ContentHQKanban({ talents, selectedTalentId }: { talents: Talent[]; selectedTalentId?: string }) {
+export function ContentHQKanban({ talents, selectedTalentId, platformFilter }: { talents: Talent[]; selectedTalentId?: string; platformFilter?: string }) {
   const targets = selectedTalentId ? talents.filter(t => t.id === selectedTalentId) : talents;
   const queries = targets.map(t => useContentPieces(t.id));
-  const allPieces = queries.flatMap((q, i) =>
-    (q.data || []).map(p => ({ ...p, talentName: targets[i].name, _talent: targets[i] }))
-  );
+  const allPieces = queries
+    .flatMap((q, i) => (q.data || []).map(p => ({ ...p, talentName: targets[i].name, _talent: targets[i] })))
+    .filter(p => !platformFilter || p.platform === platformFilter);
   const upsert = useUpsertPiece();
   const [openId, setOpenId] = useState<string | null>(null);
   const opened = allPieces.find(p => p.id === openId) || null;
