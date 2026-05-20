@@ -292,19 +292,9 @@ export default function FinancialInstallmentsPage() {
                             </Badge>
                           </Button>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNfInvoice(r.invoices!);
-                              setNfOpen(true);
-                            }}
-                          >
-                            <FilePlus2 className="h-3 w-3 mr-1" />
-                            Faturar
-                          </Button>
+                          <div onClick={(e) => e.stopPropagation()} className="inline-block">
+                            <EmitirNFButton installmentId={r.id} />
+                          </div>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
