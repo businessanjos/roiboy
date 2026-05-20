@@ -18,8 +18,8 @@ import { FinancialPageHeader } from "@/components/financial/_shared";
 type EmissionMode = "manual" | "on_payment" | "on_won";
 
 export default function FinancialFiscalSettingsPage() {
-  const { user } = useCurrentUser();
-  const accountId = (user as any)?.account_id as string | undefined;
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
   const qc = useQueryClient();
 
   const { data: contratadas } = useQuery({
