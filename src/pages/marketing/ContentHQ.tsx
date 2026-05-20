@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useTalents, Talent, useContentPieces, PLATFORMS, ContentPiece } from "@/hooks/useContentHQ";
+import { useTalents, Talent, useAllContentPieces, PLATFORMS, ContentPiece } from "@/hooks/useContentHQ";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,11 +48,13 @@ export default function ContentHQ() {
   const effPlatform = platformFilter === "all" ? undefined : platformFilter;
 
   // KPIs across selected talents
-  const talentTargets = talentId === "all" ? talents : talents.filter(t => t.id === talentId);
-  const allQueries = talentTargets.map(t => useContentPieces(t.id));
+  const { data: allPiecesRaw = [] } = useAllContentPieces();
   const allPieces = useMemo(
-    () => allQueries.flatMap(q => q.data || []).filter(p => !effPlatform || p.platform === effPlatform),
-    [allQueries, effPlatform]
+    () => allPiecesRaw.filter(p =>
+      (talentId === "all" || p.talent_id === talentId) &&
+      (!effPlatform || p.platform === effPlatform)
+    ),
+    [allPiecesRaw, talentId, effPlatform]
   );
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
@@ -62,9 +64,9 @@ export default function ContentHQ() {
   const scheduledThisMonth = piecesThisMonth.filter(p => p.status === "scheduled").length;
   const inProduction = allPieces.filter(p => ["script", "shooting", "editing", "approval"].includes(p.status)).length;
 
-  // Platform counts (for chips)
+  // Platform counts (for chips) - across selected talent, ignoring platform filter
   const platformCounts: Record<string, number> = {};
-  for (const p of allQueries.flatMap(q => q.data || [])) {
+  for (const p of allPiecesRaw.filter(x => talentId === "all" || x.talent_id === talentId)) {
     platformCounts[p.platform] = (platformCounts[p.platform] || 0) + 1;
   }
 
