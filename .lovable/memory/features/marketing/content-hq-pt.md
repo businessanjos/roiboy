@@ -40,10 +40,10 @@ Dispara via `syncPlatformAccount([accountId])` da UI Performance. Sem cron por p
 - `generate_pautas` — lote de pautas por pilar+plataforma (cria N rows em backlog)
 - `generate_briefing` — roteiro, CTA, legenda, hashtags, thumbnail brief e notas de produção
 
-System prompt sempre injeta nicho **estética** + brand voice do talento + boas práticas da plataforma (PLATFORM_TIPS map).
+**System prompt da IA — CONTEXTO CRÍTICO:** A Eternum vende **mentoria** para profissionais de estética (médicos, biomédicos, dentistas, donos de clínica). Público-alvo do conteúdo = COLEGAS profissionais (não pacientes). Temas SEMPRE sobre **negócio**: vendas, marketing, gestão de clínica, precificação (cobrar mais caro), atendimento premium, posicionamento, mentalidade de empresário, captação. **NUNCA** gerar conteúdo técnico de procedimentos, indicações clínicas, protocolos ou "como aplicar X". Nicho default no banco: `mentoria-para-profissionais-de-estetica`.
 
-**Hook único:** `src/hooks/useContentHQ.tsx` exporta tipos, `PLATFORMS`, `PIECE_STATUSES`, queries (useTalents, usePillars, useStrategy, useContentPieces), mutations (useUpsertStrategy/Pillar/Piece, useDeletePillar/Piece) e `callContentHQAI()`.
+**Hook único:** `src/hooks/useContentHQ.tsx` exporta tipos, `PLATFORMS`, `PIECE_STATUSES`, queries (useTalents, usePillars, useStrategy, useContentPieces, useAllContentPieces), mutations e `callContentHQAI()`.
 
-**Componentes:** `src/components/marketing/content-hq/ContentHQ{Strategy,Pillars,Calendar,Briefings,Kanban,Library,Performance}.tsx`.
+**Componentes:** `src/components/marketing/content-hq/ContentHQ{Strategy,Pillars,Calendar,Briefings,Kanban,Library,Performance,PlatformBoard,PieceDrawer}.tsx`.
 
-**Regra:** Bruna e Everton são talentos fixos da Eternum no nicho estética. Não deletar os seeds.
+**Regra:** Bruna e Everton são talentos fixos da Eternum. Não deletar os seeds. Conteúdo é sempre sobre **negócio da estética**, nunca técnica de procedimento.

@@ -51,7 +51,7 @@ export function ContentHQStrategy({ talent }: { talent: Talent }) {
   const handleAI = async () => {
     setAiLoading(true);
     try {
-      const r = await callContentHQAI("generate_strategy", talent, { year, quarter, objective: "crescer autoridade no nicho de estética e gerar leads qualificados" });
+      const r = await callContentHQAI("generate_strategy", talent, { year, quarter, objective: "gerar leads qualificados de profissionais de estética interessados em mentoria de vendas, marketing, gestão e precificação" });
       setForm({
         positioning: r.positioning || "",
         audience: r.audience || "",
