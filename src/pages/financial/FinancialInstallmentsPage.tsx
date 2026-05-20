@@ -40,6 +40,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { InstallmentTimelineDialog } from "@/components/financial/InstallmentTimelineDialog";
 import { PaymentStatusBadge } from "@/components/financial/PaymentStatusSelect";
 import { IssueFiscalInvoiceDialog } from "@/components/financial/IssueFiscalInvoiceDialog";
+import { EmitirNFButton } from "@/components/financial/nfse/EmitirNFButton";
 import { FileCheck, FilePlus2, Wallet, CheckCircle, Clock as ClockIcon } from "lucide-react";
 import { FinancialPageHeader, FinancialKpiCard, FinancialEmptyState } from "@/components/financial/_shared";
 import { formatBRLCompact } from "@/lib/financial-format";
@@ -291,19 +292,9 @@ export default function FinancialInstallmentsPage() {
                             </Badge>
                           </Button>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNfInvoice(r.invoices!);
-                              setNfOpen(true);
-                            }}
-                          >
-                            <FilePlus2 className="h-3 w-3 mr-1" />
-                            Faturar
-                          </Button>
+                          <div onClick={(e) => e.stopPropagation()} className="inline-block">
+                            <EmitirNFButton installmentId={r.id} />
+                          </div>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
