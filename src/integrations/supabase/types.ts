@@ -4279,6 +4279,295 @@ export type Database = {
           },
         ]
       }
+      content_library_items: {
+        Row: {
+          account_id: string
+          content: string
+          created_at: string
+          id: string
+          notes: string | null
+          performance_score: number | null
+          pillar_id: string | null
+          platform: string | null
+          talent_id: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          content: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          performance_score?: number | null
+          pillar_id?: string | null
+          platform?: string | null
+          talent_id?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          performance_score?: number | null
+          pillar_id?: string | null
+          platform?: string | null
+          talent_id?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_library_items_pillar_id_fkey"
+            columns: ["pillar_id"]
+            isOneToOne: false
+            referencedRelation: "content_pillars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_library_items_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "content_talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_pieces: {
+        Row: {
+          account_id: string
+          ai_generated: boolean
+          assigned_user_id: string | null
+          briefing: Json
+          caption: string | null
+          created_at: string
+          cta: string | null
+          format: string | null
+          hashtags: string | null
+          hook: string | null
+          id: string
+          pillar_id: string | null
+          platform: string
+          published_url: string | null
+          scheduled_date: string | null
+          script: string | null
+          status: string
+          talent_id: string
+          thumbnail_brief: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          ai_generated?: boolean
+          assigned_user_id?: string | null
+          briefing?: Json
+          caption?: string | null
+          created_at?: string
+          cta?: string | null
+          format?: string | null
+          hashtags?: string | null
+          hook?: string | null
+          id?: string
+          pillar_id?: string | null
+          platform: string
+          published_url?: string | null
+          scheduled_date?: string | null
+          script?: string | null
+          status?: string
+          talent_id: string
+          thumbnail_brief?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          ai_generated?: boolean
+          assigned_user_id?: string | null
+          briefing?: Json
+          caption?: string | null
+          created_at?: string
+          cta?: string | null
+          format?: string | null
+          hashtags?: string | null
+          hook?: string | null
+          id?: string
+          pillar_id?: string | null
+          platform?: string
+          published_url?: string | null
+          scheduled_date?: string | null
+          script?: string | null
+          status?: string
+          talent_id?: string
+          thumbnail_brief?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_pieces_pillar_id_fkey"
+            columns: ["pillar_id"]
+            isOneToOne: false
+            referencedRelation: "content_pillars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_pieces_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "content_talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_pillars: {
+        Row: {
+          account_id: string
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          mix_percentage: number
+          name: string
+          platforms: string[]
+          reference_links: Json
+          talent_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          mix_percentage?: number
+          name: string
+          platforms?: string[]
+          reference_links?: Json
+          talent_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          mix_percentage?: number
+          name?: string
+          platforms?: string[]
+          reference_links?: Json
+          talent_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_pillars_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "content_talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_strategies: {
+        Row: {
+          account_id: string
+          audience: string | null
+          big_bets: Json
+          created_at: string
+          goals: Json
+          id: string
+          positioning: string | null
+          quarter: number
+          talent_id: string
+          tone: string | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          account_id: string
+          audience?: string | null
+          big_bets?: Json
+          created_at?: string
+          goals?: Json
+          id?: string
+          positioning?: string | null
+          quarter: number
+          talent_id: string
+          tone?: string | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          account_id?: string
+          audience?: string | null
+          big_bets?: Json
+          created_at?: string
+          goals?: Json
+          id?: string
+          positioning?: string | null
+          quarter?: number
+          talent_id?: string
+          tone?: string | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_strategies_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "content_talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_talents: {
+        Row: {
+          account_id: string
+          active: boolean
+          avatar_url: string | null
+          bio: string | null
+          brand_voice: string | null
+          created_at: string
+          id: string
+          name: string
+          niche: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          active?: boolean
+          avatar_url?: string | null
+          bio?: string | null
+          brand_voice?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          niche?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          active?: boolean
+          avatar_url?: string | null
+          bio?: string | null
+          brand_voice?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          niche?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contract_company_defaults: {
         Row: {
           account_id: string
