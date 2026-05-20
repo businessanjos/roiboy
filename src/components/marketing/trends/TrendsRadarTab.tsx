@@ -210,7 +210,7 @@ export function TrendsRadarTab() {
               </Select>
               <Input
                 className="md:col-span-2"
-                placeholder="Hashtags separadas por vírgula. Ex: mentoriamedica, medicinasucesso"
+                placeholder="Hashtags separadas por vírgula. Ex: donadeclinica, esteticaavancada"
                 value={hashtags}
                 onChange={(e) => setHashtags(e.target.value)}
               />
@@ -219,7 +219,27 @@ export function TrendsRadarTab() {
                 Buscar virais
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Busca os posts mais virais da hashtag, calcula hype score e gera adaptação para sua marca automaticamente.</p>
+            <div className="flex flex-wrap gap-1.5">
+              <span className="text-[11px] text-muted-foreground self-center mr-1">Presets do nicho:</span>
+              {[
+                { label: "Estética (negócio)", tags: "donadeclinica,esteticaavancada,gestaodeclinica,empresariadaestetica,esteticista" },
+                { label: "Mentoria/Vendas", tags: "mentoriadevendas,empreendedorismofeminino,donadenegocio,vendasdeluxo,faturamento" },
+                { label: "Médicas/Clínicas", tags: "medicaempreendedora,clinicamedica,gestaomedica,marketingmedico" },
+                { label: "Memes negócio BR", tags: "memesempresarial,humorcorporativo,vidadeempresaria,rotinadeempresaria" },
+              ].map((p) => (
+                <Button
+                  key={p.label}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[11px] px-2"
+                  onClick={() => setHashtags(p.tags)}
+                >
+                  {p.label}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">Escrapamos 3× o volume, filtramos por idioma (PT-BR) e relevância via IA pro nicho de estética/mentoria. Lixo (anime, fofoca, gospel, etc.) é descartado antes de salvar.</p>
           </TabsContent>
 
           <TabsContent value="ai" className="space-y-3">
