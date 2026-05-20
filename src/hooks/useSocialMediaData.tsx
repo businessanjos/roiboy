@@ -255,6 +255,21 @@ export function useSocialMediaData() {
       const instagramIdMatch = data.permalink.match(/instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/);
       const instagramId = instagramIdMatch ? instagramIdMatch[1] : null;
 
+      // Pre-check: post already exists for this profile?
+      if (instagramId) {
+        const { data: existing } = await supabase
+          .from('instagram_posts')
+          .select('id')
+          .eq('profile_id', currentProfile.id)
+          .eq('instagram_id', instagramId)
+          .maybeSingle();
+        if (existing) {
+          const err: any = new Error('DUPLICATE_POST');
+          err.existingId = existing.id;
+          throw err;
+        }
+      }
+
       // Calculate engagement and virality rates
       const totalEngagement = data.likes + data.comments + data.shares + data.saves;
       const rawEngagementRate = data.reach > 0 ? (totalEngagement / data.reach) * 100 : 0;
@@ -295,14 +310,23 @@ export function useSocialMediaData() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if ((error as any).code === '23505') {
+          throw new Error('DUPLICATE_POST');
+        }
+        throw error;
+      }
       return post;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['instagram-posts'] });
       toast.success('Post adicionado com sucesso!');
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      if (error?.message === 'DUPLICATE_POST') {
+        toast.error('Esse post já foi adicionado para este perfil. Edite o existente em vez de criar um novo.');
+        return;
+      }
       toast.error('Erro ao adicionar post: ' + error.message);
     },
   });
