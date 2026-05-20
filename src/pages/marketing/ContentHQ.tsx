@@ -191,6 +191,7 @@ export default function ContentHQ() {
                 platformFilter={effPlatform}
               />
             )}
+            {section === "ideas" && currentTalent && <ContentHQIdeasLab talent={currentTalent} />}
             {section === "strategy" && currentTalent && <ContentHQStrategy talent={currentTalent} />}
             {section === "pillars" && currentTalent && <ContentHQPillars talent={currentTalent} />}
             {section === "briefings" && currentTalent && <ContentHQBriefings talent={currentTalent} />}
