@@ -247,10 +247,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1) Tem URL, 2) é provavelmente PT-BR, 3) hype calculado
+    // 1) Tem URL, 2) é provavelmente PT-BR, 3) NÃO é conteúdo bloqueado (sexual/vulgar), 4) hype calculado
     normalized = normalized
       .filter((it) => it.source_url)
       .filter((it) => isLikelyPortuguese(`${it.title} ${it.description || ""}`))
+      .filter((it) => !isHardBlocked(`${it.title} ${it.description || ""} ${it.creator_handle || ""}`))
       .map((it) => ({ ...it, hype_score: calcHype(it) }))
       .sort((a, b) => b.hype_score - a.hype_score)
       .slice(0, Math.max(maxItems * 2, 16));
