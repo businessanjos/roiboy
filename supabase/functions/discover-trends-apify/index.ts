@@ -270,13 +270,13 @@ Deno.serve(async (req) => {
       hype_score: it.hype_score,
       tags: it.tags,
       ai_adaptation: it.ai_adaptation || null,
-      ai_analysis: { hashtags, captured_at: new Date().toISOString() },
+      ai_analysis: { hashtags, captured_at: new Date().toISOString(), relevance: it._relevance ?? null, relevance_reason: it._relevance_reason || null },
       captured_by: capturedBy,
       expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     }));
 
     if (!records.length) {
-      return new Response(JSON.stringify({ success: true, count: 0, message: "Nenhum conteúdo encontrado para essas hashtags" }), {
+      return new Response(JSON.stringify({ success: true, count: 0, message: "Nenhum conteúdo relevante encontrado (após filtro de idioma + relevância). Tente hashtags mais específicas do nicho." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
