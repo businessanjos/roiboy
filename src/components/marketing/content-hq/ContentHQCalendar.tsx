@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Talent, useContentPieces, PLATFORMS, PIECE_STATUSES } from "@/hooks/useContentHQ";
+import { Talent, useAllContentPieces, PLATFORMS, PIECE_STATUSES } from "@/hooks/useContentHQ";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,13 @@ import { ptBR } from "date-fns/locale";
 
 export function ContentHQCalendar({ talents, selectedTalentId, platformFilter }: { talents: Talent[]; selectedTalentId?: string; platformFilter?: string }) {
   const [month, setMonth] = useState(new Date());
-  // Fetch for the selected talent or all
-  const targets = selectedTalentId ? talents.filter(t => t.id === selectedTalentId) : talents;
-  const queries = targets.map(t => useContentPieces(t.id));
-  const allPieces = queries
-    .flatMap((q, i) => (q.data || []).map(p => ({ ...p, talentName: targets[i].name })))
-    .filter(p => !platformFilter || p.platform === platformFilter);
+  // Fetch all and filter client-side (stable hook count)
+  const { data: allRaw = [] } = useAllContentPieces();
+  const talentMap = new Map(talents.map(t => [t.id, t.name]));
+  const allPieces = allRaw
+    .filter(p => !selectedTalentId || p.talent_id === selectedTalentId)
+    .filter(p => !platformFilter || p.platform === platformFilter)
+    .map(p => ({ ...p, talentName: talentMap.get(p.talent_id) || "?" }));
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 0 });

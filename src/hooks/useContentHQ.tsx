@@ -145,6 +145,20 @@ export function useContentPieces(talentId?: string) {
   });
 }
 
+export function useAllContentPieces() {
+  return useQuery({
+    queryKey: ["content-pieces", "all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("content_pieces")
+        .select("*")
+        .order("scheduled_date", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return (data || []) as ContentPiece[];
+    },
+  });
+}
+
 export function useUpsertStrategy() {
   const qc = useQueryClient();
   const { currentUser } = useCurrentUser();

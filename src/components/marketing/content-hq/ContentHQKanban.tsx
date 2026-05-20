@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Talent, useContentPieces, useUpsertPiece, PLATFORMS, PIECE_STATUSES, ContentPiece } from "@/hooks/useContentHQ";
+import { Talent, useAllContentPieces, useUpsertPiece, PLATFORMS, PIECE_STATUSES, ContentPiece } from "@/hooks/useContentHQ";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ContentHQPieceDrawer } from "./ContentHQPieceDrawer";
@@ -7,11 +7,16 @@ import { STAGE_CHECKLISTS } from "./contentHQTemplates";
 import { CheckCircle2 } from "lucide-react";
 
 export function ContentHQKanban({ talents, selectedTalentId, platformFilter }: { talents: Talent[]; selectedTalentId?: string; platformFilter?: string }) {
-  const targets = selectedTalentId ? talents.filter(t => t.id === selectedTalentId) : talents;
-  const queries = targets.map(t => useContentPieces(t.id));
-  const allPieces = queries
-    .flatMap((q, i) => (q.data || []).map(p => ({ ...p, talentName: targets[i].name, _talent: targets[i] })))
-    .filter(p => !platformFilter || p.platform === platformFilter);
+  const { data: allRaw = [] } = useAllContentPieces();
+  const talentMap = new Map(talents.map(t => [t.id, t]));
+  const allPieces = allRaw
+    .filter(p => !selectedTalentId || p.talent_id === selectedTalentId)
+    .filter(p => !platformFilter || p.platform === platformFilter)
+    .map(p => {
+      const t = talentMap.get(p.talent_id);
+      return { ...p, talentName: t?.name || "?", _talent: t as Talent };
+    })
+    .filter(p => !!p._talent);
   const upsert = useUpsertPiece();
   const [openId, setOpenId] = useState<string | null>(null);
   const opened = allPieces.find(p => p.id === openId) || null;

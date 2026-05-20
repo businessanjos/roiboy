@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Talent, useContentPieces, PLATFORMS, PIECE_STATUSES, ContentPiece } from "@/hooks/useContentHQ";
+import { Talent, useAllContentPieces, PLATFORMS, PIECE_STATUSES, ContentPiece } from "@/hooks/useContentHQ";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,11 +28,14 @@ export function ContentHQPlatformBoard({
   platformFilter?: string;
   onSelectPiece?: (piece: ContentPiece, talent: Talent) => void;
 }) {
-  const targets = selectedTalentId ? talents.filter(t => t.id === selectedTalentId) : talents;
-  const queries = targets.map(t => useContentPieces(t.id));
+  const { data: allRaw = [] } = useAllContentPieces();
+  const talentMap = new Map(talents.map(t => [t.id, t]));
   const allPieces = useMemo(
-    () => queries.flatMap((q, i) => (q.data || []).map(p => ({ ...p, _talent: targets[i] }))),
-    [queries, targets]
+    () => allRaw
+      .filter(p => !selectedTalentId || p.talent_id === selectedTalentId)
+      .map(p => ({ ...p, _talent: talentMap.get(p.talent_id) as Talent }))
+      .filter(p => !!p._talent),
+    [allRaw, selectedTalentId, talents]
   );
 
   const today = startOfDay(new Date());
