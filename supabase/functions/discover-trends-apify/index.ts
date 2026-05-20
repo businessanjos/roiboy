@@ -106,14 +106,35 @@ function isLikelyPortuguese(text: string): boolean {
   return true;
 }
 
+// Hard blocklist: conteúdo sexual, vulgar, duplo-sentido, baixaria. NUNCA passar.
+const HARD_BLOCK_PATTERNS = [
+  /\btrnsr\b/i, /\btransar\b/i, /\btrepar\b/i, /\bgozar\b/i, /\bgozei\b/i, /\bpegar\s+geral\b/i,
+  /\bsexo\b/i, /\bsexual/i, /\bnudes?\b/i, /\bpelad[oa]s?\b/i, /\bputa\b/i, /\bvadia\b/i,
+  /\bbunda\b/i, /\bbuceta\b/i, /\bpiroca\b/i, /\bpau\s+(duro|grande)\b/i,
+  /\bcorno[as]?\b/i, /\bchifre\b/i, /\btraição\b/i, /\btraiu\b/i, /\bamante\b/i,
+  /\borgasm/i, /\btesão\b/i, /\btarad[oa]\b/i, /\bsafad[oa]\b/i,
+  /\bonlyfans\b/i, /\bprivacy\b/i, /\bcalcinha\b/i, /\bsutiã\b/i,
+  /\bficar\s+de\s+mole\b/i, /\bminhas?\s+pernas?\b.*\b(mole|tremer|fraca)/i,
+];
+function isHardBlocked(text: string): boolean {
+  if (!text) return false;
+  return HARD_BLOCK_PATTERNS.some((re) => re.test(text));
+}
+
 async function aiRelevanceFilter(items: any[], contextBlock: string): Promise<any[]> {
   if (!items.length) return items;
   const prompt = `Você é curador para MENTORES de marketing/vendas/gestão de clínicas de estética e médicas no Brasil (Bruna e Everton RYKA). Público = EMPRESÁRIAS/PROFISSIONAIS do setor (donas de clínica, esteticistas, médicas), NUNCA pacientes.
 
-Para cada item dê relevance 0-10:
+REGRA ABSOLUTA — score 0 obrigatório (NUNCA passar, sem exceção):
+- QUALQUER conteúdo sexual, sensual, duplo-sentido picante, "pegação", transar, traição, corno, nudez, baixaria
+- Vulgaridade, palavrão gratuito, fofoca de famoso, briga, polêmica gratuita
+- Religioso/gospel, político, anime, lifestyle estrangeiro sem ângulo de negócio
+A marca RYKA é "rico com elegância, sem ostentação escrachada". Vulgar = morte da marca.
+
+Para o resto dê relevance 0-10:
 - 8-10: meme/formato direto sobre negócio, vendas, dinheiro, gestão, vida de empresária, rotina de clínica
-- 5-7: meme universal/trend ADAPTÁVEL para conteúdo de negócio
-- 0-4: conteúdo aleatório (anime, política, gospel, lifestyle estrangeiro, fofoca de famoso, sem ângulo de negócio)
+- 5-7: meme universal/trend ADAPTÁVEL para conteúdo de negócio LIMPO
+- 0-4: aleatório sem ângulo claro
 
 Itens:
 ${items.map((it, i) => `${i + 1}. [${it.platform}] "${(it.title || "").slice(0, 200)}" | @${it.creator_handle || "?"} | views=${it.views_count}`).join("\n")}
