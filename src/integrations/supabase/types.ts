@@ -80,6 +80,9 @@ export type Database = {
           escore_live_presence: number
           escore_whatsapp_engagement: number
           id: string
+          nfse_auto_email: boolean
+          nfse_default_contratada_id: string | null
+          nfse_emission_mode: string
           onboarding_completed: boolean
           onboarding_completed_at: string | null
           onboarding_step: number
@@ -120,6 +123,9 @@ export type Database = {
           escore_live_presence?: number
           escore_whatsapp_engagement?: number
           id?: string
+          nfse_auto_email?: boolean
+          nfse_default_contratada_id?: string | null
+          nfse_emission_mode?: string
           onboarding_completed?: boolean
           onboarding_completed_at?: string | null
           onboarding_step?: number
@@ -160,6 +166,9 @@ export type Database = {
           escore_live_presence?: number
           escore_whatsapp_engagement?: number
           id?: string
+          nfse_auto_email?: boolean
+          nfse_default_contratada_id?: string | null
+          nfse_emission_mode?: string
           onboarding_completed?: boolean
           onboarding_completed_at?: string | null
           onboarding_step?: number
@@ -4391,6 +4400,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contratadas: {
+        Row: {
+          account_id: string
+          active: boolean
+          aliquota_iss: number | null
+          cnpj: string
+          codigo_tributacao_municipio: string | null
+          created_at: string
+          endereco: Json | null
+          id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
+          is_default: boolean
+          item_lista_servico: string | null
+          nome_fantasia: string | null
+          provider: string
+          provider_config: Json | null
+          razao_social: string
+          regime_tributario: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          active?: boolean
+          aliquota_iss?: number | null
+          cnpj: string
+          codigo_tributacao_municipio?: string | null
+          created_at?: string
+          endereco?: Json | null
+          id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          is_default?: boolean
+          item_lista_servico?: string | null
+          nome_fantasia?: string | null
+          provider?: string
+          provider_config?: Json | null
+          razao_social: string
+          regime_tributario?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          active?: boolean
+          aliquota_iss?: number | null
+          cnpj?: string
+          codigo_tributacao_municipio?: string | null
+          created_at?: string
+          endereco?: Json | null
+          id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          is_default?: boolean
+          item_lista_servico?: string | null
+          nome_fantasia?: string | null
+          provider?: string
+          provider_config?: Json | null
+          razao_social?: string
+          regime_tributario?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       conversations: {
         Row: {
@@ -13445,6 +13517,129 @@ export type Database = {
         }
         Relationships: []
       }
+      nfse_issuances: {
+        Row: {
+          account_id: string
+          aliquota_iss: number | null
+          amount: number
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          client_id: string | null
+          codigo_tributacao_municipio: string | null
+          contratada_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          installment_id: string | null
+          invoice_id: string | null
+          iss_retido: boolean
+          issued_at: string | null
+          item_lista_servico: string | null
+          nfse_number: string | null
+          payer_id: string | null
+          pdf_url: string | null
+          provider: string
+          provider_request_id: string | null
+          provider_response: Json | null
+          rejected_reason: string | null
+          retry_count: number
+          rps_number: string | null
+          rps_series: string | null
+          source_id: string | null
+          source_type: string
+          status: string
+          updated_at: string
+          verification_code: string | null
+          xml_url: string | null
+        }
+        Insert: {
+          account_id: string
+          aliquota_iss?: number | null
+          amount: number
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          client_id?: string | null
+          codigo_tributacao_municipio?: string | null
+          contratada_id: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          installment_id?: string | null
+          invoice_id?: string | null
+          iss_retido?: boolean
+          issued_at?: string | null
+          item_lista_servico?: string | null
+          nfse_number?: string | null
+          payer_id?: string | null
+          pdf_url?: string | null
+          provider?: string
+          provider_request_id?: string | null
+          provider_response?: Json | null
+          rejected_reason?: string | null
+          retry_count?: number
+          rps_number?: string | null
+          rps_series?: string | null
+          source_id?: string | null
+          source_type: string
+          status?: string
+          updated_at?: string
+          verification_code?: string | null
+          xml_url?: string | null
+        }
+        Update: {
+          account_id?: string
+          aliquota_iss?: number | null
+          amount?: number
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          client_id?: string | null
+          codigo_tributacao_municipio?: string | null
+          contratada_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          installment_id?: string | null
+          invoice_id?: string | null
+          iss_retido?: boolean
+          issued_at?: string | null
+          item_lista_servico?: string | null
+          nfse_number?: string | null
+          payer_id?: string | null
+          pdf_url?: string | null
+          provider?: string
+          provider_request_id?: string | null
+          provider_response?: Json | null
+          rejected_reason?: string | null
+          retry_count?: number
+          rps_number?: string | null
+          rps_series?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          verification_code?: string | null
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfse_issuances_contratada_id_fkey"
+            columns: ["contratada_id"]
+            isOneToOne: false
+            referencedRelation: "contratadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfse_issuances_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notas_fiscais: {
         Row: {
           access_key: string | null
@@ -14337,6 +14532,10 @@ export type Database = {
           mls_level: string | null
           mql_criteria: Json | null
           name: string
+          nfse_aliquota_iss: number | null
+          nfse_codigo_tributacao_municipio: string | null
+          nfse_description_template: string | null
+          nfse_item_lista_servico: string | null
           payment_methods: Json | null
           price: number
           renewal_discount_percent: number | null
@@ -14360,6 +14559,10 @@ export type Database = {
           mls_level?: string | null
           mql_criteria?: Json | null
           name: string
+          nfse_aliquota_iss?: number | null
+          nfse_codigo_tributacao_municipio?: string | null
+          nfse_description_template?: string | null
+          nfse_item_lista_servico?: string | null
           payment_methods?: Json | null
           price?: number
           renewal_discount_percent?: number | null
@@ -14383,6 +14586,10 @@ export type Database = {
           mls_level?: string | null
           mql_criteria?: Json | null
           name?: string
+          nfse_aliquota_iss?: number | null
+          nfse_codigo_tributacao_municipio?: string | null
+          nfse_description_template?: string | null
+          nfse_item_lista_servico?: string | null
           payment_methods?: Json | null
           price?: number
           renewal_discount_percent?: number | null
