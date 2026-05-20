@@ -95,7 +95,7 @@ export default function FinancialFiscalSettingsPage() {
     <div className="p-6 space-y-6">
       <FinancialPageHeader
         title="Configuração Fiscal (NFS-e)"
-        subtitle="CNPJs emissores e regras de emissão automática de notas fiscais"
+        description="CNPJs emissores e regras de emissão automática de notas fiscais"
         icon={Receipt}
       />
 
