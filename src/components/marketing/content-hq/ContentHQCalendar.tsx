@@ -7,12 +7,14 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, isSameDay, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export function ContentHQCalendar({ talents, selectedTalentId }: { talents: Talent[]; selectedTalentId?: string }) {
+export function ContentHQCalendar({ talents, selectedTalentId, platformFilter }: { talents: Talent[]; selectedTalentId?: string; platformFilter?: string }) {
   const [month, setMonth] = useState(new Date());
   // Fetch for the selected talent or all
   const targets = selectedTalentId ? talents.filter(t => t.id === selectedTalentId) : talents;
   const queries = targets.map(t => useContentPieces(t.id));
-  const allPieces = queries.flatMap((q, i) => (q.data || []).map(p => ({ ...p, talentName: targets[i].name })));
+  const allPieces = queries
+    .flatMap((q, i) => (q.data || []).map(p => ({ ...p, talentName: targets[i].name })))
+    .filter(p => !platformFilter || p.platform === platformFilter);
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 0 });
