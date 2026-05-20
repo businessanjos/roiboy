@@ -95,15 +95,66 @@ function calcHype(item: any): number {
   return Math.min(100, Math.max(15, Math.round(raw)));
 }
 
+function isLikelyPortuguese(text: string): boolean {
+  if (!text) return true;
+  const t = text.toLowerCase();
+  const ptHits = (t.match(/\b(você|voce|não|nao|que|para|com|meu|minha|tá|tô|sobre|porque|gente|aqui|hoje|isso|vida|brasil|trabalho|dinheiro|cliente|negocio|negócio|empresa|estética|clínica|clinica|médic|medic|faturamento)\b/g) || []).length;
+  const esHits = (t.match(/\b(con|los|las|del|por|muy|pero|esto|también|hola|gracias|años|trabajo|dinero|amigo|hermano|chica|chico|nada)\b/g) || []).length;
+  const enHits = (t.match(/\b(the|and|you|that|with|this|for|are|have|but|not|all|your|like|just|what|when)\b/g) || []).length;
+  if (esHits > ptHits && esHits > 2) return false;
+  if (enHits > ptHits && enHits > 3) return false;
+  return true;
+}
+
+async function aiRelevanceFilter(items: any[], contextBlock: string): Promise<any[]> {
+  if (!items.length) return items;
+  const prompt = `Você é curador para MENTORES de marketing/vendas/gestão de clínicas de estética e médicas no Brasil (Bruna e Everton RYKA). Público = EMPRESÁRIAS/PROFISSIONAIS do setor (donas de clínica, esteticistas, médicas), NUNCA pacientes.
+
+Para cada item dê relevance 0-10:
+- 8-10: meme/formato direto sobre negócio, vendas, dinheiro, gestão, vida de empresária, rotina de clínica
+- 5-7: meme universal/trend ADAPTÁVEL para conteúdo de negócio
+- 0-4: conteúdo aleatório (anime, política, gospel, lifestyle estrangeiro, fofoca de famoso, sem ângulo de negócio)
+
+Itens:
+${items.map((it, i) => `${i + 1}. [${it.platform}] "${(it.title || "").slice(0, 200)}" | @${it.creator_handle || "?"} | views=${it.views_count}`).join("\n")}
+
+Retorne JSON: { "scores": [{ "index": 1, "relevance": 7, "reason": "..." }, ...] }${contextBlock}`;
+
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: "Você é curador especializado em conteúdo de negócio para o mercado de estética brasileiro. Responda sempre em JSON válido." },
+          { role: "user", content: prompt },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) return items;
+    const data = await res.json();
+    const parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
+    const map = new Map<number, { r: number; why: string }>();
+    (parsed.scores || []).forEach((s: any) => map.set(s.index, { r: s.relevance ?? 0, why: s.reason || "" }));
+    const scored = items.map((it, i) => ({ ...it, _relevance: map.get(i + 1)?.r ?? 0, _relevance_reason: map.get(i + 1)?.why || "" }));
+    return scored.filter((it) => it._relevance >= 5).sort((a, b) => b._relevance - a._relevance);
+  } catch (e) {
+    console.error("aiRelevanceFilter error", e);
+    return items;
+  }
+}
+
 async function aiAdapt(items: any[], niche: string, contextBlock: string) {
   if (!items.length) return items;
-  const prompt = `Você é estrategista de conteúdo. Para cada item viral abaixo, gere UMA adaptação curta (3-4 frases acionáveis) para o nicho "${niche}".${contextBlock}
+  const prompt = `Você é estrategista de conteúdo para mentores de clínicas de estética/médicas (RYKA). Para cada viral abaixo, gere UMA adaptação curta (3-4 frases ACIONÁVEIS) transformando o formato/meme em conteúdo de NEGÓCIO (vendas, marketing, gestão, precificação, posicionamento, mentalidade de empresária) para profissionais do setor de estética.${contextBlock}
 
 Itens:
 ${items.map((it, i) => `${i + 1}. [${it.platform}] ${it.title} | views=${it.views_count} likes=${it.likes_count} | criador=${it.creator_handle || "?"} | áudio=${it.audio_title || "—"}`).join("\n")}
 
 Retorne JSON: { "adaptations": [{ "index": 1, "ai_adaptation": "..." }, ...] }
-Cada adaptação DEVE falar com as DORES e DESEJOS da persona usando o VOCABULÁRIO dela.`;
+Cada adaptação DEVE: (1) descrever o gancho/roteiro adaptado, (2) usar vocabulário da persona, (3) terminar com CTA de negócio.`;
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -157,14 +208,17 @@ Deno.serve(async (req) => {
     const { voice, persona } = await fetchVoiceAndPersona(supabase, accountId);
     const contextBlock = buildBrandVoiceBlock(voice) + buildPersonaBlock(persona);
 
+    // Escrapa 3x o pedido pra ter folga depois dos filtros
+    const scrapeBudget = Math.max(maxItems * 3, 24);
+
     let rawItems: any[] = [];
     let normalized: any[] = [];
 
     if (platform === "tiktok") {
-      rawItems = await runApifyActor(ACTORS.tiktok, buildTikTokInput(hashtags, maxItems));
+      rawItems = await runApifyActor(ACTORS.tiktok, buildTikTokInput(hashtags, scrapeBudget));
       normalized = rawItems.map(normalizeTikTok);
     } else if (platform === "instagram" || platform === "reels") {
-      rawItems = await runApifyActor(ACTORS.instagram, buildInstagramHashtagInput(hashtags, maxItems));
+      rawItems = await runApifyActor(ACTORS.instagram, buildInstagramHashtagInput(hashtags, scrapeBudget));
       normalized = rawItems.map(normalizeInstagram);
     } else {
       return new Response(JSON.stringify({ error: `Plataforma ${platform} não suportada (use tiktok ou instagram)` }), {
@@ -172,17 +226,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Filter and rank
+    // 1) Tem URL, 2) é provavelmente PT-BR, 3) hype calculado
     normalized = normalized
       .filter((it) => it.source_url)
+      .filter((it) => isLikelyPortuguese(`${it.title} ${it.description || ""}`))
       .map((it) => ({ ...it, hype_score: calcHype(it) }))
       .sort((a, b) => b.hype_score - a.hype_score)
-      .slice(0, maxItems);
+      .slice(0, Math.max(maxItems * 2, 16));
 
-    // AI-adapt each top item to brand + persona
+    // 4) Filtro de relevância via IA — descarta lixo (anime, gospel, fofoca, etc.)
+    normalized = await aiRelevanceFilter(normalized, contextBlock);
+    normalized = normalized.slice(0, maxItems);
+
+    // 5) Adaptação criativa para o nicho
     normalized = await aiAdapt(
       normalized,
-      voice?.niche || persona?.business_type || "marketing digital",
+      voice?.niche || persona?.business_type || "mentoria para clínicas de estética",
       contextBlock,
     );
 
@@ -211,13 +270,13 @@ Deno.serve(async (req) => {
       hype_score: it.hype_score,
       tags: it.tags,
       ai_adaptation: it.ai_adaptation || null,
-      ai_analysis: { hashtags, captured_at: new Date().toISOString() },
+      ai_analysis: { hashtags, captured_at: new Date().toISOString(), relevance: it._relevance ?? null, relevance_reason: it._relevance_reason || null },
       captured_by: capturedBy,
       expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     }));
 
     if (!records.length) {
-      return new Response(JSON.stringify({ success: true, count: 0, message: "Nenhum conteúdo encontrado para essas hashtags" }), {
+      return new Response(JSON.stringify({ success: true, count: 0, message: "Nenhum conteúdo relevante encontrado (após filtro de idioma + relevância). Tente hashtags mais específicas do nicho." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
