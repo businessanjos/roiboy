@@ -208,14 +208,17 @@ Deno.serve(async (req) => {
     const { voice, persona } = await fetchVoiceAndPersona(supabase, accountId);
     const contextBlock = buildBrandVoiceBlock(voice) + buildPersonaBlock(persona);
 
+    // Escrapa 3x o pedido pra ter folga depois dos filtros
+    const scrapeBudget = Math.max(maxItems * 3, 24);
+
     let rawItems: any[] = [];
     let normalized: any[] = [];
 
     if (platform === "tiktok") {
-      rawItems = await runApifyActor(ACTORS.tiktok, buildTikTokInput(hashtags, maxItems));
+      rawItems = await runApifyActor(ACTORS.tiktok, buildTikTokInput(hashtags, scrapeBudget));
       normalized = rawItems.map(normalizeTikTok);
     } else if (platform === "instagram" || platform === "reels") {
-      rawItems = await runApifyActor(ACTORS.instagram, buildInstagramHashtagInput(hashtags, maxItems));
+      rawItems = await runApifyActor(ACTORS.instagram, buildInstagramHashtagInput(hashtags, scrapeBudget));
       normalized = rawItems.map(normalizeInstagram);
     } else {
       return new Response(JSON.stringify({ error: `Plataforma ${platform} não suportada (use tiktok ou instagram)` }), {
@@ -223,17 +226,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Filter and rank
+    // 1) Tem URL, 2) é provavelmente PT-BR, 3) hype calculado
     normalized = normalized
       .filter((it) => it.source_url)
+      .filter((it) => isLikelyPortuguese(`${it.title} ${it.description || ""}`))
       .map((it) => ({ ...it, hype_score: calcHype(it) }))
       .sort((a, b) => b.hype_score - a.hype_score)
-      .slice(0, maxItems);
+      .slice(0, Math.max(maxItems * 2, 16));
 
-    // AI-adapt each top item to brand + persona
+    // 4) Filtro de relevância via IA — descarta lixo (anime, gospel, fofoca, etc.)
+    normalized = await aiRelevanceFilter(normalized, contextBlock);
+    normalized = normalized.slice(0, maxItems);
+
+    // 5) Adaptação criativa para o nicho
     normalized = await aiAdapt(
       normalized,
-      voice?.niche || persona?.business_type || "marketing digital",
+      voice?.niche || persona?.business_type || "mentoria para clínicas de estética",
       contextBlock,
     );
 
