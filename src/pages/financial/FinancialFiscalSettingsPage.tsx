@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -9,29 +9,58 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Trash2, Star, Receipt, ExternalLink } from "lucide-react";
+import { Receipt, ExternalLink, CheckCircle2, Building2 } from "lucide-react";
 import { FinancialPageHeader } from "@/components/financial/_shared";
+import { Link } from "react-router-dom";
 
 type EmissionMode = "manual" | "on_payment" | "on_won";
+
+function formatCnpj(d?: string | null) {
+  if (!d) return "";
+  const c = d.replace(/\D/g, "");
+  if (c.length !== 14) return d;
+  return `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12,14)}`;
+}
 
 export default function FinancialFiscalSettingsPage() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const qc = useQueryClient();
 
-  const { data: contratadas } = useQuery({
-    queryKey: ["contratadas", accountId],
+  const { data: account } = useQuery({
+    queryKey: ["account-fiscal-base", accountId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
+        .from("accounts")
+        .select("id, name, document, document_type, city, state")
+        .eq("id", accountId!)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!accountId,
+  });
+
+  // Garante a contratada padrão automaticamente a partir dos dados da conta
+  const { data: contratada, refetch: refetchContratada } = useQuery({
+    queryKey: ["default-contratada", accountId],
+    queryFn: async () => {
+      const { data: ensured, error: rpcErr } = await supabase.rpc(
+        "ensure_default_contratada" as any,
+        { p_account_id: accountId! }
+      );
+      if (rpcErr) {
+        // não bloqueia — pode ser que falte CNPJ na conta
+        console.warn(rpcErr.message);
+      }
+      const { data } = await supabase
         .from("contratadas" as any)
         .select("*")
         .eq("account_id", accountId!)
-        .order("is_default", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as any[];
+        .eq("is_default", true)
+        .maybeSingle();
+      return data as any;
     },
     enabled: !!accountId,
   });
@@ -64,92 +93,169 @@ export default function FinancialFiscalSettingsPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const setDefault = useMutation({
-    mutationFn: async (id: string) => {
-      await supabase.from("contratadas" as any).update({ is_default: false }).eq("account_id", accountId!);
-      await supabase.from("contratadas" as any).update({ is_default: true }).eq("id", id);
-      await supabase.from("account_settings").update({ nfse_default_contratada_id: id }).eq("account_id", accountId!);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["contratadas", accountId] });
-      qc.invalidateQueries({ queryKey: ["account-settings-fiscal", accountId] });
-      toast.success("CNPJ padrão atualizado");
-    },
-  });
-
-  const deleteContratada = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("contratadas" as any).delete().eq("id", id);
+  const updateContratada = useMutation({
+    mutationFn: async (patch: Record<string, any>) => {
+      if (!contratada?.id) throw new Error("Emissor não inicializado");
+      const { error } = await supabase
+        .from("contratadas" as any)
+        .update(patch)
+        .eq("id", contratada.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["contratadas", accountId] });
-      toast.success("CNPJ removido");
+      refetchContratada();
+      toast.success("Dados fiscais atualizados");
     },
     onError: (e: any) => toast.error(e.message),
   });
 
   const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co/nfse-webhook`;
 
+  const accountHasCnpj = account?.document && account.document.replace(/\D/g, "").length === 14;
+
   return (
     <div className="p-6 space-y-6">
       <FinancialPageHeader
         title="Configuração Fiscal (NFS-e)"
-        description="CNPJs emissores e regras de emissão automática de notas fiscais"
+        description="Emissão automática de notas fiscais usando o CNPJ da sua conta"
         icon={Receipt}
       />
 
-      <Tabs defaultValue="cnpjs">
+      {!accountHasCnpj && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="p-4 flex items-start gap-3">
+            <Building2 className="h-5 w-5 text-destructive mt-0.5" />
+            <div className="flex-1">
+              <p className="font-medium">CNPJ da conta não cadastrado</p>
+              <p className="text-sm text-muted-foreground">
+                Atualize o CNPJ em <Link to="/settings?tab=profile" className="text-primary underline">Configurações da Conta</Link> para emitir notas fiscais.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Tabs defaultValue="emissor">
         <TabsList>
-          <TabsTrigger value="cnpjs">CNPJs Emissores</TabsTrigger>
+          <TabsTrigger value="emissor">Empresa Emissora</TabsTrigger>
           <TabsTrigger value="rules">Regras de Emissão</TabsTrigger>
           <TabsTrigger value="provider">Provedor / Webhook</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="cnpjs" className="space-y-4">
-          <div className="flex justify-end">
-            <ContratadaFormDialog accountId={accountId} onSaved={() => qc.invalidateQueries({ queryKey: ["contratadas", accountId] })} />
-          </div>
+        <TabsContent value="emissor" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" /> {account?.name || "Empresa"}
+                {contratada && <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> Ativa</Badge>}
+              </CardTitle>
+              <CardDescription>
+                Esses dados vêm do cadastro da sua conta. Para alterar CNPJ ou razão social, edite em{" "}
+                <Link to="/settings?tab=profile" className="text-primary underline">Configurações da Conta</Link>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-muted/40">
+                <div>
+                  <Label className="text-xs text-muted-foreground">CNPJ</Label>
+                  <div className="font-mono">{formatCnpj(account?.document)}</div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Razão Social</Label>
+                  <div>{account?.name}</div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Cidade/UF</Label>
+                  <div>{account?.city ? `${account.city} / ${account.state}` : "—"}</div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Provedor de NFS-e</Label>
+                  <div className="capitalize">{contratada?.provider || "notazz"}</div>
+                </div>
+              </div>
 
-          {!contratadas?.length && (
-            <Card><CardContent className="p-8 text-center text-muted-foreground">
-              Nenhum CNPJ emissor cadastrado. Adicione o primeiro para começar a emitir NFS-e.
-            </CardContent></Card>
-          )}
-
-          <div className="grid gap-3">
-            {contratadas?.map((c) => (
-              <Card key={c.id} className={c.is_default ? "border-primary" : ""}>
-                <CardContent className="p-4 flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold">{c.razao_social}</h3>
-                      {c.is_default && <Badge variant="default" className="gap-1"><Star className="h-3 w-3" /> Padrão</Badge>}
-                      <Badge variant="outline">{c.regime_tributario.replace("_", " ")}</Badge>
-                      <Badge variant="secondary">{c.provider}</Badge>
+              {contratada && (
+                <>
+                  <div className="pt-2 border-t">
+                    <h4 className="font-medium mb-3 text-sm">Dados fiscais específicos da NF</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Inscrição Municipal</Label>
+                        <Input
+                          defaultValue={contratada.inscricao_municipal || ""}
+                          onBlur={(e) => {
+                            const v = e.target.value.trim() || null;
+                            if (v !== (contratada.inscricao_municipal || null)) {
+                              updateContratada.mutate({ inscricao_municipal: v });
+                            }
+                          }}
+                          placeholder="Obrigatório p/ alguns municípios"
+                        />
+                      </div>
+                      <div>
+                        <Label>Regime Tributário</Label>
+                        <Select
+                          value={contratada.regime_tributario}
+                          onValueChange={(v) => updateContratada.mutate({ regime_tributario: v })}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="simples_nacional">Simples Nacional</SelectItem>
+                            <SelectItem value="lucro_presumido">Lucro Presumido</SelectItem>
+                            <SelectItem value="lucro_real">Lucro Real</SelectItem>
+                            <SelectItem value="mei">MEI</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Item LC 116/03</Label>
+                        <Input
+                          defaultValue={contratada.item_lista_servico || ""}
+                          onBlur={(e) => {
+                            const v = e.target.value.trim() || null;
+                            if (v !== (contratada.item_lista_servico || null)) {
+                              updateContratada.mutate({ item_lista_servico: v });
+                            }
+                          }}
+                          placeholder="8.02"
+                        />
+                      </div>
+                      <div>
+                        <Label>Alíquota ISS (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          defaultValue={contratada.aliquota_iss ?? ""}
+                          onBlur={(e) => {
+                            const v = e.target.value ? parseFloat(e.target.value) : null;
+                            if (v !== contratada.aliquota_iss) {
+                              updateContratada.mutate({ aliquota_iss: v });
+                            }
+                          }}
+                          placeholder="Ex: 2.00"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label>Código de Tributação Municipal (opcional)</Label>
+                        <Input
+                          defaultValue={contratada.codigo_tributacao_municipio || ""}
+                          onBlur={(e) => {
+                            const v = e.target.value.trim() || null;
+                            if (v !== (contratada.codigo_tributacao_municipio || null)) {
+                              updateContratada.mutate({ codigo_tributacao_municipio: v });
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground space-y-0.5">
-                      <div>CNPJ: {c.cnpj}</div>
-                      {c.inscricao_municipal && <div>IM: {c.inscricao_municipal}</div>}
-                      {c.item_lista_servico && <div>Item LC 116: {c.item_lista_servico} • ISS {c.aliquota_iss ?? 0}%</div>}
-                    </div>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      Esses são os únicos campos que precisam ser preenchidos aqui — o restante já vem do cadastro da conta.
+                    </p>
                   </div>
-                  <div className="flex gap-1">
-                    {!c.is_default && (
-                      <Button size="sm" variant="ghost" onClick={() => setDefault.mutate(c.id)} title="Tornar padrão">
-                        <Star className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button size="sm" variant="ghost" onClick={() => {
-                      if (confirm(`Remover ${c.razao_social}?`)) deleteContratada.mutate(c.id);
-                    }}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="rules" className="space-y-4">
@@ -218,112 +324,5 @@ export default function FinancialFiscalSettingsPage() {
         </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-function ContratadaFormDialog({ accountId, onSaved }: { accountId?: string; onSaved: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    cnpj: "",
-    razao_social: "",
-    nome_fantasia: "",
-    inscricao_municipal: "",
-    regime_tributario: "simples_nacional",
-    item_lista_servico: "8.02",
-    codigo_tributacao_municipio: "",
-    aliquota_iss: "",
-  });
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    if (!accountId) return;
-    const cnpjClean = form.cnpj.replace(/\D/g, "");
-    if (cnpjClean.length !== 14) { toast.error("CNPJ inválido"); return; }
-    if (!form.razao_social.trim()) { toast.error("Razão social obrigatória"); return; }
-    setSaving(true);
-    try {
-      const { error } = await supabase.from("contratadas" as any).insert({
-        account_id: accountId,
-        cnpj: cnpjClean,
-        razao_social: form.razao_social,
-        nome_fantasia: form.nome_fantasia || null,
-        inscricao_municipal: form.inscricao_municipal || null,
-        regime_tributario: form.regime_tributario,
-        item_lista_servico: form.item_lista_servico || null,
-        codigo_tributacao_municipio: form.codigo_tributacao_municipio || null,
-        aliquota_iss: form.aliquota_iss ? parseFloat(form.aliquota_iss) : null,
-        provider: "notazz",
-      });
-      if (error) throw error;
-      toast.success("CNPJ cadastrado");
-      onSaved();
-      setOpen(false);
-      setForm({ cnpj: "", razao_social: "", nome_fantasia: "", inscricao_municipal: "", regime_tributario: "simples_nacional", item_lista_servico: "8.02", codigo_tributacao_municipio: "", aliquota_iss: "" });
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button><Plus className="h-4 w-4 mr-1" /> Novo CNPJ emissor</Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>Novo CNPJ Emissor</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>CNPJ *</Label>
-              <Input value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0000-00" />
-            </div>
-            <div>
-              <Label>Inscrição Municipal</Label>
-              <Input value={form.inscricao_municipal} onChange={(e) => setForm({ ...form, inscricao_municipal: e.target.value })} />
-            </div>
-          </div>
-          <div>
-            <Label>Razão Social *</Label>
-            <Input value={form.razao_social} onChange={(e) => setForm({ ...form, razao_social: e.target.value })} />
-          </div>
-          <div>
-            <Label>Nome Fantasia</Label>
-            <Input value={form.nome_fantasia} onChange={(e) => setForm({ ...form, nome_fantasia: e.target.value })} />
-          </div>
-          <div>
-            <Label>Regime Tributário</Label>
-            <Select value={form.regime_tributario} onValueChange={(v) => setForm({ ...form, regime_tributario: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="simples_nacional">Simples Nacional</SelectItem>
-                <SelectItem value="lucro_presumido">Lucro Presumido</SelectItem>
-                <SelectItem value="lucro_real">Lucro Real</SelectItem>
-                <SelectItem value="mei">MEI</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <Label>Item LC 116/03</Label>
-              <Input value={form.item_lista_servico} onChange={(e) => setForm({ ...form, item_lista_servico: e.target.value })} placeholder="8.02" />
-            </div>
-            <div>
-              <Label>Cód. Trib. Mun.</Label>
-              <Input value={form.codigo_tributacao_municipio} onChange={(e) => setForm({ ...form, codigo_tributacao_municipio: e.target.value })} />
-            </div>
-            <div>
-              <Label>Alíquota ISS (%)</Label>
-              <Input type="number" step="0.01" value={form.aliquota_iss} onChange={(e) => setForm({ ...form, aliquota_iss: e.target.value })} />
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={save} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
