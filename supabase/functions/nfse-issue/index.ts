@@ -31,6 +31,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Auth — exige usuário logado
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(
+      authHeader.replace("Bearer ", ""),
+    );
+    if (claimsErr || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claimsData.claims.sub as string;
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -39,61 +63,78 @@ Deno.serve(async (req) => {
     const body: IssueBody = await req.json().catch(() => ({}));
     let issuanceId = body.issuance_id;
 
-    // Se foi passado installment_id/invoice_id, criar issuance pendente
+    // Criar issuance a partir de parcela/fatura, se necessário
     if (!issuanceId && (body.installment_id || body.invoice_id)) {
-      const { data: created, error: createErr } = await supabase.rpc(
-        "create_nfse_issuance_from_source" as any,
-        {
-          p_installment_id: body.installment_id ?? null,
-          p_invoice_id: body.invoice_id ?? null,
-        },
-      );
-      // Se RPC não existir, faz fallback simples: buscar e criar inline
-      if (createErr || !created) {
-        // Fallback: emissão manual via installment_id
-        if (body.installment_id) {
-          const { data: inst } = await supabase
-            .from("installments")
-            .select("id, amount, invoice_id")
-            .eq("id", body.installment_id)
-            .maybeSingle();
-          if (!inst) throw new Error("Parcela não encontrada");
-          const { data: inv } = await supabase
-            .from("invoices")
-            .select("id, account_id, payer_id, client_id, description, product_id")
-            .eq("id", inst.invoice_id)
-            .maybeSingle();
-          if (!inv) throw new Error("Fatura não encontrada");
-          const { data: settings } = await supabase
-            .from("account_settings")
-            .select("nfse_default_contratada_id")
-            .eq("account_id", inv.account_id)
-            .maybeSingle();
-          if (!settings?.nfse_default_contratada_id) {
-            throw new Error("CNPJ emissor padrão não configurado em /financial/configuracoes/fiscal");
-          }
-          const { data: inserted, error: insErr } = await supabase
-            .from("nfse_issuances")
-            .insert({
-              account_id: inv.account_id,
-              contratada_id: settings.nfse_default_contratada_id,
-              payer_id: inv.payer_id,
-              client_id: inv.client_id,
-              source_type: "installment",
-              source_id: inst.id,
-              invoice_id: inv.id,
-              installment_id: inst.id,
-              amount: inst.amount,
-              description: inv.description || "Serviços prestados",
-              status: "pending",
-            })
-            .select("id")
-            .single();
-          if (insErr) throw insErr;
-          issuanceId = inserted.id;
-        }
+      let invId: string | null = null;
+      let instId: string | null = body.installment_id ?? null;
+      let amount = 0;
+
+      if (instId) {
+        const { data: inst } = await supabase
+          .from("installments")
+          .select("id, amount, invoice_id")
+          .eq("id", instId)
+          .maybeSingle();
+        if (!inst) throw new Error("Parcela não encontrada");
+        invId = inst.invoice_id;
+        amount = Number(inst.amount);
+      } else if (body.invoice_id) {
+        invId = body.invoice_id;
+      }
+
+      const { data: inv } = await supabase
+        .from("invoices")
+        .select("id, account_id, payer_id, client_id, description, total_amount")
+        .eq("id", invId!)
+        .maybeSingle();
+      if (!inv) throw new Error("Fatura não encontrada");
+      if (!instId) amount = Number((inv as any).total_amount ?? 0);
+
+      const { data: settings } = await supabase
+        .from("account_settings")
+        .select("nfse_default_contratada_id")
+        .eq("account_id", inv.account_id)
+        .maybeSingle();
+      if (!settings?.nfse_default_contratada_id) {
+        throw new Error("CNPJ emissor padrão não configurado em /financial/configuracoes/fiscal");
+      }
+
+      // Deduplicar: se já existe issuance pendente/queued/issued para a mesma origem, reutiliza
+      const dedupeQuery = supabase
+        .from("nfse_issuances")
+        .select("id, status")
+        .eq("account_id", inv.account_id);
+      if (instId) dedupeQuery.eq("installment_id", instId);
+      else dedupeQuery.eq("invoice_id", invId!).is("installment_id", null);
+      const { data: existing } = await dedupeQuery
+        .in("status", ["pending", "queued", "processing", "issued"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        issuanceId = existing.id;
       } else {
-        issuanceId = created as string;
+        const { data: inserted, error: insErr } = await supabase
+          .from("nfse_issuances")
+          .insert({
+            account_id: inv.account_id,
+            contratada_id: settings.nfse_default_contratada_id,
+            payer_id: inv.payer_id,
+            client_id: inv.client_id,
+            source_type: instId ? "installment" : "invoice",
+            source_id: instId ?? invId!,
+            invoice_id: invId,
+            installment_id: instId,
+            amount,
+            description: inv.description || "Serviços prestados",
+            status: "pending",
+            created_by: userId,
+          })
+          .select("id")
+          .single();
+        if (insErr) throw insErr;
+        issuanceId = inserted.id;
       }
     }
 
@@ -108,7 +149,7 @@ Deno.serve(async (req) => {
     const { data: iss, error: issErr } = await supabase
       .from("nfse_issuances")
       .select(`
-        id, account_id, amount, description, status,
+        id, account_id, amount, description, status, retry_count,
         item_lista_servico, codigo_tributacao_municipio, aliquota_iss,
         contratada:contratadas!nfse_issuances_contratada_id_fkey (
           id, cnpj, razao_social, inscricao_municipal, endereco,
@@ -133,7 +174,8 @@ Deno.serve(async (req) => {
     const contratada: any = iss.contratada;
     const payer: any = iss.payer;
     if (!contratada) throw new Error("Contratada (CNPJ emissor) não vinculada");
-    if (!payer) throw new Error("Pagador não vinculado à emissão");
+    if (!payer) throw new Error("Pagador não vinculado à emissão. Cadastre um Pagador na fatura/cliente.");
+    if (!payer.document) throw new Error("Pagador sem CPF/CNPJ cadastrado");
 
     const itemLista = iss.item_lista_servico || contratada.item_lista_servico;
     const codigoTrib = iss.codigo_tributacao_municipio || contratada.codigo_tributacao_municipio;
@@ -199,7 +241,7 @@ Deno.serve(async (req) => {
           status: "rejected",
           provider_response: respJson ?? { raw: respText },
           rejected_reason: respJson?.message || respJson?.error || respText.slice(0, 500),
-          retry_count: (await supabase.from("nfse_issuances").select("retry_count").eq("id", iss.id).maybeSingle()).data?.retry_count ?? 0,
+          retry_count: (iss.retry_count ?? 0) + 1,
         })
         .eq("id", iss.id);
 
