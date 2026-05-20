@@ -192,6 +192,7 @@ const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/Fin
 const FinancialTaxPage = lazyRetry(() => import("./pages/financial/FinancialTaxPage"));
 const FinancialProvidersPortalPage = lazyRetry(() => import("./pages/financial/FinancialProvidersPortalPage"));
 const FinancialPayersPage = lazyRetry(() => import("./pages/financial/FinancialPayersPage"));
+const FinancialFiscalSettingsPage = lazyRetry(() => import("./pages/financial/FinancialFiscalSettingsPage"));
 const PublicProviderPortal = lazyRetry(() => import("./pages/public/PublicProviderPortal"));
 
 const queryClient = new QueryClient({
