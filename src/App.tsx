@@ -192,6 +192,7 @@ const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/Fin
 const FinancialTaxPage = lazyRetry(() => import("./pages/financial/FinancialTaxPage"));
 const FinancialProvidersPortalPage = lazyRetry(() => import("./pages/financial/FinancialProvidersPortalPage"));
 const FinancialPayersPage = lazyRetry(() => import("./pages/financial/FinancialPayersPage"));
+const FinancialFiscalSettingsPage = lazyRetry(() => import("./pages/financial/FinancialFiscalSettingsPage"));
 const PublicProviderPortal = lazyRetry(() => import("./pages/public/PublicProviderPortal"));
 
 const queryClient = new QueryClient({
@@ -305,6 +306,7 @@ const App = () => (
                               <Route path="tributario" element={<FinancialTaxPage />} />
                               <Route path="prestadores" element={<FinancialProvidersPortalPage />} />
                               <Route path="pagadores" element={<FinancialPayersPage />} />
+                              <Route path="configuracoes/fiscal" element={<FinancialFiscalSettingsPage />} />
                             </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
