@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
           },
         },
       };
-      const prompt = `Crie a estratégia de conteúdo do trimestre ${payload?.quarter || 'atual'} de ${payload?.year || new Date().getFullYear()} para ${talent.name}. Objetivo principal: ${payload?.objective || 'crescer autoridade no nicho de estética e gerar leads qualificados'}. Liste 4-6 pilares com mix sugerido (soma = 100%).`;
+      const prompt = `Crie a estratégia de conteúdo do trimestre ${payload?.quarter || 'atual'} de ${payload?.year || new Date().getFullYear()} para ${talent.name}. Objetivo principal: ${payload?.objective || 'gerar leads qualificados de profissionais de estética interessados em mentoria de vendas, marketing e gestão'}. Lembre: público são COLEGAS profissionais, temas são NEGÓCIO (vendas, marketing, gestão, precificação, posicionamento) — nunca procedimentos técnicos. Liste 4-6 pilares com mix sugerido (soma = 100%).`;
       const result = await callAI(system, prompt, tool);
       return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
