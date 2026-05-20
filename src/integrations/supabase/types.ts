@@ -4473,6 +4473,276 @@ export type Database = {
           },
         ]
       }
+      content_platform_accounts: {
+        Row: {
+          access_token: string | null
+          account_id: string
+          created_at: string
+          external_id: string | null
+          extra: Json | null
+          handle: string | null
+          id: string
+          last_sync_at: string | null
+          last_sync_error: string | null
+          platform: string
+          refresh_token: string | null
+          status: string
+          talent_id: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_id: string
+          created_at?: string
+          external_id?: string | null
+          extra?: Json | null
+          handle?: string | null
+          id?: string
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          platform: string
+          refresh_token?: string | null
+          status?: string
+          talent_id: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          account_id?: string
+          created_at?: string
+          external_id?: string | null
+          extra?: Json | null
+          handle?: string | null
+          id?: string
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          platform?: string
+          refresh_token?: string | null
+          status?: string
+          talent_id?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_platform_accounts_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "content_talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_platform_metric_snapshots: {
+        Row: {
+          account_id: string
+          created_at: string
+          followers: number | null
+          id: string
+          platform: string
+          platform_account_id: string
+          profile_visits: number | null
+          raw: Json | null
+          snapshot_date: string
+          talent_id: string
+          total_engagement: number | null
+          total_views: number | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          followers?: number | null
+          id?: string
+          platform: string
+          platform_account_id: string
+          profile_visits?: number | null
+          raw?: Json | null
+          snapshot_date?: string
+          talent_id: string
+          total_engagement?: number | null
+          total_views?: number | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          followers?: number | null
+          id?: string
+          platform?: string
+          platform_account_id?: string
+          profile_visits?: number | null
+          raw?: Json | null
+          snapshot_date?: string
+          talent_id?: string
+          total_engagement?: number | null
+          total_views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_platform_metric_snapshots_platform_account_id_fkey"
+            columns: ["platform_account_id"]
+            isOneToOne: false
+            referencedRelation: "content_platform_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_platform_metric_snapshots_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "content_talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_platform_metrics: {
+        Row: {
+          account_id: string
+          avg_watch_seconds: number | null
+          collected_at: string
+          comments: number | null
+          engagement_rate: number | null
+          id: string
+          impressions: number | null
+          likes: number | null
+          post_id: string
+          raw: Json | null
+          reach: number | null
+          saves: number | null
+          shares: number | null
+          views: number | null
+          watch_through_rate: number | null
+        }
+        Insert: {
+          account_id: string
+          avg_watch_seconds?: number | null
+          collected_at?: string
+          comments?: number | null
+          engagement_rate?: number | null
+          id?: string
+          impressions?: number | null
+          likes?: number | null
+          post_id: string
+          raw?: Json | null
+          reach?: number | null
+          saves?: number | null
+          shares?: number | null
+          views?: number | null
+          watch_through_rate?: number | null
+        }
+        Update: {
+          account_id?: string
+          avg_watch_seconds?: number | null
+          collected_at?: string
+          comments?: number | null
+          engagement_rate?: number | null
+          id?: string
+          impressions?: number | null
+          likes?: number | null
+          post_id?: string
+          raw?: Json | null
+          reach?: number | null
+          saves?: number | null
+          shares?: number | null
+          views?: number | null
+          watch_through_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_platform_metrics_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "content_platform_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_platform_posts: {
+        Row: {
+          account_id: string
+          caption: string | null
+          created_at: string
+          external_id: string
+          id: string
+          media_type: string | null
+          piece_id: string | null
+          pillar_id: string | null
+          platform: string
+          platform_account_id: string
+          published_at: string | null
+          raw: Json | null
+          talent_id: string
+          thumbnail_url: string | null
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          account_id: string
+          caption?: string | null
+          created_at?: string
+          external_id: string
+          id?: string
+          media_type?: string | null
+          piece_id?: string | null
+          pillar_id?: string | null
+          platform: string
+          platform_account_id: string
+          published_at?: string | null
+          raw?: Json | null
+          talent_id: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          account_id?: string
+          caption?: string | null
+          created_at?: string
+          external_id?: string
+          id?: string
+          media_type?: string | null
+          piece_id?: string | null
+          pillar_id?: string | null
+          platform?: string
+          platform_account_id?: string
+          published_at?: string | null
+          raw?: Json | null
+          talent_id?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_platform_posts_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "content_pieces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_platform_posts_pillar_id_fkey"
+            columns: ["pillar_id"]
+            isOneToOne: false
+            referencedRelation: "content_pillars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_platform_posts_platform_account_id_fkey"
+            columns: ["platform_account_id"]
+            isOneToOne: false
+            referencedRelation: "content_platform_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_platform_posts_talent_id_fkey"
+            columns: ["talent_id"]
+            isOneToOne: false
+            referencedRelation: "content_talents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_strategies: {
         Row: {
           account_id: string
