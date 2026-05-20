@@ -17,3 +17,4 @@ export { default as FinancialBoletosPage } from "./FinancialBoletosPage";
 export { default as FinancialNotasFiscaisPage } from "./FinancialNotasFiscaisPage";
 export { default as FinancialBalanceSheetPage } from "./FinancialBalanceSheetPage";
 export { default as FinancialSalesReconciliationPage } from "./FinancialSalesReconciliationPage";
+export { default as FinancialPayersPage } from "./FinancialPayersPage";

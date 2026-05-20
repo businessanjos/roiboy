@@ -1,93 +1,136 @@
-## Nova área: Tributário & Contador
+# Sprint 1 + Sprint 4 — Plano de execução paralelo
 
-Criar uma seção dedicada dentro de Financeiro para centralizar tudo que hoje não tem casa: regime tributário, contador, recomendações de IA fiscal e alertas estruturais (classificação de produtos, pró-labore/distribuição de lucros, etc.).
+Vamos virar a chave do Financeiro em duas frentes simultâneas. Toda a estrutura de banco para `payers`, `client_payers` e `invoices.payer_id` **já existe** — então Sprint 1 é principalmente UI/RPC, não migration pesada.
 
-### Rota e navegação
+## Sprint 1 — Pagador (Payer) em toda criação de invoice
 
-- Nova rota: `/financial/tributario`
-- Entrada no sidebar do Financeiro, abaixo de "Conciliação" e antes de "DRE/DRF"
-- Ícone: `Scale` (lucide) — neutro, evita conotação só de "imposto"
+### Objetivo
+Toda fatura criada (vinda de venda ganha, manual, ou upsell) precisa ter Pagador definido — pessoa/empresa que **paga** (CPF/CNPJ + razão social + endereço fiscal), separada do **cliente** (quem usa). Sem isso, Notazz não consegue emitir NF correta e migração Omie trava.
 
-### Layout (4 abas dentro da página)
+### Entregas
+
+1. **`/financial/pagadores` — CRUD completo de Payers**
+   - Listagem (busca por documento/nome), criar, editar, desativar
+   - Form com validação CPF/CNPJ, autocomplete via ReceitaWS (já existe edge fn similar)
+   - Visualização dos `client_payers` ligados (clientes que usam esse pagador)
+
+2. **`PayerSelector` component reutilizável**
+   - Combobox que busca payer existente do account
+   - Botão "+ Novo pagador" abre dialog inline com mini-form
+   - Opção "Usar dados do cliente como pagador" (cria payer automaticamente a partir de `clients.cpf_cnpj`/`name`)
+   - Vincula automaticamente via `client_payers` (relationship: `self` | `spouse` | `company` | `parent` | `other`)
+
+3. **Wizard "Marcar como Ganha" do Pipeline**
+   - Hoje move o stage e cria contrato; vamos adicionar **etapa obrigatória "Faturamento"**:
+     - Selecionar/criar Payer (default: pagador padrão do cliente, se existir)
+     - Confirmar método de pagamento, nº parcelas, primeira vencimento, acquirer (se cartão)
+     - Pré-visualizar split 70/30 (ou customizado por produto) entre serviço e produto
+   - No submit cria `invoices` + `installments` já com `payer_id`, `payment_method`, `card_acquirer` corretos
+   - Sem Pagador definido, não é possível ganhar o deal
+
+4. **Criação manual de invoice em `/financial/invoices`**
+   - Tornar `payer_id` obrigatório no form (hoje a coluna existe mas o form não força)
+   - Mostrar pagador na listagem e nos drawers
+
+5. **Aba "Pagadores" na ficha do cliente**
+   - Lista todos os payers vinculados, marca o default, permite trocar/adicionar
+   - Mostra histórico de invoices por pagador
+
+### Não-objetivo desta sprint
+- Notazz real (fica para Sprint 2)
+- Split por produto configurável (usa default 70/30 já existente)
+
+---
+
+## Sprint 4 — Operação ↔ Financeiro bidirecional
+
+### Objetivo
+Fechar o loop: Operação enxerga inadimplência/quitação em tempo real; Financeiro recebe sinais de cancelamento/renegociação da Operação.
+
+### Entregas
+
+1. **Trigger de quitação automática de contrato**
+   - DB function `check_invoice_settlement()` disparada após UPDATE em `installments`
+   - Quando todas as parcelas da invoice viram `paid`/`cheque_recebido`/`pix_confirmado` → `invoices.status = 'settled'` + `closed_at = now()`
+   - Quando todas as invoices de um `client_contracts` estão settled → set `client_contracts.payment_status = 'quitado'`
+   - Emite `installment_events` tipo `contract_settled`
+
+2. **Badge "Quitado — pronto para renovar"**
+   - Componente `ContractRenewalBadge` (verde-âmbar) aparece em:
+     - `/clients` (linha da tabela)
+     - Ficha do cliente (header)
+     - `/operations/renewals` (já tem detecção de 90d, agrega quitados)
+   - Visível para CS/Ops/Closer
+
+3. **Badge de Inadimplência na ficha do cliente**
+   - Já existe `OverdueBadge` em `/clients`; replicar no header da **ficha individual**
+   - Tooltip: "X parcelas em atraso, R$ Y total, vencida há Z dias"
+   - Clique abre drawer de cobrança (`dunning_cases`)
+
+4. **Hook de cancelamento de contrato → write-off proporcional**
+   - Quando `client_contracts.status` vira `cancelado` ou `cancelado_judicial`:
+     - Trigger calcula parcelas futuras (pending/scheduled) da invoice associada
+     - Cria evento `installment_events` tipo `cancellation_writeoff` em cada
+     - Atualiza `installments.status = 'written_off'` + razão = motivo do cancelamento
+   - Edge function `cancel-contract-writeoff` (chamada por trigger via `pg_net` se preferir async)
+
+5. **Renegociação no fluxo de Operação**
+   - Drawer da parcela em `/financial/installments` já tem botão Renegociar
+   - **Adicionar atalho na ficha do cliente** (aba Financeiro) para abrir o mesmo flow sem sair de Operação
+   - CS pode renegociar sem virar Financeiro
+
+6. **Bloqueio operacional opcional por inadimplência**
+   - Setting `account_settings.block_overdue_days` (default null = desativado)
+   - Quando configurado, cliente com parcelas vencidas > X dias mostra banner vermelho na ficha + bloqueia geração de novos contratos/upsells
+   - Admin/Finance pode liberar exceção (campo `clients.overdue_exception_until`)
+
+---
+
+## Estrutura técnica (resumo)
 
 ```text
-[ Visão geral ] [ Regime & Empresa ] [ Contador ] [ Alertas & IA ]
+Sprint 1 (Pagador)
+├── migration:
+│   └── RPC `ensure_payer_from_client(client_id)` — cria payer self se não existir
+├── edge fn (já existe lookup-cnpj? reaproveitar)
+├── src/components/financial/payers/
+│   ├── PayerSelector.tsx
+│   ├── PayerFormDialog.tsx
+│   ├── PayerList.tsx
+│   └── ClientPayersTab.tsx
+├── src/pages/financial/FinancialPayersPage.tsx
+├── src/components/sales/wizard/
+│   └── WonDealBillingStep.tsx  (nova etapa)
+└── update: FinancialInvoicesPage form (payer obrigatório)
+
+Sprint 4 (Cross-feeding)
+├── migration:
+│   ├── fn check_invoice_settlement() + trigger AFTER UPDATE installments
+│   ├── fn handle_contract_cancellation() + trigger AFTER UPDATE client_contracts
+│   ├── add client_contracts.payment_status enum (ativo|quitado|inadimplente|cancelado)
+│   └── add clients.overdue_exception_until, account_settings.block_overdue_days
+├── src/components/clients/
+│   ├── ContractRenewalBadge.tsx
+│   └── ClientOverdueBadge.tsx (extrai do que já existe)
+├── src/components/clients/ClientDetailHeader.tsx (mostra badges)
+└── src/components/clients/tabs/ClientFinancialTab.tsx (renegociar + histórico)
 ```
 
-**1. Visão geral**
-- KPIs (FinancialKpiCard): Regime atual, Faturamento 12m vs teto do regime, Pró-labore do mês, Alertas abertos
-- Card "Próximas obrigações" (DAS, DCTF, etc.) — manual por ora, integrável depois
-- Card "Última conversa com contador"
+## Ordem de execução
 
-**2. Regime & Empresa (por CNPJ — usa CompanySelector já existente)**
-- Regime: Simples Nacional / Lucro Presumido / Lucro Real / MEI
-- Anexo (quando Simples): I, II, III, IV, V
-- CNAE principal + secundários
-- Inscrição estadual / municipal
-- Atividade preponderante (serviços, comércio, indústria, misto)
-- Data de início, data da última opção/troca de regime
-- Observações livres
+1. **Migration única** com todos os triggers + RPCs novos (Sprint 1 + 4)
+2. Componentes de Payer + página de pagadores
+3. Wizard de Ganha com etapa Faturamento
+4. Badges (renewal + overdue) na ficha do cliente
+5. Atalhos de renegociação na ficha
+6. Atualizar memórias: `payers-and-wizard-pt`, `contract-auto-settlement-pt`
 
-**3. Contador**
-- Nome, escritório, CRC, telefone, e-mail, WhatsApp
-- Honorário mensal (vinculável a um lançamento recorrente já existente)
-- Frequência de contato esperada (mensal/trimestral)
-- Histórico de interações (timeline simples: data + nota + anexo)
-- Botão "Abrir conversa no RoyZapp" se telefone bater com contato existente
+## Riscos e mitigações
 
-**4. Alertas & IA**
-- Lista de alertas gerados (status: aberto / lido / resolvido / dispensado)
-  - Tipos: classificação de produto/serviço, pró-labore não retirado, distribuição de lucro acima do isento, faturamento aproximando teto do Simples, despesa pessoal em conta PJ, falta de NF emitida vs entrada bancária, mudança de anexo sugerida
-- Botão "Rodar análise agora" → chama edge function com Lovable AI (gemini-2.5-pro)
-  - Contexto enviado: regime, faturamento 12m, mix de receitas (products/categories), pró-labore registrado, despesas categorizadas, distribuição de lucro registrada
-  - Retorno estruturado: `[{tipo, severidade, titulo, descricao, acao_sugerida}]`
-- Recomendações persistidas em tabela, com "última análise em DD/MM"
-- Frequência sugerida: rodar mensalmente (cron opcional numa fase futura)
+- **Triggers em massa**: usar `WHERE NEW.status IS DISTINCT FROM OLD.status` para evitar reprocesso. Logar tudo em `installment_events`.
+- **Pagador inexistente em invoices antigas**: a coluna já é `NOT NULL`, então toda invoice atual já tem payer. OK.
+- **Wizard quebrando vendas em produção**: feature flag inicial — etapa Faturamento opcional para admin testar, depois obrigatória.
 
-### Dados (migration)
+## Pergunta antes de eu codar
 
-Tabelas novas (todas com `account_id` + RLS por account):
-
-- `financial_tax_profile` — 1 por `omie_settings.id` (CNPJ): regime, anexo, cnae_principal, cnaes_secundarios[], ie, im, atividade, opcao_em, observacoes
-- `financial_accountant` — 1 por `omie_settings.id`: nome, escritorio, crc, telefone, email, whatsapp, honorario_brl, frequencia, observacoes
-- `financial_accountant_interactions` — N por contador: data, nota, anexo_url
-- `financial_tax_alerts` — N por empresa: tipo (enum), severidade (info/warning/critical), titulo, descricao, acao_sugerida, status (open/read/resolved/dismissed), origem (manual/ai), created_at, resolved_at, resolved_by
-- `financial_tax_ai_runs` — log de cada análise: input_summary jsonb, output jsonb, model, tokens, created_by
-
-RLS: padrão do projeto — `account_id = current_account_id()`.
-
-### IA
-
-- Edge function `financial-tax-ai-analyze`
-  - Recebe `omie_settings_id`
-  - Junta tax_profile + agregados financeiros (12 meses) + retiradas de sócios + mix de produtos
-  - Prompt em PT-BR pedindo análise tributária objetiva e alertas estruturados em JSON
-  - Modelo: `google/gemini-2.5-pro` (raciocínio + contexto longo)
-  - Persiste em `financial_tax_alerts` e `financial_tax_ai_runs`
-
-### Componentes
-
-- `src/pages/financial/FinancialTaxPage.tsx` (página com tabs)
-- `src/components/financial/tax/TaxOverviewTab.tsx`
-- `src/components/financial/tax/TaxRegimeForm.tsx`
-- `src/components/financial/tax/AccountantTab.tsx`
-- `src/components/financial/tax/TaxAlertsTab.tsx`
-- `src/components/financial/tax/AlertCard.tsx`
-- Reusa `FinancialPageHeader`, `FinancialKpiCard`, `FinancialEmptyState`, `FinancialPageSkeleton`
-
-### O que **não** entra agora
-
-- Integração direta com sistemas contábeis (Domínio, Alterdata, eContador) — fica para fase futura
-- Geração/envio de obrigações acessórias
-- Cálculo automático de DAS — só **alerta** sobre proximidade de teto, sem calcular guia
-- Cron de análise — por ora botão manual; deixo gancho pronto
-
-### Ordem de execução (1 rodada)
-
-1. Migration (5 tabelas + RLS + enum de severidade/tipo)
-2. Edge function de análise
-3. Página + 4 abas + componentes
-4. Item no sidebar do Financeiro
-5. Atualizar memory `mem://features/financial/roy-financial-roadmap-pt` mencionando a nova área
-
-Posso seguir?
+Quer a **feature flag** na etapa Faturamento do wizard (eu lanço opcional e ligo depois) ou **já obrigatório** desde o primeiro deploy?
