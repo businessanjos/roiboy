@@ -71,6 +71,7 @@ export type Database = {
           ai_risk_prompt: string | null
           ai_roi_prompt: string | null
           ai_system_prompt: string | null
+          block_overdue_days: number | null
           created_at: string
           dashboard_churn_goal: number
           dashboard_nps_goal: number
@@ -82,6 +83,7 @@ export type Database = {
           onboarding_completed: boolean
           onboarding_completed_at: string | null
           onboarding_step: number
+          payer_required_in_won: boolean
           threshold_engagement_drop_percent: number
           threshold_low_escore: number
           threshold_low_roizometer: number
@@ -109,6 +111,7 @@ export type Database = {
           ai_risk_prompt?: string | null
           ai_roi_prompt?: string | null
           ai_system_prompt?: string | null
+          block_overdue_days?: number | null
           created_at?: string
           dashboard_churn_goal?: number
           dashboard_nps_goal?: number
@@ -120,6 +123,7 @@ export type Database = {
           onboarding_completed?: boolean
           onboarding_completed_at?: string | null
           onboarding_step?: number
+          payer_required_in_won?: boolean
           threshold_engagement_drop_percent?: number
           threshold_low_escore?: number
           threshold_low_roizometer?: number
@@ -147,6 +151,7 @@ export type Database = {
           ai_risk_prompt?: string | null
           ai_roi_prompt?: string | null
           ai_system_prompt?: string | null
+          block_overdue_days?: number | null
           created_at?: string
           dashboard_churn_goal?: number
           dashboard_nps_goal?: number
@@ -158,6 +163,7 @@ export type Database = {
           onboarding_completed?: boolean
           onboarding_completed_at?: string | null
           onboarding_step?: number
+          payer_required_in_won?: boolean
           threshold_engagement_drop_percent?: number
           threshold_low_escore?: number
           threshold_low_roizometer?: number
@@ -1526,6 +1532,8 @@ export type Database = {
           parent_contract_id: string | null
           payment_method: string | null
           payment_option: string | null
+          payment_status: string
+          payment_status_updated_at: string | null
           product_id: string | null
           receivables_generated: boolean | null
           receivables_generated_at: string | null
@@ -1563,6 +1571,8 @@ export type Database = {
           parent_contract_id?: string | null
           payment_method?: string | null
           payment_option?: string | null
+          payment_status?: string
+          payment_status_updated_at?: string | null
           product_id?: string | null
           receivables_generated?: boolean | null
           receivables_generated_at?: string | null
@@ -1600,6 +1610,8 @@ export type Database = {
           parent_contract_id?: string | null
           payment_method?: string | null
           payment_option?: string | null
+          payment_status?: string
+          payment_status_updated_at?: string | null
           product_id?: string | null
           receivables_generated?: boolean | null
           receivables_generated_at?: string | null
@@ -3093,6 +3105,7 @@ export type Database = {
           neighborhood: string | null
           notes: string | null
           onboarding_started_at: string | null
+          overdue_exception_until: string | null
           phone_e164: string
           pix_key: string | null
           pix_key_type: string | null
@@ -3156,6 +3169,7 @@ export type Database = {
           neighborhood?: string | null
           notes?: string | null
           onboarding_started_at?: string | null
+          overdue_exception_until?: string | null
           phone_e164: string
           pix_key?: string | null
           pix_key_type?: string | null
@@ -3219,6 +3233,7 @@ export type Database = {
           neighborhood?: string | null
           notes?: string | null
           onboarding_started_at?: string | null
+          overdue_exception_until?: string | null
           phone_e164?: string
           pix_key?: string | null
           pix_key_type?: string | null
@@ -20166,6 +20181,10 @@ export type Database = {
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
       dunning_default_sla: { Args: { p_stage: string }; Returns: string }
+      ensure_payer_from_client: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
       format_call_duration: { Args: { seconds: number }; Returns: string }
       generate_checkin_code: { Args: never; Returns: string }
       generate_contract_receivables: {
@@ -20201,6 +20220,15 @@ export type Database = {
           planned_amount: number
           variance: number
           variance_percent: number
+        }[]
+      }
+      get_client_overdue_summary: {
+        Args: { p_client_id: string }
+        Returns: {
+          days_overdue: number
+          oldest_due_date: string
+          overdue_amount: number
+          overdue_count: number
         }[]
       }
       get_client_profitability: {
