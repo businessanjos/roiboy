@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Crown, Target, Layers, CalendarRange, FileText, KanbanSquare, Library, BarChart3, LayoutGrid,
   Instagram, Youtube, Music2, MessageSquare, Linkedin, Image as ImageIcon, Headphones, Sparkles,
+  Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ContentHQStrategy } from "@/components/marketing/content-hq/ContentHQStrategy";
