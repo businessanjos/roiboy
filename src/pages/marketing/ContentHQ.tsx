@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Crown, Target, Layers, CalendarRange, FileText, KanbanSquare, Library, BarChart3, LayoutGrid,
   Instagram, Youtube, Music2, MessageSquare, Linkedin, Image as ImageIcon, Headphones, Sparkles,
+  Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ContentHQStrategy } from "@/components/marketing/content-hq/ContentHQStrategy";
@@ -18,11 +19,13 @@ import { ContentHQLibrary } from "@/components/marketing/content-hq/ContentHQLib
 import { ContentHQPerformance } from "@/components/marketing/content-hq/ContentHQPerformance";
 import { ContentHQPlatformBoard } from "@/components/marketing/content-hq/ContentHQPlatformBoard";
 import { ContentHQPieceDrawer } from "@/components/marketing/content-hq/ContentHQPieceDrawer";
+import { ContentHQIdeasLab } from "@/components/marketing/content-hq/ContentHQIdeasLab";
 
-type Section = "overview" | "strategy" | "pillars" | "calendar" | "briefings" | "kanban" | "library" | "performance";
+type Section = "overview" | "ideas" | "strategy" | "pillars" | "calendar" | "briefings" | "kanban" | "library" | "performance";
 
 const SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "overview", label: "Visão por Plataforma", icon: LayoutGrid },
+  { id: "ideas", label: "Banco de Ideias (IA)", icon: Lightbulb },
   { id: "calendar", label: "Calendário", icon: CalendarRange },
   { id: "kanban", label: "Produção", icon: KanbanSquare },
   { id: "briefings", label: "Pautas & Briefings", icon: FileText },
@@ -70,7 +73,7 @@ export default function ContentHQ() {
     platformCounts[p.platform] = (platformCounts[p.platform] || 0) + 1;
   }
 
-  const needsTalent = ["strategy", "pillars", "briefings", "library", "performance"].includes(section);
+  const needsTalent = ["ideas", "strategy", "pillars", "briefings", "library", "performance"].includes(section);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -188,6 +191,7 @@ export default function ContentHQ() {
                 platformFilter={effPlatform}
               />
             )}
+            {section === "ideas" && currentTalent && <ContentHQIdeasLab talent={currentTalent} />}
             {section === "strategy" && currentTalent && <ContentHQStrategy talent={currentTalent} />}
             {section === "pillars" && currentTalent && <ContentHQPillars talent={currentTalent} />}
             {section === "briefings" && currentTalent && <ContentHQBriefings talent={currentTalent} />}

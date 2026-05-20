@@ -166,6 +166,62 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    if (action === 'generate_ideas_burst') {
+      const tool = {
+        type: 'function',
+        function: {
+          name: 'return_ideas_burst',
+          description: 'Lote grande de ideias de conteúdo cobrindo múltiplos pilares e plataformas.',
+          parameters: {
+            type: 'object',
+            properties: {
+              ideas: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string', description: 'Título curto e provocador da ideia.' },
+                    hook: { type: 'string', description: 'Gancho de abertura (1ª frase que prende).' },
+                    angle: { type: 'string', description: 'Ângulo único / por que essa ideia importa agora.' },
+                    pillar_name: { type: 'string', description: 'Nome do pilar entre os fornecidos. Use exatamente como veio.' },
+                    platform: { type: 'string', enum: ['instagram','youtube','tiktok','threads','linkedin','pinterest','spotify'] },
+                    format: { type: 'string', description: 'Ex: Reel, Carrossel, Short, Vídeo longo, Post estático, Thread.' },
+                    intensity: { type: 'string', enum: ['quick_win','autoridade','viral','conversao'], description: 'Tipo da ideia.' },
+                  },
+                  required: ['title','hook','angle','pillar_name','platform','format','intensity'],
+                },
+              },
+            },
+            required: ['ideas'],
+          },
+        },
+      };
+      const pillars: { name: string; description?: string }[] = payload?.pillars || [];
+      const platforms: string[] = payload?.platforms?.length ? payload.platforms : ['instagram','youtube','tiktok'];
+      const count = Math.min(Math.max(payload?.count || 24, 6), 40);
+      const extraContext = payload?.context ? `\nCONTEXTO DA SEMANA/CAMPANHA: ${payload.context}` : '';
+      const pillarsList = pillars.length
+        ? pillars.map((p, i) => `${i + 1}. ${p.name}${p.description ? ' — ' + p.description : ''}`).join('\n')
+        : '(sem pilares definidos — invente 4-5 baseados em vendas, marketing, gestão, precificação e posicionamento)';
+      const prompt = `Gere ${count} IDEIAS de conteúdo para ${talent.name} cobrindo o mix abaixo.
+
+PILARES DISPONÍVEIS (use o nome EXATO no campo pillar_name):
+${pillarsList}
+
+PLATAFORMAS-ALVO: ${platforms.join(', ')}
+${extraContext}
+
+REGRAS:
+- Distribua as ideias entre pilares e plataformas (não concentre tudo num só).
+- Mistura de intensidades: ~30% quick_win (fácil de gravar hoje), ~30% autoridade (caso real / opinião forte), ~25% viral (gancho polêmico), ~15% conversao (CTA pra mentoria).
+- Hook precisa ser cirúrgico: pergunta provocadora, número que choca, contradição, confissão. NADA de "Você sabia que..." ou "Hoje vou te contar...".
+- Nunca conteúdo técnico de procedimento. Só negócio da estética: vendas, marketing, gestão, preço, time, posicionamento, mentalidade de empresário.
+- Formato adequado à plataforma (Reel/Short pra IG/TikTok/YT-Short, Vídeo longo pra YouTube, Thread pra Threads/LinkedIn, etc.).
+- Títulos curtos (máx 70 chars). Hooks de 1 frase.`;
+      const result = await callAI(system, prompt, tool);
+      return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     return new Response(JSON.stringify({ error: 'unknown action' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
