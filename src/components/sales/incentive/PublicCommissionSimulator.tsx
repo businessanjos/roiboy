@@ -208,31 +208,32 @@ export function PublicCommissionSimulator({
       {(plan.quarterly_bonus_enabled || plan.annual_bonus_enabled) && (
         <div className="grid md:grid-cols-2 gap-3">
           {plan.quarterly_bonus_enabled && (
-            <Card className="p-4 bg-cyan-50 border-cyan-200">
-              <div className="flex items-center gap-2 text-cyan-700 text-xs uppercase tracking-wide font-semibold">
+            <Card className="p-4 bg-cyan-50 border-cyan-200 shadow-none">
+              <div className="flex items-center gap-2 text-cyan-800 text-xs uppercase tracking-wide font-semibold">
                 <Trophy className="h-4 w-4" /> Bônus Trimestral
               </div>
               <p className="text-2xl font-black text-cyan-900 mt-1">
                 {fmt(sim.quarterly)}
               </p>
-              <p className="text-[11px] text-cyan-700/70">
+              <p className="text-[11px] text-cyan-800/80">
                 Pago se atingir {QUARTERLY_THRESHOLD}% da meta no trimestre.
               </p>
             </Card>
           )}
           {plan.annual_bonus_enabled && (
-            <Card className="p-4 bg-fuchsia-50 border-fuchsia-200">
-              <div className="flex items-center gap-2 text-fuchsia-700 text-xs uppercase tracking-wide font-semibold">
+            <Card className="p-4 bg-fuchsia-50 border-fuchsia-200 shadow-none">
+              <div className="flex items-center gap-2 text-fuchsia-800 text-xs uppercase tracking-wide font-semibold">
                 <Trophy className="h-4 w-4" /> Bônus Anual
               </div>
               <p className="text-2xl font-black text-fuchsia-900 mt-1">
                 {fmt(sim.annual)}
               </p>
-              <p className="text-[11px] text-fuchsia-700/70">
+              <p className="text-[11px] text-fuchsia-800/80">
                 Pago se atingir {ANNUAL_THRESHOLD}% da meta acumulada anual.
               </p>
             </Card>
           )}
+
         </div>
       )}
     </Card>
