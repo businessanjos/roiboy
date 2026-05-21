@@ -78,11 +78,10 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       setSelected(null);
       setItemId(null);
       setError(null);
-      setPendingItems(null);
-      setRecovering(false);
       setLoading(false);
     }
   }, [open]);
+
 
   const startConnect = async () => {
     setLoading(true);
