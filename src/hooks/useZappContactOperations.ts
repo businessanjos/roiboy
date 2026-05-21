@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ConversationAssignment, Agent } from "@/components/royzapp/types";
 import { SectorId } from "@/config/sectors";
+import { isManagementUser } from "@/lib/access/managementRoles";
 
 interface UseZappContactOperationsParams {
   currentUser: any;
@@ -128,7 +129,7 @@ export function useZappContactOperations({
 
     if (activeAssignment) {
       // Isolation check
-      const isManager = currentUser?.team_role_name === "Gestor";
+      const isManager = isManagementUser(currentUser);
       const hasFullVisibility = isAdmin || isManager;
 
       if (activeAssignment.agent_id && activeAssignment.agent_id !== currentAgent?.id && !hasFullVisibility) {
