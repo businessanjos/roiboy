@@ -127,8 +127,9 @@ export function ShareIncentivePlanDialog({
     }
   };
 
+  const PUBLIC_BASE_URL = "https://iamroy.app";
   const buildUrl = (token: string) =>
-    `${window.location.origin}/external/incentive-plan/${token}`;
+    `${PUBLIC_BASE_URL}/external/incentive-plan/${token}`;
 
   const copy = async (token: string) => {
     await navigator.clipboard.writeText(buildUrl(token));
