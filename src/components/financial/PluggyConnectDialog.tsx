@@ -12,19 +12,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Link as LinkIcon, AlertCircle, RefreshCw } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Loader2, Link as LinkIcon, AlertCircle } from "lucide-react";
 
-interface PendingItem {
-  id: string;
-  status: string;
-  executionStatus: string;
-  createdAt: string;
-  updatedAt: string;
-  institution: string;
-  institutionImage: string | null;
-}
+
 
 declare global {
   interface Window {
@@ -81,8 +71,6 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
   const [accounts, setAccounts] = useState<PluggyAccount[] | null>(null);
   const [selected, setSelected] = useState<PluggyAccount | null>(null);
   const [itemId, setItemId] = useState<string | null>(null);
-  const [pendingItems, setPendingItems] = useState<PendingItem[] | null>(null);
-  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -90,11 +78,10 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       setSelected(null);
       setItemId(null);
       setError(null);
-      setPendingItems(null);
-      setRecovering(false);
       setLoading(false);
     }
   }, [open]);
+
 
   const startConnect = async () => {
     setLoading(true);
@@ -142,29 +129,6 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
     }
   };
 
-  const loadPendingItems = async () => {
-    setRecovering(true);
-    setError(null);
-    try {
-      const { data, error: fnErr } = await supabase.functions.invoke<{
-        success: boolean;
-        items?: PendingItem[];
-        error?: string;
-      }>("pluggy-list-items", { body: { clientUserId: bankAccountId } });
-      if (fnErr) throw fnErr;
-      if (!data?.success) throw new Error(data?.error || "Erro ao buscar conexões");
-      setPendingItems(data.items ?? []);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setRecovering(false);
-    }
-  };
-
-  const useExistingItem = (id: string) => {
-    setItemId(id);
-    fetchAccounts(id);
-  };
 
   const fetchAccounts = async (id: string) => {
     setLoading(true);
@@ -237,70 +201,19 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
           </DialogDescription>
         </DialogHeader>
 
-        {!accounts && !loading && !error && !pendingItems && (
+        {!accounts && !loading && !error && (
           <div className="py-8 flex flex-col items-center gap-3">
-            <Button onClick={startConnect}>
+            <Button onClick={startConnect} size="lg">
               <LinkIcon className="h-4 w-4 mr-2" />
               Conectar banco
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={loadPendingItems}
-              disabled={recovering}
-            >
-              {recovering ? (
-                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3 w-3 mr-2" />
-              )}
-              Recuperar conexão pendente
-            </Button>
             <p className="text-xs text-muted-foreground max-w-md text-center">
-              Se você já autorizou no app do banco mas o redirect falhou, use essa opção
-              para recuperar a conexão sem refazer o OAuth.
+              Você será redirecionado para o widget da Pluggy. Conclua a autorização e
+              <strong> NÃO feche</strong> esta janela antes de clicar em "Vincular conta" no passo final.
             </p>
           </div>
         )}
 
-        {pendingItems && !accounts && !loading && (
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Conexões recentes encontradas no Pluggy. Selecione para listar as contas:
-            </p>
-            {pendingItems.length === 0 ? (
-              <div className="rounded-md border p-4 text-sm text-muted-foreground text-center">
-                Nenhuma conexão pendente encontrada para esta conta.
-              </div>
-            ) : (
-              pendingItems.map((it) => (
-                <button
-                  key={it.id}
-                  type="button"
-                  onClick={() => useExistingItem(it.id)}
-                  className="w-full text-left rounded-md border p-3 hover:bg-muted/50 transition"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="font-medium">{it.institution}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {format(parseISO(it.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        {" • "}
-                        <code className="text-[10px]">{it.id.slice(0, 8)}…</code>
-                      </div>
-                    </div>
-                    <Badge variant={it.status === "UPDATED" ? "default" : "outline"}>
-                      {it.status}
-                    </Badge>
-                  </div>
-                </button>
-              ))
-            )}
-            <Button variant="ghost" size="sm" onClick={() => setPendingItems(null)}>
-              Voltar
-            </Button>
-          </div>
-        )}
 
         {loading && (
           <div className="py-12 flex flex-col items-center gap-3 text-sm text-muted-foreground">
