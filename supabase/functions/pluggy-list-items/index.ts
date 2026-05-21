@@ -13,11 +13,11 @@ Deno.serve(async (req) => {
 
   try {
     const { clientUserId } = await req.json().catch(() => ({}));
-    if (!clientUserId) throw new Error("clientUserId é obrigatório");
 
-    const r = await pluggyFetch(
-      `/items?clientUserId=${encodeURIComponent(clientUserId)}`,
-    );
+    const qs = clientUserId
+      ? `?clientUserId=${encodeURIComponent(clientUserId)}`
+      : "";
+    const r = await pluggyFetch(`/items${qs}`);
 
     const items = (r.results ?? r.items ?? []).map((it: any) => ({
       id: it.id,
