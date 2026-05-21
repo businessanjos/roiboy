@@ -983,7 +983,7 @@ export default function RoyZapp() {
   // Memoized stats to avoid recalculating on every render
   // Admin/Gestor veem todas as conversas; atendentes comuns só veem as suas
   const stats = useMemo(() => {
-    const isManager = currentUser?.team_role_name === "Gestor";
+    const isManager = isManagementUser(currentUser);
     const hasFullVisibility = isAdmin || isManager;
     
     const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
