@@ -207,7 +207,7 @@ export default function IncentivePresentation() {
 
 /* ----------------------- SLIDES ----------------------- */
 
-function SlideIntro() {
+export function SlideIntro() {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center space-y-8 py-16">
       <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-xs uppercase tracking-[0.3em]">
@@ -230,7 +230,7 @@ function SlideIntro() {
   );
 }
 
-function SlideWhy() {
+export function SlideWhy() {
   const cards = [
     {
       icon: Target,
@@ -276,7 +276,7 @@ function SlideWhy() {
   );
 }
 
-function SlideComponents({ plan }: { plan: any }) {
+export function SlideComponents({ plan }: { plan: any }) {
   const items = [
     {
       icon: DollarSign,
@@ -342,7 +342,7 @@ function SlideComponents({ plan }: { plan: any }) {
   );
 }
 
-function SlideTiers({ tiers, bonusBase }: { tiers: any[]; bonusBase: number }) {
+export function SlideTiers({ tiers, bonusBase }: { tiers: any[]; bonusBase: number }) {
   return (
     <div className="space-y-8 py-6">
       <div>
@@ -390,7 +390,7 @@ function SlideTiers({ tiers, bonusBase }: { tiers: any[]; bonusBase: number }) {
   );
 }
 
-function SlideUncapped({ plan }: { plan: any }) {
+export function SlideUncapped({ plan }: { plan: any }) {
   const threshold = Number(plan?.uncapped_threshold_percent || 0);
   const perSale = Number(plan?.uncapped_bonus_per_sale || 0);
   return (
@@ -443,7 +443,7 @@ function SlideUncapped({ plan }: { plan: any }) {
   );
 }
 
-function SlideExtras({ plan }: { plan: any }) {
+export function SlideExtras({ plan }: { plan: any }) {
   return (
     <div className="space-y-10 py-8">
       <div>
@@ -496,7 +496,7 @@ function SlideExtras({ plan }: { plan: any }) {
   );
 }
 
-function SlideExample({ tiers, plan }: { tiers: any[]; plan: any }) {
+export function SlideExample({ tiers, plan }: { tiers: any[]; plan: any }) {
   const bonusBase = Number(plan?.bonus_base_value || 0);
   const platinum = tiers.find((t) => t.label === "Platinum");
   const elite = tiers.find((t) => t.label === "Elite");
