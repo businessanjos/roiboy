@@ -155,7 +155,10 @@ Deno.serve(async (req) => {
     const { action, talent, payload } = await req.json();
     if (!talent?.name) throw new Error('talent required');
 
-    const system = systemFor(talent.name, talent.niche || 'estética', talent.brand_voice);
+    const { persona, brandVoice } = await loadAccountContext(talent.account_id);
+    const extraPersona = formatPersona(persona);
+    const extraBrandVoice = formatBrandVoice(brandVoice);
+    const system = systemFor(talent.name, talent.niche || 'estética', talent.brand_voice, extraPersona, extraBrandVoice);
 
     if (action === 'generate_strategy') {
       const tool = {
