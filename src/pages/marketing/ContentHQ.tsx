@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTalents, Talent, useAllContentPieces, PLATFORMS, ContentPiece } from "@/hooks/useContentHQ";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Crown, Target, Layers, CalendarRange, FileText, KanbanSquare, Library, BarChart3, LayoutGrid,
   Instagram, Youtube, Music2, MessageSquare, Linkedin, Image as ImageIcon, Headphones, Sparkles,
-  Lightbulb,
+  Lightbulb, Info, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ContentHQStrategy } from "@/components/marketing/content-hq/ContentHQStrategy";
@@ -134,6 +135,17 @@ export default function ContentHQ() {
             );
           })}
         </div>
+      </div>
+
+      {/* Fonte da verdade: Persona & Tom de Voz vivem em Criação */}
+      <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-sm">
+        <Info className="h-4 w-4 text-amber-600 shrink-0" />
+        <div className="flex-1 text-amber-900 dark:text-amber-200">
+          <strong>Persona</strong> e <strong>Tom de Voz</strong> da marca são definidos em <strong>Criação</strong> e usados automaticamente por toda IA do Content HQ.
+        </div>
+        <Button asChild variant="ghost" size="sm" className="text-amber-700 hover:text-amber-800 hover:bg-amber-500/10 gap-1">
+          <Link to="/criacao">Editar em Criação <ArrowRight className="h-3.5 w-3.5" /></Link>
+        </Button>
       </div>
 
       {/* Section tabs */}
