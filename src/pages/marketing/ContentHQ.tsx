@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTalents, Talent, useAllContentPieces, PLATFORMS, ContentPiece } from "@/hooks/useContentHQ";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Crown, Target, Layers, CalendarRange, FileText, KanbanSquare, Library, BarChart3, LayoutGrid,
   Instagram, Youtube, Music2, MessageSquare, Linkedin, Image as ImageIcon, Headphones, Sparkles,
-  Lightbulb,
+  Lightbulb, Info, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ContentHQStrategy } from "@/components/marketing/content-hq/ContentHQStrategy";
