@@ -10752,6 +10752,66 @@ export type Database = {
           },
         ]
       }
+      incentive_plan_share_links: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          label: string | null
+          last_viewed_at: string | null
+          plan_id: string | null
+          token: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          last_viewed_at?: string | null
+          plan_id?: string | null
+          token: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          last_viewed_at?: string | null
+          plan_id?: string | null
+          token?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incentive_plan_share_links_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incentive_plan_share_links_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "sales_incentive_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insights_dashboard_shares: {
         Row: {
           account_id: string

@@ -1,74 +1,59 @@
+## Objetivo
+Gerar um link público (sem login) da apresentação `/sales-team/incentive-presentation/slideshow` para mostrar a pessoas externas, incluindo o simulador de comissão funcional. Token revogável e com expiração.
 
-# Head de Conteúdo Multi-Plataforma (Bruna & Everton)
+## Fluxo do usuário
+1. Em `/sales-team/incentive-presentation`, novo botão **"Gerar link externo"** (visível só para gestão).
+2. Dialog gera/mostra o token e URL pública: `https://iamroy.app/external/incentive-plan/<token>`.
+3. Permite revogar/renovar e definir expiração (padrão 30 dias).
+4. Pessoa externa abre o link → vê os slides + simulador sem precisar logar.
 
-Nova área dentro de **Marketing** que centraliza toda a estratégia de conteúdo de Bruna e Everton em 4 frentes: YouTube (long + Shorts), TikTok, Instagram (Reels/Feed/Stories) e Threads/LinkedIn/Pinterest/Spotify (podcast). Cobre os 3 níveis: **estratégico → tático → operacional**, com IA gerando pilares, pautas e briefings ancorados no nicho de **estética**.
+## O que o link expõe (e o que NÃO expõe)
+- Expõe: estrutura do plano vigente (faixas, multiplicadores, base de bônus, sem-teto, tri/anual, SPIFFs públicos, produtos com taxas para o simulador).
+- Não expõe: vendedores, vendas reais, metas individuais, dashboards internos.
 
-## Arquitetura da área
+## Mudanças
 
-Nova rota `/marketing/content-hq` (Content Headquarters) com sidebar vertical interna:
+### 1. Banco
+Migration nova:
+- `incentive_plan_share_links` (`id`, `account_id`, `plan_id` nullable, `token` único, `label`, `is_active`, `expires_at`, `created_by`, `view_count`, `last_viewed_at`, timestamps).
+- RLS: apenas usuários do mesmo `account_id` com role de gestão (admin/management) podem CRUD.
 
-```text
-Marketing > Content HQ
-├── 1. Estratégia        (Porquê fazer)
-├── 2. Pilares            (O que fazer)
-├── 3. Calendário         (Quando fazer — multi-plataforma)
-├── 4. Pautas & Briefings (Como fazer — operacional detalhado)
-├── 5. Produção (Kanban)  (Execução: ideia → roteiro → grav → edição → publicado)
-├── 6. Biblioteca         (Hooks, CTAs, referências, brand voice)
-└── 7. Performance        (Métricas consolidadas por talento × plataforma)
-```
+### 2. Edge function (pública, verify_jwt=false)
+`supabase/functions/public-incentive-plan/index.ts`:
+- Valida token → checa `is_active`, expiração, incrementa `view_count`.
+- Usa service role para buscar `incentive_plans`, `incentive_plan_tiers`, `incentive_plan_product_rates`, `incentive_plan_quotas`, `incentive_plan_spiffs` do `account_id` (plano executivo de vendas).
+- Retorna JSON enxuto pro frontend.
 
-Acesso fixo aos dois talentos via seletor topo: **Bruna | Everton | Ambos**.
+### 3. Refatoração para reutilizar slides
+- Extrair os 8 slides de `IncentivePresentation.tsx` para `src/components/sales/incentive/slides/*` (ou um único `IncentiveSlides.tsx` exportando os componentes).
+- `IncentivePresentation.tsx` passa a importar dali (mantém comportamento atual).
 
-## Conteúdo de cada seção
+### 4. Simulador público
+- Criar `PublicCommissionSimulator.tsx`: versão enxuta do `CommissionSimulator` que aceita os dados via props (sem `useCurrentUser`/`useQuotasIncentives`), permite ajustar nº de vendas, mix de produto e formas de pagamento, e mostra o resultado em tempo real.
+- Mantém os mesmos cálculos do simulador interno (faixa, sem teto, SPIFFs por método).
 
-**1. Estratégia** — Por talento: posicionamento, público-alvo (avatar de estética), tom de voz, objetivos trimestrais (awareness, autoridade, conversão), big bets por plataforma. Editável + versionável.
+### 5. Página pública
+`src/pages/public/PublicIncentivePresentation.tsx` em rota `/external/incentive-plan/:token`:
+- Chama o edge function, renderiza estados (loading, inválido, expirado, ok).
+- Usa os slides extraídos + `PublicCommissionSimulator`.
+- Sem chrome do app (rota fora do `AppLayout`).
 
-**2. Pilares de conteúdo** — 4–6 pilares por talento (ex: "Procedimentos faciais", "Bastidores", "Casos antes/depois", "Educação técnica para colegas", "Lifestyle médico"). Cada pilar tem: descrição, % de mix ideal, plataformas onde performa, exemplos de referência.
+### 6. Botão de compartilhamento
+- Novo `ShareIncentivePlanDialog` chamado por botão "Compartilhar externamente" no header de `/sales-team/incentive-presentation` (CloserDashboard).
+- Permite criar link, copiar URL, definir expiração, revogar links existentes.
 
-**3. Calendário Editorial Multi-Plataforma** — Visão semanal/mensal com swimlanes por plataforma. Cada card = um conteúdo planejado (talento, pilar, plataforma, formato, data, status, responsável operacional). Drag-and-drop entre datas.
+## Arquivos
+- `supabase/migrations/<novo>.sql`
+- `supabase/functions/public-incentive-plan/index.ts`
+- `src/components/sales/incentive/IncentiveSlides.tsx` (extração)
+- `src/components/sales/incentive/PublicCommissionSimulator.tsx`
+- `src/components/sales/incentive/ShareIncentivePlanDialog.tsx`
+- `src/pages/public/PublicIncentivePresentation.tsx`
+- `src/pages/IncentivePresentation.tsx` (passa a usar slides extraídos)
+- `src/pages/CloserDashboard.tsx` (botão "Compartilhar externamente")
+- `src/App.tsx` (rota pública nova)
 
-**4. Pautas & Briefings (IA)** — Para cada conteúdo: gancho, roteiro/estrutura, CTA, hashtags, thumbnail brief, descrição/legenda otimizada por plataforma. Botão **"Gerar com IA"** que considera: talento, pilar, plataforma, nicho estética, brand voice salva. Sempre editável.
-
-**5. Produção (Kanban)** — Colunas: `Backlog → Roteiro → Gravação → Edição → Aprovação → Agendado → Publicado`. Cada card puxa o briefing da seção 4.
-
-**6. Biblioteca** — Brand voice por talento, banco de hooks que funcionam, CTAs testados, referências (URLs), hashtags por pilar.
-
-**7. Performance** — Conecta com o que já existe (Instagram, TikTok, YouTube). Adiciona consolidado **por talento × pilar × plataforma**, taxa de execução do calendário (planejado vs publicado).
-
-## Camada de IA (Lovable AI)
-
-Edge function `content-hq-ai` com 3 modos via `action`:
-- `generate_strategy` — input: talento + objetivo trimestre → output: posicionamento + pilares sugeridos
-- `generate_pautas` — input: talento + pilar + plataforma + qtd + período → output: lista de pautas com gancho
-- `generate_briefing` — input: pauta + plataforma → output: roteiro completo, CTA, hashtags, thumb brief
-
-Modelo padrão `google/gemini-3-flash-preview`. System prompt sempre injeta: nicho estética, brand voice do talento, boas práticas da plataforma.
-
-## Modelo de dados (novas tabelas)
-
-- `content_talents` — bruna, everton (seed inicial; estrutura permite adicionar)
-- `content_strategies` — talent_id, quarter, year, positioning, audience, tone, goals (jsonb), big_bets (jsonb)
-- `content_pillars` — talent_id, name, description, mix_percentage, platforms (text[]), references (jsonb)
-- `content_pieces` — peça de conteúdo (talent_id, pillar_id, platform, format, scheduled_date, status, briefing jsonb, assigned_user_id, hook, cta, hashtags, caption, thumbnail_brief)
-- `content_library_items` — talent_id, type (hook|cta|reference|hashtag), content, pillar_id, performance_score
-
-RLS por `account_id` + sector marketing.
-
-## Detalhes técnicos
-
-- Sidebar vertical interna seguindo padrão `mem://style/universal-sidebar-navigation-pattern-pt`
-- Plataforma badges com cores próprias (semantic tokens em index.css)
-- Status do `content_pieces` com cores consistentes (Backlog cinza, Roteiro amber, Produção azul, Publicado verde)
-- Calendário reutiliza componentes de `MonthlyCalendarView` adaptados
-- Kanban reutiliza padrão dos Kanbans de pipeline existentes
-- IA via Lovable AI Gateway, edge function única com `action` discriminador
-- Sem mocks; dados reais desde o início (seed Bruna + Everton via migration)
-
-## Escopo desta entrega
-
-MVP cobre seções 1–5 + IA + sidebar. Seções 6 (Biblioteca) e 7 (Performance) entram como esqueleto navegável (UI sem analytics complexos), para iterar nas próximas rodadas.
-
-## Memória
-
-Criar `mem://features/marketing/content-hq-pt.md` consolidando: rota, talentos fixos, plataformas suportadas, modelo IA, tabelas, e regra de que Bruna e Everton são os talentos padrão da Eternum.
+## Aceitação
+- Link público abre em janela anônima, mostra todos os 8 slides e o simulador roda com os dados do plano vigente.
+- Revogar o link no painel interno bloqueia o acesso imediatamente.
+- Após `expires_at`, link mostra "Link expirado".
