@@ -19,7 +19,9 @@ import {
   Sparkles,
   Presentation,
   Eye,
+  Share2,
 } from "lucide-react";
+import { ShareIncentivePlanDialog } from "@/components/sales/incentive/ShareIncentivePlanDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSalesTeamMetrics } from "@/hooks/useSalesTeamMetrics";
