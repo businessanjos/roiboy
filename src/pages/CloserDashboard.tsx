@@ -370,6 +370,7 @@ export default function CloserDashboard() {
     useCloserPersonalStats(selYear, selMonth, effectiveUserId);
   const [breakdown, setBreakdown] = useState<{ kind: BreakdownKind; title: string } | null>(null);
   const openBreakdown = (kind: BreakdownKind, title: string) => setBreakdown({ kind, title });
+  const [shareOpen, setShareOpen] = useState(false);
 
 
   return (
