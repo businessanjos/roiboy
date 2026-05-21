@@ -1,7 +1,70 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const LOVABLE_AI_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 const MODEL = 'google/gemini-3-flash-preview';
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+async function loadAccountContext(account_id: string | undefined) {
+  if (!account_id) return { persona: null, brandVoice: null };
+  const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+  const [pRes, bvRes] = await Promise.all([
+    admin
+      .from('marketing_personas')
+      .select('name, profession, age_range, gender, location, business_type, business_size, revenue_range, pains, desires, objections, emotional_triggers, vocabulary, biggest_dream, biggest_fear, ai_summary, notes')
+      .eq('account_id', account_id)
+      .eq('is_default', true)
+      .maybeSingle(),
+    admin
+      .from('marketing_brand_voice')
+      .select('personality, tone_keywords, forbidden_words, signature_phrases, target_audience, niche, values_and_mission, emoji_style, hashtag_strategy, ai_summary, example_posts')
+      .eq('account_id', account_id)
+      .maybeSingle(),
+  ]);
+  return { persona: pRes.data, brandVoice: bvRes.data };
+}
+
+function formatPersona(p: any): string {
+  if (!p) return '';
+  const lines: string[] = [`PERSONA (definida em Marketing > Criação > Persona):`];
+  if (p.name) lines.push(`- Nome: ${p.name}`);
+  if (p.profession) lines.push(`- Profissão: ${p.profession}`);
+  if (p.age_range) lines.push(`- Faixa etária: ${p.age_range}`);
+  if (p.gender) lines.push(`- Gênero: ${p.gender}`);
+  if (p.location) lines.push(`- Localização: ${p.location}`);
+  if (p.business_type) lines.push(`- Tipo de negócio: ${p.business_type}`);
+  if (p.business_size) lines.push(`- Porte: ${p.business_size}`);
+  if (p.revenue_range) lines.push(`- Faturamento: ${p.revenue_range}`);
+  if (p.pains?.length) lines.push(`- Dores: ${p.pains.join('; ')}`);
+  if (p.desires?.length) lines.push(`- Desejos: ${p.desires.join('; ')}`);
+  if (p.objections?.length) lines.push(`- Objeções: ${p.objections.join('; ')}`);
+  if (p.emotional_triggers?.length) lines.push(`- Gatilhos emocionais: ${p.emotional_triggers.join('; ')}`);
+  if (p.vocabulary?.length) lines.push(`- Vocabulário usado: ${p.vocabulary.join('; ')}`);
+  if (p.biggest_dream) lines.push(`- Maior sonho: ${p.biggest_dream}`);
+  if (p.biggest_fear) lines.push(`- Maior medo: ${p.biggest_fear}`);
+  if (p.ai_summary) lines.push(`- Resumo IA: ${p.ai_summary}`);
+  if (p.notes) lines.push(`- Notas: ${p.notes}`);
+  return lines.length > 1 ? lines.join('\n') : '';
+}
+
+function formatBrandVoice(bv: any): string {
+  if (!bv) return '';
+  const lines: string[] = [`TOM DE VOZ DA MARCA (definido em Marketing > Criação > Tom de Voz):`];
+  if (bv.personality) lines.push(`- Personalidade: ${bv.personality}`);
+  if (bv.tone_keywords?.length) lines.push(`- Tom (palavras-chave): ${bv.tone_keywords.join(', ')}`);
+  if (bv.forbidden_words?.length) lines.push(`- NUNCA usar estas palavras: ${bv.forbidden_words.join(', ')}`);
+  if (bv.signature_phrases?.length) lines.push(`- Bordões/frases-assinatura: ${bv.signature_phrases.join(' | ')}`);
+  if (bv.target_audience) lines.push(`- Público-alvo: ${bv.target_audience}`);
+  if (bv.niche) lines.push(`- Nicho: ${bv.niche}`);
+  if (bv.values_and_mission) lines.push(`- Valores e missão: ${bv.values_and_mission}`);
+  if (bv.emoji_style) lines.push(`- Estilo de emoji: ${bv.emoji_style}`);
+  if (bv.hashtag_strategy) lines.push(`- Estratégia de hashtag: ${bv.hashtag_strategy}`);
+  if (bv.ai_summary) lines.push(`- Resumo IA: ${bv.ai_summary}`);
+  if (bv.example_posts?.length) lines.push(`- Exemplos de posts que funcionam:\n  • ${bv.example_posts.slice(0, 3).join('\n  • ')}`);
+  return lines.length > 1 ? lines.join('\n') : '';
+}
 
 const PLATFORM_TIPS: Record<string, string> = {
   instagram: 'Reels 7-15s, hook nos 2 primeiros segundos, legenda escaneável, CTA claro.',
