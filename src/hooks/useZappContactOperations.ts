@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ConversationAssignment, Agent } from "@/components/royzapp/types";
 import { SectorId } from "@/config/sectors";
+import { isManagementUser } from "@/lib/access/managementRoles";
 
 interface UseZappContactOperationsParams {
   currentUser: any;
