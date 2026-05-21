@@ -103,12 +103,12 @@ export function PublicCommissionSimulator({
   }, [sales, baseSalary, sortedTiers, plan]);
 
   return (
-    <Card className="p-6 space-y-6">
+    <Card className="p-6 space-y-6 bg-white border-slate-200 shadow-sm">
       <div className="flex items-center gap-2">
         <Calculator className="h-5 w-5 text-amber-600" />
         <div>
           <h3 className="text-lg font-bold text-slate-900">Simulador</h3>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-600">
             Ajuste o nº de vendas e o salário para simular ganhos mensais.
           </p>
         </div>
@@ -121,7 +121,7 @@ export function PublicCommissionSimulator({
               Nº de vendas no mês:{" "}
               <span className="font-bold text-slate-900">{sales}</span>
             </Label>
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs border-slate-300 text-slate-700 bg-white">
               {Math.round(sim.pct)}% da meta
             </Badge>
           </div>
@@ -132,7 +132,7 @@ export function PublicCommissionSimulator({
             max={20}
             step={1}
           />
-          <div className="flex justify-between text-[10px] text-slate-400">
+          <div className="flex justify-between text-[10px] text-slate-500">
             <span>0</span>
             <span>5</span>
             <span>10</span>
@@ -149,13 +149,14 @@ export function PublicCommissionSimulator({
             step={500}
             value={baseSalary}
             onChange={(e) => setBaseSalary(Number(e.target.value || 0))}
-            className="text-slate-900"
+            className="text-slate-900 bg-white border-slate-300 placeholder:text-slate-400"
           />
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-500">
             Valor ilustrativo — substitua pelo CLT real do vendedor.
           </p>
         </div>
       </div>
+
 
       {/* Quick buttons */}
       <div className="flex flex-wrap gap-2">
