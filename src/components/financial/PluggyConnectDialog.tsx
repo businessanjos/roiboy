@@ -92,6 +92,7 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       setError(null);
       setPendingItems(null);
       setRecovering(false);
+      setLoading(false);
     }
   }, [open]);
 
