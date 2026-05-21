@@ -240,6 +240,7 @@ const App = () => (
                           <Route path="/onboarding" element={<Onboarding />} />
                           <Route path="/contrato/:token" element={<PublicDigitalContract />} />
                           <Route path="/portal/prestador/:token" element={<PublicProviderPortal />} />
+                          <Route path="/external/incentive-plan/:token" element={<PublicIncentivePresentation />} />
                           
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/terms-of-service" element={<TermsOfService />} />
