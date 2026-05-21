@@ -920,8 +920,8 @@ export default function RoyZapp() {
       const skipTabFilterForGroups = filterConversationType === "group" && isGroup;
       const skipTabFilterForPinnedGroups = isPinnedGroupInAllOrGroups;
       
-      // Checar se o usuário tem visibilidade total (Admin ou Gestor)
-      const isManager = currentUser?.team_role_name === "Gestor";
+      // Checar se o usuário tem visibilidade total (Admin, Gestor, Gerente, Head, Diretor, C-level, Sócio)
+      const isManager = isManagementUser(currentUser);
       const hasFullVisibility = isAdmin || isManager;
       
       // Conversations with no agent should ALWAYS show in queue, regardless of status
