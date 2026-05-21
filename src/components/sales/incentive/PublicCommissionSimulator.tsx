@@ -165,14 +165,18 @@ export function PublicCommissionSimulator({
             key={n}
             type="button"
             size="sm"
-            variant={sales === n ? "default" : "outline"}
             onClick={() => setSales(n)}
-            className="h-7 px-2.5 text-xs"
+            className={
+              sales === n
+                ? "h-7 px-2.5 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold border-0"
+                : "h-7 px-2.5 text-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300"
+            }
           >
             {n} vendas
           </Button>
         ))}
       </div>
+
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Metric label="Faixa" value={sim.activeTier?.label ?? "—"} accent="text-slate-900" big />
