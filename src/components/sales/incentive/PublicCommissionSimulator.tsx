@@ -103,12 +103,12 @@ export function PublicCommissionSimulator({
   }, [sales, baseSalary, sortedTiers, plan]);
 
   return (
-    <Card className="p-6 space-y-6">
+    <Card className="p-6 space-y-6 bg-white border-slate-200 shadow-sm">
       <div className="flex items-center gap-2">
         <Calculator className="h-5 w-5 text-amber-600" />
         <div>
           <h3 className="text-lg font-bold text-slate-900">Simulador</h3>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-600">
             Ajuste o nº de vendas e o salário para simular ganhos mensais.
           </p>
         </div>
@@ -121,7 +121,7 @@ export function PublicCommissionSimulator({
               Nº de vendas no mês:{" "}
               <span className="font-bold text-slate-900">{sales}</span>
             </Label>
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs border-slate-300 text-slate-700 bg-white">
               {Math.round(sim.pct)}% da meta
             </Badge>
           </div>
@@ -132,7 +132,7 @@ export function PublicCommissionSimulator({
             max={20}
             step={1}
           />
-          <div className="flex justify-between text-[10px] text-slate-400">
+          <div className="flex justify-between text-[10px] text-slate-500">
             <span>0</span>
             <span>5</span>
             <span>10</span>
@@ -149,13 +149,14 @@ export function PublicCommissionSimulator({
             step={500}
             value={baseSalary}
             onChange={(e) => setBaseSalary(Number(e.target.value || 0))}
-            className="text-slate-900"
+            className="text-slate-900 bg-white border-slate-300 placeholder:text-slate-400"
           />
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-500">
             Valor ilustrativo — substitua pelo CLT real do vendedor.
           </p>
         </div>
       </div>
+
 
       {/* Quick buttons */}
       <div className="flex flex-wrap gap-2">
@@ -164,14 +165,18 @@ export function PublicCommissionSimulator({
             key={n}
             type="button"
             size="sm"
-            variant={sales === n ? "default" : "outline"}
             onClick={() => setSales(n)}
-            className="h-7 px-2.5 text-xs"
+            className={
+              sales === n
+                ? "h-7 px-2.5 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold border-0"
+                : "h-7 px-2.5 text-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300"
+            }
           >
             {n} vendas
           </Button>
         ))}
       </div>
+
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Metric label="Faixa" value={sim.activeTier?.label ?? "—"} accent="text-slate-900" big />
@@ -203,31 +208,32 @@ export function PublicCommissionSimulator({
       {(plan.quarterly_bonus_enabled || plan.annual_bonus_enabled) && (
         <div className="grid md:grid-cols-2 gap-3">
           {plan.quarterly_bonus_enabled && (
-            <Card className="p-4 bg-cyan-50 border-cyan-200">
-              <div className="flex items-center gap-2 text-cyan-700 text-xs uppercase tracking-wide font-semibold">
+            <Card className="p-4 bg-cyan-50 border-cyan-200 shadow-none">
+              <div className="flex items-center gap-2 text-cyan-800 text-xs uppercase tracking-wide font-semibold">
                 <Trophy className="h-4 w-4" /> Bônus Trimestral
               </div>
               <p className="text-2xl font-black text-cyan-900 mt-1">
                 {fmt(sim.quarterly)}
               </p>
-              <p className="text-[11px] text-cyan-700/70">
+              <p className="text-[11px] text-cyan-800/80">
                 Pago se atingir {QUARTERLY_THRESHOLD}% da meta no trimestre.
               </p>
             </Card>
           )}
           {plan.annual_bonus_enabled && (
-            <Card className="p-4 bg-fuchsia-50 border-fuchsia-200">
-              <div className="flex items-center gap-2 text-fuchsia-700 text-xs uppercase tracking-wide font-semibold">
+            <Card className="p-4 bg-fuchsia-50 border-fuchsia-200 shadow-none">
+              <div className="flex items-center gap-2 text-fuchsia-800 text-xs uppercase tracking-wide font-semibold">
                 <Trophy className="h-4 w-4" /> Bônus Anual
               </div>
               <p className="text-2xl font-black text-fuchsia-900 mt-1">
                 {fmt(sim.annual)}
               </p>
-              <p className="text-[11px] text-fuchsia-700/70">
+              <p className="text-[11px] text-fuchsia-800/80">
                 Pago se atingir {ANNUAL_THRESHOLD}% da meta acumulada anual.
               </p>
             </Card>
           )}
+
         </div>
       )}
     </Card>
