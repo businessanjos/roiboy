@@ -28,7 +28,19 @@ Deno.serve(async (req) => {
         headers: { "X-API-KEY": j.apiKey },
       });
       out.items_status = r2.status;
-      out.items_body = await r2.text();
+      out.items_body = (await r2.text()).slice(0, 500);
+
+      const r3 = await fetch("https://api.pluggy.ai/items?clientUserId=test", {
+        headers: { "X-API-KEY": j.apiKey },
+      });
+      out.items_filter_status = r3.status;
+      out.items_filter_body = (await r3.text()).slice(0, 500);
+
+      const r4 = await fetch("https://api.pluggy.ai/connectors", {
+        headers: { "X-API-KEY": j.apiKey },
+      });
+      out.connectors_status = r4.status;
+      out.connectors_body = (await r4.text()).slice(0, 200);
     }
   } catch (e: any) {
     out.error = e.message;
