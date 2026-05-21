@@ -15,15 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Link as LinkIcon, AlertCircle } from "lucide-react";
 
 
-interface PendingItem {
-  id: string;
-  status: string;
-  executionStatus: string;
-  createdAt: string;
-  updatedAt: string;
-  institution: string;
-  institutionImage: string | null;
-}
 
 declare global {
   interface Window {
