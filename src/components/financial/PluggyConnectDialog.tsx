@@ -237,70 +237,19 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
           </DialogDescription>
         </DialogHeader>
 
-        {!accounts && !loading && !error && !pendingItems && (
+        {!accounts && !loading && !error && (
           <div className="py-8 flex flex-col items-center gap-3">
-            <Button onClick={startConnect}>
+            <Button onClick={startConnect} size="lg">
               <LinkIcon className="h-4 w-4 mr-2" />
               Conectar banco
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={loadPendingItems}
-              disabled={recovering}
-            >
-              {recovering ? (
-                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3 w-3 mr-2" />
-              )}
-              Recuperar conexão pendente
-            </Button>
             <p className="text-xs text-muted-foreground max-w-md text-center">
-              Se você já autorizou no app do banco mas o redirect falhou, use essa opção
-              para recuperar a conexão sem refazer o OAuth.
+              Você será redirecionado para o widget da Pluggy. Conclua a autorização e
+              <strong> NÃO feche</strong> esta janela antes de clicar em "Vincular conta" no passo final.
             </p>
           </div>
         )}
 
-        {pendingItems && !accounts && !loading && (
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Conexões recentes encontradas no Pluggy. Selecione para listar as contas:
-            </p>
-            {pendingItems.length === 0 ? (
-              <div className="rounded-md border p-4 text-sm text-muted-foreground text-center">
-                Nenhuma conexão pendente encontrada para esta conta.
-              </div>
-            ) : (
-              pendingItems.map((it) => (
-                <button
-                  key={it.id}
-                  type="button"
-                  onClick={() => useExistingItem(it.id)}
-                  className="w-full text-left rounded-md border p-3 hover:bg-muted/50 transition"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="font-medium">{it.institution}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {format(parseISO(it.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        {" • "}
-                        <code className="text-[10px]">{it.id.slice(0, 8)}…</code>
-                      </div>
-                    </div>
-                    <Badge variant={it.status === "UPDATED" ? "default" : "outline"}>
-                      {it.status}
-                    </Badge>
-                  </div>
-                </button>
-              ))
-            )}
-            <Button variant="ghost" size="sm" onClick={() => setPendingItems(null)}>
-              Voltar
-            </Button>
-          </div>
-        )}
 
         {loading && (
           <div className="py-12 flex flex-col items-center gap-3 text-sm text-muted-foreground">
