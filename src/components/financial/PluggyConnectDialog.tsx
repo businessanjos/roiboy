@@ -206,14 +206,29 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
     },
   });
 
+  const hasUnlinkedAccounts = !!accounts && accounts.length > 0;
+
+  const handleOpenChange = (v: boolean) => {
+    if (!v && hasUnlinkedAccounts && !linkMutation.isPending) {
+      const ok = window.confirm(
+        "Atenção: você ainda não vinculou nenhuma conta!\n\n" +
+          "A autorização no banco já aconteceu, mas SEM o passo final de \"Vincular conta\" " +
+          "o ROY não vai conseguir puxar saldo nem extrato.\n\n" +
+          "Tem certeza que quer fechar mesmo assim?"
+      );
+      if (!ok) return;
+    }
+    onOpenChange(v);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Conectar via Pluggy — {bankAccountName}</DialogTitle>
           <DialogDescription>
-            Clique em "Conectar banco" para abrir o seletor seguro do Pluggy. Após autenticar no seu banco,
-            escolha qual conta vincular ao ROY.
+            Fluxo em <strong>3 passos</strong>: (1) autorizar no banco, (2) selecionar a conta,
+            (3) clicar em <strong>"Vincular conta"</strong>. Sem o passo 3 a conexão não é salva no ROY.
           </DialogDescription>
         </DialogHeader>
 
@@ -308,56 +323,75 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
           </p>
         )}
 
-        {accounts && accounts.length > 0 && (
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
-            {accounts.map((a) => {
-              const isSel = selected?.account_id === a.account_id;
-              return (
-                <button
-                  key={a.account_id}
-                  type="button"
-                  onClick={() => setSelected(a)}
-                  className={`w-full text-left rounded-md border p-3 transition ${
-                    isSel ? "border-primary bg-primary/5" : "hover:bg-muted/50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="font-medium">{a.account_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {a.institution} • {a.account_number || a.account_id}
+        {hasUnlinkedAccounts && (
+          <>
+            <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 flex gap-2 items-start">
+              <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-700 dark:text-amber-400">
+                  Passo final obrigatório
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Selecione a conta abaixo e clique em <strong>"Vincular conta"</strong>.
+                  Fechar agora descarta a conexão.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {accounts!.map((a) => {
+                const isSel = selected?.account_id === a.account_id;
+                return (
+                  <button
+                    key={a.account_id}
+                    type="button"
+                    onClick={() => setSelected(a)}
+                    className={`w-full text-left rounded-md border p-3 transition ${
+                      isSel ? "border-primary bg-primary/5 ring-2 ring-primary/30" : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="font-medium">{a.account_name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {a.institution} • {a.account_number || a.account_id}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline">{a.account_type}</Badge>
+                        {a.balance != null && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            R$ {a.balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <Badge variant="outline">{a.account_type}</Badge>
-                      {a.balance != null && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          R$ {a.balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={linkMutation.isPending}
+          >
             Cancelar
           </Button>
-          {accounts && accounts.length > 0 && (
+          {hasUnlinkedAccounts && (
             <Button
               disabled={!selected || linkMutation.isPending}
               onClick={() => selected && linkMutation.mutate(selected)}
+              className={selected ? "animate-pulse" : ""}
             >
               {linkMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <LinkIcon className="h-4 w-4 mr-2" />
               )}
-              Vincular conta
+              Vincular conta {selected ? "✓" : "(selecione uma conta)"}
             </Button>
           )}
         </DialogFooter>
