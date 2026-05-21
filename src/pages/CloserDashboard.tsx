@@ -439,8 +439,20 @@ export default function CloserDashboard() {
                 <Presentation className="h-4 w-4" />
                 Apresentar plano
               </Button>
+              {isManager && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShareOpen(true)}
+                  className="gap-1.5"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Compartilhar externamente
+                </Button>
+              )}
             </div>
           </div>
+          <ShareIncentivePlanDialog open={shareOpen} onOpenChange={setShareOpen} />
 
           {isViewingOther && (
             <div className="rounded-lg border border-sky-200 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-900 px-4 py-2.5 text-sm text-sky-900 dark:text-sky-200 flex items-center gap-2">
