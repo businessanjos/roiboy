@@ -129,29 +129,6 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
     }
   };
 
-  const loadPendingItems = async () => {
-    setRecovering(true);
-    setError(null);
-    try {
-      const { data, error: fnErr } = await supabase.functions.invoke<{
-        success: boolean;
-        items?: PendingItem[];
-        error?: string;
-      }>("pluggy-list-items", { body: { clientUserId: bankAccountId } });
-      if (fnErr) throw fnErr;
-      if (!data?.success) throw new Error(data?.error || "Erro ao buscar conexões");
-      setPendingItems(data.items ?? []);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setRecovering(false);
-    }
-  };
-
-  const useExistingItem = (id: string) => {
-    setItemId(id);
-    fetchAccounts(id);
-  };
 
   const fetchAccounts = async (id: string) => {
     setLoading(true);
