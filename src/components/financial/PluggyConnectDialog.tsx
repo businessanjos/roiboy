@@ -121,17 +121,21 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
             return;
           }
           setItemId(newItemId);
-          // Aguarda alguns segundos para item ficar UPDATED, então busca contas
+          setLoading(true);
           setTimeout(() => fetchAccounts(newItemId), 2500);
         },
         onError: (e: any) => {
           setError(typeof e === "string" ? e : (e?.message ?? "Erro ao conectar banco"));
+          setLoading(false);
         },
         onClose: () => {
           setLoading(false);
         },
       });
       widget.init();
+      // Widget Pluggy abre sua própria UI em overlay — liberar loading do nosso dialog
+      // para não travar caso onClose não dispare (popup bloqueado, erro silencioso, etc).
+      setLoading(false);
     } catch (e: any) {
       setError(e.message);
       setLoading(false);
