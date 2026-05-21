@@ -69,6 +69,7 @@ import { ClientZappSheet } from "@/components/client/ClientZappSheet";
 import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDialog";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
+import { isManagementUser } from "@/lib/access/managementRoles";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
