@@ -266,38 +266,15 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
               )}
 
               {hasContent && !loading && (
-                <Tabs value={activeModel} onValueChange={(v) => setActiveModel(v as any)}>
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="gemini" disabled={!gemini && !geminiErr} className="gap-2">
-                      <span className="h-2 w-2 rounded-full bg-blue-500" />
-                      Gemini Pro
-                      {geminiErr && <AlertTriangle className="h-3 w-3 text-destructive" />}
-                    </TabsTrigger>
-                    <TabsTrigger value="gpt" disabled={!gpt && !gptErr} className="gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                      GPT
-                      {gptErr && <AlertTriangle className="h-3 w-3 text-destructive" />}
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="gemini" className="mt-0">
-                    {gemini ? (
-                      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <MarkdownRenderer content={gemini} />
-                      </div>
-                    ) : (
-                      <ModelErrorBlock error={geminiErr} model="Gemini Pro" />
-                    )}
-                  </TabsContent>
-                  <TabsContent value="gpt" className="mt-0">
-                    {gpt ? (
-                      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <MarkdownRenderer content={gpt} />
-                      </div>
-                    ) : (
-                      <ModelErrorBlock error={gptErr} model="GPT" />
-                    )}
-                  </TabsContent>
-                </Tabs>
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  {usedFallback && (
+                    <div className="mb-3 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2 flex items-center gap-2">
+                      <AlertTriangle className="h-3 w-3" />
+                      Síntese unificada indisponível — exibindo o melhor draft disponível.
+                    </div>
+                  )}
+                  <MarkdownRenderer content={content} />
+                </div>
               )}
             </div>
           )}
