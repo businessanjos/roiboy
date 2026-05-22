@@ -87,8 +87,9 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel, rpc
     setStartedAt(Date.now());
     setElapsed(0);
     const { data, error } = await supabase.functions.invoke("ops-workload-insights", {
-      body: { rows, periodLabel },
+      body: { rows, periodLabel, rpcParams },
     });
+
     if (error) {
       setErr(error.message || "Falha ao gerar insights");
     } else if ((data as any)?.error) {
