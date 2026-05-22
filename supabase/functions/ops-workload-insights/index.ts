@@ -103,6 +103,66 @@ Deno.serve(async (req) => {
     const overallRespRate = totals.totalIn > 0 ? Math.round((totals.resp / totals.totalIn) * 100) : 0;
     const overallCoverage = totals.active > 0 ? Math.round((totals.attended / totals.active) * 100) : 0;
 
+    // === Sample client inbound messages for thematic analysis ===
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    const consultantIds = rows.map(r => r.user_id).filter(Boolean);
+    let messagesSample = '';
+    let sampleCount = 0;
+    try {
+      // 1) Clients owned by these consultants
+      const { data: clientsData } = await admin
+        .from('clients')
+        .select('id')
+        .in('responsible_user_id', consultantIds);
+      const clientIds = (clientsData || []).map((c: any) => c.id);
+
+      if (clientIds.length > 0) {
+        // 2) Conversations of those clients
+        const { data: convsData } = await admin
+          .from('zapp_conversations')
+          .select('id, client_id')
+          .in('client_id', clientIds);
+        const convIds = (convsData || []).map((c: any) => c.id);
+
+        if (convIds.length > 0) {
+          // 3) Inbound text messages in period (cap to keep tokens reasonable)
+          const { data: msgs } = await admin
+            .from('zapp_messages')
+            .select('content, transcription, message_type, sender_name, created_at, zapp_conversation_id')
+            .in('zapp_conversation_id', convIds)
+            .eq('direction', 'inbound')
+            .gte('created_at', periodStart.toISOString())
+            .lte('created_at', periodEnd.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1200);
+
+          const lines: string[] = [];
+          for (const m of (msgs || [])) {
+            const txt = (m.content || m.transcription || '').toString().trim();
+            if (!txt) continue;
+            // skip super short / non-meaningful
+            if (txt.length < 4) continue;
+            const clean = txt.replace(/\s+/g, ' ').slice(0, 220);
+            lines.push(`- ${clean}`);
+            if (lines.length >= 600) break;
+          }
+          sampleCount = lines.length;
+          messagesSample = lines.join('\n');
+        }
+      }
+    } catch (e) {
+      console.error('message sampling error', e);
+    }
+
+    const themesBlock = sampleCount > 0
+      ? `\n\nAMOSTRA DE MENSAGENS RECEBIDAS DOS CLIENTES (${sampleCount} mensagens, do mais recente para o mais antigo):\n${messagesSample}\n`
+      : `\n\n[Sem amostra de mensagens disponível no período]\n`;
+
+
+
     const prompt = `Você é um analista de operações sênior. Analise a performance das consultoras de Operações no período: ${periodLabel}.
 
 TOTAIS DO PERÍODO:
