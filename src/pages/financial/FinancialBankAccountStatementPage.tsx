@@ -44,6 +44,8 @@ export default function FinancialBankAccountStatementPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [pluggyOpen, setPluggyOpen] = useState(false);
+
 
   const { data: bankAccount } = useQuery({
     enabled: !!id && !!accountId,
