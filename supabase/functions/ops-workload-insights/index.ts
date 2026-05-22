@@ -152,7 +152,8 @@ Seja direto, sem floreios. Use bullets onde fizer sentido.`;
     };
 
     const GEMINI_MODEL = 'google/gemini-2.5-pro';
-    const GPT_MODEL = 'openai/gpt-5';
+    const GPT_MODEL = 'openai/gpt-5-mini';
+    const SYNTH_MODEL = 'google/gemini-2.5-flash';
 
     const [gemini, gpt] = await Promise.all([
       callModel(GEMINI_MODEL),
@@ -208,7 +209,7 @@ Média vs mediana, mais rápidos e mais lentos.
 ## Recomendações
 3-5 ações práticas e acionáveis para a reunião.`;
 
-    const synthesizerModel = gemini.content ? GEMINI_MODEL : GPT_MODEL;
+    const synthesizerModel = SYNTH_MODEL;
     let unifiedContent: string | null = null;
     let unifiedError: string | null = null;
     try {
