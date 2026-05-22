@@ -17,9 +17,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, RefreshCw, Search, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ArrowLeft, RefreshCw, Search, ArrowUpRight, ArrowDownRight, Link2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PluggyConnectDialog } from "@/components/financial/PluggyConnectDialog";
 
 interface Entry {
   id: string;
