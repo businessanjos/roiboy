@@ -53,11 +53,8 @@ type View = "current" | "history";
 export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: Props) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [gemini, setGemini] = useState<string>("");
-  const [gpt, setGpt] = useState<string>("");
-  const [geminiErr, setGeminiErr] = useState<string | null>(null);
-  const [gptErr, setGptErr] = useState<string | null>(null);
-  const [activeModel, setActiveModel] = useState<"gemini" | "gpt">("gemini");
+  const [content, setContent] = useState<string>("");
+  const [usedFallback, setUsedFallback] = useState(false);
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState<View>("current");
   const [history, setHistory] = useState<SavedReport[]>([]);
@@ -78,14 +75,13 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
     [rows]
   );
 
-  const hasContent = !!(gemini || gpt);
-  const currentText = activeModel === "gemini" ? gemini : gpt;
-  const currentErr = activeModel === "gemini" ? geminiErr : gptErr;
+  const hasContent = !!content;
 
   const run = async () => {
     setLoading(true);
     setErr(null);
-    setGemini(""); setGpt(""); setGeminiErr(null); setGptErr(null);
+    setContent("");
+    setUsedFallback(false);
     setStartedAt(Date.now());
     setElapsed(0);
     const { data, error } = await supabase.functions.invoke("ops-workload-insights", {
@@ -97,11 +93,8 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
       setErr((data as any).error);
     } else {
       const d = data as any;
-      setGemini(d.gemini || "");
-      setGpt(d.gpt || "");
-      setGeminiErr(d.geminiError || null);
-      setGptErr(d.gptError || null);
-      setActiveModel(d.gemini ? "gemini" : "gpt");
+      setContent(d.content || "");
+      setUsedFallback(!!d.usedFallback);
       loadHistory();
     }
     setLoading(false);
@@ -112,19 +105,17 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
     setHistoryLoading(true);
     const { data, error } = await supabase
       .from("ops_workload_ai_reports")
-      .select("id,created_at,period_label,rows_count,gemini_content,gpt_content,gemini_error,gpt_error")
+      .select("id,created_at,period_label,rows_count,gemini_content,gpt_content,gemini_error,gpt_error,models_used")
       .order("created_at", { ascending: false })
       .limit(30);
-    if (!error && data) setHistory(data as SavedReport[]);
+    if (!error && data) setHistory(data as any);
     setHistoryLoading(false);
   };
 
   const openSaved = (r: SavedReport) => {
-    setGemini(r.gemini_content || "");
-    setGpt(r.gpt_content || "");
-    setGeminiErr(r.gemini_error);
-    setGptErr(r.gpt_error);
-    setActiveModel(r.gemini_content ? "gemini" : "gpt");
+    const unified = (r as any).models_used?.unified_content as string | undefined;
+    setContent(unified || r.gemini_content || r.gpt_content || "");
+    setUsedFallback(!unified);
     setView("current");
   };
 
@@ -151,15 +142,14 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
       if (rows.length > 0 && !hasContent && !loading) run();
     }
     if (!open) {
-      setGemini(""); setGpt(""); setGeminiErr(null); setGptErr(null);
-      setErr(null); setCopied(false); setView("current");
+      setContent(""); setErr(null); setCopied(false); setView("current"); setUsedFallback(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(currentText);
+      await navigator.clipboard.writeText(content);
       setCopied(true);
       toast({ title: "Copiado!", description: "Resumo copiado para a área de transferência." });
       setTimeout(() => setCopied(false), 2000);
@@ -167,6 +157,7 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
       toast({ title: "Erro", description: "Não foi possível copiar.", variant: "destructive" });
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -275,38 +266,15 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
               )}
 
               {hasContent && !loading && (
-                <Tabs value={activeModel} onValueChange={(v) => setActiveModel(v as any)}>
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="gemini" disabled={!gemini && !geminiErr} className="gap-2">
-                      <span className="h-2 w-2 rounded-full bg-blue-500" />
-                      Gemini Pro
-                      {geminiErr && <AlertTriangle className="h-3 w-3 text-destructive" />}
-                    </TabsTrigger>
-                    <TabsTrigger value="gpt" disabled={!gpt && !gptErr} className="gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                      GPT
-                      {gptErr && <AlertTriangle className="h-3 w-3 text-destructive" />}
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="gemini" className="mt-0">
-                    {gemini ? (
-                      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <MarkdownRenderer content={gemini} />
-                      </div>
-                    ) : (
-                      <ModelErrorBlock error={geminiErr} model="Gemini Pro" />
-                    )}
-                  </TabsContent>
-                  <TabsContent value="gpt" className="mt-0">
-                    {gpt ? (
-                      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <MarkdownRenderer content={gpt} />
-                      </div>
-                    ) : (
-                      <ModelErrorBlock error={gptErr} model="GPT" />
-                    )}
-                  </TabsContent>
-                </Tabs>
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  {usedFallback && (
+                    <div className="mb-3 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2 flex items-center gap-2">
+                      <AlertTriangle className="h-3 w-3" />
+                      Síntese unificada indisponível — exibindo o melhor draft disponível.
+                    </div>
+                  )}
+                  <MarkdownRenderer content={content} />
+                </div>
               )}
             </div>
           )}
@@ -317,10 +285,10 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
           <div className="border-t bg-muted/30 px-7 py-3 flex items-center justify-between gap-3">
             <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
               <Sparkles className="h-3 w-3 text-primary" />
-              Salvo no histórico · Comparado entre Gemini Pro e GPT
+              Análise unificada (Gemini Pro + GPT) · salva no histórico
             </div>
             <div className="flex items-center gap-2">
-              {currentText && (
+              {content && (
                 <Button size="sm" variant="ghost" onClick={handleCopy}>
                   {copied ? (
                     <><Check className="h-3.5 w-3.5 mr-1.5 text-emerald-500" /> Copiado</>
