@@ -166,6 +166,78 @@ Seja direto, sem floreios. Use bullets onde fizer sentido.`;
       );
     }
 
+    // Etapa 2: SÍNTESE — combina as duas análises em UM relatório unificado
+    const synthesisPrompt = `Você é o editor-chefe que consolida análises de dois analistas seniores em UM relatório executivo final, em português, em markdown.
+
+DADOS REAIS (fonte da verdade — sempre prevalece sobre os analistas):
+Período: ${periodLabel}
+- Carteira ativa total: ${totals.active} clientes
+- Clientes que iniciaram contato: ${totals.called}
+- Clientes efetivamente atendidos: ${totals.attended} (${overallCoverage}% de cobertura)
+- Mensagens recebidas: ${totals.inbound} | enviadas: ${totals.outbound}
+- Conversas: ${totals.convs}
+- Taxa global de resposta (12h): ${overallRespRate}% (${totals.resp}/${totals.totalIn})
+- Tempo total respondendo: ${fmtMin(totals.totalRespTime)}
+
+POR CONSULTORA:
+${table}
+
+ANÁLISE A:
+${gemini.content || '[Indisponível]'}
+
+ANÁLISE B:
+${gpt.content || '[Indisponível]'}
+
+REGRAS DA SÍNTESE:
+1. Combine pontos onde A e B concordam (alta confiança).
+2. Onde discordarem, escolha a versão melhor fundamentada nos números reais e descarte a outra.
+3. NUNCA escreva "Analista A", "Analista B", "ambos modelos", "Gemini", "GPT" — o resultado deve parecer escrito por UMA pessoa.
+4. Não duplique informação. Texto fluido, direto, executivo.
+5. Cite nomes próprios, percentuais e métricas concretas.
+6. Se os analistas divergirem em números, use os números do bloco DADOS REAIS.
+
+Estrutura obrigatória:
+## Resumo Executivo
+2-3 frases sobre a saúde geral do atendimento.
+## Destaques Positivos
+Quem performa bem e por quê (métricas concretas).
+## Alertas e Preocupações
+Riscos com nomes: carteiras >40, baixa cobertura, resposta lenta, clientes que chamaram e não foram atendidos.
+## Tempo de Atendimento
+Média vs mediana, mais rápidos e mais lentos.
+## Recomendações
+3-5 ações práticas e acionáveis para a reunião.`;
+
+    const synthesizerModel = gemini.content ? GEMINI_MODEL : GPT_MODEL;
+    let unifiedContent: string | null = null;
+    let unifiedError: string | null = null;
+    try {
+      const r = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: synthesizerModel,
+          messages: [
+            { role: 'system', content: 'Você é um editor sênior. Consolida análises em um relatório único e fluido, sem mencionar múltiplas fontes.' },
+            { role: 'user', content: synthesisPrompt },
+          ],
+        }),
+      });
+      if (!r.ok) {
+        unifiedError = `Erro na síntese: ${r.status}`;
+        console.error('synthesis error', r.status, await r.text());
+      } else {
+        const data = await r.json();
+        unifiedContent = data?.choices?.[0]?.message?.content || '';
+      }
+    } catch (e) {
+      unifiedError = e instanceof Error ? e.message : 'Erro desconhecido';
+      console.error('synthesis exception', e);
+    }
+
+    // Fallback: se síntese falhou, usa o melhor draft disponível
+    const finalContent = unifiedContent || gemini.content || gpt.content || '';
+
     // Persist report
     let reportId: string | null = null;
     try {
@@ -173,7 +245,6 @@ Seja direto, sem floreios. Use bullets onde fizer sentido.`;
       const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-      // Get user from auth header
       let userId: string | null = null;
       const authHeader = req.headers.get('Authorization');
       if (authHeader) {
@@ -196,7 +267,13 @@ Seja direto, sem floreios. Use bullets onde fizer sentido.`;
           gpt_content: gpt.content,
           gemini_error: gemini.error,
           gpt_error: gpt.error,
-          models_used: { gemini: GEMINI_MODEL, gpt: GPT_MODEL },
+          models_used: {
+            gemini: GEMINI_MODEL,
+            gpt: GPT_MODEL,
+            synthesizer: synthesizerModel,
+            unified_content: finalContent,
+            unified_error: unifiedError,
+          },
         })
         .select('id')
         .single();
@@ -209,10 +286,11 @@ Seja direto, sem floreios. Use bullets onde fizer sentido.`;
     return new Response(
       JSON.stringify({
         reportId,
-        gemini: gemini.content,
-        gpt: gpt.content,
-        geminiError: gemini.error,
-        gptError: gpt.error,
+        content: finalContent,
+        synthesisError: unifiedError,
+        usedFallback: !unifiedContent,
+        drafts: { gemini: gemini.content, gpt: gpt.content },
+        draftErrors: { gemini: gemini.error, gpt: gpt.error },
         totals,
         overallRespRate,
         overallCoverage,
