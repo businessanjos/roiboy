@@ -29,7 +29,21 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { rows, periodLabel } = await req.json() as { rows: Row[]; periodLabel: string };
+    const raw = await req.text();
+    if (!raw) {
+      return new Response(JSON.stringify({ error: 'Corpo da requisição vazio' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    let parsed: { rows: Row[]; periodLabel: string };
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return new Response(JSON.stringify({ error: 'JSON inválido no corpo da requisição' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const { rows, periodLabel } = parsed;
     if (!Array.isArray(rows) || rows.length === 0) {
       return new Response(JSON.stringify({ error: 'Sem dados' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
