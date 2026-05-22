@@ -27,6 +27,7 @@ interface Row {
   inbound_msgs: number;
   outbound_msgs: number;
   conversations: number;
+  conversations_total: number;
   avg_first_response_min: number;
   median_first_response_min: number;
   total_response_time_min: number;
@@ -228,7 +229,8 @@ export function OperationsConsultantWorkloadCard() {
                       <Th icon={<MessageSquare className="h-3.5 w-3.5" />} tip="Mensagens enviadas em conversas de clientes da carteira (atribuído via cliente, não via remetente)">
                         Enviadas
                       </Th>
-                      <Th icon={<MessagesSquare className="h-3.5 w-3.5" />}>Conversas</Th>
+                      <Th icon={<MessagesSquare className="h-3.5 w-3.5" />} tip="Conversas com clientes da carteira que possuem contrato ativo no período">Conversas</Th>
+                      <Th icon={<MessagesSquare className="h-3.5 w-3.5" />} tip="Total de conversas no período, incluindo clientes sem contrato ativo (ex.: trial, cancelados, pré-venda)">Conv. (total)</Th>
                       <Th icon={<Clock className="h-3.5 w-3.5" />} tip="Tempo médio entre msg recebida do cliente e a 1ª resposta enviada (janela de 12h). Mediana entre parênteses é mais robusta contra outliers.">
                         1ª resposta
                       </Th>
@@ -280,6 +282,14 @@ export function OperationsConsultantWorkloadCard() {
                           <td className="py-2 px-2 text-right">{r.inbound_msgs}</td>
                           <td className="py-2 px-2 text-right">{r.outbound_msgs}</td>
                           <td className="py-2 px-2 text-right">{r.conversations}</td>
+                          <td className="py-2 px-2 text-right">
+                            <span className="font-medium">{r.conversations_total}</span>
+                            {r.conversations_total > r.conversations && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                (+{r.conversations_total - r.conversations})
+                              </span>
+                            )}
+                          </td>
                           <td className="py-2 px-2 text-right">
                             <div>{fmtDuration(r.avg_first_response_min)}</div>
                             {r.median_first_response_min > 0 && (
