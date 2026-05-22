@@ -17,9 +17,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, RefreshCw, Search, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ArrowLeft, RefreshCw, Search, ArrowUpRight, ArrowDownRight, Link2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PluggyConnectDialog } from "@/components/financial/PluggyConnectDialog";
 
 interface Entry {
   id: string;
@@ -43,6 +44,8 @@ export default function FinancialBankAccountStatementPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [pluggyOpen, setPluggyOpen] = useState(false);
+
 
   const { data: bankAccount } = useQuery({
     enabled: !!id && !!accountId,
@@ -133,13 +136,25 @@ export default function FinancialBankAccountStatementPage() {
             </p>
           </div>
         </div>
-        {isLinked && (
+        {isLinked ? (
           <Button onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending}>
             <RefreshCw className={`h-4 w-4 mr-2 ${syncMutation.isPending ? "animate-spin" : ""}`} />
             Sincronizar agora
           </Button>
+        ) : (
+          <Button onClick={() => setPluggyOpen(true)}>
+            <Link2 className="h-4 w-4 mr-2" />
+            Conectar via Pluggy
+          </Button>
         )}
       </div>
+
+      <PluggyConnectDialog
+        open={pluggyOpen}
+        onOpenChange={setPluggyOpen}
+        bankAccountId={id!}
+        bankAccountName={bankAccount?.name ?? ""}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
