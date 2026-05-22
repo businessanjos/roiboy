@@ -229,7 +229,8 @@ export function OperationsConsultantWorkloadCard() {
                       <Th icon={<MessageSquare className="h-3.5 w-3.5" />} tip="Mensagens enviadas em conversas de clientes da carteira (atribuído via cliente, não via remetente)">
                         Enviadas
                       </Th>
-                      <Th icon={<MessagesSquare className="h-3.5 w-3.5" />}>Conversas</Th>
+                      <Th icon={<MessagesSquare className="h-3.5 w-3.5" />} tip="Conversas com clientes da carteira que possuem contrato ativo no período">Conversas</Th>
+                      <Th icon={<MessagesSquare className="h-3.5 w-3.5" />} tip="Total de conversas no período, incluindo clientes sem contrato ativo (ex.: trial, cancelados, pré-venda)">Conv. (total)</Th>
                       <Th icon={<Clock className="h-3.5 w-3.5" />} tip="Tempo médio entre msg recebida do cliente e a 1ª resposta enviada (janela de 12h). Mediana entre parênteses é mais robusta contra outliers.">
                         1ª resposta
                       </Th>
