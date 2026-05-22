@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    let parsed: { rows: Row[]; periodLabel: string };
+    let parsed: { rows: Row[]; periodLabel: string; rpcParams?: any };
     try {
       parsed = JSON.parse(raw);
     } catch {
@@ -44,12 +44,25 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const { rows, periodLabel } = parsed;
+    const { rows, periodLabel, rpcParams } = parsed;
     if (!Array.isArray(rows) || rows.length === 0) {
       return new Response(JSON.stringify({ error: 'Sem dados' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Resolve period bounds from rpcParams
+    const now = new Date();
+    let periodStart: Date;
+    let periodEnd: Date = now;
+    if (rpcParams?.p_start && rpcParams?.p_end) {
+      periodStart = new Date(rpcParams.p_start);
+      periodEnd = new Date(rpcParams.p_end);
+    } else {
+      const days = Number(rpcParams?.p_days) || 7;
+      periodStart = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    }
+
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY não configurada');
