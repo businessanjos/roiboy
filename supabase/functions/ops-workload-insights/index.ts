@@ -327,9 +327,9 @@ Baseado na amostra de mensagens: principais temas, dúvidas recorrentes (com exe
     // Persist report
     let reportId: string | null = null;
     try {
-      const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-      const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+      // SUPABASE_URL, SERVICE_ROLE and admin already initialized above
+
+
 
       let userId: string | null = null;
       const authHeader = req.headers.get('Authorization');
