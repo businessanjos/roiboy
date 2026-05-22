@@ -26,6 +26,17 @@ declare global {
 }
 
 const PLUGGY_CDN = "https://cdn.pluggy.ai/web-connect/v2.13.1/pluggy-connect.js";
+const PLUGGY_SCRIPT_ID = "pluggy-connect-script";
+const PLUGGY_TIMEOUT_MS = 15000;
+
+function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), PLUGGY_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 interface PluggyAccount {
   account_id: string;
@@ -46,21 +57,49 @@ interface Props {
 }
 
 function loadPluggyScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.PluggyConnect) return resolve();
-    const existing = document.querySelector<HTMLScriptElement>(`script[src="${PLUGGY_CDN}"]`);
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Falha ao carregar Pluggy Connect")));
-      return;
-    }
-    const s = document.createElement("script");
-    s.src = PLUGGY_CDN;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error("Falha ao carregar Pluggy Connect"));
-    document.head.appendChild(s);
-  });
+  return withTimeout(
+    new Promise((resolve, reject) => {
+      if (window.PluggyConnect) return resolve();
+      const existing = document.querySelector<HTMLScriptElement>(`#${PLUGGY_SCRIPT_ID}, script[src="${PLUGGY_CDN}"]`);
+      if (existing) {
+        if (existing.dataset.failed === "true") existing.remove();
+        else if (existing.dataset.loaded === "true") {
+          return window.PluggyConnect
+            ? resolve()
+            : reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
+        } else {
+          existing.addEventListener("load", () => {
+            existing.dataset.loaded = "true";
+            window.PluggyConnect
+              ? resolve()
+              : reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
+          }, { once: true });
+          existing.addEventListener("error", () => {
+            existing.dataset.failed = "true";
+            reject(new Error("Falha ao carregar Pluggy Connect"));
+          }, { once: true });
+          return;
+        }
+      }
+      if (window.PluggyConnect) return resolve();
+      const s = document.createElement("script");
+      s.id = PLUGGY_SCRIPT_ID;
+      s.src = PLUGGY_CDN;
+      s.async = true;
+      s.onload = () => {
+        s.dataset.loaded = "true";
+        window.PluggyConnect
+          ? resolve()
+          : reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
+      };
+      s.onerror = () => {
+        s.dataset.failed = "true";
+        reject(new Error("Falha ao carregar Pluggy Connect"));
+      };
+      document.head.appendChild(s);
+    }),
+    "A Pluggy demorou demais para carregar. Verifique pop-ups/bloqueadores ou tente novamente."
+  );
 }
 
 export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAccountName }: Props) {
