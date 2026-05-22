@@ -38,6 +38,20 @@ function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+function getErrorMessage(error: unknown, fallback = "Erro desconhecido") {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === "string" ? message : fallback;
+  }
+  return fallback;
+}
+
+interface PluggySuccessPayload {
+  item?: { id?: string };
+}
+
 interface PluggyAccount {
   account_id: string;
   account_name: string;
@@ -64,15 +78,13 @@ function loadPluggyScript(): Promise<void> {
       if (existing) {
         if (existing.dataset.failed === "true") existing.remove();
         else if (existing.dataset.loaded === "true") {
-          return window.PluggyConnect
-            ? resolve()
-            : reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
+          if (window.PluggyConnect) return resolve();
+          return reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
         } else {
           existing.addEventListener("load", () => {
             existing.dataset.loaded = "true";
-            window.PluggyConnect
-              ? resolve()
-              : reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
+            if (window.PluggyConnect) resolve();
+            else reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
           }, { once: true });
           existing.addEventListener("error", () => {
             existing.dataset.failed = "true";
@@ -88,9 +100,8 @@ function loadPluggyScript(): Promise<void> {
       s.async = true;
       s.onload = () => {
         s.dataset.loaded = "true";
-        window.PluggyConnect
-          ? resolve()
-          : reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
+        if (window.PluggyConnect) resolve();
+        else reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
       };
       s.onerror = () => {
         s.dataset.failed = "true";
