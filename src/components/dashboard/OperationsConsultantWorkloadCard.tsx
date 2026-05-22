@@ -114,11 +114,12 @@ export function OperationsConsultantWorkloadCard() {
     (a, r) => ({
       clients: a.clients + r.active_clients,
       who: a.who + r.clients_who_messaged,
+      attended: a.attended + r.clients_attended,
       inbound: a.inbound + r.inbound_msgs,
       outbound: a.outbound + r.outbound_msgs,
       convs: a.convs + r.conversations,
     }),
-    { clients: 0, who: 0, inbound: 0, outbound: 0, convs: 0 }
+    { clients: 0, who: 0, attended: 0, inbound: 0, outbound: 0, convs: 0 }
   ), [rows]);
 
   return (
