@@ -319,11 +319,12 @@ export function OperationsConsultantWorkloadCard() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="text-2xl font-bold">{value.toLocaleString("pt-BR")}</div>
+      {hint && <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );
 }
