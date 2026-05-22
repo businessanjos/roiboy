@@ -26,6 +26,31 @@ declare global {
 }
 
 const PLUGGY_CDN = "https://cdn.pluggy.ai/web-connect/v2.13.1/pluggy-connect.js";
+const PLUGGY_SCRIPT_ID = "pluggy-connect-script";
+const PLUGGY_TIMEOUT_MS = 15000;
+
+function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), PLUGGY_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function getErrorMessage(error: unknown, fallback = "Erro desconhecido") {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === "string" ? message : fallback;
+  }
+  return fallback;
+}
+
+interface PluggySuccessPayload {
+  item?: { id?: string };
+}
 
 interface PluggyAccount {
   account_id: string;
@@ -46,21 +71,46 @@ interface Props {
 }
 
 function loadPluggyScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.PluggyConnect) return resolve();
-    const existing = document.querySelector<HTMLScriptElement>(`script[src="${PLUGGY_CDN}"]`);
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Falha ao carregar Pluggy Connect")));
-      return;
-    }
-    const s = document.createElement("script");
-    s.src = PLUGGY_CDN;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error("Falha ao carregar Pluggy Connect"));
-    document.head.appendChild(s);
-  });
+  return withTimeout(
+    new Promise((resolve, reject) => {
+      if (window.PluggyConnect) return resolve();
+      const existing = document.querySelector<HTMLScriptElement>(`#${PLUGGY_SCRIPT_ID}, script[src="${PLUGGY_CDN}"]`);
+      if (existing) {
+        if (existing.dataset.failed === "true") existing.remove();
+        else if (existing.dataset.loaded === "true") {
+          if (window.PluggyConnect) return resolve();
+          return reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
+        } else {
+          existing.addEventListener("load", () => {
+            existing.dataset.loaded = "true";
+            if (window.PluggyConnect) resolve();
+            else reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
+          }, { once: true });
+          existing.addEventListener("error", () => {
+            existing.dataset.failed = "true";
+            reject(new Error("Falha ao carregar Pluggy Connect"));
+          }, { once: true });
+          return;
+        }
+      }
+      if (window.PluggyConnect) return resolve();
+      const s = document.createElement("script");
+      s.id = PLUGGY_SCRIPT_ID;
+      s.src = PLUGGY_CDN;
+      s.async = true;
+      s.onload = () => {
+        s.dataset.loaded = "true";
+        if (window.PluggyConnect) resolve();
+        else reject(new Error("Pluggy carregou, mas o widget não ficou disponível"));
+      };
+      s.onerror = () => {
+        s.dataset.failed = "true";
+        reject(new Error("Falha ao carregar Pluggy Connect"));
+      };
+      document.head.appendChild(s);
+    }),
+    "A Pluggy demorou demais para carregar. Verifique pop-ups/bloqueadores ou tente novamente."
+  );
 }
 
 export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAccountName }: Props) {
@@ -101,7 +151,7 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       const widget = new window.PluggyConnect({
         connectToken: data.accessToken,
         includeSandbox: true,
-        onSuccess: async (payload: any) => {
+        onSuccess: async (payload: PluggySuccessPayload) => {
           const newItemId = payload?.item?.id;
           if (!newItemId) {
             setError("Item Pluggy não retornado");
@@ -111,8 +161,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
           setLoading(true);
           setTimeout(() => fetchAccounts(newItemId), 2500);
         },
-        onError: (e: any) => {
-          setError(typeof e === "string" ? e : (e?.message ?? "Erro ao conectar banco"));
+        onError: (e: unknown) => {
+          setError(getErrorMessage(e, "Erro ao conectar banco"));
           setLoading(false);
         },
         onClose: () => {
@@ -123,8 +173,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       // Widget Pluggy abre sua própria UI em overlay — liberar loading do nosso dialog
       // para não travar caso onClose não dispare (popup bloqueado, erro silencioso, etc).
       setLoading(false);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
       setLoading(false);
     }
   };
@@ -141,8 +191,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       if (fnErr) throw fnErr;
       if (!data?.success) throw new Error(data?.error || "Erro ao listar contas");
       setAccounts(data.accounts ?? []);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -170,8 +220,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       toast({ title: "Banco conectado via Pluggy" });
       onOpenChange(false);
     },
-    onError: (e: any) => {
-      toast({ title: "Erro ao vincular", description: e.message, variant: "destructive" });
+    onError: (e: unknown) => {
+      toast({ title: "Erro ao vincular", description: getErrorMessage(e), variant: "destructive" });
     },
   });
 
