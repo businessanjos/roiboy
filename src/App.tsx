@@ -334,7 +334,7 @@ const App = () => (
                             <Route path="/marketing" element={<Marketing />} />
                             <Route path="/content-calendar" element={<ContentCalendar />} />
                             <Route path="/social-media" element={<SocialMedia />} />
-                            <Route path="/criacao" element={<ContentCreation />} />
+                            <Route path="/criacao" element={<Navigate to="/marketing/content-hq" replace />} />
                             <Route path="/marketing-tasks" element={<MarketingTasks />} />
                             <Route path="/marketing-insights" element={<MarketingInsights />} />
                             <Route path="/marketing/trafego-pago" element={<MarketingTrafegoPago />} />
