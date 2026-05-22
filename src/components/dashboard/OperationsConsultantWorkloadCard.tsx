@@ -283,6 +283,14 @@ export function OperationsConsultantWorkloadCard() {
                           <td className="py-2 px-2 text-right">{r.outbound_msgs}</td>
                           <td className="py-2 px-2 text-right">{r.conversations}</td>
                           <td className="py-2 px-2 text-right">
+                            <span className="font-medium">{r.conversations_total}</span>
+                            {r.conversations_total > r.conversations && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                (+{r.conversations_total - r.conversations})
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2 px-2 text-right">
                             <div>{fmtDuration(r.avg_first_response_min)}</div>
                             {r.median_first_response_min > 0 && (
                               <div className="text-xs text-muted-foreground">med {fmtDuration(r.median_first_response_min)}</div>
