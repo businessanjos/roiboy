@@ -285,10 +285,10 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
           <div className="border-t bg-muted/30 px-7 py-3 flex items-center justify-between gap-3">
             <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
               <Sparkles className="h-3 w-3 text-primary" />
-              Salvo no histórico · Comparado entre Gemini Pro e GPT
+              Análise unificada (Gemini Pro + GPT) · salva no histórico
             </div>
             <div className="flex items-center gap-2">
-              {currentText && (
+              {content && (
                 <Button size="sm" variant="ghost" onClick={handleCopy}>
                   {copied ? (
                     <><Check className="h-3.5 w-3.5 mr-1.5 text-emerald-500" /> Copiado</>
