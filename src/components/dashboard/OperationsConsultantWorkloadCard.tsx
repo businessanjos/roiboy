@@ -197,9 +197,14 @@ export function OperationsConsultantWorkloadCard() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
                 <Metric label="Carteira ativa" value={totals.clients} />
                 <Metric label="Clientes que chamaram" value={totals.who} />
+                <Metric
+                  label="Clientes atendidos"
+                  value={totals.attended}
+                  hint={totals.clients > 0 ? `${Math.round((totals.attended / totals.clients) * 100)}% da carteira` : undefined}
+                />
                 <Metric label="Mensagens recebidas" value={totals.inbound} />
                 <Metric label="Mensagens enviadas" value={totals.outbound} />
                 <Metric label="Conversas no período" value={totals.convs} />
@@ -212,7 +217,10 @@ export function OperationsConsultantWorkloadCard() {
                       <th className="py-2 pr-2 font-medium">Consultora</th>
                       <Th icon={<Users className="h-3.5 w-3.5" />}>Carteira</Th>
                       <Th icon={<PhoneIncoming className="h-3.5 w-3.5" />} tip="Clientes distintos que enviaram ao menos 1 msg no período">
-                        Clientes ativos chamaram
+                        Chamaram
+                      </Th>
+                      <Th icon={<Headphones className="h-3.5 w-3.5" />} tip="Clientes distintos que receberam ao menos 1 mensagem da consultora no período (efetivamente atendidos)">
+                        Atendidos
                       </Th>
                       <Th icon={<MessageSquare className="h-3.5 w-3.5" />} tip="Mensagens recebidas dos clientes da carteira">
                         Recebidas
@@ -221,7 +229,7 @@ export function OperationsConsultantWorkloadCard() {
                         Enviadas
                       </Th>
                       <Th icon={<MessagesSquare className="h-3.5 w-3.5" />}>Conversas</Th>
-                      <Th icon={<Clock className="h-3.5 w-3.5" />} tip="Tempo médio entre msg recebida do cliente e a 1ª resposta enviada (janela de 12h)">
+                      <Th icon={<Clock className="h-3.5 w-3.5" />} tip="Tempo médio entre msg recebida do cliente e a 1ª resposta enviada (janela de 12h). Mediana entre parênteses é mais robusta contra outliers.">
                         1ª resposta
                       </Th>
                       <Th tip="% de msgs recebidas que tiveram resposta em até 12h">Resp%</Th>
