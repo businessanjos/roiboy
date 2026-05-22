@@ -8,12 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Users, MessageSquare, Clock, MessagesSquare, Loader2, PhoneIncoming, Info, CalendarIcon } from "lucide-react";
+import { Users, MessageSquare, Clock, MessagesSquare, Loader2, PhoneIncoming, Info, CalendarIcon, Headphones, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
 import { OpsClientsBreakdownDialog } from "./OpsClientsBreakdownDialog";
+import { OpsWorkloadAiDialog } from "./OpsWorkloadAiDialog";
 
 interface Row {
   user_id: string;
