@@ -111,39 +111,59 @@ Deno.serve(async (req) => {
     const consultantIds = rows.map(r => r.user_id).filter(Boolean);
     let messagesSample = '';
     let sampleCount = 0;
+    const samplingDebug: any = { consultantIds: consultantIds.length };
     try {
       // 1) Clients owned by these consultants
-      const { data: clientsData } = await admin
+      const { data: clientsData, error: clientsErr } = await admin
         .from('clients')
         .select('id')
-        .in('responsible_user_id', consultantIds);
+        .in('responsible_user_id', consultantIds)
+        .limit(10000);
+      if (clientsErr) console.error('clients query error', clientsErr);
       const clientIds = (clientsData || []).map((c: any) => c.id);
+      samplingDebug.clientIds = clientIds.length;
 
       if (clientIds.length > 0) {
-        // 2) Conversations of those clients
-        const { data: convsData } = await admin
-          .from('zapp_conversations')
-          .select('id, client_id')
-          .in('client_id', clientIds);
-        const convIds = (convsData || []).map((c: any) => c.id);
+        // 2) Conversations of those clients — paginate to bypass 1000-row default
+        const convIds: string[] = [];
+        const CHUNK = 200;
+        for (let i = 0; i < clientIds.length; i += CHUNK) {
+          const slice = clientIds.slice(i, i + CHUNK);
+          const { data: convsData, error: convErr } = await admin
+            .from('zapp_conversations')
+            .select('id')
+            .in('client_id', slice)
+            .limit(5000);
+          if (convErr) console.error('conv query error', convErr);
+          for (const c of (convsData || [])) convIds.push((c as any).id);
+        }
+        samplingDebug.convIds = convIds.length;
 
         if (convIds.length > 0) {
-          // 3) Inbound text messages in period (cap to keep tokens reasonable)
-          const { data: msgs } = await admin
-            .from('zapp_messages')
-            .select('content, transcription, message_type, sender_name, created_at, zapp_conversation_id')
-            .in('zapp_conversation_id', convIds)
-            .eq('direction', 'inbound')
-            .gte('created_at', periodStart.toISOString())
-            .lte('created_at', periodEnd.toISOString())
-            .order('created_at', { ascending: false })
-            .limit(1200);
+          // 3) Inbound text messages in period (paginate by conv chunks)
+          const allMsgs: any[] = [];
+          for (let i = 0; i < convIds.length; i += 100) {
+            const slice = convIds.slice(i, i + 100);
+            const { data: msgs, error: msgErr } = await admin
+              .from('zapp_messages')
+              .select('content, transcription, created_at')
+              .in('zapp_conversation_id', slice)
+              .eq('direction', 'inbound')
+              .gte('created_at', periodStart.toISOString())
+              .lte('created_at', periodEnd.toISOString())
+              .order('created_at', { ascending: false })
+              .limit(800);
+            if (msgErr) console.error('msg query error', msgErr);
+            if (msgs) allMsgs.push(...msgs);
+            if (allMsgs.length >= 2500) break;
+          }
+          samplingDebug.rawMessages = allMsgs.length;
+          allMsgs.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 
           const lines: string[] = [];
-          for (const m of (msgs || [])) {
+          for (const m of allMsgs) {
             const txt = (m.content || m.transcription || '').toString().trim();
             if (!txt) continue;
-            // skip super short / non-meaningful
             if (txt.length < 4) continue;
             const clean = txt.replace(/\s+/g, ' ').slice(0, 220);
             lines.push(`- ${clean}`);
@@ -155,7 +175,9 @@ Deno.serve(async (req) => {
       }
     } catch (e) {
       console.error('message sampling error', e);
+      samplingDebug.exception = e instanceof Error ? e.message : String(e);
     }
+    console.log('[ops-workload-insights] sampling', JSON.stringify(samplingDebug), 'finalSample=', sampleCount);
 
     const themesBlock = sampleCount > 0
       ? `\n\nAMOSTRA DE MENSAGENS RECEBIDAS DOS CLIENTES (${sampleCount} mensagens, do mais recente para o mais antigo):\n${messagesSample}\n`
