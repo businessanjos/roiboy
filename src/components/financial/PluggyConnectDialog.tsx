@@ -151,7 +151,7 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       const widget = new window.PluggyConnect({
         connectToken: data.accessToken,
         includeSandbox: true,
-        onSuccess: async (payload: any) => {
+        onSuccess: async (payload: PluggySuccessPayload) => {
           const newItemId = payload?.item?.id;
           if (!newItemId) {
             setError("Item Pluggy não retornado");
@@ -161,8 +161,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
           setLoading(true);
           setTimeout(() => fetchAccounts(newItemId), 2500);
         },
-        onError: (e: any) => {
-          setError(typeof e === "string" ? e : (e?.message ?? "Erro ao conectar banco"));
+        onError: (e: unknown) => {
+          setError(getErrorMessage(e, "Erro ao conectar banco"));
           setLoading(false);
         },
         onClose: () => {
@@ -173,8 +173,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       // Widget Pluggy abre sua própria UI em overlay — liberar loading do nosso dialog
       // para não travar caso onClose não dispare (popup bloqueado, erro silencioso, etc).
       setLoading(false);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
       setLoading(false);
     }
   };
@@ -191,8 +191,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       if (fnErr) throw fnErr;
       if (!data?.success) throw new Error(data?.error || "Erro ao listar contas");
       setAccounts(data.accounts ?? []);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -220,8 +220,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       toast({ title: "Banco conectado via Pluggy" });
       onOpenChange(false);
     },
-    onError: (e: any) => {
-      toast({ title: "Erro ao vincular", description: e.message, variant: "destructive" });
+    onError: (e: unknown) => {
+      toast({ title: "Erro ao vincular", description: getErrorMessage(e), variant: "destructive" });
     },
   });
 
