@@ -235,8 +235,7 @@ export const sectors: Sector[] = [
     defaultRoute: "/marketing",
     navItems: [
       { to: "/marketing", icon: CalendarDays, label: "Calendário Anual" },
-      { to: "/marketing/content-hq", icon: Crown, label: "Content HQ" },
-      { to: "/criacao", icon: Star, label: "Criação" },
+      { to: "/marketing/content-hq", icon: Crown, label: "Conteúdo" },
       { to: "/content-calendar", icon: LayoutGrid, label: "Conteúdo" },
       { to: "/social-media", icon: Instagram, label: "Social Media" },
       { to: "/marketing/trafego-pago", icon: TrendingUp, label: "Tráfego Pago" },
