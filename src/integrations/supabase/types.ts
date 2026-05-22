@@ -21194,14 +21194,17 @@ export type Database = {
           active_clients: number
           avatar_url: string
           avg_first_response_min: number
+          clients_attended: number
           clients_who_messaged: number
           conversations: number
           email: string
           inbound_msgs: number
+          median_first_response_min: number
           name: string
           outbound_msgs: number
           responded_inbound: number
           total_inbound_with_window: number
+          total_response_time_min: number
           user_id: string
         }[]
       }

@@ -8,12 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Users, MessageSquare, Clock, MessagesSquare, Loader2, PhoneIncoming, Info, CalendarIcon } from "lucide-react";
+import { Users, MessageSquare, Clock, MessagesSquare, Loader2, PhoneIncoming, Info, CalendarIcon, Headphones, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
 import { OpsClientsBreakdownDialog } from "./OpsClientsBreakdownDialog";
+import { OpsWorkloadAiDialog } from "./OpsWorkloadAiDialog";
 
 interface Row {
   user_id: string;
@@ -22,10 +23,13 @@ interface Row {
   avatar_url: string | null;
   active_clients: number;
   clients_who_messaged: number;
+  clients_attended: number;
   inbound_msgs: number;
   outbound_msgs: number;
   conversations: number;
   avg_first_response_min: number;
+  median_first_response_min: number;
+  total_response_time_min: number;
   responded_inbound: number;
   total_inbound_with_window: number;
 }
@@ -64,6 +68,7 @@ export function OperationsConsultantWorkloadCard() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const { params, label } = useMemo(() => {
     if (preset === "today") {
@@ -109,11 +114,12 @@ export function OperationsConsultantWorkloadCard() {
     (a, r) => ({
       clients: a.clients + r.active_clients,
       who: a.who + r.clients_who_messaged,
+      attended: a.attended + r.clients_attended,
       inbound: a.inbound + r.inbound_msgs,
       outbound: a.outbound + r.outbound_msgs,
       convs: a.convs + r.conversations,
     }),
-    { clients: 0, who: 0, inbound: 0, outbound: 0, convs: 0 }
+    { clients: 0, who: 0, attended: 0, inbound: 0, outbound: 0, convs: 0 }
   ), [rows]);
 
   return (
@@ -130,7 +136,17 @@ export function OperationsConsultantWorkloadCard() {
               Mensagens, conversas e clientes contados sobre conversas vinculadas ao cliente do consultor.
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setAiOpen(true)}
+              disabled={loading || rows.length === 0}
+              className="gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              Resumo IA
+            </Button>
             <Select value={preset} onValueChange={(v) => setPreset(v as PresetKey)}>
               <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -181,9 +197,14 @@ export function OperationsConsultantWorkloadCard() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
                 <Metric label="Carteira ativa" value={totals.clients} />
                 <Metric label="Clientes que chamaram" value={totals.who} />
+                <Metric
+                  label="Clientes atendidos"
+                  value={totals.attended}
+                  hint={totals.clients > 0 ? `${Math.round((totals.attended / totals.clients) * 100)}% da carteira` : undefined}
+                />
                 <Metric label="Mensagens recebidas" value={totals.inbound} />
                 <Metric label="Mensagens enviadas" value={totals.outbound} />
                 <Metric label="Conversas no período" value={totals.convs} />
@@ -196,7 +217,10 @@ export function OperationsConsultantWorkloadCard() {
                       <th className="py-2 pr-2 font-medium">Consultora</th>
                       <Th icon={<Users className="h-3.5 w-3.5" />}>Carteira</Th>
                       <Th icon={<PhoneIncoming className="h-3.5 w-3.5" />} tip="Clientes distintos que enviaram ao menos 1 msg no período">
-                        Clientes ativos chamaram
+                        Chamaram
+                      </Th>
+                      <Th icon={<Headphones className="h-3.5 w-3.5" />} tip="Clientes distintos que receberam ao menos 1 mensagem da consultora no período (efetivamente atendidos)">
+                        Atendidos
                       </Th>
                       <Th icon={<MessageSquare className="h-3.5 w-3.5" />} tip="Mensagens recebidas dos clientes da carteira">
                         Recebidas
@@ -205,7 +229,7 @@ export function OperationsConsultantWorkloadCard() {
                         Enviadas
                       </Th>
                       <Th icon={<MessagesSquare className="h-3.5 w-3.5" />}>Conversas</Th>
-                      <Th icon={<Clock className="h-3.5 w-3.5" />} tip="Tempo médio entre msg recebida do cliente e a 1ª resposta enviada (janela de 12h)">
+                      <Th icon={<Clock className="h-3.5 w-3.5" />} tip="Tempo médio entre msg recebida do cliente e a 1ª resposta enviada (janela de 12h). Mediana entre parênteses é mais robusta contra outliers.">
                         1ª resposta
                       </Th>
                       <Th tip="% de msgs recebidas que tiveram resposta em até 12h">Resp%</Th>
@@ -247,10 +271,21 @@ export function OperationsConsultantWorkloadCard() {
                               ({r.active_clients > 0 ? Math.round((r.clients_who_messaged / r.active_clients) * 100) : 0}%)
                             </span>
                           </td>
+                          <td className="py-2 px-2 text-right">
+                            <span className="font-medium">{r.clients_attended}</span>
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({r.active_clients > 0 ? Math.round((r.clients_attended / r.active_clients) * 100) : 0}%)
+                            </span>
+                          </td>
                           <td className="py-2 px-2 text-right">{r.inbound_msgs}</td>
                           <td className="py-2 px-2 text-right">{r.outbound_msgs}</td>
                           <td className="py-2 px-2 text-right">{r.conversations}</td>
-                          <td className="py-2 px-2 text-right">{fmtDuration(r.avg_first_response_min)}</td>
+                          <td className="py-2 px-2 text-right">
+                            <div>{fmtDuration(r.avg_first_response_min)}</div>
+                            {r.median_first_response_min > 0 && (
+                              <div className="text-xs text-muted-foreground">med {fmtDuration(r.median_first_response_min)}</div>
+                            )}
+                          </td>
                           <td className="py-2 px-2 text-right">
                             {r.total_inbound_with_window > 0 ? `${respRate}%` : "—"}
                           </td>
@@ -280,15 +315,22 @@ export function OperationsConsultantWorkloadCard() {
         periodLabel={label}
         rpcParams={params}
       />
+      <OpsWorkloadAiDialog
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+        rows={rows}
+        periodLabel={label}
+      />
     </TooltipProvider>
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="text-2xl font-bold">{value.toLocaleString("pt-BR")}</div>
+      {hint && <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );
 }
