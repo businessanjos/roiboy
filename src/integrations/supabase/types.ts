@@ -1482,6 +1482,7 @@ export type Database = {
       }
       client_churn_analyses: {
         Row: {
+          account_id: string | null
           client_id: string
           created_at: string
           created_by: string | null
@@ -1492,6 +1493,7 @@ export type Database = {
           summary: string | null
         }
         Insert: {
+          account_id?: string | null
           client_id: string
           created_at?: string
           created_by?: string | null
@@ -1502,6 +1504,7 @@ export type Database = {
           summary?: string | null
         }
         Update: {
+          account_id?: string | null
           client_id?: string
           created_at?: string
           created_by?: string | null
@@ -14691,6 +14694,7 @@ export type Database = {
       }
       ops_workload_ai_reports: {
         Row: {
+          account_id: string | null
           created_at: string
           created_by: string | null
           gemini_content: string | null
@@ -14705,6 +14709,7 @@ export type Database = {
           totals: Json | null
         }
         Insert: {
+          account_id?: string | null
           created_at?: string
           created_by?: string | null
           gemini_content?: string | null
@@ -14719,6 +14724,7 @@ export type Database = {
           totals?: Json | null
         }
         Update: {
+          account_id?: string | null
           created_at?: string
           created_by?: string | null
           gemini_content?: string | null
