@@ -217,6 +217,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bank-accounts-all"] });
+      qc.invalidateQueries({ queryKey: ["bank-account", bankAccountId] });
+      qc.invalidateQueries({ queryKey: ["bank-account-statement", bankAccountId] });
       toast({ title: "Banco conectado via Pluggy" });
       onOpenChange(false);
     },
