@@ -271,10 +271,21 @@ export function OperationsConsultantWorkloadCard() {
                               ({r.active_clients > 0 ? Math.round((r.clients_who_messaged / r.active_clients) * 100) : 0}%)
                             </span>
                           </td>
+                          <td className="py-2 px-2 text-right">
+                            <span className="font-medium">{r.clients_attended}</span>
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({r.active_clients > 0 ? Math.round((r.clients_attended / r.active_clients) * 100) : 0}%)
+                            </span>
+                          </td>
                           <td className="py-2 px-2 text-right">{r.inbound_msgs}</td>
                           <td className="py-2 px-2 text-right">{r.outbound_msgs}</td>
                           <td className="py-2 px-2 text-right">{r.conversations}</td>
-                          <td className="py-2 px-2 text-right">{fmtDuration(r.avg_first_response_min)}</td>
+                          <td className="py-2 px-2 text-right">
+                            <div>{fmtDuration(r.avg_first_response_min)}</div>
+                            {r.median_first_response_min > 0 && (
+                              <div className="text-xs text-muted-foreground">med {fmtDuration(r.median_first_response_min)}</div>
+                            )}
+                          </td>
                           <td className="py-2 px-2 text-right">
                             {r.total_inbound_with_window > 0 ? `${respRate}%` : "—"}
                           </td>
