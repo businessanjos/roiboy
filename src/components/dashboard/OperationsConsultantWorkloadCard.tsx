@@ -320,7 +320,9 @@ export function OperationsConsultantWorkloadCard() {
         onOpenChange={setAiOpen}
         rows={rows}
         periodLabel={label}
+        rpcParams={params}
       />
+
     </TooltipProvider>
   );
 }

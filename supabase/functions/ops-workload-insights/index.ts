@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    let parsed: { rows: Row[]; periodLabel: string };
+    let parsed: { rows: Row[]; periodLabel: string; rpcParams?: any };
     try {
       parsed = JSON.parse(raw);
     } catch {
@@ -44,12 +44,25 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const { rows, periodLabel } = parsed;
+    const { rows, periodLabel, rpcParams } = parsed;
     if (!Array.isArray(rows) || rows.length === 0) {
       return new Response(JSON.stringify({ error: 'Sem dados' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Resolve period bounds from rpcParams
+    const now = new Date();
+    let periodStart: Date;
+    let periodEnd: Date = now;
+    if (rpcParams?.p_start && rpcParams?.p_end) {
+      periodStart = new Date(rpcParams.p_start);
+      periodEnd = new Date(rpcParams.p_end);
+    } else {
+      const days = Number(rpcParams?.p_days) || 7;
+      periodStart = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    }
+
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY não configurada');
@@ -90,6 +103,66 @@ Deno.serve(async (req) => {
     const overallRespRate = totals.totalIn > 0 ? Math.round((totals.resp / totals.totalIn) * 100) : 0;
     const overallCoverage = totals.active > 0 ? Math.round((totals.attended / totals.active) * 100) : 0;
 
+    // === Sample client inbound messages for thematic analysis ===
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    const consultantIds = rows.map(r => r.user_id).filter(Boolean);
+    let messagesSample = '';
+    let sampleCount = 0;
+    try {
+      // 1) Clients owned by these consultants
+      const { data: clientsData } = await admin
+        .from('clients')
+        .select('id')
+        .in('responsible_user_id', consultantIds);
+      const clientIds = (clientsData || []).map((c: any) => c.id);
+
+      if (clientIds.length > 0) {
+        // 2) Conversations of those clients
+        const { data: convsData } = await admin
+          .from('zapp_conversations')
+          .select('id, client_id')
+          .in('client_id', clientIds);
+        const convIds = (convsData || []).map((c: any) => c.id);
+
+        if (convIds.length > 0) {
+          // 3) Inbound text messages in period (cap to keep tokens reasonable)
+          const { data: msgs } = await admin
+            .from('zapp_messages')
+            .select('content, transcription, message_type, sender_name, created_at, zapp_conversation_id')
+            .in('zapp_conversation_id', convIds)
+            .eq('direction', 'inbound')
+            .gte('created_at', periodStart.toISOString())
+            .lte('created_at', periodEnd.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1200);
+
+          const lines: string[] = [];
+          for (const m of (msgs || [])) {
+            const txt = (m.content || m.transcription || '').toString().trim();
+            if (!txt) continue;
+            // skip super short / non-meaningful
+            if (txt.length < 4) continue;
+            const clean = txt.replace(/\s+/g, ' ').slice(0, 220);
+            lines.push(`- ${clean}`);
+            if (lines.length >= 600) break;
+          }
+          sampleCount = lines.length;
+          messagesSample = lines.join('\n');
+        }
+      }
+    } catch (e) {
+      console.error('message sampling error', e);
+    }
+
+    const themesBlock = sampleCount > 0
+      ? `\n\nAMOSTRA DE MENSAGENS RECEBIDAS DOS CLIENTES (${sampleCount} mensagens, do mais recente para o mais antigo):\n${messagesSample}\n`
+      : `\n\n[Sem amostra de mensagens disponível no período]\n`;
+
+
+
     const prompt = `Você é um analista de operações sênior. Analise a performance das consultoras de Operações no período: ${periodLabel}.
 
 TOTAIS DO PERÍODO:
@@ -103,7 +176,7 @@ TOTAIS DO PERÍODO:
 
 POR CONSULTORA (uma por linha):
 ${table}
-
+${themesBlock}
 Entregue uma análise EXECUTIVA em português, em markdown, com as seções abaixo. Seja específico citando nomes, números e percentuais. Nada genérico.
 
 ## Resumo Executivo
@@ -118,10 +191,19 @@ Riscos reais: carteiras superdimensionadas (>40), baixa cobertura, tempo de resp
 ## Tempo de Atendimento
 Comparar média vs mediana por consultora (se mediana << média → outliers puxando). Quem responde mais rápido, quem é mais lento.
 
+## Temas das Conversas
+Baseado SOMENTE na amostra de mensagens recebidas, identifique:
+- **Principais temas abordados** pelos clientes (3-6 tópicos com estimativa de % ou volume relativo).
+- **Principais dúvidas recorrentes** (cite exemplos curtos entre aspas se possível).
+- **Natureza das interações**: o quanto é sobre o **método/programa** (mentoria, materiais, conteúdo) vs **dia a dia da clínica** (operação, equipe, pacientes, financeiro) vs **reclamações/lamentações/desabafos** vs **dúvidas técnicas da plataforma**. Dê percentuais aproximados que somem 100%.
+- **Sinais de risco** (clientes insatisfeitos, churn iminente, pedidos de cancelamento, frustração recorrente).
+Se não houver amostra suficiente, diga explicitamente.
+
 ## Recomendações
-3-5 ações práticas e acionáveis para a reunião.
+3-5 ações práticas e acionáveis para a reunião — incluindo recomendações específicas baseadas nos temas/dúvidas mais frequentes (ex: criar FAQ, treinamento, conteúdo, automação).
 
 Seja direto, sem floreios. Use bullets onde fizer sentido.`;
+
 
     const callModel = async (model: string): Promise<{ content: string | null; error: string | null }> => {
       try {
@@ -182,7 +264,7 @@ Período: ${periodLabel}
 
 POR CONSULTORA:
 ${table}
-
+${themesBlock}
 ANÁLISE A:
 ${gemini.content || '[Indisponível]'}
 
@@ -191,10 +273,10 @@ ${gpt.content || '[Indisponível]'}
 
 REGRAS DA SÍNTESE:
 1. Combine pontos onde A e B concordam (alta confiança).
-2. Onde discordarem, escolha a versão melhor fundamentada nos números reais e descarte a outra.
+2. Onde discordarem, escolha a versão melhor fundamentada nos números reais e na amostra de mensagens; descarte a outra.
 3. NUNCA escreva "Analista A", "Analista B", "ambos modelos", "Gemini", "GPT" — o resultado deve parecer escrito por UMA pessoa.
 4. Não duplique informação. Texto fluido, direto, executivo.
-5. Cite nomes próprios, percentuais e métricas concretas.
+5. Cite nomes próprios, percentuais e métricas concretas. Para temas das conversas, use a amostra de mensagens como fonte da verdade.
 6. Se os analistas divergirem em números, use os números do bloco DADOS REAIS.
 
 Estrutura obrigatória:
@@ -206,8 +288,11 @@ Quem performa bem e por quê (métricas concretas).
 Riscos com nomes: carteiras >40, baixa cobertura, resposta lenta, clientes que chamaram e não foram atendidos.
 ## Tempo de Atendimento
 Média vs mediana, mais rápidos e mais lentos.
+## Temas das Conversas
+Baseado na amostra de mensagens: principais temas, dúvidas recorrentes (com exemplos), e split aproximado em % (método/programa, dia a dia da clínica, reclamações/desabafos, dúvidas técnicas). Sinais de risco/churn. Se a amostra for insuficiente, diga.
 ## Recomendações
-3-5 ações práticas e acionáveis para a reunião.`;
+3-5 ações práticas e acionáveis para a reunião — incluindo ações baseadas nos temas/dúvidas (FAQ, conteúdo, treinamento, automação).`;
+
 
     const synthesizerModel = SYNTH_MODEL;
     let unifiedContent: string | null = null;
@@ -242,9 +327,9 @@ Média vs mediana, mais rápidos e mais lentos.
     // Persist report
     let reportId: string | null = null;
     try {
-      const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-      const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+      // SUPABASE_URL, SERVICE_ROLE and admin already initialized above
+
+
 
       let userId: string | null = null;
       const authHeader = req.headers.get('Authorization');
@@ -274,7 +359,9 @@ Média vs mediana, mais rápidos e mais lentos.
             synthesizer: synthesizerModel,
             unified_content: finalContent,
             unified_error: unifiedError,
+            messages_sample_count: sampleCount,
           },
+
         })
         .select('id')
         .single();

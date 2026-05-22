@@ -35,7 +35,9 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   rows: any[];
   periodLabel: string;
+  rpcParams?: any;
 }
+
 
 interface SavedReport {
   id: string;
@@ -50,7 +52,7 @@ interface SavedReport {
 
 type View = "current" | "history";
 
-export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: Props) {
+export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel, rpcParams }: Props) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [content, setContent] = useState<string>("");
@@ -85,8 +87,9 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
     setStartedAt(Date.now());
     setElapsed(0);
     const { data, error } = await supabase.functions.invoke("ops-workload-insights", {
-      body: { rows, periodLabel },
+      body: { rows, periodLabel, rpcParams },
     });
+
     if (error) {
       setErr(error.message || "Falha ao gerar insights");
     } else if ((data as any)?.error) {
