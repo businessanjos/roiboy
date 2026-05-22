@@ -14689,6 +14689,51 @@ export type Database = {
           },
         ]
       }
+      ops_workload_ai_reports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          gemini_content: string | null
+          gemini_error: string | null
+          gpt_content: string | null
+          gpt_error: string | null
+          id: string
+          models_used: Json | null
+          period_label: string
+          rows_count: number
+          rows_snapshot: Json | null
+          totals: Json | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          gemini_content?: string | null
+          gemini_error?: string | null
+          gpt_content?: string | null
+          gpt_error?: string | null
+          id?: string
+          models_used?: Json | null
+          period_label: string
+          rows_count?: number
+          rows_snapshot?: Json | null
+          totals?: Json | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          gemini_content?: string | null
+          gemini_error?: string | null
+          gpt_content?: string | null
+          gpt_error?: string | null
+          id?: string
+          models_used?: Json | null
+          period_label?: string
+          rows_count?: number
+          rows_snapshot?: Json | null
+          totals?: Json | null
+        }
+        Relationships: []
+      }
       payers: {
         Row: {
           account_id: string
