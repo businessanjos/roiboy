@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useTalents, Talent, useAllContentPieces, PLATFORMS, ContentPiece } from "@/hooks/useContentHQ";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import {
   Crown, Target, Layers, CalendarRange, FileText, KanbanSquare, Library, BarChart3, LayoutGrid,
   Instagram, Youtube, Music2, MessageSquare, Linkedin, Image as ImageIcon, Headphones, Sparkles,
-  Lightbulb, Info, ArrowRight,
+  Lightbulb, Sun, Bot, Flame, Zap, Wand2, CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ContentProfileProvider } from "@/contexts/ContentProfileContext";
+import { ProfileSelector } from "@/components/marketing/ProfileSelector";
+import { DailyContentPanel } from "@/components/marketing/DailyContentPanel";
 import { ContentHQStrategy } from "@/components/marketing/content-hq/ContentHQStrategy";
 import { ContentHQPillars } from "@/components/marketing/content-hq/ContentHQPillars";
 import { ContentHQCalendar } from "@/components/marketing/content-hq/ContentHQCalendar";
@@ -21,20 +23,82 @@ import { ContentHQPerformance } from "@/components/marketing/content-hq/ContentH
 import { ContentHQPlatformBoard } from "@/components/marketing/content-hq/ContentHQPlatformBoard";
 import { ContentHQPieceDrawer } from "@/components/marketing/content-hq/ContentHQPieceDrawer";
 import { ContentHQIdeasLab } from "@/components/marketing/content-hq/ContentHQIdeasLab";
+import { MarketingPersonaTab } from "@/components/marketing/persona/MarketingPersonaTab";
+import { BrandVoiceTab } from "@/components/marketing/brand/BrandVoiceTab";
+import { MarketingIdeasTab } from "@/components/marketing/ideas/MarketingIdeasTab";
+import { EditorialCalendarTab } from "@/components/marketing/calendar/EditorialCalendarTab";
+import { TrendsRadarTab } from "@/components/marketing/trends/TrendsRadarTab";
+import { HooksTab } from "@/components/marketing/hooks/HooksTab";
+import { CopyStudioTab } from "@/components/marketing/copy/CopyStudioTab";
+import { MarketingReferencesTab } from "@/components/marketing/references/MarketingReferencesTab";
+import { CopilotTab } from "@/components/marketing/copilot/CopilotTab";
 
-type Section = "overview" | "ideas" | "strategy" | "pillars" | "calendar" | "briefings" | "kanban" | "library" | "performance";
+type Section =
+  // Hoje
+  | "today"
+  // Estratégia
+  | "persona" | "brand" | "strategy" | "pillars"
+  // Ideação
+  | "ideas-creation" | "ideas" | "hooks" | "trends" | "copilot"
+  // Planejamento
+  | "overview" | "calendar" | "editorial" | "briefings"
+  // Produção
+  | "kanban" | "copy" | "references" | "library"
+  // Performance
+  | "performance";
 
-const SECTIONS: { id: Section; label: string; icon: any }[] = [
-  { id: "overview", label: "Visão por Plataforma", icon: LayoutGrid },
-  { id: "ideas", label: "Banco de Ideias (IA)", icon: Lightbulb },
-  { id: "calendar", label: "Calendário", icon: CalendarRange },
-  { id: "kanban", label: "Produção", icon: KanbanSquare },
-  { id: "briefings", label: "Pautas & Briefings", icon: FileText },
-  { id: "pillars", label: "Pilares", icon: Layers },
-  { id: "strategy", label: "Estratégia", icon: Target },
-  { id: "library", label: "Biblioteca", icon: Library },
-  { id: "performance", label: "Performance", icon: BarChart3 },
+type SectionDef = { id: Section; label: string; icon: any; needsTalent?: boolean; hqHeader?: boolean };
+type SectionGroup = { group: string; items: SectionDef[] };
+
+const GROUPS: SectionGroup[] = [
+  {
+    group: "Hoje",
+    items: [{ id: "today", label: "O que postar hoje", icon: Sun }],
+  },
+  {
+    group: "Estratégia",
+    items: [
+      { id: "persona", label: "Persona", icon: Target },
+      { id: "brand", label: "Tom de Voz", icon: Wand2 },
+      { id: "strategy", label: "Estratégia (HQ)", icon: Target, needsTalent: true, hqHeader: true },
+      { id: "pillars", label: "Pilares (HQ)", icon: Layers, needsTalent: true, hqHeader: true },
+    ],
+  },
+  {
+    group: "Ideação",
+    items: [
+      { id: "ideas-creation", label: "Banco de Ideias", icon: Lightbulb },
+      { id: "ideas", label: "Ideias por Talento (HQ)", icon: Lightbulb, needsTalent: true, hqHeader: true },
+      { id: "hooks", label: "Hooks", icon: Zap },
+      { id: "trends", label: "Trends", icon: Flame },
+      { id: "copilot", label: "Copilot", icon: Bot },
+    ],
+  },
+  {
+    group: "Planejamento",
+    items: [
+      { id: "overview", label: "Visão por Plataforma", icon: LayoutGrid, hqHeader: true },
+      { id: "calendar", label: "Calendário (HQ)", icon: CalendarRange, hqHeader: true },
+      { id: "editorial", label: "Editorial", icon: CalendarDays },
+      { id: "briefings", label: "Pautas & Briefings", icon: FileText, needsTalent: true, hqHeader: true },
+    ],
+  },
+  {
+    group: "Produção",
+    items: [
+      { id: "kanban", label: "Kanban (HQ)", icon: KanbanSquare, hqHeader: true },
+      { id: "copy", label: "Copy IA", icon: Sparkles },
+      { id: "references", label: "Referências", icon: ImageIcon },
+      { id: "library", label: "Biblioteca (HQ)", icon: Library, needsTalent: true, hqHeader: true },
+    ],
+  },
+  {
+    group: "Performance",
+    items: [{ id: "performance", label: "Performance (HQ)", icon: BarChart3, needsTalent: true, hqHeader: true }],
+  },
 ];
+
+const ALL_SECTIONS: SectionDef[] = GROUPS.flatMap((g) => g.items);
 
 const PLATFORM_ICONS: Record<string, any> = {
   instagram: Instagram, youtube: Youtube, tiktok: Music2, threads: MessageSquare,
@@ -43,11 +107,13 @@ const PLATFORM_ICONS: Record<string, any> = {
 
 export default function ContentHQ() {
   const { data: talents = [], isLoading } = useTalents();
-  const [section, setSection] = useState<Section>("overview");
+  const [section, setSection] = useState<Section>("today");
   const [talentId, setTalentId] = useState<string | "all">("all");
   const [platformFilter, setPlatformFilter] = useState<string | "all">("all");
   const [drawerPiece, setDrawerPiece] = useState<{ piece: ContentPiece; talent: Talent } | null>(null);
 
+  const currentSection = ALL_SECTIONS.find((s) => s.id === section)!;
+  const showHqHeader = !!currentSection.hqHeader;
   const currentTalent = talents.find((t) => t.id === talentId);
   const effPlatform = platformFilter === "all" ? undefined : platformFilter;
 
@@ -68,158 +134,174 @@ export default function ContentHQ() {
   const scheduledThisMonth = piecesThisMonth.filter(p => p.status === "scheduled").length;
   const inProduction = allPieces.filter(p => ["script", "shooting", "editing", "approval"].includes(p.status)).length;
 
-  // Platform counts (for chips) - across selected talent, ignoring platform filter
   const platformCounts: Record<string, number> = {};
   for (const p of allPiecesRaw.filter(x => talentId === "all" || x.talent_id === talentId)) {
     platformCounts[p.platform] = (platformCounts[p.platform] || 0) + 1;
   }
 
-  const needsTalent = ["ideas", "strategy", "pillars", "briefings", "library", "performance"].includes(section);
-
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Command header */}
-      <div className="rounded-xl border bg-gradient-to-br from-amber-500/5 via-background to-primary/5 p-5">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
+    <ContentProfileProvider>
+      <div className="container mx-auto py-6">
+        {/* Page header */}
+        <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-lg bg-amber-500/10 flex items-center justify-center">
               <Crown className="h-6 w-6 text-amber-500" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Content HQ</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Conteúdo</h1>
               <p className="text-sm text-muted-foreground">
-                Comando central de conteúdo multi-plataforma
+                Comando central de conteúdo: persona, estratégia, produção e performance.
               </p>
             </div>
           </div>
-
-          <div className="grid grid-cols-4 gap-3">
-            <KpiPill label="Publicados (mês)" value={publishedThisMonth} tone="emerald" />
-            <KpiPill label="Agendados (mês)" value={scheduledThisMonth} tone="cyan" />
-            <KpiPill label="Em produção" value={inProduction} tone="purple" />
-            <KpiPill label="Total ativo" value={allPieces.length} tone="amber" />
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Perfil de marca:</span>
+            <ProfileSelector />
           </div>
         </div>
 
-        {/* Talent row */}
-        <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t">
-          <span className="text-xs uppercase tracking-wider text-muted-foreground mr-1">Talento</span>
-          <TalentChip active={talentId === "all"} onClick={() => setTalentId("all")} label="Ambos" />
-          {talents.map((t) => (
-            <TalentChip
-              key={t.id}
-              active={talentId === t.id}
-              onClick={() => setTalentId(t.id)}
-              label={t.name}
-              avatar={t.avatar_url}
-            />
-          ))}
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
+          {/* Vertical sidebar */}
+          <aside className="space-y-5">
+            {GROUPS.map((g) => (
+              <div key={g.group}>
+                <div className="px-2 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {g.group}
+                </div>
+                <nav className="space-y-0.5">
+                  {g.items.map((s) => {
+                    const Icon = s.icon;
+                    const active = section === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setSection(s.id)}
+                        className={cn(
+                          "w-full text-left text-sm rounded-md px-2.5 py-1.5 flex items-center gap-2 transition-colors",
+                          active
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{s.label}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+            ))}
+          </aside>
 
-        {/* Platform filter row */}
-        <div className="flex flex-wrap items-center gap-2 mt-3">
-          <span className="text-xs uppercase tracking-wider text-muted-foreground mr-1">Plataforma</span>
-          <PlatformChip active={platformFilter === "all"} onClick={() => setPlatformFilter("all")} label="Todas" icon={Sparkles} count={Object.values(platformCounts).reduce((a, b) => a + b, 0)} />
-          {PLATFORMS.map((p) => {
-            const Icon = PLATFORM_ICONS[p.id] || Sparkles;
-            return (
-              <PlatformChip
-                key={p.id}
-                active={platformFilter === p.id}
-                onClick={() => setPlatformFilter(p.id)}
-                label={p.label}
-                icon={Icon}
-                count={platformCounts[p.id] || 0}
-                color={p.color}
-              />
-            );
-          })}
-        </div>
-      </div>
+          {/* Content area */}
+          <div className="space-y-5 min-w-0">
+            {showHqHeader && (
+              <div className="rounded-xl border bg-gradient-to-br from-amber-500/5 via-background to-primary/5 p-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  <KpiPill label="Publicados (mês)" value={publishedThisMonth} tone="emerald" />
+                  <KpiPill label="Agendados (mês)" value={scheduledThisMonth} tone="cyan" />
+                  <KpiPill label="Em produção" value={inProduction} tone="purple" />
+                  <KpiPill label="Total ativo" value={allPieces.length} tone="amber" />
+                </div>
 
-      {/* Fonte da verdade: Persona & Tom de Voz vivem em Criação */}
-      <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-sm">
-        <Info className="h-4 w-4 text-amber-600 shrink-0" />
-        <div className="flex-1 text-amber-900 dark:text-amber-200">
-          <strong>Persona</strong> e <strong>Tom de Voz</strong> da marca são definidos em <strong>Criação</strong> e usados automaticamente por toda IA do Content HQ.
-        </div>
-        <Button asChild variant="ghost" size="sm" className="text-amber-700 hover:text-amber-800 hover:bg-amber-500/10 gap-1">
-          <Link to="/criacao">Editar em Criação <ArrowRight className="h-3.5 w-3.5" /></Link>
-        </Button>
-      </div>
+                <div className="flex flex-wrap items-center gap-2 pt-3 border-t">
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground mr-1">Talento</span>
+                  <TalentChip active={talentId === "all"} onClick={() => setTalentId("all")} label="Ambos" />
+                  {talents.map((t) => (
+                    <TalentChip
+                      key={t.id}
+                      active={talentId === t.id}
+                      onClick={() => setTalentId(t.id)}
+                      label={t.name}
+                      avatar={t.avatar_url}
+                    />
+                  ))}
+                </div>
 
-      {/* Section tabs */}
-      <div className="flex flex-wrap gap-1.5 border-b pb-px">
-        {SECTIONS.map((s) => {
-          const Icon = s.icon;
-          const active = section === s.id;
-          return (
-            <button
-              key={s.id}
-              onClick={() => setSection(s.id)}
-              className={cn(
-                "px-3.5 py-2 text-sm font-medium rounded-t-md transition-colors flex items-center gap-2 border-b-2 -mb-px",
-                active
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground mr-1">Plataforma</span>
+                  <PlatformChip active={platformFilter === "all"} onClick={() => setPlatformFilter("all")} label="Todas" icon={Sparkles} count={Object.values(platformCounts).reduce((a, b) => a + b, 0)} />
+                  {PLATFORMS.map((p) => {
+                    const Icon = PLATFORM_ICONS[p.id] || Sparkles;
+                    return (
+                      <PlatformChip
+                        key={p.id}
+                        active={platformFilter === p.id}
+                        onClick={() => setPlatformFilter(p.id)}
+                        label={p.label}
+                        icon={Icon}
+                        count={platformCounts[p.id] || 0}
+                        color={p.color}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div>
+              {isLoading && currentSection.needsTalent ? (
+                <Card className="p-8 text-center text-muted-foreground">Carregando talentos...</Card>
+              ) : currentSection.needsTalent && talentId === "all" ? (
+                <Card className="p-8 text-center text-muted-foreground">
+                  Selecione <strong>Bruna</strong> ou <strong>Everton</strong> para ver esta seção.
+                </Card>
+              ) : (
+                <>
+                  {section === "today" && <DailyContentPanel />}
+                  {section === "persona" && <MarketingPersonaTab />}
+                  {section === "brand" && <BrandVoiceTab />}
+                  {section === "ideas-creation" && <MarketingIdeasTab />}
+                  {section === "hooks" && <HooksTab />}
+                  {section === "trends" && <TrendsRadarTab />}
+                  {section === "copilot" && <CopilotTab />}
+                  {section === "editorial" && <EditorialCalendarTab />}
+                  {section === "copy" && <CopyStudioTab />}
+                  {section === "references" && <MarketingReferencesTab />}
+
+                  {section === "overview" && (
+                    <ContentHQPlatformBoard
+                      talents={talents}
+                      selectedTalentId={talentId === "all" ? undefined : talentId}
+                      platformFilter={effPlatform}
+                      onSelectPiece={(piece, talent) => setDrawerPiece({ piece, talent })}
+                    />
+                  )}
+                  {section === "calendar" && (
+                    <ContentHQCalendar
+                      talents={talents}
+                      selectedTalentId={talentId === "all" ? undefined : talentId}
+                      platformFilter={effPlatform}
+                    />
+                  )}
+                  {section === "kanban" && (
+                    <ContentHQKanban
+                      talents={talents}
+                      selectedTalentId={talentId === "all" ? undefined : talentId}
+                      platformFilter={effPlatform}
+                    />
+                  )}
+                  {section === "ideas" && currentTalent && <ContentHQIdeasLab talent={currentTalent} />}
+                  {section === "strategy" && currentTalent && <ContentHQStrategy talent={currentTalent} />}
+                  {section === "pillars" && currentTalent && <ContentHQPillars talent={currentTalent} />}
+                  {section === "briefings" && currentTalent && <ContentHQBriefings talent={currentTalent} />}
+                  {section === "library" && currentTalent && <ContentHQLibrary talent={currentTalent} />}
+                  {section === "performance" && currentTalent && <ContentHQPerformance talent={currentTalent} />}
+                </>
               )}
-            >
-              <Icon className="h-4 w-4" />
-              {s.label}
-            </button>
-          );
-        })}
-      </div>
+            </div>
+          </div>
+        </div>
 
-      {/* Content */}
-      <div>
-        {isLoading ? (
-          <Card className="p-8 text-center text-muted-foreground">Carregando talentos...</Card>
-        ) : needsTalent && talentId === "all" ? (
-          <Card className="p-8 text-center text-muted-foreground">
-            Selecione <strong>Bruna</strong> ou <strong>Everton</strong> para ver esta seção.
-          </Card>
-        ) : (
-          <>
-            {section === "overview" && (
-              <ContentHQPlatformBoard
-                talents={talents}
-                selectedTalentId={talentId === "all" ? undefined : talentId}
-                platformFilter={effPlatform}
-                onSelectPiece={(piece, talent) => setDrawerPiece({ piece, talent })}
-              />
-            )}
-            {section === "calendar" && (
-              <ContentHQCalendar
-                talents={talents}
-                selectedTalentId={talentId === "all" ? undefined : talentId}
-                platformFilter={effPlatform}
-              />
-            )}
-            {section === "kanban" && (
-              <ContentHQKanban
-                talents={talents}
-                selectedTalentId={talentId === "all" ? undefined : talentId}
-                platformFilter={effPlatform}
-              />
-            )}
-            {section === "ideas" && currentTalent && <ContentHQIdeasLab talent={currentTalent} />}
-            {section === "strategy" && currentTalent && <ContentHQStrategy talent={currentTalent} />}
-            {section === "pillars" && currentTalent && <ContentHQPillars talent={currentTalent} />}
-            {section === "briefings" && currentTalent && <ContentHQBriefings talent={currentTalent} />}
-            {section === "library" && currentTalent && <ContentHQLibrary talent={currentTalent} />}
-            {section === "performance" && currentTalent && <ContentHQPerformance talent={currentTalent} />}
-          </>
-        )}
+        <ContentHQPieceDrawer
+          piece={drawerPiece?.piece || null}
+          talent={drawerPiece?.talent || null}
+          open={!!drawerPiece}
+          onOpenChange={(v) => !v && setDrawerPiece(null)}
+        />
       </div>
-
-      <ContentHQPieceDrawer
-        piece={drawerPiece?.piece || null}
-        talent={drawerPiece?.talent || null}
-        open={!!drawerPiece}
-        onOpenChange={(v) => !v && setDrawerPiece(null)}
-      />
-    </div>
+    </ContentProfileProvider>
   );
 }
 
@@ -231,7 +313,7 @@ function KpiPill({ label, value, tone }: { label: string; value: number; tone: "
     amber: "text-amber-700 bg-amber-500/10 border-amber-500/20",
   };
   return (
-    <div className={cn("rounded-lg border px-3 py-2 min-w-[110px]", toneMap[tone])}>
+    <div className={cn("rounded-lg border px-3 py-2", toneMap[tone])}>
       <div className="text-2xl font-bold leading-none">{value}</div>
       <div className="text-[11px] mt-1 opacity-80">{label}</div>
     </div>
@@ -240,12 +322,7 @@ function KpiPill({ label, value, tone }: { label: string; value: number; tone: "
 
 function TalentChip({ active, onClick, label, avatar }: { active: boolean; onClick: () => void; label: string; avatar?: string | null }) {
   return (
-    <Button
-      variant={active ? "default" : "outline"}
-      size="sm"
-      onClick={onClick}
-      className="gap-2 h-8"
-    >
+    <Button variant={active ? "default" : "outline"} size="sm" onClick={onClick} className="gap-2 h-8">
       {avatar !== undefined && (
         <Avatar className="h-5 w-5">
           {avatar && <AvatarImage src={avatar} />}
