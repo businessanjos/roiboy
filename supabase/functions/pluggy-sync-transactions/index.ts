@@ -63,37 +63,43 @@ Deno.serve(async (req) => {
           const txs = r.results ?? [];
           if (txs.length === 0) break;
 
-          for (const t of txs) {
-            const txId = String(t.id);
-            const { data: exists } = await supabase
-              .from("financial_entries")
-              .select("id")
-              .eq("bank_account_id", acc.id)
-              .eq("openfinance_transaction_id", txId)
-              .maybeSingle();
-            if (exists) continue;
+          // Dedup em lote: 1 query por página em vez de 1 por transação
+          const pageIds = txs.map((t: any) => String(t.id));
+          const { data: existing } = await supabase
+            .from("financial_entries")
+            .select("openfinance_transaction_id")
+            .eq("bank_account_id", acc.id)
+            .in("openfinance_transaction_id", pageIds);
+          const existingSet = new Set((existing ?? []).map((e: any) => e.openfinance_transaction_id));
 
-            // Pluggy: amount negativo = débito, positivo = crédito
-            const amount = Number(t.amount);
-            const isReceivable = amount >= 0;
-            const date = (t.date ?? new Date().toISOString()).slice(0, 10);
-            const description = t.descriptionRaw || t.description || "Movimentação Pluggy";
-
-            const { error: insErr } = await supabase.from("financial_entries").insert({
-              account_id: acc.account_id,
-              bank_account_id: acc.id,
-              entry_type: isReceivable ? "receivable" : "payable",
-              description: String(description).slice(0, 500),
-              amount: Math.abs(amount),
-              due_date: date,
-              payment_date: date,
-              status: "paid",
-              source: "openfinance",
-              openfinance_transaction_id: txId,
-              is_conciliated: true,
-              conciliated_at: new Date().toISOString(),
+          const rows = txs
+            .filter((t: any) => !existingSet.has(String(t.id)))
+            .map((t: any) => {
+              const amount = Number(t.amount);
+              const isReceivable = amount >= 0;
+              const date = (t.date ?? new Date().toISOString()).slice(0, 10);
+              const description = t.descriptionRaw || t.description || "Movimentação Pluggy";
+              return {
+                account_id: acc.account_id,
+                bank_account_id: acc.id,
+                entry_type: isReceivable ? "receivable" : "payable",
+                description: String(description).slice(0, 500),
+                amount: Math.abs(amount),
+                due_date: date,
+                payment_date: date,
+                status: "paid",
+                source: "openfinance",
+                openfinance_transaction_id: String(t.id),
+                is_conciliated: true,
+                conciliated_at: new Date().toISOString(),
+              };
             });
-            if (!insErr) imported++;
+
+          if (rows.length > 0) {
+            const { error: insErr, count } = await supabase
+              .from("financial_entries")
+              .insert(rows, { count: "exact" });
+            if (!insErr) imported += count ?? rows.length;
           }
 
           if (txs.length < pageSize) break;
