@@ -359,7 +359,9 @@ Baseado na amostra de mensagens: principais temas, dúvidas recorrentes (com exe
             synthesizer: synthesizerModel,
             unified_content: finalContent,
             unified_error: unifiedError,
+            messages_sample_count: sampleCount,
           },
+
         })
         .select('id')
         .single();
