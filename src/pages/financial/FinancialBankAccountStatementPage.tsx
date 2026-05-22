@@ -136,13 +136,25 @@ export default function FinancialBankAccountStatementPage() {
             </p>
           </div>
         </div>
-        {isLinked && (
+        {isLinked ? (
           <Button onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending}>
             <RefreshCw className={`h-4 w-4 mr-2 ${syncMutation.isPending ? "animate-spin" : ""}`} />
             Sincronizar agora
           </Button>
+        ) : (
+          <Button onClick={() => setPluggyOpen(true)}>
+            <Link2 className="h-4 w-4 mr-2" />
+            Conectar via Pluggy
+          </Button>
         )}
       </div>
+
+      <PluggyConnectDialog
+        open={pluggyOpen}
+        onOpenChange={setPluggyOpen}
+        bankAccountId={id!}
+        bankAccountName={bankAccount?.name ?? ""}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
