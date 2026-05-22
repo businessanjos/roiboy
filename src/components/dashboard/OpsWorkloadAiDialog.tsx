@@ -52,7 +52,7 @@ interface SavedReport {
 
 type View = "current" | "history";
 
-export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: Props) {
+export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel, rpcParams }: Props) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [content, setContent] = useState<string>("");
