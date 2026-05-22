@@ -21242,6 +21242,7 @@ export type Database = {
           clients_attended: number
           clients_who_messaged: number
           conversations: number
+          conversations_total: number
           email: string
           inbound_msgs: number
           median_first_response_min: number
