@@ -27,6 +27,7 @@ interface Row {
   inbound_msgs: number;
   outbound_msgs: number;
   conversations: number;
+  conversations_total: number;
   avg_first_response_min: number;
   median_first_response_min: number;
   total_response_time_min: number;
