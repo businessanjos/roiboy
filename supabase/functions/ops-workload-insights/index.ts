@@ -209,7 +209,7 @@ Média vs mediana, mais rápidos e mais lentos.
 ## Recomendações
 3-5 ações práticas e acionáveis para a reunião.`;
 
-    const synthesizerModel = gemini.content ? GEMINI_MODEL : GPT_MODEL;
+    const synthesizerModel = SYNTH_MODEL;
     let unifiedContent: string | null = null;
     let unifiedError: string | null = null;
     try {
