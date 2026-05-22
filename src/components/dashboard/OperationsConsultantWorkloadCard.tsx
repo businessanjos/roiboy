@@ -136,7 +136,17 @@ export function OperationsConsultantWorkloadCard() {
               Mensagens, conversas e clientes contados sobre conversas vinculadas ao cliente do consultor.
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setAiOpen(true)}
+              disabled={loading || rows.length === 0}
+              className="gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              Resumo IA
+            </Button>
             <Select value={preset} onValueChange={(v) => setPreset(v as PresetKey)}>
               <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
               <SelectContent>
