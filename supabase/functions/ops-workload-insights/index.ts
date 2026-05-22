@@ -264,7 +264,7 @@ Período: ${periodLabel}
 
 POR CONSULTORA:
 ${table}
-
+${themesBlock}
 ANÁLISE A:
 ${gemini.content || '[Indisponível]'}
 
@@ -273,10 +273,10 @@ ${gpt.content || '[Indisponível]'}
 
 REGRAS DA SÍNTESE:
 1. Combine pontos onde A e B concordam (alta confiança).
-2. Onde discordarem, escolha a versão melhor fundamentada nos números reais e descarte a outra.
+2. Onde discordarem, escolha a versão melhor fundamentada nos números reais e na amostra de mensagens; descarte a outra.
 3. NUNCA escreva "Analista A", "Analista B", "ambos modelos", "Gemini", "GPT" — o resultado deve parecer escrito por UMA pessoa.
 4. Não duplique informação. Texto fluido, direto, executivo.
-5. Cite nomes próprios, percentuais e métricas concretas.
+5. Cite nomes próprios, percentuais e métricas concretas. Para temas das conversas, use a amostra de mensagens como fonte da verdade.
 6. Se os analistas divergirem em números, use os números do bloco DADOS REAIS.
 
 Estrutura obrigatória:
@@ -288,8 +288,11 @@ Quem performa bem e por quê (métricas concretas).
 Riscos com nomes: carteiras >40, baixa cobertura, resposta lenta, clientes que chamaram e não foram atendidos.
 ## Tempo de Atendimento
 Média vs mediana, mais rápidos e mais lentos.
+## Temas das Conversas
+Baseado na amostra de mensagens: principais temas, dúvidas recorrentes (com exemplos), e split aproximado em % (método/programa, dia a dia da clínica, reclamações/desabafos, dúvidas técnicas). Sinais de risco/churn. Se a amostra for insuficiente, diga.
 ## Recomendações
-3-5 ações práticas e acionáveis para a reunião.`;
+3-5 ações práticas e acionáveis para a reunião — incluindo ações baseadas nos temas/dúvidas (FAQ, conteúdo, treinamento, automação).`;
+
 
     const synthesizerModel = SYNTH_MODEL;
     let unifiedContent: string | null = null;
