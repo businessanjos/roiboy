@@ -23,10 +23,13 @@ interface Row {
   avatar_url: string | null;
   active_clients: number;
   clients_who_messaged: number;
+  clients_attended: number;
   inbound_msgs: number;
   outbound_msgs: number;
   conversations: number;
   avg_first_response_min: number;
+  median_first_response_min: number;
+  total_response_time_min: number;
   responded_inbound: number;
   total_inbound_with_window: number;
 }
