@@ -315,6 +315,12 @@ export function OperationsConsultantWorkloadCard() {
         periodLabel={label}
         rpcParams={params}
       />
+      <OpsWorkloadAiDialog
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+        rows={rows}
+        periodLabel={label}
+      />
     </TooltipProvider>
   );
 }
