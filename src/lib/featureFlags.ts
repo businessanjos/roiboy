@@ -5,7 +5,7 @@ export const featureFlags = {
     allowedEmails: ["m.quintana@me.com"],
   },
   opsConsultantWorkload: {
-    allowedEmails: ["m.quintana@me.com"],
+    allowedEmails: ["m.quintana@me.com", "jonathanmarcato@anjosbusiness.com"],
   },
 } as const;
 
