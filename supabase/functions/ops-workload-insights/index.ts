@@ -176,7 +176,7 @@ TOTAIS DO PERÍODO:
 
 POR CONSULTORA (uma por linha):
 ${table}
-
+${themesBlock}
 Entregue uma análise EXECUTIVA em português, em markdown, com as seções abaixo. Seja específico citando nomes, números e percentuais. Nada genérico.
 
 ## Resumo Executivo
@@ -191,10 +191,19 @@ Riscos reais: carteiras superdimensionadas (>40), baixa cobertura, tempo de resp
 ## Tempo de Atendimento
 Comparar média vs mediana por consultora (se mediana << média → outliers puxando). Quem responde mais rápido, quem é mais lento.
 
+## Temas das Conversas
+Baseado SOMENTE na amostra de mensagens recebidas, identifique:
+- **Principais temas abordados** pelos clientes (3-6 tópicos com estimativa de % ou volume relativo).
+- **Principais dúvidas recorrentes** (cite exemplos curtos entre aspas se possível).
+- **Natureza das interações**: o quanto é sobre o **método/programa** (mentoria, materiais, conteúdo) vs **dia a dia da clínica** (operação, equipe, pacientes, financeiro) vs **reclamações/lamentações/desabafos** vs **dúvidas técnicas da plataforma**. Dê percentuais aproximados que somem 100%.
+- **Sinais de risco** (clientes insatisfeitos, churn iminente, pedidos de cancelamento, frustração recorrente).
+Se não houver amostra suficiente, diga explicitamente.
+
 ## Recomendações
-3-5 ações práticas e acionáveis para a reunião.
+3-5 ações práticas e acionáveis para a reunião — incluindo recomendações específicas baseadas nos temas/dúvidas mais frequentes (ex: criar FAQ, treinamento, conteúdo, automação).
 
 Seja direto, sem floreios. Use bullets onde fizer sentido.`;
+
 
     const callModel = async (model: string): Promise<{ content: string | null; error: string | null }> => {
       try {
