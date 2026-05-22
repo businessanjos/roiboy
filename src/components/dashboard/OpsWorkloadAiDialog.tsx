@@ -35,7 +35,9 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   rows: any[];
   periodLabel: string;
+  rpcParams?: any;
 }
+
 
 interface SavedReport {
   id: string;
