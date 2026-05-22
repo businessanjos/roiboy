@@ -5,6 +5,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Poll item até sair de UPDATING (máx ~20s)
+async function waitItemReady(itemId: string) {
+  const TERMINAL_OK = new Set(["UPDATED", "PARTIAL_SUCCESS", "WAITING_USER_INPUT", "WAITING_USER_ACTION"]);
+  const TERMINAL_FAIL = new Set(["LOGIN_ERROR", "OUTDATED", "ERROR"]);
+  const MAX_TRIES = 10;
+  const DELAY_MS = 2000;
+
+  let item: any = null;
+  for (let i = 0; i < MAX_TRIES; i++) {
+    item = await pluggyFetch(`/items/${itemId}`);
+    const status = item?.status;
+    if (TERMINAL_OK.has(status)) return item;
+    if (TERMINAL_FAIL.has(status)) {
+      throw new Error(`Pluggy item falhou: ${status} — ${item?.executionStatus ?? ""}`.trim());
+    }
+    await new Promise((r) => setTimeout(r, DELAY_MS));
+  }
+  return item; // devolve mesmo se ainda UPDATING — front mostra contas se já houver
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -12,7 +32,7 @@ Deno.serve(async (req) => {
     const { itemId } = await req.json();
     if (!itemId) throw new Error("itemId é obrigatório");
 
-    const item = await pluggyFetch(`/items/${itemId}`);
+    const item = await waitItemReady(itemId);
     const accountsRes = await pluggyFetch(`/accounts?itemId=${itemId}`);
 
     const accounts = (accountsRes.results ?? []).map((a: any) => ({
@@ -24,12 +44,12 @@ Deno.serve(async (req) => {
         : "checking",
       balance: typeof a.balance === "number" ? a.balance : null,
       currency: a.currencyCode ?? "BRL",
-      institution: item.connector?.name ?? "Pluggy",
+      institution: item?.connector?.name ?? "Pluggy",
       item_id: itemId,
     }));
 
     return new Response(
-      JSON.stringify({ success: true, accounts, institution: item.connector?.name }),
+      JSON.stringify({ success: true, accounts, institution: item?.connector?.name, status: item?.status }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {

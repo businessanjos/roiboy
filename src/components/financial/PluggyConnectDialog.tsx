@@ -159,7 +159,8 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
           }
           setItemId(newItemId);
           setLoading(true);
-          setTimeout(() => fetchAccounts(newItemId), 2500);
+          // edge function faz polling do status do item — não precisa esperar aqui
+          fetchAccounts(newItemId);
         },
         onError: (e: unknown) => {
           setError(getErrorMessage(e, "Erro ao conectar banco"));
