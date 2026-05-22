@@ -53,11 +53,8 @@ type View = "current" | "history";
 export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: Props) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [gemini, setGemini] = useState<string>("");
-  const [gpt, setGpt] = useState<string>("");
-  const [geminiErr, setGeminiErr] = useState<string | null>(null);
-  const [gptErr, setGptErr] = useState<string | null>(null);
-  const [activeModel, setActiveModel] = useState<"gemini" | "gpt">("gemini");
+  const [content, setContent] = useState<string>("");
+  const [usedFallback, setUsedFallback] = useState(false);
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState<View>("current");
   const [history, setHistory] = useState<SavedReport[]>([]);
@@ -78,14 +75,13 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
     [rows]
   );
 
-  const hasContent = !!(gemini || gpt);
-  const currentText = activeModel === "gemini" ? gemini : gpt;
-  const currentErr = activeModel === "gemini" ? geminiErr : gptErr;
+  const hasContent = !!content;
 
   const run = async () => {
     setLoading(true);
     setErr(null);
-    setGemini(""); setGpt(""); setGeminiErr(null); setGptErr(null);
+    setContent("");
+    setUsedFallback(false);
     setStartedAt(Date.now());
     setElapsed(0);
     const { data, error } = await supabase.functions.invoke("ops-workload-insights", {
@@ -97,11 +93,8 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
       setErr((data as any).error);
     } else {
       const d = data as any;
-      setGemini(d.gemini || "");
-      setGpt(d.gpt || "");
-      setGeminiErr(d.geminiError || null);
-      setGptErr(d.gptError || null);
-      setActiveModel(d.gemini ? "gemini" : "gpt");
+      setContent(d.content || "");
+      setUsedFallback(!!d.usedFallback);
       loadHistory();
     }
     setLoading(false);
@@ -112,19 +105,17 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
     setHistoryLoading(true);
     const { data, error } = await supabase
       .from("ops_workload_ai_reports")
-      .select("id,created_at,period_label,rows_count,gemini_content,gpt_content,gemini_error,gpt_error")
+      .select("id,created_at,period_label,rows_count,gemini_content,gpt_content,gemini_error,gpt_error,models_used")
       .order("created_at", { ascending: false })
       .limit(30);
-    if (!error && data) setHistory(data as SavedReport[]);
+    if (!error && data) setHistory(data as any);
     setHistoryLoading(false);
   };
 
   const openSaved = (r: SavedReport) => {
-    setGemini(r.gemini_content || "");
-    setGpt(r.gpt_content || "");
-    setGeminiErr(r.gemini_error);
-    setGptErr(r.gpt_error);
-    setActiveModel(r.gemini_content ? "gemini" : "gpt");
+    const unified = (r as any).models_used?.unified_content as string | undefined;
+    setContent(unified || r.gemini_content || r.gpt_content || "");
+    setUsedFallback(!unified);
     setView("current");
   };
 
@@ -151,15 +142,14 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
       if (rows.length > 0 && !hasContent && !loading) run();
     }
     if (!open) {
-      setGemini(""); setGpt(""); setGeminiErr(null); setGptErr(null);
-      setErr(null); setCopied(false); setView("current");
+      setContent(""); setErr(null); setCopied(false); setView("current"); setUsedFallback(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(currentText);
+      await navigator.clipboard.writeText(content);
       setCopied(true);
       toast({ title: "Copiado!", description: "Resumo copiado para a área de transferência." });
       setTimeout(() => setCopied(false), 2000);
@@ -167,6 +157,7 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
       toast({ title: "Erro", description: "Não foi possível copiar.", variant: "destructive" });
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
