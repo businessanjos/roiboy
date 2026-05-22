@@ -1,4 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 interface Row {
   user_id: string;
@@ -122,45 +123,102 @@ Comparar média vs mediana por consultora (se mediana << média → outliers pux
 
 Seja direto, sem floreios. Use bullets onde fizer sentido.`;
 
-    const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-pro',
-        messages: [
-          { role: 'system', content: 'Você é um analista de operações sênior. Responda em PT-BR, conciso e específico.' },
-          { role: 'user', content: prompt },
-        ],
-      }),
-    });
+    const callModel = async (model: string): Promise<{ content: string | null; error: string | null }> => {
+      try {
+        const r = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: 'Você é um analista de operações sênior. Responda em PT-BR, conciso e específico.' },
+              { role: 'user', content: prompt },
+            ],
+          }),
+        });
+        if (!r.ok) {
+          const t = await r.text();
+          console.error(`[${model}] gateway error`, r.status, t);
+          if (r.status === 429) return { content: null, error: 'Limite de requisições atingido' };
+          if (r.status === 402) return { content: null, error: 'Créditos de IA esgotados' };
+          return { content: null, error: `Erro ${r.status}` };
+        }
+        const data = await r.json();
+        return { content: data?.choices?.[0]?.message?.content || '', error: null };
+      } catch (e) {
+        console.error(`[${model}] exception`, e);
+        return { content: null, error: e instanceof Error ? e.message : 'Erro desconhecido' };
+      }
+    };
 
-    if (!aiRes.ok) {
-      if (aiRes.status === 429) {
-        return new Response(JSON.stringify({ error: 'Limite de requisições atingido. Tente novamente em instantes.' }), {
-          status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      if (aiRes.status === 402) {
-        return new Response(JSON.stringify({ error: 'Créditos de IA esgotados no workspace.' }), {
-          status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const t = await aiRes.text();
-      console.error('AI gateway error', aiRes.status, t);
-      return new Response(JSON.stringify({ error: 'Erro no gateway de IA' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const GEMINI_MODEL = 'google/gemini-2.5-pro';
+    const GPT_MODEL = 'openai/gpt-5';
+
+    const [gemini, gpt] = await Promise.all([
+      callModel(GEMINI_MODEL),
+      callModel(GPT_MODEL),
+    ]);
+
+    if (!gemini.content && !gpt.content) {
+      return new Response(
+        JSON.stringify({ error: `Ambos modelos falharam. Gemini: ${gemini.error}. GPT: ${gpt.error}` }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
 
-    const data = await aiRes.json();
-    const content = data?.choices?.[0]?.message?.content || '';
+    // Persist report
+    let reportId: string | null = null;
+    try {
+      const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+      const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    return new Response(JSON.stringify({ insights: content, totals, overallRespRate, overallCoverage }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+      // Get user from auth header
+      let userId: string | null = null;
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const userClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY') || '', {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: u } = await userClient.auth.getUser();
+        userId = u?.user?.id || null;
+      }
+
+      const { data: ins, error: insErr } = await admin
+        .from('ops_workload_ai_reports')
+        .insert({
+          created_by: userId,
+          period_label: periodLabel,
+          rows_count: rows.length,
+          totals: { ...totals, overallRespRate, overallCoverage },
+          rows_snapshot: rows,
+          gemini_content: gemini.content,
+          gpt_content: gpt.content,
+          gemini_error: gemini.error,
+          gpt_error: gpt.error,
+          models_used: { gemini: GEMINI_MODEL, gpt: GPT_MODEL },
+        })
+        .select('id')
+        .single();
+      if (insErr) console.error('persist report error', insErr);
+      else reportId = ins?.id || null;
+    } catch (e) {
+      console.error('persist exception', e);
+    }
+
+    return new Response(
+      JSON.stringify({
+        reportId,
+        gemini: gemini.content,
+        gpt: gpt.content,
+        geminiError: gemini.error,
+        gptError: gpt.error,
+        totals,
+        overallRespRate,
+        overallCoverage,
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
   } catch (e) {
     console.error('ops-workload-insights error:', e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Erro desconhecido' }), {

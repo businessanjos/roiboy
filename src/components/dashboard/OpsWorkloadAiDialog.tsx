@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -17,10 +19,14 @@ import {
   Users,
   Calendar,
   Brain,
+  History,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import MarkdownRenderer from "@/components/sales/MarkdownRenderer";
 import { toast } from "@/hooks/use-toast";
 
@@ -31,29 +37,55 @@ interface Props {
   periodLabel: string;
 }
 
+interface SavedReport {
+  id: string;
+  created_at: string;
+  period_label: string;
+  rows_count: number;
+  gemini_content: string | null;
+  gpt_content: string | null;
+  gemini_error: string | null;
+  gpt_error: string | null;
+}
+
+type View = "current" | "history";
+
 export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: Props) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [insights, setInsights] = useState<string>("");
+  const [gemini, setGemini] = useState<string>("");
+  const [gpt, setGpt] = useState<string>("");
+  const [geminiErr, setGeminiErr] = useState<string | null>(null);
+  const [gptErr, setGptErr] = useState<string | null>(null);
+  const [activeModel, setActiveModel] = useState<"gemini" | "gpt">("gemini");
   const [copied, setCopied] = useState(false);
+  const [view, setView] = useState<View>("current");
+  const [history, setHistory] = useState<SavedReport[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
 
-  const totals = useMemo(() => {
-    return rows.reduce(
-      (a, r) => ({
-        attended: a.attended + (r.clients_attended || 0),
-        inbound: a.inbound + (r.inbound_msgs || 0),
-        outbound: a.outbound + (r.outbound_msgs || 0),
-      }),
-      { attended: 0, inbound: 0, outbound: 0 }
-    );
-  }, [rows]);
+  const totals = useMemo(
+    () =>
+      rows.reduce(
+        (a, r) => ({
+          attended: a.attended + (r.clients_attended || 0),
+          inbound: a.inbound + (r.inbound_msgs || 0),
+          outbound: a.outbound + (r.outbound_msgs || 0),
+        }),
+        { attended: 0, inbound: 0, outbound: 0 }
+      ),
+    [rows]
+  );
+
+  const hasContent = !!(gemini || gpt);
+  const currentText = activeModel === "gemini" ? gemini : gpt;
+  const currentErr = activeModel === "gemini" ? geminiErr : gptErr;
 
   const run = async () => {
     setLoading(true);
     setErr(null);
-    setInsights("");
+    setGemini(""); setGpt(""); setGeminiErr(null); setGptErr(null);
     setStartedAt(Date.now());
     setElapsed(0);
     const { data, error } = await supabase.functions.invoke("ops-workload-insights", {
@@ -64,13 +96,49 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
     } else if ((data as any)?.error) {
       setErr((data as any).error);
     } else {
-      setInsights((data as any)?.insights || "");
+      const d = data as any;
+      setGemini(d.gemini || "");
+      setGpt(d.gpt || "");
+      setGeminiErr(d.geminiError || null);
+      setGptErr(d.gptError || null);
+      setActiveModel(d.gemini ? "gemini" : "gpt");
+      loadHistory();
     }
     setLoading(false);
     setStartedAt(null);
   };
 
-  // Elapsed timer
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    const { data, error } = await supabase
+      .from("ops_workload_ai_reports")
+      .select("id,created_at,period_label,rows_count,gemini_content,gpt_content,gemini_error,gpt_error")
+      .order("created_at", { ascending: false })
+      .limit(30);
+    if (!error && data) setHistory(data as SavedReport[]);
+    setHistoryLoading(false);
+  };
+
+  const openSaved = (r: SavedReport) => {
+    setGemini(r.gemini_content || "");
+    setGpt(r.gpt_content || "");
+    setGeminiErr(r.gemini_error);
+    setGptErr(r.gpt_error);
+    setActiveModel(r.gemini_content ? "gemini" : "gpt");
+    setView("current");
+  };
+
+  const deleteSaved = async (id: string) => {
+    if (!confirm("Excluir este resumo?")) return;
+    const { error } = await supabase.from("ops_workload_ai_reports").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    setHistory((h) => h.filter((x) => x.id !== id));
+    toast({ title: "Excluído" });
+  };
+
   useEffect(() => {
     if (!startedAt) return;
     const id = setInterval(() => setElapsed(Math.round((Date.now() - startedAt) / 100) / 10), 100);
@@ -78,20 +146,20 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
   }, [startedAt]);
 
   useEffect(() => {
-    if (open && rows.length > 0 && !insights && !loading) {
-      run();
+    if (open) {
+      loadHistory();
+      if (rows.length > 0 && !hasContent && !loading) run();
     }
     if (!open) {
-      setInsights("");
-      setErr(null);
-      setCopied(false);
+      setGemini(""); setGpt(""); setGeminiErr(null); setGptErr(null);
+      setErr(null); setCopied(false); setView("current");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(insights);
+      await navigator.clipboard.writeText(currentText);
       setCopied(true);
       toast({ title: "Copiado!", description: "Resumo copiado para a área de transferência." });
       setTimeout(() => setCopied(false), 2000);
@@ -103,13 +171,12 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 border-0">
-        {/* Hero header with gradient */}
+        {/* Hero header */}
         <div className="relative overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-background border-b">
-          {/* Decorative blobs */}
           <div className="absolute -top-24 -right-16 h-64 w-64 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
           <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
 
-          <DialogHeader className="relative px-7 pt-7 pb-5 space-y-4">
+          <DialogHeader className="relative px-7 pt-7 pb-4 space-y-4">
             <div className="flex items-start gap-4">
               <div className="relative shrink-0">
                 <div className="absolute inset-0 bg-primary/30 blur-xl rounded-2xl" />
@@ -123,80 +190,147 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
                   <Sparkles className="h-4 w-4 text-primary animate-pulse" />
                 </DialogTitle>
                 <DialogDescription className="text-sm mt-1">
-                  Análise executiva da demanda das consultoras de operações
+                  Análise executiva com Gemini Pro e GPT — salva no histórico
                 </DialogDescription>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant={view === "current" ? "secondary" : "ghost"}
+                  onClick={() => setView("current")}
+                  className="gap-1.5"
+                >
+                  <Sparkles className="h-3.5 w-3.5" /> Atual
+                </Button>
+                <Button
+                  size="sm"
+                  variant={view === "history" ? "secondary" : "ghost"}
+                  onClick={() => setView("history")}
+                  className="gap-1.5"
+                >
+                  <History className="h-3.5 w-3.5" /> Histórico
+                  {history.length > 0 && (
+                    <span className="ml-1 text-[10px] rounded-full bg-primary/20 text-primary px-1.5">
+                      {history.length}
+                    </span>
+                  )}
+                </Button>
               </div>
             </div>
 
-            {/* Context chips */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Badge variant="secondary" className="gap-1.5 px-2.5 py-1 font-normal">
-                <Calendar className="h-3 w-3" />
-                {periodLabel}
-              </Badge>
-              <Badge variant="secondary" className="gap-1.5 px-2.5 py-1 font-normal">
-                <Users className="h-3 w-3" />
-                {rows.length} consultora{rows.length !== 1 ? "s" : ""}
-              </Badge>
-              {totals.attended > 0 && (
+            {view === "current" && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 <Badge variant="secondary" className="gap-1.5 px-2.5 py-1 font-normal">
-                  {totals.attended.toLocaleString("pt-BR")} clientes atendidos
+                  <Calendar className="h-3 w-3" /> {periodLabel}
                 </Badge>
-              )}
-              {totals.inbound + totals.outbound > 0 && (
                 <Badge variant="secondary" className="gap-1.5 px-2.5 py-1 font-normal">
-                  {(totals.inbound + totals.outbound).toLocaleString("pt-BR")} mensagens
+                  <Users className="h-3 w-3" /> {rows.length} consultora{rows.length !== 1 ? "s" : ""}
                 </Badge>
-              )}
-            </div>
+                {totals.attended > 0 && (
+                  <Badge variant="secondary" className="gap-1.5 px-2.5 py-1 font-normal">
+                    {totals.attended.toLocaleString("pt-BR")} atendidos
+                  </Badge>
+                )}
+                {totals.inbound + totals.outbound > 0 && (
+                  <Badge variant="secondary" className="gap-1.5 px-2.5 py-1 font-normal">
+                    {(totals.inbound + totals.outbound).toLocaleString("pt-BR")} msgs
+                  </Badge>
+                )}
+              </div>
+            )}
           </DialogHeader>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-7 py-5 bg-background">
-          {loading && <LoadingState elapsed={elapsed} />}
+        <div className="flex-1 overflow-y-auto bg-background">
+          {view === "history" ? (
+            <HistoryList
+              items={history}
+              loading={historyLoading}
+              onOpen={openSaved}
+              onDelete={deleteSaved}
+              onRefresh={loadHistory}
+            />
+          ) : (
+            <div className="px-7 py-5">
+              {loading && <LoadingState elapsed={elapsed} />}
 
-          {err && !loading && (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5">
-              <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
+              {err && !loading && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="h-9 w-9 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-destructive text-sm">
+                        Não foi possível gerar o resumo
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1 break-words">{err}</p>
+                      <Button size="sm" variant="outline" className="mt-3" onClick={run}>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Tentar novamente
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-destructive text-sm">Não foi possível gerar o resumo</h4>
-                  <p className="text-xs text-muted-foreground mt-1 break-words">{err}</p>
-                  <Button size="sm" variant="outline" className="mt-3" onClick={run}>
-                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Tentar novamente
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {insights && !loading && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <MarkdownRenderer content={insights} />
+              {hasContent && !loading && (
+                <Tabs value={activeModel} onValueChange={(v) => setActiveModel(v as any)}>
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="gemini" disabled={!gemini && !geminiErr} className="gap-2">
+                      <span className="h-2 w-2 rounded-full bg-blue-500" />
+                      Gemini Pro
+                      {geminiErr && <AlertTriangle className="h-3 w-3 text-destructive" />}
+                    </TabsTrigger>
+                    <TabsTrigger value="gpt" disabled={!gpt && !gptErr} className="gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      GPT
+                      {gptErr && <AlertTriangle className="h-3 w-3 text-destructive" />}
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="gemini" className="mt-0">
+                    {gemini ? (
+                      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <MarkdownRenderer content={gemini} />
+                      </div>
+                    ) : (
+                      <ModelErrorBlock error={geminiErr} model="Gemini Pro" />
+                    )}
+                  </TabsContent>
+                  <TabsContent value="gpt" className="mt-0">
+                    {gpt ? (
+                      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <MarkdownRenderer content={gpt} />
+                      </div>
+                    ) : (
+                      <ModelErrorBlock error={gptErr} model="GPT" />
+                    )}
+                  </TabsContent>
+                </Tabs>
+              )}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        {insights && !loading && (
+        {view === "current" && hasContent && !loading && (
           <div className="border-t bg-muted/30 px-7 py-3 flex items-center justify-between gap-3">
             <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
               <Sparkles className="h-3 w-3 text-primary" />
-              Gerado por IA · Sempre valide informações críticas
+              Salvo no histórico · Comparado entre Gemini Pro e GPT
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" onClick={handleCopy}>
-                {copied ? (
-                  <><Check className="h-3.5 w-3.5 mr-1.5 text-emerald-500" /> Copiado</>
-                ) : (
-                  <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar</>
-                )}
-              </Button>
-              <Button size="sm" variant="outline" onClick={run}>
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerar
+              {currentText && (
+                <Button size="sm" variant="ghost" onClick={handleCopy}>
+                  {copied ? (
+                    <><Check className="h-3.5 w-3.5 mr-1.5 text-emerald-500" /> Copiado</>
+                  ) : (
+                    <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar</>
+                  )}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={run} disabled={loading || rows.length === 0}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Gerar novo
               </Button>
             </div>
           </div>
@@ -206,18 +340,107 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel }: P
   );
 }
 
+function ModelErrorBlock({ error, model }: { error: string | null; model: string }) {
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5">
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <div className="font-medium text-amber-700 dark:text-amber-300">
+            {model} não retornou conteúdo
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">{error || "Sem detalhes"}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HistoryList({
+  items, loading, onOpen, onDelete, onRefresh,
+}: {
+  items: SavedReport[];
+  loading: boolean;
+  onOpen: (r: SavedReport) => void;
+  onDelete: (id: string) => void;
+  onRefresh: () => void;
+}) {
+  return (
+    <div className="px-7 py-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-muted-foreground">Resumos salvos</h3>
+        <Button size="sm" variant="ghost" onClick={onRefresh}>
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Atualizar
+        </Button>
+      </div>
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="text-center py-12 text-sm text-muted-foreground">
+          Nenhum resumo salvo ainda. Gere um na aba "Atual".
+        </div>
+      ) : (
+        <ScrollArea className="max-h-[60vh]">
+          <div className="space-y-2 pr-2">
+            {items.map((r) => (
+              <div
+                key={r.id}
+                className="group rounded-lg border bg-card hover:border-primary/50 hover:bg-accent/40 transition-colors p-3 cursor-pointer flex items-center gap-3"
+                onClick={() => onOpen(r)}
+              >
+                <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Brain className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm truncate">{r.period_label}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
+                    <span>
+                      {formatDistanceToNow(new Date(r.created_at), { addSuffix: true, locale: ptBR })}
+                    </span>
+                    <span>·</span>
+                    <span>{r.rows_count} consultoras</span>
+                    {r.gemini_content && (
+                      <Badge variant="outline" className="h-4 px-1.5 text-[9px] gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> Gemini
+                      </Badge>
+                    )}
+                    {r.gpt_content && (
+                      <Badge variant="outline" className="h-4 px-1.5 text-[9px] gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> GPT
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+                  onClick={(e) => { e.stopPropagation(); onDelete(r.id); }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+      )}
+    </div>
+  );
+}
+
 function LoadingState({ elapsed }: { elapsed: number }) {
   const steps = [
     { label: "Coletando métricas das consultoras", threshold: 0 },
-    { label: "Cruzando volume vs tempo de resposta", threshold: 2 },
-    { label: "Identificando alertas e gargalos", threshold: 5 },
-    { label: "Sintetizando recomendações executivas", threshold: 8 },
+    { label: "Consultando Gemini Pro e GPT em paralelo", threshold: 2 },
+    { label: "Identificando alertas e gargalos", threshold: 8 },
+    { label: "Salvando resumo no histórico", threshold: 14 },
   ];
   const activeIdx = steps.reduce((acc, s, i) => (elapsed >= s.threshold ? i : acc), 0);
 
   return (
     <div className="space-y-6">
-      {/* Animated status */}
       <div className="flex items-center gap-3 rounded-xl border bg-gradient-to-r from-primary/5 to-transparent p-4">
         <div className="relative">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -225,40 +448,24 @@ function LoadingState({ elapsed }: { elapsed: number }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium">{steps[activeIdx].label}...</div>
-          <div className="text-xs text-muted-foreground">
-            Processando · {elapsed.toFixed(1)}s
-          </div>
+          <div className="text-xs text-muted-foreground">Processando · {elapsed.toFixed(1)}s</div>
         </div>
       </div>
 
-      {/* Step list */}
       <div className="space-y-2">
         {steps.map((s, i) => {
           const done = i < activeIdx;
           const current = i === activeIdx;
           return (
-            <div
-              key={i}
-              className={`flex items-center gap-3 text-sm transition-opacity ${
-                done || current ? "opacity-100" : "opacity-40"
-              }`}
-            >
-              <div
-                className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                  done
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                    : current
-                    ? "bg-primary/15 text-primary"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {done ? (
-                  <Check className="h-3 w-3" />
-                ) : current ? (
-                  <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                ) : (
-                  <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-                )}
+            <div key={i} className={`flex items-center gap-3 text-sm transition-opacity ${done || current ? "opacity-100" : "opacity-40"}`}>
+              <div className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                done ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  : current ? "bg-primary/15 text-primary"
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {done ? <Check className="h-3 w-3" /> : current
+                  ? <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  : <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />}
               </div>
               <span className={done ? "text-muted-foreground line-through" : ""}>{s.label}</span>
             </div>
@@ -266,7 +473,6 @@ function LoadingState({ elapsed }: { elapsed: number }) {
         })}
       </div>
 
-      {/* Skeleton preview */}
       <div className="space-y-3 pt-2">
         <Skeleton className="h-6 w-1/3" />
         <Skeleton className="h-4 w-full" />
