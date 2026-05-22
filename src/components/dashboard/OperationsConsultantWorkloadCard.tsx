@@ -68,6 +68,7 @@ export function OperationsConsultantWorkloadCard() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const { params, label } = useMemo(() => {
     if (preset === "today") {
