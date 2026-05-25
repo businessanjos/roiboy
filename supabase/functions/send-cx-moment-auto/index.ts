@@ -103,41 +103,35 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Find WhatsApp integration (sector "operacoes" first, then any connected as fallback)
+        // Find WhatsApp integration: prefer uazapi-with-token in "operacoes" sector,
+        // then any uazapi-with-token connected. Meta_official is not yet supported here.
         let whatsappIntegration: { id: string; sector_id: string | null; config: Record<string, string> } | null = null;
 
-        const { data: opsIntegration } = await supabase
+        const { data: allIntegrations } = await supabase
           .from("integrations")
           .select("id, sector_id, config")
           .eq("account_id", moment.account_id)
           .eq("type", "whatsapp")
-          .eq("status", "connected")
-          .eq("sector_id", "operacoes")
-          .limit(1);
+          .eq("status", "connected");
 
-        if (opsIntegration && opsIntegration.length > 0) {
-          whatsappIntegration = opsIntegration[0] as typeof whatsappIntegration;
-        } else {
-          const { data: fallbackIntegration } = await supabase
-            .from("integrations")
-            .select("id, sector_id, config")
-            .eq("account_id", moment.account_id)
-            .eq("type", "whatsapp")
-            .eq("status", "connected")
-            .limit(1);
+        const usableUazapi = (allIntegrations || []).filter((i) => {
+          const cfg = (i.config || {}) as Record<string, string>;
+          const prov = cfg.provider || "uazapi";
+          return prov === "uazapi" && !!cfg.instance_token;
+        });
 
-          if (fallbackIntegration && fallbackIntegration.length > 0) {
-            whatsappIntegration = fallbackIntegration[0] as typeof whatsappIntegration;
-          }
-        }
+        whatsappIntegration =
+          (usableUazapi.find((i) => i.sector_id === "operacoes") as typeof whatsappIntegration) ||
+          (usableUazapi[0] as typeof whatsappIntegration) ||
+          null;
 
         if (!whatsappIntegration) {
-          console.log(`No WhatsApp integration connected for account ${moment.account_id}`);
+          console.log(`No usable WhatsApp (uazapi) integration for account ${moment.account_id}`);
           await supabase
             .from("client_life_events")
             .update({
               send_status: "failed",
-              send_error: "Nenhum WhatsApp conectado para envio automático",
+              send_error: "Nenhum WhatsApp UAZAPI conectado para envio automático",
             })
             .eq("id", moment.id);
           failedCount++;
@@ -146,7 +140,11 @@ Deno.serve(async (req) => {
 
         const provider = whatsappIntegration.config?.provider || "uazapi";
         const instanceToken = whatsappIntegration.config?.instance_token;
-        const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "https://g1.uazapi.com";
+        const UAZAPI_URL =
+          whatsappIntegration.config?.host_url ||
+          Deno.env.get("UAZAPI_URL") ||
+          "https://g1.uazapi.com";
+        console.log(`[cx-auto] Using integration ${whatsappIntegration.id} via ${UAZAPI_URL}`);
 
         if (!instanceToken) {
           await supabase
