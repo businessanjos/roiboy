@@ -15401,6 +15401,110 @@ export type Database = {
         }
         Relationships: []
       }
+      rebranding_channels: {
+        Row: {
+          account_id: string
+          category: string
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          notes: string | null
+          owner: string | null
+          progress: number
+          sort_order: number
+          status: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          account_id: string
+          category?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          owner?: string | null
+          progress?: number
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          account_id?: string
+          category?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          owner?: string | null
+          progress?: number
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
+      rebranding_tasks: {
+        Row: {
+          account_id: string
+          assignee: string | null
+          channel_id: string | null
+          checklist: Json
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          assignee?: string | null
+          channel_id?: string | null
+          checklist?: Json
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          assignee?: string | null
+          channel_id?: string | null
+          checklist?: Json
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rebranding_tasks_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "rebranding_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recommendations: {
         Row: {
           account_id: string
