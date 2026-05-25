@@ -17,7 +17,9 @@ import {
   Sparkles, Globe, Instagram, Linkedin, AtSign, Music, Youtube, Music2,
   Palette, BookOpen, Presentation, FileText, Mail, Briefcase, Megaphone,
   Users, Plus, ExternalLink, Trash2, Edit, GripVertical, CheckCircle2,
+  Ruler, Type, MessageSquare, Link2, AlertTriangle, Check, X, Image as ImageIcon,
 } from "lucide-react";
+import { REBRANDING_SPECS, BRAND_KIT } from "@/data/rebrandingSpecs";
 
 const ICONS: Record<string, any> = {
   Globe, Instagram, Linkedin, AtSign, Music, Youtube, Music2,
