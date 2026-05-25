@@ -239,54 +239,23 @@ Deno.serve(async (req) => {
 
         const phoneClean = recipient.phone.replace(/\D/g, "");
         
-        if (integration.provider === "uazapi") {
-          const apiUrl = `${integration.api_url}/sendText`;
-          const response = await fetch(apiUrl, {
+        if (provider === "uazapi") {
+          const response = await fetch(`${UAZAPI_URL}/send/text`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${integration.api_key}`,
-            },
-            body: JSON.stringify({
-              phone: phoneClean,
-              message: personalizedMessage,
-            }),
+            headers: { "Content-Type": "application/json", "token": instanceToken! },
+            body: JSON.stringify({ number: phoneClean, text: personalizedMessage }),
           });
 
           const result = await response.json();
           console.log("UAZAPI response:", result);
 
-          if (result.error === false || result.status === "PENDING" || result.messageId) {
+          if (result.error === false || result.chatid || result.messageid || result.messageId || result.status?.toLowerCase?.() === "pending") {
             whatsappSuccess = true;
           } else {
             whatsappError = result.message || result.error || "Unknown error";
           }
-        } else if (integration.provider === "evolution") {
-          const baseUrl = integration.api_url?.endsWith("/") 
-            ? integration.api_url.slice(0, -1) 
-            : integration.api_url;
-          const apiUrl = `${baseUrl}/message/sendText/${integration.instance_name}`;
-          
-          const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "apikey": integration.api_key || "",
-            },
-            body: JSON.stringify({
-              number: phoneClean,
-              text: personalizedMessage,
-            }),
-          });
-
-          const result = await response.json();
-          console.log("Evolution response:", result);
-
-          if (result.key?.id || result.status === "PENDING") {
-            whatsappSuccess = true;
-          } else {
-            whatsappError = result.message || result.error || "Unknown error";
-          }
+        } else {
+          whatsappError = `Provider ${provider} não suportado`;
         }
 
         // Update recipient status
