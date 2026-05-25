@@ -340,6 +340,7 @@ const App = () => (
                             <Route path="/marketing-insights" element={<MarketingInsights />} />
                             <Route path="/marketing/trafego-pago" element={<MarketingTrafegoPago />} />
                             <Route path="/marketing/content-hq" element={<ContentHQ />} />
+                            <Route path="/marketing/rebranding" element={<Rebranding />} />
                             <Route path="/insights" element={<Insights />} />
                             <Route path="/insights/:dashboardId" element={<Insights />} />
                             
