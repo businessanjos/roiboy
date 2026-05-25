@@ -98,18 +98,48 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get WhatsApp integration
-    const { data: integration, error: integrationError } = await supabase
-      .from("whatsapp_integrations")
-      .select("*")
-      .eq("account_id", accountId)
-      .eq("is_active", true)
-      .single();
+    // Get WhatsApp integration (prefer "operacoes" sector, fallback to any connected)
+    let integration: { id: string; sector_id: string | null; config: Record<string, string> } | null = null;
 
-    if (integrationError || !integration) {
-      console.error("WhatsApp integration not found:", integrationError);
+    const { data: opsIntegration } = await supabase
+      .from("integrations")
+      .select("id, sector_id, config")
+      .eq("account_id", accountId)
+      .eq("type", "whatsapp")
+      .eq("status", "connected")
+      .eq("sector_id", "operacoes")
+      .limit(1);
+
+    if (opsIntegration && opsIntegration.length > 0) {
+      integration = opsIntegration[0] as typeof integration;
+    } else {
+      const { data: anyIntegration } = await supabase
+        .from("integrations")
+        .select("id, sector_id, config")
+        .eq("account_id", accountId)
+        .eq("type", "whatsapp")
+        .eq("status", "connected")
+        .limit(1);
+      if (anyIntegration && anyIntegration.length > 0) {
+        integration = anyIntegration[0] as typeof integration;
+      }
+    }
+
+    if (!integration) {
+      console.error("No connected WhatsApp integration");
       return new Response(
-        JSON.stringify({ error: "WhatsApp integration not configured or inactive" }),
+        JSON.stringify({ error: "Nenhum WhatsApp conectado" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const provider = integration.config?.provider || "uazapi";
+    const instanceToken = integration.config?.instance_token;
+    const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "https://g1.uazapi.com";
+
+    if (provider === "uazapi" && !instanceToken) {
+      return new Response(
+        JSON.stringify({ error: "Token da integração WhatsApp não configurado" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -209,54 +239,23 @@ Deno.serve(async (req) => {
 
         const phoneClean = recipient.phone.replace(/\D/g, "");
         
-        if (integration.provider === "uazapi") {
-          const apiUrl = `${integration.api_url}/sendText`;
-          const response = await fetch(apiUrl, {
+        if (provider === "uazapi") {
+          const response = await fetch(`${UAZAPI_URL}/send/text`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${integration.api_key}`,
-            },
-            body: JSON.stringify({
-              phone: phoneClean,
-              message: personalizedMessage,
-            }),
+            headers: { "Content-Type": "application/json", "token": instanceToken! },
+            body: JSON.stringify({ number: phoneClean, text: personalizedMessage }),
           });
 
           const result = await response.json();
           console.log("UAZAPI response:", result);
 
-          if (result.error === false || result.status === "PENDING" || result.messageId) {
+          if (result.error === false || result.chatid || result.messageid || result.messageId || result.status?.toLowerCase?.() === "pending") {
             whatsappSuccess = true;
           } else {
             whatsappError = result.message || result.error || "Unknown error";
           }
-        } else if (integration.provider === "evolution") {
-          const baseUrl = integration.api_url?.endsWith("/") 
-            ? integration.api_url.slice(0, -1) 
-            : integration.api_url;
-          const apiUrl = `${baseUrl}/message/sendText/${integration.instance_name}`;
-          
-          const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "apikey": integration.api_key || "",
-            },
-            body: JSON.stringify({
-              number: phoneClean,
-              text: personalizedMessage,
-            }),
-          });
-
-          const result = await response.json();
-          console.log("Evolution response:", result);
-
-          if (result.key?.id || result.status === "PENDING") {
-            whatsappSuccess = true;
-          } else {
-            whatsappError = result.message || result.error || "Unknown error";
-          }
+        } else {
+          whatsappError = `Provider ${provider} não suportado`;
         }
 
         // Update recipient status
