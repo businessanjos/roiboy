@@ -53,6 +53,7 @@ import {
   formatCNPJ, 
   formatCEP,
   formatBrazilianPhone,
+  formatInternationalPhone,
   formatDateBR,
   parseDateBRToISO,
   parseISOToDateBR,
@@ -235,7 +236,7 @@ export function ClientZappSheet({
       setClient(clientData);
       const initialData = {
         full_name: clientData.full_name || "",
-        phone_e164: formatBrazilianPhone(clientData.phone_e164) || clientData.phone_e164 || "",
+        phone_e164: formatInternationalPhone(clientData.phone_e164 || "") || clientData.phone_e164 || "",
         email: extractFirstEmail(clientData.emails),
         cpf: formatCPF(clientData.cpf || "") || "",
         cnpj: formatCNPJ(clientData.cnpj || "") || "",
