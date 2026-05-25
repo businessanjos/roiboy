@@ -98,18 +98,48 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get WhatsApp integration
-    const { data: integration, error: integrationError } = await supabase
-      .from("whatsapp_integrations")
-      .select("*")
-      .eq("account_id", accountId)
-      .eq("is_active", true)
-      .single();
+    // Get WhatsApp integration (prefer "operacoes" sector, fallback to any connected)
+    let integration: { id: string; sector_id: string | null; config: Record<string, string> } | null = null;
 
-    if (integrationError || !integration) {
-      console.error("WhatsApp integration not found:", integrationError);
+    const { data: opsIntegration } = await supabase
+      .from("integrations")
+      .select("id, sector_id, config")
+      .eq("account_id", accountId)
+      .eq("type", "whatsapp")
+      .eq("status", "connected")
+      .eq("sector_id", "operacoes")
+      .limit(1);
+
+    if (opsIntegration && opsIntegration.length > 0) {
+      integration = opsIntegration[0] as typeof integration;
+    } else {
+      const { data: anyIntegration } = await supabase
+        .from("integrations")
+        .select("id, sector_id, config")
+        .eq("account_id", accountId)
+        .eq("type", "whatsapp")
+        .eq("status", "connected")
+        .limit(1);
+      if (anyIntegration && anyIntegration.length > 0) {
+        integration = anyIntegration[0] as typeof integration;
+      }
+    }
+
+    if (!integration) {
+      console.error("No connected WhatsApp integration");
       return new Response(
-        JSON.stringify({ error: "WhatsApp integration not configured or inactive" }),
+        JSON.stringify({ error: "Nenhum WhatsApp conectado" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const provider = integration.config?.provider || "uazapi";
+    const instanceToken = integration.config?.instance_token;
+    const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "https://g1.uazapi.com";
+
+    if (provider === "uazapi" && !instanceToken) {
+      return new Response(
+        JSON.stringify({ error: "Token da integração WhatsApp não configurado" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
