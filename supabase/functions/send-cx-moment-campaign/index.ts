@@ -98,44 +98,42 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get WhatsApp integration (prefer "operacoes" sector, fallback to any connected)
+    // Get WhatsApp integration: prefer uazapi-with-token in "operacoes", then any uazapi with token.
     let integration: { id: string; sector_id: string | null; config: Record<string, string> } | null = null;
 
-    const { data: opsIntegration } = await supabase
+    const { data: allIntegrations } = await supabase
       .from("integrations")
       .select("id, sector_id, config")
       .eq("account_id", accountId)
       .eq("type", "whatsapp")
-      .eq("status", "connected")
-      .eq("sector_id", "operacoes")
-      .limit(1);
+      .eq("status", "connected");
 
-    if (opsIntegration && opsIntegration.length > 0) {
-      integration = opsIntegration[0] as typeof integration;
-    } else {
-      const { data: anyIntegration } = await supabase
-        .from("integrations")
-        .select("id, sector_id, config")
-        .eq("account_id", accountId)
-        .eq("type", "whatsapp")
-        .eq("status", "connected")
-        .limit(1);
-      if (anyIntegration && anyIntegration.length > 0) {
-        integration = anyIntegration[0] as typeof integration;
-      }
-    }
+    const usableUazapi = (allIntegrations || []).filter((i) => {
+      const cfg = (i.config || {}) as Record<string, string>;
+      const prov = cfg.provider || "uazapi";
+      return prov === "uazapi" && !!cfg.instance_token;
+    });
+
+    integration =
+      (usableUazapi.find((i) => i.sector_id === "operacoes") as typeof integration) ||
+      (usableUazapi[0] as typeof integration) ||
+      null;
 
     if (!integration) {
-      console.error("No connected WhatsApp integration");
+      console.error("No usable UAZAPI WhatsApp integration");
       return new Response(
-        JSON.stringify({ error: "Nenhum WhatsApp conectado" }),
+        JSON.stringify({ error: "Nenhum WhatsApp UAZAPI conectado" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const provider = integration.config?.provider || "uazapi";
     const instanceToken = integration.config?.instance_token;
-    const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "https://g1.uazapi.com";
+    const UAZAPI_URL =
+      integration.config?.host_url ||
+      Deno.env.get("UAZAPI_URL") ||
+      "https://g1.uazapi.com";
+    console.log(`[cx-campaign] Using integration ${integration.id} via ${UAZAPI_URL}`);
 
     if (provider === "uazapi" && !instanceToken) {
       return new Response(
