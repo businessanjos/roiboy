@@ -103,42 +103,61 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Find WhatsApp integration for "Operação" sector
-        const { data: integrations, error: integrationError } = await supabase
-          .from("whatsapp_integrations")
-          .select("*")
+        // Find WhatsApp integration (sector "operacoes" first, then any connected as fallback)
+        let whatsappIntegration: { id: string; sector_id: string | null; config: Record<string, string> } | null = null;
+
+        const { data: opsIntegration } = await supabase
+          .from("integrations")
+          .select("id, sector_id, config")
           .eq("account_id", moment.account_id)
-          .eq("is_active", true)
+          .eq("type", "whatsapp")
+          .eq("status", "connected")
           .eq("sector_id", "operacoes")
           .limit(1);
 
-        let whatsappIntegration = integrations?.[0];
-
-        if (integrationError || !whatsappIntegration) {
-          console.log(`No WhatsApp integration found for account ${moment.account_id}`);
-          
-          // Try to find any active integration as fallback
+        if (opsIntegration && opsIntegration.length > 0) {
+          whatsappIntegration = opsIntegration[0] as typeof whatsappIntegration;
+        } else {
           const { data: fallbackIntegration } = await supabase
-            .from("whatsapp_integrations")
-            .select("*")
+            .from("integrations")
+            .select("id, sector_id, config")
             .eq("account_id", moment.account_id)
-            .eq("is_active", true)
+            .eq("type", "whatsapp")
+            .eq("status", "connected")
             .limit(1);
 
-          if (!fallbackIntegration || fallbackIntegration.length === 0) {
-            await supabase
-              .from("client_life_events")
-              .update({
-                send_status: "failed",
-                send_error: "Nenhum WhatsApp conectado para envio automático",
-              })
-              .eq("id", moment.id);
-            failedCount++;
-            continue;
+          if (fallbackIntegration && fallbackIntegration.length > 0) {
+            whatsappIntegration = fallbackIntegration[0] as typeof whatsappIntegration;
           }
-          
-          // Use fallback integration
-          whatsappIntegration = fallbackIntegration[0];
+        }
+
+        if (!whatsappIntegration) {
+          console.log(`No WhatsApp integration connected for account ${moment.account_id}`);
+          await supabase
+            .from("client_life_events")
+            .update({
+              send_status: "failed",
+              send_error: "Nenhum WhatsApp conectado para envio automático",
+            })
+            .eq("id", moment.id);
+          failedCount++;
+          continue;
+        }
+
+        const provider = whatsappIntegration.config?.provider || "uazapi";
+        const instanceToken = whatsappIntegration.config?.instance_token;
+        const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "https://g1.uazapi.com";
+
+        if (!instanceToken) {
+          await supabase
+            .from("client_life_events")
+            .update({
+              send_status: "failed",
+              send_error: "Token da integração WhatsApp não configurado",
+            })
+            .eq("id", moment.id);
+          failedCount++;
+          continue;
         }
 
         // Get attached images
@@ -166,117 +185,44 @@ Deno.serve(async (req) => {
         let sendError: string | null = null;
 
         // Send text message first
-        if (personalizedMessage.trim()) {
+        if (personalizedMessage.trim() && provider === "uazapi") {
           try {
-            if (whatsappIntegration.provider === "uazapi") {
-              const apiUrl = `${whatsappIntegration.api_url}/sendText`;
-              const response = await fetch(apiUrl, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${whatsappIntegration.api_key}`,
-                },
-                body: JSON.stringify({
-                  phone: phoneClean,
-                  message: personalizedMessage,
-                }),
-              });
-
-              const result = await response.json();
-              console.log("UAZAPI text response:", result);
-
-              if (result.error === false || result.status === "PENDING" || result.messageId) {
-                messageSent = true;
-              } else {
-                sendError = result.message || result.error || "Erro ao enviar mensagem";
-              }
-            } else if (whatsappIntegration.provider === "evolution") {
-              const baseUrl = whatsappIntegration.api_url?.endsWith("/") 
-                ? whatsappIntegration.api_url.slice(0, -1) 
-                : whatsappIntegration.api_url;
-              const apiUrl = `${baseUrl}/message/sendText/${whatsappIntegration.instance_name}`;
-              
-              const response = await fetch(apiUrl, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "apikey": whatsappIntegration.api_key || "",
-                },
-                body: JSON.stringify({
-                  number: phoneClean,
-                  text: personalizedMessage,
-                }),
-              });
-
-              const result = await response.json();
-              console.log("Evolution text response:", result);
-
-              if (result.key?.id || result.status === "PENDING") {
-                messageSent = true;
-              } else {
-                sendError = result.message || result.error || "Erro ao enviar mensagem";
-              }
+            const response = await fetch(`${UAZAPI_URL}/send/text`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "token": instanceToken },
+              body: JSON.stringify({ number: phoneClean, text: personalizedMessage }),
+            });
+            const result = await response.json();
+            console.log("UAZAPI text response:", result);
+            if (result.error === false || result.chatid || result.messageid || result.messageId || result.status?.toLowerCase?.() === "pending") {
+              messageSent = true;
+            } else {
+              sendError = result.message || result.error || "Erro ao enviar mensagem";
             }
           } catch (error) {
             console.error("Error sending text:", error);
             sendError = (error as Error).message;
           }
+        } else if (!personalizedMessage.trim()) {
+          sendError = "Mensagem está vazia";
+        } else {
+          sendError = `Provider ${provider} não suportado`;
         }
 
         // Send images if message was sent successfully
-        if (messageSent && images && images.length > 0) {
+        if (messageSent && images && images.length > 0 && provider === "uazapi") {
           for (const image of images as LifeEventImage[]) {
             try {
-              await randomDelay(2, 4); // Small delay between images
-
-              if (whatsappIntegration.provider === "uazapi") {
-                const apiUrl = `${whatsappIntegration.api_url}/sendMedia`;
-                const response = await fetch(apiUrl, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${whatsappIntegration.api_key}`,
-                  },
-                  body: JSON.stringify({
-                    phone: phoneClean,
-                    type: "image",
-                    media: image.image_url,
-                    caption: "", // No caption for images
-                  }),
-                });
-
-                const result = await response.json();
-                console.log("UAZAPI image response:", result);
-
-                if (result.error === false || result.status === "PENDING" || result.messageId) {
-                  imagesSent++;
-                }
-              } else if (whatsappIntegration.provider === "evolution") {
-                const baseUrl = whatsappIntegration.api_url?.endsWith("/") 
-                  ? whatsappIntegration.api_url.slice(0, -1) 
-                  : whatsappIntegration.api_url;
-                const apiUrl = `${baseUrl}/message/sendMedia/${whatsappIntegration.instance_name}`;
-                
-                const response = await fetch(apiUrl, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "apikey": whatsappIntegration.api_key || "",
-                  },
-                  body: JSON.stringify({
-                    number: phoneClean,
-                    mediatype: "image",
-                    media: image.image_url,
-                    caption: "",
-                  }),
-                });
-
-                const result = await response.json();
-                console.log("Evolution image response:", result);
-
-                if (result.key?.id || result.status === "PENDING") {
-                  imagesSent++;
-                }
+              await randomDelay(2, 4);
+              const response = await fetch(`${UAZAPI_URL}/send/media`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "token": instanceToken },
+                body: JSON.stringify({ number: phoneClean, type: "image", file: image.image_url, text: "" }),
+              });
+              const result = await response.json();
+              console.log("UAZAPI image response:", result);
+              if (result.error === false || result.chatid || result.messageid || result.messageId || result.status?.toLowerCase?.() === "pending") {
+                imagesSent++;
               }
             } catch (error) {
               console.error("Error sending image:", error);
