@@ -385,6 +385,15 @@ export default function Dashboard() {
     return clients.filter(c => c.product_ids?.includes(gestaoProductFilter));
   }, [clients, gestaoProductFilter]);
 
+  // Filter CX upcoming events by product filter (shares same filter as Gestão)
+  const filteredUpcomingEvents = useMemo(() => {
+    if (gestaoProductFilter === "all") return upcomingEvents;
+    return (upcomingEvents || []).filter((e: any) => {
+      const clientProducts = clientProductsMap[e.client_id] || [];
+      return clientProducts.includes(gestaoProductFilter);
+    });
+  }, [upcomingEvents, gestaoProductFilter, clientProductsMap]);
+
   const gestaoClientStats = useMemo(() => ({
     total: gestaoFilteredClients.length,
     active: gestaoFilteredClients.filter(c => c.hasActiveContract === true).length,
@@ -789,7 +798,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Momentos CX Próximos</p>
-                    <p className="text-3xl font-bold text-primary">{upcomingEvents.length}</p>
+                    <p className="text-3xl font-bold text-primary">{filteredUpcomingEvents.length}</p>
                   </div>
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <Bell className="h-6 w-6 text-primary" />
@@ -804,7 +813,7 @@ export default function Dashboard() {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Aniversários</p>
                     <p className="text-3xl font-bold text-foreground">
-                      {upcomingEvents.filter(e => e.event_type === "birthday").length}
+                      {filteredUpcomingEvents.filter(e => e.event_type === "birthday").length}
                     </p>
                   </div>
                   <div className="h-12 w-12 rounded-full bg-pink-500/10 flex items-center justify-center">
@@ -820,7 +829,7 @@ export default function Dashboard() {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Detectados por IA</p>
                     <p className="text-3xl font-bold text-foreground">
-                      {upcomingEvents.filter(e => e.source === "ai_detected").length}
+                      {filteredUpcomingEvents.filter(e => e.source === "ai_detected").length}
                     </p>
                   </div>
                   <div className="h-12 w-12 rounded-full bg-violet-500/10 flex items-center justify-center">
@@ -842,13 +851,13 @@ export default function Dashboard() {
                 <CardDescription>Eventos importantes dos próximos 30 dias</CardDescription>
               </CardHeader>
               <CardContent>
-                {upcomingEvents.length === 0 ? (
+                {filteredUpcomingEvents.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     Nenhum momento CX próximo. Cadastre aniversários e datas importantes dos seus clientes!
                   </p>
                 ) : (
                   <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                    {upcomingEvents.map((event: any) => {
+                    {filteredUpcomingEvents.map((event: any) => {
                       const Icon = EVENT_TYPE_ICONS[event.event_type] || Calendar;
                       return (
                         <Link
