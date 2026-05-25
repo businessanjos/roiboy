@@ -17,6 +17,7 @@ import {
   BarChart3,
   TrendingUp,
   Megaphone,
+  Sparkles,
   Settings,
   FileSignature,
   UserPlus,
