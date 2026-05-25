@@ -385,6 +385,15 @@ export default function Dashboard() {
     return clients.filter(c => c.product_ids?.includes(gestaoProductFilter));
   }, [clients, gestaoProductFilter]);
 
+  // Filter CX upcoming events by product filter (shares same filter as Gestão)
+  const filteredUpcomingEvents = useMemo(() => {
+    if (gestaoProductFilter === "all") return upcomingEvents;
+    return (upcomingEvents || []).filter((e: any) => {
+      const clientProducts = clientProductsMap[e.client_id] || [];
+      return clientProducts.includes(gestaoProductFilter);
+    });
+  }, [upcomingEvents, gestaoProductFilter, clientProductsMap]);
+
   const gestaoClientStats = useMemo(() => ({
     total: gestaoFilteredClients.length,
     active: gestaoFilteredClients.filter(c => c.hasActiveContract === true).length,
