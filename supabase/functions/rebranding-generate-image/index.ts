@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
       prompt,
       aspectRatio = "1:1",
       palette = [],
+      predominantHex = null,
       referenceUrls = [],
       channelKey = null,
       assetLabel = null,
@@ -82,8 +83,10 @@ Deno.serve(async (req) => {
     const size = AR_TO_SIZE[aspectRatio] || AR_TO_SIZE["1:1"];
 
     // Monta prompt enriquecido com brand kit
+    const predominant = predominantHex || (palette[0] ?? null);
+    const supportColors = (palette as string[]).filter((c) => c !== predominant);
     const paletteText = palette.length
-      ? `Paleta obrigatória (use somente estas cores principais): ${palette.join(", ")}.`
+      ? `Paleta obrigatória da marca: ${predominant ? `cor PREDOMINANTE ${predominant} (deve ocupar a maior área visual)` : ""}${supportColors.length ? `, cores de apoio: ${supportColors.join(", ")}` : ""}. Use somente estas cores.`
       : "";
     const styleText = styleNotes ? `Estilo: ${styleNotes}.` : "";
     const dimensionText = `Dimensões alvo: ${size.w}×${size.h}px (aspect ratio ${aspectRatio}).`;
