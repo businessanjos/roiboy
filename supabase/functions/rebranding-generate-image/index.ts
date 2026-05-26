@@ -92,62 +92,105 @@ Deno.serve(async (req) => {
     const dimensionText = `Dimensões alvo: ${size.w}×${size.h}px (aspect ratio ${aspectRatio}).`;
     const brandPreface = `Esta imagem é para a marca Eternum. Mantenha consistência com a identidade visual. ${paletteText} ${styleText} ${dimensionText}`.trim();
 
-    // Constrói content multimodal (texto + imagens de ref)
-    const content: any[] = [{ type: "text", text: `${brandPreface}\n\n${prompt}` }];
-    for (const url of (referenceUrls as string[]).slice(0, 4)) {
-      content.push({ type: "image_url", image_url: { url } });
-    }
-
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content }],
-        modalities: ["image", "text"],
-      }),
-    });
-
-    if (!aiResp.ok) {
-      const txt = await aiResp.text();
-      if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições atingido. Aguarde alguns segundos." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos em Settings > Workspace > Usage." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      console.error("AI gateway error:", aiResp.status, txt);
-      throw new Error(`AI Gateway erro ${aiResp.status}`);
-    }
-
-    const aiJson = await aiResp.json();
-    // Procura imagem na resposta
-    const msg = aiJson.choices?.[0]?.message;
+    const isOpenAIImage = typeof model === "string" && model.startsWith("openai/gpt-image");
     let dataUrl: string | null = null;
 
-    // Formato 1: message.images
-    if (Array.isArray(msg?.images) && msg.images[0]?.image_url?.url) {
-      dataUrl = msg.images[0].image_url.url;
-    }
-    // Formato 2: content array
-    if (!dataUrl && Array.isArray(msg?.content)) {
-      for (const part of msg.content) {
-        if (part?.type === "image_url" && part?.image_url?.url) {
-          dataUrl = part.image_url.url;
-          break;
+    if (isOpenAIImage) {
+      // OpenAI /v1/images/generations — não suporta referenceUrls nem messages
+      // Mapeia aspect ratio para os tamanhos aceitos
+      const openaiSize =
+        aspectRatio === "16:9" || aspectRatio === "3:2" || aspectRatio === "4:3" || aspectRatio === "21:9"
+          ? "1536x1024"
+          : aspectRatio === "9:16" || aspectRatio === "2:3" || aspectRatio === "3:4" || aspectRatio === "4:5"
+          ? "1024x1536"
+          : "1024x1024";
+
+      const fullPrompt = `${brandPreface}\n\n${prompt}`;
+      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          prompt: fullPrompt,
+          size: openaiSize,
+          quality: "high",
+          n: 1,
+        }),
+      });
+
+      if (!aiResp.ok) {
+        const txt = await aiResp.text();
+        if (aiResp.status === 429) {
+          return new Response(JSON.stringify({ error: "Limite de requisições atingido. Aguarde alguns segundos." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (aiResp.status === 402) {
+          return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos em Settings > Workspace > Usage." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        console.error("AI gateway error:", aiResp.status, txt);
+        throw new Error(`AI Gateway erro ${aiResp.status}`);
+      }
+      const aiJson = await aiResp.json();
+      const b64 = aiJson?.data?.[0]?.b64_json;
+      if (b64) dataUrl = `data:image/png;base64,${b64}`;
+    } else {
+      // Gemini via chat completions (suporta referenceUrls multimodais)
+      const content: any[] = [{ type: "text", text: `${brandPreface}\n\n${prompt}` }];
+      for (const url of (referenceUrls as string[]).slice(0, 4)) {
+        content.push({ type: "image_url", image_url: { url } });
+      }
+
+      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content }],
+          modalities: ["image", "text"],
+        }),
+      });
+
+      if (!aiResp.ok) {
+        const txt = await aiResp.text();
+        if (aiResp.status === 429) {
+          return new Response(JSON.stringify({ error: "Limite de requisições atingido. Aguarde alguns segundos." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (aiResp.status === 402) {
+          return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos em Settings > Workspace > Usage." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        console.error("AI gateway error:", aiResp.status, txt);
+        throw new Error(`AI Gateway erro ${aiResp.status}`);
+      }
+
+      const aiJson = await aiResp.json();
+      const msg = aiJson.choices?.[0]?.message;
+      if (Array.isArray(msg?.images) && msg.images[0]?.image_url?.url) {
+        dataUrl = msg.images[0].image_url.url;
+      }
+      if (!dataUrl && Array.isArray(msg?.content)) {
+        for (const part of msg.content) {
+          if (part?.type === "image_url" && part?.image_url?.url) {
+            dataUrl = part.image_url.url;
+            break;
+          }
         }
       }
     }
 
     if (!dataUrl) {
-      console.error("No image in AI response:", JSON.stringify(aiJson).slice(0, 500));
       throw new Error("IA não retornou imagem");
     }
 
