@@ -168,7 +168,6 @@ export function SalesDashboardChatTab() {
         const t = await resp.text().catch(() => "");
         throw new Error(t || `HTTP ${resp.status}`);
       }
-      setStage("gpt");
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buf = "";
@@ -186,19 +185,24 @@ export function SalesDashboardChatTab() {
           if (!line.startsWith("data: ")) continue;
           const payload = line.slice(6).trim();
           if (payload === "[DONE]") continue;
+          let parsed: any;
           try {
-            const parsed = JSON.parse(payload);
-            if (parsed.type === "delta") {
-              acc += parsed.content;
-              setMessages((prev) =>
-                prev.map((m) => (m.id === assistantId ? { ...m, content: acc } : m)),
-              );
-            } else if (parsed.type === "metadata") {
-              metadata = { kpi: parsed.kpi, chart_hint: parsed.chart_hint, analysis: parsed.analysis };
-            } else if (parsed.type === "error") {
-              throw new Error(parsed.error);
-            }
-          } catch {/* incomplete */}
+            parsed = JSON.parse(payload);
+          } catch {
+            continue;
+          }
+          if (parsed.type === "delta") {
+            acc += parsed.content;
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, content: acc } : m)),
+            );
+          } else if (parsed.type === "status") {
+            setStage(parsed.stage === "gpt" ? "gpt" : "gemini");
+          } else if (parsed.type === "metadata") {
+            metadata = { kpi: parsed.kpi, chart_hint: parsed.chart_hint, analysis: parsed.analysis };
+          } else if (parsed.type === "error") {
+            throw new Error(parsed.error);
+          }
         }
       }
       setMessages((prev) =>
@@ -337,7 +341,7 @@ export function SalesDashboardChatTab() {
             {isStreaming && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                {stage === "gemini" ? "Gemini Pro analisando dados…" : "GPT-5 gerando insight…"}
+                {stage === "gemini" ? "AION analisando dados…" : "AION gerando insight…"}
               </div>
             )}
           </div>
