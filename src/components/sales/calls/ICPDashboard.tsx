@@ -1,12 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import {
   Crown, MapPin, Building2, TrendingUp, Users, Target, Briefcase, Loader2,
-  Stethoscope, Sparkles, AlertCircle, ShieldCheck, DollarSign,
+  Stethoscope, Sparkles, AlertCircle, ShieldCheck, DollarSign, RefreshCw,
 } from 'lucide-react';
 
 type IcpSignals = {
@@ -73,6 +75,24 @@ function TopItems({ data, empty }: { data: Record<string, number>; empty?: strin
 export function ICPDashboard() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const queryClient = useQueryClient();
+
+  const backfillMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('backfill-icp-signals', {
+        body: { account_id: accountId, only_champions: true, limit: 50 },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { processed: number; ok: number; skipped: number; failed: number };
+    },
+    onSuccess: (r) => {
+      toast.success(`ICP extraído em ${r.ok} call(s). ${r.skipped} sem texto suficiente, ${r.failed} falharam.`);
+      queryClient.invalidateQueries({ queryKey: ['icp-dashboard-v2'] });
+    },
+    onError: (e: any) => toast.error(e?.message || 'Erro ao reanalisar ICP'),
+  });
+
 
   const { data: icpData, isLoading } = useQuery({
     queryKey: ['icp-dashboard-v2', accountId],
@@ -165,17 +185,29 @@ export function ICPDashboard() {
         </CardContent></Card>
       </div>
 
-      {signalsCoverage < 60 && (
+      {signalsCoverage < 100 && (
         <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardContent className="p-3 flex items-start gap-2 text-xs">
-            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-muted-foreground">
-              Apenas <span className="font-semibold text-foreground">{icpData.withSignals}/{icpData.totalSuccess}</span> calls campeãs têm sinais ICP extraídos.
-              Calls antigas analisadas antes da IA ICP precisam ser <span className="font-medium">reanalisadas</span> para entrar no perfil.
+          <CardContent className="p-3 flex items-center gap-3 text-xs flex-wrap">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-muted-foreground flex-1 min-w-[220px]">
+              <span className="font-semibold text-foreground">{icpData.withSignals}/{icpData.totalSuccess}</span> calls campeãs com sinais ICP extraídos.
+              {signalsCoverage < 100 && ' Reanalise para preencher os nichos das calls antigas.'}
             </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => backfillMutation.mutate()}
+              disabled={backfillMutation.isPending}
+              className="gap-1.5"
+            >
+              {backfillMutation.isPending
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Reanalisando...</>
+                : <><RefreshCw className="w-3.5 h-3.5" />Reanalisar ICP de todas</>}
+            </Button>
           </CardContent>
         </Card>
       )}
+
 
       {/* PRIMARY: niche combined (profissão + especialidade) */}
       <Card className="border-primary/30">
