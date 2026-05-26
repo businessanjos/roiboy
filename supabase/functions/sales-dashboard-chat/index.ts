@@ -41,7 +41,7 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     admin.from("sales_goals").select("*").eq("account_id", accountId).gte("created_at", sinceIso).limit(500),
     admin.from("pipelines").select("id,name,type").eq("account_id", accountId),
     // Clientes novos via contratos no período (proxy de "novos clientes")
-    admin.from("contracts").select("id,client_id,product_id,value,status,start_date,created_at").gte("created_at", sinceIso).eq("account_id", accountId).limit(5000),
+    admin.from("client_contracts").select("id,client_id,product_id,value,status,start_date,created_at,contract_type").gte("created_at", sinceIso).eq("account_id", accountId).limit(5000),
     // Custos: lançamentos financeiros pagos no período (despesas)
     admin.from("financial_entries").select("id,amount,entry_type,status,due_date,payment_date,category_id,description").eq("account_id", accountId).eq("entry_type", "payable").gte("due_date", sinceDate).limit(10000),
     admin.from("financial_categories").select("id,name,dre_group,type").eq("account_id", accountId),
