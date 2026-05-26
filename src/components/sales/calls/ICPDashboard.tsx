@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -10,88 +11,41 @@ import {
   Crown, MapPin, Building2, TrendingUp, Users, Target, Briefcase, Loader2,
   Stethoscope, Sparkles, AlertCircle, ShieldCheck, DollarSign, RefreshCw,
 } from 'lucide-react';
+...
+  const autoRanRef = useRef(false);
+  const [autoRunning, setAutoRunning] = useState(false);
 
-type IcpSignals = {
-  profession?: string | null;
-  specialty?: string | null;
-  niche_combined?: string | null;
-  business_model?: string | null;
-  team_size?: string | null;
-  revenue_range?: string | null;
-  ticket_range?: string | null;
-  decision_role?: string | null;
-  main_pains?: string[];
-  main_objections?: string[];
-  triggers_that_worked?: string[];
-  city?: string | null;
-  state?: string | null;
-  age_estimate?: string | null;
-};
-
-interface ICPData {
-  totalSuccess: number;
-  totalFailure: number;
-  withSignals: number;
-  professions: Record<string, number>;
-  specialties: Record<string, number>;
-  niches: Record<string, number>;
-  businessModels: Record<string, number>;
-  ticketRanges: Record<string, number>;
-  revenueRanges: Record<string, number>;
-  decisionRoles: Record<string, number>;
-  pains: Record<string, number>;
-  objections: Record<string, number>;
-  triggers: Record<string, number>;
-  cities: Record<string, number>;
-  states: Record<string, number>;
-}
-
-function inc(map: Record<string, number>, key?: string | null) {
-  if (!key) return;
-  const k = key.trim();
-  if (!k) return;
-  map[k] = (map[k] || 0) + 1;
-}
-
-function TopItems({ data, empty }: { data: Record<string, number>; empty?: string }) {
-  const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  const max = sorted[0]?.[1] || 1;
-  if (sorted.length === 0) return <p className="text-xs text-muted-foreground">{empty ?? 'Sem dados suficientes'}</p>;
-  return (
-    <div className="space-y-2">
-      {sorted.map(([name, count]) => (
-        <div key={name} className="space-y-1">
-          <div className="flex items-center justify-between text-sm gap-2">
-            <span className="truncate">{name}</span>
-            <Badge variant="secondary" className="text-xs ml-2 shrink-0">{count}</Badge>
-          </div>
-          <Progress value={(count / max) * 100} className="h-1.5" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function ICPDashboard() {
-  const { currentUser } = useCurrentUser();
-  const accountId = currentUser?.account_id;
-  const queryClient = useQueryClient();
+  async function runBackfillLoop(onlyChampions: boolean) {
+    setAutoRunning(true);
+    try {
+      let totalOk = 0, totalFailed = 0, rounds = 0;
+      // Loop até o backend dizer que não tem mais pendentes (ou 6 voltas no máx)
+      // — cada chamada processa até 80 calls em paralelo.
+      while (rounds < 6) {
+        rounds++;
+        const { data, error } = await supabase.functions.invoke('backfill-icp-signals', {
+          body: { account_id: accountId, only_champions: onlyChampions, limit: 80 },
+        });
+        if (error) throw error;
+        if (data?.error && !data?.processed) throw new Error(data.error);
+        totalOk += data?.ok || 0;
+        totalFailed += data?.failed || 0;
+        queryClient.invalidateQueries({ queryKey: ['icp-dashboard-v2'] });
+        if (!data?.remaining) break;
+      }
+      if (totalOk > 0) toast.success(`ICP extraído em ${totalOk} call(s)${totalFailed ? ` (${totalFailed} falharam)` : ''}.`);
+      else if (totalFailed > 0) toast.error(`Não foi possível extrair ICP de ${totalFailed} call(s).`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao reanalisar ICP');
+    } finally {
+      setAutoRunning(false);
+    }
+  }
 
   const backfillMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('backfill-icp-signals', {
-        body: { account_id: accountId, only_champions: true, limit: 50 },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data as { processed: number; ok: number; skipped: number; failed: number };
-    },
-    onSuccess: (r) => {
-      toast.success(`ICP extraído em ${r.ok} call(s). ${r.skipped} sem texto suficiente, ${r.failed} falharam.`);
-      queryClient.invalidateQueries({ queryKey: ['icp-dashboard-v2'] });
-    },
-    onError: (e: any) => toast.error(e?.message || 'Erro ao reanalisar ICP'),
+    mutationFn: () => runBackfillLoop(false),
   });
+
 
 
   const { data: icpData, isLoading } = useQuery({
