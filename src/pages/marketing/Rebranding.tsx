@@ -219,6 +219,9 @@ export default function Rebranding() {
             <Sparkles className="h-3.5 w-3.5 mr-1" /> Studio IA
           </TabsTrigger>
           <TabsTrigger value="brand">Brand Kit</TabsTrigger>
+          <TabsTrigger value="products">
+            <Palette className="h-3.5 w-3.5 mr-1" /> Produtos
+          </TabsTrigger>
           <TabsTrigger value="tasks">Tarefas (Kanban)</TabsTrigger>
           <TabsTrigger value="playbook">Playbook</TabsTrigger>
         </TabsList>
