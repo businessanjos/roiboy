@@ -11,11 +11,24 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  Sparkles, Loader2, Download, Image as ImageIcon, Upload, X, Save, Wand2,
+  Sparkles, Loader2, Download, Image as ImageIcon, Upload, X, Save, Wand2, Star, Plus,
 } from "lucide-react";
 import { REBRANDING_SPECS } from "@/data/rebrandingSpecs";
 
-const ETERNUM_PALETTE = ["#0a0a0a", "#d2ae6d", "#efede6", "#42423d"];
+type PaletteColor = { hex: string; role: "predominant" | "support" };
+const ETERNUM_PALETTE: PaletteColor[] = [
+  { hex: "#0a0a0a", role: "predominant" },
+  { hex: "#d2ae6d", role: "support" },
+  { hex: "#efede6", role: "support" },
+  { hex: "#42423d", role: "support" },
+];
+
+const normalizeHex = (v: string): string | null => {
+  let s = v.trim().replace(/^#/, "");
+  if (s.length === 3) s = s.split("").map((c) => c + c).join("");
+  if (!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+  return `#${s.toLowerCase()}`;
+};
 
 const ASPECT_PRESETS = [
   { value: "1:1",  label: "Quadrado 1:1 (Instagram Post, 1080×1080)" },
