@@ -109,8 +109,8 @@ export function AssetUploadBox({
         file_name: file.name,
         file_size_bytes: file.size,
         mime_type: file.type,
-        uploaded_by: profile?.id,
-        uploaded_by_name: profile?.name,
+        uploaded_by: currentUser?.id,
+        uploaded_by_name: currentUser?.name,
         source: "upload",
       });
       if (insErr) throw insErr;
@@ -127,8 +127,8 @@ export function AssetUploadBox({
     mutationFn: async ({ id, status, note }: { id: string; status: string; note?: string }) => {
       const { error } = await supabase.from("rebranding_assets").update({
         status,
-        reviewed_by: profile?.id,
-        reviewed_by_name: profile?.name,
+        reviewed_by: currentUser?.id,
+        reviewed_by_name: currentUser?.name,
         reviewed_at: new Date().toISOString(),
         review_note: note || null,
       }).eq("id", id);
