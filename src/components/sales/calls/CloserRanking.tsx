@@ -22,49 +22,66 @@ export function CloserRanking() {
   const accountId = currentUser?.account_id;
 
   const { data: ranking = [], isLoading } = useQuery({
-    queryKey: ['closer-ranking', accountId],
+    queryKey: ['closer-ranking-v2', accountId],
     queryFn: async (): Promise<SellerStats[]> => {
       // Get analyses with user info
       const { data: analyses, error } = await supabase
         .from('sales_call_analyses')
-        .select('user_id, call_outcome')
+        .select('user_id, seller_user_id, call_outcome')
         .eq('account_id', accountId!)
         .not('call_outcome', 'is', null);
       if (error) throw error;
 
-      // Get users that are Closers (exclude SDRs and other roles)
-      const { data: closerRoles } = await supabase
+      // Build the universe of users that should appear in the ranking:
+      // anyone with a sales-area role (Closer, Head, Comercial, SDR, Vendas, Mentor)
+      // OR anyone that actually has at least one analysis.
+      const SALES_ROLE_PATTERNS = ['closer', 'head', 'comercial', 'sdr', 'vendas', 'mentor'];
+      const orFilter = SALES_ROLE_PATTERNS.map(p => `name.ilike.%${p}%`).join(',');
+      const { data: salesRoles } = await supabase
         .from('team_roles')
         .select('id')
-        .ilike('name', '%closer%');
-      const closerRoleIds = (closerRoles || []).map(r => r.id);
+        .or(orFilter);
+      const salesRoleIds = (salesRoles || []).map(r => r.id);
 
-      const { data: closerLinks } = await supabase
-        .from('user_team_roles')
-        .select('user_id')
-        .in('team_role_id', closerRoleIds.length ? closerRoleIds : ['00000000-0000-0000-0000-000000000000']);
-      const closerUserIds = new Set((closerLinks || []).map(l => l.user_id));
+      const salesUserIdsSet = new Set<string>();
+      if (salesRoleIds.length) {
+        const { data: links } = await supabase
+          .from('user_team_roles')
+          .select('user_id')
+          .in('team_role_id', salesRoleIds);
+        (links || []).forEach(l => salesUserIdsSet.add(l.user_id));
+      }
+      // Also include any user that already has analyses (so o gestor sempre
+      // aparece se rodou uma análise, mesmo sem o role formal).
+      (analyses || []).forEach(a => {
+        const uid = (a.seller_user_id as string | null) || (a.user_id as string | null);
+        if (uid) salesUserIdsSet.add(uid);
+      });
+
+      if (salesUserIdsSet.size === 0) return [];
 
       const { data: users } = await supabase
         .from('users')
         .select('id, name')
         .eq('account_id', accountId!)
-        .in('id', Array.from(closerUserIds).length ? Array.from(closerUserIds) : ['00000000-0000-0000-0000-000000000000']);
+        .in('id', Array.from(salesUserIdsSet));
 
       const userMap = new Map((users || []).map(u => [u.id, u.name]));
       const statsMap = new Map<string, SellerStats>();
 
       for (const a of (analyses || [])) {
-        if (!a.user_id) continue;
-        if (!closerUserIds.has(a.user_id)) continue;
-        if (!statsMap.has(a.user_id)) {
-          statsMap.set(a.user_id, {
-            userId: a.user_id,
-            userName: userMap.get(a.user_id) || 'Desconhecido',
+        // Prefer seller_user_id (quem de fato fez a call) sobre user_id (quem subiu a análise).
+        const uid = (a.seller_user_id as string | null) || (a.user_id as string | null);
+        if (!uid) continue;
+        if (!salesUserIdsSet.has(uid)) continue;
+        if (!statsMap.has(uid)) {
+          statsMap.set(uid, {
+            userId: uid,
+            userName: userMap.get(uid) || 'Desconhecido',
             totalCalls: 0, successCalls: 0, failureCalls: 0, partialCalls: 0, conversionRate: 0,
           });
         }
-        const s = statsMap.get(a.user_id)!;
+        const s = statsMap.get(uid)!;
         s.totalCalls++;
         if (a.call_outcome === 'success') s.successCalls++;
         else if (a.call_outcome === 'failure') s.failureCalls++;
