@@ -4,49 +4,62 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Crown, MapPin, Building2, Calendar, TrendingUp, Users, Target, Briefcase, Loader2 } from 'lucide-react';
+import {
+  Crown, MapPin, Building2, TrendingUp, Users, Target, Briefcase, Loader2,
+  Stethoscope, Sparkles, AlertCircle, ShieldCheck, DollarSign,
+} from 'lucide-react';
+
+type IcpSignals = {
+  profession?: string | null;
+  specialty?: string | null;
+  niche_combined?: string | null;
+  business_model?: string | null;
+  team_size?: string | null;
+  revenue_range?: string | null;
+  ticket_range?: string | null;
+  decision_role?: string | null;
+  main_pains?: string[];
+  main_objections?: string[];
+  triggers_that_worked?: string[];
+  city?: string | null;
+  state?: string | null;
+  age_estimate?: string | null;
+};
 
 interface ICPData {
   totalSuccess: number;
   totalFailure: number;
+  withSignals: number;
+  professions: Record<string, number>;
+  specialties: Record<string, number>;
+  niches: Record<string, number>;
+  businessModels: Record<string, number>;
+  ticketRanges: Record<string, number>;
+  revenueRanges: Record<string, number>;
+  decisionRoles: Record<string, number>;
+  pains: Record<string, number>;
+  objections: Record<string, number>;
+  triggers: Record<string, number>;
   cities: Record<string, number>;
   states: Record<string, number>;
-  segments: Record<string, number>;
-  niches: Record<string, number>;
-  companies: Record<string, number>;
-  hasCompany: number;
-  noCompany: number;
-  avgAge: number | null;
-  ageRanges: Record<string, number>;
 }
 
-function calcAgeFromBirthDate(birthDate: string | null): number | null {
-  if (!birthDate) return null;
-  const today = new Date();
-  const birth = new Date(birthDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
+function inc(map: Record<string, number>, key?: string | null) {
+  if (!key) return;
+  const k = key.trim();
+  if (!k) return;
+  map[k] = (map[k] || 0) + 1;
 }
 
-function getAgeRange(age: number): string {
-  if (age < 25) return '18-24';
-  if (age < 35) return '25-34';
-  if (age < 45) return '35-44';
-  if (age < 55) return '45-54';
-  return '55+';
-}
-
-function TopItems({ data, label, icon: Icon, color }: { data: Record<string, number>; label: string; icon: any; color: string }) {
+function TopItems({ data, empty }: { data: Record<string, number>; empty?: string }) {
   const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const max = sorted[0]?.[1] || 1;
-  if (sorted.length === 0) return <p className="text-xs text-muted-foreground">Sem dados suficientes</p>;
+  if (sorted.length === 0) return <p className="text-xs text-muted-foreground">{empty ?? 'Sem dados suficientes'}</p>;
   return (
     <div className="space-y-2">
       {sorted.map(([name, count]) => (
         <div key={name} className="space-y-1">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-sm gap-2">
             <span className="truncate">{name}</span>
             <Badge variant="secondary" className="text-xs ml-2 shrink-0">{count}</Badge>
           </div>
@@ -62,50 +75,44 @@ export function ICPDashboard() {
   const accountId = currentUser?.account_id;
 
   const { data: icpData, isLoading } = useQuery({
-    queryKey: ['icp-dashboard', accountId],
+    queryKey: ['icp-dashboard-v2', accountId],
     queryFn: async (): Promise<ICPData> => {
-      // Get all analyses with outcomes and client data
       const { data: analyses, error } = await supabase
         .from('sales_call_analyses')
-        .select('call_outcome, client:clients!sales_call_analyses_client_id_fkey(full_name, city, state, company_name, business_segment, business_niche, birth_date, cnpj)')
-        .eq('account_id', accountId!)
-        .not('client_id', 'is', null);
+        .select('call_outcome, icp_signals, client:clients!sales_call_analyses_client_id_fkey(city, state)')
+        .eq('account_id', accountId!);
       if (error) throw error;
 
       const result: ICPData = {
-        totalSuccess: 0, totalFailure: 0,
-        cities: {}, states: {}, segments: {}, niches: {}, companies: {},
-        hasCompany: 0, noCompany: 0, avgAge: null, ageRanges: {},
+        totalSuccess: 0, totalFailure: 0, withSignals: 0,
+        professions: {}, specialties: {}, niches: {}, businessModels: {},
+        ticketRanges: {}, revenueRanges: {}, decisionRoles: {},
+        pains: {}, objections: {}, triggers: {},
+        cities: {}, states: {},
       };
-      const ages: number[] = [];
 
       for (const a of (analyses || [])) {
         if (a.call_outcome === 'success') result.totalSuccess++;
         else if (a.call_outcome === 'failure') result.totalFailure++;
-
-        // Only profile from successful calls
         if (a.call_outcome !== 'success') continue;
-        const c = a.client as any;
-        if (!c) continue;
 
-        if (c.city) result.cities[c.city] = (result.cities[c.city] || 0) + 1;
-        if (c.state) result.states[c.state] = (result.states[c.state] || 0) + 1;
-        if (c.business_segment) result.segments[c.business_segment] = (result.segments[c.business_segment] || 0) + 1;
-        if (c.business_niche) result.niches[c.business_niche] = (result.niches[c.business_niche] || 0) + 1;
-        if (c.company_name) {
-          result.companies[c.company_name] = (result.companies[c.company_name] || 0) + 1;
-          result.hasCompany++;
-        } else {
-          result.noCompany++;
-        }
-        const age = calcAgeFromBirthDate(c.birth_date);
-        if (age) {
-          ages.push(age);
-          const range = getAgeRange(age);
-          result.ageRanges[range] = (result.ageRanges[range] || 0) + 1;
-        }
+        const sig = (a.icp_signals as IcpSignals | null) || null;
+        if (sig) result.withSignals++;
+        const client = a.client as any;
+
+        inc(result.professions, sig?.profession);
+        inc(result.specialties, sig?.specialty);
+        inc(result.niches, sig?.niche_combined);
+        inc(result.businessModels, sig?.business_model);
+        inc(result.ticketRanges, sig?.ticket_range);
+        inc(result.revenueRanges, sig?.revenue_range);
+        inc(result.decisionRoles, sig?.decision_role);
+        (sig?.main_pains || []).forEach(p => inc(result.pains, p));
+        (sig?.main_objections || []).forEach(o => inc(result.objections, o));
+        (sig?.triggers_that_worked || []).forEach(t => inc(result.triggers, t));
+        inc(result.cities, sig?.city || client?.city);
+        inc(result.states, sig?.state || client?.state);
       }
-      result.avgAge = ages.length ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length) : null;
       return result;
     },
     enabled: !!accountId,
@@ -119,7 +126,7 @@ export function ICPDashboard() {
         <CardContent className="p-12 text-center">
           <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">Sem dados de ICP</h3>
-          <p className="text-sm text-muted-foreground">Marque calls como "Campeã" e vincule a clientes para construir seu perfil ideal.</p>
+          <p className="text-sm text-muted-foreground">Marque calls como "Campeã" para que a IA extraia o perfil ideal automaticamente.</p>
         </CardContent>
       </Card>
     );
@@ -127,6 +134,9 @@ export function ICPDashboard() {
 
   const conversionRate = icpData.totalSuccess + icpData.totalFailure > 0
     ? Math.round((icpData.totalSuccess / (icpData.totalSuccess + icpData.totalFailure)) * 100)
+    : 0;
+  const signalsCoverage = icpData.totalSuccess > 0
+    ? Math.round((icpData.withSignals / icpData.totalSuccess) * 100)
     : 0;
 
   return (
@@ -144,34 +154,95 @@ export function ICPDashboard() {
           <p className="text-xs text-muted-foreground">Taxa de Conversão</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
-          <Calendar className="w-6 h-6 text-amber-500 mx-auto mb-1" />
-          <p className="text-2xl font-bold">{icpData.avgAge ? `${icpData.avgAge} anos` : '—'}</p>
-          <p className="text-xs text-muted-foreground">Idade Média ICP</p>
+          <Sparkles className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+          <p className="text-2xl font-bold">{signalsCoverage}%</p>
+          <p className="text-xs text-muted-foreground">Cobertura ICP (IA)</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
           <Building2 className="w-6 h-6 text-blue-500 mx-auto mb-1" />
-          <p className="text-2xl font-bold">{icpData.hasCompany + icpData.noCompany > 0 ? Math.round((icpData.hasCompany / (icpData.hasCompany + icpData.noCompany)) * 100) : 0}%</p>
-          <p className="text-xs text-muted-foreground">Possuem Empresa</p>
+          <p className="text-2xl font-bold">{Object.keys(icpData.niches).length}</p>
+          <p className="text-xs text-muted-foreground">Nichos distintos</p>
         </CardContent></Card>
       </div>
 
-      {/* Detail cards */}
+      {signalsCoverage < 60 && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="p-3 flex items-start gap-2 text-xs">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-muted-foreground">
+              Apenas <span className="font-semibold text-foreground">{icpData.withSignals}/{icpData.totalSuccess}</span> calls campeãs têm sinais ICP extraídos.
+              Calls antigas analisadas antes da IA ICP precisam ser <span className="font-medium">reanalisadas</span> para entrar no perfil.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* PRIMARY: niche combined (profissão + especialidade) */}
+      <Card className="border-primary/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Stethoscope className="w-4 h-4 text-primary" />Nichos campeões (profissão + especialidade)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TopItems data={icpData.niches} empty="A IA ainda não identificou nichos combinados — reanalise as calls campeãs." />
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" />Top Cidades (Calls Campeãs)</CardTitle></CardHeader>
-          <CardContent><TopItems data={icpData.cities} label="Cidade" icon={MapPin} color="text-primary" /></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Briefcase className="w-4 h-4 text-primary" />Profissões</CardTitle></CardHeader>
+          <CardContent><TopItems data={icpData.professions} /></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" />Top Estados</CardTitle></CardHeader>
-          <CardContent><TopItems data={icpData.states} label="Estado" icon={MapPin} color="text-primary" /></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" />Especialidades / Áreas</CardTitle></CardHeader>
+          <CardContent><TopItems data={icpData.specialties} /></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Briefcase className="w-4 h-4 text-primary" />Segmentos</CardTitle></CardHeader>
-          <CardContent><TopItems data={icpData.segments} label="Segmento" icon={Briefcase} color="text-primary" /></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Building2 className="w-4 h-4 text-primary" />Modelo de negócio</CardTitle></CardHeader>
+          <CardContent><TopItems data={icpData.businessModels} /></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-primary" />Faixa Etária</CardTitle></CardHeader>
-          <CardContent><TopItems data={icpData.ageRanges} label="Faixa" icon={Calendar} color="text-amber-500" /></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><DollarSign className="w-4 h-4 text-emerald-500" />Faixa de ticket / faturamento</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Ticket médio do lead</p>
+              <TopItems data={icpData.ticketRanges} />
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Faturamento mensal</p>
+              <TopItems data={icpData.revenueRanges} />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" />Papel decisor</CardTitle></CardHeader>
+          <CardContent><TopItems data={icpData.decisionRoles} /></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" />Localização</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Estados</p>
+              <TopItems data={icpData.states} />
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Cidades</p>
+              <TopItems data={icpData.cities} />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><AlertCircle className="w-4 h-4 text-rose-500" />Dores recorrentes (que fecharam)</CardTitle></CardHeader>
+          <CardContent><TopItems data={icpData.pains} /></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-amber-500" />Objeções vencidas</CardTitle></CardHeader>
+          <CardContent><TopItems data={icpData.objections} /></CardContent>
+        </Card>
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-emerald-500" />Gatilhos que mais funcionaram</CardTitle></CardHeader>
+          <CardContent><TopItems data={icpData.triggers} /></CardContent>
         </Card>
       </div>
     </div>
