@@ -343,7 +343,7 @@ Nunca invente números além dos presentes no JSON. Se kpi != null, destaque ess
               }
             }
           }
-          send(JSON.stringify({ type: "metadata", kpi: analyst.kpi ?? null, chart_hint: analyst.chart_hint ?? null, analysis: analyst.analysis ?? null, period_months: monthsBack, models: { analyst: "google/gemini-2.5-pro", insight: "openai/gpt-5" } }));
+          send(JSON.stringify({ type: "metadata", kpi: analyst.kpi ?? null, chart_hint: analyst.chart_hint ?? null, analysis: analyst.analysis ?? null, period_months: monthsBack, models: { analyst: "google/gemini-2.5-flash", insight: "openai/gpt-5" } }));
           send("[DONE]");
         } catch (e) {
           send(JSON.stringify({ type: "error", error: String(e) }));
