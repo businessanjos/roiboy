@@ -107,68 +107,34 @@ export function IdealScriptGenerator() {
       if (!selectedProduct) throw new Error('Selecione um produto');
       if (productChampionCalls.length === 0) throw new Error('Nenhuma call campeã para este produto');
 
-      const callsSummary = productChampionCalls.slice(0, 8).map((c, i) =>
-        `### Call ${i + 1} (${new Date(c.created_at).toLocaleDateString('pt-BR')})\n${c.analysis?.substring(0, 2000) || 'Sem análise'}`
-      ).join('\n\n---\n\n');
+      // Look up the latest existing "Script Ideal — <produto>" so we can EVOLVE it
+      // instead of regenerating from scratch every time.
+      const { data: existing } = await supabase
+        .from('sales_scripts')
+        .select('id, content, created_at')
+        .eq('account_id', accountId!)
+        .eq('title', `Script Ideal — ${selectedProduct.name}`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      const productBlock = `PRODUTO ALVO: ${selectedProduct.name}${selectedProduct.description ? `\nDESCRIÇÃO: ${selectedProduct.description}` : ''}`;
-
-      const prompt = `GERAÇÃO DE SCRIPT IDEAL — ESPECÍFICO POR PRODUTO
-
-${productBlock}
-
-Baseado nas ${productChampionCalls.length} calls campeãs DESTE PRODUTO abaixo, gere um SCRIPT MODELO PERFEITO **exclusivo para vender ${selectedProduct.name}**. Não use exemplos genéricos — todo o conteúdo deve refletir a oferta, dores, objeções e linguagem reais deste produto.
-
-${callsSummary}
-
-${customInstructions ? `INSTRUÇÕES ADICIONAIS DO GESTOR:\n${customInstructions}\n` : ''}
-
-⚠️ FORMATAÇÃO OBRIGATÓRIA (para gerar o mapa mental visual):
-- Use **markdown** com cabeçalhos hierárquicos (##, ###, ####).
-- Cada **##** representa uma ETAPA do processo comercial (Preparação, Abertura, Sondagem, Apresentação, Objeções, Fechamento, etc.).
-- Use **###** para sub-blocos dentro de cada etapa.
-- Use **####** ou bullets (- / *) para frases exatas, perguntas e exemplos.
-- Não use tabelas. Não use blocos de código.
-
-Gere o script completo a seguir:
-
-# Script Ideal — ${selectedProduct.name}
-
-## Preparação (Contexto e Objetivo)
-- Mindset, pesquisa prévia, materiais à mão.
-
-## Abertura (primeiros 30s)
-- Frase de abertura exata
-- Tom de voz e postura
-
-## Sondagem / Qualificação
-- Perguntas que mais geraram engajamento
-- Ordem ideal e como reagir às respostas
-
-## Apresentação da Solução (${selectedProduct.name})
-- Pitch que mais converteu para este produto
-- Palavras-chave e gatilhos identificados
-- Conexão dor → solução específica deste produto
-
-## Contorno de Objeções
-- Objeções recorrentes neste produto e respostas que funcionaram
-- Frases exatas extraídas das calls campeãs
-
-## Fechamento
-- Técnica de fechamento que mais apareceu
-- Como criar urgência de forma natural
-
-## Dicas de Ouro
-- Padrões sutis dos campeões neste produto
-- Timing, pausas e ritmo ideal
-
-Seja EXTREMAMENTE ESPECÍFICO. Use exemplos reais extraídos das análises. Cada bullet deve ser acionável e copiável pelo time.`;
-
-      const { data, error } = await supabase.functions.invoke('analyze-sales-call', {
-        body: { transcript: prompt }
+      const { data, error } = await supabase.functions.invoke('generate-ideal-script', {
+        body: {
+          product_name: selectedProduct.name,
+          product_description: selectedProduct.description ?? null,
+          custom_instructions: customInstructions || null,
+          previous_script: existing?.content || null,
+          champion_calls: productChampionCalls.slice(0, 10).map(c => ({
+            created_at: c.created_at,
+            analysis: c.analysis,
+            transcript_preview: c.transcript_preview,
+            icp_signals: (c as any).icp_signals ?? null,
+          })),
+        },
       });
       if (error) throw error;
-      return data.analysis as string;
+      if (data?.error) throw new Error(data.error);
+      return (data?.script as string) || '';
     },
     onSuccess: async (script) => {
       setIdealScript(script);
