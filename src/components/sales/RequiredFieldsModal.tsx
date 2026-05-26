@@ -74,7 +74,9 @@ export function RequiredFieldsModal({
   const [dealContact, setDealContact] = useState<{ name?: string | null; phone?: string | null; email?: string | null } | undefined>(undefined);
 
   const showBriefing = outcomeType === "won";
-  const showBilling = outcomeType !== "lost"; // mostra em "won" e em moves de stage
+  // Dados de faturamento / emissão de NF só fazem sentido quando a venda é dada como ganha.
+  // NÃO pedir em movimentos intermediários de etapa.
+  const showBilling = outcomeType === "won";
 
   // Reset values when modal opens; pre-check briefing status; load deal contact for mentorado defaults
   useEffect(() => {
