@@ -30,7 +30,7 @@ export function IdealScriptGenerator() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sales_call_analyses')
-        .select('id, analysis, created_at, transcript_preview, product_id')
+        .select('id, analysis, created_at, transcript_preview, product_id, icp_signals')
         .eq('account_id', accountId!)
         .eq('call_outcome', 'success')
         .order('created_at', { ascending: false })
