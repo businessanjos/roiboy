@@ -69,17 +69,30 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
   // Folha mensal por departamento (somatório atual)
   const payrollByDept: Record<string, number> = {};
   for (const c of (hrCollabR.data ?? []) as any[]) {
-    const dept = c.department || "sem_departamento";
+    const dept = (c.department || "sem_departamento").toString();
     payrollByDept[dept] = (payrollByDept[dept] ?? 0) + Number(c.salary ?? 0);
   }
+  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const salesPayroll = Object.entries(payrollByDept)
+    .filter(([d]) => ["comercial", "vendas", "sales", "sdr"].some(k => norm(d).includes(k)))
+    .reduce((a, [, v]) => a + v, 0);
+  const marketingPayroll = Object.entries(payrollByDept)
+    .filter(([d]) => norm(d).includes("marketing") || norm(d).includes("mkt"))
+    .reduce((a, [, v]) => a + v, 0);
 
-  // Novos clientes/mês via contratos
+  // Novos clientes/mês via client_contracts (exclui renovações quando identificável)
   const newClientsByMonth: Record<string, Set<string>> = {};
+  const newClientsValueByMonth: Record<string, number> = {};
   for (const c of (contractsR.data ?? []) as any[]) {
     const m = (c.start_date ?? c.created_at ?? "").slice(0, 7);
     if (!m || !c.client_id) continue;
+    // pular renovações se contract_type sinalizar
+    if (typeof c.contract_type === "string" && norm(c.contract_type).includes("renov")) continue;
     newClientsByMonth[m] ??= new Set();
-    newClientsByMonth[m].add(c.client_id);
+    if (!newClientsByMonth[m].has(c.client_id)) {
+      newClientsByMonth[m].add(c.client_id);
+      newClientsValueByMonth[m] = (newClientsValueByMonth[m] ?? 0) + Number(c.value ?? 0);
+    }
   }
   const newClientsMonthly = Object.fromEntries(
     Object.entries(newClientsByMonth).map(([m, s]) => [m, s.size]),
