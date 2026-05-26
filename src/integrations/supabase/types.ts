@@ -8999,6 +8999,51 @@ export type Database = {
           },
         ]
       }
+      form_field_events: {
+        Row: {
+          at: string
+          event: string
+          field_id: string
+          form_id: string
+          id: string
+          seconds_on_field: number | null
+          session_id: string
+        }
+        Insert: {
+          at?: string
+          event: string
+          field_id: string
+          form_id: string
+          id?: string
+          seconds_on_field?: number | null
+          session_id: string
+        }
+        Update: {
+          at?: string
+          event?: string
+          field_id?: string
+          form_id?: string
+          id?: string
+          seconds_on_field?: number | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_field_events_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_field_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "form_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_fields: {
         Row: {
           created_at: string | null
@@ -9045,12 +9090,24 @@ export type Database = {
           client_name: string | null
           client_phone: string | null
           created_at: string
+          email: string | null
           form_id: string
           id: string
+          landed_at: string | null
           last_edited_at: string | null
           last_edited_by: string | null
+          match_method: string | null
+          matched_deal_id: string | null
+          matched_lead_id: string | null
+          phone: string | null
           responses: Json
+          session_id: string | null
           submitted_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
         }
         Insert: {
           account_id: string
@@ -9058,12 +9115,24 @@ export type Database = {
           client_name?: string | null
           client_phone?: string | null
           created_at?: string
+          email?: string | null
           form_id: string
           id?: string
+          landed_at?: string | null
           last_edited_at?: string | null
           last_edited_by?: string | null
+          match_method?: string | null
+          matched_deal_id?: string | null
+          matched_lead_id?: string | null
+          phone?: string | null
           responses?: Json
+          session_id?: string | null
           submitted_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Update: {
           account_id?: string
@@ -9071,12 +9140,24 @@ export type Database = {
           client_name?: string | null
           client_phone?: string | null
           created_at?: string
+          email?: string | null
           form_id?: string
           id?: string
+          landed_at?: string | null
           last_edited_at?: string | null
           last_edited_by?: string | null
+          match_method?: string | null
+          matched_deal_id?: string | null
+          matched_lead_id?: string | null
+          phone?: string | null
           responses?: Json
+          session_id?: string | null
           submitted_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Relationships: [
           {
@@ -9114,45 +9195,165 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "form_responses_matched_deal_id_fkey"
+            columns: ["matched_deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_matched_lead_id_fkey"
+            columns: ["matched_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "form_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_sessions: {
+        Row: {
+          account_id: string
+          completed_at: string | null
+          country: string | null
+          created_at: string
+          fields_seen: number
+          form_id: string
+          id: string
+          ip_hash: string | null
+          landed_at: string
+          last_field_id: string | null
+          referrer: string | null
+          response_id: string | null
+          session_token: string
+          started_at: string | null
+          total_seconds: number | null
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          account_id: string
+          completed_at?: string | null
+          country?: string | null
+          created_at?: string
+          fields_seen?: number
+          form_id: string
+          id?: string
+          ip_hash?: string | null
+          landed_at?: string
+          last_field_id?: string | null
+          referrer?: string | null
+          response_id?: string | null
+          session_token: string
+          started_at?: string | null
+          total_seconds?: number | null
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          account_id?: string
+          completed_at?: string | null
+          country?: string | null
+          created_at?: string
+          fields_seen?: number
+          form_id?: string
+          id?: string
+          ip_hash?: string | null
+          landed_at?: string
+          last_field_id?: string | null
+          referrer?: string | null
+          response_id?: string | null
+          session_token?: string
+          started_at?: string | null
+          total_seconds?: number | null
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_sessions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_sessions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
         ]
       }
       forms: {
         Row: {
           account_id: string
           appearance: Json | null
+          campaign_meta: Json
           created_at: string
           description: string | null
           fields: Json
           id: string
           is_active: boolean
+          is_campaign: boolean
           require_client_info: boolean
           sector_id: string | null
+          slug: string | null
           title: string
           updated_at: string
         }
         Insert: {
           account_id: string
           appearance?: Json | null
+          campaign_meta?: Json
           created_at?: string
           description?: string | null
           fields?: Json
           id?: string
           is_active?: boolean
+          is_campaign?: boolean
           require_client_info?: boolean
           sector_id?: string | null
+          slug?: string | null
           title: string
           updated_at?: string
         }
         Update: {
           account_id?: string
           appearance?: Json | null
+          campaign_meta?: Json
           created_at?: string
           description?: string | null
           fields?: Json
           id?: string
           is_active?: boolean
+          is_campaign?: boolean
           require_client_info?: boolean
           sector_id?: string | null
+          slug?: string | null
           title?: string
           updated_at?: string
         }
