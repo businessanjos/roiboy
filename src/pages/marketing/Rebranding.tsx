@@ -20,6 +20,8 @@ import {
   Ruler, Type, MessageSquare, Link2, AlertTriangle, Check, X, Image as ImageIcon,
 } from "lucide-react";
 import { REBRANDING_SPECS, BRAND_KIT } from "@/data/rebrandingSpecs";
+import { AssetUploadBox } from "@/components/marketing/rebranding/AssetUploadBox";
+import { AiStudio } from "@/components/marketing/rebranding/AiStudio";
 
 const ICONS: Record<string, any> = {
   Globe, Instagram, Linkedin, AtSign, Music, Youtube, Music2,
