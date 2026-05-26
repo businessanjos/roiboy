@@ -11,8 +11,9 @@ type: feature
   1. Análise textual (markdown) — campo `analysis`.
   2. Extração estruturada de sinais ICP via tool calling → grava em `sales_call_analyses.icp_signals` (jsonb).
 - Campos extraídos: `profession`, `specialty`, `niche_combined` (ex: "Médico que atua com emagrecimento"), `business_model`, `team_size`, `revenue_range`, `ticket_range`, `decision_role`, `main_pains[]`, `main_objections[]`, `triggers_that_worked[]`, `city`, `state`, `age_estimate`.
-- `ICPDashboard` agrega de `icp_signals` (NÃO mais de `clients.business_segment/niche`, que estão vazios). Mostra cobertura ICP (% de campeãs com sinais).
-- Calls antigas precisam ser reanalisadas para aparecerem no ICP (banner amarelo avisa quando cobertura < 60%).
+- Modelo de extração: `google/gemini-2.5-pro` (não flash) — necessário para construir `niche_combined` corretamente (ex: "Médico que atua com emagrecimento").
+- `ICPDashboard` agrega de `icp_signals`. Mostra cobertura ICP (% de campeãs com sinais).
+- Banner de cobertura tem botão **"Reanalisar ICP de todas"** que chama a edge function `backfill-icp-signals` (extrai ICP em lote para todas as campeãs sem `icp_signals`, usando `analysis + transcript_preview`). Idempotente — só toca rows com `icp_signals IS NULL`.
 
 ## Script Ideal (evolutivo)
 - Edge function dedicada: `generate-ideal-script` (NÃO usa `analyze-sales-call`, que retorna estrutura de análise).
