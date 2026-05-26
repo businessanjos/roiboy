@@ -232,6 +232,7 @@ const App = () => (
                           
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/f/:formId" element={<PublicForm />} />
+                          <Route path="/c/:slug" element={<PublicCampaignForm />} />
                           <Route path="/rsvp/:token" element={<PublicRSVP />} />
                           <Route path="/inscricao/:code" element={<PublicEventRegistration />} />
                           <Route path="/feedback/:eventId" element={<PublicEventFeedback />} />
