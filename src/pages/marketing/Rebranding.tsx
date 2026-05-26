@@ -768,18 +768,31 @@ function ChannelSpecs() {
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
                 {spec.assets && spec.assets.length > 0 && (
-                  <SpecSection icon={<Ruler className="h-4 w-4" />} title="Dimensões de artes">
+                  <SpecSection icon={<Ruler className="h-4 w-4" />} title="Artes & Uploads">
                     <div className="space-y-2">
                       {spec.assets.map((a, i) => (
-                        <div key={i} className="rounded-md border bg-card p-2.5 text-xs">
-                          <div className="flex justify-between gap-2">
-                            <span className="font-medium">{a.label}</span>
-                            <code className="text-primary font-mono">{a.size}</code>
-                          </div>
-                          {a.format && <div className="text-muted-foreground mt-0.5">Formato: {a.format}</div>}
-                          {a.note && <div className="text-muted-foreground mt-0.5 italic">{a.note}</div>}
-                        </div>
+                        <AssetUploadBox
+                          key={i}
+                          channelKey={spec.key}
+                          assetLabel={a.label}
+                          assetDimensions={a.size}
+                          assetFormat={a.format}
+                          assetKind="spec"
+                        />
                       ))}
+                      <details className="rounded-md border bg-muted/20 p-2">
+                        <summary className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                          <ImageIcon className="h-3.5 w-3.5" /> Extras deste canal (arquivos avulsos)
+                        </summary>
+                        <div className="mt-2">
+                          <AssetUploadBox
+                            channelKey={spec.key}
+                            assetLabel="__extras__"
+                            assetDimensions="Livre"
+                            assetKind="extra"
+                          />
+                        </div>
+                      </details>
                     </div>
                   </SpecSection>
                 )}
