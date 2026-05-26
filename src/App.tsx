@@ -98,6 +98,7 @@ const Tasks = lazyRetry(() => import("./pages/Tasks"));
 const Notifications = lazyRetry(() => import("./pages/Notifications"));
 const Forms = lazyRetry(() => import("./pages/Forms"));
 const PublicForm = lazyRetry(() => import("./pages/PublicForm"));
+const PublicCampaignForm = lazyRetry(() => import("./pages/PublicCampaignForm"));
 const PublicRSVP = lazyRetry(() => import("./pages/PublicRSVP"));
 const PublicEventRegistration = lazyRetry(() => import("./pages/PublicEventRegistration"));
 const PublicEventFeedback = lazyRetry(() => import("./pages/PublicEventFeedback"));
