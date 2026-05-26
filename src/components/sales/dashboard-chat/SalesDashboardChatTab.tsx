@@ -38,6 +38,14 @@ const SUGGESTIONS = [
   "Top 5 motivos de perda em valor nos últimos 90 dias",
 ];
 
+const PERIOD_OPTIONS = [
+  { label: "Último mês", value: 1 },
+  { label: "Últimos 3 meses", value: 3 },
+  { label: "Últimos 6 meses", value: 6 },
+  { label: "Últimos 12 meses", value: 12 },
+  { label: "Últimos 24 meses", value: 24 },
+];
+
 export function SalesDashboardChatTab() {
   const qc = useQueryClient();
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -46,6 +54,7 @@ export function SalesDashboardChatTab() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [stage, setStage] = useState<"idle" | "gemini" | "gpt">("idle");
   const [pinTarget, setPinTarget] = useState<{ kpi: KpiPayload; question: string } | null>(null);
+  const [periodMonths, setPeriodMonths] = useState<number>(12);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: sessions = [] } = useQuery({
