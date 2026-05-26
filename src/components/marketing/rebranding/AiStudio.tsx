@@ -226,9 +226,8 @@ export function AiStudio({
               <Select value={model} onValueChange={setModel}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="google/gemini-3-pro-image-preview">Gemini 3 Pro Image (qualidade máxima)</SelectItem>
-                  <SelectItem value="google/gemini-3.1-flash-image-preview">Gemini 3.1 Flash Image (rápido)</SelectItem>
-                  <SelectItem value="google/gemini-2.5-flash-image">Gemini 2.5 Flash (Nano Banana)</SelectItem>
+                  <SelectItem value="google/gemini-3-pro-image-preview">Gemini 3 Pro Image — Google (qualidade máxima)</SelectItem>
+                  <SelectItem value="openai/gpt-image-2">GPT Image 2 — OpenAI (qualidade máxima)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
