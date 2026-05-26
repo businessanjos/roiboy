@@ -864,8 +864,6 @@ export default function SalesDashboard() {
         {format(end, "dd/MM/yyyy", { locale: ptBR })}
       </div>
 
-      {/* KPI Row (configurável) */}
-      <div className="flex items-center justify-between -mb-2">
       {/* KPIs fixados via IA */}
       <PinnedKpisStrip />
 
