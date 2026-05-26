@@ -253,7 +253,7 @@ export function SalesDashboardChatTab() {
           <BrainCircuit className="w-5 h-5 text-primary" />
           <div>
             <p className="text-sm font-semibold">AION</p>
-            <p className="text-xs text-muted-foreground">Gemini Pro analisa · GPT-5 gera o insight</p>
+            
           </div>
         </div>
 
