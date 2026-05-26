@@ -266,9 +266,9 @@ Responda PURAMENTE em JSON:
 Use kpi APENAS quando a pergunta produzir um número rastreável fixável no dashboard. Caso contrário, kpi=null.
 NUNCA invente dados. Se faltar algo crítico, calcule o melhor possível e liste no analysis o que precisa ser preenchido (ex: "Folha do depto Marketing não cadastrada no RH").`;
 
-    const analyst = await callJson("google/gemini-2.5-pro", [
+    const analyst = await callJson("google/gemini-2.5-flash", [
       { role: "system", content: analystSystem },
-      { role: "user", content: `Pergunta do gestor: ${body.question}\n\nSnapshot (JSON):\n${JSON.stringify(snapshot).slice(0, 220000)}` },
+      { role: "user", content: `Pergunta do gestor: ${body.question}\n\nSnapshot (JSON):\n${JSON.stringify(snapshot).slice(0, 120000)}` },
     ]);
 
     const insightSystem = `Você é o AION, copiloto executivo de gestão comercial e financeira. Receberá:
