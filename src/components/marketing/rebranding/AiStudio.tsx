@@ -39,6 +39,27 @@ const ASPECT_PRESETS = [
   { value: "21:9", label: "Ultra-wide 21:9 (Cover LinkedIn, 1920×820)" },
 ];
 
+// Extrai a primeira dimensão "WxH" de uma string tipo "1200×630" ou "32×32 / 192×192"
+const parseFirstSize = (size?: string): { w: number; h: number } | null => {
+  if (!size) return null;
+  const m = size.match(/(\d+)\s*[×x]\s*(\d+)/);
+  if (!m) return null;
+  return { w: parseInt(m[1], 10), h: parseInt(m[2], 10) };
+};
+
+// Escolhe o preset mais próximo da proporção W/H
+const closestAspectPreset = (w: number, h: number): string => {
+  const target = w / h;
+  let best = ASPECT_PRESETS[0].value;
+  let bestDiff = Infinity;
+  for (const p of ASPECT_PRESETS) {
+    const [pw, ph] = p.value.split(":").map(Number);
+    const diff = Math.abs(pw / ph - target);
+    if (diff < bestDiff) { bestDiff = diff; best = p.value; }
+  }
+  return best;
+};
+
 const STYLE_PRESETS = [
   "Fotografia editorial, luz natural cinematográfica",
   "Minimalista, fundo neutro, alto contraste",
