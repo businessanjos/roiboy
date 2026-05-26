@@ -886,7 +886,7 @@ export default function SalesDashboard() {
           <TabsTrigger value="team">Equipe</TabsTrigger>
           <TabsTrigger value="origin">Origem & Perdas</TabsTrigger>
           <TabsTrigger value="ask" className="gap-1.5">
-            <span className="inline-flex items-center gap-1">✨ Pergunte aos Dados</span>
+            <span className="inline-flex items-center gap-1">✨ AION</span>
           </TabsTrigger>
         </TabsList>
 
