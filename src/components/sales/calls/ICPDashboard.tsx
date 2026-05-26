@@ -75,6 +75,24 @@ function TopItems({ data, empty }: { data: Record<string, number>; empty?: strin
 export function ICPDashboard() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const queryClient = useQueryClient();
+
+  const backfillMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('backfill-icp-signals', {
+        body: { account_id: accountId, only_champions: true, limit: 50 },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { processed: number; ok: number; skipped: number; failed: number };
+    },
+    onSuccess: (r) => {
+      toast.success(`ICP extraído em ${r.ok} call(s). ${r.skipped} sem texto suficiente, ${r.failed} falharam.`);
+      queryClient.invalidateQueries({ queryKey: ['icp-dashboard-v2'] });
+    },
+    onError: (e: any) => toast.error(e?.message || 'Erro ao reanalisar ICP'),
+  });
+
 
   const { data: icpData, isLoading } = useQuery({
     queryKey: ['icp-dashboard-v2', accountId],
