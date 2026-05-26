@@ -58,8 +58,8 @@ export function AssetUploadBox({
   assetKind = "spec", onAiGenerate,
 }: AssetUploadBoxProps) {
   const qc = useQueryClient();
-  const { profile } = useCurrentUser();
-  const accountId = profile?.account_id;
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
