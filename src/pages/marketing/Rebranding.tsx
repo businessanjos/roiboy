@@ -242,6 +242,10 @@ export default function Rebranding() {
           <BrandKit />
         </TabsContent>
 
+        <TabsContent value="products" className="mt-4">
+          <ProductsRebrand />
+        </TabsContent>
+
         <TabsContent value="tasks" className="mt-4">
           <TasksKanban tasks={tasks} channels={channels} accountId={accountId!} />
         </TabsContent>
