@@ -842,11 +842,22 @@ Deno.serve(async (req) => {
         // This is CRITICAL to prevent duplication when user edits a message
         // ============================================
         const msgAnyEdit = msg as Record<string, unknown>;
-        const isEditedMessage = msgAnyEdit.edited === true || 
+        const editNestedMsg = msgAnyEdit.message as Record<string, unknown> | undefined;
+        const editProtocol = editNestedMsg?.protocolMessage as Record<string, unknown> | undefined;
+        // Baileys/WhatsApp edits arrive as protocolMessage with type=14 (MESSAGE_EDIT) and editedMessage payload
+        const hasProtocolEdit = !!editProtocol && (
+          editProtocol.editedMessage !== undefined ||
+          editProtocol.type === "MESSAGE_EDIT" ||
+          editProtocol.type === 14
+        );
+        const isEditedMessage = msgAnyEdit.edited === true ||
+                                msgAnyEdit.isEdited === true ||
                                 msgAnyEdit.messageType === "editedMessage" ||
                                 msgAnyEdit.messageType === "EditedMessage" ||
-                                (typeof msgAnyEdit.type === "string" && msgAnyEdit.type.toLowerCase().includes("edited"));
-        
+                                (typeof msgAnyEdit.type === "string" && msgAnyEdit.type.toLowerCase().includes("edited")) ||
+                                (typeof msgAnyEdit.event === "string" && msgAnyEdit.event.toLowerCase().includes("edit")) ||
+                                hasProtocolEdit;
+
         // isEditedMessage flag used later for upsert logic
 
         // ============================================
@@ -1648,6 +1659,45 @@ Deno.serve(async (req) => {
                   );
                 }
               }
+
+              // FALLBACK: edit arrived without a resolvable original id.
+              // Find the most recent inbound message in this conversation from the same sender
+              // within the last 15 minutes. Update it in place instead of inserting a duplicate.
+              const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+              let fallbackQuery = supabase
+                .from("zapp_messages")
+                .select("id, content, sender_phone, created_at")
+                .eq("zapp_conversation_id", zappConversationId)
+                .eq("direction", "inbound")
+                .gte("created_at", fifteenMinAgo)
+                .order("created_at", { ascending: false })
+                .limit(5);
+              if (isGroupMessage && phone) fallbackQuery = fallbackQuery.eq("sender_phone", phone);
+              const { data: recentInbound } = await fallbackQuery;
+              const fallback = (recentInbound ?? []).find(m => m.id !== undefined);
+              if (fallback) {
+                await supabase
+                  .from("zapp_messages")
+                  .update({
+                    content: newEditedContent,
+                    is_edited: true,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", fallback.id);
+                console.log(`[EDIT] Inbound edit applied via time-window fallback to ${fallback.id}`);
+                return new Response(
+                  JSON.stringify({ ok: true, edited: true, message_id: fallback.id, fallback: true }),
+                  { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+
+              // Edit signal received but no original found at all — drop it to avoid creating
+              // a phantom "edited" duplicate. Better to lose one edit than to duplicate.
+              console.warn(`[EDIT] Inbound edit dropped: no original found (msgId=${originalMsgId}, conv=${zappConversationId})`);
+              return new Response(
+                JSON.stringify({ ignored: true, reason: "edit_without_original" }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
             }
 
             // INBOUND: Check for exact external_message_id match first
