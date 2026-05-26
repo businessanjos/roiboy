@@ -842,11 +842,22 @@ Deno.serve(async (req) => {
         // This is CRITICAL to prevent duplication when user edits a message
         // ============================================
         const msgAnyEdit = msg as Record<string, unknown>;
-        const isEditedMessage = msgAnyEdit.edited === true || 
+        const editNestedMsg = msgAnyEdit.message as Record<string, unknown> | undefined;
+        const editProtocol = editNestedMsg?.protocolMessage as Record<string, unknown> | undefined;
+        // Baileys/WhatsApp edits arrive as protocolMessage with type=14 (MESSAGE_EDIT) and editedMessage payload
+        const hasProtocolEdit = !!editProtocol && (
+          editProtocol.editedMessage !== undefined ||
+          editProtocol.type === "MESSAGE_EDIT" ||
+          editProtocol.type === 14
+        );
+        const isEditedMessage = msgAnyEdit.edited === true ||
+                                msgAnyEdit.isEdited === true ||
                                 msgAnyEdit.messageType === "editedMessage" ||
                                 msgAnyEdit.messageType === "EditedMessage" ||
-                                (typeof msgAnyEdit.type === "string" && msgAnyEdit.type.toLowerCase().includes("edited"));
-        
+                                (typeof msgAnyEdit.type === "string" && msgAnyEdit.type.toLowerCase().includes("edited")) ||
+                                (typeof msgAnyEdit.event === "string" && msgAnyEdit.event.toLowerCase().includes("edit")) ||
+                                hasProtocolEdit;
+
         // isEditedMessage flag used later for upsert logic
 
         // ============================================
