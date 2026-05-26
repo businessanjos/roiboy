@@ -194,7 +194,10 @@ export default function Rebranding() {
       <Tabs defaultValue="map">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="map">Mapa de Canais</TabsTrigger>
-          <TabsTrigger value="specs">Especificações</TabsTrigger>
+          <TabsTrigger value="specs">Especificações & Arquivos</TabsTrigger>
+          <TabsTrigger value="studio">
+            <Sparkles className="h-3.5 w-3.5 mr-1" /> Studio IA
+          </TabsTrigger>
           <TabsTrigger value="brand">Brand Kit</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas (Kanban)</TabsTrigger>
           <TabsTrigger value="playbook">Playbook</TabsTrigger>
@@ -206,6 +209,10 @@ export default function Rebranding() {
 
         <TabsContent value="specs" className="mt-4">
           <ChannelSpecs />
+        </TabsContent>
+
+        <TabsContent value="studio" className="mt-4">
+          <AiStudio />
         </TabsContent>
 
         <TabsContent value="brand" className="mt-4">
