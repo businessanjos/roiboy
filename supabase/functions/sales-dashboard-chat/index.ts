@@ -41,7 +41,7 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     admin.from("sales_goals").select("*").eq("account_id", accountId).gte("created_at", sinceIso).limit(500),
     admin.from("pipelines").select("id,name,type").eq("account_id", accountId),
     // Clientes novos via contratos no período (proxy de "novos clientes")
-    admin.from("contracts").select("id,client_id,product_id,value,status,start_date,created_at").gte("created_at", sinceIso).eq("account_id", accountId).limit(5000),
+    admin.from("client_contracts").select("id,client_id,product_id,value,status,start_date,created_at,contract_type").gte("created_at", sinceIso).eq("account_id", accountId).limit(5000),
     // Custos: lançamentos financeiros pagos no período (despesas)
     admin.from("financial_entries").select("id,amount,entry_type,status,due_date,payment_date,category_id,description").eq("account_id", accountId).eq("entry_type", "payable").gte("due_date", sinceDate).limit(10000),
     admin.from("financial_categories").select("id,name,dre_group,type").eq("account_id", accountId),
@@ -69,17 +69,30 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
   // Folha mensal por departamento (somatório atual)
   const payrollByDept: Record<string, number> = {};
   for (const c of (hrCollabR.data ?? []) as any[]) {
-    const dept = c.department || "sem_departamento";
+    const dept = (c.department || "sem_departamento").toString();
     payrollByDept[dept] = (payrollByDept[dept] ?? 0) + Number(c.salary ?? 0);
   }
+  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const salesPayroll = Object.entries(payrollByDept)
+    .filter(([d]) => ["comercial", "vendas", "sales", "sdr"].some(k => norm(d).includes(k)))
+    .reduce((a, [, v]) => a + v, 0);
+  const marketingPayroll = Object.entries(payrollByDept)
+    .filter(([d]) => norm(d).includes("marketing") || norm(d).includes("mkt"))
+    .reduce((a, [, v]) => a + v, 0);
 
-  // Novos clientes/mês via contratos
+  // Novos clientes/mês via client_contracts (exclui renovações quando identificável)
   const newClientsByMonth: Record<string, Set<string>> = {};
+  const newClientsValueByMonth: Record<string, number> = {};
   for (const c of (contractsR.data ?? []) as any[]) {
     const m = (c.start_date ?? c.created_at ?? "").slice(0, 7);
     if (!m || !c.client_id) continue;
+    // pular renovações se contract_type sinalizar
+    if (typeof c.contract_type === "string" && norm(c.contract_type).includes("renov")) continue;
     newClientsByMonth[m] ??= new Set();
-    newClientsByMonth[m].add(c.client_id);
+    if (!newClientsByMonth[m].has(c.client_id)) {
+      newClientsByMonth[m].add(c.client_id);
+      newClientsValueByMonth[m] = (newClientsValueByMonth[m] ?? 0) + Number(c.value ?? 0);
+    }
   }
   const newClientsMonthly = Object.fromEntries(
     Object.entries(newClientsByMonth).map(([m, s]) => [m, s.size]),
@@ -149,6 +162,39 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     spiffByMonth[m] = (spiffByMonth[m] ?? 0) + Number(s.prize_amount ?? 0);
   }
 
+  // ===== CAC mensal pré-computado (fonte de verdade para a IA) =====
+  // Critério: usa folha atual como proxy mensal de salário + comissões + spiffs do mês.
+  // Marketing ad-spend NÃO está disponível (lançamentos sem category_id/cost_center/supplier).
+  const totalCommByMonth: Record<string, number> = {};
+  for (const u of Object.values(commByUserMonth)) {
+    for (const [m, v] of Object.entries(u)) totalCommByMonth[m] = (totalCommByMonth[m] ?? 0) + v;
+  }
+  const cacByMonth: Record<string, any> = {};
+  const allMonths = new Set<string>([
+    ...Object.keys(newClientsMonthly),
+    ...Object.keys(totalCommByMonth),
+    ...Object.keys(spiffByMonth),
+  ]);
+  for (const m of allMonths) {
+    const newC = newClientsMonthly[m] ?? 0;
+    const comm = totalCommByMonth[m] ?? 0;
+    const spiff = spiffByMonth[m] ?? 0;
+    const totalCost = salesPayroll + marketingPayroll + comm + spiff;
+    cacByMonth[m] = {
+      new_clients: newC,
+      sales_payroll_monthly: salesPayroll,
+      marketing_payroll_monthly: marketingPayroll,
+      commissions: comm,
+      spiffs: spiff,
+      total_cost: totalCost,
+      cac: newC > 0 ? totalCost / newC : null,
+      new_clients_revenue: newClientsValueByMonth[m] ?? 0,
+    };
+  }
+
+  const finEntriesCategorized = (finEntriesR.data ?? []).filter((e: any) => e.category_id).length;
+  const finEntriesTotal = (finEntriesR.data ?? []).length;
+
   return {
     period: { months: monthsBack, start: sinceIso, end: new Date().toISOString() },
     counts: {
@@ -157,7 +203,14 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
       users: usersR.data?.length ?? 0,
       pipelines: pipelinesR.data?.length ?? 0,
       hr_collaborators: hrCollabR.data?.length ?? 0,
-      financial_entries: finEntriesR.data?.length ?? 0,
+      financial_entries: finEntriesTotal,
+      financial_entries_categorized: finEntriesCategorized,
+    },
+    data_quality_notes: {
+      financial_categorization_pct: finEntriesTotal > 0 ? Math.round((finEntriesCategorized / finEntriesTotal) * 100) : 0,
+      ad_spend_available: false,
+      ad_spend_reason: "Lançamentos financeiros sem category_id/cost_center/supplier preenchidos. Ad spend de marketing não é rastreável no banco hoje.",
+      payroll_source: "snapshot atual de hr_collaborators.salary (sem histórico mensal)",
     },
     pipelines: pipelinesR.data ?? [],
     stages: (stagesR.data ?? []).map((s: any) => ({ id: s.id, name: s.name, pipeline_id: s.pipeline_id, is_won: s.is_won, is_lost: s.is_lost })),
@@ -180,9 +233,13 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     deals_by_source: dealsBySource,
     cost_by_month_by_dre_group: costByMonth,
     payroll_current_by_department: payrollByDept,
+    payroll_aggregates: { sales_monthly: salesPayroll, marketing_monthly: marketingPayroll },
     commissions_by_user_by_month: commByUserMonth,
+    commissions_total_by_month: totalCommByMonth,
     spiff_payouts_by_month: spiffByMonth,
     new_clients_per_month: newClientsMonthly,
+    new_clients_revenue_per_month: newClientsValueByMonth,
+    cac_by_month: cacByMonth,
     financial_categories: (finCatsR.data ?? []).map((c: any) => ({ id: c.id, name: c.name, dre_group: c.dre_group })),
   };
 }
@@ -253,24 +310,24 @@ Deno.serve(async (req) => {
           send(JSON.stringify({ type: "status", stage: "gemini", content: "Analisando dados…" }));
           const snapshot = await buildSnapshot(admin, userRow.account_id, monthsBack);
 
-          const analystSystem = `Você é um analista de dados sênior de operação comercial e financeira.
-Receberá um snapshot JSON com dados dos últimos ${monthsBack} meses contendo dados comerciais, metas, contratos, custos por DRE, folha atual por departamento, comissões, spiffs e clientes novos por mês.
+          const analystSystem = `Você é analista de dados sênior. Receberá um snapshot JSON pré-calculado dos últimos ${monthsBack} meses.
 
-CAC (Custo de Aquisição de Cliente):
-  CAC_mensal = (custos_marketing + custos_vendas) / novos_clientes_do_mês
-  - custos_marketing ≈ soma dos lançamentos cuja categoria tem nome contendo "marketing" OU dre_group="sales" referente a mídia/propaganda + folha do depto Marketing + ferramentas marketing
-  - custos_vendas ≈ comissões + spiffs + folha do depto Comercial/Vendas + ferramentas comerciais
-  - Use payroll_current_by_department como aproximação mensal da folha quando faltar lançamento explícito.
-  - SEMPRE explicite quais componentes você incluiu e quais faltam. Se algum dado essencial faltar, calcule o que for possível e sinalize a aproximação no campo "analysis".
+REGRAS DUROS:
+- O snapshot JÁ TRAZ \`cac_by_month\` calculado mês a mês com new_clients, sales_payroll_monthly, marketing_payroll_monthly, commissions, spiffs, total_cost e cac. USE ESSES NÚMEROS — não recalcule do zero.
+- \`data_quality_notes.ad_spend_available=false\` significa: não há ad spend rastreável; assuma 0 e sinalize na premissa.
+- \`payroll_aggregates\` traz salesPayroll e marketingPayroll mensais já somados.
+- Se a pergunta for sobre CAC, responda com o(s) mês(es) pedido(s) usando cac_by_month direto.
+- Se faltar mês específico, use o último mês com new_clients > 0.
+- NÃO peça mais dados ao usuário. Trabalhe com o que tem e seja explícito sobre limitações em 1 linha.
 
 Responda PURAMENTE em JSON:
 {
-  "analysis": "string com análise factual + breakdown numérico + premissas usadas",
-  "kpi": null OU { "label": "string curta", "value": número, "value_text": "string formatada (ex 'R$ 12.345')", "unit": "BRL|%|qtd|dias|null", "period": "string descritiva", "comparison": "string opcional vs período anterior", "trend": "up|down|flat" },
+  "analysis": "análise factual + breakdown numérico curto (use os campos do snapshot) + 1 linha de premissa quando aplicável",
+  "kpi": null OU { "label": "string curta", "value": número, "value_text": "R$ X.XXX", "unit": "BRL|%|qtd|dias|null", "period": "ex: 'mai/2026'", "comparison": "opcional vs período anterior", "trend": "up|down|flat" },
   "chart_hint": null OU { "type": "bar|line|pie", "data": [{"label":"x","value":n}] }
 }
-Use kpi APENAS quando a pergunta produzir um número rastreável fixável no dashboard. Caso contrário, kpi=null.
-NUNCA invente dados. Se faltar algo crítico, calcule o melhor possível e liste no analysis o que precisa ser preenchido.`;
+Use kpi quando a pergunta produzir UM número principal. Para CAC, sempre retorne kpi.
+NUNCA invente números fora do snapshot.`;
 
           const analyst = await callJson("google/gemini-2.5-flash", [
             { role: "system", content: analystSystem },
@@ -278,14 +335,23 @@ NUNCA invente dados. Se faltar algo crítico, calcule o melhor possível e liste
           ]);
 
           send(JSON.stringify({ type: "status", stage: "gpt", content: "Gerando insight…" }));
-          const insightSystem = `Você é o AION, copiloto executivo de gestão comercial e financeira. Receberá a pergunta original e a análise factual do analista.
-Gere a resposta FINAL em markdown, em português, com tom executivo, direto e sem repetir o JSON cru.
-Estrutura obrigatória:
-1) **Resposta direta** em 1-2 linhas com o número principal em destaque.
-2) **Breakdown** com bullets ou pequena tabela mostrando os componentes do cálculo.
-3) **Premissas e gaps**: se houver aproximações ou dados faltantes, liste em "⚠️ Premissas usadas".
-4) **Recomendação** prática (1-3 ações concretas).
-Nunca invente números além dos presentes no JSON.`;
+          const insightSystem = `Você é o AION, copiloto executivo. Receberá a pergunta e a análise factual já com os números.
+
+TOM: direto, executivo, brasileiro, sem floreio. Nada de "vou analisar", "é importante notar", "com base nos dados". Vá direto ao número.
+
+FORMATO obrigatório (markdown enxuto):
+**[Número principal em destaque na primeira linha]** — contexto em 1 frase.
+
+**Composição** (tabela markdown ou bullets curtos com os valores em R$):
+| Componente | Valor |
+|---|---|
+| ... | R$ ... |
+
+**Leitura rápida**: 1-2 linhas com o que o número significa (bom/ruim, vs benchmark, tendência se houver).
+
+**Próximo passo**: 1 ação concreta (1 linha).
+
+Se houver limitação relevante de dado, adicione no fim em itálico: *Premissa: ...* (máx 1 linha). Não invente. Se a análise não tiver número, diga em 1 linha o que falta e pare.`;
 
           const insightModel = "openai/gpt-5-mini";
           const gptResp = await fetch(GATEWAY, {
