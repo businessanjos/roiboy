@@ -185,17 +185,29 @@ export function ICPDashboard() {
         </CardContent></Card>
       </div>
 
-      {signalsCoverage < 60 && (
+      {signalsCoverage < 100 && (
         <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardContent className="p-3 flex items-start gap-2 text-xs">
-            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-muted-foreground">
-              Apenas <span className="font-semibold text-foreground">{icpData.withSignals}/{icpData.totalSuccess}</span> calls campeãs têm sinais ICP extraídos.
-              Calls antigas analisadas antes da IA ICP precisam ser <span className="font-medium">reanalisadas</span> para entrar no perfil.
+          <CardContent className="p-3 flex items-center gap-3 text-xs flex-wrap">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-muted-foreground flex-1 min-w-[220px]">
+              <span className="font-semibold text-foreground">{icpData.withSignals}/{icpData.totalSuccess}</span> calls campeãs com sinais ICP extraídos.
+              {signalsCoverage < 100 && ' Reanalise para preencher os nichos das calls antigas.'}
             </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => backfillMutation.mutate()}
+              disabled={backfillMutation.isPending}
+              className="gap-1.5"
+            >
+              {backfillMutation.isPending
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Reanalisando...</>
+                : <><RefreshCw className="w-3.5 h-3.5" />Reanalisar ICP de todas</>}
+            </Button>
           </CardContent>
         </Card>
       )}
+
 
       {/* PRIMARY: niche combined (profissão + especialidade) */}
       <Card className="border-primary/30">
