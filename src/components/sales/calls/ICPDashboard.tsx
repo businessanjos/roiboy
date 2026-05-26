@@ -1,12 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import {
   Crown, MapPin, Building2, TrendingUp, Users, Target, Briefcase, Loader2,
-  Stethoscope, Sparkles, AlertCircle, ShieldCheck, DollarSign,
+  Stethoscope, Sparkles, AlertCircle, ShieldCheck, DollarSign, RefreshCw,
 } from 'lucide-react';
 
 type IcpSignals = {
