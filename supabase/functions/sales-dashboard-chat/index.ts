@@ -85,6 +85,70 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     Object.entries(newClientsByMonth).map(([m, s]) => [m, s.size]),
   );
 
+  // ===== Agregações de deals (evita mandar raw 5000 linhas) =====
+  const stageMap = new Map<string, any>((stagesR.data ?? []).map((s: any) => [s.id, s]));
+  const userMap = new Map<string, string>((usersR.data ?? []).map((u: any) => [u.id, u.name]));
+  const lossMap = new Map<string, string>((lossR.data ?? []).map((l: any) => [l.id, l.name]));
+
+  const dealsByMonth: Record<string, { created: number; won: number; lost: number; won_value: number; lost_value: number }> = {};
+  const wonByOwner: Record<string, { name: string; won: number; value: number }> = {};
+  const lostByReason: Record<string, { name: string; count: number; value: number }> = {};
+  const dealsBySource: Record<string, number> = {};
+  let totalCreated = 0, totalWon = 0, totalLost = 0, totalWonValue = 0, totalLostValue = 0, totalOpenValue = 0;
+
+  for (const d of (dealsR.data ?? []) as any[]) {
+    totalCreated++;
+    const createdMonth = (d.created_at ?? "").slice(0, 7);
+    if (createdMonth) {
+      dealsByMonth[createdMonth] ??= { created: 0, won: 0, lost: 0, won_value: 0, lost_value: 0 };
+      dealsByMonth[createdMonth].created++;
+    }
+    const val = Number(d.received_value ?? d.value ?? 0);
+    const stage = d.stage_id ? stageMap.get(d.stage_id) : null;
+    const isWon = d.status === "won" || stage?.is_won;
+    const isLost = d.status === "lost" || stage?.is_lost;
+    if (isWon) {
+      totalWon++; totalWonValue += val;
+      const wm = (d.won_at ?? d.created_at ?? "").slice(0, 7);
+      if (wm) {
+        dealsByMonth[wm] ??= { created: 0, won: 0, lost: 0, won_value: 0, lost_value: 0 };
+        dealsByMonth[wm].won++; dealsByMonth[wm].won_value += val;
+      }
+      const oid = d.responsible_user_id ?? "unknown";
+      wonByOwner[oid] ??= { name: userMap.get(oid) ?? "Desconhecido", won: 0, value: 0 };
+      wonByOwner[oid].won++; wonByOwner[oid].value += val;
+    } else if (isLost) {
+      totalLost++; totalLostValue += val;
+      const lm = (d.lost_at ?? d.created_at ?? "").slice(0, 7);
+      if (lm) {
+        dealsByMonth[lm] ??= { created: 0, won: 0, lost: 0, won_value: 0, lost_value: 0 };
+        dealsByMonth[lm].lost++; dealsByMonth[lm].lost_value += val;
+      }
+      const rname = (d.loss_reason_id ? lossMap.get(d.loss_reason_id) : null) ?? d.lost_reason ?? "sem_motivo";
+      lostByReason[rname] ??= { name: rname, count: 0, value: 0 };
+      lostByReason[rname].count++; lostByReason[rname].value += val;
+    } else {
+      totalOpenValue += val;
+    }
+    const src = d.source ?? "sem_origem";
+    dealsBySource[src] = (dealsBySource[src] ?? 0) + 1;
+  }
+
+  const commByUserMonth: Record<string, Record<string, number>> = {};
+  for (const c of (commR.data ?? []) as any[]) {
+    const uid = c.user_id ?? "unknown";
+    const m = (c.created_at ?? "").slice(0, 7);
+    if (!m) continue;
+    commByUserMonth[uid] ??= {};
+    commByUserMonth[uid][m] = (commByUserMonth[uid][m] ?? 0) + Number(c.commission_amount ?? 0);
+  }
+  const spiffByMonth: Record<string, number> = {};
+  for (const s of (spiffsR.data ?? []) as any[]) {
+    const m = (s.created_at ?? "").slice(0, 7);
+    if (!m) continue;
+    spiffByMonth[m] = (spiffByMonth[m] ?? 0) + Number(s.prize_amount ?? 0);
+  }
+
   return {
     period: { months: monthsBack, start: sinceIso, end: new Date().toISOString() },
     counts: {
@@ -96,19 +160,30 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
       financial_entries: finEntriesR.data?.length ?? 0,
     },
     pipelines: pipelinesR.data ?? [],
-    stages: stagesR.data ?? [],
-    users: usersR.data ?? [],
+    stages: (stagesR.data ?? []).map((s: any) => ({ id: s.id, name: s.name, pipeline_id: s.pipeline_id, is_won: s.is_won, is_lost: s.is_lost })),
+    users: (usersR.data ?? []).filter((u: any) => u.is_active).map((u: any) => ({ id: u.id, name: u.name, role: u.role })),
     loss_reasons: lossR.data ?? [],
     sales_goals: goalsR.data ?? [],
-    deals: dealsR.data ?? [],
-    contracts: contractsR.data ?? [],
-    // ===== CAC / unit economics =====
-    cost_by_month_by_dre_group: costByMonth,        // {"2025-04": {"sales": 12345, "personnel": 50000, ...}}
-    payroll_current_by_department: payrollByDept,   // {"Marketing": 25000, "Comercial": 60000, ...}
-    spiff_payouts: spiffsR.data ?? [],
-    commission_entries: commR.data ?? [],
-    new_clients_per_month: newClientsMonthly,       // {"2025-04": 12, ...}
-    financial_categories: finCatsR.data ?? [],
+    deals_summary: {
+      total_created: totalCreated,
+      total_won: totalWon,
+      total_lost: totalLost,
+      total_won_value: totalWonValue,
+      total_lost_value: totalLostValue,
+      total_open_value: totalOpenValue,
+      win_rate: totalWon + totalLost > 0 ? totalWon / (totalWon + totalLost) : null,
+      avg_ticket_won: totalWon > 0 ? totalWonValue / totalWon : 0,
+    },
+    deals_by_month: dealsByMonth,
+    won_by_owner: Object.values(wonByOwner).sort((a, b) => b.value - a.value).slice(0, 30),
+    lost_by_reason: Object.values(lostByReason).sort((a, b) => b.count - a.count).slice(0, 30),
+    deals_by_source: dealsBySource,
+    cost_by_month_by_dre_group: costByMonth,
+    payroll_current_by_department: payrollByDept,
+    commissions_by_user_by_month: commByUserMonth,
+    spiff_payouts_by_month: spiffByMonth,
+    new_clients_per_month: newClientsMonthly,
+    financial_categories: (finCatsR.data ?? []).map((c: any) => ({ id: c.id, name: c.name, dre_group: c.dre_group })),
   };
 }
 
