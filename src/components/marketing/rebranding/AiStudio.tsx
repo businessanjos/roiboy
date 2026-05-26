@@ -39,6 +39,27 @@ const ASPECT_PRESETS = [
   { value: "21:9", label: "Ultra-wide 21:9 (Cover LinkedIn, 1920×820)" },
 ];
 
+// Extrai a primeira dimensão "WxH" de uma string tipo "1200×630" ou "32×32 / 192×192"
+const parseFirstSize = (size?: string): { w: number; h: number } | null => {
+  if (!size) return null;
+  const m = size.match(/(\d+)\s*[×x]\s*(\d+)/);
+  if (!m) return null;
+  return { w: parseInt(m[1], 10), h: parseInt(m[2], 10) };
+};
+
+// Escolhe o preset mais próximo da proporção W/H
+const closestAspectPreset = (w: number, h: number): string => {
+  const target = w / h;
+  let best = ASPECT_PRESETS[0].value;
+  let bestDiff = Infinity;
+  for (const p of ASPECT_PRESETS) {
+    const [pw, ph] = p.value.split(":").map(Number);
+    const diff = Math.abs(pw / ph - target);
+    if (diff < bestDiff) { bestDiff = diff; best = p.value; }
+  }
+  return best;
+};
+
 const STYLE_PRESETS = [
   "Fotografia editorial, luz natural cinematográfica",
   "Minimalista, fundo neutro, alto contraste",
@@ -212,8 +233,65 @@ export function AiStudio({
               </Select>
             </div>
 
+            {/* 1) Canal */}
             <div>
-              <Label className="text-xs">Dimensão / Aspect Ratio</Label>
+              <Label className="text-xs">1. Canal</Label>
+              <Select
+                value={channelKey || "none"}
+                onValueChange={(v) => {
+                  setChannelKey(v === "none" ? null : v);
+                  setAssetLabel(null);
+                }}
+              >
+                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione o canal" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Nenhum (livre) —</SelectItem>
+                  {REBRANDING_SPECS.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 2) Asset do canal */}
+            <div>
+              <Label className="text-xs">
+                2. Peça / Asset {!channelKey && <span className="text-muted-foreground">(escolha um canal primeiro)</span>}
+              </Label>
+              <Select
+                value={assetLabel || "none"}
+                onValueChange={(v) => {
+                  if (v === "none") { setAssetLabel(null); return; }
+                  setAssetLabel(v);
+                  const asset = availableAssets.find((a) => a.label === v);
+                  const dim = parseFirstSize(asset?.size);
+                  if (dim) setAspectRatio(closestAspectPreset(dim.w, dim.h));
+                }}
+                disabled={!channelKey || availableAssets.length === 0}
+              >
+                <SelectTrigger className="h-9"><SelectValue placeholder={channelKey ? "Selecione a peça" : "—"} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Nenhuma (livre) —</SelectItem>
+                  {availableAssets.map((a) => (
+                    <SelectItem key={a.label} value={a.label}>
+                      {a.label} · {a.size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 3) Dimensão / Aspect ratio (auto-preenchido pelo asset) */}
+            <div>
+              <Label className="text-xs flex items-center justify-between">
+                <span>3. Dimensão / Aspect Ratio</span>
+                {assetLabel && (() => {
+                  const asset = availableAssets.find((a) => a.label === assetLabel);
+                  return asset?.size ? (
+                    <span className="text-[10px] text-muted-foreground font-mono">alvo: {asset.size}</span>
+                  ) : null;
+                })()}
+              </Label>
               <Select value={aspectRatio} onValueChange={setAspectRatio}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -222,33 +300,6 @@ export function AiStudio({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">Canal (opcional)</Label>
-                <Select value={channelKey || "none"} onValueChange={(v) => { setChannelKey(v === "none" ? null : v); setAssetLabel(null); }}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Nenhum —</SelectItem>
-                    {REBRANDING_SPECS.map((s) => (
-                      <SelectItem key={s.key} value={s.key}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Asset (opcional)</Label>
-                <Select value={assetLabel || "none"} onValueChange={(v) => setAssetLabel(v === "none" ? null : v)} disabled={!channelKey}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Nenhum —</SelectItem>
-                    {availableAssets.map((a) => (
-                      <SelectItem key={a.label} value={a.label}>{a.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
             <div className="space-y-2">
