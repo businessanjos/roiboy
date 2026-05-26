@@ -1598,6 +1598,58 @@ Deno.serve(async (req) => {
               }
             }
           } else {
+            // INBOUND: handle edited messages first to prevent duplicates.
+            // WhatsApp/UAZAPI edits arrive either with the same external_message_id
+            // OR with a new id that references the original via several fields.
+            if (isEditedMessage) {
+              const msgAnyInb = msg as Record<string, unknown>;
+              const nestedMsg = msgAnyInb.message as Record<string, unknown> | undefined;
+              const protocolMessage = nestedMsg?.protocolMessage as Record<string, unknown> | undefined;
+              const protocolKey = protocolMessage?.key as Record<string, unknown> | undefined;
+              const editedNested = protocolMessage?.editedMessage as Record<string, unknown> | undefined;
+              const editedExtended = editedNested?.extendedTextMessage as Record<string, unknown> | undefined;
+
+              const originalMsgId =
+                (msgAnyInb.editedMessageId as string) ||
+                (msgAnyInb.originalMessageId as string) ||
+                (msgAnyInb.referenceId as string) ||
+                (protocolKey?.id as string) ||
+                quotedMsgId ||
+                null;
+
+              const newEditedContent =
+                (editedNested?.conversation as string) ||
+                (editedExtended?.text as string) ||
+                content ||
+                null;
+
+              if (originalMsgId) {
+                const { data: original } = await supabase
+                  .from("zapp_messages")
+                  .select("id, external_message_id")
+                  .eq("zapp_conversation_id", zappConversationId)
+                  .or(`external_message_id.eq.${originalMsgId},external_message_id.ilike.%:${originalMsgId}`)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (original) {
+                  await supabase
+                    .from("zapp_messages")
+                    .update({
+                      content: newEditedContent,
+                      is_edited: true,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", original.id);
+                  console.log(`[EDIT] Inbound edit applied to original ${original.id} (orig msgId=${originalMsgId})`);
+                  return new Response(
+                    JSON.stringify({ ok: true, edited: true, message_id: original.id }),
+                    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                  );
+                }
+              }
+            }
+
             // INBOUND: Check for exact external_message_id match first
             const { data: existingMsg } = await supabase
               .from("zapp_messages")
@@ -1610,6 +1662,21 @@ Deno.serve(async (req) => {
               if (existingMsg.is_deleted) {
                 return new Response(
                   JSON.stringify({ ignored: true, reason: "message_deleted" }),
+                  { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+              if (isEditedMessage) {
+                await supabase
+                  .from("zapp_messages")
+                  .update({
+                    content: content,
+                    is_edited: true,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", existingMsg.id);
+                console.log(`[EDIT] Inbound edit updated existing message ${existingMsg.id} in place`);
+                return new Response(
+                  JSON.stringify({ ok: true, edited: true, message_id: existingMsg.id }),
                   { headers: { ...corsHeaders, "Content-Type": "application/json" } }
                 );
               }
