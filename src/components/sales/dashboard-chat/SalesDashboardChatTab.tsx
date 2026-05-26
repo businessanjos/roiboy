@@ -257,7 +257,7 @@ export function SalesDashboardChatTab() {
           </div>
         </div>
 
-        <ScrollArea className="flex-1" viewportRef={scrollRef as any}>
+        <ScrollArea className="flex-1">
           <div ref={scrollRef} className="px-4 py-4 space-y-4">
             {messages.length === 0 && (
               <div className="space-y-3 pt-8">
