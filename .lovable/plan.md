@@ -1,86 +1,52 @@
-# Formulários Roy para Campanhas
+## Chat de Operação no Sales Dashboard
 
-Construir um sistema próprio de formulários para campanhas de tráfego pago, reaproveitando a tabela `forms` existente, com URL pública (`/f/:slug`), tracking de funil, captura de UTM, matching com lead/deal e heatmap de abandono por campo. Convive lado a lado com a aba Typeform atual.
+Adicionar um painel de chat dentro de `/sales-dashboard` onde o gestor "conversa com os dados" da operação comercial. Cada resposta pode ser transformada em um KPI fixo no topo do dashboard.
 
-## 1. Banco de dados (1 migration)
+### 1. UI no Sales Dashboard
 
-**Extensão de `public.forms`:**
-- `slug text` único por conta — usado em `/f/:slug`
-- `is_campaign boolean default false` — distingue formulário de campanha
-- `campaign_meta jsonb default '{}'` — defaults (cor, logo, CTA, redirect pós-envio)
+- Nova aba **"Pergunte aos Dados"** (ícone Sparkles) ao lado de Metas/Funil/Performance/Equipe/Origem.
+- Layout split:
+  - Esquerda: histórico de conversas (sessões salvas, renomeáveis, deletáveis).
+  - Direita: chat estilo ChatGPT com markdown, streaming token-a-token, indicador "Gemini analisando…" → "GPT gerando insight…".
+- Sugestões iniciais: "Qual closer está com pior conversão este mês?", "Quanto perdi em MRR por 'sem fit' nos últimos 30 dias?", "Compare o funil de Maio vs Abril".
+- Topo do dashboard: nova faixa **"KPIs fixados"** acima das abas, com cards arrastáveis (remover/ocultar). Vazio por padrão.
 
-**Nova `public.form_sessions`** (1 linha por visitante):
-- `id, account_id, form_id, session_token` (cookie/localStorage)
-- `landed_at, started_at, completed_at` (timestamps do funil)
-- `utm_source, utm_medium, utm_campaign, utm_content, utm_term, referrer, user_agent, ip_hash, country`
-- `response_id uuid` (set quando completa)
-- `last_field_id text, fields_seen int, total_seconds int`
-- Index por `(account_id, form_id, landed_at)`
+### 2. Pipeline de IA (2 etapas)
 
-**Nova `public.form_field_events`** (granular para heatmap):
-- `id, session_id, form_id, field_id, event` (`focus|blur|change|skip`), `at`, `seconds_on_field`
-- Index por `(form_id, field_id)`
+Edge function `sales-dashboard-chat` (streaming):
 
-**Extensão de `public.form_responses`:**
-- `session_id uuid`, `email text`, `phone text`, `matched_lead_id uuid`, `matched_deal_id uuid`, `match_method text`, `utm_source/medium/campaign/content/term text`, `landed_at, submitted_at`
+1. **Gemini 2.5 Pro — Analista**: recebe a pergunta + snapshot estruturado dos dados de vendas (deals, stages, owners, períodos, motivos de perda, metas, comissões agregadas pelos últimos 12 meses). Retorna JSON com:
+   - `analysis`: texto analítico bruto
+   - `kpi`: `{ label, value, unit, period, comparison, trend }` quando a pergunta produz um KPI numérico
+   - `chart_data` opcional
+2. **GPT-5 — Insight**: recebe o JSON do Gemini + a pergunta original. Gera resposta final em markdown com narrativa executiva, contexto, recomendação. Mantém o bloco `kpi` intacto no metadata.
 
-**RLS + GRANTs:** sessions e events ficam públicas para INSERT (anon) — formulário sem login — e SELECT só authenticated da conta. Lookup de slug é público.
+Stream apenas a saída final do GPT para a UI. Metadata (`kpi`, `chart_data`) entregue como evento JSON final.
 
-## 2. Edge Functions
+### 3. Fixar KPI no Dashboard
 
-- **`get-campaign-form`** (público): resolve slug → retorna form + campos (reusa lógica de `get-public-form`).
-- **`track-campaign-form`** (público): aceita `{ event, session_token, form_id, field_id, utm, ... }`. Faz upsert em `form_sessions` e insert em `form_field_events`. Eventos: `view, start, field_focus, field_blur, complete`.
-- **`submit-campaign-form`** (público): insere em `form_responses` com session_id; marca session `completed_at`; roda matching email/telefone contra `leads`/`deals` (reusa helpers `canonicalEmail`, `phoneVariants` do typeform-webhook); responde redirect_url.
+- Botão **"Fixar como KPI"** aparece sob a resposta quando `kpi` está presente.
+- Ao clicar: abre dialog para escolher label/cor/ícone (autopreenchido) e salva em `sales_dashboard_pinned_kpis`.
+- KPI fica visível para o usuário que fixou (privado). Opção "Compartilhar com a equipe" torna global.
+- Valores são recomputados em background: cada KPI fixado guarda a "pergunta canônica" e roda novamente quando o dashboard é aberto (cache 10min).
 
-## 3. Frontend
+### 4. Banco de dados
 
-**Rota pública nova `/f/:slug`** (`src/pages/PublicCampaignForm.tsx`):
-- Wizard estilo Typeform (uma pergunta por tela, progress bar, transições).
-- Captura UTMs da URL no mount.
-- Gera `session_token` em localStorage; dispara `view` no mount, `start` no primeiro foco, `field_focus`/`field_blur` por campo, `complete` no submit.
-- Suporta tipos básicos de `custom_fields` (text, email, phone, select, multi-select, textarea, number).
+Novas tabelas:
 
-**Aba nova "Formulários Roy" em `/marketing/trafego-pago`** (`src/components/marketing/CampaignFormsTab.tsx`):
-- Lista de formulários da conta (`is_campaign = true`) com badge ativo, slug copiável (link `/f/:slug`), contagem de submissões últimos 30d.
-- Botão "Novo formulário" → dialog: título, descrição, slug, seleção dos `custom_fields` que comporão o wizard, aparência (cor primária, logo, mensagem final/redirect).
-- Botão "Ver analytics" por formulário abre dashboard.
+- `sales_chat_sessions` — title, user_id, last_message_at
+- `sales_chat_messages` — session_id, role (user|assistant), content, metadata jsonb (kpi, chart_data, model_used)
+- `sales_dashboard_pinned_kpis` — user_id, label, icon, color, question, last_value, last_computed_at, is_shared, position
 
-**Dashboard de analytics** (`src/components/marketing/CampaignFormAnalytics.tsx`):
-- **Cards de funil:** Views → Iniciados → Completos (+ % conversão entre etapas).
-- **Tempo médio total** e **tempo médio por campo**.
-- **Heatmap de abandono:** tabela por campo com `% de quem viu` × `% que abandonou` × `tempo médio`.
-- **Origens (UTM):** breakdown por `utm_source`/`utm_campaign` com taxa de conversão.
-- **Matching:** quantos respondentes viraram lead, deal, e quantos chegaram a `won` (lookup pelo `matched_lead_id`/`matched_deal_id` → `deals.status='won'`).
-- Período filtrável (7d/30d/90d/custom).
+RLS: gestor vê só suas sessões; KPIs compartilhados visíveis para usuários com acesso ao Sales Dashboard.
 
-A aba Typeform permanece intacta ao lado.
+### 5. Acesso
 
-## 4. Detalhes técnicos
+Apenas usuários com `hasFullAccess` no SalesDashboard (Jonathan, Maikol, Everton + admins via `isManagementUser`) veem a aba e podem fixar KPIs.
 
-```text
-Public flow:
-  /f/:slug
-    └─ get-campaign-form           (slug → form+fields)
-    └─ track-campaign-form         (view → start → field_focus/blur → complete)
-    └─ submit-campaign-form        (response + match + redirect)
+### Detalhes técnicos
 
-Auth flow:
-  /marketing/trafego-pago → "Formulários Roy"
-    └─ list/create/edit (forms WHERE is_campaign)
-    └─ analytics view (sessions + responses + field_events)
-```
-
-- Matching de lead/deal reusa `_shared/email-normalize.ts` e `_shared/phone-normalize.ts` (mesma lógica do typeform-webhook).
-- `session_token` é UUID v4 gerado client-side; serve só para deduplicar eventos da mesma sessão, sem PII.
-- `ip_hash` armazenado com SHA-256 (LGPD-safe) só para detectar bots.
-- Aparência segue tokens do design system (sem cores hardcoded).
-- Não removo nada do Typeform; aba e edge functions atuais ficam.
-
-## 5. O que NÃO faz parte (pode vir depois)
-
-- Embed em sites externos via iframe/script.
-- A/B testing entre versões do mesmo formulário.
-- Webhook outbound para n8n/Zapier ao receber resposta.
-- Migração automática das respostas históricas do Typeform.
-
-Quando aprovar, eu rodo a migration e implemento na sequência.
+- Modelos: `google/gemini-2.5-pro` (análise), `openai/gpt-5` (insight) via Lovable AI Gateway.
+- Snapshot de dados montado server-side a partir de queries agregadas (deals + sales_users + loss_reasons + goals + contracts), limitado a 12 meses para caber em contexto.
+- Streaming SSE para o texto do GPT; chunk final `event: metadata` traz o objeto KPI.
+- Recomputação do KPI fixado: edge function `recompute-pinned-kpi` chamada via React Query no mount do dashboard.
