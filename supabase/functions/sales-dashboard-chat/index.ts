@@ -192,6 +192,7 @@ async function callJson(model: string, messages: any[]) {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages, response_format: { type: "json_object" } }),
+    signal: AbortSignal.timeout(75_000),
   });
   if (!r.ok) throw new Error(`${model} ${r.status}: ${await r.text()}`);
   const json = await r.json();
@@ -237,18 +238,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    const monthsBack = Math.max(1, Math.min(36, Number(body.period_months ?? 12)));
-    const snapshot = await buildSnapshot(admin, userRow.account_id, monthsBack);
+    const monthsBack = Math.max(1, Math.min(24, Number(body.period_months ?? 12)));
+    const question = body.question.trim();
+    const history = (body.history ?? []).slice(-6);
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (data: string) => controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+        const decoder = new TextDecoder();
+        const heartbeat = setInterval(() => {
+          send(JSON.stringify({ type: "heartbeat", at: new Date().toISOString() }));
+        }, 15_000);
+        try {
+          send(JSON.stringify({ type: "status", stage: "gemini", content: "Analisando dados…" }));
+          const snapshot = await buildSnapshot(admin, userRow.account_id, monthsBack);
 
-    const analystSystem = `Você é um analista de dados sênior de operação comercial e financeira.
-Receberá um snapshot JSON com dados dos últimos ${monthsBack} meses contendo:
-- deals, stages, pipelines, users, loss_reasons, sales_goals
-- contracts (proxy de clientes adquiridos)
-- cost_by_month_by_dre_group: despesas pagas/lançadas por mês e grupo DRE (sales, personnel, administrative, financial_expenses, taxes, etc.)
-- payroll_current_by_department: folha mensal atual por departamento (snapshot, não série histórica)
-- spiff_payouts e commission_entries: pagamentos variáveis por usuário/mês
-- new_clients_per_month: contagem de clientes novos por mês (via contratos)
-- financial_categories: dicionário de categorias (id -> name, dre_group)
+          const analystSystem = `Você é um analista de dados sênior de operação comercial e financeira.
+Receberá um snapshot JSON com dados dos últimos ${monthsBack} meses contendo dados comerciais, metas, contratos, custos por DRE, folha atual por departamento, comissões, spiffs e clientes novos por mês.
 
 CAC (Custo de Aquisição de Cliente):
   CAC_mensal = (custos_marketing + custos_vendas) / novos_clientes_do_mês
@@ -264,63 +270,46 @@ Responda PURAMENTE em JSON:
   "chart_hint": null OU { "type": "bar|line|pie", "data": [{"label":"x","value":n}] }
 }
 Use kpi APENAS quando a pergunta produzir um número rastreável fixável no dashboard. Caso contrário, kpi=null.
-NUNCA invente dados. Se faltar algo crítico, calcule o melhor possível e liste no analysis o que precisa ser preenchido (ex: "Folha do depto Marketing não cadastrada no RH").`;
+NUNCA invente dados. Se faltar algo crítico, calcule o melhor possível e liste no analysis o que precisa ser preenchido.`;
 
-    const analyst = await callJson("google/gemini-2.5-flash", [
-      { role: "system", content: analystSystem },
-      { role: "user", content: `Pergunta do gestor: ${body.question}\n\nSnapshot (JSON):\n${JSON.stringify(snapshot).slice(0, 120000)}` },
-    ]);
+          const analyst = await callJson("google/gemini-2.5-flash", [
+            { role: "system", content: analystSystem },
+            { role: "user", content: `Pergunta do gestor: ${question}\n\nSnapshot (JSON):\n${JSON.stringify(snapshot).slice(0, 80_000)}` },
+          ]);
 
-    const insightSystem = `Você é o AION, copiloto executivo de gestão comercial e financeira. Receberá:
-- a pergunta original do gestor
-- a análise factual do analista (JSON, com premissas e breakdown)
-Sua tarefa: gerar a resposta FINAL em markdown, em português, com tom executivo, direto, sem repetir o JSON cru.
+          send(JSON.stringify({ type: "status", stage: "gpt", content: "Gerando insight…" }));
+          const insightSystem = `Você é o AION, copiloto executivo de gestão comercial e financeira. Receberá a pergunta original e a análise factual do analista.
+Gere a resposta FINAL em markdown, em português, com tom executivo, direto e sem repetir o JSON cru.
 Estrutura obrigatória:
 1) **Resposta direta** em 1-2 linhas com o número principal em destaque.
 2) **Breakdown** com bullets ou pequena tabela mostrando os componentes do cálculo.
-3) **Premissas e gaps**: se a análise menciona aproximações ou dados faltantes, liste-os em uma seção "⚠️ Premissas usadas" para o gestor saber a confiança da resposta.
+3) **Premissas e gaps**: se houver aproximações ou dados faltantes, liste em "⚠️ Premissas usadas".
 4) **Recomendação** prática (1-3 ações concretas).
-Nunca invente números além dos presentes no JSON. Se kpi != null, destaque esse número.`;
+Nunca invente números além dos presentes no JSON.`;
 
-    const gptResp = await fetch(GATEWAY, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "openai/gpt-5",
-        stream: true,
-        messages: [
-          { role: "system", content: insightSystem },
-          ...(body.history ?? []).slice(-6),
-          { role: "user", content: `Pergunta: ${body.question}\n\nAnálise (JSON):\n${JSON.stringify(analyst)}` },
-        ],
-      }),
-    });
+          const insightModel = "openai/gpt-5-mini";
+          const gptResp = await fetch(GATEWAY, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: insightModel,
+              stream: true,
+              messages: [
+                { role: "system", content: insightSystem },
+                ...history,
+                { role: "user", content: `Pergunta: ${question}\n\nAnálise (JSON):\n${JSON.stringify(analyst)}` },
+              ],
+            }),
+            signal: AbortSignal.timeout(90_000),
+          });
 
-    if (!gptResp.ok || !gptResp.body) {
-      const t = await gptResp.text();
-      if (gptResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit. Tente em instantes." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (gptResp.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos esgotados na workspace de IA." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ error: "AI gateway error", detail: t }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+          if (!gptResp.ok || !gptResp.body) {
+            const t = await gptResp.text();
+            throw new Error(gptResp.status === 429 ? "Rate limit. Tente em instantes." : gptResp.status === 402 ? "Créditos esgotados na workspace de IA." : `AI gateway error: ${t}`);
+          }
 
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        const send = (data: string) => controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        const reader = gptResp.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        try {
+          const reader = gptResp.body.getReader();
+          let buffer = "";
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -343,11 +332,12 @@ Nunca invente números além dos presentes no JSON. Se kpi != null, destaque ess
               }
             }
           }
-          send(JSON.stringify({ type: "metadata", kpi: analyst.kpi ?? null, chart_hint: analyst.chart_hint ?? null, analysis: analyst.analysis ?? null, period_months: monthsBack, models: { analyst: "google/gemini-2.5-flash", insight: "openai/gpt-5" } }));
-          send("[DONE]");
+          send(JSON.stringify({ type: "metadata", kpi: analyst.kpi ?? null, chart_hint: analyst.chart_hint ?? null, analysis: analyst.analysis ?? null, period_months: monthsBack, models: { analyst: "google/gemini-2.5-flash", insight: insightModel } }));
         } catch (e) {
-          send(JSON.stringify({ type: "error", error: String(e) }));
+          send(JSON.stringify({ type: "error", error: e instanceof Error ? e.message : String(e) }));
         } finally {
+          clearInterval(heartbeat);
+          send("[DONE]");
           controller.close();
         }
       },
