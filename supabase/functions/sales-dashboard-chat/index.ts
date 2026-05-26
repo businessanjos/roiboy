@@ -162,6 +162,39 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     spiffByMonth[m] = (spiffByMonth[m] ?? 0) + Number(s.prize_amount ?? 0);
   }
 
+  // ===== CAC mensal pré-computado (fonte de verdade para a IA) =====
+  // Critério: usa folha atual como proxy mensal de salário + comissões + spiffs do mês.
+  // Marketing ad-spend NÃO está disponível (lançamentos sem category_id/cost_center/supplier).
+  const totalCommByMonth: Record<string, number> = {};
+  for (const u of Object.values(commByUserMonth)) {
+    for (const [m, v] of Object.entries(u)) totalCommByMonth[m] = (totalCommByMonth[m] ?? 0) + v;
+  }
+  const cacByMonth: Record<string, any> = {};
+  const allMonths = new Set<string>([
+    ...Object.keys(newClientsMonthly),
+    ...Object.keys(totalCommByMonth),
+    ...Object.keys(spiffByMonth),
+  ]);
+  for (const m of allMonths) {
+    const newC = newClientsMonthly[m] ?? 0;
+    const comm = totalCommByMonth[m] ?? 0;
+    const spiff = spiffByMonth[m] ?? 0;
+    const totalCost = salesPayroll + marketingPayroll + comm + spiff;
+    cacByMonth[m] = {
+      new_clients: newC,
+      sales_payroll_monthly: salesPayroll,
+      marketing_payroll_monthly: marketingPayroll,
+      commissions: comm,
+      spiffs: spiff,
+      total_cost: totalCost,
+      cac: newC > 0 ? totalCost / newC : null,
+      new_clients_revenue: newClientsValueByMonth[m] ?? 0,
+    };
+  }
+
+  const finEntriesCategorized = (finEntriesR.data ?? []).filter((e: any) => e.category_id).length;
+  const finEntriesTotal = (finEntriesR.data ?? []).length;
+
   return {
     period: { months: monthsBack, start: sinceIso, end: new Date().toISOString() },
     counts: {
@@ -170,7 +203,14 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
       users: usersR.data?.length ?? 0,
       pipelines: pipelinesR.data?.length ?? 0,
       hr_collaborators: hrCollabR.data?.length ?? 0,
-      financial_entries: finEntriesR.data?.length ?? 0,
+      financial_entries: finEntriesTotal,
+      financial_entries_categorized: finEntriesCategorized,
+    },
+    data_quality_notes: {
+      financial_categorization_pct: finEntriesTotal > 0 ? Math.round((finEntriesCategorized / finEntriesTotal) * 100) : 0,
+      ad_spend_available: false,
+      ad_spend_reason: "Lançamentos financeiros sem category_id/cost_center/supplier preenchidos. Ad spend de marketing não é rastreável no banco hoje.",
+      payroll_source: "snapshot atual de hr_collaborators.salary (sem histórico mensal)",
     },
     pipelines: pipelinesR.data ?? [],
     stages: (stagesR.data ?? []).map((s: any) => ({ id: s.id, name: s.name, pipeline_id: s.pipeline_id, is_won: s.is_won, is_lost: s.is_lost })),
@@ -193,9 +233,13 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     deals_by_source: dealsBySource,
     cost_by_month_by_dre_group: costByMonth,
     payroll_current_by_department: payrollByDept,
+    payroll_aggregates: { sales_monthly: salesPayroll, marketing_monthly: marketingPayroll },
     commissions_by_user_by_month: commByUserMonth,
+    commissions_total_by_month: totalCommByMonth,
     spiff_payouts_by_month: spiffByMonth,
     new_clients_per_month: newClientsMonthly,
+    new_clients_revenue_per_month: newClientsValueByMonth,
+    cac_by_month: cacByMonth,
     financial_categories: (finCatsR.data ?? []).map((c: any) => ({ id: c.id, name: c.name, dre_group: c.dre_group })),
   };
 }
