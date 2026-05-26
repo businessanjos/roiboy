@@ -156,6 +156,16 @@ export function ICPDashboard() {
     enabled: !!accountId,
   });
 
+  // Auto-roda uma vez quando detecta calls campeãs sem ICP extraído.
+  // O Jonathan não precisa mais clicar em nada — abre o dashboard e a IA preenche.
+  useEffect(() => {
+    if (!icpData || autoRanRef.current || backfillMutation.isPending) return;
+    if (icpData.totalSuccess > 0 && icpData.withSignals < icpData.totalSuccess) {
+      autoRanRef.current = true;
+      backfillMutation.mutate();
+    }
+  }, [icpData, backfillMutation]);
+
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
   if (!icpData || icpData.totalSuccess === 0) {
