@@ -190,7 +190,7 @@ export function AssetUploadBox({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-xs">{assetLabel}</span>
             {assetDimensions && (
-              <code className="text-[10px] text-primary font-mono bg-primary/10 px-1.5 py-0.5 rounded">
+              <code className="text-[10px] text-foreground font-mono bg-muted px-1.5 py-0.5 rounded border">
                 {assetDimensions}
               </code>
             )}
