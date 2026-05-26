@@ -16765,6 +16765,128 @@ export type Database = {
           },
         ]
       }
+      sales_chat_messages: {
+        Row: {
+          auth_user_id: string
+          content: string
+          created_at: string
+          id: string
+          metadata: Json
+          role: string
+          session_id: string
+        }
+        Insert: {
+          auth_user_id: string
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          role: string
+          session_id: string
+        }
+        Update: {
+          auth_user_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sales_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_chat_sessions: {
+        Row: {
+          account_id: string
+          auth_user_id: string
+          created_at: string
+          id: string
+          last_message_at: string
+          title: string
+        }
+        Insert: {
+          account_id: string
+          auth_user_id: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          title?: string
+        }
+        Update: {
+          account_id?: string
+          auth_user_id?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      sales_dashboard_pinned_kpis: {
+        Row: {
+          account_id: string
+          auth_user_id: string
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          is_shared: boolean
+          label: string
+          last_comparison: string | null
+          last_computed_at: string | null
+          last_trend: string | null
+          last_value: number | null
+          last_value_text: string | null
+          position: number
+          question: string
+          unit: string | null
+        }
+        Insert: {
+          account_id: string
+          auth_user_id: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_shared?: boolean
+          label: string
+          last_comparison?: string | null
+          last_computed_at?: string | null
+          last_trend?: string | null
+          last_value?: number | null
+          last_value_text?: string | null
+          position?: number
+          question: string
+          unit?: string | null
+        }
+        Update: {
+          account_id?: string
+          auth_user_id?: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_shared?: boolean
+          label?: string
+          last_comparison?: string | null
+          last_computed_at?: string | null
+          last_trend?: string | null
+          last_value?: number | null
+          last_value_text?: string | null
+          position?: number
+          question?: string
+          unit?: string | null
+        }
+        Relationships: []
+      }
       sales_goal_metrics: {
         Row: {
           account_id: string

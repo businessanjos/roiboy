@@ -80,6 +80,8 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { SalesDashboardChatTab } from "@/components/sales/dashboard-chat/SalesDashboardChatTab";
+import { PinnedKpisStrip } from "@/components/sales/dashboard-chat/PinnedKpisStrip";
 import {
   Dialog,
   DialogContent,
@@ -862,6 +864,9 @@ export default function SalesDashboard() {
         {format(end, "dd/MM/yyyy", { locale: ptBR })}
       </div>
 
+      {/* KPIs fixados via IA */}
+      <PinnedKpisStrip />
+
       {/* KPI Row (configurável) */}
       <div className="flex items-center justify-between -mb-2">
         <span className="text-xs text-muted-foreground">Indicadores principais</span>
@@ -874,13 +879,20 @@ export default function SalesDashboard() {
       </div>
 
       <Tabs defaultValue="goals" className="w-full">
-        <TabsList className="grid grid-cols-5 w-full md:w-fit">
+        <TabsList className="grid grid-cols-6 w-full md:w-fit">
           <TabsTrigger value="goals">Metas</TabsTrigger>
           <TabsTrigger value="funnel">Funil</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="team">Equipe</TabsTrigger>
           <TabsTrigger value="origin">Origem & Perdas</TabsTrigger>
+          <TabsTrigger value="ask" className="gap-1.5">
+            <span className="inline-flex items-center gap-1">✨ Pergunte aos Dados</span>
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ask" className="mt-4">
+          <SalesDashboardChatTab />
+        </TabsContent>
 
         {/* ---------- METAS ---------- */}
         <TabsContent value="goals" className="space-y-4 mt-4">
