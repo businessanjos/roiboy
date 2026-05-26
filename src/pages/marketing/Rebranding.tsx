@@ -28,6 +28,26 @@ const ICONS: Record<string, any> = {
   Palette, BookOpen, Presentation, FileText, Mail, Briefcase, Megaphone, Users,
 };
 
+// Brand colors per icon (official-ish brand palette). Falls back to primary.
+const BRAND_COLORS: Record<string, { bg: string; fg: string }> = {
+  Instagram: { bg: "bg-[#E1306C]/15", fg: "text-[#E1306C]" },
+  Linkedin: { bg: "bg-[#0A66C2]/15", fg: "text-[#0A66C2]" },
+  AtSign: { bg: "bg-foreground/10", fg: "text-foreground" }, // Threads
+  Music: { bg: "bg-[#1DB954]/15", fg: "text-[#1DB954]" }, // Spotify
+  Music2: { bg: "bg-[#FA243C]/15", fg: "text-[#FA243C]" }, // Apple Music / TikTok-ish
+  Youtube: { bg: "bg-[#FF0000]/15", fg: "text-[#FF0000]" },
+  Mail: { bg: "bg-[#EA4335]/15", fg: "text-[#EA4335]" },
+  Globe: { bg: "bg-[#D7B46A]/15", fg: "text-[#D7B46A]" }, // Eternum gold
+  Palette: { bg: "bg-[#D7B46A]/15", fg: "text-[#D7B46A]" },
+  Presentation: { bg: "bg-[#FF6F00]/15", fg: "text-[#FF6F00]" },
+  BookOpen: { bg: "bg-[#8B5CF6]/15", fg: "text-[#8B5CF6]" },
+  FileText: { bg: "bg-[#0EA5E9]/15", fg: "text-[#0EA5E9]" },
+  Briefcase: { bg: "bg-[#475569]/15", fg: "text-[#475569]" },
+  Megaphone: { bg: "bg-[#F59E0B]/15", fg: "text-[#F59E0B]" },
+  Users: { bg: "bg-[#10B981]/15", fg: "text-[#10B981]" },
+};
+
+
 const STATUS_META: Record<string, { label: string; color: string; progress: number }> = {
   not_started: { label: "Não iniciado", color: "bg-muted text-muted-foreground", progress: 0 },
   in_progress: { label: "Em andamento", color: "bg-blue-500/15 text-blue-600", progress: 50 },
