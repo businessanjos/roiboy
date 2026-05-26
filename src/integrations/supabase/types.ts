@@ -16460,6 +16460,7 @@ export type Database = {
           deal_id: string | null
           extracted_lead_name: string | null
           extracted_seller_name: string | null
+          icp_signals: Json | null
           id: string
           outcome_notes: string | null
           product_id: string | null
@@ -16480,6 +16481,7 @@ export type Database = {
           deal_id?: string | null
           extracted_lead_name?: string | null
           extracted_seller_name?: string | null
+          icp_signals?: Json | null
           id?: string
           outcome_notes?: string | null
           product_id?: string | null
@@ -16500,6 +16502,7 @@ export type Database = {
           deal_id?: string | null
           extracted_lead_name?: string | null
           extracted_seller_name?: string | null
+          icp_signals?: Json | null
           id?: string
           outcome_notes?: string | null
           product_id?: string | null

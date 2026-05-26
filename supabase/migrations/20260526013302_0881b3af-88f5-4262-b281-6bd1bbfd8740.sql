@@ -1,0 +1,3 @@
+ALTER TABLE public.sales_call_analyses ADD COLUMN IF NOT EXISTS icp_signals jsonb;
+CREATE INDEX IF NOT EXISTS idx_sales_call_analyses_icp_signals ON public.sales_call_analyses USING gin(icp_signals);
+COMMENT ON COLUMN public.sales_call_analyses.icp_signals IS 'AI-extracted ICP profile from call: profession, niche/specialty, business_model, ticket_range, pains, objections, decision_role, team_size, revenue_range';
