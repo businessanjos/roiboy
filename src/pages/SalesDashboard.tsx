@@ -80,6 +80,8 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { SalesDashboardChatTab } from "@/components/sales/dashboard-chat/SalesDashboardChatTab";
+import { PinnedKpisStrip } from "@/components/sales/dashboard-chat/PinnedKpisStrip";
 import {
   Dialog,
   DialogContent,
