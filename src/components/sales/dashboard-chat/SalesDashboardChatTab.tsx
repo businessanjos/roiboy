@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PinKpiDialog } from "./PinKpiDialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface KpiPayload {
   label: string;
@@ -38,6 +39,14 @@ const SUGGESTIONS = [
   "Top 5 motivos de perda em valor nos últimos 90 dias",
 ];
 
+const PERIOD_OPTIONS = [
+  { label: "Último mês", value: 1 },
+  { label: "Últimos 3 meses", value: 3 },
+  { label: "Últimos 6 meses", value: 6 },
+  { label: "Últimos 12 meses", value: 12 },
+  { label: "Últimos 24 meses", value: 24 },
+];
+
 export function SalesDashboardChatTab() {
   const qc = useQueryClient();
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -46,6 +55,7 @@ export function SalesDashboardChatTab() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [stage, setStage] = useState<"idle" | "gemini" | "gpt">("idle");
   const [pinTarget, setPinTarget] = useState<{ kpi: KpiPayload; question: string } | null>(null);
+  const [periodMonths, setPeriodMonths] = useState<number>(12);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: sessions = [] } = useQuery({
@@ -152,7 +162,7 @@ export function SalesDashboardChatTab() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ question, session_id: sid, history }),
+        body: JSON.stringify({ question, session_id: sid, history, period_months: periodMonths }),
       });
       if (!resp.ok || !resp.body) {
         const t = await resp.text().catch(() => "");
@@ -251,10 +261,19 @@ export function SalesDashboardChatTab() {
       <Card className="flex flex-col overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-3 border-b">
           <BrainCircuit className="w-5 h-5 text-primary" />
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-semibold">AION</p>
-            
           </div>
+          <Select value={String(periodMonths)} onValueChange={(v) => setPeriodMonths(Number(v))}>
+            <SelectTrigger className="w-[180px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIOD_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <ScrollArea className="flex-1">
