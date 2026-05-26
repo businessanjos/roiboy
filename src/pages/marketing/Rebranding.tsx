@@ -324,10 +324,16 @@ function ChannelsMap({ channels, accountId }: { channels: Channel[]; accountId: 
                   <CardContent className="pt-5">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <Icon className="h-5 w-5 text-primary" />
-                        </div>
+                        {(() => {
+                          const brand = BRAND_COLORS[ch.icon || "Globe"] || { bg: "bg-primary/10", fg: "text-primary" };
+                          return (
+                            <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${brand.bg}`}>
+                              <Icon className={`h-5 w-5 ${brand.fg}`} />
+                            </div>
+                          );
+                        })()}
                         <div className="min-w-0">
+
                           <div className="font-semibold truncate">{ch.name}</div>
                           {ch.owner && (
                             <div className="text-xs text-muted-foreground truncate">{ch.owner}</div>
