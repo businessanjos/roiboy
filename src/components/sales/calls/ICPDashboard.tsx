@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -10,7 +11,6 @@ import {
   Crown, MapPin, Building2, TrendingUp, Users, Target, Briefcase, Loader2,
   Stethoscope, Sparkles, AlertCircle, ShieldCheck, DollarSign, RefreshCw,
 } from 'lucide-react';
-
 type IcpSignals = {
   profession?: string | null;
   specialty?: string | null;
@@ -76,22 +76,32 @@ export function ICPDashboard() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const queryClient = useQueryClient();
+  const autoRanRef = useRef(false);
 
-  const backfillMutation = useMutation({
-    mutationFn: async () => {
+  async function runBackfillLoop(onlyChampions: boolean) {
+    let totalOk = 0, totalFailed = 0, rounds = 0;
+    // Loop até o backend dizer que não tem mais pendentes (ou 6 voltas no máx)
+    // — cada chamada processa até 80 calls em paralelo.
+    while (rounds < 6) {
+      rounds++;
       const { data, error } = await supabase.functions.invoke('backfill-icp-signals', {
-        body: { account_id: accountId, only_champions: true, limit: 50 },
+        body: { account_id: accountId, only_champions: onlyChampions, limit: 80 },
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data as { processed: number; ok: number; skipped: number; failed: number };
-    },
-    onSuccess: (r) => {
-      toast.success(`ICP extraído em ${r.ok} call(s). ${r.skipped} sem texto suficiente, ${r.failed} falharam.`);
+      if (data?.error && !data?.processed) throw new Error(data.error);
+      totalOk += data?.ok || 0;
+      totalFailed += data?.failed || 0;
       queryClient.invalidateQueries({ queryKey: ['icp-dashboard-v2'] });
-    },
-    onError: (e: any) => toast.error(e?.message || 'Erro ao reanalisar ICP'),
+      if (!data?.remaining) break;
+    }
+    if (totalOk > 0) toast.success(`ICP extraído em ${totalOk} call(s)${totalFailed ? ` (${totalFailed} falharam)` : ''}.`);
+    else if (totalFailed > 0) toast.error(`Não foi possível extrair ICP de ${totalFailed} call(s).`);
+  }
+
+  const backfillMutation = useMutation({
+    mutationFn: () => runBackfillLoop(false),
   });
+
 
 
   const { data: icpData, isLoading } = useQuery({
@@ -137,6 +147,16 @@ export function ICPDashboard() {
     },
     enabled: !!accountId,
   });
+
+  // Auto-roda uma vez quando detecta calls campeãs sem ICP extraído.
+  // O Jonathan não precisa mais clicar em nada — abre o dashboard e a IA preenche.
+  useEffect(() => {
+    if (!icpData || autoRanRef.current || backfillMutation.isPending) return;
+    if (icpData.totalSuccess > 0 && icpData.withSignals < icpData.totalSuccess) {
+      autoRanRef.current = true;
+      backfillMutation.mutate();
+    }
+  }, [icpData, backfillMutation]);
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
