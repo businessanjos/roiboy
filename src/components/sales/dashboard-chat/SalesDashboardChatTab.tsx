@@ -6,6 +6,7 @@ import {
   Target, Users, Flame, Filter, LineChart,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -346,10 +347,27 @@ export function SalesDashboardChatTab() {
                         prose-headings:font-semibold prose-headings:tracking-tight
                         prose-p:leading-relaxed prose-p:my-2
                         prose-strong:text-foreground prose-strong:font-semibold
-                        prose-table:my-3 prose-table:text-sm
-                        prose-th:bg-muted/50 prose-th:font-medium prose-th:text-xs prose-th:uppercase prose-th:tracking-wider
-                        prose-td:py-1.5 prose-em:text-muted-foreground prose-em:text-xs">
-                        <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
+                        prose-em:text-muted-foreground prose-em:text-xs
+                        prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
+                        prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-muted prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            table: ({ node, ...props }) => (
+                              <div className="my-3 overflow-x-auto rounded-lg border">
+                                <table className="w-full text-sm border-collapse" {...props} />
+                              </div>
+                            ),
+                            thead: ({ node, ...props }) => <thead className="bg-muted/60" {...props} />,
+                            th: ({ node, ...props }) => (
+                              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b" {...props} />
+                            ),
+                            td: ({ node, ...props }) => (
+                              <td className="px-3 py-2 border-b border-border/40 align-top tabular-nums" {...props} />
+                            ),
+                            tr: ({ node, ...props }) => <tr className="even:bg-muted/20" {...props} />,
+                          }}
+                        >{m.content || "…"}</ReactMarkdown>
                       </div>
                     )}
                     {m.metadata?.kpi && (
