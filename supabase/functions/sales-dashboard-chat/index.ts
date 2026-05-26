@@ -310,24 +310,24 @@ Deno.serve(async (req) => {
           send(JSON.stringify({ type: "status", stage: "gemini", content: "Analisando dados…" }));
           const snapshot = await buildSnapshot(admin, userRow.account_id, monthsBack);
 
-          const analystSystem = `Você é um analista de dados sênior de operação comercial e financeira.
-Receberá um snapshot JSON com dados dos últimos ${monthsBack} meses contendo dados comerciais, metas, contratos, custos por DRE, folha atual por departamento, comissões, spiffs e clientes novos por mês.
+          const analystSystem = `Você é analista de dados sênior. Receberá um snapshot JSON pré-calculado dos últimos ${monthsBack} meses.
 
-CAC (Custo de Aquisição de Cliente):
-  CAC_mensal = (custos_marketing + custos_vendas) / novos_clientes_do_mês
-  - custos_marketing ≈ soma dos lançamentos cuja categoria tem nome contendo "marketing" OU dre_group="sales" referente a mídia/propaganda + folha do depto Marketing + ferramentas marketing
-  - custos_vendas ≈ comissões + spiffs + folha do depto Comercial/Vendas + ferramentas comerciais
-  - Use payroll_current_by_department como aproximação mensal da folha quando faltar lançamento explícito.
-  - SEMPRE explicite quais componentes você incluiu e quais faltam. Se algum dado essencial faltar, calcule o que for possível e sinalize a aproximação no campo "analysis".
+REGRAS DUROS:
+- O snapshot JÁ TRAZ \`cac_by_month\` calculado mês a mês com new_clients, sales_payroll_monthly, marketing_payroll_monthly, commissions, spiffs, total_cost e cac. USE ESSES NÚMEROS — não recalcule do zero.
+- \`data_quality_notes.ad_spend_available=false\` significa: não há ad spend rastreável; assuma 0 e sinalize na premissa.
+- \`payroll_aggregates\` traz salesPayroll e marketingPayroll mensais já somados.
+- Se a pergunta for sobre CAC, responda com o(s) mês(es) pedido(s) usando cac_by_month direto.
+- Se faltar mês específico, use o último mês com new_clients > 0.
+- NÃO peça mais dados ao usuário. Trabalhe com o que tem e seja explícito sobre limitações em 1 linha.
 
 Responda PURAMENTE em JSON:
 {
-  "analysis": "string com análise factual + breakdown numérico + premissas usadas",
-  "kpi": null OU { "label": "string curta", "value": número, "value_text": "string formatada (ex 'R$ 12.345')", "unit": "BRL|%|qtd|dias|null", "period": "string descritiva", "comparison": "string opcional vs período anterior", "trend": "up|down|flat" },
+  "analysis": "análise factual + breakdown numérico curto (use os campos do snapshot) + 1 linha de premissa quando aplicável",
+  "kpi": null OU { "label": "string curta", "value": número, "value_text": "R$ X.XXX", "unit": "BRL|%|qtd|dias|null", "period": "ex: 'mai/2026'", "comparison": "opcional vs período anterior", "trend": "up|down|flat" },
   "chart_hint": null OU { "type": "bar|line|pie", "data": [{"label":"x","value":n}] }
 }
-Use kpi APENAS quando a pergunta produzir um número rastreável fixável no dashboard. Caso contrário, kpi=null.
-NUNCA invente dados. Se faltar algo crítico, calcule o melhor possível e liste no analysis o que precisa ser preenchido.`;
+Use kpi quando a pergunta produzir UM número principal. Para CAC, sempre retorne kpi.
+NUNCA invente números fora do snapshot.`;
 
           const analyst = await callJson("google/gemini-2.5-flash", [
             { role: "system", content: analystSystem },
@@ -335,14 +335,23 @@ NUNCA invente dados. Se faltar algo crítico, calcule o melhor possível e liste
           ]);
 
           send(JSON.stringify({ type: "status", stage: "gpt", content: "Gerando insight…" }));
-          const insightSystem = `Você é o AION, copiloto executivo de gestão comercial e financeira. Receberá a pergunta original e a análise factual do analista.
-Gere a resposta FINAL em markdown, em português, com tom executivo, direto e sem repetir o JSON cru.
-Estrutura obrigatória:
-1) **Resposta direta** em 1-2 linhas com o número principal em destaque.
-2) **Breakdown** com bullets ou pequena tabela mostrando os componentes do cálculo.
-3) **Premissas e gaps**: se houver aproximações ou dados faltantes, liste em "⚠️ Premissas usadas".
-4) **Recomendação** prática (1-3 ações concretas).
-Nunca invente números além dos presentes no JSON.`;
+          const insightSystem = `Você é o AION, copiloto executivo. Receberá a pergunta e a análise factual já com os números.
+
+TOM: direto, executivo, brasileiro, sem floreio. Nada de "vou analisar", "é importante notar", "com base nos dados". Vá direto ao número.
+
+FORMATO obrigatório (markdown enxuto):
+**[Número principal em destaque na primeira linha]** — contexto em 1 frase.
+
+**Composição** (tabela markdown ou bullets curtos com os valores em R$):
+| Componente | Valor |
+|---|---|
+| ... | R$ ... |
+
+**Leitura rápida**: 1-2 linhas com o que o número significa (bom/ruim, vs benchmark, tendência se houver).
+
+**Próximo passo**: 1 ação concreta (1 linha).
+
+Se houver limitação relevante de dado, adicione no fim em itálico: *Premissa: ...* (máx 1 linha). Não invente. Se a análise não tiver número, diga em 1 linha o que falta e pare.`;
 
           const insightModel = "openai/gpt-5-mini";
           const gptResp = await fetch(GATEWAY, {
