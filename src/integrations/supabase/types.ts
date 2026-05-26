@@ -15401,6 +15401,172 @@ export type Database = {
         }
         Relationships: []
       }
+      rebranding_ai_generations: {
+        Row: {
+          account_id: string
+          aspect_ratio: string | null
+          asset_label: string | null
+          channel_key: string | null
+          created_at: string
+          error_message: string | null
+          file_name: string | null
+          file_path: string | null
+          height: number | null
+          id: string
+          mime_type: string | null
+          model: string
+          palette: Json | null
+          prompt: string
+          reference_files: Json | null
+          saved_as_asset_id: string | null
+          status: string
+          user_id: string | null
+          user_name: string | null
+          width: number | null
+        }
+        Insert: {
+          account_id: string
+          aspect_ratio?: string | null
+          asset_label?: string | null
+          channel_key?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          model?: string
+          palette?: Json | null
+          prompt: string
+          reference_files?: Json | null
+          saved_as_asset_id?: string | null
+          status?: string
+          user_id?: string | null
+          user_name?: string | null
+          width?: number | null
+        }
+        Update: {
+          account_id?: string
+          aspect_ratio?: string | null
+          asset_label?: string | null
+          channel_key?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          model?: string
+          palette?: Json | null
+          prompt?: string
+          reference_files?: Json | null
+          saved_as_asset_id?: string | null
+          status?: string
+          user_id?: string | null
+          user_name?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rebranding_ai_generations_saved_as_asset_id_fkey"
+            columns: ["saved_as_asset_id"]
+            isOneToOne: false
+            referencedRelation: "rebranding_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rebranding_assets: {
+        Row: {
+          account_id: string
+          asset_dimensions: string | null
+          asset_format: string | null
+          asset_kind: string
+          asset_label: string
+          channel_id: string | null
+          channel_key: string
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size_bytes: number | null
+          id: string
+          mime_type: string | null
+          notes: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          source: string
+          status: string
+          updated_at: string
+          uploaded_by: string | null
+          uploaded_by_name: string | null
+          version: number
+        }
+        Insert: {
+          account_id: string
+          asset_dimensions?: string | null
+          asset_format?: string | null
+          asset_kind?: string
+          asset_label: string
+          channel_id?: string | null
+          channel_key: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_name?: string | null
+          version?: number
+        }
+        Update: {
+          account_id?: string
+          asset_dimensions?: string | null
+          asset_format?: string | null
+          asset_kind?: string
+          asset_label?: string
+          channel_id?: string | null
+          channel_key?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_name?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rebranding_assets_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "rebranding_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rebranding_channels: {
         Row: {
           account_id: string

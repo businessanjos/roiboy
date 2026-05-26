@@ -20,6 +20,8 @@ import {
   Ruler, Type, MessageSquare, Link2, AlertTriangle, Check, X, Image as ImageIcon,
 } from "lucide-react";
 import { REBRANDING_SPECS, BRAND_KIT } from "@/data/rebrandingSpecs";
+import { AssetUploadBox } from "@/components/marketing/rebranding/AssetUploadBox";
+import { AiStudio } from "@/components/marketing/rebranding/AiStudio";
 
 const ICONS: Record<string, any> = {
   Globe, Instagram, Linkedin, AtSign, Music, Youtube, Music2,
@@ -192,7 +194,10 @@ export default function Rebranding() {
       <Tabs defaultValue="map">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="map">Mapa de Canais</TabsTrigger>
-          <TabsTrigger value="specs">Especificações</TabsTrigger>
+          <TabsTrigger value="specs">Especificações & Arquivos</TabsTrigger>
+          <TabsTrigger value="studio">
+            <Sparkles className="h-3.5 w-3.5 mr-1" /> Studio IA
+          </TabsTrigger>
           <TabsTrigger value="brand">Brand Kit</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas (Kanban)</TabsTrigger>
           <TabsTrigger value="playbook">Playbook</TabsTrigger>
@@ -204,6 +209,10 @@ export default function Rebranding() {
 
         <TabsContent value="specs" className="mt-4">
           <ChannelSpecs />
+        </TabsContent>
+
+        <TabsContent value="studio" className="mt-4">
+          <AiStudio />
         </TabsContent>
 
         <TabsContent value="brand" className="mt-4">
@@ -759,18 +768,31 @@ function ChannelSpecs() {
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
                 {spec.assets && spec.assets.length > 0 && (
-                  <SpecSection icon={<Ruler className="h-4 w-4" />} title="Dimensões de artes">
+                  <SpecSection icon={<Ruler className="h-4 w-4" />} title="Artes & Uploads">
                     <div className="space-y-2">
                       {spec.assets.map((a, i) => (
-                        <div key={i} className="rounded-md border bg-card p-2.5 text-xs">
-                          <div className="flex justify-between gap-2">
-                            <span className="font-medium">{a.label}</span>
-                            <code className="text-primary font-mono">{a.size}</code>
-                          </div>
-                          {a.format && <div className="text-muted-foreground mt-0.5">Formato: {a.format}</div>}
-                          {a.note && <div className="text-muted-foreground mt-0.5 italic">{a.note}</div>}
-                        </div>
+                        <AssetUploadBox
+                          key={i}
+                          channelKey={spec.key}
+                          assetLabel={a.label}
+                          assetDimensions={a.size}
+                          assetFormat={a.format}
+                          assetKind="spec"
+                        />
                       ))}
+                      <details className="rounded-md border bg-muted/20 p-2">
+                        <summary className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                          <ImageIcon className="h-3.5 w-3.5" /> Extras deste canal (arquivos avulsos)
+                        </summary>
+                        <div className="mt-2">
+                          <AssetUploadBox
+                            channelKey={spec.key}
+                            assetLabel="__extras__"
+                            assetDimensions="Livre"
+                            assetKind="extra"
+                          />
+                        </div>
+                      </details>
                     </div>
                   </SpecSection>
                 )}
