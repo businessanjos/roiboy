@@ -133,6 +133,7 @@
 - [Omie Identity Matching](mem://integrations/omie/client-identity-validation-pt) — CPF/CNPJ and Name cross-validation
 - [Omie Financial Bridge Page](mem://integrations/omie/financial-bridge-page-pt) — Página /financial/integracoes/omie
 - [YouTube Analytics Sync](mem://features/marketing/youtube-integration-pt) — Tracking videos/shorts/lives
+- [Campaign Forms (Formulários Roy)](mem://features/marketing/campaign-forms-pt) — Substitui Typeform: /c/:slug + tracking funil/UTM/abandono na aba "Formulários Roy" de /marketing/trafego-pago
 - [Content HQ](mem://features/marketing/content-hq-pt) — Área /marketing/content-hq Bruna+Everton, multi-plataforma, IA gera estratégia/pautas/briefings
 - [External REST API](mem://integrations/external-rest-api-v1-pt) — `x-api-key` protected CRUD endpoints
 - [Clinica Ryka Integration](mem://integrations/clinica-ryka-sync-v2-pt) — Bidirectional sync

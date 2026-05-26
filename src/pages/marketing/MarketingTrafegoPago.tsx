@@ -12,8 +12,9 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
-import { TrendingUp, Target, Inbox, BarChart3, Megaphone, Loader2, ExternalLink, Link2, RefreshCw, Zap, Unlink, Settings2, FileText, CalendarIcon } from 'lucide-react';
+import { TrendingUp, Target, Inbox, BarChart3, Megaphone, Loader2, ExternalLink, Link2, RefreshCw, Zap, Unlink, Settings2, FileText, CalendarIcon, ClipboardList } from 'lucide-react';
 import { TypeformDashboard } from '@/components/marketing/TypeformDashboard';
+import { CampaignFormsTab } from '@/components/marketing/CampaignFormsTab';
 import { MarketingLinksUtm } from '@/components/marketing/MarketingLinksUtm';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -198,6 +199,7 @@ export default function MarketingTrafegoPago() {
           <TabsTrigger value="campaigns" className="gap-2"><Megaphone className="w-4 h-4" />Campanhas</TabsTrigger>
           <TabsTrigger value="links" className="gap-2"><Link2 className="w-4 h-4" />Links & UTM</TabsTrigger>
           <TabsTrigger value="typeform" className="gap-2"><FileText className="w-4 h-4" />Typeform</TabsTrigger>
+          <TabsTrigger value="campaign-forms" className="gap-2"><ClipboardList className="w-4 h-4" />Formulários Roy</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-4">
@@ -430,6 +432,10 @@ export default function MarketingTrafegoPago() {
 
         <TabsContent value="typeform" className="mt-4">
           <TypeformDashboard />
+        </TabsContent>
+
+        <TabsContent value="campaign-forms" className="mt-4">
+          <CampaignFormsTab />
         </TabsContent>
       </Tabs>
     </div>
