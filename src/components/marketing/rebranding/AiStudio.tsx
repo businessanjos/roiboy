@@ -11,11 +11,24 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  Sparkles, Loader2, Download, Image as ImageIcon, Upload, X, Save, Wand2,
+  Sparkles, Loader2, Download, Image as ImageIcon, Upload, X, Save, Wand2, Star, Plus,
 } from "lucide-react";
 import { REBRANDING_SPECS } from "@/data/rebrandingSpecs";
 
-const ETERNUM_PALETTE = ["#0a0a0a", "#d2ae6d", "#efede6", "#42423d"];
+type PaletteColor = { hex: string; role: "predominant" | "support" };
+const ETERNUM_PALETTE: PaletteColor[] = [
+  { hex: "#0a0a0a", role: "predominant" },
+  { hex: "#d2ae6d", role: "support" },
+  { hex: "#efede6", role: "support" },
+  { hex: "#42423d", role: "support" },
+];
+
+const normalizeHex = (v: string): string | null => {
+  let s = v.trim().replace(/^#/, "");
+  if (s.length === 3) s = s.split("").map((c) => c + c).join("");
+  if (!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+  return `#${s.toLowerCase()}`;
+};
 
 const ASPECT_PRESETS = [
   { value: "1:1",  label: "Quadrado 1:1 (Instagram Post, 1080×1080)" },
@@ -59,7 +72,8 @@ export function AiStudio({
   const [aspectRatio, setAspectRatio] = useState(initialAspectRatio);
   const [channelKey, setChannelKey] = useState<string | null>(initialChannelKey);
   const [assetLabel, setAssetLabel] = useState<string | null>(initialAssetLabel);
-  const [palette, setPalette] = useState<string[]>(ETERNUM_PALETTE);
+  const [palette, setPalette] = useState<PaletteColor[]>(ETERNUM_PALETTE);
+  const [hexDraft, setHexDraft] = useState("");
   const [refUrls, setRefUrls] = useState<string[]>([]);
   const [model, setModel] = useState("google/gemini-3-pro-image-preview");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
@@ -84,12 +98,15 @@ export function AiStudio({
 
   const generate = useMutation({
     mutationFn: async () => {
+      const predominantHex = palette.find((p) => p.role === "predominant")?.hex || palette[0]?.hex || null;
       const { data, error } = await supabase.functions.invoke("rebranding-generate-image", {
         body: {
           prompt,
           styleNotes,
           aspectRatio,
-          palette,
+          palette: palette.map((p) => p.hex),
+          predominantHex,
+          paletteDetailed: palette,
           referenceUrls: refUrls,
           channelKey,
           assetLabel,
@@ -234,23 +251,125 @@ export function AiStudio({
               </div>
             </div>
 
-            <div>
-              <Label className="text-xs">Paleta da marca (cores guia)</Label>
-              <div className="flex gap-1.5 mt-1 flex-wrap items-center">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Paleta da marca (cores guia)</Label>
+                <span className="text-[10px] text-muted-foreground">Marque a cor predominante com a estrela</span>
+              </div>
+
+              <div className="space-y-1.5">
                 {palette.map((c, i) => (
-                  <div key={i} className="relative group">
-                    <div className="h-8 w-8 rounded border-2 border-border" style={{ background: c }} title={c} />
-                    <button onClick={() => setPalette(palette.filter((_, j) => j !== i))}
-                      className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-red-500 text-white rounded-full text-[8px] opacity-0 group-hover:opacity-100">×</button>
+                  <div key={i} className="flex items-center gap-2 rounded-md border bg-muted/30 p-1.5">
+                    {/* Swatch + nativo (escondido) para abrir o color picker */}
+                    <label
+                      className="h-9 w-9 rounded border-2 border-border cursor-pointer shrink-0 relative overflow-hidden"
+                      style={{ background: c.hex }}
+                      title="Clique para abrir o seletor"
+                    >
+                      <input
+                        type="color"
+                        value={c.hex}
+                        onChange={(e) => {
+                          const v = e.target.value.toLowerCase();
+                          setPalette((p) => p.map((x, j) => (j === i ? { ...x, hex: v } : x)));
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                    </label>
+
+                    {/* HEX input */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground font-mono">#</span>
+                        <Input
+                          value={c.hex.replace(/^#/, "").toUpperCase()}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
+                            setPalette((p) => p.map((x, j) => (j === i ? { ...x, hex: `#${raw.toLowerCase()}` } : x)));
+                          }}
+                          onBlur={(e) => {
+                            const n = normalizeHex(e.target.value);
+                            if (n) setPalette((p) => p.map((x, j) => (j === i ? { ...x, hex: n } : x)));
+                          }}
+                          placeholder="000000"
+                          maxLength={6}
+                          className="h-8 font-mono text-xs uppercase"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Predominante toggle */}
+                    <Button
+                      type="button"
+                      variant={c.role === "predominant" ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 px-2 gap-1 shrink-0"
+                      onClick={() =>
+                        setPalette((p) =>
+                          p.map((x, j) => ({ ...x, role: j === i ? "predominant" : "support" })),
+                        )
+                      }
+                      title="Definir como cor predominante"
+                    >
+                      <Star className={`h-3.5 w-3.5 ${c.role === "predominant" ? "fill-current" : ""}`} />
+                      <span className="text-[10px]">
+                        {c.role === "predominant" ? "Predominante" : "Apoio"}
+                      </span>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        setPalette((p) => {
+                          const next = p.filter((_, j) => j !== i);
+                          // garante 1 predominante
+                          if (next.length && !next.some((x) => x.role === "predominant")) {
+                            next[0] = { ...next[0], role: "predominant" };
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 ))}
-                <Input
-                  type="color"
-                  className="h-8 w-8 p-0.5 cursor-pointer"
-                  onChange={(e) => setPalette((p) => [...p, e.target.value].slice(0, 6))}
-                />
               </div>
+
+              {/* Adicionar nova cor por HEX */}
+              {palette.length < 8 && (
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-xs text-muted-foreground font-mono">#</span>
+                  <Input
+                    value={hexDraft}
+                    onChange={(e) => setHexDraft(e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6))}
+                    placeholder="HEX (ex: D2AE6D)"
+                    className="h-8 font-mono text-xs uppercase max-w-[160px]"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1"
+                    onClick={() => {
+                      const n = normalizeHex(hexDraft);
+                      if (!n) {
+                        toast.error("HEX inválido. Use 3 ou 6 caracteres (ex: D2AE6D).");
+                        return;
+                      }
+                      setPalette((p) => [...p, { hex: n, role: "support" }]);
+                      setHexDraft("");
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Adicionar cor
+                  </Button>
+                </div>
+              )}
             </div>
+
 
             <div>
               <Label className="text-xs">Estilo / MIV (referências escritas)</Label>
