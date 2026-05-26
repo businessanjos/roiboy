@@ -760,138 +760,304 @@ function Playbook() {
 // ============ ESPECIFICAÇÕES DETALHADAS POR CANAL ============
 function ChannelSpecs() {
   const [filter, setFilter] = useState<string>("all");
-  const filtered = filter === "all"
-    ? REBRANDING_SPECS
-    : REBRANDING_SPECS.filter((s) => s.category === filter);
+  const [query, setQuery] = useState("");
+  const [selectedKey, setSelectedKey] = useState<string>(REBRANDING_SPECS[0]?.key);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return REBRANDING_SPECS.filter((s) => {
+      if (filter !== "all" && s.category !== filter) return false;
+      if (q && !s.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [filter, query]);
+
+  const grouped = useMemo(() => {
+    const map: Record<string, typeof REBRANDING_SPECS> = {};
+    filtered.forEach((s) => {
+      (map[s.category] ||= []).push(s);
+    });
+    return map;
+  }, [filtered]);
+
+  const selected = useMemo(
+    () => filtered.find((s) => s.key === selectedKey) || filtered[0],
+    [filtered, selectedKey]
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button size="sm" variant={filter === "all" ? "default" : "outline"} onClick={() => setFilter("all")}>
-          Todos ({REBRANDING_SPECS.length})
-        </Button>
-        {Object.entries(CATEGORY_META).map(([k, m]) => {
-          const count = REBRANDING_SPECS.filter((s) => s.category === k).length;
-          if (!count) return null;
-          return (
-            <Button key={k} size="sm" variant={filter === k ? "default" : "outline"} onClick={() => setFilter(k)}>
-              {m.label} ({count})
+    <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 min-h-[600px]">
+      {/* Sidebar: canais */}
+      <Card className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-6rem)] flex flex-col">
+        <div className="p-3 border-b space-y-2">
+          <Input
+            placeholder="Buscar canal..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-8 text-sm"
+          />
+          <div className="flex flex-wrap gap-1">
+            <Button
+              size="sm"
+              variant={filter === "all" ? "default" : "ghost"}
+              className="h-6 px-2 text-[11px]"
+              onClick={() => setFilter("all")}
+            >
+              Todos ({REBRANDING_SPECS.length})
             </Button>
-          );
-        })}
-      </div>
+            {Object.entries(CATEGORY_META).map(([k, m]) => {
+              const count = REBRANDING_SPECS.filter((s) => s.category === k).length;
+              if (!count) return null;
+              return (
+                <Button
+                  key={k}
+                  size="sm"
+                  variant={filter === k ? "default" : "ghost"}
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => setFilter(k)}
+                >
+                  {m.label} ({count})
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="overflow-y-auto p-2 space-y-3 flex-1">
+          {Object.entries(grouped).map(([cat, items]) => (
+            <div key={cat}>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 mb-1">
+                {CATEGORY_META[cat]?.label || cat}
+              </div>
+              <div className="space-y-0.5">
+                {items.map((s) => {
+                  const Icon = ICONS[s.icon] || Globe;
+                  const brand = BRAND_COLORS[s.icon];
+                  const active = selected?.key === s.key;
+                  return (
+                    <button
+                      key={s.key}
+                      onClick={() => setSelectedKey(s.key)}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm transition-colors ${
+                        active
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-muted text-foreground"
+                      }`}
+                    >
+                      <div className={`h-6 w-6 rounded flex items-center justify-center shrink-0 ${brand?.bg || "bg-primary/10"}`}>
+                        <Icon className={`h-3.5 w-3.5 ${brand?.fg || "text-primary"}`} />
+                      </div>
+                      <span className="truncate flex-1">{s.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="text-xs text-muted-foreground text-center py-6">
+              Nenhum canal encontrado
+            </div>
+          )}
+        </div>
+      </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {filtered.map((spec) => {
-          const Icon = ICONS[spec.icon] || Globe;
-          return (
-            <Card key={spec.key} className="overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base">{spec.name}</CardTitle>
-                    <Badge className={`${CATEGORY_META[spec.category]?.color} mt-1`} variant="secondary">
-                      {CATEGORY_META[spec.category]?.label}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4 space-y-4">
-                {spec.assets && spec.assets.length > 0 && (
-                  <SpecSection icon={<Ruler className="h-4 w-4" />} title="Artes & Uploads">
-                    <div className="space-y-2">
-                      {spec.assets.map((a, i) => (
-                        <AssetUploadBox
-                          key={i}
-                          channelKey={spec.key}
-                          assetLabel={a.label}
-                          assetDimensions={a.size}
-                          assetFormat={a.format}
-                          assetKind="spec"
-                        />
-                      ))}
-                      <details className="rounded-md border bg-muted/20 p-2">
-                        <summary className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
-                          <ImageIcon className="h-3.5 w-3.5" /> Extras deste canal (arquivos avulsos)
-                        </summary>
-                        <div className="mt-2">
-                          <AssetUploadBox
-                            channelKey={spec.key}
-                            assetLabel="__extras__"
-                            assetDimensions="Livre"
-                            assetKind="extra"
-                          />
-                        </div>
-                      </details>
-                    </div>
-                  </SpecSection>
-                )}
-
-                {spec.bio && spec.bio.length > 0 && (
-                  <SpecSection icon={<Type className="h-4 w-4" />} title="Bio / Perfil">
-                    <div className="space-y-2">
-                      {spec.bio.map((b, i) => (
-                        <div key={i} className="rounded-md border bg-card p-2.5 text-xs space-y-0.5">
-                          <div className="flex justify-between gap-2">
-                            <span className="font-medium">{b.field}</span>
-                            {b.limit && <Badge variant="outline" className="text-[10px]">{b.limit}</Badge>}
-                          </div>
-                          <div className="text-muted-foreground">{b.recommendation}</div>
-                          {b.example && <div className="text-primary italic">ex: {b.example}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  </SpecSection>
-                )}
-
-                {spec.links && spec.links.length > 0 && (
-                  <SpecSection icon={<Link2 className="h-4 w-4" />} title="Links importantes">
-                    <div className="flex flex-wrap gap-1.5">
-                      {spec.links.map((l) => (
-                        <Badge key={l} variant="secondary" className="text-xs">{l}</Badge>
-                      ))}
-                    </div>
-                  </SpecSection>
-                )}
-
-                <SpecSection icon={<CheckCircle2 className="h-4 w-4" />} title={`Checklist (${spec.checklist.length})`}>
-                  <ul className="space-y-1.5 text-xs">
-                    {spec.checklist.map((c, i) => (
-                      <li key={i} className="flex gap-2">
-                        <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                        <span>{c}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </SpecSection>
-
-                {spec.doNot && spec.doNot.length > 0 && (
-                  <SpecSection icon={<AlertTriangle className="h-4 w-4 text-red-600" />} title="Atenção / Não fazer">
-                    <ul className="space-y-1.5 text-xs">
-                      {spec.doNot.map((c, i) => (
-                        <li key={i} className="flex gap-2">
-                          <X className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
-                          <span>{c}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </SpecSection>
-                )}
-
-                {spec.notes && (
-                  <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-2.5 text-xs text-amber-900 dark:text-amber-200">
-                    <strong>Nota:</strong> {spec.notes}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* Detalhe: canal selecionado */}
+      {selected ? (
+        <ChannelSpecDetail key={selected.key} spec={selected} />
+      ) : (
+        <Card className="flex items-center justify-center text-sm text-muted-foreground">
+          Selecione um canal
+        </Card>
+      )}
     </div>
+  );
+}
+
+function ChannelSpecDetail({ spec }: { spec: (typeof REBRANDING_SPECS)[number] }) {
+  const Icon = ICONS[spec.icon] || Globe;
+  const brand = BRAND_COLORS[spec.icon];
+
+  const sections: { id: string; label: string; count?: number; icon: React.ReactNode; render: () => React.ReactNode }[] = [];
+
+  if (spec.assets && spec.assets.length > 0) {
+    sections.push({
+      id: "assets",
+      label: "Artes & Uploads",
+      count: spec.assets.length,
+      icon: <Ruler className="h-4 w-4" />,
+      render: () => (
+        <div className="space-y-2">
+          {spec.assets!.map((a, i) => (
+            <AssetUploadBox
+              key={i}
+              channelKey={spec.key}
+              assetLabel={a.label}
+              assetDimensions={a.size}
+              assetFormat={a.format}
+              assetKind="spec"
+            />
+          ))}
+          <details className="rounded-md border bg-muted/20 p-2">
+            <summary className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+              <ImageIcon className="h-3.5 w-3.5" /> Extras deste canal (arquivos avulsos)
+            </summary>
+            <div className="mt-2">
+              <AssetUploadBox
+                channelKey={spec.key}
+                assetLabel="__extras__"
+                assetDimensions="Livre"
+                assetKind="extra"
+              />
+            </div>
+          </details>
+        </div>
+      ),
+    });
+  }
+
+  if (spec.bio && spec.bio.length > 0) {
+    sections.push({
+      id: "bio",
+      label: "Bio / Perfil",
+      count: spec.bio.length,
+      icon: <Type className="h-4 w-4" />,
+      render: () => (
+        <div className="space-y-2">
+          {spec.bio!.map((b, i) => (
+            <div key={i} className="rounded-md border bg-card p-2.5 text-xs space-y-0.5">
+              <div className="flex justify-between gap-2">
+                <span className="font-medium">{b.field}</span>
+                {b.limit && <Badge variant="outline" className="text-[10px]">{b.limit}</Badge>}
+              </div>
+              <div className="text-muted-foreground">{b.recommendation}</div>
+              {b.example && <div className="text-primary italic">ex: {b.example}</div>}
+            </div>
+          ))}
+        </div>
+      ),
+    });
+  }
+
+  if (spec.links && spec.links.length > 0) {
+    sections.push({
+      id: "links",
+      label: "Links importantes",
+      count: spec.links.length,
+      icon: <Link2 className="h-4 w-4" />,
+      render: () => (
+        <div className="flex flex-wrap gap-1.5">
+          {spec.links!.map((l) => (
+            <Badge key={l} variant="secondary" className="text-xs">{l}</Badge>
+          ))}
+        </div>
+      ),
+    });
+  }
+
+  sections.push({
+    id: "checklist",
+    label: "Checklist",
+    count: spec.checklist.length,
+    icon: <CheckCircle2 className="h-4 w-4" />,
+    render: () => (
+      <ul className="space-y-1.5 text-xs">
+        {spec.checklist.map((c, i) => (
+          <li key={i} className="flex gap-2">
+            <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+            <span>{c}</span>
+          </li>
+        ))}
+      </ul>
+    ),
+  });
+
+  if (spec.doNot && spec.doNot.length > 0) {
+    sections.push({
+      id: "donot",
+      label: "Atenção / Não fazer",
+      count: spec.doNot.length,
+      icon: <AlertTriangle className="h-4 w-4 text-red-600" />,
+      render: () => (
+        <ul className="space-y-1.5 text-xs">
+          {spec.doNot!.map((c, i) => (
+            <li key={i} className="flex gap-2">
+              <X className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+              <span>{c}</span>
+            </li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+
+  const [openSection, setOpenSection] = useState<string>(sections[0]?.id || "");
+
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="bg-muted/30 border-b">
+        <div className="flex items-center gap-3">
+          <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${brand?.bg || "bg-primary/10"}`}>
+            <Icon className={`h-5 w-5 ${brand?.fg || "text-primary"}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-base">{spec.name}</CardTitle>
+            <Badge className={`${CATEGORY_META[spec.category]?.color} mt-1`} variant="secondary">
+              {CATEGORY_META[spec.category]?.label}
+            </Badge>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 pt-2">
+          {sections.map((s) => (
+            <Button
+              key={s.id}
+              size="sm"
+              variant={openSection === s.id ? "default" : "outline"}
+              className="h-6 px-2 text-[11px] gap-1"
+              onClick={() => setOpenSection(s.id)}
+            >
+              {s.icon}
+              <span>{s.label}</span>
+              {s.count != null && (
+                <span className="text-[10px] opacity-70">({s.count})</span>
+              )}
+            </Button>
+          ))}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-4 space-y-2">
+        {sections.map((s) => (
+          <div
+            key={s.id}
+            className={`rounded-lg border ${openSection === s.id ? "" : "bg-muted/20"}`}
+          >
+            <button
+              onClick={() => setOpenSection(openSection === s.id ? "" : s.id)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-left"
+            >
+              <span className="flex items-center gap-2">
+                {s.icon}
+                {s.label}
+                {s.count != null && (
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{s.count}</Badge>
+                )}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {openSection === s.id ? "−" : "+"}
+              </span>
+            </button>
+            {openSection === s.id && (
+              <div className="px-3 pb-3 pt-1 border-t">{s.render()}</div>
+            )}
+          </div>
+        ))}
+
+        {spec.notes && (
+          <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-2.5 text-xs text-amber-900 dark:text-amber-200">
+            <strong>Nota:</strong> {spec.notes}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
