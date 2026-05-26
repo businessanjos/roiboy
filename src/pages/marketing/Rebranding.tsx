@@ -219,6 +219,9 @@ export default function Rebranding() {
             <Sparkles className="h-3.5 w-3.5 mr-1" /> Studio IA
           </TabsTrigger>
           <TabsTrigger value="brand">Brand Kit</TabsTrigger>
+          <TabsTrigger value="products">
+            <Palette className="h-3.5 w-3.5 mr-1" /> Produtos
+          </TabsTrigger>
           <TabsTrigger value="tasks">Tarefas (Kanban)</TabsTrigger>
           <TabsTrigger value="playbook">Playbook</TabsTrigger>
         </TabsList>
@@ -237,6 +240,10 @@ export default function Rebranding() {
 
         <TabsContent value="brand" className="mt-4">
           <BrandKit />
+        </TabsContent>
+
+        <TabsContent value="products" className="mt-4">
+          <ProductsRebrand />
         </TabsContent>
 
         <TabsContent value="tasks" className="mt-4">
@@ -995,3 +1002,87 @@ function BrandKit() {
     </div>
   );
 }
+
+// ===================== Produtos (rebranding map) =====================
+type ProductRebrand = {
+  oldName: string | null;
+  newName: string;
+  status: "rename" | "adjust" | "keep";
+  color: string;
+  note?: string;
+};
+
+const PRODUCTS_REBRAND: ProductRebrand[] = [
+  { oldName: "Rykas Pass", newName: "E-Pass", status: "rename", color: "#D7B46A", note: "Renomeação completa — atualizar artes, contratos, comunicação e site." },
+  { oldName: "Rykas Mentoring", newName: "Eternum Mentoring", status: "rename", color: "#C9A84C", note: "Renomeação completa — alinhar ao guarda-chuva Eternum." },
+  { oldName: null, newName: "Eternum Club", status: "adjust", color: "#8B5CF6", note: "Ajustes pontuais de identidade — manter nome." },
+  { oldName: null, newName: "Eternum Private", status: "adjust", color: "#0F172A", note: "Ajustes pontuais — produto premium, reforçar exclusividade." },
+  { oldName: null, newName: "Eternum MVP", status: "adjust", color: "#FF6F00", note: "Ajustes pontuais — manter posicionamento entry." },
+  { oldName: null, newName: "Eternum Conselho", status: "adjust", color: "#475569", note: "Ajustes pontuais — institucional/board." },
+];
+
+function ProductsRebrand() {
+  const renames = PRODUCTS_REBRAND.filter((p) => p.status === "rename");
+  const adjusts = PRODUCTS_REBRAND.filter((p) => p.status === "adjust");
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-amber-500" />
+            Renomeações — atualização obrigatória
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {renames.map((p) => (
+            <div key={p.newName} className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+              <Badge variant="outline" className="font-mono text-xs line-through opacity-70 shrink-0">
+                {p.oldName}
+              </Badge>
+              <span className="text-muted-foreground">→</span>
+              <Badge className="text-xs font-semibold shrink-0" style={{ backgroundColor: p.color, color: "#fff" }}>
+                {p.newName}
+              </Badge>
+              {p.note && <p className="text-xs text-muted-foreground flex-1">{p.note}</p>}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5 text-primary" />
+            Ajustes finos — manter o nome
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {adjusts.map((p) => (
+              <div key={p.newName} className="p-3 rounded-lg border bg-card flex items-start gap-3">
+                <div className="w-10 h-10 rounded-md shrink-0 flex items-center justify-center font-bold text-white text-xs" style={{ backgroundColor: p.color }}>
+                  {p.newName.replace("Eternum ", "").charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm">{p.newName}</div>
+                  {p.note && <p className="text-xs text-muted-foreground mt-0.5">{p.note}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-amber-500/30 bg-amber-500/5">
+        <CardContent className="p-4 flex items-start gap-3 text-xs">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-muted-foreground">
+            <span className="font-semibold text-foreground">Atenção:</span> esta é a referência visual do rebranding. As renomeações em <span className="font-mono">products.name</span> (banco) só devem ser aplicadas quando você confirmar — isso reflete em contratos, dashboards, badges e integrações.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
