@@ -14,6 +14,7 @@ import { ptBR } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { TrendingUp, Target, Inbox, BarChart3, Megaphone, Loader2, ExternalLink, Link2, RefreshCw, Zap, Unlink, Settings2, FileText, CalendarIcon } from 'lucide-react';
 import { TypeformDashboard } from '@/components/marketing/TypeformDashboard';
+import { CampaignFormsTab } from '@/components/marketing/CampaignFormsTab';
 import { MarketingLinksUtm } from '@/components/marketing/MarketingLinksUtm';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
