@@ -433,6 +433,10 @@ export default function MarketingTrafegoPago() {
         <TabsContent value="typeform" className="mt-4">
           <TypeformDashboard />
         </TabsContent>
+
+        <TabsContent value="campaign-forms" className="mt-4">
+          <CampaignFormsTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
