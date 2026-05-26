@@ -261,10 +261,19 @@ export function SalesDashboardChatTab() {
       <Card className="flex flex-col overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-3 border-b">
           <BrainCircuit className="w-5 h-5 text-primary" />
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-semibold">AION</p>
-            
           </div>
+          <Select value={String(periodMonths)} onValueChange={(v) => setPeriodMonths(Number(v))}>
+            <SelectTrigger className="w-[180px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIOD_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <ScrollArea className="flex-1">
