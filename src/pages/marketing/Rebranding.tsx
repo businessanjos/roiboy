@@ -190,14 +190,24 @@ export default function Rebranding() {
       </Card>
 
       <Tabs defaultValue="map">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="map">Mapa de Canais</TabsTrigger>
+          <TabsTrigger value="specs">Especificações</TabsTrigger>
+          <TabsTrigger value="brand">Brand Kit</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas (Kanban)</TabsTrigger>
           <TabsTrigger value="playbook">Playbook</TabsTrigger>
         </TabsList>
 
         <TabsContent value="map" className="mt-4">
           <ChannelsMap channels={channels} accountId={accountId!} />
+        </TabsContent>
+
+        <TabsContent value="specs" className="mt-4">
+          <ChannelSpecs />
+        </TabsContent>
+
+        <TabsContent value="brand" className="mt-4">
+          <BrandKit />
         </TabsContent>
 
         <TabsContent value="tasks" className="mt-4">
