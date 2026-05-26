@@ -79,30 +79,23 @@ export function ICPDashboard() {
   const autoRanRef = useRef(false);
 
   async function runBackfillLoop(onlyChampions: boolean) {
-    setAutoRunning(true);
-    try {
-      let totalOk = 0, totalFailed = 0, rounds = 0;
-      // Loop até o backend dizer que não tem mais pendentes (ou 6 voltas no máx)
-      // — cada chamada processa até 80 calls em paralelo.
-      while (rounds < 6) {
-        rounds++;
-        const { data, error } = await supabase.functions.invoke('backfill-icp-signals', {
-          body: { account_id: accountId, only_champions: onlyChampions, limit: 80 },
-        });
-        if (error) throw error;
-        if (data?.error && !data?.processed) throw new Error(data.error);
-        totalOk += data?.ok || 0;
-        totalFailed += data?.failed || 0;
-        queryClient.invalidateQueries({ queryKey: ['icp-dashboard-v2'] });
-        if (!data?.remaining) break;
-      }
-      if (totalOk > 0) toast.success(`ICP extraído em ${totalOk} call(s)${totalFailed ? ` (${totalFailed} falharam)` : ''}.`);
-      else if (totalFailed > 0) toast.error(`Não foi possível extrair ICP de ${totalFailed} call(s).`);
-    } catch (e: any) {
-      toast.error(e?.message || 'Erro ao reanalisar ICP');
-    } finally {
-      setAutoRunning(false);
+    let totalOk = 0, totalFailed = 0, rounds = 0;
+    // Loop até o backend dizer que não tem mais pendentes (ou 6 voltas no máx)
+    // — cada chamada processa até 80 calls em paralelo.
+    while (rounds < 6) {
+      rounds++;
+      const { data, error } = await supabase.functions.invoke('backfill-icp-signals', {
+        body: { account_id: accountId, only_champions: onlyChampions, limit: 80 },
+      });
+      if (error) throw error;
+      if (data?.error && !data?.processed) throw new Error(data.error);
+      totalOk += data?.ok || 0;
+      totalFailed += data?.failed || 0;
+      queryClient.invalidateQueries({ queryKey: ['icp-dashboard-v2'] });
+      if (!data?.remaining) break;
     }
+    if (totalOk > 0) toast.success(`ICP extraído em ${totalOk} call(s)${totalFailed ? ` (${totalFailed} falharam)` : ''}.`);
+    else if (totalFailed > 0) toast.error(`Não foi possível extrair ICP de ${totalFailed} call(s).`);
   }
 
   const backfillMutation = useMutation({
