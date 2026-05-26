@@ -98,12 +98,15 @@ export function AiStudio({
 
   const generate = useMutation({
     mutationFn: async () => {
+      const predominantHex = palette.find((p) => p.role === "predominant")?.hex || palette[0]?.hex || null;
       const { data, error } = await supabase.functions.invoke("rebranding-generate-image", {
         body: {
           prompt,
           styleNotes,
           aspectRatio,
-          palette,
+          palette: palette.map((p) => p.hex),
+          predominantHex,
+          paletteDetailed: palette,
           referenceUrls: refUrls,
           channelKey,
           assetLabel,
