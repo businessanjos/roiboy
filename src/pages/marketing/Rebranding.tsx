@@ -17,7 +17,9 @@ import {
   Sparkles, Globe, Instagram, Linkedin, AtSign, Music, Youtube, Music2,
   Palette, BookOpen, Presentation, FileText, Mail, Briefcase, Megaphone,
   Users, Plus, ExternalLink, Trash2, Edit, GripVertical, CheckCircle2,
+  Ruler, Type, MessageSquare, Link2, AlertTriangle, Check, X, Image as ImageIcon,
 } from "lucide-react";
+import { REBRANDING_SPECS, BRAND_KIT } from "@/data/rebrandingSpecs";
 
 const ICONS: Record<string, any> = {
   Globe, Instagram, Linkedin, AtSign, Music, Youtube, Music2,
@@ -188,14 +190,24 @@ export default function Rebranding() {
       </Card>
 
       <Tabs defaultValue="map">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="map">Mapa de Canais</TabsTrigger>
+          <TabsTrigger value="specs">Especificações</TabsTrigger>
+          <TabsTrigger value="brand">Brand Kit</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas (Kanban)</TabsTrigger>
           <TabsTrigger value="playbook">Playbook</TabsTrigger>
         </TabsList>
 
         <TabsContent value="map" className="mt-4">
           <ChannelsMap channels={channels} accountId={accountId!} />
+        </TabsContent>
+
+        <TabsContent value="specs" className="mt-4">
+          <ChannelSpecs />
+        </TabsContent>
+
+        <TabsContent value="brand" className="mt-4">
+          <BrandKit />
         </TabsContent>
 
         <TabsContent value="tasks" className="mt-4">
@@ -699,6 +711,239 @@ function Playbook() {
           </CardContent>
         </Card>
       ))}
+    </div>
+  );
+}
+
+// ============ ESPECIFICAÇÕES DETALHADAS POR CANAL ============
+function ChannelSpecs() {
+  const [filter, setFilter] = useState<string>("all");
+  const filtered = filter === "all"
+    ? REBRANDING_SPECS
+    : REBRANDING_SPECS.filter((s) => s.category === filter);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button size="sm" variant={filter === "all" ? "default" : "outline"} onClick={() => setFilter("all")}>
+          Todos ({REBRANDING_SPECS.length})
+        </Button>
+        {Object.entries(CATEGORY_META).map(([k, m]) => {
+          const count = REBRANDING_SPECS.filter((s) => s.category === k).length;
+          if (!count) return null;
+          return (
+            <Button key={k} size="sm" variant={filter === k ? "default" : "outline"} onClick={() => setFilter(k)}>
+              {m.label} ({count})
+            </Button>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {filtered.map((spec) => {
+          const Icon = ICONS[spec.icon] || Globe;
+          return (
+            <Card key={spec.key} className="overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-base">{spec.name}</CardTitle>
+                    <Badge className={`${CATEGORY_META[spec.category]?.color} mt-1`} variant="secondary">
+                      {CATEGORY_META[spec.category]?.label}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                {spec.assets && spec.assets.length > 0 && (
+                  <SpecSection icon={<Ruler className="h-4 w-4" />} title="Dimensões de artes">
+                    <div className="space-y-2">
+                      {spec.assets.map((a, i) => (
+                        <div key={i} className="rounded-md border bg-card p-2.5 text-xs">
+                          <div className="flex justify-between gap-2">
+                            <span className="font-medium">{a.label}</span>
+                            <code className="text-primary font-mono">{a.size}</code>
+                          </div>
+                          {a.format && <div className="text-muted-foreground mt-0.5">Formato: {a.format}</div>}
+                          {a.note && <div className="text-muted-foreground mt-0.5 italic">{a.note}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </SpecSection>
+                )}
+
+                {spec.bio && spec.bio.length > 0 && (
+                  <SpecSection icon={<Type className="h-4 w-4" />} title="Bio / Perfil">
+                    <div className="space-y-2">
+                      {spec.bio.map((b, i) => (
+                        <div key={i} className="rounded-md border bg-card p-2.5 text-xs space-y-0.5">
+                          <div className="flex justify-between gap-2">
+                            <span className="font-medium">{b.field}</span>
+                            {b.limit && <Badge variant="outline" className="text-[10px]">{b.limit}</Badge>}
+                          </div>
+                          <div className="text-muted-foreground">{b.recommendation}</div>
+                          {b.example && <div className="text-primary italic">ex: {b.example}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </SpecSection>
+                )}
+
+                {spec.links && spec.links.length > 0 && (
+                  <SpecSection icon={<Link2 className="h-4 w-4" />} title="Links importantes">
+                    <div className="flex flex-wrap gap-1.5">
+                      {spec.links.map((l) => (
+                        <Badge key={l} variant="secondary" className="text-xs">{l}</Badge>
+                      ))}
+                    </div>
+                  </SpecSection>
+                )}
+
+                <SpecSection icon={<CheckCircle2 className="h-4 w-4" />} title={`Checklist (${spec.checklist.length})`}>
+                  <ul className="space-y-1.5 text-xs">
+                    {spec.checklist.map((c, i) => (
+                      <li key={i} className="flex gap-2">
+                        <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                        <span>{c}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </SpecSection>
+
+                {spec.doNot && spec.doNot.length > 0 && (
+                  <SpecSection icon={<AlertTriangle className="h-4 w-4 text-red-600" />} title="Atenção / Não fazer">
+                    <ul className="space-y-1.5 text-xs">
+                      {spec.doNot.map((c, i) => (
+                        <li key={i} className="flex gap-2">
+                          <X className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+                          <span>{c}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </SpecSection>
+                )}
+
+                {spec.notes && (
+                  <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-2.5 text-xs text-amber-900 dark:text-amber-200">
+                    <strong>Nota:</strong> {spec.notes}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SpecSection({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2 text-sm font-medium">
+        {icon}
+        <span>{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ============ BRAND KIT ============
+function BrandKit() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-primary" />
+            {BRAND_KIT.voice.title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {BRAND_KIT.voice.pillars.map((p) => (
+            <div key={p.label} className="rounded-md border p-3">
+              <div className="font-semibold text-sm">{p.label}</div>
+              <div className="text-xs text-muted-foreground mt-1">{p.description}</div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Type className="h-4 w-4 text-primary" />
+            {BRAND_KIT.tone.title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {BRAND_KIT.tone.matrix.map((t) => (
+            <div key={t.canal} className="rounded-md border p-2.5">
+              <Badge variant="secondary" className="text-xs">{t.canal}</Badge>
+              <div className="text-xs text-muted-foreground mt-1.5">{t.tom}</div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-base">Do / Don't da marca</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2 text-sm font-medium text-emerald-600">
+              <Check className="h-4 w-4" />
+              Faça
+            </div>
+            <ul className="space-y-1.5 text-xs">
+              {BRAND_KIT.doDont.do.map((d, i) => (
+                <li key={i} className="flex gap-2">
+                  <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                  <span>{d}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2 text-sm font-medium text-red-600">
+              <X className="h-4 w-4" />
+              Não faça
+            </div>
+            <ul className="space-y-1.5 text-xs">
+              {BRAND_KIT.doDont.dont.map((d, i) => (
+                <li key={i} className="flex gap-2">
+                  <X className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+                  <span>{d}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-base">Cronograma de Rollout (Day-by-day)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {BRAND_KIT.rolloutChecklist.map((item, i) => {
+              const [tag, ...rest] = item.split(":");
+              return (
+                <div key={i} className="flex items-start gap-3 rounded-md border p-2.5">
+                  <Badge variant="outline" className="font-mono text-xs shrink-0">{tag.trim()}</Badge>
+                  <span className="text-xs">{rest.join(":").trim()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
