@@ -72,7 +72,8 @@ export function AiStudio({
   const [aspectRatio, setAspectRatio] = useState(initialAspectRatio);
   const [channelKey, setChannelKey] = useState<string | null>(initialChannelKey);
   const [assetLabel, setAssetLabel] = useState<string | null>(initialAssetLabel);
-  const [palette, setPalette] = useState<string[]>(ETERNUM_PALETTE);
+  const [palette, setPalette] = useState<PaletteColor[]>(ETERNUM_PALETTE);
+  const [hexDraft, setHexDraft] = useState("");
   const [refUrls, setRefUrls] = useState<string[]>([]);
   const [model, setModel] = useState("google/gemini-3-pro-image-preview");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
