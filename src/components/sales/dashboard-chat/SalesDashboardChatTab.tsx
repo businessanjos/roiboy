@@ -161,7 +161,7 @@ export function SalesDashboardChatTab() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ question, session_id: sid, history }),
+        body: JSON.stringify({ question, session_id: sid, history, period_months: periodMonths }),
       });
       if (!resp.ok || !resp.body) {
         const t = await resp.text().catch(() => "");
