@@ -77,7 +77,6 @@ export function ICPDashboard() {
   const accountId = currentUser?.account_id;
   const queryClient = useQueryClient();
   const autoRanRef = useRef(false);
-  const [autoRunning, setAutoRunning] = useState(false);
 
   async function runBackfillLoop(onlyChampions: boolean) {
     setAutoRunning(true);
