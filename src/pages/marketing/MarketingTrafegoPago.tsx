@@ -411,11 +411,13 @@ export default function MarketingTrafegoPago() {
               )}
             </CardContent>
           </Card>
+          </>)}
         </TabsContent>
 
         <TabsContent value="leadads" className="mt-4">
-          <LeadAdsConfig />
+          {!isConnected ? <MetaConnectPrompt /> : <LeadAdsConfig />}
         </TabsContent>
+
 
         <TabsContent value="campaigns" className="mt-4">
           {selectedAccount ? (
