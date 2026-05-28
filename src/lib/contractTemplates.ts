@@ -2,7 +2,12 @@
 
 import { numberToBRLExtenso } from "@/lib/numberToWordsBRL";
 
-export type TemplateVariableType = "text" | "textarea" | "number" | "currency" | "date";
+export type TemplateVariableType = "text" | "textarea" | "number" | "currency" | "date" | "select";
+
+export interface TemplateVariableOption {
+  value: string;
+  label: string;
+}
 
 export interface TemplateVariableDef {
   /** Placeholder key used in the template body, e.g. "RAZAO_SOCIAL" -> {{RAZAO_SOCIAL}} */
@@ -17,6 +22,8 @@ export interface TemplateVariableDef {
   required?: boolean;
   /** Hint shown below input */
   hint?: string;
+  /** For type=select — discrete options shown as a dropdown in the wizard */
+  options?: TemplateVariableOption[];
 }
 
 export interface AutofillContext {
