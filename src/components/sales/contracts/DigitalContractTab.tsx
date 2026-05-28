@@ -742,6 +742,7 @@ export const DigitalContractTab = ({
         name: data.client_representative || "",
         email: data.client_email || "",
         phone: clientPhone,
+        auth_mode: "assinaturaTela",
       });
       drafts.push({
         enabled: false,
@@ -749,6 +750,7 @@ export const DigitalContractTab = ({
         name: data.client_name || "",
         email: data.client_email || "",
         phone: clientPhone,
+        auth_mode: "assinaturaTela",
       });
     } else {
       drafts.push({
@@ -757,6 +759,7 @@ export const DigitalContractTab = ({
         name: data.client_name || "",
         email: data.client_email || "",
         phone: clientPhone,
+        auth_mode: "assinaturaTela",
       });
     }
     // Signatários fixos da CONTRATADA (Everton + 2 testemunhas Marcato).
