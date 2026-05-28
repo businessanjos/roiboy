@@ -420,7 +420,9 @@ export default function MarketingTrafegoPago() {
 
 
         <TabsContent value="campaigns" className="mt-4">
-          {selectedAccount ? (
+          {!isConnected ? (
+            <MetaConnectPrompt />
+          ) : selectedAccount ? (
             <CampaignsManager adAccountId={selectedAccount} datePreset={period} />
           ) : (
             <Card className="bg-card/50 border-border/30">
