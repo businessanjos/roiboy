@@ -360,6 +360,15 @@ export const mergeContractorPlaceholders = (
   const email = contractor.client_email ?? "";
   const address = contractor.client_address ?? "";
 
+  // Helper: só sobrescreve o placeholder quando o valor de origem (menteeData)
+  // estiver realmente preenchido. Caso contrário, mantemos o que o usuário
+  // digitou — senão cada tecla seria apagada pelo merge.
+  const setIfFilled = (key: string, val: string) => {
+    if (val !== undefined && val !== null && String(val).trim() !== "") {
+      out[key] = val;
+    }
+  };
+
   for (const key of keys) {
     const K = key.toUpperCase();
     if (/(EMPRESA|CONTRATADA|COMPANY)/.test(K)) continue;
@@ -367,24 +376,27 @@ export const mergeContractorPlaceholders = (
     const allowLegacyGenericKey = !hasExplicitContractorKeys;
 
     if (/^CNPJ$|CONTRATANTE_CNPJ|CLIENTE_CNPJ|CLIENT_CNPJ/.test(K)) {
-      if (explicitContractorKey) out[key] = "";
-      else if (allowLegacyGenericKey) out[key] = cpf;
+      if (explicitContractorKey) {
+        // mantém vazio — não vem de menteeData
+      } else if (allowLegacyGenericKey) {
+        setIfFilled(key, cpf);
+      }
     } else if (/^CPF$|CONTRATANTE_CPF|CLIENTE_CPF|CLIENT_CPF|CLIENT_DOCUMENT|^DOCUMENTO$|CPF_CNPJ|CNPJ_CPF/.test(K)) {
-      if (explicitContractorKey || allowLegacyGenericKey || /^CPF$|^DOCUMENTO$/.test(K)) out[key] = cpf;
+      if (explicitContractorKey || allowLegacyGenericKey || /^CPF$|^DOCUMENTO$/.test(K)) setIfFilled(key, cpf);
     } else if (/CLIENT_?NAME|FULL_?NAME|^CONTRATANTE$|CONTRATANTE_NOME|CLIENTE_NOME/.test(K)) {
-      out[key] = name;
+      setIfFilled(key, name);
     } else if (/RAZAO_?SOCIAL|RAZÃO_?SOCIAL|NOME_?FANTASIA|FANTASIA|(^|_)NOME(_COMPLETO)?$|NOME_PLACEHOLDER/.test(K)) {
-      if (allowLegacyGenericKey) out[key] = name;
+      if (allowLegacyGenericKey) setIfFilled(key, name);
     } else if (/INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(K)) {
-      if (allowLegacyGenericKey) out[key] = "";
+      // nunca sobrescrever IE/IM automaticamente
     } else if (/^EMAIL$|^E_?MAIL$|CLIENT_EMAIL|CONTRATANTE_EMAIL|EMAIL_CONTRATANTE/.test(K)) {
-      if (explicitContractorKey || allowLegacyGenericKey || /CONTRATANTE/.test(K)) out[key] = email;
+      if (explicitContractorKey || allowLegacyGenericKey || /CONTRATANTE/.test(K)) setIfFilled(key, email);
     } else if (/^ENDERECO$|^ENDEREÇO$|CLIENT_ADDRESS|CONTRATANTE_ENDERECO|ENDERECO_CONTRATANTE|^RUA$|LOGRADOURO/.test(K)) {
-      if (explicitContractorKey || allowLegacyGenericKey || /CONTRATANTE/.test(K)) out[key] = address;
+      if (explicitContractorKey || allowLegacyGenericKey || /CONTRATANTE/.test(K)) setIfFilled(key, address);
     } else if (/NACIONALIDADE|NATIONALITY/.test(K)) {
-      out[key] = contractor.client_nationality ?? "";
+      setIfFilled(key, contractor.client_nationality ?? "");
     } else if (/ESTADO_?CIVIL|MARITAL/.test(K)) {
-      out[key] = contractor.client_marital_status ?? "";
+      setIfFilled(key, contractor.client_marital_status ?? "");
     }
   }
 
