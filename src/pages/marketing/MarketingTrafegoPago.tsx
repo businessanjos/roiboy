@@ -164,22 +164,30 @@ export default function MarketingTrafegoPago() {
           <p className="text-sm text-muted-foreground">Performance de anúncios e campanhas pagas</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setManageOpen(true)} className="gap-1.5">
-            <Settings2 className="w-3.5 h-3.5" />Contas ({accounts.length})
-          </Button>
-          <Button
-            variant="outline" size="sm"
-            onClick={async () => {
-              setIsDisconnecting(true);
-              const ok = await disconnectMeta();
-              setIsDisconnecting(false);
-              if (ok) toast.success('Desconectado!');
-            }}
-            disabled={isDisconnecting}
-            className="gap-1.5 text-destructive hover:text-destructive"
-          >
-            {isDisconnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5" />}Desconectar
-          </Button>
+          {isConnected ? (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setManageOpen(true)} className="gap-1.5">
+                <Settings2 className="w-3.5 h-3.5" />Contas ({accounts.length})
+              </Button>
+              <Button
+                variant="outline" size="sm"
+                onClick={async () => {
+                  setIsDisconnecting(true);
+                  const ok = await disconnectMeta();
+                  setIsDisconnecting(false);
+                  if (ok) toast.success('Desconectado!');
+                }}
+                disabled={isDisconnecting}
+                className="gap-1.5 text-destructive hover:text-destructive"
+              >
+                {isDisconnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5" />}Desconectar
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" onClick={connectMeta} className="gap-1.5">
+              <ExternalLink className="w-3.5 h-3.5" />Conectar Meta Ads
+            </Button>
+          )}
         </div>
       </div>
 
