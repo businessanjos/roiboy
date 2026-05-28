@@ -2074,11 +2074,33 @@ export const ContractWizard = ({
           // que são tratados pelo bloco de busca acima.
           let visibleList = step === "client"
             ? list.filter((v) => {
-                const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
-                const isContractorCpf = /^cpf$|cpf_/i.test(v.key);
-                return !isContractorCnpj && !isContractorCpf;
+                const k = v.key.toUpperCase();
+                const isCompanyScoped = /EMPRESA|CONTRATADA|COMPANY/.test(k);
+                if (isCompanyScoped) return true;
+                // Documento do contratante — tratado pelo bloco de busca acima
+                const isContractorCnpj = /CNPJ/.test(k);
+                const isContractorCpf = /^CPF$|CPF_|_CPF$/.test(k);
+                const isGenericDoc = /^(CLIENT_)?DOCUMENT(O)?$|^DOC$|CLIENT_DOC(UMENT)?$/.test(k);
+                return !isContractorCnpj && !isContractorCpf && !isGenericDoc;
               })
             : list;
+
+          // Deduplica campos de nome do contratante (ex.: RAZAO_SOCIAL + CLIENT_NAME
+          // no mesmo template). Mantemos o primeiro que aparecer e escondemos os demais.
+          if (step === "client") {
+            const isContractorName = (k: string) => {
+              const up = k.toUpperCase();
+              if (/EMPRESA|CONTRATADA|COMPANY/.test(up)) return false;
+              return /^(CLIENT_)?NAME$|^NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|^CONTRATANTE(_NOME)?$|RAZAO_?SOCIAL|RAZÃO_?SOCIAL/.test(up);
+            };
+            let seenName = false;
+            visibleList = visibleList.filter((v) => {
+              if (!isContractorName(v.key)) return true;
+              if (seenName) return false;
+              seenName = true;
+              return true;
+            });
+          }
 
           // Quando CPF (PF) está selecionado, esconde Nome Fantasia / IE / IM
           // e converte "Razão Social" em "Nome completo" (mantendo o placeholder
