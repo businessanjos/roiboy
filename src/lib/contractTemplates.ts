@@ -477,8 +477,34 @@ const parseMoneyLike = (raw: any): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+const RYKAS_PAYMENT_PRESETS: Record<string, { label: string; total: number; totalWords: string }> = {
+  A_VISTA: {
+    label: "À vista — R$ 70.000,00",
+    total: 70000,
+    totalWords: "setenta mil reais",
+  },
+  CARTAO_12X: {
+    label: "Cartão de crédito 12x — R$ 80.400,00",
+    total: 80400,
+    totalWords: "oitenta mil e quatrocentos reais",
+  },
+  CHEQUE_1_11: {
+    label: "Cheque 1+11 — R$ 80.400,00",
+    total: 80400,
+    totalWords: "oitenta mil e quatrocentos reais",
+  },
+};
+
 const withDerivedPaymentValues = (values: Record<string, any>): Record<string, any> => {
   const out = { ...(values ?? {}) };
+  // Rykas template helpers — derive label/total/words from the selected variant
+  const rykas = out.FORMA_PAGAMENTO_RYKAS;
+  if (rykas && RYKAS_PAYMENT_PRESETS[String(rykas)]) {
+    const preset = RYKAS_PAYMENT_PRESETS[String(rykas)];
+    if (!out.FORMA_PAGAMENTO_RYKAS_LABEL) out.FORMA_PAGAMENTO_RYKAS_LABEL = preset.label;
+    if (!out.VALOR_TOTAL_RYKAS) out.VALOR_TOTAL_RYKAS = formatBRL(preset.total);
+    if (!out.VALOR_TOTAL_RYKAS_EXTENSO) out.VALOR_TOTAL_RYKAS_EXTENSO = preset.totalWords;
+  }
   const currentInstallment = resolveValueByKey("INSTALLMENT_VALUE", out).value;
   if (currentInstallment !== undefined && currentInstallment !== null && currentInstallment !== "") return out;
   const total = parseMoneyLike(resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value);
