@@ -143,6 +143,7 @@ const MarketingInsights = lazyRetry(() => import("./pages/MarketingInsights"));
 const MarketingTrafegoPago = lazyRetry(() => import("./pages/marketing/MarketingTrafegoPago"));
 const ContentHQ = lazyRetry(() => import("./pages/marketing/ContentHQ"));
 const Rebranding = lazyRetry(() => import("./pages/marketing/Rebranding"));
+const MarketingProjects = lazyRetry(() => import("./pages/marketing/MarketingProjects"));
 
 const Insights = lazyRetry(() => import("./pages/Insights"));
 const RHDashboard = lazyRetry(() => import("./pages/RHDashboard"));
