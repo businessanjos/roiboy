@@ -139,29 +139,22 @@ export default function MarketingTrafegoPago() {
     );
   }
 
-  if (!isConnected) {
-    return (
-      <div className="space-y-6 p-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Tráfego Pago</h1>
-          <p className="text-sm text-muted-foreground">Conecte sua conta para começar</p>
+  const MetaConnectPrompt = () => (
+    <Card className="bg-card/50 border-border/30">
+      <CardContent className="flex flex-col items-center justify-center py-16">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+          <Target className="w-8 h-8 text-primary" />
         </div>
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-            <Target className="w-10 h-10 text-primary" />
-          </div>
-          <h2 className="text-xl font-bold text-foreground mb-2">Conecte sua conta Meta Ads</h2>
-          <p className="text-sm text-muted-foreground text-center max-w-md mb-2">
-            Para visualizar métricas, gerenciar campanhas e acompanhar o desempenho dos seus anúncios, conecte sua conta do Facebook/Meta.
-          </p>
-          <p className="text-xs text-muted-foreground text-center max-w-sm mb-8">É rápido, seguro e você pode desconectar a qualquer momento.</p>
-          <Button size="lg" onClick={connectMeta} className="gap-2">
-            <ExternalLink className="w-4 h-4" />Conectar com Facebook
-          </Button>
-        </div>
-      </div>
-    );
-  }
+        <h2 className="text-lg font-bold text-foreground mb-2">Conecte sua conta Meta Ads</h2>
+        <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
+          Esta aba precisa do Meta conectado. As demais áreas (Typeform, Formulários Roy, Links & UTM) continuam funcionando normalmente.
+        </p>
+        <Button size="lg" onClick={connectMeta} className="gap-2">
+          <ExternalLink className="w-4 h-4" />Conectar com Facebook
+        </Button>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-6 p-6">
@@ -171,22 +164,30 @@ export default function MarketingTrafegoPago() {
           <p className="text-sm text-muted-foreground">Performance de anúncios e campanhas pagas</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setManageOpen(true)} className="gap-1.5">
-            <Settings2 className="w-3.5 h-3.5" />Contas ({accounts.length})
-          </Button>
-          <Button
-            variant="outline" size="sm"
-            onClick={async () => {
-              setIsDisconnecting(true);
-              const ok = await disconnectMeta();
-              setIsDisconnecting(false);
-              if (ok) toast.success('Desconectado!');
-            }}
-            disabled={isDisconnecting}
-            className="gap-1.5 text-destructive hover:text-destructive"
-          >
-            {isDisconnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5" />}Desconectar
-          </Button>
+          {isConnected ? (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setManageOpen(true)} className="gap-1.5">
+                <Settings2 className="w-3.5 h-3.5" />Contas ({accounts.length})
+              </Button>
+              <Button
+                variant="outline" size="sm"
+                onClick={async () => {
+                  setIsDisconnecting(true);
+                  const ok = await disconnectMeta();
+                  setIsDisconnecting(false);
+                  if (ok) toast.success('Desconectado!');
+                }}
+                disabled={isDisconnecting}
+                className="gap-1.5 text-destructive hover:text-destructive"
+              >
+                {isDisconnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5" />}Desconectar
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" onClick={connectMeta} className="gap-1.5">
+              <ExternalLink className="w-3.5 h-3.5" />Conectar Meta Ads
+            </Button>
+          )}
         </div>
       </div>
 
@@ -203,6 +204,9 @@ export default function MarketingTrafegoPago() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-4">
+          {!isConnected ? <MetaConnectPrompt /> : (<>
+
+
           <Card className="bg-card/50 border-border/30">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -407,14 +411,18 @@ export default function MarketingTrafegoPago() {
               )}
             </CardContent>
           </Card>
+          </>)}
         </TabsContent>
 
         <TabsContent value="leadads" className="mt-4">
-          <LeadAdsConfig />
+          {!isConnected ? <MetaConnectPrompt /> : <LeadAdsConfig />}
         </TabsContent>
 
+
         <TabsContent value="campaigns" className="mt-4">
-          {selectedAccount ? (
+          {!isConnected ? (
+            <MetaConnectPrompt />
+          ) : selectedAccount ? (
             <CampaignsManager adAccountId={selectedAccount} datePreset={period} />
           ) : (
             <Card className="bg-card/50 border-border/30">
