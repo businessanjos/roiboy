@@ -811,6 +811,7 @@ export const DigitalContractTab = ({
             name: s.name.trim(),
             email: s.email.trim() || undefined,
             phone: s.phone.replace(/\D/g, "") || undefined,
+            auth_mode: s.auth_mode,
           })),
         },
       });
