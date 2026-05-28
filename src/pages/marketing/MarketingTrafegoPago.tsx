@@ -139,29 +139,22 @@ export default function MarketingTrafegoPago() {
     );
   }
 
-  if (!isConnected) {
-    return (
-      <div className="space-y-6 p-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Tráfego Pago</h1>
-          <p className="text-sm text-muted-foreground">Conecte sua conta para começar</p>
+  const MetaConnectPrompt = () => (
+    <Card className="bg-card/50 border-border/30">
+      <CardContent className="flex flex-col items-center justify-center py-16">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+          <Target className="w-8 h-8 text-primary" />
         </div>
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-            <Target className="w-10 h-10 text-primary" />
-          </div>
-          <h2 className="text-xl font-bold text-foreground mb-2">Conecte sua conta Meta Ads</h2>
-          <p className="text-sm text-muted-foreground text-center max-w-md mb-2">
-            Para visualizar métricas, gerenciar campanhas e acompanhar o desempenho dos seus anúncios, conecte sua conta do Facebook/Meta.
-          </p>
-          <p className="text-xs text-muted-foreground text-center max-w-sm mb-8">É rápido, seguro e você pode desconectar a qualquer momento.</p>
-          <Button size="lg" onClick={connectMeta} className="gap-2">
-            <ExternalLink className="w-4 h-4" />Conectar com Facebook
-          </Button>
-        </div>
-      </div>
-    );
-  }
+        <h2 className="text-lg font-bold text-foreground mb-2">Conecte sua conta Meta Ads</h2>
+        <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
+          Esta aba precisa do Meta conectado. As demais áreas (Typeform, Formulários Roy, Links & UTM) continuam funcionando normalmente.
+        </p>
+        <Button size="lg" onClick={connectMeta} className="gap-2">
+          <ExternalLink className="w-4 h-4" />Conectar com Facebook
+        </Button>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-6 p-6">
