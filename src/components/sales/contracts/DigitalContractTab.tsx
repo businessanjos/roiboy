@@ -1230,6 +1230,28 @@ export const DigitalContractTab = ({
                       />
                     </div>
                   </div>
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground">Forma de assinatura</Label>
+                    <Select
+                      value={s.auth_mode}
+                      onValueChange={(v: ZapAuthMode) =>
+                        setSignerDrafts((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, auth_mode: v } : p)),
+                        )
+                      }
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(AUTH_MODE_LABEL) as ZapAuthMode[]).map((m) => (
+                          <SelectItem key={m} value={m} className="text-xs">
+                            {AUTH_MODE_LABEL[m]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </Card>
               ))}
               <Button
