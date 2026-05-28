@@ -85,6 +85,7 @@ serve(async (req) => {
             name: (s.name || "").trim(),
             email: s.email ? String(s.email).trim() : undefined,
             phone: onlyDigits(s.phone) || undefined,
+            auth_mode: typeof s.auth_mode === "string" ? s.auth_mode : undefined,
           }))
           .filter((s: any) => s.name && (s.email || s.phone));
         if (signers.length === 0) {
