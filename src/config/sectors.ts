@@ -238,6 +238,7 @@ export const sectors: Sector[] = [
     navItems: [
       { to: "/marketing", icon: CalendarDays, label: "Calendário Anual" },
       { to: "/marketing/content-hq", icon: Crown, label: "Conteúdo" },
+      { to: "/marketing/projetos", icon: FolderKanban, label: "Projetos" },
       { to: "/content-calendar", icon: LayoutGrid, label: "Conteúdo" },
       { to: "/social-media", icon: Instagram, label: "Social Media" },
       { to: "/marketing/trafego-pago", icon: TrendingUp, label: "Tráfego Pago" },
