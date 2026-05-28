@@ -334,7 +334,7 @@ export function useProjectEvents(projectId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("marketing_project_events" as any)
-        .select("event_id, event:events(id, title, date, type, color, status, category)")
+        .select("event_id, event:events(id, title, scheduled_at, event_type, color, status, category)")
         .eq("project_id", projectId!);
       if (error) throw error;
       return (data || []).map((r: any) => r.event).filter(Boolean);
