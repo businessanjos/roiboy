@@ -706,6 +706,35 @@ export const ContractWizard = ({
     }
   }, [templateVariables, placeholderValues]);
 
+  /* Mantém o documento digitado no box de busca sincronizado com TODAS as
+     variáveis de documento do template (CPF, CNPJ, CLIENT_DOCUMENT, etc.),
+     para o usuário não ter que digitar duas vezes. */
+  useEffect(() => {
+    if (!templateVariables || templateVariables.length === 0) return;
+    const digits = (docInput ?? "").replace(/\D/g, "");
+    if (!digits) return;
+    const updates: Record<string, any> = {};
+    for (const v of templateVariables) {
+      const k = v.key.toUpperCase();
+      if (/EMPRESA|CONTRATADA|COMPANY/.test(k)) continue;
+      const isCnpjKey = /CNPJ/.test(k);
+      const isCpfKey = /^CPF$|CPF_|_CPF$/.test(k);
+      const isGenericDoc = /^(CLIENT_)?DOCUMENT(O)?$|^DOC$|CLIENT_DOC(UMENT)?$/.test(k);
+      if (!isCnpjKey && !isCpfKey && !isGenericDoc) continue;
+      if (docType === "cnpj" && isCpfKey && !isCnpjKey && !isGenericDoc) continue;
+      if (docType === "cpf" && isCnpjKey && !isCpfKey && !isGenericDoc) continue;
+      const cur = placeholderValues?.[v.key];
+      if (cur === digits) continue;
+      updates[v.key] = digits;
+    }
+    if (Object.keys(updates).length > 0) {
+      for (const [k, val] of Object.entries(updates)) updateField(k, val);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docInput, docType, templateVariables]);
+
+
+
 
   /* ---- Load templates & products ---- */
   useEffect(() => {
