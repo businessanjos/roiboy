@@ -508,115 +508,154 @@ export const DigitalContractTab = ({
       return null;
     }
 
-    // A4 com margem inferior reservada para o carimbo/hash de assinatura (ZapSign)
-    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    const pageWidth = pdf.internal.pageSize.getWidth(); // 210mm
-    const pageHeight = pdf.internal.pageSize.getHeight(); // 297mm
-    const MARGIN_TOP = 0;
-    const MARGIN_BOTTOM = 22; // reserva para hash/rodapé do assinador
-    const usableHeight = pageHeight - MARGIN_TOP - MARGIN_BOTTOM;
-    const GAP = 2;
+    // ------------------------------------------------------------------
+    // Paginação A4 real ("virtual paginator")
+    //
+    // Estratégia: clonamos o .contract-document para um sandbox offscreen
+    // a 210mm, e para cada `.rk-page` original redistribuímos seus filhos
+    // em N novas `.rk-page` reais, de forma que NENHUMA delas ultrapasse
+    // a área útil (A4 menos padding do template menos zona reservada
+    // para o carimbo/hash da ZapSign). Cada página final vira EXATAMENTE
+    // 1 página do PDF — sem fatiar o canvas no meio de texto, sem
+    // sobreposição com o carimbo de assinatura.
+    // ------------------------------------------------------------------
+    const A4_W_MM = 210;
+    const A4_H_MM = 297;
+    const A4_W_PX = 794; // 210mm @ 96dpi
+    const PX_PER_MM = A4_W_PX / A4_W_MM;
+    const A4_H_PX = A4_H_MM * PX_PER_MM; // ~1123
+    const ZAPSIGN_RESERVED_MM = 26; // faixa do carimbo/hash no rodapé
+    const ZAPSIGN_RESERVED_PX = ZAPSIGN_RESERVED_MM * PX_PER_MM;
 
-    // Procura o nó real do contrato renderizado (TemplatedContractPreview cria .contract-document)
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const pageWidthMm = pdf.internal.pageSize.getWidth();
+    const pageHeightMm = pdf.internal.pageSize.getHeight();
+
     const docNode =
       (target.querySelector(".contract-document") as HTMLElement | null) ?? target;
 
-    // Coleta blocos lógicos para evitar quebras no meio de cláusulas/títulos.
-    // Prioridade: .rk-page (página do template). Se a página não couber, divide por .rk-section/.rk-clause.
-    const collectBlocks = (root: HTMLElement): HTMLElement[] => {
-      const pages = Array.from(root.querySelectorAll<HTMLElement>(".rk-page"));
-      if (pages.length === 0) return [root];
-      const out: HTMLElement[] = [];
-      for (const page of pages) {
-        // Aproxima 1 página A4 em px à largura renderizada (210mm @ 96dpi ≈ 794px)
-        const pxPerMm = page.getBoundingClientRect().width / 210;
-        const pageLimitPx = usableHeight * pxPerMm;
-        if (page.offsetHeight <= pageLimitPx * 1.05) {
-          out.push(page);
+    // Sandbox offscreen com largura A4 exata
+    const sandbox = document.createElement("div");
+    sandbox.style.cssText = [
+      "position:fixed",
+      "left:-10000px",
+      "top:0",
+      "width:210mm",
+      "background:#ffffff",
+      "z-index:-1",
+      "pointer-events:none",
+    ].join(";");
+    const clone = docNode.cloneNode(true) as HTMLElement;
+    clone.style.transform = "none";
+    clone.style.width = "210mm";
+    clone.style.minHeight = "auto";
+    sandbox.appendChild(clone);
+    document.body.appendChild(sandbox);
+
+    // Aguarda layout/fontes para medidas serem precisas
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    if ((document as any).fonts?.ready) {
+      try { await (document as any).fonts.ready; } catch { /* noop */ }
+    }
+
+    try {
+      const originalPages = Array.from(
+        clone.querySelectorAll<HTMLElement>(".rk-page"),
+      );
+
+      // Se não houver .rk-page, trata o documento inteiro como uma única página
+      const pagesToProcess: HTMLElement[] =
+        originalPages.length > 0 ? originalPages : [clone];
+
+      const finalPages: HTMLElement[] = [];
+
+      for (const origPage of pagesToProcess) {
+        const cs = getComputedStyle(origPage);
+        const padTop = parseFloat(cs.paddingTop) || 0;
+        const padBottom = parseFloat(cs.paddingBottom) || 0;
+        // Área útil para conteúdo dentro de UMA página A4 do PDF
+        const usableContentPx =
+          A4_H_PX - padTop - padBottom - ZAPSIGN_RESERVED_PX;
+
+        // Se a página original já cabe inteira, mantém como está
+        if (origPage.offsetHeight <= A4_H_PX - ZAPSIGN_RESERVED_PX) {
+          finalPages.push(origPage);
+          continue;
+        }
+
+        // Cria fábrica de páginas vazias preservando classes/atributos
+        const makeEmptyPage = (): HTMLElement => {
+          const p = origPage.cloneNode(false) as HTMLElement;
+          p.style.minHeight = "";
+          p.style.height = "";
+          return p;
+        };
+
+        const parent = origPage.parentElement!;
+        const children = Array.from(origPage.children) as HTMLElement[];
+
+        let current = makeEmptyPage();
+        parent.insertBefore(current, origPage);
+        finalPages.push(current);
+
+        const contentHeightOf = (page: HTMLElement) =>
+          page.offsetHeight - padTop - padBottom;
+
+        for (const child of children) {
+          current.appendChild(child);
+          if (
+            contentHeightOf(current) > usableContentPx &&
+            current.children.length > 1
+          ) {
+            // Estourou: tira o último filho e começa nova página com ele
+            current.removeChild(child);
+            current = makeEmptyPage();
+            parent.insertBefore(current, origPage);
+            finalPages.push(current);
+            current.appendChild(child);
+          }
+        }
+
+        origPage.remove();
+      }
+
+      // Renderiza cada página final como 1 página do PDF
+      for (let i = 0; i < finalPages.length; i++) {
+        const fp = finalPages[i];
+
+        // Mede a altura natural da página (pode ser <= ou > que A4)
+        const naturalH = fp.offsetHeight;
+        const overflows = naturalH > A4_H_PX - ZAPSIGN_RESERVED_PX;
+
+        const canvas = await html2canvas(fp, {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          useCORS: true,
+          windowWidth: A4_W_PX,
+          width: A4_W_PX,
+          height: overflows ? naturalH : A4_H_PX,
+        });
+
+        if (i > 0) pdf.addPage();
+
+        if (!overflows) {
+          // Cabe folgado: imagem ocupa página A4 inteira (com espaço inferior
+          // já livre porque pintamos com height = A4_H_PX e o conteúdo está
+          // colado no topo via padding do template)
+          const img = canvas.toDataURL("image/jpeg", 0.95);
+          pdf.addImage(img, "JPEG", 0, 0, A4_W_MM, A4_H_MM);
         } else {
-          const subs = Array.from(
-            page.querySelectorAll<HTMLElement>(
-              ":scope > .rk-section, :scope > .rk-clause, :scope > .rk-pillars, :scope > .rk-sign, :scope > .rk-footer, :scope > .rk-hero",
-            ),
-          );
-          if (subs.length === 0) {
-            out.push(page);
-          } else {
-            // Inclui também filhos diretos que não casaram com seletores acima
-            const seen = new Set<HTMLElement>(subs);
-            for (const child of Array.from(page.children) as HTMLElement[]) {
-              if (!seen.has(child)) subs.push(child);
-            }
-            // Mantém ordem do DOM
-            subs.sort((a, b) =>
-              a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
-            );
-            out.push(...subs);
-          }
+          // Fallback: um único filho gigante (raro). Encaixa a altura
+          // proporcionalmente, mas NUNCA ultrapassa a zona reservada.
+          const maxRenderableMm = pageHeightMm - ZAPSIGN_RESERVED_MM;
+          const naturalMm = (canvas.height * A4_W_MM) / canvas.width;
+          const renderMm = Math.min(naturalMm, maxRenderableMm);
+          const img = canvas.toDataURL("image/jpeg", 0.95);
+          pdf.addImage(img, "JPEG", 0, 0, A4_W_MM, renderMm);
         }
       }
-      return out;
-    };
-
-    const blocks = collectBlocks(docNode);
-
-    let currentY = MARGIN_TOP;
-    let firstOnPage = true;
-
-    const renderToPdf = async (el: HTMLElement, forcePageBreak: boolean) => {
-      const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff" });
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      const renderedWidthMm = pageWidth;
-      const blockHeightMm = (canvas.height * renderedWidthMm) / canvas.width;
-
-      // Força nova página entre .rk-page (capa, etc) ou quando não couber
-      const needsNewPage =
-        forcePageBreak ||
-        (!firstOnPage && currentY + blockHeightMm > MARGIN_TOP + usableHeight);
-
-      if (needsNewPage && !firstOnPage) {
-        pdf.addPage();
-        currentY = MARGIN_TOP;
-        firstOnPage = true;
-      }
-
-      // Se um bloco isolado for maior que a página utilizável, fatia ele em múltiplas páginas
-      if (blockHeightMm > usableHeight) {
-        const mmPerPx = blockHeightMm / canvas.height;
-        const sliceHeightPx = Math.floor(usableHeight / mmPerPx);
-        let yPx = 0;
-        while (yPx < canvas.height) {
-          const sliceCanvas = document.createElement("canvas");
-          sliceCanvas.width = canvas.width;
-          sliceCanvas.height = Math.min(sliceHeightPx, canvas.height - yPx);
-          const ctx = sliceCanvas.getContext("2d")!;
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-          ctx.drawImage(canvas, 0, -yPx);
-          const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
-          const sliceMm = sliceCanvas.height * mmPerPx;
-          if (!firstOnPage) {
-            pdf.addPage();
-            currentY = MARGIN_TOP;
-          }
-          pdf.addImage(sliceData, "JPEG", 0, currentY, renderedWidthMm, sliceMm);
-          currentY += sliceMm + GAP;
-          firstOnPage = false;
-          yPx += sliceCanvas.height;
-        }
-        return;
-      }
-
-      pdf.addImage(imgData, "JPEG", 0, currentY, renderedWidthMm, blockHeightMm);
-      currentY += blockHeightMm + GAP;
-      firstOnPage = false;
-    };
-
-    for (let i = 0; i < blocks.length; i++) {
-      const el = blocks[i];
-      // .rk-page sempre começa em página nova (exceto o primeiro)
-      const isPage = el.classList.contains("rk-page");
-      await renderToPdf(el, isPage && i > 0);
+    } finally {
+      sandbox.remove();
     }
 
     const blob = pdf.output("blob");
