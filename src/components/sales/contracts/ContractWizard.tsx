@@ -418,6 +418,22 @@ const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLook
         placeholder="(00) 00000-0000"
       />
     );
+  } else if (v.type === "select") {
+    const opts = Array.isArray(v.options) ? v.options : [];
+    input = (
+      <Select value={value ? String(value) : ""} onValueChange={(val) => onChange(val)} disabled={disabled}>
+        <SelectTrigger>
+          <SelectValue placeholder="Selecione…" />
+        </SelectTrigger>
+        <SelectContent>
+          {opts.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
   } else {
     input = (
       <Input
