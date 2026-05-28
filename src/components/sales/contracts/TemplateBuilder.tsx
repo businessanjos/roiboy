@@ -42,6 +42,7 @@ import {
   X,
   Settings2,
   Zap,
+  List,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -85,6 +86,7 @@ const TYPES: { value: TemplateVariableType; label: string; icon: any }[] = [
   { value: "number", label: "Número", icon: Hash },
   { value: "currency", label: "Moeda (R$)", icon: DollarSign },
   { value: "date", label: "Data", icon: Calendar },
+  { value: "select", label: "Lista (seleção)", icon: List },
 ];
 
 const TYPE_ICON: Record<TemplateVariableType, any> = {
@@ -93,6 +95,7 @@ const TYPE_ICON: Record<TemplateVariableType, any> = {
   number: Hash,
   currency: DollarSign,
   date: Calendar,
+  select: List,
 };
 
 /* ------------------------------------------------------------------ */

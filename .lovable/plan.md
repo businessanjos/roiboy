@@ -1,52 +1,72 @@
-## Chat de Operação no Sales Dashboard
+## Objetivo
 
-Adicionar um painel de chat dentro de `/sales-dashboard` onde o gestor "conversa com os dados" da operação comercial. Cada resposta pode ser transformada em um KPI fixo no topo do dashboard.
+Substituir os 6 contratos do Rykas Mentoring (PF/PJ × 3 formas de pagamento) por **1 template único** com blocos condicionais, mantendo o template atual como histórico.
 
-### 1. UI no Sales Dashboard
+---
 
-- Nova aba **"Pergunte aos Dados"** (ícone Sparkles) ao lado de Metas/Funil/Performance/Equipe/Origem.
-- Layout split:
-  - Esquerda: histórico de conversas (sessões salvas, renomeáveis, deletáveis).
-  - Direita: chat estilo ChatGPT com markdown, streaming token-a-token, indicador "Gemini analisando…" → "GPT gerando insight…".
-- Sugestões iniciais: "Qual closer está com pior conversão este mês?", "Quanto perdi em MRR por 'sem fit' nos últimos 30 dias?", "Compare o funil de Maio vs Abril".
-- Topo do dashboard: nova faixa **"KPIs fixados"** acima das abas, com cards arrastáveis (remover/ocultar). Vazio por padrão.
+## Mapeamento do que muda entre os 6 arquivos
 
-### 2. Pipeline de IA (2 etapas)
+**Eixo PF vs PJ** — muda só o bloco de qualificação do CONTRATANTE e a linha de assinatura.
 
-Edge function `sales-dashboard-chat` (streaming):
+**Eixo Forma de Pagamento:**
+- **À vista (R$ 70.000):** cláusula simples.
+- **Cartão 12x (R$ 80.400):** + 4 parágrafos (chargeback, terceiros, limite, fatura) e parágrafo de atraso 2+ parcelas.
+- **Cheque 1+11 (R$ 80.400):** + bloco operacional (envio SEDEX p/ CAIXA POSTAL 2002 Arapongas-PR, e-mail `financeiro@anjosbusiness.com.br`, taxa R$ 2.000, PIX backup) e parágrafo de atraso 2+ parcelas.
 
-1. **Gemini 2.5 Pro — Analista**: recebe a pergunta + snapshot estruturado dos dados de vendas (deals, stages, owners, períodos, motivos de perda, metas, comissões agregadas pelos últimos 12 meses). Retorna JSON com:
-   - `analysis`: texto analítico bruto
-   - `kpi`: `{ label, value, unit, period, comparison, trend }` quando a pergunta produz um KPI numérico
-   - `chart_data` opcional
-2. **GPT-5 — Insight**: recebe o JSON do Gemini + a pergunta original. Gera resposta final em markdown com narrativa executiva, contexto, recomendação. Mantém o bloco `kpi` intacto no metadata.
+Todo o resto (objeto, cláusulas de mentoria, responsabilidades, confidencialidade, rescisão, sistema Clínica Ryka 6 meses, autorização de imagem) é idêntico nos 6.
 
-Stream apenas a saída final do GPT para a UI. Metadata (`kpi`, `chart_data`) entregue como evento JSON final.
+**Bug encontrado nos 3 arquivos PJ:** valor à vista descrito como "setenta e nove mil reais" — vou corrigir para "setenta mil reais" (combinando com o valor numérico R$ 70.000,00). Se você quiser manter o erro original, é só avisar.
 
-### 3. Fixar KPI no Dashboard
+---
 
-- Botão **"Fixar como KPI"** aparece sob a resposta quando `kpi` está presente.
-- Ao clicar: abre dialog para escolher label/cor/ícone (autopreenchido) e salva em `sales_dashboard_pinned_kpis`.
-- KPI fica visível para o usuário que fixou (privado). Opção "Compartilhar com a equipe" torna global.
-- Valores são recomputados em background: cada KPI fixado guarda a "pergunta canônica" e roda novamente quando o dashboard é aberto (cache 10min).
+## Mudanças no código
 
-### 4. Banco de dados
+### 1. Engine de templates — `src/lib/contractTemplates.ts`
 
-Novas tabelas:
+Adicionar **suporte a blocos condicionais** antes do replace existente em `renderTemplate`:
 
-- `sales_chat_sessions` — title, user_id, last_message_at
-- `sales_chat_messages` — session_id, role (user|assistant), content, metadata jsonb (kpi, chart_data, model_used)
-- `sales_dashboard_pinned_kpis` — user_id, label, icon, color, question, last_value, last_computed_at, is_shared, position
+```
+{{#if FORMA_PAGAMENTO_RYKAS=CARTAO_12X}}...conteúdo...{{/if}}
+```
 
-RLS: gestor vê só suas sessões; KPIs compartilhados visíveis para usuários com acesso ao Sales Dashboard.
+Implementação: 1 regex extra que processa blocos antes da substituição de placeholders escalares. Suporta também `{{#if KEY!=value}}` para negação.
 
-### 5. Acesso
+Atualizar `extractPlaceholders` para ignorar tokens dentro de blocos condicionais ao detectar variáveis de wizard, evitando duplicação.
 
-Apenas usuários com `hasFullAccess` no SalesDashboard (Jonathan, Maikol, Everton + admins via `isManagementUser`) veem a aba e podem fixar KPIs.
+Adicionar tipo de variável `"select"` com `options: string[]` para o wizard renderizar um dropdown.
 
-### Detalhes técnicos
+### 2. Wizard — `src/components/sales/contracts/ContractWizard.tsx`
 
-- Modelos: `google/gemini-2.5-pro` (análise), `openai/gpt-5` (insight) via Lovable AI Gateway.
-- Snapshot de dados montado server-side a partir de queries agregadas (deals + sales_users + loss_reasons + goals + contracts), limitado a 12 meses para caber em contexto.
-- Streaming SSE para o texto do GPT; chunk final `event: metadata` traz o objeto KPI.
-- Recomputação do KPI fixado: edge function `recompute-pinned-kpi` chamada via React Query no mount do dashboard.
+- Renderizar variáveis tipo `select` como dropdown (componente Select da shadcn).
+- Injetar automaticamente no `values` o placeholder `DOC_TYPE` = "PF" ou "PJ" baseado no `docType` já existente, para que o template condicional funcione sem o vendedor precisar selecionar manualmente.
+
+### 3. Banco — migration
+
+- Criar 1 novo registro em `contract_templates` chamado **"Rykas Mentoring — v2 (PF/PJ + Pagamentos)"**, vinculado ao produto Rykas Mentoring (id `8d3e9bb6...`), com `is_default = true`.
+- HTML do template contém blocos condicionais para `DOC_TYPE` (PF/PJ) e `FORMA_PAGAMENTO_RYKAS` (A_VISTA / CARTAO_12X / CHEQUE_1_11).
+- Variáveis definidas: campos comuns + `FORMA_PAGAMENTO_RYKAS` (select com 3 opções) + `VALOR_TOTAL_RYKAS` (auto-preenchido conforme escolha).
+- Marcar o template Rykas antigo como `is_active = false` (preserva como histórico, contratos já gerados continuam funcionando — eles têm snapshot em `digital_contracts.template_html`).
+
+### 4. Produto Rykas — `data update`
+
+O produto **`Rykas Mentoring`** (id `8d3e9bb6...`) hoje tem `price = 70000`. Mantém como **preço base (à vista)**. As variações (80.400) ficam dentro do wizard via select, refletidas em `VALOR_TOTAL_RYKAS` e na cláusula condicional. Isso preserva métricas/dashboards baseadas em `products.price`.
+
+Se você preferir 3 produtos separados (Rykas Mentoring À Vista / Cartão / Cheque) para dashboards distinguirem, me avise antes de eu rodar a migration — é uma decisão de modelagem.
+
+---
+
+## Resumo dos arquivos
+
+| Arquivo | Mudança |
+|---|---|
+| `src/lib/contractTemplates.ts` | + parser de `{{#if}}`, + tipo `select` |
+| `src/components/sales/contracts/ContractWizard.tsx` | + render select, + inject `DOC_TYPE` |
+| Migration nova | + template Rykas v2, desativa antigo |
+
+---
+
+## Pontos para você confirmar antes de eu rodar
+
+1. **Bug do extenso PJ** ("setenta e nove" → corrigir para "setenta")? Sim/não.
+2. **Produto único com select** (recomendado) ou **3 produtos separados** no cadastro?
+3. **Tudo o resto** segue como nos arquivos enviados, incluindo: Anjo Consultor como bônus, Clínica Ryka 6 meses, 3 usuários, mentoria quinta 07h, vigência 6 meses, taxa cheque R$ 2.000, CAIXA POSTAL 2002 Arapongas-PR, e-mail `financeiro@anjosbusiness.com.br`. Confirma esses dados?

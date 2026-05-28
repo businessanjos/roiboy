@@ -2,7 +2,12 @@
 
 import { numberToBRLExtenso } from "@/lib/numberToWordsBRL";
 
-export type TemplateVariableType = "text" | "textarea" | "number" | "currency" | "date";
+export type TemplateVariableType = "text" | "textarea" | "number" | "currency" | "date" | "select";
+
+export interface TemplateVariableOption {
+  value: string;
+  label: string;
+}
 
 export interface TemplateVariableDef {
   /** Placeholder key used in the template body, e.g. "RAZAO_SOCIAL" -> {{RAZAO_SOCIAL}} */
@@ -17,6 +22,8 @@ export interface TemplateVariableDef {
   required?: boolean;
   /** Hint shown below input */
   hint?: string;
+  /** For type=select — discrete options shown as a dropdown in the wizard */
+  options?: TemplateVariableOption[];
 }
 
 export interface AutofillContext {
@@ -470,8 +477,34 @@ const parseMoneyLike = (raw: any): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+const RYKAS_PAYMENT_PRESETS: Record<string, { label: string; total: number; totalWords: string }> = {
+  A_VISTA: {
+    label: "À vista — R$ 70.000,00",
+    total: 70000,
+    totalWords: "setenta mil reais",
+  },
+  CARTAO_12X: {
+    label: "Cartão de crédito 12x — R$ 80.400,00",
+    total: 80400,
+    totalWords: "oitenta mil e quatrocentos reais",
+  },
+  CHEQUE_1_11: {
+    label: "Cheque 1+11 — R$ 80.400,00",
+    total: 80400,
+    totalWords: "oitenta mil e quatrocentos reais",
+  },
+};
+
 const withDerivedPaymentValues = (values: Record<string, any>): Record<string, any> => {
   const out = { ...(values ?? {}) };
+  // Rykas template helpers — derive label/total/words from the selected variant
+  const rykas = out.FORMA_PAGAMENTO_RYKAS;
+  if (rykas && RYKAS_PAYMENT_PRESETS[String(rykas)]) {
+    const preset = RYKAS_PAYMENT_PRESETS[String(rykas)];
+    if (!out.FORMA_PAGAMENTO_RYKAS_LABEL) out.FORMA_PAGAMENTO_RYKAS_LABEL = preset.label;
+    if (!out.VALOR_TOTAL_RYKAS) out.VALOR_TOTAL_RYKAS = formatBRL(preset.total);
+    if (!out.VALOR_TOTAL_RYKAS_EXTENSO) out.VALOR_TOTAL_RYKAS_EXTENSO = preset.totalWords;
+  }
   const currentInstallment = resolveValueByKey("INSTALLMENT_VALUE", out).value;
   if (currentInstallment !== undefined && currentInstallment !== null && currentInstallment !== "") return out;
   const total = parseMoneyLike(resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value);
@@ -483,6 +516,33 @@ const withDerivedPaymentValues = (values: Record<string, any>): Record<string, a
   return out;
 };
 
+/**
+ * Process conditional blocks of the form:
+ *   {{#if KEY=VALUE}}...{{/if}}
+ *   {{#if KEY!=VALUE}}...{{/if}}
+ * Comparison is case-insensitive on VALUE. Supports nesting via repeated passes.
+ */
+const processConditionalBlocks = (html: string, values: Record<string, any>): string => {
+  if (!html.includes("{{#if")) return html;
+  const re = /\{\{#if\s+([A-Z0-9_]+)\s*(!?=)\s*([^}]+?)\s*\}\}([\s\S]*?)\{\{\/if\}\}/g;
+  let prev = "";
+  let out = html;
+  // Loop to handle nested conditionals (process inner-most each pass)
+  let safety = 8;
+  while (out !== prev && safety-- > 0) {
+    prev = out;
+    out = out.replace(re, (_m, key: string, op: string, expected: string, body: string) => {
+      const actual = values?.[key];
+      const actualStr = actual === null || actual === undefined ? "" : String(actual).trim().toLowerCase();
+      const expectedStr = String(expected).trim().toLowerCase();
+      const eq = actualStr === expectedStr;
+      const keep = op === "=" ? eq : !eq;
+      return keep ? body : "";
+    });
+  }
+  return out;
+};
+
 /** Replace {{KEY}} in the template HTML with values, applying type-aware formatting. */
 export const renderTemplate = (
   templateHtml: string,
@@ -491,6 +551,18 @@ export const renderTemplate = (
 ): string => {
   if (!templateHtml) return "";
   const renderValues = withDerivedPaymentValues(values);
+  // Auto-inject DOC_TYPE (PF/PJ) based on CNPJ/CPF presence if not explicitly set,
+  // so templates can use {{#if DOC_TYPE=PJ}}…{{/if}} blocks without extra wiring.
+  if (renderValues.DOC_TYPE === undefined || renderValues.DOC_TYPE === null || renderValues.DOC_TYPE === "") {
+    const cnpjV = renderValues.CNPJ ?? renderValues.CLIENT_DOCUMENT;
+    const cpfV = renderValues.CPF;
+    const cnpjDigits = String(cnpjV ?? "").replace(/\D/g, "");
+    const cpfDigits = String(cpfV ?? "").replace(/\D/g, "");
+    if (cnpjDigits.length === 14) renderValues.DOC_TYPE = "PJ";
+    else if (cpfDigits.length === 11) renderValues.DOC_TYPE = "PF";
+    else if (cnpjDigits.length >= 12) renderValues.DOC_TYPE = "PJ";
+    else if (cpfDigits.length >= 11) renderValues.DOC_TYPE = "PF";
+  }
   const typeMap = new Map(variables.map((v) => [v.key, v.type]));
   const htmlWithInstallmentValue = templateHtml.includes("{{INSTALLMENT_VALUE}}") || templateHtml.includes("{{VALOR_PARCELA}}")
     ? templateHtml
@@ -500,7 +572,8 @@ export const renderTemplate = (
           /(<div><div class="k">Parcelas<\/div><div class="v">\{\{INSTALLMENTS\}\}<\/div><\/div>)/,
           '$1\n        <div><div class="k">Valor parcela</div><div class="v">{{INSTALLMENT_VALUE}}</div></div>',
         );
-  return htmlWithInstallmentValue.replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (_match, key: string) => {
+  const htmlAfterConditionals = processConditionalBlocks(htmlWithInstallmentValue, renderValues);
+  return htmlAfterConditionals.replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (_match, key: string) => {
     const resolved = resolveValueByKey(key, renderValues);
     // Prefer the type of the actual key, else of the alias source
     const t = typeMap.get(key) ?? (resolved.aliasedFrom ? typeMap.get(resolved.aliasedFrom) : undefined);
