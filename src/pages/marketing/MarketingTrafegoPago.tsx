@@ -204,11 +204,8 @@ export default function MarketingTrafegoPago() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-4">
-          {!isConnected ? <MetaConnectPrompt /> : <></>}
-          {isConnected && (<></>)}
-          {isConnected && <></>}
-          {/* meta-only content below */}
-          {isConnected && (<>
+          {!isConnected ? <MetaConnectPrompt /> : (<>
+
 
           <Card className="bg-card/50 border-border/30">
             <CardHeader>
