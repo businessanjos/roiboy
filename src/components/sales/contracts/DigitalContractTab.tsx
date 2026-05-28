@@ -33,12 +33,24 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
 type ZapSignerRole = "contratante" | "contratado" | "representante_legal" | "testemunha" | "fiador";
+type ZapAuthMode =
+  | "assinaturaTela"
+  | "tokenEmail"
+  | "tokenSms"
+  | "assinaturaTela-tokenEmail"
+  | "assinaturaTela-tokenSms"
+  | "selfie"
+  | "documentoSelfie"
+  | "videoselfie"
+  | "cpf"
+  | "certificadoDigital";
 interface SignerDraft {
   enabled: boolean;
   role: ZapSignerRole;
   name: string;
   email: string;
   phone: string;
+  auth_mode: ZapAuthMode;
 }
 const ROLE_LABEL: Record<ZapSignerRole, string> = {
   contratante: "Contratante",
@@ -46,6 +58,19 @@ const ROLE_LABEL: Record<ZapSignerRole, string> = {
   representante_legal: "Representante Legal",
   testemunha: "Testemunha",
   fiador: "Fiador",
+};
+
+const AUTH_MODE_LABEL: Record<ZapAuthMode, string> = {
+  assinaturaTela: "Assinatura na tela (padrão)",
+  tokenEmail: "Token por e-mail",
+  tokenSms: "Token por SMS",
+  "assinaturaTela-tokenEmail": "Assinatura + token e-mail",
+  "assinaturaTela-tokenSms": "Assinatura + token SMS",
+  selfie: "Selfie (foto do signatário)",
+  documentoSelfie: "Selfie + foto do documento",
+  videoselfie: "Vídeo selfie",
+  cpf: "Validação por CPF",
+  certificadoDigital: "Certificado digital (ICP-Brasil)",
 };
 
 // Signatários fixos da CONTRATADA (sempre exibidos, editáveis se necessário)
@@ -56,6 +81,7 @@ const FIXED_CONTRACTADA_SIGNERS: SignerDraft[] = [
     name: "Everton Pieri",
     email: "everton@anjosbusiness.com.br",
     phone: "",
+    auth_mode: "assinaturaTela",
   },
   {
     enabled: true,
@@ -63,6 +89,7 @@ const FIXED_CONTRACTADA_SIGNERS: SignerDraft[] = [
     name: "Jessica Marcato",
     email: "jessicamarcato@anjosbusiness.com",
     phone: "",
+    auth_mode: "assinaturaTela",
   },
   {
     enabled: true,
@@ -70,8 +97,10 @@ const FIXED_CONTRACTADA_SIGNERS: SignerDraft[] = [
     name: "Jonathan Marcato",
     email: "jonathanmarcato@anjosbusiness.com",
     phone: "",
+    auth_mode: "assinaturaTela",
   },
 ];
+
 
 interface DigitalContractTabProps {
   dealId: string;
