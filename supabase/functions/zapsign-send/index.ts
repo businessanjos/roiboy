@@ -164,6 +164,19 @@ serve(async (req) => {
       fiador: "Fiador",
     };
 
+    const ALLOWED_AUTH_MODES = new Set([
+      "assinaturaTela",
+      "tokenEmail",
+      "tokenSms",
+      "assinaturaTela-tokenEmail",
+      "assinaturaTela-tokenSms",
+      "selfie",
+      "documentoSelfie",
+      "videoselfie",
+      "cpf",
+      "certificadoDigital",
+    ]);
+
     const zapSignPayload: any = {
       sandbox: sandbox === true,
       name: contract_name || "Contrato de Prestação de Serviços",
@@ -172,12 +185,14 @@ serve(async (req) => {
       signers: signers.map((s: any) => {
         const roleLabel = roleLabels[s.role] || s.role || "";
         const phone = onlyDigits(s.phone);
+        const auth_mode =
+          s.auth_mode && ALLOWED_AUTH_MODES.has(s.auth_mode) ? s.auth_mode : "assinaturaTela";
         return {
           name: roleLabel ? `${s.name} (${roleLabel})` : s.name,
           email: s.email || undefined,
           phone_country: phone ? "55" : undefined,
           phone_number: phone || undefined,
-          auth_mode: "assinaturaTela",
+          auth_mode,
           send_automatic_email: !!s.email,
           send_automatic_whatsapp: !!phone,
         };
