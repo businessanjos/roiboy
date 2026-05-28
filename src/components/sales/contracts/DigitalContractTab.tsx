@@ -1238,7 +1238,7 @@ export const DigitalContractTab = ({
                 onClick={() =>
                   setSignerDrafts((prev) => [
                     ...prev,
-                    { enabled: true, role: "testemunha", name: "", email: "", phone: "" },
+                    { enabled: true, role: "testemunha", name: "", email: "", phone: "", auth_mode: "assinaturaTela" },
                   ])
                 }
               >
