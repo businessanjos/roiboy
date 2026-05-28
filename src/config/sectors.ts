@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Megaphone,
   Sparkles,
+  FolderKanban,
   Settings,
   FileSignature,
   UserPlus,
