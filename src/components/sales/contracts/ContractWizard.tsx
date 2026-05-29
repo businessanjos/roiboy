@@ -2517,14 +2517,9 @@ export const ContractWizard = ({
               size="sm"
               onClick={async () => {
                 if (!canNext) return;
-                if (!currentStepComplete) {
-                  toast.warning(
-                    `Avançando com ${missingInStep} campo${missingInStep > 1 ? "s" : ""} pendente${missingInStep > 1 ? "s" : ""}.`,
-                    missingLabels.length > 0
-                      ? { description: `Você pode completar depois: ${missingLabels.join(", ")}` }
-                      : undefined,
-                  );
-                }
+                // Dados do mentorado são auto-importados da etapa 1; se
+                // ainda faltar algo, mostramos só o banner amarelo acima —
+                // sem toast confuso pedindo para "completar depois".
                 if (step === "client") {
                   await persistClientFromPlaceholders();
                 }
