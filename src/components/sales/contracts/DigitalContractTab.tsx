@@ -1020,6 +1020,80 @@ export const DigitalContractTab = ({
         )}
       </Card>
 
+      {contract?.zapsign_document_token && (
+        <Card className="p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold">Status das assinaturas</p>
+            <Button size="sm" variant="ghost" onClick={handleCheckStatus} className="h-7 px-2">
+              <RefreshCw className="h-3 w-3 mr-1" />
+              <span className="text-[11px]">Atualizar</span>
+            </Button>
+          </div>
+          {!contract.zapsign_signers || contract.zapsign_signers.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground">
+              Clique em "Atualizar" para consultar o status dos signatários no ZapSign.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {contract.zapsign_signers.map((s, i) => {
+                const isSigned = s.status === "signed";
+                const isViewed = !isSigned && (s.status === "link-opened" || (s.times_viewed ?? 0) > 0 || !!s.last_view_at);
+                const isRefused = s.status === "refused";
+                const badgeClass = isSigned
+                  ? "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
+                  : isRefused
+                  ? "bg-red-500/15 text-red-700 border-red-500/30"
+                  : isViewed
+                  ? "bg-amber-500/15 text-amber-700 border-amber-500/30"
+                  : "bg-muted text-muted-foreground border-border";
+                const label = isSigned
+                  ? "Assinado"
+                  : isRefused
+                  ? "Recusado"
+                  : isViewed
+                  ? "Abriu, não assinou"
+                  : "Aguardando";
+                return (
+                  <div
+                    key={s.token ?? i}
+                    className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium truncate">{s.name || "Signatário"}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {[s.email, s.phone_number].filter(Boolean).join(" • ") || "—"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {isSigned && s.signed_at
+                          ? `Assinou em ${new Date(s.signed_at).toLocaleString("pt-BR")}`
+                          : isViewed
+                          ? `${s.times_viewed ?? 0} visualização(ões)${s.last_view_at ? ` • última em ${new Date(s.last_view_at).toLocaleString("pt-BR")}` : ""}`
+                          : "Sem visualizações registradas"}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${badgeClass} whitespace-nowrap`}>
+                      {label}
+                    </span>
+                    {s.sign_url && !isSigned && (
+                      <a
+                        href={s.sign_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-primary hover:underline whitespace-nowrap"
+                      >
+                        Link
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
+
+
       <ContractWizard
         templateId={templateId}
         productId={productId}
