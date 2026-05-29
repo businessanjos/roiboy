@@ -678,8 +678,18 @@ export const ContractWizard = ({
   const [docType, setDocType] = useState<"cnpj" | "cpf">("cnpj");
   const [docInput, setDocInput] = useState("");
   const [docBirth, setDocBirth] = useState("");
+  const [billingDocType, setBillingDocType] = useState<"cnpj" | "cpf" | null>(null);
   const docInitedRef = useRef(false);
   const billingDocAppliedRef = useRef(false);
+  const savedDocType = placeholderValues?.[CONTRACTOR_DOC_TYPE_KEY];
+  const savedDocValue = onlyDigits(placeholderValues?.[CONTRACTOR_DOC_VALUE_KEY]);
+  const effectiveDocType: "cnpj" | "cpf" =
+    billingDocType === "cpf" ||
+    savedDocType === "cpf" ||
+    (savedDocValue.length === 11 && savedDocType !== "cnpj") ||
+    docType === "cpf"
+      ? "cpf"
+      : "cnpj";
 
   /* Inicializa o tipo (CNPJ/CPF) e o input do documento a partir dos
      placeholder_values já salvos no contrato. Executa uma vez quando
