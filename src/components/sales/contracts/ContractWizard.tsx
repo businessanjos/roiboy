@@ -207,6 +207,10 @@ const formatCpfCnpj = (s: string) => {
     .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
 };
 
+const CONTRACTOR_DOC_TYPE_KEY = "__CONTRACTOR_DOC_TYPE__";
+const CONTRACTOR_DOC_VALUE_KEY = "__CONTRACTOR_DOC_VALUE__";
+const onlyDigits = (value: any) => String(value ?? "").replace(/\D/g, "");
+
 const formatPhone = (s: string) => {
   const d = s.replace(/\D/g, "");
   if (d.length <= 10) {
