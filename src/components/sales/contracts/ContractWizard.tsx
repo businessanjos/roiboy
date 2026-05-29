@@ -2229,12 +2229,58 @@ export const ContractWizard = ({
               return 0;
             });
           }
+          // ---- Endereço: esconde "Endereço completo" quando há campos granulares
+          // e ordena os campos de endereço como CEP → Rua → Número → Complemento → Bairro → Cidade → UF
+          const addrCategory = (key: string, type?: string): number | null => {
+            const k = key.toUpperCase();
+            if (/(^|_)CEP($|_)|ZIP/.test(k)) return 0;
+            if (/(^|_)RUA($|_)|LOGRADOURO/.test(k)) return 1;
+            if (/^ENDERECO$|^ENDEREÇO$|^ADDRESS$|CLIENT_ADDRESS|ENDERECO_COMPLETO|FULL_ADDRESS/.test(k)) {
+              return type === "textarea" ? 99 : 1; // 99 = composto "endereço completo"
+            }
+            if (/^NUMERO$|NUM_END|NUMERO_ENDERECO/.test(k)) return 2;
+            if (/COMPLEMENTO/.test(k)) return 3;
+            if (/BAIRRO/.test(k)) return 4;
+            if (/(^|_)CIDADE($|_)|MUNICIPIO/.test(k)) return 5;
+            if (/(^|_)ESTADO($|_)|^UF$|_UF$/.test(k)) return 6;
+            return null;
+          };
+          const hasGranular = visibleList.some((v) => {
+            const c = addrCategory(v.key, v.type);
+            return c !== null && c !== 99;
+          });
+          if (hasGranular) {
+            visibleList = visibleList.filter((v) => addrCategory(v.key, v.type) !== 99);
+          }
+          // Estabiliza ordem: campos não-endereço mantêm posição original;
+          // os de endereço aparecem juntos, na ordem definida acima, ancorados
+          // na posição do primeiro campo de endereço encontrado.
+          {
+            const addrIdx: number[] = [];
+            visibleList.forEach((v, i) => {
+              if (addrCategory(v.key, v.type) !== null) addrIdx.push(i);
+            });
+            if (addrIdx.length > 1) {
+              const addrItems = addrIdx
+                .map((i) => visibleList[i])
+                .sort((a, b) => (addrCategory(a.key, a.type)! - addrCategory(b.key, b.type)!));
+              const nonAddr = visibleList.filter((v) => addrCategory(v.key, v.type) === null);
+              const insertAt = addrIdx[0];
+              visibleList = [
+                ...nonAddr.slice(0, insertAt),
+                ...addrItems,
+                ...nonAddr.slice(insertAt),
+              ];
+            }
+          }
+
           return visibleList.length === 0 ? (
           <div className="text-center py-8 text-sm text-muted-foreground">
             Nada para preencher nesta etapa.
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 gap-x-4 gap-y-4">
+
             {visibleList.map((v) => (
               <PlaceholderField
                 key={v.key}
