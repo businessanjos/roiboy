@@ -110,6 +110,17 @@ interface DigitalContractTabProps {
   clientName?: string;
 }
 
+interface ZapSignerStatus {
+  name: string;
+  email?: string | null;
+  phone_number?: string | null;
+  status: string; // new | link-opened | signed | refused
+  signed_at?: string | null;
+  times_viewed?: number;
+  last_view_at?: string | null;
+  token?: string;
+  sign_url?: string;
+}
 interface ContractRow {
   id: string;
   contract_number: string | null;
@@ -118,6 +129,7 @@ interface ContractRow {
   signed_pdf_path: string | null;
   signed_at: string | null;
   zapsign_document_token: string | null;
+  zapsign_signers?: ZapSignerStatus[] | null;
 }
 
 // Convert flat DB row -> editor data
