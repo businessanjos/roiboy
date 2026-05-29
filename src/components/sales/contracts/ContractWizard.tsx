@@ -679,6 +679,7 @@ export const ContractWizard = ({
   const [docInput, setDocInput] = useState("");
   const [docBirth, setDocBirth] = useState("");
   const docInitedRef = useRef(false);
+  const billingDocAppliedRef = useRef(false);
 
   /* Inicializa o tipo (CNPJ/CPF) e o input do documento a partir dos
      placeholder_values já salvos no contrato. Executa uma vez quando
@@ -743,7 +744,7 @@ export const ContractWizard = ({
   }, [templateVariables, placeholderValues, menteeData?.client_cpf_cnpj]);
 
   useEffect(() => {
-    if (!dealId || docInitedRef.current) return;
+    if (!dealId || billingDocAppliedRef.current) return;
     let cancelled = false;
     (async () => {
       const { data: fields } = await supabase
@@ -767,6 +768,7 @@ export const ContractWizard = ({
       if (!isCpfBillingType(valueByName[BILLING_TYPE_FIELD_NAME])) return;
       const billingCpf = onlyDigits(valueByName[BILLING_DOC_FIELD_NAME]);
       if (billingCpf.length !== 11) return;
+      billingDocAppliedRef.current = true;
       setDocType("cpf");
       setDocInput(billingCpf);
       docInitedRef.current = true;
