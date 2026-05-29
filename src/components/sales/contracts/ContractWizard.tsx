@@ -2366,8 +2366,9 @@ export const ContractWizard = ({
                 const isCompanyScoped = /EMPRESA|CONTRATADA|COMPANY/.test(k);
                 if (isCompanyScoped) return true;
                 // Documento do contratante — tratado pelo bloco de busca acima
-                const isContractorCnpj = /CNPJ/.test(k);
-                const isContractorCpf = /^CPF$|CPF_|_CPF$/.test(k);
+                const idText = `${v.key} ${v.label || ""}`.toUpperCase();
+                const isContractorCnpj = /CNPJ/.test(idText);
+                const isContractorCpf = /^CPF$|CPF_|_CPF$|\bCPF\b/.test(idText);
                 const isGenericDoc = /^(CLIENT_)?DOCUMENT(O)?$|^DOC$|CLIENT_DOC(UMENT)?$/.test(k);
                 return !isContractorCnpj && !isContractorCpf && !isGenericDoc;
               })
@@ -2395,7 +2396,7 @@ export const ContractWizard = ({
           // do template para que o conteúdo continue sendo preenchido).
           if (step === "client" && docType === "cpf") {
             visibleList = visibleList.filter((v) => {
-              const k = v.key.toUpperCase();
+              const k = `${v.key} ${v.label || ""}`.toUpperCase();
               const isHidden =
                 /FANTASIA/.test(k) ||
                 /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(k);
