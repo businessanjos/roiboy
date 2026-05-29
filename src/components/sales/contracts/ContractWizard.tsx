@@ -1006,8 +1006,57 @@ export const ContractWizard = ({
 
   /* ---- Mutations ---- */
 
+  const viaCepLookup = async (cep8: string, baseValues: Record<string, any>) => {
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep8}/json/`);
+      const data = await res.json();
+      if (!data || data.erro) {
+        toast.error("CEP não encontrado");
+        return;
+      }
+      const nextValues = { ...baseValues };
+      const setByRegex = (re: RegExp, val: any) => {
+        if (val == null || val === "") return;
+        for (const tv of templateVariables) {
+          const k = tv.key.toUpperCase();
+          if (re.test(k) && !nextValues[tv.key]) nextValues[tv.key] = val;
+        }
+      };
+      for (const tv of templateVariables) {
+        const k = tv.key.toUpperCase();
+        const isLogr = /(^|_)RUA($|_)|LOGRADOURO/.test(k) || (/^ENDERECO$|^ENDEREÇO$/.test(k) && tv.type !== "textarea");
+        if (isLogr && data.logradouro && !nextValues[tv.key]) nextValues[tv.key] = data.logradouro;
+      }
+      setByRegex(/BAIRRO/, data.bairro);
+      setByRegex(/(^|_)CIDADE($|_)|MUNICIPIO/, data.localidade);
+      setByRegex(/(^|_)ESTADO($|_)|^UF$|_UF$/, data.uf);
+      setByRegex(/COMPLEMENTO/, data.complemento);
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: nextValues,
+      });
+      toast.success("Endereço preenchido pelo CEP");
+    } catch {
+      toast.error("Falha ao consultar o CEP");
+    }
+  };
+
   const updateField = (key: string, value: any) => {
     const nextValues: Record<string, any> = { ...placeholderValues, [key]: value };
+
+    // ViaCEP autofill: ao completar 8 dígitos no CEP, busca e preenche o restante
+    const keyUp = key.toUpperCase();
+    const isCepKey = /(^|_)CEP($|_)|ZIP/.test(keyUp);
+    if (isCepKey) {
+      const digits = String(value ?? "").replace(/\D/g, "");
+      if (digits.length === 8) {
+        // dispara em background; ainda persistimos o valor digitado imediatamente
+        setTimeout(() => viaCepLookup(digits, { ...placeholderValues, [key]: digits }), 0);
+      }
+    }
 
     // Auto-fill any "extenso" placeholders when a total/contract value changes.
     // Heuristic: triggering field is currency-typed AND its key matches valor/total/contrato/preco
