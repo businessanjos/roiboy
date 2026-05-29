@@ -978,8 +978,9 @@ export const ContractWizard = ({
         });
         let seenName = false, seenEmail = false, seenPhone = false;
         effectiveList = list.filter((v) => {
-          const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
-          const isContractorCpf = /^cpf$|cpf_/i.test(v.key);
+          const idText = `${v.key} ${v.label || ""}`;
+          const isContractorCnpj = /cnpj/i.test(idText) && !/empresa|contratada|company/i.test(idText);
+          const isContractorCpf = /(^|\b)cpf\b|cpf_/i.test(idText);
           if (isContractorCnpj || isContractorCpf) return false;
           const ku = v.key.toUpperCase();
           // Complemento de endereço é sempre opcional
@@ -999,10 +1000,11 @@ export const ContractWizard = ({
           }
           // Em modo CPF (pessoa física) escondemos os campos próprios de PJ.
           if (docType === "cpf") {
+            const idText = `${v.key} ${v.label || ""}`.toUpperCase();
             const isHidden =
-              /CNPJ/.test(ku) ||
-              /FANTASIA/.test(ku) ||
-              /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(ku);
+              /CNPJ/.test(idText) ||
+              /FANTASIA/.test(idText) ||
+              /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(idText);
             if (isHidden) return false;
           }
           return true;
