@@ -1028,7 +1028,7 @@ export const DigitalContractTab = ({
                 ? Math.max(1, Math.round(Number(data.total_value) / Number(productExtras.installment_price)))
                 : null,
             billing_period: productExtras.billing_period ?? null,
-            duration_months: null,
+            duration_months: data.contract_duration_months ?? 12,
           },
           user: {
             name: currentUser?.name ?? null,
