@@ -726,8 +726,10 @@ export const ContractWizard = ({
   useEffect(() => {
     if (!templateVariables || templateVariables.length === 0) return;
     const digits = (docInput ?? "").replace(/\D/g, "");
-    if (!digits) return;
-    const updates: Record<string, any> = {};
+    const updates: Record<string, any> = {
+      [CONTRACTOR_DOC_TYPE_KEY]: docType,
+      [CONTRACTOR_DOC_VALUE_KEY]: digits,
+    };
     for (const v of templateVariables) {
       const k = v.key.toUpperCase();
       if (/EMPRESA|CONTRATADA|COMPANY/.test(k)) continue;
@@ -740,6 +742,15 @@ export const ContractWizard = ({
       const cur = placeholderValues?.[v.key];
       if (cur === digits) continue;
       updates[v.key] = digits;
+    }
+    if (docType === "cpf") {
+      updates.CLIENT_CPF = digits;
+      updates.CONTRATANTE_CPF = digits;
+      updates.CPF = digits;
+    } else {
+      updates.CLIENT_CNPJ = digits;
+      updates.CONTRATANTE_CNPJ = digits;
+      updates.CNPJ = digits;
     }
     if (Object.keys(updates).length > 0) {
       for (const [k, val] of Object.entries(updates)) updateField(k, val);
