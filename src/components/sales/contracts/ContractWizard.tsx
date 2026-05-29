@@ -794,6 +794,7 @@ export const ContractWizard = ({
   useEffect(() => {
     if (!templateVariables || templateVariables.length === 0) return;
     const digits = (docInput ?? "").replace(/\D/g, "");
+    if (!digits) return;
     const updates: Record<string, any> = {
       [CONTRACTOR_DOC_TYPE_KEY]: docType,
       [CONTRACTOR_DOC_VALUE_KEY]: digits,
