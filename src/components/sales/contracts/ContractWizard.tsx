@@ -803,8 +803,14 @@ export const ContractWizard = ({
       const isCpfKey = /^CPF$|CPF_|_CPF$/.test(k);
       const isGenericDoc = /^(CLIENT_)?DOCUMENT(O)?$|^DOC$|CLIENT_DOC(UMENT)?$/.test(k);
       if (!isCnpjKey && !isCpfKey && !isGenericDoc) continue;
-      if (docType === "cnpj" && isCpfKey && !isCnpjKey && !isGenericDoc) continue;
-      if (docType === "cpf" && isCnpjKey && !isCpfKey && !isGenericDoc) continue;
+      if (docType === "cnpj" && isCpfKey && !isCnpjKey && !isGenericDoc) {
+        updates[v.key] = "";
+        continue;
+      }
+      if (docType === "cpf" && isCnpjKey && !isCpfKey && !isGenericDoc) {
+        updates[v.key] = "";
+        continue;
+      }
       const cur = placeholderValues?.[v.key];
       if (cur === digits) continue;
       updates[v.key] = digits;
@@ -813,10 +819,16 @@ export const ContractWizard = ({
       updates.CLIENT_CPF = digits;
       updates.CONTRATANTE_CPF = digits;
       updates.CPF = digits;
+      updates.CLIENT_CNPJ = "";
+      updates.CONTRATANTE_CNPJ = "";
+      updates.CNPJ = "";
     } else {
       updates.CLIENT_CNPJ = digits;
       updates.CONTRATANTE_CNPJ = digits;
       updates.CNPJ = digits;
+      updates.CLIENT_CPF = "";
+      updates.CONTRATANTE_CPF = "";
+      updates.CPF = "";
     }
     const changed = Object.entries(updates).some(([k, val]) => placeholderValues?.[k] !== val);
     if (changed) {
