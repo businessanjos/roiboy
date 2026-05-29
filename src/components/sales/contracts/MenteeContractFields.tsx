@@ -168,6 +168,18 @@ const BILLING_FIELDS = {
   mentEmail: "Mentorado - E-mail",
 } as const;
 
+type BillingCustomFieldRow = { id: string; name: string };
+type BillingFieldValueRow = { field_id: string; value_text: string | null };
+type BillingDealRow = { client_id: string | null; contact_name: string | null; contact_email: string | null };
+type ClientPayerLinkRow = { payer_id: string | null; is_default: boolean | null };
+type PayerRow = {
+  id: string;
+  document_type: string | null;
+  document: string | null;
+  legal_name: string | null;
+  email_billing: string | null;
+};
+
 export interface MenteeContractFieldsProps {
   data: DigitalContractData;
   onChange: (next: DigitalContractData) => void;
@@ -321,7 +333,7 @@ export const MenteeContractFields = ({
         .select("id, name")
         .in("name", names);
       const idByName: Record<string, string> = {};
-      (cf || []).forEach((f: any) => {
+      ((cf || []) as BillingCustomFieldRow[]).forEach((f) => {
         idByName[f.name] = f.id;
       });
       const fieldIds = Object.values(idByName);
@@ -335,7 +347,7 @@ export const MenteeContractFields = ({
         .eq("deal_id", dealId)
         .in("field_id", fieldIds);
       const valByName: Record<string, string> = {};
-      (vals || []).forEach((v: any) => {
+      ((vals || []) as BillingFieldValueRow[]).forEach((v) => {
         const name = Object.entries(idByName).find(([, id]) => id === v.field_id)?.[0];
         if (name) valByName[name] = v.value_text || "";
       });
@@ -353,23 +365,26 @@ export const MenteeContractFields = ({
         .select("client_id, contact_name, contact_email")
         .eq("id", dealId)
         .maybeSingle();
+      const dealBilling = dealRow as BillingDealRow | null;
 
-      if ((!cpf || !nome || !email) && (dealRow as any)?.client_id) {
+      if ((!cpf || !nome || !email) && dealBilling?.client_id) {
         const { data: payerLinks } = await supabase
           .from("client_payers")
           .select("payer_id, is_default")
-          .eq("client_id", (dealRow as any).client_id)
+          .eq("client_id", dealBilling.client_id)
           .order("is_default", { ascending: false });
-        const payerIds = (payerLinks || []).map((link: any) => link.payer_id).filter(Boolean);
+        const links = (payerLinks || []) as ClientPayerLinkRow[];
+        const payerIds = links.map((link) => link.payer_id).filter((id): id is string => Boolean(id));
         if (payerIds.length > 0) {
           const { data: payers } = await supabase
             .from("payers")
             .select("id, document_type, document, legal_name, email_billing")
             .in("id", payerIds);
-          const payerById = new Map((payers || []).map((payer: any) => [payer.id, payer]));
-          const cpfPayer = (payerLinks || [])
-            .map((link: any) => payerById.get(link.payer_id))
-            .find((payer: any) => payer && (isCpfBillingType(payer.document_type) || String(payer.document || "").replace(/\D/g, "").length === 11));
+          const payerRows = (payers || []) as PayerRow[];
+          const payerById = new Map<string, PayerRow>(payerRows.map((payer) => [payer.id, payer]));
+          const cpfPayer = links
+            .map((link) => (link.payer_id ? payerById.get(link.payer_id) : undefined))
+            .find((payer): payer is PayerRow => Boolean(payer) && (isCpfBillingType(payer.document_type) || String(payer.document || "").replace(/\D/g, "").length === 11));
           if (cpfPayer) {
             cpf = cpf || cpfPayer.document || "";
             nome = nome || cpfPayer.legal_name || "";
@@ -378,8 +393,8 @@ export const MenteeContractFields = ({
         }
       }
 
-      nome = nome || (dealRow as any)?.contact_name || "";
-      email = email || (dealRow as any)?.contact_email || "";
+      nome = nome || dealBilling?.contact_name || "";
+      email = email || dealBilling?.contact_email || "";
       if (!cpf && !nome && !email) {
         toast.error("Não encontrei dados de faturamento CPF para copiar.");
         return;
@@ -391,8 +406,9 @@ export const MenteeContractFields = ({
         client_email: email || data.client_email,
       });
       toast.success("Dados copiados do faturamento.");
-    } catch (e: any) {
-      toast.error("Erro ao copiar: " + (e?.message ?? "tente novamente"));
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "tente novamente";
+      toast.error("Erro ao copiar: " + message);
     } finally {
       setCopyingBilling(false);
     }
