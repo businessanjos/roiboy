@@ -307,7 +307,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        processed: moments.length,
+        processed: eligible.length,
         sent: sentCount,
         failed: failedCount,
       }),
