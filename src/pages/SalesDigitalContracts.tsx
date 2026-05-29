@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { buildPublicContractUrl } from "@/lib/publicLink";
 
 interface DigitalContractListItem {
   id: string;
@@ -249,7 +250,7 @@ export default function SalesDigitalContracts() {
   }, [currentUser?.account_id]);
 
   const copyPublicLink = async (token: string) => {
-    const url = `${window.location.origin}/contrato/${token}`;
+    const url = buildPublicContractUrl(token);
     await navigator.clipboard.writeText(url);
     toast.success("Link público copiado");
   };
