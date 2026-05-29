@@ -2413,6 +2413,7 @@ export const ContractWizard = ({
             visibleList = visibleList.filter((v) => {
               const k = `${v.key} ${v.label || ""}`.toUpperCase();
               const isHidden =
+                /CNPJ/.test(k) ||
                 /FANTASIA/.test(k) ||
                 /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(k);
               return !isHidden;
