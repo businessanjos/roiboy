@@ -686,6 +686,7 @@ export const ContractWizard = ({
   const effectiveDocType: "cnpj" | "cpf" =
     billingDocType === "cpf" ||
     savedDocType === "cpf" ||
+    onlyDigits(menteeData?.client_cpf_cnpj).length === 11 ||
     (savedDocValue.length === 11 && savedDocType !== "cnpj") ||
     docType === "cpf"
       ? "cpf"
@@ -807,7 +808,7 @@ export const ContractWizard = ({
     const digits = (docInput ?? "").replace(/\D/g, "");
     if (!digits) return;
     const updates: Record<string, any> = {
-      [CONTRACTOR_DOC_TYPE_KEY]: docType,
+      [CONTRACTOR_DOC_TYPE_KEY]: effectiveDocType,
       [CONTRACTOR_DOC_VALUE_KEY]: digits,
     };
     for (const v of templateVariables) {
@@ -817,11 +818,11 @@ export const ContractWizard = ({
       const isCpfKey = /^CPF$|CPF_|_CPF$/.test(k);
       const isGenericDoc = /^(CLIENT_)?DOCUMENT(O)?$|^DOC$|CLIENT_DOC(UMENT)?$/.test(k);
       if (!isCnpjKey && !isCpfKey && !isGenericDoc) continue;
-      if (docType === "cnpj" && isCpfKey && !isCnpjKey && !isGenericDoc) {
+      if (effectiveDocType === "cnpj" && isCpfKey && !isCnpjKey && !isGenericDoc) {
         updates[v.key] = "";
         continue;
       }
-      if (docType === "cpf" && isCnpjKey && !isCpfKey && !isGenericDoc) {
+      if (effectiveDocType === "cpf" && isCnpjKey && !isCpfKey && !isGenericDoc) {
         updates[v.key] = "";
         continue;
       }
