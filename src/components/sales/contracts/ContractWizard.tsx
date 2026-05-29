@@ -671,8 +671,18 @@ export const ContractWizard = ({
      as variáveis e valores estão disponíveis. */
   useEffect(() => {
     if (docInitedRef.current) return;
-    if (!templateVariables || templateVariables.length === 0) return;
     if (!placeholderValues) return;
+
+    const savedDocType = placeholderValues[CONTRACTOR_DOC_TYPE_KEY];
+    const savedDocValue = onlyDigits(placeholderValues[CONTRACTOR_DOC_VALUE_KEY]);
+    if (savedDocType === "cpf" || savedDocType === "cnpj") {
+      setDocType(savedDocType);
+      if (savedDocValue) setDocInput(savedDocValue);
+      docInitedRef.current = true;
+      return;
+    }
+
+    if (!templateVariables || templateVariables.length === 0) return;
 
     const vars = templateVariables.filter((v) => !isFixedContratadaKey(v.key));
 
@@ -691,19 +701,19 @@ export const ContractWizard = ({
     const cnpjVal = findVal(/cnpj/i);
     const cpfVal = findVal(/^cpf$|cpf_|_cpf/i);
 
-    if (cnpjVal) {
-      const digits = cnpjVal.replace(/\D/g, "");
-      if (digits.length >= 11) {
-        setDocType("cnpj");
+    if (cpfVal) {
+      const digits = cpfVal.replace(/\D/g, "");
+      if (digits.length === 11) {
+        setDocType("cpf");
         setDocInput(digits);
         docInitedRef.current = true;
         return;
       }
     }
-    if (cpfVal) {
-      const digits = cpfVal.replace(/\D/g, "");
-      if (digits.length >= 11) {
-        setDocType("cpf");
+    if (cnpjVal) {
+      const digits = cnpjVal.replace(/\D/g, "");
+      if (digits.length === 14) {
+        setDocType("cnpj");
         setDocInput(digits);
         docInitedRef.current = true;
       }
