@@ -1103,7 +1103,9 @@ export const ContractWizard = ({
       if (n) { next.client_name = n; changed = true; }
     }
     if (!isFilled(next.client_cpf_cnpj)) {
-      const d = findVal(/^CPF$|CLIENT_CPF|CONTRATANTE_CPF|^CNPJ$|CLIENT_CNPJ|CONTRATANTE_CNPJ/);
+      const d = docType === "cpf"
+        ? findVal(/^CPF$|CLIENT_CPF|CONTRATANTE_CPF/)
+        : findVal(/^CNPJ$|CLIENT_CNPJ|CONTRATANTE_CNPJ|^CPF$|CLIENT_CPF|CONTRATANTE_CPF/);
       if (d) { next.client_cpf_cnpj = d; changed = true; }
     }
     if (!isFilled(next.client_email)) {
@@ -1129,7 +1131,7 @@ export const ContractWizard = ({
     }
     if (changed) onMenteeChange(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placeholderValues, menteeData?.client_name, menteeData?.client_cpf_cnpj, menteeData?.client_email, menteeData?.client_address]);
+  }, [placeholderValues, docType, docInput, menteeData?.client_name, menteeData?.client_cpf_cnpj, menteeData?.client_email, menteeData?.client_address]);
 
 
   /* ---- Mutations ---- */
