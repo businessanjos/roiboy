@@ -521,6 +521,9 @@ const withDerivedPaymentValues = (values: Record<string, any>): Record<string, a
     if (!out.FORMA_PAGAMENTO_RYKAS_LABEL) out.FORMA_PAGAMENTO_RYKAS_LABEL = preset.label;
     if (!out.VALOR_TOTAL_RYKAS) out.VALOR_TOTAL_RYKAS = formatBRL(preset.total);
     if (!out.VALOR_TOTAL_RYKAS_EXTENSO) out.VALOR_TOTAL_RYKAS_EXTENSO = preset.totalWords;
+    if (!out.__MODALIDADE_PAGAMENTO_UI__) {
+      out.__MODALIDADE_PAGAMENTO_UI__ = String(rykas) === "A_VISTA" ? "a_vista" : String(rykas) === "CHEQUE_1_11" ? "cheque" : "parcelado";
+    }
   } else {
     const total = resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value;
     const totalNum = parseMoneyLike(total);
@@ -554,6 +557,10 @@ const withDerivedPaymentValues = (values: Record<string, any>): Record<string, a
     .toLowerCase();
   if (modality === "parcelado" && /cheque/.test(paymentText)) {
     out.__MODALIDADE_PAGAMENTO_UI__ = "cheque";
+  } else if (!modality && /cheque/.test(paymentText)) {
+    out.__MODALIDADE_PAGAMENTO_UI__ = "cheque";
+  } else if (!modality && /parcelad|cart[aã]o|boleto|pix|transfer/.test(paymentText)) {
+    out.__MODALIDADE_PAGAMENTO_UI__ = /[àa]\s*vista|1x/.test(paymentText) ? "a_vista" : "parcelado";
   }
   const currentInstallment = resolveValueByKey("INSTALLMENT_VALUE", out).value;
   if (currentInstallment !== undefined && currentInstallment !== null && currentInstallment !== "") return out;
