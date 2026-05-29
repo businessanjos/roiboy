@@ -849,15 +849,45 @@ export const ContractWizard = ({
       const list = groupedVars[k];
       let effectiveList = list;
       if (k === "client") {
+        // Helpers para detectar grupos de campos duplicados/compostos
+        const isContractorNameKey = (key: string) => {
+          const up = key.toUpperCase();
+          if (/EMPRESA|CONTRATADA|COMPANY/.test(up)) return false;
+          return /^(CLIENT_)?NAME$|^NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|^CONTRATANTE(_NOME)?$|RAZAO_?SOCIAL|RAZÃO_?SOCIAL/.test(up);
+        };
+        const isEmailKey = (key: string) => /EMAIL|E_?MAIL/.test(key.toUpperCase());
+        const isPhoneKey = (key: string) => /CELULAR|TELEFONE|WHATSAPP|PHONE/.test(key.toUpperCase());
+        const isCompositeAddress = (v: { key: string; type?: string }) => {
+          const up = v.key.toUpperCase();
+          const matchesAddr = /^ENDERECO$|^ENDEREÇO$|^ADDRESS$|CLIENT_ADDRESS|ENDERECO_COMPLETO|FULL_ADDRESS/.test(up);
+          return matchesAddr && v.type === "textarea";
+        };
+        const hasGranularAddress = list.some((v) => {
+          const up = v.key.toUpperCase();
+          return /(^|_)CEP($|_)|ZIP|(^|_)RUA($|_)|LOGRADOURO|^NUMERO$|NUM_END|BAIRRO|(^|_)CIDADE($|_)|MUNICIPIO|(^|_)ESTADO($|_)|^UF$|_UF$/.test(up);
+        });
+        let seenName = false, seenEmail = false, seenPhone = false;
         effectiveList = list.filter((v) => {
           const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
           const isContractorCpf = /^cpf$|cpf_/i.test(v.key);
           if (isContractorCnpj || isContractorCpf) return false;
-          // Complemento de endereço é sempre opcional
           const ku = v.key.toUpperCase();
+          // Complemento de endereço é sempre opcional
           if (/COMPLEMENTO/.test(ku)) return false;
-          // Em modo CPF (pessoa física) escondemos Nome Fantasia / IE / IM,
-          // então também não devem contar como obrigatórios.
+          // Esconde "Endereço completo" composto quando há campos granulares (mesma regra do render)
+          if (hasGranularAddress && isCompositeAddress(v)) return false;
+          // Dedup: conta só a primeira ocorrência de Nome/E-mail/Telefone do contratante
+          if (isContractorNameKey(v.key)) {
+            if (seenName) return false;
+            seenName = true;
+          } else if (isEmailKey(v.key)) {
+            if (seenEmail) return false;
+            seenEmail = true;
+          } else if (isPhoneKey(v.key)) {
+            if (seenPhone) return false;
+            seenPhone = true;
+          }
+          // Em modo CPF (pessoa física) escondemos Nome Fantasia / IE / IM
           if (docType === "cpf") {
             const isHidden =
               /FANTASIA/.test(ku) ||
@@ -867,6 +897,7 @@ export const ContractWizard = ({
           return true;
         });
       }
+
       if (k === "payment") {
         const formaVar = list.find((v) => classifyPaymentVar(v.key) === "forma");
         const formaCurrent = formaVar ? (placeholderValues?.[formaVar.key] ?? "") : "";
