@@ -207,6 +207,23 @@ const formatCpfCnpj = (s: string) => {
     .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
 };
 
+const CONTRACTOR_DOC_TYPE_KEY = "__CONTRACTOR_DOC_TYPE__";
+const CONTRACTOR_DOC_VALUE_KEY = "__CONTRACTOR_DOC_VALUE__";
+const onlyDigits = (value: any) => String(value ?? "").replace(/\D/g, "");
+const BILLING_TYPE_FIELD_NAME = "Tipo de Pessoa (NF)";
+const BILLING_DOC_FIELD_NAME = "CPF/CNPJ (NF)";
+const BILLING_NAME_FIELD_NAME = "Razão Social / Nome (NF)";
+const BILLING_EMAIL_FIELD_NAME = "E-mail para envio da NF";
+
+const isCpfBillingType = (value: string | null | undefined) => {
+  const normalized = (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+  return /\b(cpf|pf|pessoa\s*fisica|fisica)\b/.test(normalized);
+};
+
 const formatPhone = (s: string) => {
   const d = s.replace(/\D/g, "");
   if (d.length <= 10) {
@@ -324,8 +341,9 @@ interface FieldProps {
 const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLooking, onCpfLookup, cpfLooking }: FieldProps) => {
   const [currencyDraft, setCurrencyDraft] = useState<string | null>(null);
   const help = guessFieldHelp(v);
-  const isCnpjField = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
-  const isCpfField = /^cpf$|cpf_/i.test(v.key);
+  const fieldIdentity = `${v.key} ${v.label || ""}`;
+  const isCnpjField = /cnpj/i.test(fieldIdentity) && !/empresa|contratada|company/i.test(fieldIdentity);
+  const isCpfField = /(^|\b)cpf\b|cpf_/i.test(fieldIdentity);
   const isPhoneField = /celular|telefone|whatsapp/i.test(v.key);
   const isCurrencyField = v.type === "currency";
   const isFullWidth = v.type === "textarea" || /endereco|rua|complemento|extenso/i.test(v.key);
@@ -661,14 +679,33 @@ export const ContractWizard = ({
   const [docInput, setDocInput] = useState("");
   const [docBirth, setDocBirth] = useState("");
   const docInitedRef = useRef(false);
+  const billingDocAppliedRef = useRef(false);
 
   /* Inicializa o tipo (CNPJ/CPF) e o input do documento a partir dos
      placeholder_values já salvos no contrato. Executa uma vez quando
      as variáveis e valores estão disponíveis. */
   useEffect(() => {
     if (docInitedRef.current) return;
-    if (!templateVariables || templateVariables.length === 0) return;
     if (!placeholderValues) return;
+
+    const savedDocType = placeholderValues[CONTRACTOR_DOC_TYPE_KEY];
+    const savedDocValue = onlyDigits(placeholderValues[CONTRACTOR_DOC_VALUE_KEY]);
+    if (savedDocType === "cpf" || savedDocType === "cnpj") {
+      setDocType(savedDocType);
+      if (savedDocValue) setDocInput(savedDocValue);
+      docInitedRef.current = true;
+      return;
+    }
+
+    const menteeDoc = onlyDigits(menteeData?.client_cpf_cnpj);
+    if (menteeDoc.length === 11) {
+      setDocType("cpf");
+      setDocInput(menteeDoc);
+      docInitedRef.current = true;
+      return;
+    }
+
+    if (!templateVariables || templateVariables.length === 0) return;
 
     const vars = templateVariables.filter((v) => !isFixedContratadaKey(v.key));
 
@@ -687,24 +724,69 @@ export const ContractWizard = ({
     const cnpjVal = findVal(/cnpj/i);
     const cpfVal = findVal(/^cpf$|cpf_|_cpf/i);
 
-    if (cnpjVal) {
-      const digits = cnpjVal.replace(/\D/g, "");
-      if (digits.length >= 11) {
-        setDocType("cnpj");
+    if (cpfVal) {
+      const digits = cpfVal.replace(/\D/g, "");
+      if (digits.length === 11) {
+        setDocType("cpf");
         setDocInput(digits);
         docInitedRef.current = true;
         return;
       }
     }
-    if (cpfVal) {
-      const digits = cpfVal.replace(/\D/g, "");
-      if (digits.length >= 11) {
-        setDocType("cpf");
+    if (cnpjVal) {
+      const digits = cnpjVal.replace(/\D/g, "");
+      if (digits.length === 14) {
+        setDocType("cnpj");
         setDocInput(digits);
         docInitedRef.current = true;
       }
     }
-  }, [templateVariables, placeholderValues]);
+  }, [templateVariables, placeholderValues, menteeData?.client_cpf_cnpj]);
+
+  useEffect(() => {
+    if (!dealId || billingDocAppliedRef.current) return;
+    let cancelled = false;
+    (async () => {
+      const { data: fields } = await supabase
+        .from("custom_fields")
+        .select("id, name")
+        .in("name", [BILLING_TYPE_FIELD_NAME, BILLING_DOC_FIELD_NAME, BILLING_NAME_FIELD_NAME, BILLING_EMAIL_FIELD_NAME]);
+      if (cancelled || !fields?.length) return;
+      const idByName = new Map((fields as { id: string; name: string }[]).map((field) => [field.name, field.id]));
+      const ids = Array.from(idByName.values());
+      const { data: values } = await supabase
+        .from("deal_field_values")
+        .select("field_id, value_text")
+        .eq("deal_id", dealId)
+        .in("field_id", ids);
+      if (cancelled || !values?.length) return;
+      const valueByName: Record<string, string> = {};
+      (values as { field_id: string; value_text: string | null }[]).forEach((row) => {
+        const found = Array.from(idByName.entries()).find(([, id]) => id === row.field_id);
+        if (found) valueByName[found[0]] = row.value_text || "";
+      });
+      if (!isCpfBillingType(valueByName[BILLING_TYPE_FIELD_NAME])) return;
+      const billingCpf = onlyDigits(valueByName[BILLING_DOC_FIELD_NAME]);
+      if (billingCpf.length !== 11) return;
+      billingDocAppliedRef.current = true;
+      setDocType("cpf");
+      setDocInput(billingCpf);
+      docInitedRef.current = true;
+      if (onMenteeChange && menteeData) {
+        const next: DigitalContractData = {
+          ...menteeData,
+          client_cpf_cnpj: billingCpf,
+          client_name: menteeData.client_name || valueByName[BILLING_NAME_FIELD_NAME] || "",
+          client_email: menteeData.client_email || valueByName[BILLING_EMAIL_FIELD_NAME] || "",
+        };
+        onMenteeChange(next);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealId, onMenteeChange, menteeData]);
 
   /* Mantém o documento digitado no box de busca sincronizado com TODAS as
      variáveis de documento do template (CPF, CNPJ, CLIENT_DOCUMENT, etc.),
@@ -713,7 +795,10 @@ export const ContractWizard = ({
     if (!templateVariables || templateVariables.length === 0) return;
     const digits = (docInput ?? "").replace(/\D/g, "");
     if (!digits) return;
-    const updates: Record<string, any> = {};
+    const updates: Record<string, any> = {
+      [CONTRACTOR_DOC_TYPE_KEY]: docType,
+      [CONTRACTOR_DOC_VALUE_KEY]: digits,
+    };
     for (const v of templateVariables) {
       const k = v.key.toUpperCase();
       if (/EMPRESA|CONTRATADA|COMPANY/.test(k)) continue;
@@ -721,14 +806,42 @@ export const ContractWizard = ({
       const isCpfKey = /^CPF$|CPF_|_CPF$/.test(k);
       const isGenericDoc = /^(CLIENT_)?DOCUMENT(O)?$|^DOC$|CLIENT_DOC(UMENT)?$/.test(k);
       if (!isCnpjKey && !isCpfKey && !isGenericDoc) continue;
-      if (docType === "cnpj" && isCpfKey && !isCnpjKey && !isGenericDoc) continue;
-      if (docType === "cpf" && isCnpjKey && !isCpfKey && !isGenericDoc) continue;
+      if (docType === "cnpj" && isCpfKey && !isCnpjKey && !isGenericDoc) {
+        updates[v.key] = "";
+        continue;
+      }
+      if (docType === "cpf" && isCnpjKey && !isCpfKey && !isGenericDoc) {
+        updates[v.key] = "";
+        continue;
+      }
       const cur = placeholderValues?.[v.key];
       if (cur === digits) continue;
       updates[v.key] = digits;
     }
-    if (Object.keys(updates).length > 0) {
-      for (const [k, val] of Object.entries(updates)) updateField(k, val);
+    if (docType === "cpf") {
+      updates.CLIENT_CPF = digits;
+      updates.CONTRATANTE_CPF = digits;
+      updates.CPF = digits;
+      updates.CLIENT_CNPJ = "";
+      updates.CONTRATANTE_CNPJ = "";
+      updates.CNPJ = "";
+    } else {
+      updates.CLIENT_CNPJ = digits;
+      updates.CONTRATANTE_CNPJ = digits;
+      updates.CNPJ = digits;
+      updates.CLIENT_CPF = "";
+      updates.CONTRATANTE_CPF = "";
+      updates.CPF = "";
+    }
+    const changed = Object.entries(updates).some(([k, val]) => placeholderValues?.[k] !== val);
+    if (changed) {
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: { ...placeholderValues, ...updates },
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docInput, docType, templateVariables]);
@@ -868,8 +981,9 @@ export const ContractWizard = ({
         });
         let seenName = false, seenEmail = false, seenPhone = false;
         effectiveList = list.filter((v) => {
-          const isContractorCnpj = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
-          const isContractorCpf = /^cpf$|cpf_/i.test(v.key);
+          const idText = `${v.key} ${v.label || ""}`;
+          const isContractorCnpj = /cnpj/i.test(idText) && !/empresa|contratada|company/i.test(idText);
+          const isContractorCpf = /(^|\b)cpf\b|cpf_/i.test(idText);
           if (isContractorCnpj || isContractorCpf) return false;
           const ku = v.key.toUpperCase();
           // Complemento de endereço é sempre opcional
@@ -887,11 +1001,13 @@ export const ContractWizard = ({
             if (seenPhone) return false;
             seenPhone = true;
           }
-          // Em modo CPF (pessoa física) escondemos Nome Fantasia / IE / IM
+          // Em modo CPF (pessoa física) escondemos os campos próprios de PJ.
           if (docType === "cpf") {
+            const idText = `${v.key} ${v.label || ""}`.toUpperCase();
             const isHidden =
-              /FANTASIA/.test(ku) ||
-              /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(ku);
+              /CNPJ/.test(idText) ||
+              /FANTASIA/.test(idText) ||
+              /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(idText);
             if (isHidden) return false;
           }
           return true;
@@ -1052,12 +1168,19 @@ export const ContractWizard = ({
     };
     const next: typeof menteeData = { ...menteeData };
     let changed = false;
+    const selectedDoc = onlyDigits(v[CONTRACTOR_DOC_VALUE_KEY] || docInput);
+    if (docType === "cpf" && selectedDoc.length === 11 && onlyDigits(next.client_cpf_cnpj) !== selectedDoc) {
+      next.client_cpf_cnpj = selectedDoc;
+      changed = true;
+    }
     if (!isFilled(next.client_name)) {
       const n = findVal(/(^|_)NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|CONTRATANTE(_NOME)?$|RAZAO_?SOCIAL|RAZÃO_?SOCIAL/);
       if (n) { next.client_name = n; changed = true; }
     }
     if (!isFilled(next.client_cpf_cnpj)) {
-      const d = findVal(/^CPF$|CLIENT_CPF|CONTRATANTE_CPF|^CNPJ$|CLIENT_CNPJ|CONTRATANTE_CNPJ/);
+      const d = docType === "cpf"
+        ? findVal(/^CPF$|CLIENT_CPF|CONTRATANTE_CPF/)
+        : findVal(/^CNPJ$|CLIENT_CNPJ|CONTRATANTE_CNPJ|^CPF$|CLIENT_CPF|CONTRATANTE_CPF/);
       if (d) { next.client_cpf_cnpj = d; changed = true; }
     }
     if (!isFilled(next.client_email)) {
@@ -1083,7 +1206,7 @@ export const ContractWizard = ({
     }
     if (changed) onMenteeChange(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placeholderValues, menteeData?.client_name, menteeData?.client_cpf_cnpj, menteeData?.client_email, menteeData?.client_address]);
+  }, [placeholderValues, docType, docInput, menteeData?.client_name, menteeData?.client_cpf_cnpj, menteeData?.client_email, menteeData?.client_address]);
 
 
   /* ---- Mutations ---- */
@@ -2172,7 +2295,11 @@ export const ContractWizard = ({
               <div className="flex rounded-md border border-input overflow-hidden shrink-0">
                 <button
                   type="button"
-                  onClick={() => setDocType("cnpj")}
+                  onClick={() => {
+                    setDocType("cnpj");
+                    const currentDigits = onlyDigits(docInput);
+                    if (currentDigits.length === 11) setDocInput("");
+                  }}
                   className={`px-3 py-1.5 text-xs font-medium transition ${
                     docType === "cnpj"
                       ? "bg-primary text-primary-foreground"
@@ -2184,7 +2311,11 @@ export const ContractWizard = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDocType("cpf")}
+                  onClick={() => {
+                    setDocType("cpf");
+                    const currentDigits = onlyDigits(docInput);
+                    if (currentDigits.length === 14) setDocInput("");
+                  }}
                   className={`px-3 py-1.5 text-xs font-medium transition ${
                     docType === "cpf"
                       ? "bg-primary text-primary-foreground"
@@ -2238,8 +2369,9 @@ export const ContractWizard = ({
                 const isCompanyScoped = /EMPRESA|CONTRATADA|COMPANY/.test(k);
                 if (isCompanyScoped) return true;
                 // Documento do contratante — tratado pelo bloco de busca acima
-                const isContractorCnpj = /CNPJ/.test(k);
-                const isContractorCpf = /^CPF$|CPF_|_CPF$/.test(k);
+                const idText = `${v.key} ${v.label || ""}`.toUpperCase();
+                const isContractorCnpj = /CNPJ/.test(idText);
+                const isContractorCpf = /^CPF$|CPF_|_CPF$|\bCPF\b/.test(idText);
                 const isGenericDoc = /^(CLIENT_)?DOCUMENT(O)?$|^DOC$|CLIENT_DOC(UMENT)?$/.test(k);
                 return !isContractorCnpj && !isContractorCpf && !isGenericDoc;
               })
@@ -2267,7 +2399,7 @@ export const ContractWizard = ({
           // do template para que o conteúdo continue sendo preenchido).
           if (step === "client" && docType === "cpf") {
             visibleList = visibleList.filter((v) => {
-              const k = v.key.toUpperCase();
+              const k = `${v.key} ${v.label || ""}`.toUpperCase();
               const isHidden =
                 /FANTASIA/.test(k) ||
                 /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(k);
