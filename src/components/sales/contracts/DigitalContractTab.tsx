@@ -1186,7 +1186,7 @@ export const DigitalContractTab = ({
       </div>
 
       <Dialog open={signerDialogOpen} onOpenChange={(o) => !sendingZapsign && setSignerDialogOpen(o)}>
-        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] !flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-base">Selecionar signatários</DialogTitle>
             <DialogDescription className="text-xs">
@@ -1205,7 +1205,7 @@ export const DigitalContractTab = ({
             />
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+          <ScrollArea className="flex-1 min-h-0 h-full -mx-6 px-6">
             <div className="space-y-3 py-1">
               {signerDrafts.map((s, idx) => (
                 <Card key={idx} className="p-3 space-y-2">
