@@ -341,8 +341,9 @@ interface FieldProps {
 const PlaceholderField = ({ v, value, onChange, disabled, onCnpjLookup, cnpjLooking, onCpfLookup, cpfLooking }: FieldProps) => {
   const [currencyDraft, setCurrencyDraft] = useState<string | null>(null);
   const help = guessFieldHelp(v);
-  const isCnpjField = /cnpj/i.test(v.key) && !/empresa|contratada|company/i.test(v.key);
-  const isCpfField = /^cpf$|cpf_/i.test(v.key);
+  const fieldIdentity = `${v.key} ${v.label || ""}`;
+  const isCnpjField = /cnpj/i.test(fieldIdentity) && !/empresa|contratada|company/i.test(fieldIdentity);
+  const isCpfField = /(^|\b)cpf\b|cpf_/i.test(fieldIdentity);
   const isPhoneField = /celular|telefone|whatsapp/i.test(v.key);
   const isCurrencyField = v.type === "currency";
   const isFullWidth = v.type === "textarea" || /endereco|rua|complemento|extenso/i.test(v.key);
