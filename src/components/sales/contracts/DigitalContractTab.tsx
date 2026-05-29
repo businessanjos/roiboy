@@ -392,6 +392,15 @@ export const DigitalContractTab = ({
               const resolvedProductId = await mapItemVendaToProductId(raw);
               if (!cancelled && resolvedProductId) {
                 setProductId(resolvedProductId);
+                const { data: prod } = await supabase
+                  .from("products")
+                  .select("name")
+                  .eq("id", resolvedProductId)
+                  .maybeSingle();
+                // Rykas Mentoring sempre tem vigência de 6 meses (regra de negócio fixa)
+                if (!cancelled && prod?.name && /ryka.*mentoring/i.test(prod.name)) {
+                  setData((prev) => ({ ...prev, contract_duration_months: 6 }));
+                }
                 const { data: tpls } = await supabase
                   .from("contract_templates" as any)
                   .select("id, content_html, variables, product_id, is_default, is_active")
