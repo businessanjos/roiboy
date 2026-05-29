@@ -1181,7 +1181,7 @@ export const ContractWizard = ({
     const next: typeof menteeData = { ...menteeData };
     let changed = false;
     const selectedDoc = onlyDigits(v[CONTRACTOR_DOC_VALUE_KEY] || docInput);
-    if (docType === "cpf" && selectedDoc.length === 11 && onlyDigits(next.client_cpf_cnpj) !== selectedDoc) {
+    if (effectiveDocType === "cpf" && selectedDoc.length === 11 && onlyDigits(next.client_cpf_cnpj) !== selectedDoc) {
       next.client_cpf_cnpj = selectedDoc;
       changed = true;
     }
@@ -1190,7 +1190,7 @@ export const ContractWizard = ({
       if (n) { next.client_name = n; changed = true; }
     }
     if (!isFilled(next.client_cpf_cnpj)) {
-      const d = docType === "cpf"
+      const d = effectiveDocType === "cpf"
         ? findVal(/^CPF$|CLIENT_CPF|CONTRATANTE_CPF/)
         : findVal(/^CNPJ$|CLIENT_CNPJ|CONTRATANTE_CNPJ|^CPF$|CLIENT_CPF|CONTRATANTE_CPF/);
       if (d) { next.client_cpf_cnpj = d; changed = true; }
