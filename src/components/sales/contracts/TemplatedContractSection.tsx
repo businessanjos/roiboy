@@ -378,13 +378,14 @@ export const TemplatedContractPreview = ({
   const forceReadablePillarsLayout = (html: string) => {
     if (!html.includes("rk-pillars") && !html.includes("rk-clause")) return html;
     const override = `<style>
-/* === Cláusulas: nunca espremer conteúdo na coluna do número === */
-.contract-document .rk-clause{display:grid!important;grid-template-columns:110px minmax(0,1fr)!important;column-gap:18px!important;align-items:start!important;}
+/* === Cláusulas: nunca cortar/abreviar títulos ou marcadores === */
+.contract-document .rk-clause{display:grid!important;grid-template-columns:190px minmax(0,1fr)!important;column-gap:18px!important;align-items:start!important;}
 .contract-document .rk-clause > *:not(.rk-clause-num){grid-column:2!important;min-width:0!important;max-width:100%!important;overflow-wrap:break-word!important;}
-.contract-document .rk-clause .rk-clause-num{grid-column:1!important;grid-row:1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+.contract-document .rk-clause .rk-clause-num{grid-column:1!important;grid-row:1!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;word-break:normal!important;overflow-wrap:break-word!important;hyphens:auto!important;line-height:1.35!important;max-width:190px!important;}
 .contract-document .rk-clause p,.contract-document .rk-clause li,.contract-document .rk-clause ul,.contract-document .rk-clause ol{min-width:0!important;max-width:100%!important;}
 .contract-document .rk-clause ul,.contract-document .rk-clause ol{padding-left:22px!important;margin:6px 0 10px!important;}
 .contract-document .rk-clause li{margin:3px 0!important;line-height:1.55!important;}
+.contract-document .rk-toc ol li,.contract-document .rk-cover-meta .item .v{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:break-word!important;}
 
 /* === Quadro 3P1R: layout em linhas largas, à prova de A4 === */
 .contract-document .rk-pillars{display:block!important;margin:30px 0!important;border:1px solid var(--ink,#000)!important;background:#fff!important;border-radius:0!important;overflow:hidden!important;}
