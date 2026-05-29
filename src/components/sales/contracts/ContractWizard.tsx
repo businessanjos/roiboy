@@ -778,6 +778,7 @@ export const ContractWizard = ({
       if (!isCpfBillingType(valueByName[BILLING_TYPE_FIELD_NAME])) return;
       const billingCpf = onlyDigits(valueByName[BILLING_DOC_FIELD_NAME]);
       if (billingCpf.length !== 11) return;
+      setBillingDocType("cpf");
       billingDocAppliedRef.current = true;
       setDocType("cpf");
       setDocInput(billingCpf);
