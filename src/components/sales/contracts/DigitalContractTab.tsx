@@ -468,6 +468,44 @@ export const DigitalContractTab = ({
     };
   }, [productId]);
 
+  // Autosave (debounced) — persiste alterações dos campos do wizard sem
+  // exigir clique em "Salvar". Só roda quando o contrato já existe e
+  // está em rascunho (não toca em contratos enviados/assinados).
+  const autosaveSkipRef = useRef(true);
+  useEffect(() => {
+    if (!contract?.id) return;
+    if (loading || saving) return;
+    if (contract.status && contract.status !== "draft") return;
+    if (autosaveSkipRef.current) {
+      autosaveSkipRef.current = false;
+      return;
+    }
+    const handle = setTimeout(async () => {
+      try {
+        await supabase
+          .from("digital_contracts")
+          .update({
+            ...dataToRow(data),
+            template_id: templateId,
+            product_id: productId,
+            template_html: templateHtml,
+            template_variables: templateVariables as any,
+            placeholder_values: resolvedPlaceholderValues as any,
+          } as any)
+          .eq("id", contract.id);
+      } catch (e) {
+        console.warn("[DigitalContractTab] autosave failed", e);
+      }
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [contract?.id, contract?.status, data, templateId, productId, templateHtml, templateVariables, resolvedPlaceholderValues, loading, saving]);
+
+  // Reset do guard de autosave quando o contrato carregado muda
+  useEffect(() => {
+    autosaveSkipRef.current = true;
+  }, [contract?.id]);
+
+
   const handleSave = async () => {
     if (!accountId) return;
     setSaving(true);
