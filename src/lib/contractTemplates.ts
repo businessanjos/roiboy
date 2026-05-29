@@ -537,6 +537,24 @@ const withDerivedPaymentValues = (values: Record<string, any>): Record<string, a
     if (!out.VALOR_TOTAL_RYKAS && totalNum !== null) out.VALOR_TOTAL_RYKAS = formatBRL(totalNum);
     if (!out.VALOR_TOTAL_RYKAS_EXTENSO && totalNum !== null) out.VALOR_TOTAL_RYKAS_EXTENSO = formatPlainBRLWords(totalNum);
   }
+  const modality = String(out.__MODALIDADE_PAGAMENTO_UI__ ?? "").trim().toLowerCase();
+  const paymentText = [
+    out.__FORMA_PAGAMENTO_UI__,
+    out.FORMA_PAGAMENTO_RYKAS,
+    out.FORMA_PAGAMENTO_RYKAS_LABEL,
+    out.FORMA_PAGAMENTO,
+    out.FORMA_DE_PAGAMENTO,
+    out.PAGAMENTO,
+    out.PAYMENT_METHOD,
+    out.METODO_PAGAMENTO,
+    out.MEIO_PAGAMENTO,
+  ]
+    .filter((v) => v !== null && v !== undefined && v !== "")
+    .join(" ")
+    .toLowerCase();
+  if (modality === "parcelado" && /cheque/.test(paymentText)) {
+    out.__MODALIDADE_PAGAMENTO_UI__ = "cheque";
+  }
   const currentInstallment = resolveValueByKey("INSTALLMENT_VALUE", out).value;
   if (currentInstallment !== undefined && currentInstallment !== null && currentInstallment !== "") return out;
   const total = parseMoneyLike(resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value);
