@@ -1093,6 +1093,11 @@ export const ContractWizard = ({
     };
     const next: typeof menteeData = { ...menteeData };
     let changed = false;
+    const selectedDoc = onlyDigits(v[CONTRACTOR_DOC_VALUE_KEY] || docInput);
+    if (docType === "cpf" && selectedDoc.length === 11 && onlyDigits(next.client_cpf_cnpj) !== selectedDoc) {
+      next.client_cpf_cnpj = selectedDoc;
+      changed = true;
+    }
     if (!isFilled(next.client_name)) {
       const n = findVal(/(^|_)NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|CONTRATANTE(_NOME)?$|RAZAO_?SOCIAL|RAZÃO_?SOCIAL/);
       if (n) { next.client_name = n; changed = true; }
