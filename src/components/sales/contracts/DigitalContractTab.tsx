@@ -914,7 +914,7 @@ export const DigitalContractTab = ({
 
   const handleCopyPublicLink = () => {
     if (!contract?.share_token) return;
-    const url = `${window.location.origin}/contrato/${contract.share_token}`;
+    const url = buildPublicContractUrl(contract.share_token);
     navigator.clipboard.writeText(url);
     toast.success("Link copiado");
   };
