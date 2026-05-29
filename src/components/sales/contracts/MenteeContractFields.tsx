@@ -150,6 +150,15 @@ const parseAddress = (raw: string | null | undefined): AddressParts => {
   return out;
 };
 
+const isCpfBillingType = (value: string | null | undefined) => {
+  const normalized = (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+  return /\b(cpf|pf|pessoa\s*fisica|fisica)\b/.test(normalized);
+};
+
 export interface MenteeContractFieldsProps {
   data: DigitalContractData;
   onChange: (next: DigitalContractData) => void;
@@ -284,7 +293,7 @@ export const MenteeContractFields = ({
     };
   }, [dealId]);
 
-  const isBillingCpf = billingTipo === "cpf";
+  const isBillingCpf = isCpfBillingType(billingTipo);
 
   const update = <K extends keyof DigitalContractData>(field: K, value: DigitalContractData[K]) => {
     onChange({ ...data, [field]: value });
@@ -321,8 +330,8 @@ export const MenteeContractFields = ({
         const name = Object.entries(idByName).find(([, id]) => id === v.field_id)?.[0];
         if (name) valByName[name] = v.value_text || "";
       });
-      const tipo = (valByName["Tipo de Pessoa (NF)"] || "").toLowerCase();
-      if (tipo && tipo !== "cpf") {
+      const tipo = valByName["Tipo de Pessoa (NF)"] || "";
+      if (tipo && !isCpfBillingType(tipo)) {
         toast.error("O faturamento é PJ. O Mentorado deve ser sempre Pessoa Física — preencha manualmente.");
         return;
       }
@@ -373,7 +382,7 @@ export const MenteeContractFields = ({
             variant="outline"
             size="sm"
             onClick={copyFromBilling}
-            disabled={disabled || copyingBilling || !dealId || !billingChecked || !isBillingCpf}
+            disabled={disabled || copyingBilling || !dealId || !billingChecked}
             className="h-8 text-xs ml-auto"
             title={!isBillingCpf && billingChecked ? "Disponível apenas quando o faturamento é CPF" : undefined}
           >
