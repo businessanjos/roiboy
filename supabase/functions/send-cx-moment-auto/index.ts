@@ -100,12 +100,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Found ${moments.length} moments to process`);
+    console.log(`Found ${eligible.length} moments to process`);
 
     let sentCount = 0;
     let failedCount = 0;
 
-    for (const moment of moments as unknown as LifeEventWithDetails[]) {
+    for (const moment of eligible as unknown as LifeEventWithDetails[]) {
       try {
         const client = moment.clients;
         
