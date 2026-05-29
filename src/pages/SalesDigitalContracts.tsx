@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { buildPublicContractUrl } from "@/lib/publicLink";
 
 interface DigitalContractListItem {
   id: string;
