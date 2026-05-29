@@ -210,6 +210,19 @@ const formatCpfCnpj = (s: string) => {
 const CONTRACTOR_DOC_TYPE_KEY = "__CONTRACTOR_DOC_TYPE__";
 const CONTRACTOR_DOC_VALUE_KEY = "__CONTRACTOR_DOC_VALUE__";
 const onlyDigits = (value: any) => String(value ?? "").replace(/\D/g, "");
+const BILLING_TYPE_FIELD_NAME = "Tipo de Pessoa (NF)";
+const BILLING_DOC_FIELD_NAME = "CPF/CNPJ (NF)";
+const BILLING_NAME_FIELD_NAME = "Razão Social / Nome (NF)";
+const BILLING_EMAIL_FIELD_NAME = "E-mail para envio da NF";
+
+const isCpfBillingType = (value: string | null | undefined) => {
+  const normalized = (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+  return /\b(cpf|pf|pessoa\s*fisica|fisica)\b/.test(normalized);
+};
 
 const formatPhone = (s: string) => {
   const d = s.replace(/\D/g, "");
