@@ -325,6 +325,7 @@ export const DigitalContractTab = ({
             signed_pdf_path: existing.signed_pdf_path,
             signed_at: existing.signed_at,
             zapsign_document_token: existing.zapsign_document_token,
+            zapsign_signers: ((existing as any).zapsign_signers as ZapSignerStatus[] | null) ?? null,
           });
           setData(rowToData(existing));
           setTemplateId((existing as any).template_id ?? null);
