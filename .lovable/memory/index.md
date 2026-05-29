@@ -59,6 +59,7 @@
 - [Fixed Contratada Data](mem://features/sales/contract-fixed-contratada-data-pt) — Eternum Mentoring Club Ltda, hardcoded no template
 - [Contract Wizard Autofill](mem://features/sales/contract-autofill-pt) — Autofill no wizard com produto como default e deal sobrescrevendo
 - [Roulette Async Approval](mem://features/sales/roulette-async-approval-pt) — Vendedor solicita giro, gestor aprova/rejeita em /sales-team/spiffs
+- [Rykas Mentoring Vigência](mem://features/sales/rykas-mentoring-duration-pt) — Vigência sempre 6 meses para produtos Rykas Mentoring
 
 ### Clients & Contracts
 - [VIP Crown Indicator](mem://features/client/vip-crown-indicator-pt) — Coroa âmbar via `<VipBadge clientId>`
