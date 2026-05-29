@@ -741,6 +741,50 @@ export const ContractWizard = ({
     }
   }, [templateVariables, placeholderValues, menteeData?.client_cpf_cnpj]);
 
+  useEffect(() => {
+    if (!dealId || docInitedRef.current) return;
+    let cancelled = false;
+    (async () => {
+      const { data: fields } = await supabase
+        .from("custom_fields")
+        .select("id, name")
+        .in("name", [BILLING_TYPE_FIELD_NAME, BILLING_DOC_FIELD_NAME, BILLING_NAME_FIELD_NAME, BILLING_EMAIL_FIELD_NAME]);
+      if (cancelled || !fields?.length) return;
+      const idByName = new Map((fields as { id: string; name: string }[]).map((field) => [field.name, field.id]));
+      const ids = Array.from(idByName.values());
+      const { data: values } = await supabase
+        .from("deal_field_values")
+        .select("field_id, value_text")
+        .eq("deal_id", dealId)
+        .in("field_id", ids);
+      if (cancelled || !values?.length) return;
+      const valueByName: Record<string, string> = {};
+      (values as { field_id: string; value_text: string | null }[]).forEach((row) => {
+        const found = Array.from(idByName.entries()).find(([, id]) => id === row.field_id);
+        if (found) valueByName[found[0]] = row.value_text || "";
+      });
+      if (!isCpfBillingType(valueByName[BILLING_TYPE_FIELD_NAME])) return;
+      const billingCpf = onlyDigits(valueByName[BILLING_DOC_FIELD_NAME]);
+      if (billingCpf.length !== 11) return;
+      setDocType("cpf");
+      setDocInput(billingCpf);
+      docInitedRef.current = true;
+      if (onMenteeChange && menteeData) {
+        const next: DigitalContractData = {
+          ...menteeData,
+          client_cpf_cnpj: billingCpf,
+          client_name: menteeData.client_name || valueByName[BILLING_NAME_FIELD_NAME] || "",
+          client_email: menteeData.client_email || valueByName[BILLING_EMAIL_FIELD_NAME] || "",
+        };
+        onMenteeChange(next);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealId, onMenteeChange, menteeData]);
+
   /* Mantém o documento digitado no box de busca sincronizado com TODAS as
      variáveis de documento do template (CPF, CNPJ, CLIENT_DOCUMENT, etc.),
      para o usuário não ter que digitar duas vezes. */
