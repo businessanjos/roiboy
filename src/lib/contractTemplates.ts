@@ -507,6 +507,11 @@ const RYKAS_PAYMENT_PRESETS: Record<string, { label: string; total: number; tota
   },
 };
 
+const formatPlainBRLWords = (value: any): string => {
+  const num = parseMoneyLike(value);
+  return num === null ? "" : numberToBRLExtenso(num);
+};
+
 const withDerivedPaymentValues = (values: Record<string, any>): Record<string, any> => {
   const out = { ...(values ?? {}) };
   // Rykas template helpers — derive label/total/words from the selected variant
@@ -516,6 +521,21 @@ const withDerivedPaymentValues = (values: Record<string, any>): Record<string, a
     if (!out.FORMA_PAGAMENTO_RYKAS_LABEL) out.FORMA_PAGAMENTO_RYKAS_LABEL = preset.label;
     if (!out.VALOR_TOTAL_RYKAS) out.VALOR_TOTAL_RYKAS = formatBRL(preset.total);
     if (!out.VALOR_TOTAL_RYKAS_EXTENSO) out.VALOR_TOTAL_RYKAS_EXTENSO = preset.totalWords;
+  } else {
+    const total = resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value;
+    const totalNum = parseMoneyLike(total);
+    const paymentLabel =
+      out.FORMA_PAGAMENTO_RYKAS ||
+      out.FORMA_PAGAMENTO ||
+      out.FORMA_DE_PAGAMENTO ||
+      out.PAGAMENTO ||
+      out.PAYMENT_METHOD ||
+      out.METODO_PAGAMENTO ||
+      out.MEIO_PAGAMENTO;
+
+    if (!out.FORMA_PAGAMENTO_RYKAS_LABEL && paymentLabel) out.FORMA_PAGAMENTO_RYKAS_LABEL = paymentLabel;
+    if (!out.VALOR_TOTAL_RYKAS && totalNum !== null) out.VALOR_TOTAL_RYKAS = formatBRL(totalNum);
+    if (!out.VALOR_TOTAL_RYKAS_EXTENSO && totalNum !== null) out.VALOR_TOTAL_RYKAS_EXTENSO = formatPlainBRLWords(totalNum);
   }
   const currentInstallment = resolveValueByKey("INSTALLMENT_VALUE", out).value;
   if (currentInstallment !== undefined && currentInstallment !== null && currentInstallment !== "") return out;
