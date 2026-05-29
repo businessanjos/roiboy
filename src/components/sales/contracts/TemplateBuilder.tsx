@@ -134,7 +134,7 @@ const SAMPLE_CTX = {
   company: {
     name: "ETERNUM MENTORING CLUB LTDA",
     cnpj: "53.844.206/0001-64",
-    address: "Av. Copacabana, 325, Sala 207, Barueri/SP",
+    address: "Av. Copacabana, 325, Sala 102, Barueri/SP",
     representative: "—",
     email: "financeiro@anjosbusiness.com.br",
   },
