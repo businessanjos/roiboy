@@ -1034,6 +1034,57 @@ export const ContractWizard = ({
     templateVariables,
   ]);
 
+  /* ---- Auto-importa dados do Contratante (etapa 1) para Mentorado (etapa 2) ----
+     A etapa 1 é justamente para preencher os dados do cliente; não faz sentido
+     pedir os mesmos campos de novo na etapa 2. Sempre que houver valor no
+     placeholder e o campo do mentorado estiver vazio, preenchemos automaticamente. */
+  useEffect(() => {
+    if (!onMenteeChange || !menteeData) return;
+    const v = placeholderValues ?? {};
+    const isFilled = (x: any) => x !== null && x !== undefined && String(x).trim() !== "";
+    const findVal = (regex: RegExp): string | undefined => {
+      for (const key of Object.keys(v)) {
+        const up = key.toUpperCase();
+        if (/(EMPRESA|CONTRATADA|COMPANY)/.test(up)) continue;
+        if (regex.test(up) && isFilled(v[key])) return String(v[key]);
+      }
+      return undefined;
+    };
+    const next: typeof menteeData = { ...menteeData };
+    let changed = false;
+    if (!isFilled(next.client_name)) {
+      const n = findVal(/(^|_)NOME(_COMPLETO)?$|FULL_?NAME|CLIENT_?NAME|CONTRATANTE(_NOME)?$|RAZAO_?SOCIAL|RAZÃO_?SOCIAL/);
+      if (n) { next.client_name = n; changed = true; }
+    }
+    if (!isFilled(next.client_cpf_cnpj)) {
+      const d = findVal(/^CPF$|CLIENT_CPF|CONTRATANTE_CPF|^CNPJ$|CLIENT_CNPJ|CONTRATANTE_CNPJ/);
+      if (d) { next.client_cpf_cnpj = d; changed = true; }
+    }
+    if (!isFilled(next.client_email)) {
+      const e = findVal(/EMAIL|E_?MAIL/);
+      if (e) { next.client_email = e; changed = true; }
+    }
+    if (!isFilled(next.client_address)) {
+      const rua = findVal(/(^|_)RUA$|LOGRADOURO|^ENDERECO$|^ENDEREÇO$/);
+      const numero = findVal(/^NUMERO$|NUM_END|NUMERO_ENDERECO/);
+      const compl = findVal(/COMPLEMENTO/);
+      const bairro = findVal(/BAIRRO/);
+      const cidade = findVal(/(^|_)CIDADE$/);
+      const estado = findVal(/(^|_)ESTADO$|^UF$/);
+      const cep = findVal(/(^|_)CEP$|ZIP/);
+      const parts: string[] = [];
+      if (rua) parts.push(numero ? `${rua}, ${numero}` : rua);
+      if (compl) parts.push(compl);
+      if (bairro) parts.push(bairro);
+      if (cidade || estado) parts.push([cidade, estado].filter(Boolean).join("/"));
+      if (cep) parts.push(`CEP ${cep}`);
+      const composed = parts.join(" - ");
+      if (composed) { next.client_address = composed; changed = true; }
+    }
+    if (changed) onMenteeChange(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeholderValues, menteeData?.client_name, menteeData?.client_cpf_cnpj, menteeData?.client_email, menteeData?.client_address]);
+
 
   /* ---- Mutations ---- */
 
@@ -2466,14 +2517,9 @@ export const ContractWizard = ({
               size="sm"
               onClick={async () => {
                 if (!canNext) return;
-                if (!currentStepComplete) {
-                  toast.warning(
-                    `Avançando com ${missingInStep} campo${missingInStep > 1 ? "s" : ""} pendente${missingInStep > 1 ? "s" : ""}.`,
-                    missingLabels.length > 0
-                      ? { description: `Você pode completar depois: ${missingLabels.join(", ")}` }
-                      : undefined,
-                  );
-                }
+                // Dados do mentorado são auto-importados da etapa 1; se
+                // ainda faltar algo, mostramos só o banner amarelo acima —
+                // sem toast confuso pedindo para "completar depois".
                 if (step === "client") {
                   await persistClientFromPlaceholders();
                 }
