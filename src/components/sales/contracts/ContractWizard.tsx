@@ -2467,15 +2467,12 @@ export const ContractWizard = ({
               onClick={async () => {
                 if (!canNext) return;
                 if (!currentStepComplete) {
-                  toast.error(
-                    `Preencha todos os campos obrigatórios antes de avançar${
-                      missingInStep > 0 ? ` (${missingInStep} pendente${missingInStep > 1 ? "s" : ""})` : ""
-                    }.`,
+                  toast.warning(
+                    `Avançando com ${missingInStep} campo${missingInStep > 1 ? "s" : ""} pendente${missingInStep > 1 ? "s" : ""}.`,
                     missingLabels.length > 0
-                      ? { description: `Faltam: ${missingLabels.join(", ")}` }
+                      ? { description: `Você pode completar depois: ${missingLabels.join(", ")}` }
                       : undefined,
                   );
-                  return;
                 }
                 if (step === "client") {
                   await persistClientFromPlaceholders();
@@ -2492,7 +2489,7 @@ export const ContractWizard = ({
                 }
                 setStep(allKeys[currentIdx + 1]);
               }}
-              disabled={!canNext || disabled || !currentStepComplete}
+              disabled={!canNext || disabled}
               title={
                 !currentStepComplete
                   ? missingLabels.length > 0
