@@ -918,6 +918,7 @@ export const DigitalContractTab = ({
           signed_pdf_path: updated.signed_pdf_path,
           signed_at: updated.signed_at,
           zapsign_document_token: updated.zapsign_document_token,
+          zapsign_signers: ((updated as any).zapsign_signers as ZapSignerStatus[] | null) ?? null,
         });
       }
     } catch (e: any) {
