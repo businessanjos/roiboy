@@ -829,7 +829,7 @@ export const ContractWizard = ({
       if (cur === digits) continue;
       updates[v.key] = digits;
     }
-    if (docType === "cpf") {
+    if (effectiveDocType === "cpf") {
       updates.CLIENT_CPF = digits;
       updates.CONTRATANTE_CPF = digits;
       updates.CPF = digits;
@@ -1013,7 +1013,7 @@ export const ContractWizard = ({
             seenPhone = true;
           }
           // Em modo CPF (pessoa física) escondemos os campos próprios de PJ.
-          if (docType === "cpf") {
+          if (effectiveDocType === "cpf") {
             const idText = `${v.key} ${v.label || ""}`.toUpperCase();
             const isHidden =
               /CNPJ/.test(idText) ||
@@ -1102,7 +1102,7 @@ export const ContractWizard = ({
       });
     }
     return counts;
-  }, [groupedVars, placeholderValues, menteeData, onMenteeChange, docType]);
+  }, [groupedVars, placeholderValues, menteeData, onMenteeChange, effectiveDocType]);
 
   const totalFilled = Object.values(filledCounts).reduce((a, b) => a + b.filled, 0);
   const totalAll = Object.values(filledCounts).reduce((a, b) => a + b.total, 0);
@@ -1217,7 +1217,7 @@ export const ContractWizard = ({
     }
     if (changed) onMenteeChange(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placeholderValues, docType, docInput, menteeData?.client_name, menteeData?.client_cpf_cnpj, menteeData?.client_email, menteeData?.client_address]);
+  }, [placeholderValues, effectiveDocType, docInput, menteeData?.client_name, menteeData?.client_cpf_cnpj, menteeData?.client_email, menteeData?.client_address]);
 
 
   /* ---- Mutations ---- */
@@ -1512,7 +1512,7 @@ export const ContractWizard = ({
   };
 
   const handleDocLookup = () => {
-    if (docType === "cnpj") handleCnpjLookup(docInput);
+    if (effectiveDocType === "cnpj") handleCnpjLookup(docInput);
     else handleCpfLookup(docInput);
   };
 
@@ -2297,9 +2297,9 @@ export const ContractWizard = ({
                 Buscar dados do contratante
               </span>
               <span className="text-[11px] text-muted-foreground">
-                {docType === "cnpj"
+                {effectiveDocType === "cnpj"
                   ? "Preenche automaticamente nome, endereço e contatos."
-                  : "Informe o CPF e preencha os demais dados manualmente."}
+                  : "Faturamento em CPF: os campos de PJ ficam fora desta etapa."}
               </span>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -2312,7 +2312,7 @@ export const ContractWizard = ({
                     if (currentDigits.length === 11) setDocInput("");
                   }}
                   className={`px-3 py-1.5 text-xs font-medium transition ${
-                    docType === "cnpj"
+                    effectiveDocType === "cnpj"
                       ? "bg-primary text-primary-foreground"
                       : "bg-background text-muted-foreground hover:text-foreground"
                   }`}
@@ -2328,7 +2328,7 @@ export const ContractWizard = ({
                     if (currentDigits.length === 14) setDocInput("");
                   }}
                   className={`px-3 py-1.5 text-xs font-medium transition ${
-                    docType === "cpf"
+                    effectiveDocType === "cpf"
                       ? "bg-primary text-primary-foreground"
                       : "bg-background text-muted-foreground hover:text-foreground"
                   }`}
@@ -2340,17 +2340,17 @@ export const ContractWizard = ({
               <Input
                 value={docInput ? formatCpfCnpj(docInput) : ""}
                 onChange={(e) => setDocInput(e.target.value.replace(/\D/g, ""))}
-                placeholder={docType === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"}
+                placeholder={effectiveDocType === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"}
                 disabled={disabled}
                 className="h-9 flex-1"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && docType === "cnpj") {
+                  if (e.key === "Enter" && effectiveDocType === "cnpj") {
                     e.preventDefault();
                     handleDocLookup();
                   }
                 }}
               />
-              {docType === "cnpj" && (
+              {effectiveDocType === "cnpj" && (
                 <Button
                   type="button"
                   size="sm"
@@ -2408,7 +2408,7 @@ export const ContractWizard = ({
           // Quando CPF (PF) está selecionado, esconde Nome Fantasia / IE / IM
           // e converte "Razão Social" em "Nome completo" (mantendo o placeholder
           // do template para que o conteúdo continue sendo preenchido).
-          if (step === "client" && docType === "cpf") {
+          if (step === "client" && effectiveDocType === "cpf") {
             visibleList = visibleList.filter((v) => {
               const k = `${v.key} ${v.label || ""}`.toUpperCase();
               const isHidden =
