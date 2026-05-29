@@ -159,6 +159,27 @@ const isCpfBillingType = (value: string | null | undefined) => {
   return /\b(cpf|pf|pessoa\s*fisica|fisica)\b/.test(normalized);
 };
 
+const BILLING_FIELDS = {
+  tipo: "Tipo de Pessoa (NF)",
+  doc: "CPF/CNPJ (NF)",
+  nome: "Razão Social / Nome (NF)",
+  email: "E-mail para envio da NF",
+  mentNome: "Mentorado - Nome",
+  mentEmail: "Mentorado - E-mail",
+} as const;
+
+type BillingCustomFieldRow = { id: string; name: string };
+type BillingFieldValueRow = { field_id: string; value_text: string | null };
+type BillingDealRow = { client_id: string | null; contact_name: string | null; contact_email: string | null };
+type ClientPayerLinkRow = { payer_id: string | null; is_default: boolean | null };
+type PayerRow = {
+  id: string;
+  document_type: string | null;
+  document: string | null;
+  legal_name: string | null;
+  email_billing: string | null;
+};
+
 export interface MenteeContractFieldsProps {
   data: DigitalContractData;
   onChange: (next: DigitalContractData) => void;
@@ -261,7 +282,7 @@ export const MenteeContractFields = ({
         const { data: cf } = await supabase
           .from("custom_fields")
           .select("id")
-          .eq("name", "Tipo de Pessoa (NF)")
+          .eq("name", BILLING_FIELDS.tipo)
           .maybeSingle();
         if (!cf?.id) {
           if (!cancelled) {
@@ -306,13 +327,13 @@ export const MenteeContractFields = ({
     }
     setCopyingBilling(true);
     try {
-      const names = ["Tipo de Pessoa (NF)", "CPF/CNPJ (NF)", "Razão Social / Nome (NF)", "E-mail para envio da NF"];
+      const names = Object.values(BILLING_FIELDS);
       const { data: cf } = await supabase
         .from("custom_fields")
         .select("id, name")
         .in("name", names);
       const idByName: Record<string, string> = {};
-      (cf || []).forEach((f: any) => {
+      ((cf || []) as BillingCustomFieldRow[]).forEach((f) => {
         idByName[f.name] = f.id;
       });
       const fieldIds = Object.values(idByName);
@@ -326,20 +347,56 @@ export const MenteeContractFields = ({
         .eq("deal_id", dealId)
         .in("field_id", fieldIds);
       const valByName: Record<string, string> = {};
-      (vals || []).forEach((v: any) => {
+      ((vals || []) as BillingFieldValueRow[]).forEach((v) => {
         const name = Object.entries(idByName).find(([, id]) => id === v.field_id)?.[0];
         if (name) valByName[name] = v.value_text || "";
       });
-      const tipo = valByName["Tipo de Pessoa (NF)"] || "";
+      const tipo = valByName[BILLING_FIELDS.tipo] || "";
       if (tipo && !isCpfBillingType(tipo)) {
         toast.error("O faturamento é PJ. O Mentorado deve ser sempre Pessoa Física — preencha manualmente.");
         return;
       }
-      const cpf = valByName["CPF/CNPJ (NF)"] || "";
-      const nome = valByName["Razão Social / Nome (NF)"] || "";
-      const email = valByName["E-mail para envio da NF"] || "";
+      let cpf = valByName[BILLING_FIELDS.doc] || "";
+      let nome = valByName[BILLING_FIELDS.nome] || valByName[BILLING_FIELDS.mentNome] || "";
+      let email = valByName[BILLING_FIELDS.email] || valByName[BILLING_FIELDS.mentEmail] || "";
+
+      const { data: dealRow } = await supabase
+        .from("deals")
+        .select("client_id, contact_name, contact_email")
+        .eq("id", dealId)
+        .maybeSingle();
+      const dealBilling = dealRow as BillingDealRow | null;
+
+      if ((!cpf || !nome || !email) && dealBilling?.client_id) {
+        const { data: payerLinks } = await supabase
+          .from("client_payers")
+          .select("payer_id, is_default")
+          .eq("client_id", dealBilling.client_id)
+          .order("is_default", { ascending: false });
+        const links = (payerLinks || []) as ClientPayerLinkRow[];
+        const payerIds = links.map((link) => link.payer_id).filter((id): id is string => Boolean(id));
+        if (payerIds.length > 0) {
+          const { data: payers } = await supabase
+            .from("payers")
+            .select("id, document_type, document, legal_name, email_billing")
+            .in("id", payerIds);
+          const payerRows = (payers || []) as PayerRow[];
+          const payerById = new Map<string, PayerRow>(payerRows.map((payer) => [payer.id, payer]));
+          const cpfPayer = links
+            .map((link) => (link.payer_id ? payerById.get(link.payer_id) : undefined))
+            .find((payer): payer is PayerRow => Boolean(payer) && (isCpfBillingType(payer.document_type) || String(payer.document || "").replace(/\D/g, "").length === 11));
+          if (cpfPayer) {
+            cpf = cpf || cpfPayer.document || "";
+            nome = nome || cpfPayer.legal_name || "";
+            email = email || cpfPayer.email_billing || "";
+          }
+        }
+      }
+
+      nome = nome || dealBilling?.contact_name || "";
+      email = email || dealBilling?.contact_email || "";
       if (!cpf && !nome && !email) {
-        toast.error("Sem dados de faturamento preenchidos para copiar.");
+        toast.error("Não encontrei dados de faturamento CPF para copiar.");
         return;
       }
       onChange({
@@ -349,8 +406,9 @@ export const MenteeContractFields = ({
         client_email: email || data.client_email,
       });
       toast.success("Dados copiados do faturamento.");
-    } catch (e: any) {
-      toast.error("Erro ao copiar: " + (e?.message ?? "tente novamente"));
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "tente novamente";
+      toast.error("Erro ao copiar: " + message);
     } finally {
       setCopyingBilling(false);
     }
