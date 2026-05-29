@@ -484,12 +484,12 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
               <div className="grid grid-cols-2 gap-10 text-sm">
                 <div className="text-center">
                   <div className="border-t border-border pt-3 mt-16">
-                    <p className="text-[11px] text-muted-foreground">Nome · CPF</p>
+                    <p className="text-[11px] text-muted-foreground">Nome</p>
                   </div>
                 </div>
                 <div className="text-center">
                   <div className="border-t border-border pt-3 mt-16">
-                    <p className="text-[11px] text-muted-foreground">Nome · CPF</p>
+                    <p className="text-[11px] text-muted-foreground">Nome</p>
                   </div>
                 </div>
               </div>
