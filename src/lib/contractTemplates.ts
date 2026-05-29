@@ -507,15 +507,64 @@ const RYKAS_PAYMENT_PRESETS: Record<string, { label: string; total: number; tota
   },
 };
 
+const formatPlainBRLWords = (value: any): string => {
+  const num = parseMoneyLike(value);
+  return num === null ? "" : numberToBRLExtenso(num);
+};
+
 const withDerivedPaymentValues = (values: Record<string, any>): Record<string, any> => {
   const out = { ...(values ?? {}) };
   // Rykas template helpers — derive label/total/words from the selected variant
   const rykas = out.FORMA_PAGAMENTO_RYKAS;
   if (rykas && RYKAS_PAYMENT_PRESETS[String(rykas)]) {
     const preset = RYKAS_PAYMENT_PRESETS[String(rykas)];
+    const explicitTotal = resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value;
+    const explicitTotalNum = parseMoneyLike(explicitTotal);
+    const finalTotal = explicitTotalNum ?? preset.total;
     if (!out.FORMA_PAGAMENTO_RYKAS_LABEL) out.FORMA_PAGAMENTO_RYKAS_LABEL = preset.label;
-    if (!out.VALOR_TOTAL_RYKAS) out.VALOR_TOTAL_RYKAS = formatBRL(preset.total);
-    if (!out.VALOR_TOTAL_RYKAS_EXTENSO) out.VALOR_TOTAL_RYKAS_EXTENSO = preset.totalWords;
+    if (!out.VALOR_TOTAL_RYKAS) out.VALOR_TOTAL_RYKAS = formatBRL(finalTotal);
+    if (!out.VALOR_TOTAL_RYKAS_EXTENSO) out.VALOR_TOTAL_RYKAS_EXTENSO = explicitTotalNum === null ? preset.totalWords : formatPlainBRLWords(finalTotal);
+    if (!out.__MODALIDADE_PAGAMENTO_UI__) {
+      out.__MODALIDADE_PAGAMENTO_UI__ = String(rykas) === "A_VISTA" ? "a_vista" : String(rykas) === "CHEQUE_1_11" ? "cheque" : "parcelado";
+    }
+  } else {
+    const total = resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value;
+    const totalNum = parseMoneyLike(total);
+    const paymentLabel =
+      out.FORMA_PAGAMENTO_RYKAS ||
+      out.FORMA_PAGAMENTO ||
+      out.FORMA_DE_PAGAMENTO ||
+      out.PAGAMENTO ||
+      out.PAYMENT_METHOD ||
+      out.METODO_PAGAMENTO ||
+      out.MEIO_PAGAMENTO;
+
+    if (!out.FORMA_PAGAMENTO_RYKAS_LABEL && paymentLabel) out.FORMA_PAGAMENTO_RYKAS_LABEL = paymentLabel;
+    if (!out.VALOR_TOTAL_RYKAS && totalNum !== null) out.VALOR_TOTAL_RYKAS = formatBRL(totalNum);
+    if (!out.VALOR_TOTAL_RYKAS_EXTENSO && totalNum !== null) out.VALOR_TOTAL_RYKAS_EXTENSO = formatPlainBRLWords(totalNum);
+  }
+  const modality = String(out.__MODALIDADE_PAGAMENTO_UI__ ?? "").trim().toLowerCase();
+  const paymentText = [
+    out.__FORMA_PAGAMENTO_UI__,
+    out.FORMA_PAGAMENTO_RYKAS,
+    out.FORMA_PAGAMENTO_RYKAS_LABEL,
+    out.FORMA_PAGAMENTO,
+    out.FORMA_DE_PAGAMENTO,
+    out.PAGAMENTO,
+    out.PAYMENT_METHOD,
+    out.METODO_PAGAMENTO,
+    out.MEIO_PAGAMENTO,
+  ]
+    .filter((v) => v !== null && v !== undefined && v !== "")
+    .join(" ")
+    .toLowerCase();
+  const hasKnownModality = ["a_vista", "parcelado", "cheque"].includes(modality);
+  if (modality === "parcelado" && /cheque/.test(paymentText)) {
+    out.__MODALIDADE_PAGAMENTO_UI__ = "cheque";
+  } else if (!hasKnownModality && /cheque/.test(paymentText)) {
+    out.__MODALIDADE_PAGAMENTO_UI__ = "cheque";
+  } else if (!hasKnownModality && /parcelad|cart[aã]o|boleto|pix|transfer/.test(paymentText)) {
+    out.__MODALIDADE_PAGAMENTO_UI__ = /[àa]\s*vista|1x/.test(paymentText) ? "a_vista" : "parcelado";
   }
   const currentInstallment = resolveValueByKey("INSTALLMENT_VALUE", out).value;
   if (currentInstallment !== undefined && currentInstallment !== null && currentInstallment !== "") return out;
@@ -566,8 +615,10 @@ export const renderTemplate = (
   // Auto-inject DOC_TYPE (PF/PJ) based on CNPJ/CPF presence if not explicitly set,
   // so templates can use {{#if DOC_TYPE=PJ}}…{{/if}} blocks without extra wiring.
   if (renderValues.DOC_TYPE === undefined || renderValues.DOC_TYPE === null || renderValues.DOC_TYPE === "") {
-    const cnpjV = renderValues.CNPJ ?? renderValues.CLIENT_DOCUMENT;
-    const cpfV = renderValues.CPF;
+    const pickFirstFilled = (...candidates: any[]) =>
+      candidates.find((v) => v !== null && v !== undefined && String(v).trim() !== "") ?? "";
+    const cnpjV = pickFirstFilled(renderValues.CNPJ, renderValues.CLIENT_CNPJ, renderValues.CONTRATANTE_CNPJ, renderValues.CLIENT_DOCUMENT);
+    const cpfV = pickFirstFilled(renderValues.CPF, renderValues.CLIENT_CPF, renderValues.CONTRATANTE_CPF, renderValues.CLIENT_DOCUMENT);
     const cnpjDigits = String(cnpjV ?? "").replace(/\D/g, "");
     const cpfDigits = String(cpfV ?? "").replace(/\D/g, "");
     if (cnpjDigits.length === 14) renderValues.DOC_TYPE = "PJ";

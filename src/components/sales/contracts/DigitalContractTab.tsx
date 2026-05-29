@@ -243,8 +243,20 @@ export const DigitalContractTab = ({
       const d = new Date(typeof baseDate === "string" && baseDate.length <= 10 ? baseDate + "T12:00:00" : baseDate);
       return Number.isNaN(d.getTime()) ? String(new Date().getFullYear()) : String(d.getFullYear());
     })();
+    const firstFilled = (...vals: any[]) => vals.find((v) => v !== null && v !== undefined && v !== "") ?? "";
+    const durationText = data.contract_duration_months ? `${data.contract_duration_months} meses` : "";
     return {
       ...merged,
+      TOTAL_VALUE: firstFilled(merged.TOTAL_VALUE, data.total_value),
+      VALOR_TOTAL: firstFilled(merged.VALOR_TOTAL, data.total_value),
+      INSTALLMENTS: firstFilled(merged.INSTALLMENTS, data.installments),
+      PARCELAS: firstFilled(merged.PARCELAS, data.installments),
+      INSTALLMENT_VALUE: firstFilled(merged.INSTALLMENT_VALUE, data.installment_value),
+      VALOR_PARCELA: firstFilled(merged.VALOR_PARCELA, data.installment_value),
+      DATA_PAGAMENTO: firstFilled(merged.DATA_PAGAMENTO, data.first_due_date),
+      DUE_DATE: firstFilled(merged.DUE_DATE, data.first_due_date),
+      DATA_PRIMEIRA_PARCELA: firstFilled(merged.DATA_PRIMEIRA_PARCELA, data.first_due_date),
+      CONTRACT_DURATION: firstFilled(merged.CONTRACT_DURATION, durationText),
       PRODUCT_NAME: merged.PRODUCT_NAME || productName || merged.PRODUCT_NAME || "",
       PRODUTO: merged.PRODUTO || productName || "",
       PROGRAMA: merged.PROGRAMA || productName || "",
