@@ -320,6 +320,16 @@ export const DigitalContractTab = ({
           setTemplateHtml(loadedTemplateHtml);
           setTemplateVariables(loadedTemplateVariables);
           setPlaceholderValues(((existing as any).placeholder_values as Record<string, any>) ?? {});
+
+          // Sempre carregar dados completos do cliente (necessário para autofill de telefone no envio ZapSign)
+          if (clientId) {
+            const { data: client } = await supabase
+              .from("clients")
+              .select("id, full_name, cpf, cnpj, rg, birth_date, phone_e164, phone, emails, street, street_number, complement, neighborhood, city, state, zip_code, company_name")
+              .eq("id", clientId)
+              .maybeSingle();
+            if (!cancelled) setClientFull(client ?? null);
+          }
         } else {
           const { data: defaults } = await supabase
             .from("contract_company_defaults")
