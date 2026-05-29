@@ -682,6 +682,14 @@ export const ContractWizard = ({
       return;
     }
 
+    const menteeDoc = onlyDigits(menteeData?.client_cpf_cnpj);
+    if (menteeDoc.length === 11) {
+      setDocType("cpf");
+      setDocInput(menteeDoc);
+      docInitedRef.current = true;
+      return;
+    }
+
     if (!templateVariables || templateVariables.length === 0) return;
 
     const vars = templateVariables.filter((v) => !isFixedContratadaKey(v.key));
@@ -718,7 +726,7 @@ export const ContractWizard = ({
         docInitedRef.current = true;
       }
     }
-  }, [templateVariables, placeholderValues]);
+  }, [templateVariables, placeholderValues, menteeData?.client_cpf_cnpj]);
 
   /* Mantém o documento digitado no box de busca sincronizado com TODAS as
      variáveis de documento do template (CPF, CNPJ, CLIENT_DOCUMENT, etc.),
