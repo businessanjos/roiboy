@@ -2278,7 +2278,11 @@ export const ContractWizard = ({
               <div className="flex rounded-md border border-input overflow-hidden shrink-0">
                 <button
                   type="button"
-                  onClick={() => setDocType("cnpj")}
+                  onClick={() => {
+                    setDocType("cnpj");
+                    const currentDigits = onlyDigits(docInput);
+                    if (currentDigits.length === 11) setDocInput("");
+                  }}
                   className={`px-3 py-1.5 text-xs font-medium transition ${
                     docType === "cnpj"
                       ? "bg-primary text-primary-foreground"
@@ -2290,7 +2294,11 @@ export const ContractWizard = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDocType("cpf")}
+                  onClick={() => {
+                    setDocType("cpf");
+                    const currentDigits = onlyDigits(docInput);
+                    if (currentDigits.length === 14) setDocInput("");
+                  }}
                   className={`px-3 py-1.5 text-xs font-medium transition ${
                     docType === "cpf"
                       ? "bg-primary text-primary-foreground"
