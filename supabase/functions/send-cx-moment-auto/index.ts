@@ -45,7 +45,20 @@ Deno.serve(async (req) => {
   try {
     console.log("Processing scheduled CX moments...");
 
-    // Fetch scheduled moments that are due (limit to 10 per execution)
+    // SAFETY NET: self-heal pending events whose event_date is TODAY (MM-DD match)
+    // and don't have a scheduled_send_at. This prevents silent losses when an event
+    // is created without proper scheduling (legacy data, race conditions, etc.).
+    // Excludes manually paused events.
+    const todayMMDD = new Date().toISOString().slice(5, 10); // "MM-DD"
+    const { error: healError } = await supabase.rpc("heal_pending_life_events_for_today", {
+      p_today_mmdd: todayMMDD,
+    });
+    if (healError) {
+      console.warn("[heal] non-fatal:", healError.message);
+    }
+
+    // Fetch scheduled moments that are due. Excludes manually paused.
+    // Batch size raised to 50 to clear backlogs faster.
     const { data: moments, error: fetchError } = await supabase
       .from("client_life_events")
       .select(`
@@ -59,6 +72,7 @@ Deno.serve(async (req) => {
         is_recurring,
         scheduled_send_at,
         send_status,
+        send_error,
         clients!inner (
           full_name,
           phone_e164
@@ -66,14 +80,19 @@ Deno.serve(async (req) => {
       `)
       .eq("send_status", "scheduled")
       .lte("scheduled_send_at", new Date().toISOString())
-      .limit(10);
+      .limit(50);
 
     if (fetchError) {
       console.error("Error fetching moments:", fetchError);
       throw fetchError;
     }
 
-    if (!moments || moments.length === 0) {
+    // Filter out manually paused (extra defense; heal RPC already skips them)
+    const eligible = (moments || []).filter(
+      (m) => !((m as { send_error?: string }).send_error || "").includes("PAUSADO MANUALMENTE")
+    );
+
+    if (eligible.length === 0) {
       console.log("No scheduled moments to process");
       return new Response(
         JSON.stringify({ success: true, processed: 0, message: "No moments to process" }),
@@ -81,12 +100,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Found ${moments.length} moments to process`);
+    console.log(`Found ${eligible.length} moments to process`);
 
     let sentCount = 0;
     let failedCount = 0;
 
-    for (const moment of moments as unknown as LifeEventWithDetails[]) {
+    for (const moment of eligible as unknown as LifeEventWithDetails[]) {
       try {
         const client = moment.clients;
         
@@ -288,7 +307,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        processed: moments.length,
+        processed: eligible.length,
         sent: sentCount,
         failed: failedCount,
       }),

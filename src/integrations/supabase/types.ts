@@ -22248,6 +22248,10 @@ export type Database = {
         Returns: string[]
       }
       get_user_account_id: { Args: never; Returns: string }
+      heal_pending_life_events_for_today: {
+        Args: { p_today_mmdd: string }
+        Returns: number
+      }
       immutable_unaccent: { Args: { "": string }; Returns: string }
       increment_template_usage: {
         Args: { template_id: string }
