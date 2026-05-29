@@ -1186,7 +1186,7 @@ export const DigitalContractTab = ({
       </div>
 
       <Dialog open={signerDialogOpen} onOpenChange={(o) => !sendingZapsign && setSignerDialogOpen(o)}>
-        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] !flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-base">Selecionar signatários</DialogTitle>
             <DialogDescription className="text-xs">
