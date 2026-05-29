@@ -927,9 +927,10 @@ export const ContractWizard = ({
             if (seenPhone) return false;
             seenPhone = true;
           }
-          // Em modo CPF (pessoa física) escondemos Nome Fantasia / IE / IM
+          // Em modo CPF (pessoa física) escondemos os campos próprios de PJ.
           if (docType === "cpf") {
             const isHidden =
+              /CNPJ/.test(ku) ||
               /FANTASIA/.test(ku) ||
               /INSCRICAO_?(MUNICIPAL|ESTADUAL)|INSCRIÇÃO_?(MUNICIPAL|ESTADUAL)|^IE$|^IM$|_IE$|_IM$/.test(ku);
             if (isHidden) return false;
