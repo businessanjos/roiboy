@@ -611,8 +611,10 @@ export const renderTemplate = (
   // Auto-inject DOC_TYPE (PF/PJ) based on CNPJ/CPF presence if not explicitly set,
   // so templates can use {{#if DOC_TYPE=PJ}}…{{/if}} blocks without extra wiring.
   if (renderValues.DOC_TYPE === undefined || renderValues.DOC_TYPE === null || renderValues.DOC_TYPE === "") {
-    const cnpjV = renderValues.CNPJ ?? renderValues.CLIENT_DOCUMENT;
-    const cpfV = renderValues.CPF;
+    const pickFirstFilled = (...candidates: any[]) =>
+      candidates.find((v) => v !== null && v !== undefined && String(v).trim() !== "") ?? "";
+    const cnpjV = pickFirstFilled(renderValues.CNPJ, renderValues.CLIENT_CNPJ, renderValues.CONTRATANTE_CNPJ, renderValues.CLIENT_DOCUMENT);
+    const cpfV = pickFirstFilled(renderValues.CPF, renderValues.CLIENT_CPF, renderValues.CONTRATANTE_CPF, renderValues.CLIENT_DOCUMENT);
     const cnpjDigits = String(cnpjV ?? "").replace(/\D/g, "");
     const cpfDigits = String(cpfV ?? "").replace(/\D/g, "");
     if (cnpjDigits.length === 14) renderValues.DOC_TYPE = "PJ";
