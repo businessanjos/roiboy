@@ -1205,7 +1205,7 @@ export const DigitalContractTab = ({
             />
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+          <ScrollArea className="flex-1 min-h-0 h-full -mx-6 px-6">
             <div className="space-y-3 py-1">
               {signerDrafts.map((s, idx) => (
                 <Card key={idx} className="p-3 space-y-2">
