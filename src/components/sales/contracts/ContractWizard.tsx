@@ -752,8 +752,15 @@ export const ContractWizard = ({
       updates.CONTRATANTE_CNPJ = digits;
       updates.CNPJ = digits;
     }
-    if (Object.keys(updates).length > 0) {
-      for (const [k, val] of Object.entries(updates)) updateField(k, val);
+    const changed = Object.entries(updates).some(([k, val]) => placeholderValues?.[k] !== val);
+    if (changed) {
+      onChange({
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables,
+        placeholder_values: { ...placeholderValues, ...updates },
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docInput, docType, templateVariables]);
