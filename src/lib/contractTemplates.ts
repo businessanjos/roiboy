@@ -558,11 +558,12 @@ const withDerivedPaymentValues = (values: Record<string, any>): Record<string, a
     .filter((v) => v !== null && v !== undefined && v !== "")
     .join(" ")
     .toLowerCase();
+  const hasKnownModality = ["a_vista", "parcelado", "cheque"].includes(modality);
   if (modality === "parcelado" && /cheque/.test(paymentText)) {
     out.__MODALIDADE_PAGAMENTO_UI__ = "cheque";
-  } else if (!modality && /cheque/.test(paymentText)) {
+  } else if (!hasKnownModality && /cheque/.test(paymentText)) {
     out.__MODALIDADE_PAGAMENTO_UI__ = "cheque";
-  } else if (!modality && /parcelad|cart[aã]o|boleto|pix|transfer/.test(paymentText)) {
+  } else if (!hasKnownModality && /parcelad|cart[aã]o|boleto|pix|transfer/.test(paymentText)) {
     out.__MODALIDADE_PAGAMENTO_UI__ = /[àa]\s*vista|1x/.test(paymentText) ? "a_vista" : "parcelado";
   }
   const currentInstallment = resolveValueByKey("INSTALLMENT_VALUE", out).value;
