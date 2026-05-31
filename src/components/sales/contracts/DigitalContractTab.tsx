@@ -1056,6 +1056,12 @@ export const DigitalContractTab = ({
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           <span className="ml-1.5">Salvar</span>
         </Button>
+        {contract && (
+          <Button size="sm" variant="outline" onClick={handleDuplicate} disabled={saving} title="Cria um novo rascunho editável a partir deste contrato">
+            <Copy className="h-3.5 w-3.5" />
+            <span className="ml-1.5">Duplicar</span>
+          </Button>
+        )}
         <Button
           size="sm"
           variant="outline"
