@@ -105,10 +105,12 @@ const FIXED_CONTRACTADA_SIGNERS: SignerDraft[] = [
 
 
 interface DigitalContractTabProps {
-  dealId: string;
+  dealId: string | null;
   dealValue?: number | null;
   clientId?: string | null;
   clientName?: string;
+  /** Quando definido, abre direto este contrato (útil para contratos sem deal). */
+  contractId?: string | null;
 }
 
 interface ZapSignerStatus {
