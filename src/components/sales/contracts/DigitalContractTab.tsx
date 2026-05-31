@@ -281,17 +281,30 @@ export const DigitalContractTab = ({
     const startRaw = firstFilled(
       placeholderValues?.VIGENCIA_INICIO,
       placeholderValues?.DATA_INICIO,
+      placeholderValues?.START_DATE,
+      placeholderValues?.CONTRACT_DATE,
+      placeholderValues?.DATA_CELEBRACAO,
+      placeholderValues?.DATA_CELEBRAÇÃO,
+      placeholderValues?.DATA_CONTRATO,
+      placeholderValues?.DATA_ASSINATURA,
       merged.START_DATE,
       merged.VIGENCIA_INICIO,
       merged.DATA_INICIO,
+      merged.CONTRACT_DATE,
+      merged.DATA_CELEBRACAO,
+      merged.DATA_CELEBRAÇÃO,
+      merged.DATA_CONTRATO,
+      merged.DATA_ASSINATURA,
     );
     const endRaw = firstFilled(
       placeholderValues?.VIGENCIA_FIM,
       placeholderValues?.DATA_FIM,
       placeholderValues?.DATA_TERMINO,
+      placeholderValues?.END_DATE,
       merged.END_DATE,
       merged.VIGENCIA_FIM,
       merged.DATA_FIM,
+      merged.DATA_TERMINO,
     );
     const startD = parseLooseDate(startRaw);
     const endD = parseLooseDate(endRaw);
