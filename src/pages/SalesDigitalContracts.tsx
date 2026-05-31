@@ -94,7 +94,7 @@ export default function SalesDigitalContracts() {
   const [dealSearch, setDealSearch] = useState("");
   const [deals, setDeals] = useState<DealOption[]>([]);
   const [loadingDeals, setLoadingDeals] = useState(false);
-  const [editorDeal, setEditorDeal] = useState<{ id: string; clientId: string | null; clientName: string; value: number | null } | null>(null);
+  const [editorDeal, setEditorDeal] = useState<{ id: string | null; clientId: string | null; clientName: string; value: number | null; contractId?: string | null } | null>(null);
 
   useEffect(() => {
     async function loadContracts() {
@@ -489,10 +489,21 @@ export default function SalesDigitalContracts() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        disabled={!contract.deal_id}
-                        onClick={() => contract.deal_id && openDealContractEditor(contract.deal_id)}
+                        onClick={() => {
+                          if (contract.deal_id) {
+                            openDealContractEditor(contract.deal_id);
+                          } else {
+                            setEditorDeal({
+                              id: null,
+                              clientId: null,
+                              clientName: contract.client_name || contract.contract_number,
+                              value: contract.total_value ?? null,
+                              contractId: contract.id,
+                            });
+                          }
+                        }}
                         aria-label="Abrir contrato"
-                        title="Abrir contrato"
+                        title={contract.deal_id ? "Abrir contrato" : "Abrir contrato (sem negócio vinculado)"}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
@@ -597,6 +608,7 @@ export default function SalesDigitalContracts() {
                 dealValue={editorDeal.value}
                 clientId={editorDeal.clientId}
                 clientName={editorDeal.clientName}
+                contractId={editorDeal.contractId ?? null}
               />
             )}
           </div>

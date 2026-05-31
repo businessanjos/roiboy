@@ -105,10 +105,12 @@ const FIXED_CONTRACTADA_SIGNERS: SignerDraft[] = [
 
 
 interface DigitalContractTabProps {
-  dealId: string;
+  dealId: string | null;
   dealValue?: number | null;
   clientId?: string | null;
   clientName?: string;
+  /** Quando definido, abre direto este contrato (útil para contratos sem deal). */
+  contractId?: string | null;
 }
 
 interface ZapSignerStatus {
@@ -218,6 +220,7 @@ export const DigitalContractTab = ({
   dealValue,
   clientId,
   clientName,
+  contractId,
 }: DigitalContractTabProps) => {
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
@@ -282,17 +285,22 @@ export const DigitalContractTab = ({
     let cancelled = false;
     async function load() {
       if (!accountId) return;
+      if (!dealId && !contractId) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
-        const { data: existing, error } = await supabase
+        const baseQuery = supabase
           .from("digital_contracts")
-          .select("*")
-          .eq("deal_id", dealId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .select("*");
+        const query = contractId
+          ? baseQuery.eq("id", contractId)
+          : baseQuery.eq("deal_id", dealId as string).order("created_at", { ascending: false }).limit(1);
+        const { data: existing, error } = await query.maybeSingle();
         if (error) throw error;
         if (cancelled) return;
+
 
         if (existing) {
           let loadedTemplateHtml = (existing as any).template_html ?? null;
@@ -401,6 +409,10 @@ export const DigitalContractTab = ({
           setData(seed);
 
           // Auto-resolve product from deal's "Item da Venda" custom field and load default template
+          if (!dealId) {
+            // Orphan contract (sem deal) — nada para resolver
+          } else
+
           try {
             const { mapItemVendaToProductId, DEAL_FIELD_IDS } = await import(
               "@/utils/dealToClientContractMapping"
@@ -456,10 +468,11 @@ export const DigitalContractTab = ({
     return () => {
       cancelled = true;
     };
-  }, [dealId, accountId, clientId, clientName, dealValue]);
+  }, [dealId, contractId, accountId, clientId, clientName, dealValue]);
 
   // Fetch deal extras (entry_value, won_at) once for autofill
   useEffect(() => {
+    if (!dealId) return;
     let cancelled = false;
     (async () => {
       const { data: deal } = await supabase
