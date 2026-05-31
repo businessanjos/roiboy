@@ -281,17 +281,30 @@ export const DigitalContractTab = ({
     const startRaw = firstFilled(
       placeholderValues?.VIGENCIA_INICIO,
       placeholderValues?.DATA_INICIO,
+      placeholderValues?.START_DATE,
+      placeholderValues?.CONTRACT_DATE,
+      placeholderValues?.DATA_CELEBRACAO,
+      placeholderValues?.DATA_CELEBRAÇÃO,
+      placeholderValues?.DATA_CONTRATO,
+      placeholderValues?.DATA_ASSINATURA,
       merged.START_DATE,
       merged.VIGENCIA_INICIO,
       merged.DATA_INICIO,
+      merged.CONTRACT_DATE,
+      merged.DATA_CELEBRACAO,
+      merged.DATA_CELEBRAÇÃO,
+      merged.DATA_CONTRATO,
+      merged.DATA_ASSINATURA,
     );
     const endRaw = firstFilled(
       placeholderValues?.VIGENCIA_FIM,
       placeholderValues?.DATA_FIM,
       placeholderValues?.DATA_TERMINO,
+      placeholderValues?.END_DATE,
       merged.END_DATE,
       merged.VIGENCIA_FIM,
       merged.DATA_FIM,
+      merged.DATA_TERMINO,
     );
     const startD = parseLooseDate(startRaw);
     const endD = parseLooseDate(endRaw);
@@ -306,6 +319,7 @@ export const DigitalContractTab = ({
     }
     const effectiveMonths = monthsFromDates ?? data.contract_duration_months ?? null;
     const durationText = effectiveMonths ? `${effectiveMonths} meses` : "";
+    const durationValue = monthsFromDates ? durationText : firstFilled(merged.CONTRACT_DURATION, durationText);
     return {
       ...merged,
       TOTAL_VALUE: firstFilled(merged.TOTAL_VALUE, data.total_value),
@@ -317,7 +331,10 @@ export const DigitalContractTab = ({
       DATA_PAGAMENTO: firstFilled(merged.DATA_PAGAMENTO, data.first_due_date),
       DUE_DATE: firstFilled(merged.DUE_DATE, data.first_due_date),
       DATA_PRIMEIRA_PARCELA: firstFilled(merged.DATA_PRIMEIRA_PARCELA, data.first_due_date),
-      CONTRACT_DURATION: firstFilled(merged.CONTRACT_DURATION, durationText),
+      CONTRACT_DURATION: durationValue,
+      DURACAO_MESES: durationValue,
+      DURACAO: durationValue,
+      VIGENCIA: durationValue,
       PRODUCT_NAME: merged.PRODUCT_NAME || productName || merged.PRODUCT_NAME || "",
       PRODUTO: merged.PRODUTO || productName || "",
       PROGRAMA: merged.PROGRAMA || productName || "",
