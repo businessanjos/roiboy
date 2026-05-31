@@ -105,7 +105,7 @@ export default function SalesDigitalContracts() {
         const { data, error } = await supabase
           .from("digital_contracts")
           .select(
-            "id, deal_id, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at",
+            "id, deal_id, client_id, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at",
           )
           .eq("account_id", currentUser.account_id)
           .order("updated_at", { ascending: false });
