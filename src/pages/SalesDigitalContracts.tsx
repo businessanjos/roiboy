@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { DigitalContractTab } from "@/components/sales/contracts/DigitalContractTab";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Copy, ExternalLink, FilePlus2, FileSignature, FileText, Loader2, Search, Settings2 } from "lucide-react";
+import { Copy, ExternalLink, FilePlus2, FileSignature, FileText, Files, Loader2, Search, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
