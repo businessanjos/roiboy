@@ -496,6 +496,16 @@ export default function SalesDigitalContracts() {
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteContract(contract.id, contract.contract_number, contract.status)}
+                        aria-label="Excluir contrato"
+                        title="Excluir contrato"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
