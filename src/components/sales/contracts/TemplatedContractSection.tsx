@@ -385,6 +385,9 @@ export const TemplatedContractPreview = ({
 .contract-document .rk-clause p,.contract-document .rk-clause li,.contract-document .rk-clause ul,.contract-document .rk-clause ol{min-width:0!important;max-width:100%!important;}
 .contract-document .rk-clause ul,.contract-document .rk-clause ol{padding-left:22px!important;margin:6px 0 10px!important;}
 .contract-document .rk-clause li{margin:3px 0!important;line-height:1.55!important;}
+/* === Sem justify: evita "rios" e buracos enormes entre palavras no PDF === */
+.contract-document .rk-clause,.contract-document .rk-clause p,.contract-document .rk-clause li,.contract-document .rk-clause div,.contract-document .rk-clause span{text-align:left!important;word-spacing:normal!important;text-align-last:left!important;hyphens:none!important;}
+.contract-document p,.contract-document li{text-align:left!important;word-spacing:normal!important;}
 .contract-document .rk-toc ol li,.contract-document .rk-cover-meta .item .v{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:break-word!important;}
 
 /* === Quadro 3P1R: layout em linhas largas, à prova de A4 === */
