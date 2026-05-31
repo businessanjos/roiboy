@@ -60,16 +60,24 @@ interface DealOption {
 const statusLabels: Record<string, string> = {
   draft: "Rascunho",
   ready: "Pronto",
+  sent: "Enviado p/ assinatura",
+  pending: "Assinatura pendente",
   pending_signature: "Assinatura pendente",
   signed: "Assinado",
+  refused: "Recusado",
+  expired: "Expirado",
   cancelled: "Cancelado",
 };
 
 const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   draft: "secondary",
   ready: "outline",
+  sent: "default",
+  pending: "default",
   pending_signature: "default",
   signed: "default",
+  refused: "destructive",
+  expired: "destructive",
   cancelled: "destructive",
 };
 
@@ -185,7 +193,7 @@ export default function SalesDigitalContracts() {
       (acc, contract) => {
         acc.total += Number(contract.total_value ?? 0);
         if (contract.status === "signed") acc.signed += 1;
-        if (contract.status === "pending_signature") acc.pending += 1;
+        if (["pending_signature", "pending", "sent"].includes(contract.status)) acc.pending += 1;
         return acc;
       },
       { total: 0, signed: 0, pending: 0 },
