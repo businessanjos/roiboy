@@ -450,8 +450,18 @@ export default function SalesDigitalContracts() {
                         size="icon"
                         onClick={() => copyPublicLink(contract.share_token)}
                         aria-label="Copiar link público"
+                        title="Copiar link público"
                       >
                         <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => duplicateContract(contract.id)}
+                        aria-label="Duplicar contrato"
+                        title="Duplicar como novo rascunho"
+                      >
+                        <Files className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -459,6 +469,7 @@ export default function SalesDigitalContracts() {
                         disabled={!contract.deal_id}
                         onClick={() => contract.deal_id && openDealContractEditor(contract.deal_id)}
                         aria-label="Abrir contrato"
+                        title="Abrir contrato"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
