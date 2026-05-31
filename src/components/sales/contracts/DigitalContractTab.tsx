@@ -1624,9 +1624,10 @@ export const DigitalContractTab = ({
                 <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar signatário
               </Button>
             </div>
-          </ScrollArea>
+            </div>
+          </div>
 
-          <DialogFooter className="flex-row sm:justify-between gap-2">
+          <DialogFooter className="flex-row sm:justify-between gap-2 px-6 pb-6 flex-shrink-0">
             <Button
               size="sm"
               variant="outline"
