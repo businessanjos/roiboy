@@ -608,6 +608,7 @@ export default function SalesDigitalContracts() {
                 dealValue={editorDeal.value}
                 clientId={editorDeal.clientId}
                 clientName={editorDeal.clientName}
+                contractId={editorDeal.contractId ?? null}
               />
             )}
           </div>
