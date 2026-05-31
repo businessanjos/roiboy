@@ -32,6 +32,7 @@ import { buildPublicContractUrl } from "@/lib/publicLink";
 interface DigitalContractListItem {
   id: string;
   deal_id: string | null;
+  client_id: string | null;
   contract_number: string | null;
   status: string;
   client_name: string;
