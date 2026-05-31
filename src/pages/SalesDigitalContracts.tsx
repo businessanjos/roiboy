@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { DigitalContractTab } from "@/components/sales/contracts/DigitalContractTab";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Copy, ExternalLink, FilePlus2, FileSignature, FileText, Loader2, Search, Settings2 } from "lucide-react";
+import { Copy, ExternalLink, FilePlus2, FileSignature, FileText, Files, Loader2, Search, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -255,6 +255,74 @@ export default function SalesDigitalContracts() {
     toast.success("Link público copiado");
   };
 
+  const duplicateContract = async (contractId: string) => {
+    if (!currentUser?.account_id) return;
+    if (!window.confirm("Duplicar este contrato como novo rascunho? O original será preservado.")) return;
+    try {
+      // Carrega contrato completo
+      const { data: src, error: srcErr } = await supabase
+        .from("digital_contracts")
+        .select("*")
+        .eq("id", contractId)
+        .maybeSingle();
+      if (srcErr) throw srcErr;
+      if (!src) throw new Error("Contrato não encontrado");
+
+      // Gera novo número
+      const { data: numData, error: numErr } = await supabase.rpc(
+        "next_digital_contract_number" as any,
+        { p_account_id: currentUser.account_id } as any,
+      );
+      if (numErr) throw numErr;
+      const newNumber = numData as unknown as string;
+
+      // Remove campos que não devem ser copiados
+      const {
+        id: _id,
+        created_at: _ca,
+        updated_at: _ua,
+        share_token: _st,
+        zapsign_document_token: _zt,
+        zapsign_signers: _zs,
+        signed_pdf_path: _sp,
+        signed_at: _sa,
+        contract_number: _cn,
+        status: _status,
+        created_by: _cb,
+        ...rest
+      } = src as any;
+
+      const insertPayload: any = {
+        ...rest,
+        contract_number: newNumber,
+        status: "draft",
+        created_by: currentUser.auth_user_id ?? null,
+        zapsign_document_token: null,
+        zapsign_signers: null,
+        signed_pdf_path: null,
+        signed_at: null,
+      };
+
+      const { data: created, error: insErr } = await supabase
+        .from("digital_contracts")
+        .insert(insertPayload)
+        .select("id, deal_id, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at")
+        .single();
+      if (insErr) throw insErr;
+
+      setContracts((prev) => [created as DigitalContractListItem, ...prev]);
+      toast.success(`Contrato duplicado como ${newNumber}`);
+
+      // Abre editor automaticamente
+      if (created.deal_id) {
+        openDealContractEditor(created.deal_id);
+      }
+    } catch (e: any) {
+      console.error("[SalesDigitalContracts] duplicate error:", e);
+      toast.error(e?.message ?? "Erro ao duplicar contrato");
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -382,8 +450,18 @@ export default function SalesDigitalContracts() {
                         size="icon"
                         onClick={() => copyPublicLink(contract.share_token)}
                         aria-label="Copiar link público"
+                        title="Copiar link público"
                       >
                         <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => duplicateContract(contract.id)}
+                        aria-label="Duplicar contrato"
+                        title="Duplicar como novo rascunho"
+                      >
+                        <Files className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -391,6 +469,7 @@ export default function SalesDigitalContracts() {
                         disabled={!contract.deal_id}
                         onClick={() => contract.deal_id && openDealContractEditor(contract.deal_id)}
                         aria-label="Abrir contrato"
+                        title="Abrir contrato"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
