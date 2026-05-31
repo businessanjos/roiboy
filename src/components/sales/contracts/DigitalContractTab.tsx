@@ -260,7 +260,52 @@ export const DigitalContractTab = ({
       return Number.isNaN(d.getTime()) ? String(new Date().getFullYear()) : String(d.getFullYear());
     })();
     const firstFilled = (...vals: any[]) => vals.find((v) => v !== null && v !== undefined && v !== "") ?? "";
-    const durationText = data.contract_duration_months ? `${data.contract_duration_months} meses` : "";
+    // Vigência: prioriza diferença real entre Início e Fim editados no wizard,
+    // só cai no contract_duration_months quando não houver datas explícitas.
+    const parseLooseDate = (v: any): Date | null => {
+      if (!v) return null;
+      const s = String(v).trim();
+      const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) {
+        const d = new Date(`${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T12:00:00`);
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+      const brMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if (brMatch) {
+        const d = new Date(`${brMatch[3]}-${brMatch[2]}-${brMatch[1]}T12:00:00`);
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+      const d = new Date(s);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+    const startRaw = firstFilled(
+      placeholderValues?.VIGENCIA_INICIO,
+      placeholderValues?.DATA_INICIO,
+      merged.START_DATE,
+      merged.VIGENCIA_INICIO,
+      merged.DATA_INICIO,
+    );
+    const endRaw = firstFilled(
+      placeholderValues?.VIGENCIA_FIM,
+      placeholderValues?.DATA_FIM,
+      placeholderValues?.DATA_TERMINO,
+      merged.END_DATE,
+      merged.VIGENCIA_FIM,
+      merged.DATA_FIM,
+    );
+    const startD = parseLooseDate(startRaw);
+    const endD = parseLooseDate(endRaw);
+    let monthsFromDates: number | null = null;
+    if (startD && endD && endD.getTime() > startD.getTime()) {
+      const months =
+        (endD.getFullYear() - startD.getFullYear()) * 12 +
+        (endD.getMonth() - startD.getMonth()) +
+        (endD.getDate() >= startD.getDate() ? 0 : -1) +
+        1; // inclui o mês final (ex.: 29/05 → 28/05 do ano seguinte = 12 meses)
+      if (months > 0) monthsFromDates = months;
+    }
+    const effectiveMonths = monthsFromDates ?? data.contract_duration_months ?? null;
+    const durationText = effectiveMonths ? `${effectiveMonths} meses` : "";
     return {
       ...merged,
       TOTAL_VALUE: firstFilled(merged.TOTAL_VALUE, data.total_value),
