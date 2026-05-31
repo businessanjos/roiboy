@@ -494,9 +494,9 @@ export default function SalesDigitalContracts() {
                           if (contract.deal_id) {
                             openDealContractEditor(contract.deal_id);
                           } else {
-                            setEditorDeal({
+                             setEditorDeal({
                               id: null,
-                              clientId: null,
+                              clientId: contract.client_id ?? null,
                               clientName: contract.client_name || contract.contract_number,
                               value: contract.total_value ?? null,
                               contractId: contract.id,
