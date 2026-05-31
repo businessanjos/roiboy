@@ -468,7 +468,7 @@ export const DigitalContractTab = ({
     return () => {
       cancelled = true;
     };
-  }, [dealId, accountId, clientId, clientName, dealValue]);
+  }, [dealId, contractId, accountId, clientId, clientName, dealValue]);
 
   // Fetch deal extras (entry_value, won_at) once for autofill
   useEffect(() => {
