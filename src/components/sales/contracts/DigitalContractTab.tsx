@@ -472,6 +472,7 @@ export const DigitalContractTab = ({
 
   // Fetch deal extras (entry_value, won_at) once for autofill
   useEffect(() => {
+    if (!dealId) return;
     let cancelled = false;
     (async () => {
       const { data: deal } = await supabase
