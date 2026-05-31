@@ -94,7 +94,7 @@ export default function SalesDigitalContracts() {
   const [dealSearch, setDealSearch] = useState("");
   const [deals, setDeals] = useState<DealOption[]>([]);
   const [loadingDeals, setLoadingDeals] = useState(false);
-  const [editorDeal, setEditorDeal] = useState<{ id: string; clientId: string | null; clientName: string; value: number | null } | null>(null);
+  const [editorDeal, setEditorDeal] = useState<{ id: string | null; clientId: string | null; clientName: string; value: number | null; contractId?: string | null } | null>(null);
 
   useEffect(() => {
     async function loadContracts() {
