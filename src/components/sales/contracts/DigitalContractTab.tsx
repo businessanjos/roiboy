@@ -614,6 +614,71 @@ export const DigitalContractTab = ({
     }
   };
 
+  const handleDuplicate = async () => {
+    if (!accountId || !contract) {
+      toast.error("Salve o contrato antes de duplicar.");
+      return;
+    }
+    const confirmMsg = contract.status && contract.status !== "draft"
+      ? "Duplicar este contrato como novo rascunho? O contrato original ficará preservado no histórico."
+      : "Duplicar este contrato como novo rascunho?";
+    if (!window.confirm(confirmMsg)) return;
+    setSaving(true);
+    try {
+      const { data: numData, error: numErr } = await supabase.rpc(
+        "next_digital_contract_number" as any,
+        { p_account_id: accountId } as any,
+      );
+      if (numErr) throw numErr;
+      const newNumber = numData as unknown as string;
+
+      const insertPayload: any = {
+        account_id: accountId,
+        deal_id: dealId,
+        client_id: clientId ?? null,
+        contract_number: newNumber,
+        status: "draft",
+        created_by: currentUser?.auth_user_id ?? null,
+        ...dataToRow({ ...data, contract_number: newNumber }),
+        template_id: templateId,
+        product_id: productId,
+        template_html: templateHtml,
+        template_variables: templateVariables as any,
+        placeholder_values: resolvedPlaceholderValues as any,
+        // explicit reset of signing/lifecycle fields
+        zapsign_document_token: null,
+        zapsign_signers: null,
+        signed_pdf_path: null,
+        signed_at: null,
+      };
+      const { data: created, error } = await supabase
+        .from("digital_contracts")
+        .insert(insertPayload)
+        .select()
+        .single();
+      if (error) throw error;
+
+      setContract({
+        id: created.id,
+        contract_number: created.contract_number,
+        status: created.status,
+        share_token: created.share_token,
+        signed_pdf_path: created.signed_pdf_path,
+        signed_at: created.signed_at,
+        zapsign_document_token: created.zapsign_document_token,
+        zapsign_signers: null,
+      });
+      setData({ ...data, contract_number: newNumber });
+      autosaveSkipRef.current = true;
+      toast.success(`Contrato duplicado como ${newNumber} (rascunho editável)`);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message ?? "Erro ao duplicar contrato");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const generatePdfToStorage = async (opts?: { silent?: boolean }): Promise<string | null> => {
     const target = pdfPreviewRef.current ?? docRef.current ?? hiddenPdfRef.current;
     if (!target || !contract) {
