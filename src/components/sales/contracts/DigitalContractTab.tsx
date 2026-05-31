@@ -285,17 +285,22 @@ export const DigitalContractTab = ({
     let cancelled = false;
     async function load() {
       if (!accountId) return;
+      if (!dealId && !contractId) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
-        const { data: existing, error } = await supabase
+        const baseQuery = supabase
           .from("digital_contracts")
-          .select("*")
-          .eq("deal_id", dealId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .select("*");
+        const query = contractId
+          ? baseQuery.eq("id", contractId)
+          : baseQuery.eq("deal_id", dealId as string).order("created_at", { ascending: false }).limit(1);
+        const { data: existing, error } = await query.maybeSingle();
         if (error) throw error;
         if (cancelled) return;
+
 
         if (existing) {
           let loadedTemplateHtml = (existing as any).template_html ?? null;
