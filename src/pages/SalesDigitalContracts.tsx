@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { DigitalContractTab } from "@/components/sales/contracts/DigitalContractTab";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Copy, ExternalLink, FilePlus2, FileSignature, FileText, Files, Loader2, Search, Settings2 } from "lucide-react";
+import { Copy, ExternalLink, FilePlus2, FileSignature, FileText, Files, Loader2, Search, Settings2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -323,6 +323,29 @@ export default function SalesDigitalContracts() {
     }
   };
 
+  const deleteContract = async (contractId: string, contractNumber: string, status: string) => {
+    if (!currentUser?.account_id) return;
+    const isSigned = status === "signed";
+    const warning = isSigned
+      ? `ATENÇÃO: o contrato ${contractNumber} já está ASSINADO. Excluir aqui não cancela na ZapSign nem invalida o documento assinado. Tem certeza que deseja remover do sistema?`
+      : status === "sent"
+      ? `O contrato ${contractNumber} foi enviado para assinatura. Excluir aqui não cancela na ZapSign. Deseja remover do sistema mesmo assim?`
+      : `Excluir o contrato ${contractNumber}? Esta ação não pode ser desfeita.`;
+    if (!window.confirm(warning)) return;
+    try {
+      const { error } = await supabase
+        .from("digital_contracts")
+        .delete()
+        .eq("id", contractId);
+      if (error) throw error;
+      setContracts((prev) => prev.filter((c) => c.id !== contractId));
+      toast.success(`Contrato ${contractNumber} excluído`);
+    } catch (e: any) {
+      console.error("[SalesDigitalContracts] delete error:", e);
+      toast.error(e?.message ?? "Erro ao excluir contrato");
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -472,6 +495,16 @@ export default function SalesDigitalContracts() {
                         title="Abrir contrato"
                       >
                         <ExternalLink className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteContract(contract.id, contract.contract_number, contract.status)}
+                        aria-label="Excluir contrato"
+                        title="Excluir contrato"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
