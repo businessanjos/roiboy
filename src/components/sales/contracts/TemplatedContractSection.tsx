@@ -378,6 +378,13 @@ export const TemplatedContractPreview = ({
   const forceReadablePillarsLayout = (html: string) => {
     if (!html.includes("rk-pillars") && !html.includes("rk-clause")) return html;
     const override = `<style>
+/* === Fonte segura no PDF: Geist é carregada por @import inline e o
+   html2canvas não espera — caía em fallback "hairline" ilegível.
+   Forçamos stack de sistema com peso normal e sem features OpenType. === */
+.contract-document,.contract-document *{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif!important;font-feature-settings:normal!important;font-variant-ligatures:normal!important;-webkit-font-smoothing:antialiased!important;text-rendering:optimizeLegibility!important;}
+.contract-document{font-weight:400!important;letter-spacing:0!important;}
+.contract-document p,.contract-document li,.contract-document dd,.contract-document dt,.contract-document span,.contract-document div{font-weight:400!important;letter-spacing:0!important;}
+.contract-document strong,.contract-document b{font-weight:700!important;}
 /* === Cláusulas: nunca cortar/abreviar títulos ou marcadores === */
 .contract-document .rk-clause{display:grid!important;grid-template-columns:190px minmax(0,1fr)!important;column-gap:18px!important;align-items:start!important;}
 .contract-document .rk-clause > *:not(.rk-clause-num){grid-column:2!important;min-width:0!important;max-width:100%!important;overflow-wrap:break-word!important;}
