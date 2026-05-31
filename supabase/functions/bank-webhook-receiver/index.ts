@@ -33,7 +33,8 @@ Deno.serve(async (req) => {
 
   const expectedSecret = Deno.env.get("BANK_WEBHOOK_SECRET");
   const provided = req.headers.get("x-webhook-secret");
-  if (expectedSecret && provided !== expectedSecret) {
+  // Fail closed: if the secret isn't configured, reject everything.
+  if (!expectedSecret || !provided || provided !== expectedSecret) {
     return new Response(JSON.stringify({ error: "forbidden" }), {
       status: 403,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
