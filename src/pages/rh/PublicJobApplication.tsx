@@ -102,17 +102,16 @@ export default function PublicJobApplication() {
 
       if (resumeFile) {
         const ext = resumeFile.name.split(".").pop();
-        const path = `${job.id}/${Date.now()}_${formData.candidate_name.replace(/\s+/g, "_")}.${ext}`;
+        const safeName = formData.candidate_name.replace(/[^a-zA-Z0-9_-]+/g, "_");
+        const path = `${job.id}/${Date.now()}_${safeName}.${ext}`;
         const { error: uploadError } = await supabase.storage
           .from("hr-resumes")
           .upload(path, resumeFile);
 
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from("hr-resumes")
-          .getPublicUrl(path);
-        resume_url = urlData.publicUrl;
+        // Bucket is private — store the storage path; viewer generates signed URL on demand.
+        resume_url = path;
       }
 
       const { error: insertError } = await supabase

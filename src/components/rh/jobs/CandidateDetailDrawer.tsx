@@ -180,10 +180,32 @@ export default function CandidateDetailDrawer({ open, onOpenChange, candidate, j
                   <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-1.5">
                     <FileText className="h-3.5 w-3.5" />Currículo
                   </h4>
-                  <a href={candidate.resume_url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-primary hover:underline">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        // Support both new (storage path) and legacy (full public URL) values.
+                        let path = candidate.resume_url as string;
+                        const marker = "/hr-resumes/";
+                        if (path.includes(marker)) {
+                          path = path.substring(path.indexOf(marker) + marker.length);
+                        }
+                        const { data, error } = await supabase.storage
+                          .from("hr-resumes")
+                          .createSignedUrl(path, 60 * 10);
+                        if (error || !data?.signedUrl) {
+                          toast.error("Não foi possível abrir o currículo");
+                          return;
+                        }
+                        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+                      } catch {
+                        toast.error("Não foi possível abrir o currículo");
+                      }
+                    }}
+                    className="flex items-center gap-2 text-sm text-primary hover:underline"
+                  >
                     <ExternalLink className="h-4 w-4" />Abrir currículo
-                  </a>
+                  </button>
                 </section>
               </>
             )}
