@@ -679,6 +679,44 @@ export const DigitalContractTab = ({
     }
   };
 
+  const handleReopenForEditing = async () => {
+    if (!contract) return;
+    const signed = contract.status === "signed" || contract.signed_at;
+    const msg = signed
+      ? `ATENÇÃO: este contrato consta como ASSINADO. Reabrir para edição vai descartar o vínculo com a ZapSign e o PDF assinado anterior continuará armazenado apenas como histórico. Você terá que enviar novamente para assinatura. Continuar?`
+      : `Reabrir este contrato como rascunho? O envio atual da ZapSign será desvinculado e você precisará enviar novamente para assinatura após editar.`;
+    if (!window.confirm(msg)) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("digital_contracts")
+        .update({
+          status: "draft",
+          zapsign_document_token: null,
+          zapsign_signers: null,
+          signed_pdf_path: null,
+          signed_at: null,
+        } as any)
+        .eq("id", contract.id);
+      if (error) throw error;
+      setContract({
+        ...contract,
+        status: "draft",
+        zapsign_document_token: null,
+        zapsign_signers: null,
+        signed_pdf_path: null,
+        signed_at: null,
+      });
+      autosaveSkipRef.current = true;
+      toast.success("Contrato reaberto para edição");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message ?? "Erro ao reabrir contrato");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const generatePdfToStorage = async (opts?: { silent?: boolean }): Promise<string | null> => {
     const target = pdfPreviewRef.current ?? docRef.current ?? hiddenPdfRef.current;
     if (!target || !contract) {
@@ -1060,6 +1098,18 @@ export const DigitalContractTab = ({
           <Button size="sm" variant="outline" onClick={handleDuplicate} disabled={saving} title="Cria um novo rascunho editável a partir deste contrato">
             <Copy className="h-3.5 w-3.5" />
             <span className="ml-1.5">Duplicar</span>
+          </Button>
+        )}
+        {contract && contract.status && contract.status !== "draft" && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleReopenForEditing}
+            disabled={saving}
+            title="Volta o contrato para rascunho e desvincula da ZapSign para permitir edição"
+            className="border-amber-500/40 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
+          >
+            <span className="ml-0.5">Reabrir para edição</span>
           </Button>
         )}
         <Button
