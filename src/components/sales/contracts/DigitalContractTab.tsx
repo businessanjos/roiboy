@@ -220,6 +220,7 @@ export const DigitalContractTab = ({
   dealValue,
   clientId,
   clientName,
+  contractId,
 }: DigitalContractTabProps) => {
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
