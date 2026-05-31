@@ -193,7 +193,7 @@ export default function SalesDigitalContracts() {
       (acc, contract) => {
         acc.total += Number(contract.total_value ?? 0);
         if (contract.status === "signed") acc.signed += 1;
-        if (contract.status === "pending_signature") acc.pending += 1;
+        if (["pending_signature", "pending", "sent"].includes(contract.status)) acc.pending += 1;
         return acc;
       },
       { total: 0, signed: 0, pending: 0 },
