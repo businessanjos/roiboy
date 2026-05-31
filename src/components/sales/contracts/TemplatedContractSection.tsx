@@ -485,7 +485,12 @@ export const TemplatedContractPreview = ({
           ref={innerRef}
           className="contract-document bg-white text-black"
           style={{ width: "210mm", minHeight: "297mm" }}
-          dangerouslySetInnerHTML={{ __html: rendered }}
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(rendered, {
+              FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "input"],
+              FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur"],
+            }),
+          }}
         />
       </div>
     </div>
