@@ -32,6 +32,7 @@ import { buildPublicContractUrl } from "@/lib/publicLink";
 interface DigitalContractListItem {
   id: string;
   deal_id: string | null;
+  client_id: string | null;
   contract_number: string | null;
   status: string;
   client_name: string;
@@ -105,7 +106,7 @@ export default function SalesDigitalContracts() {
         const { data, error } = await supabase
           .from("digital_contracts")
           .select(
-            "id, deal_id, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at",
+            "id, deal_id, client_id, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at",
           )
           .eq("account_id", currentUser.account_id)
           .order("updated_at", { ascending: false });
@@ -493,9 +494,9 @@ export default function SalesDigitalContracts() {
                           if (contract.deal_id) {
                             openDealContractEditor(contract.deal_id);
                           } else {
-                            setEditorDeal({
+                             setEditorDeal({
                               id: null,
-                              clientId: null,
+                              clientId: contract.client_id ?? null,
                               clientName: contract.client_name || contract.contract_number,
                               value: contract.total_value ?? null,
                               contractId: contract.id,
