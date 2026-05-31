@@ -306,6 +306,7 @@ export const DigitalContractTab = ({
     }
     const effectiveMonths = monthsFromDates ?? data.contract_duration_months ?? null;
     const durationText = effectiveMonths ? `${effectiveMonths} meses` : "";
+    const durationValue = monthsFromDates ? durationText : firstFilled(merged.CONTRACT_DURATION, durationText);
     return {
       ...merged,
       TOTAL_VALUE: firstFilled(merged.TOTAL_VALUE, data.total_value),
@@ -317,7 +318,10 @@ export const DigitalContractTab = ({
       DATA_PAGAMENTO: firstFilled(merged.DATA_PAGAMENTO, data.first_due_date),
       DUE_DATE: firstFilled(merged.DUE_DATE, data.first_due_date),
       DATA_PRIMEIRA_PARCELA: firstFilled(merged.DATA_PRIMEIRA_PARCELA, data.first_due_date),
-      CONTRACT_DURATION: firstFilled(merged.CONTRACT_DURATION, durationText),
+      CONTRACT_DURATION: durationValue,
+      DURACAO_MESES: durationValue,
+      DURACAO: durationValue,
+      VIGENCIA: durationValue,
       PRODUCT_NAME: merged.PRODUCT_NAME || productName || merged.PRODUCT_NAME || "",
       PRODUTO: merged.PRODUTO || productName || "",
       PROGRAMA: merged.PROGRAMA || productName || "",
