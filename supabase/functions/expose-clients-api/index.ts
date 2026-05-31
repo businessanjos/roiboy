@@ -7,6 +7,8 @@ const corsHeaders = {
   "Content-Type": "application/json",
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders });
 }
@@ -23,7 +25,7 @@ Deno.serve(async (req) => {
   // Auth
   const apiKey = req.headers.get("x-api-key");
   const expectedKey = Deno.env.get("INTEGRATION_API_KEY");
-  if (!expectedKey || apiKey !== expectedKey) {
+  if (!expectedKey || !apiKey || apiKey !== expectedKey) {
     return error("Unauthorized", 401);
   }
 
@@ -35,12 +37,26 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const action = url.searchParams.get("action");
 
+  // Resolve body once (for non-GET) so account_id and other params can come from either source.
+  let body: any = {};
+  if (req.method === "POST" || req.method === "PUT") {
+    body = await req.json().catch(() => ({}));
+  }
+
+  // ── Tenant scoping: caller MUST specify which account they are acting on.
+  // This prevents the service-role key from returning data from every tenant.
+  const accountId = url.searchParams.get("account_id") || body?.account_id;
+  if (!accountId || typeof accountId !== "string" || !UUID_RE.test(accountId)) {
+    return error("account_id is required (uuid)", 400);
+  }
+
   try {
     // ── list_clients ──
     if (action === "list_clients") {
       const { data, error: e } = await supabase
         .from("clients")
-        .select("id, full_name, cnpj, emails, phone_e164, status, created_at")
+        .select("id, full_name, cnpj, emails, phone_e164, status, created_at, account_id")
+        .eq("account_id", accountId)
         .order("full_name");
 
       if (e) return error(e.message, 500);
@@ -60,15 +76,16 @@ Deno.serve(async (req) => {
 
     // ── get_client ──
     if (action === "get_client") {
-      const clientId = url.searchParams.get("client_id") || (req.method !== "GET" ? (await req.clone().json().catch(() => ({})))?.client_id : null);
-      if (!clientId || typeof clientId !== "string" || clientId.length < 10) {
-        return error("client_id is required");
+      const clientId = url.searchParams.get("client_id") || body?.client_id;
+      if (!clientId || typeof clientId !== "string" || !UUID_RE.test(clientId)) {
+        return error("client_id is required (uuid)");
       }
 
       const { data: client, error: e1 } = await supabase
         .from("clients")
         .select("*")
         .eq("id", clientId)
+        .eq("account_id", accountId)
         .maybeSingle();
 
       if (e1) return error(e1.message, 500);
@@ -78,6 +95,7 @@ Deno.serve(async (req) => {
         .from("client_contracts")
         .select("id, contract_type, value, status, start_date, end_date, payment_method, notes")
         .eq("client_id", clientId)
+        .eq("account_id", accountId)
         .eq("status", "active");
 
       return json({ client, active_contracts: contracts ?? [] });
@@ -85,15 +103,25 @@ Deno.serve(async (req) => {
 
     // ── list_contracts ──
     if (action === "list_contracts") {
-      const clientId = url.searchParams.get("client_id") || (req.method !== "GET" ? (await req.clone().json().catch(() => ({})))?.client_id : null);
-      if (!clientId || typeof clientId !== "string" || clientId.length < 10) {
-        return error("client_id is required");
+      const clientId = url.searchParams.get("client_id") || body?.client_id;
+      if (!clientId || typeof clientId !== "string" || !UUID_RE.test(clientId)) {
+        return error("client_id is required (uuid)");
       }
+
+      // Verify the client belongs to the requesting account before exposing its contracts.
+      const { data: ownerCheck } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("id", clientId)
+        .eq("account_id", accountId)
+        .maybeSingle();
+      if (!ownerCheck) return error("Client not found", 404);
 
       const { data, error: e } = await supabase
         .from("client_contracts")
         .select("id, contract_type, value, status, start_date, end_date, payment_method, notes")
         .eq("client_id", clientId)
+        .eq("account_id", accountId)
         .order("start_date", { ascending: false });
 
       if (e) return error(e.message, 500);
@@ -112,14 +140,9 @@ Deno.serve(async (req) => {
 
     // ── update_client ──
     if (action === "update_client") {
-      let body: any = {};
-      if (req.method === "POST" || req.method === "PUT") {
-        body = await req.json().catch(() => ({}));
-      }
-
       const clientId = url.searchParams.get("client_id") || body?.client_id;
-      if (!clientId || typeof clientId !== "string" || clientId.length < 10) {
-        return error("client_id is required");
+      if (!clientId || typeof clientId !== "string" || !UUID_RE.test(clientId)) {
+        return error("client_id is required (uuid)");
       }
 
       const allowedFields: Record<string, string> = {
@@ -151,6 +174,7 @@ Deno.serve(async (req) => {
         .from("clients")
         .update(updates)
         .eq("id", clientId)
+        .eq("account_id", accountId)
         .select("id, full_name, phone_e164, emails, status")
         .maybeSingle();
 
@@ -161,7 +185,7 @@ Deno.serve(async (req) => {
     }
 
     return error("Invalid action. Use: list_clients, get_client, list_contracts, update_client");
-  } catch (err) {
+  } catch (_err) {
     return error("Internal server error", 500);
   }
 });
