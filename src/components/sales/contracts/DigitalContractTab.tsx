@@ -409,6 +409,10 @@ export const DigitalContractTab = ({
           setData(seed);
 
           // Auto-resolve product from deal's "Item da Venda" custom field and load default template
+          if (!dealId) {
+            // Orphan contract (sem deal) — nada para resolver
+          } else
+
           try {
             const { mapItemVendaToProductId, DEAL_FIELD_IDS } = await import(
               "@/utils/dealToClientContractMapping"
