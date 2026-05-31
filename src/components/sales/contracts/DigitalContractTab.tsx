@@ -1100,6 +1100,18 @@ export const DigitalContractTab = ({
             <span className="ml-1.5">Duplicar</span>
           </Button>
         )}
+        {contract && contract.status && contract.status !== "draft" && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleReopenForEditing}
+            disabled={saving}
+            title="Volta o contrato para rascunho e desvincula da ZapSign para permitir edição"
+            className="border-amber-500/40 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
+          >
+            <span className="ml-0.5">Reabrir para edição</span>
+          </Button>
+        )}
         <Button
           size="sm"
           variant="outline"
