@@ -323,6 +323,29 @@ export default function SalesDigitalContracts() {
     }
   };
 
+  const deleteContract = async (contractId: string, contractNumber: string, status: string) => {
+    if (!currentUser?.account_id) return;
+    const isSigned = status === "signed";
+    const warning = isSigned
+      ? `ATENÇÃO: o contrato ${contractNumber} já está ASSINADO. Excluir aqui não cancela na ZapSign nem invalida o documento assinado. Tem certeza que deseja remover do sistema?`
+      : status === "sent"
+      ? `O contrato ${contractNumber} foi enviado para assinatura. Excluir aqui não cancela na ZapSign. Deseja remover do sistema mesmo assim?`
+      : `Excluir o contrato ${contractNumber}? Esta ação não pode ser desfeita.`;
+    if (!window.confirm(warning)) return;
+    try {
+      const { error } = await supabase
+        .from("digital_contracts")
+        .delete()
+        .eq("id", contractId);
+      if (error) throw error;
+      setContracts((prev) => prev.filter((c) => c.id !== contractId));
+      toast.success(`Contrato ${contractNumber} excluído`);
+    } catch (e: any) {
+      console.error("[SalesDigitalContracts] delete error:", e);
+      toast.error(e?.message ?? "Erro ao excluir contrato");
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
