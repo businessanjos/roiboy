@@ -489,10 +489,21 @@ export default function SalesDigitalContracts() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        disabled={!contract.deal_id}
-                        onClick={() => contract.deal_id && openDealContractEditor(contract.deal_id)}
+                        onClick={() => {
+                          if (contract.deal_id) {
+                            openDealContractEditor(contract.deal_id);
+                          } else {
+                            setEditorDeal({
+                              id: null,
+                              clientId: null,
+                              clientName: contract.client_name || contract.contract_number,
+                              value: contract.total_value ?? null,
+                              contractId: contract.id,
+                            });
+                          }
+                        }}
                         aria-label="Abrir contrato"
-                        title="Abrir contrato"
+                        title={contract.deal_id ? "Abrir contrato" : "Abrir contrato (sem negócio vinculado)"}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
