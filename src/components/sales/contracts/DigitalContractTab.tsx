@@ -20,6 +20,7 @@ import {
   X,
   Plus,
   Trash2,
+  Copy,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
