@@ -1482,8 +1482,8 @@ export const DigitalContractTab = ({
       </div>
 
       <Dialog open={signerDialogOpen} onOpenChange={(o) => !sendingZapsign && setSignerDialogOpen(o)}>
-        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] !flex flex-col overflow-hidden">
-          <DialogHeader>
+        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] !flex flex-col overflow-hidden p-0">
+          <DialogHeader className="px-6 pt-6 flex-shrink-0">
             <DialogTitle className="text-base">Selecionar signatários</DialogTitle>
             <DialogDescription className="text-xs">
               Marque quem deve assinar e revise nome, e-mail e WhatsApp. ZapSign exige pelo
@@ -1491,7 +1491,7 @@ export const DigitalContractTab = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-1">
+          <div className="space-y-1 px-6 flex-shrink-0">
             <Label className="text-[11px] text-muted-foreground">Nome do documento (aparece no ZapSign e nas notificações)</Label>
             <Input
               value={documentName}
@@ -1501,8 +1501,8 @@ export const DigitalContractTab = ({
             />
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 h-full -mx-6 px-6">
-            <div className="space-y-3 py-1">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6">
+            <div className="space-y-3 py-3">
               {signerDrafts.map((s, idx) => (
                 <Card key={idx} className="p-3 space-y-2">
                   <div className="flex items-center gap-2">
