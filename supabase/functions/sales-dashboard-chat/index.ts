@@ -613,6 +613,40 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "period_comparison",
+      description: "Compara o período corrente (N meses) vs o período anterior de mesmo tamanho. Retorna won_count, won_value, lost_count, lost_value e variações %.",
+      parameters: {
+        type: "object",
+        properties: { months: { type: "number", default: 1 } },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "stagnant_deals_list",
+      description: "Lista deals em aberto estagnados há mais de N dias sem mudança de etapa. Retorna até 30 deals com title, valor, dias parados, etapa, responsável.",
+      parameters: {
+        type: "object",
+        properties: { min_days: { type: "number", default: 30 } },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "user_goal_attainment_detail",
+      description: "Detalha o atingimento de meta de um vendedor mês a mês (goal, super_goal, realizado) no período.",
+      parameters: {
+        type: "object",
+        properties: { user_id: { type: "string" } },
+        required: ["user_id"],
+      },
+    },
+  },
 ];
 
 async function execTool(admin: ReturnType<typeof createClient>, accountId: string, sinceIso: string, name: string, args: any): Promise<any> {
