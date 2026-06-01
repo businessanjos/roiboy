@@ -23,20 +23,38 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const expectedSecret = Deno.env.get('GOOGLE_SHEETS_WEBHOOK_SECRET');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Fail-closed shared-secret validation
+    if (!expectedSecret) {
+      console.error('GOOGLE_SHEETS_WEBHOOK_SECRET not configured');
+      return new Response(JSON.stringify({ error: 'Webhook not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const payload = await req.json();
-    console.log('Webhook received:', JSON.stringify(payload, null, 2));
+    const headerSecret = req.headers.get('x-webhook-secret');
+    const providedSecret = headerSecret || payload?.webhook_secret;
+    if (providedSecret !== expectedSecret) {
+      console.error('Invalid webhook secret');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Webhook received (authenticated)');
 
     const {
       account_id,
       bank_account_id,
       event_type,
       transactions,
-      webhook_secret
     } = payload;
 
-    // Validate webhook secret
     const { data: account } = await supabase
       .from('accounts')
       .select('id')
