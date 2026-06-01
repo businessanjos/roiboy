@@ -89,10 +89,8 @@ export default function CollaboratorDocuments({ collaboratorId, accountId }: Pro
           .upload(path, file);
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from("hr-documents")
-          .getPublicUrl(path);
-        fileUrl = urlData.publicUrl;
+        // Store the storage path (bucket is private; signed URLs are generated on download)
+        fileUrl = path;
         fileName = file.name;
         fileSize = file.size;
       }
