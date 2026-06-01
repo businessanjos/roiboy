@@ -89,10 +89,8 @@ export default function CollaboratorDocuments({ collaboratorId, accountId }: Pro
           .upload(path, file);
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from("hr-documents")
-          .getPublicUrl(path);
-        fileUrl = urlData.publicUrl;
+        // Store the storage path (bucket is private; signed URLs are generated on download)
+        fileUrl = path;
         fileName = file.name;
         fileSize = file.size;
       }
@@ -180,10 +178,26 @@ export default function CollaboratorDocuments({ collaboratorId, accountId }: Pro
                 <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-300">Vencendo</Badge>
               )}
               {doc.file_url && (
-                <Button variant="ghost" size="icon" asChild>
-                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-4 w-4" />
-                  </a>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={async () => {
+                    try {
+                      // Backwards-compat: stored value may be a full public URL or just the storage path
+                      let path = doc.file_url as string;
+                      const m = path.match(/\/hr-documents\/(.+?)(?:\?|$)/);
+                      if (m) path = decodeURIComponent(m[1]);
+                      const { data, error } = await supabase.storage
+                        .from("hr-documents")
+                        .createSignedUrl(path, 60);
+                      if (error || !data?.signedUrl) throw error || new Error("no url");
+                      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+                    } catch (e: any) {
+                      toast.error("Não foi possível abrir o documento");
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4" />
                 </Button>
               )}
               <AlertDialog>
