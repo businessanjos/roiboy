@@ -47,13 +47,13 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     admin.from("users").select("id,name,role,team_role_id,is_active").eq("account_id", accountId),
     admin.from("deal_loss_reasons").select("id,name").eq("account_id", accountId),
     admin.from("sales_goals").select("*").eq("account_id", accountId).gte("created_at", sinceIso).limit(500),
-    admin.from("pipelines").select("id,name,type").eq("account_id", accountId),
+    admin.from("pipelines").select("id,name").eq("account_id", accountId),
     admin.from("client_contracts").select("id,client_id,product_id,value,status,start_date,end_date,created_at,cancelled_at,status_changed_at,contract_type,cancellation_reason").eq("account_id", accountId).or(`created_at.gte.${sinceIso},status_changed_at.gte.${sinceIso},cancelled_at.gte.${sinceIso}`).limit(10000),
     admin.from("financial_entries").select("id,amount,entry_type,status,due_date,payment_date,category_id,description").eq("account_id", accountId).eq("entry_type", "payable").gte("due_date", sinceDate).limit(15000),
     admin.from("financial_categories").select("id,name,dre_group,type").eq("account_id", accountId),
     admin.from("hr_collaborators").select("id,full_name,department,hr_department_id,salary,status,hire_date,termination_date,employment_type").eq("account_id", accountId).neq("status", "inactive").limit(2000),
     admin.from("spiff_spins").select("id,prize_amount,created_at,user_id").eq("account_id", accountId).gte("created_at", sinceIso).limit(3000),
-    admin.from("commission_deal_entries").select("id,commission_amount,user_id,created_at,deal_id").eq("account_id", accountId).gte("created_at", sinceIso).limit(8000),
+    admin.from("commission_deal_entries").select("id,commission_total,user_id,created_at,deal_id").eq("account_id", accountId).gte("created_at", sinceIso).limit(8000),
     admin.from("clients").select("id,status,created_at,sales_user_id,responsible_user_id,business_segment").eq("account_id", accountId).limit(20000),
     admin.from("sales_meetings").select("id,scheduled_at,status,seller_user_id:created_by,duration_minutes,meeting_type").eq("account_id", accountId).gte("scheduled_at", sinceIso).limit(5000),
     admin.from("deal_activities").select("id,type,created_at,user_id,deal_id,scheduled_at,completed_at").eq("account_id", accountId).gte("created_at", sinceIso).limit(20000),
@@ -212,7 +212,7 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     const m = (c.created_at ?? "").slice(0, 7);
     if (!m) continue;
     commByUserMonth[uid] ??= {};
-    commByUserMonth[uid][m] = (commByUserMonth[uid][m] ?? 0) + Number(c.commission_amount ?? 0);
+    commByUserMonth[uid][m] = (commByUserMonth[uid][m] ?? 0) + Number(c.commission_total ?? 0);
   }
   const spiffByMonth: Record<string, number> = {};
   for (const s of (spiffsR.data ?? []) as any[]) {
