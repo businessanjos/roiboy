@@ -72,19 +72,38 @@ export function useZappMessaging({
    * Returns true if safe to send; false (and toasts the user) if not.
    */
   const assertIntegrationMatchesSector = useCallback(
-    async (integrationId: string | undefined | null): Promise<boolean> => {
-      if (!integrationId) {
-        toast.error("WhatsApp não configurado", {
-          description: "Nenhuma instância selecionada para este setor.",
-        });
-        return false;
-      }
+    async (
+      integrationId: string | undefined | null,
+      opts?: { isGroup?: boolean }
+    ): Promise<{ ok: boolean; integrationId?: string }> => {
       if (!selectedSectorId || !currentUser?.account_id) {
         toast.error("Setor não selecionado", {
           description: "Recarregue a página e selecione o setor novamente.",
         });
-        return false;
+        return { ok: false };
       }
+
+      // GROUPS são multi-setor: se a instância da conversa pertence a outro
+      // setor (foi recebida por outra instância), use a instância do setor
+      // atual automaticamente em vez de bloquear o envio.
+      if (opts?.isGroup && selectedIntegrationId && integrationId !== selectedIntegrationId) {
+        console.log(
+          `[ZAPP-SEND] Group override: usando instância do setor atual (${selectedIntegrationId}) em vez de ${integrationId}.`
+        );
+        return { ok: true, integrationId: selectedIntegrationId };
+      }
+
+      if (!integrationId) {
+        // Para grupos, ainda dá pra tentar com a do setor
+        if (opts?.isGroup && selectedIntegrationId) {
+          return { ok: true, integrationId: selectedIntegrationId };
+        }
+        toast.error("WhatsApp não configurado", {
+          description: "Nenhuma instância selecionada para este setor.",
+        });
+        return { ok: false };
+      }
+
       try {
         const { data, error } = await supabase
           .from("integrations")
@@ -97,9 +116,13 @@ export function useZappMessaging({
           toast.error("Instância do WhatsApp não encontrada", {
             description: "Recarregue a página e tente novamente.",
           });
-          return false;
+          return { ok: false };
         }
         if (data.sector_id !== selectedSectorId) {
+          // Fallback final: grupo sem selectedIntegrationId mas com instância de outro setor
+          if (opts?.isGroup && selectedIntegrationId) {
+            return { ok: true, integrationId: selectedIntegrationId };
+          }
           console.error(
             `[ZAPP-SEND] ABORT: integration ${integrationId} belongs to sector "${data.sector_id}" but current sector is "${selectedSectorId}".`
           );
@@ -107,17 +130,18 @@ export function useZappMessaging({
             description:
               "A instância selecionada não pertence ao setor atual. Recarregue a página e selecione o setor novamente para evitar envio pelo número errado.",
           });
-          return false;
+          return { ok: false };
         }
-        return true;
+        return { ok: true, integrationId };
       } catch (err) {
         console.error("[ZAPP-SEND] assertIntegrationMatchesSector error:", err);
         toast.error("Erro ao validar instância do WhatsApp");
-        return false;
+        return { ok: false };
       }
     },
-    [selectedSectorId, currentUser?.account_id]
+    [selectedSectorId, selectedIntegrationId, currentUser?.account_id]
   );
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
