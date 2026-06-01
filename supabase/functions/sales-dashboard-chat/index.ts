@@ -1,5 +1,5 @@
-// Sales Dashboard Chat (AION): Gemini Pro analisa dados, GPT gera insight.
-// Streaming SSE: text deltas + chunk final `event: metadata` com KPI.
+// Sales Dashboard Chat (AION): Gemini 2.5 Pro com tool-calling para análise sob demanda.
+// Streaming SSE: deltas + status + metadata final.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -18,41 +18,140 @@ interface ReqBody {
   question: string;
   session_id?: string | null;
   history?: { role: "user" | "assistant"; content: string }[];
-  period_months?: number; // janela de análise (default 12)
+  period_months?: number;
 }
 
+const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+// ============= SNAPSHOT (compacto, agregado, completo) =============
 async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: string, monthsBack: number) {
   const since = new Date();
   since.setMonth(since.getMonth() - monthsBack);
   const sinceIso = since.toISOString();
   const sinceDate = sinceIso.slice(0, 10);
 
+  // Deals: filtra QUALQUER deal tocado no período (criado, fechado, perdido OU em aberto criado antes)
+  const dealsCols = "id,title,value,received_value,status,stage_id,pipeline_id,source,responsible_user_id,sdr_user_id,won_at,lost_at,lost_reason,loss_reason_id,created_at,expected_close_date,client_id";
+
   const [
-    dealsR, stagesR, usersR, lossR, goalsR, pipelinesR,
+    dealsCreatedR, dealsWonR, dealsLostR, dealsOpenR,
+    stagesR, usersR, lossR, goalsR, pipelinesR,
     contractsR, finEntriesR, finCatsR, hrCollabR, spiffsR, commR,
+    clientsR, meetingsR, activitiesR, churnR, callsR,
   ] = await Promise.all([
-    admin
-      .from("deals")
-      .select("id,title,value,received_value,status,stage_id,pipeline_id,source,responsible_user_id,sdr_user_id,won_at,lost_at,lost_reason,loss_reason_id,created_at,expected_close_date,client_id")
-      .gte("created_at", sinceIso).eq("account_id", accountId).limit(5000),
+    admin.from("deals").select(dealsCols).gte("created_at", sinceIso).eq("account_id", accountId).limit(8000),
+    admin.from("deals").select(dealsCols).gte("won_at", sinceIso).eq("account_id", accountId).limit(8000),
+    admin.from("deals").select(dealsCols).gte("lost_at", sinceIso).eq("account_id", accountId).limit(8000),
+    admin.from("deals").select(dealsCols).is("won_at", null).is("lost_at", null).neq("status", "won").neq("status", "lost").eq("account_id", accountId).limit(8000),
     admin.from("deal_stages").select("id,name,pipeline_id,order_index,is_won,is_lost").eq("account_id", accountId),
     admin.from("users").select("id,name,role,team_role_id,is_active").eq("account_id", accountId),
     admin.from("deal_loss_reasons").select("id,name").eq("account_id", accountId),
     admin.from("sales_goals").select("*").eq("account_id", accountId).gte("created_at", sinceIso).limit(500),
     admin.from("pipelines").select("id,name,type").eq("account_id", accountId),
-    // Clientes novos via contratos no período (proxy de "novos clientes")
-    admin.from("client_contracts").select("id,client_id,product_id,value,status,start_date,created_at,contract_type").gte("created_at", sinceIso).eq("account_id", accountId).limit(5000),
-    // Custos: lançamentos financeiros pagos no período (despesas)
-    admin.from("financial_entries").select("id,amount,entry_type,status,due_date,payment_date,category_id,description").eq("account_id", accountId).eq("entry_type", "payable").gte("due_date", sinceDate).limit(10000),
+    admin.from("client_contracts").select("id,client_id,product_id,value,status,start_date,end_date,created_at,cancelled_at,status_changed_at,contract_type,cancellation_reason").eq("account_id", accountId).or(`created_at.gte.${sinceIso},status_changed_at.gte.${sinceIso},cancelled_at.gte.${sinceIso}`).limit(10000),
+    admin.from("financial_entries").select("id,amount,entry_type,status,due_date,payment_date,category_id,description").eq("account_id", accountId).eq("entry_type", "payable").gte("due_date", sinceDate).limit(15000),
     admin.from("financial_categories").select("id,name,dre_group,type").eq("account_id", accountId),
-    // Folha (snapshot atual de salários por depto) — proxy mensal
     admin.from("hr_collaborators").select("id,full_name,department,hr_department_id,salary,status,hire_date,termination_date,employment_type").eq("account_id", accountId).neq("status", "inactive").limit(2000),
-    // Spiffs & comissões pagos
-    admin.from("spiff_spins").select("id,prize_amount,created_at,user_id").eq("account_id", accountId).gte("created_at", sinceIso).limit(2000),
-    admin.from("commission_deal_entries").select("id,commission_amount,user_id,created_at,deal_id").eq("account_id", accountId).gte("created_at", sinceIso).limit(5000),
+    admin.from("spiff_spins").select("id,prize_amount,created_at,user_id").eq("account_id", accountId).gte("created_at", sinceIso).limit(3000),
+    admin.from("commission_deal_entries").select("id,commission_amount,user_id,created_at,deal_id").eq("account_id", accountId).gte("created_at", sinceIso).limit(8000),
+    admin.from("clients").select("id,status,created_at,sales_user_id,responsible_user_id,business_segment").eq("account_id", accountId).limit(20000),
+    admin.from("sales_meetings").select("id,scheduled_at,status,seller_user_id:created_by,duration_minutes,meeting_type").eq("account_id", accountId).gte("scheduled_at", sinceIso).limit(5000),
+    admin.from("deal_activities").select("id,type,created_at,user_id,deal_id,scheduled_at,completed_at").eq("account_id", accountId).gte("created_at", sinceIso).limit(20000),
+    admin.from("client_churn_analyses").select("id,client_id,overall_risk,created_at").eq("account_id", accountId).gte("created_at", sinceIso).limit(2000),
+    admin.from("sales_call_analyses").select("id,call_date,seller_user_id,ai_score,call_outcome,deal_id").eq("account_id", accountId).gte("call_date", sinceDate).limit(3000),
   ]);
 
-  // Pré-agregar custos por DRE/categoria por mês (reduz tokens)
+  // Mesclar deals (dedup por id)
+  const dealsMap = new Map<string, any>();
+  for (const arr of [dealsCreatedR.data, dealsWonR.data, dealsLostR.data, dealsOpenR.data]) {
+    for (const d of (arr ?? []) as any[]) dealsMap.set(d.id, d);
+  }
+  const allDeals = [...dealsMap.values()];
+
+  const stageMap = new Map<string, any>((stagesR.data ?? []).map((s: any) => [s.id, s]));
+  const userMap = new Map<string, string>((usersR.data ?? []).map((u: any) => [u.id, u.name]));
+  const lossMap = new Map<string, string>((lossR.data ?? []).map((l: any) => [l.id, l.name]));
+  const pipelineMap = new Map<string, string>((pipelinesR.data ?? []).map((p: any) => [p.id, p.name]));
+
+  // ===== Agregações de deals =====
+  const dealsByMonth: Record<string, { created: number; won: number; lost: number; won_value: number; lost_value: number }> = {};
+  const wonByOwner: Record<string, { name: string; won: number; value: number }> = {};
+  const wonBySdr: Record<string, { name: string; won: number; value: number }> = {};
+  const lostByOwner: Record<string, { name: string; lost: number; value: number }> = {};
+  const lostByReason: Record<string, { name: string; count: number; value: number }> = {};
+  const dealsBySource: Record<string, { count: number; won: number; won_value: number }> = {};
+  const dealsByPipeline: Record<string, { name: string; created: number; won: number; lost: number; open: number; won_value: number }> = {};
+  const funnelByStage: Record<string, { pipeline: string; stage: string; count: number; value: number }> = {};
+
+  let tCreated = 0, tWon = 0, tLost = 0, tWonValue = 0, tLostValue = 0, tOpenValue = 0, tOpenCount = 0;
+
+  for (const d of allDeals) {
+    const val = Number(d.received_value ?? d.value ?? 0);
+    const stage = d.stage_id ? stageMap.get(d.stage_id) : null;
+    const isWon = d.status === "won" || stage?.is_won;
+    const isLost = d.status === "lost" || stage?.is_lost;
+    const pipName = d.pipeline_id ? pipelineMap.get(d.pipeline_id) ?? "sem_pipeline" : "sem_pipeline";
+
+    // Created (apenas se criado no período)
+    const cm = (d.created_at ?? "").slice(0, 7);
+    if (cm && new Date(d.created_at) >= since) {
+      tCreated++;
+      dealsByMonth[cm] ??= { created: 0, won: 0, lost: 0, won_value: 0, lost_value: 0 };
+      dealsByMonth[cm].created++;
+      dealsByPipeline[pipName] ??= { name: pipName, created: 0, won: 0, lost: 0, open: 0, won_value: 0 };
+      dealsByPipeline[pipName].created++;
+      const src = d.source ?? "sem_origem";
+      dealsBySource[src] ??= { count: 0, won: 0, won_value: 0 };
+      dealsBySource[src].count++;
+    }
+
+    if (isWon) {
+      const wm = (d.won_at ?? "").slice(0, 7);
+      if (wm && new Date(d.won_at) >= since) {
+        tWon++; tWonValue += val;
+        dealsByMonth[wm] ??= { created: 0, won: 0, lost: 0, won_value: 0, lost_value: 0 };
+        dealsByMonth[wm].won++; dealsByMonth[wm].won_value += val;
+        const oid = d.responsible_user_id ?? "unknown";
+        wonByOwner[oid] ??= { name: userMap.get(oid) ?? "Desconhecido", won: 0, value: 0 };
+        wonByOwner[oid].won++; wonByOwner[oid].value += val;
+        if (d.sdr_user_id) {
+          wonBySdr[d.sdr_user_id] ??= { name: userMap.get(d.sdr_user_id) ?? "Desconhecido", won: 0, value: 0 };
+          wonBySdr[d.sdr_user_id].won++; wonBySdr[d.sdr_user_id].value += val;
+        }
+        dealsByPipeline[pipName] ??= { name: pipName, created: 0, won: 0, lost: 0, open: 0, won_value: 0 };
+        dealsByPipeline[pipName].won++; dealsByPipeline[pipName].won_value += val;
+        const src = d.source ?? "sem_origem";
+        dealsBySource[src] ??= { count: 0, won: 0, won_value: 0 };
+        dealsBySource[src].won++; dealsBySource[src].won_value += val;
+      }
+    } else if (isLost) {
+      const lm = (d.lost_at ?? "").slice(0, 7);
+      if (lm && new Date(d.lost_at) >= since) {
+        tLost++; tLostValue += val;
+        dealsByMonth[lm] ??= { created: 0, won: 0, lost: 0, won_value: 0, lost_value: 0 };
+        dealsByMonth[lm].lost++; dealsByMonth[lm].lost_value += val;
+        const rname = (d.loss_reason_id ? lossMap.get(d.loss_reason_id) : null) ?? d.lost_reason ?? "sem_motivo";
+        lostByReason[rname] ??= { name: rname, count: 0, value: 0 };
+        lostByReason[rname].count++; lostByReason[rname].value += val;
+        const oid = d.responsible_user_id ?? "unknown";
+        lostByOwner[oid] ??= { name: userMap.get(oid) ?? "Desconhecido", lost: 0, value: 0 };
+        lostByOwner[oid].lost++; lostByOwner[oid].value += val;
+        dealsByPipeline[pipName] ??= { name: pipName, created: 0, won: 0, lost: 0, open: 0, won_value: 0 };
+        dealsByPipeline[pipName].lost++;
+      }
+    } else {
+      tOpenValue += val; tOpenCount++;
+      dealsByPipeline[pipName] ??= { name: pipName, created: 0, won: 0, lost: 0, open: 0, won_value: 0 };
+      dealsByPipeline[pipName].open++;
+      if (stage) {
+        const key = `${d.pipeline_id}:${d.stage_id}`;
+        funnelByStage[key] ??= { pipeline: pipName, stage: stage.name, count: 0, value: 0 };
+        funnelByStage[key].count++; funnelByStage[key].value += val;
+      }
+    }
+  }
+
+  // ===== Custos por DRE/categoria por mês =====
   const catMap = new Map<string, { name: string; dre_group: string | null }>(
     (finCatsR.data ?? []).map((c: any) => [c.id, { name: c.name, dre_group: c.dre_group }]),
   );
@@ -66,13 +165,12 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     costByMonth[month][group] = (costByMonth[month][group] ?? 0) + Number(e.amount ?? 0);
   }
 
-  // Folha mensal por departamento (somatório atual)
+  // ===== Folha mensal por departamento =====
   const payrollByDept: Record<string, number> = {};
   for (const c of (hrCollabR.data ?? []) as any[]) {
     const dept = (c.department || "sem_departamento").toString();
     payrollByDept[dept] = (payrollByDept[dept] ?? 0) + Number(c.salary ?? 0);
   }
-  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const salesPayroll = Object.entries(payrollByDept)
     .filter(([d]) => ["comercial", "vendas", "sales", "sdr"].some(k => norm(d).includes(k)))
     .reduce((a, [, v]) => a + v, 0);
@@ -80,73 +178,34 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     .filter(([d]) => norm(d).includes("marketing") || norm(d).includes("mkt"))
     .reduce((a, [, v]) => a + v, 0);
 
-  // Novos clientes/mês via client_contracts (exclui renovações quando identificável)
+  // ===== Contratos: novos, ativos, churn =====
   const newClientsByMonth: Record<string, Set<string>> = {};
   const newClientsValueByMonth: Record<string, number> = {};
+  const cancelledByMonth: Record<string, { count: number; value: number; reasons: Record<string, number> }> = {};
+  let activeContracts = 0, cancelledContracts = 0;
   for (const c of (contractsR.data ?? []) as any[]) {
+    if (c.status === "active") activeContracts++;
+    if (c.status === "cancelled") cancelledContracts++;
     const m = (c.start_date ?? c.created_at ?? "").slice(0, 7);
-    if (!m || !c.client_id) continue;
-    // pular renovações se contract_type sinalizar
-    if (typeof c.contract_type === "string" && norm(c.contract_type).includes("renov")) continue;
-    newClientsByMonth[m] ??= new Set();
-    if (!newClientsByMonth[m].has(c.client_id)) {
-      newClientsByMonth[m].add(c.client_id);
-      newClientsValueByMonth[m] = (newClientsValueByMonth[m] ?? 0) + Number(c.value ?? 0);
+    if (m && c.client_id && !(typeof c.contract_type === "string" && norm(c.contract_type).includes("renov"))) {
+      newClientsByMonth[m] ??= new Set();
+      if (!newClientsByMonth[m].has(c.client_id)) {
+        newClientsByMonth[m].add(c.client_id);
+        newClientsValueByMonth[m] = (newClientsValueByMonth[m] ?? 0) + Number(c.value ?? 0);
+      }
+    }
+    if (c.status === "cancelled" && c.cancelled_at) {
+      const cm = c.cancelled_at.slice(0, 7);
+      cancelledByMonth[cm] ??= { count: 0, value: 0, reasons: {} };
+      cancelledByMonth[cm].count++;
+      cancelledByMonth[cm].value += Number(c.value ?? 0);
+      const r = c.cancellation_reason ?? "sem_motivo";
+      cancelledByMonth[cm].reasons[r] = (cancelledByMonth[cm].reasons[r] ?? 0) + 1;
     }
   }
-  const newClientsMonthly = Object.fromEntries(
-    Object.entries(newClientsByMonth).map(([m, s]) => [m, s.size]),
-  );
+  const newClientsMonthly = Object.fromEntries(Object.entries(newClientsByMonth).map(([m, s]) => [m, s.size]));
 
-  // ===== Agregações de deals (evita mandar raw 5000 linhas) =====
-  const stageMap = new Map<string, any>((stagesR.data ?? []).map((s: any) => [s.id, s]));
-  const userMap = new Map<string, string>((usersR.data ?? []).map((u: any) => [u.id, u.name]));
-  const lossMap = new Map<string, string>((lossR.data ?? []).map((l: any) => [l.id, l.name]));
-
-  const dealsByMonth: Record<string, { created: number; won: number; lost: number; won_value: number; lost_value: number }> = {};
-  const wonByOwner: Record<string, { name: string; won: number; value: number }> = {};
-  const lostByReason: Record<string, { name: string; count: number; value: number }> = {};
-  const dealsBySource: Record<string, number> = {};
-  let totalCreated = 0, totalWon = 0, totalLost = 0, totalWonValue = 0, totalLostValue = 0, totalOpenValue = 0;
-
-  for (const d of (dealsR.data ?? []) as any[]) {
-    totalCreated++;
-    const createdMonth = (d.created_at ?? "").slice(0, 7);
-    if (createdMonth) {
-      dealsByMonth[createdMonth] ??= { created: 0, won: 0, lost: 0, won_value: 0, lost_value: 0 };
-      dealsByMonth[createdMonth].created++;
-    }
-    const val = Number(d.received_value ?? d.value ?? 0);
-    const stage = d.stage_id ? stageMap.get(d.stage_id) : null;
-    const isWon = d.status === "won" || stage?.is_won;
-    const isLost = d.status === "lost" || stage?.is_lost;
-    if (isWon) {
-      totalWon++; totalWonValue += val;
-      const wm = (d.won_at ?? d.created_at ?? "").slice(0, 7);
-      if (wm) {
-        dealsByMonth[wm] ??= { created: 0, won: 0, lost: 0, won_value: 0, lost_value: 0 };
-        dealsByMonth[wm].won++; dealsByMonth[wm].won_value += val;
-      }
-      const oid = d.responsible_user_id ?? "unknown";
-      wonByOwner[oid] ??= { name: userMap.get(oid) ?? "Desconhecido", won: 0, value: 0 };
-      wonByOwner[oid].won++; wonByOwner[oid].value += val;
-    } else if (isLost) {
-      totalLost++; totalLostValue += val;
-      const lm = (d.lost_at ?? d.created_at ?? "").slice(0, 7);
-      if (lm) {
-        dealsByMonth[lm] ??= { created: 0, won: 0, lost: 0, won_value: 0, lost_value: 0 };
-        dealsByMonth[lm].lost++; dealsByMonth[lm].lost_value += val;
-      }
-      const rname = (d.loss_reason_id ? lossMap.get(d.loss_reason_id) : null) ?? d.lost_reason ?? "sem_motivo";
-      lostByReason[rname] ??= { name: rname, count: 0, value: 0 };
-      lostByReason[rname].count++; lostByReason[rname].value += val;
-    } else {
-      totalOpenValue += val;
-    }
-    const src = d.source ?? "sem_origem";
-    dealsBySource[src] = (dealsBySource[src] ?? 0) + 1;
-  }
-
+  // ===== Comissões e spiffs por mês =====
   const commByUserMonth: Record<string, Record<string, number>> = {};
   for (const c of (commR.data ?? []) as any[]) {
     const uid = c.user_id ?? "unknown";
@@ -161,19 +220,15 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     if (!m) continue;
     spiffByMonth[m] = (spiffByMonth[m] ?? 0) + Number(s.prize_amount ?? 0);
   }
-
-  // ===== CAC mensal pré-computado (fonte de verdade para a IA) =====
-  // Critério: usa folha atual como proxy mensal de salário + comissões + spiffs do mês.
-  // Marketing ad-spend NÃO está disponível (lançamentos sem category_id/cost_center/supplier).
   const totalCommByMonth: Record<string, number> = {};
   for (const u of Object.values(commByUserMonth)) {
     for (const [m, v] of Object.entries(u)) totalCommByMonth[m] = (totalCommByMonth[m] ?? 0) + v;
   }
+
+  // ===== CAC mensal =====
   const cacByMonth: Record<string, any> = {};
   const allMonths = new Set<string>([
-    ...Object.keys(newClientsMonthly),
-    ...Object.keys(totalCommByMonth),
-    ...Object.keys(spiffByMonth),
+    ...Object.keys(newClientsMonthly), ...Object.keys(totalCommByMonth), ...Object.keys(spiffByMonth),
   ]);
   for (const m of allMonths) {
     const newC = newClientsMonthly[m] ?? 0;
@@ -192,25 +247,85 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     };
   }
 
+  // ===== Reuniões e atividades =====
+  const meetings = (meetingsR.data ?? []) as any[];
+  const meetingsByMonth: Record<string, { scheduled: number; completed: number; no_show: number }> = {};
+  for (const m of meetings) {
+    const mo = (m.scheduled_at ?? "").slice(0, 7);
+    if (!mo) continue;
+    meetingsByMonth[mo] ??= { scheduled: 0, completed: 0, no_show: 0 };
+    meetingsByMonth[mo].scheduled++;
+    if (m.status === "completed" || m.status === "done") meetingsByMonth[mo].completed++;
+    if (m.status === "no_show" || m.status === "noshow") meetingsByMonth[mo].no_show++;
+  }
+
+  const activitiesByUser: Record<string, { name: string; total: number; by_type: Record<string, number> }> = {};
+  for (const a of (activitiesR.data ?? []) as any[]) {
+    const uid = a.user_id ?? "unknown";
+    activitiesByUser[uid] ??= { name: userMap.get(uid) ?? "Desconhecido", total: 0, by_type: {} };
+    activitiesByUser[uid].total++;
+    const t = a.type ?? "outro";
+    activitiesByUser[uid].by_type[t] = (activitiesByUser[uid].by_type[t] ?? 0) + 1;
+  }
+
+  // ===== Win rate por owner com count para denominador =====
+  const winRateByOwner: Record<string, { name: string; won: number; lost: number; win_rate: number | null; value: number }> = {};
+  for (const [uid, w] of Object.entries(wonByOwner)) {
+    winRateByOwner[uid] ??= { name: w.name, won: 0, lost: 0, win_rate: null, value: 0 };
+    winRateByOwner[uid].won = w.won; winRateByOwner[uid].value = w.value;
+  }
+  for (const [uid, l] of Object.entries(lostByOwner)) {
+    winRateByOwner[uid] ??= { name: l.name, won: 0, lost: 0, win_rate: null, value: 0 };
+    winRateByOwner[uid].lost = l.lost;
+  }
+  for (const r of Object.values(winRateByOwner)) {
+    const tot = r.won + r.lost;
+    r.win_rate = tot > 0 ? r.won / tot : null;
+  }
+
+  // ===== Calls IA =====
+  const callsByUser: Record<string, { name: string; count: number; avg_score: number | null }> = {};
+  for (const c of (callsR.data ?? []) as any[]) {
+    const uid = c.seller_user_id ?? "unknown";
+    callsByUser[uid] ??= { name: userMap.get(uid) ?? "Desconhecido", count: 0, avg_score: null };
+    callsByUser[uid].count++;
+    if (typeof c.ai_score === "number") {
+      const prev = callsByUser[uid].avg_score ?? 0;
+      callsByUser[uid].avg_score = (prev * (callsByUser[uid].count - 1) + c.ai_score) / callsByUser[uid].count;
+    }
+  }
+
+  // ===== Churn risk =====
+  const churnByRisk: Record<string, number> = {};
+  for (const c of (churnR.data ?? []) as any[]) {
+    const r = c.overall_risk ?? "unknown";
+    churnByRisk[r] = (churnByRisk[r] ?? 0) + 1;
+  }
+
   const finEntriesCategorized = (finEntriesR.data ?? []).filter((e: any) => e.category_id).length;
   const finEntriesTotal = (finEntriesR.data ?? []).length;
 
   return {
-    period: { months: monthsBack, start: sinceIso, end: new Date().toISOString() },
+    period: { months: monthsBack, start: sinceIso.slice(0, 10), end: new Date().toISOString().slice(0, 10) },
     counts: {
-      deals: dealsR.data?.length ?? 0,
+      deals_in_period: allDeals.length,
       contracts: contractsR.data?.length ?? 0,
-      users: usersR.data?.length ?? 0,
+      active_contracts: activeContracts,
+      cancelled_contracts: cancelledContracts,
+      users_active: (usersR.data ?? []).filter((u: any) => u.is_active).length,
       pipelines: pipelinesR.data?.length ?? 0,
       hr_collaborators: hrCollabR.data?.length ?? 0,
       financial_entries: finEntriesTotal,
-      financial_entries_categorized: finEntriesCategorized,
+      meetings: meetings.length,
+      activities: activitiesR.data?.length ?? 0,
+      calls_analyzed: callsR.data?.length ?? 0,
+      clients_total: clientsR.data?.length ?? 0,
     },
     data_quality_notes: {
       financial_categorization_pct: finEntriesTotal > 0 ? Math.round((finEntriesCategorized / finEntriesTotal) * 100) : 0,
       ad_spend_available: false,
-      ad_spend_reason: "Lançamentos financeiros sem category_id/cost_center/supplier preenchidos. Ad spend de marketing não é rastreável no banco hoje.",
-      payroll_source: "snapshot atual de hr_collaborators.salary (sem histórico mensal)",
+      ad_spend_reason: "Lançamentos sem category_id/cost_center/supplier preenchidos. Ad spend não rastreável.",
+      payroll_source: "snapshot atual hr_collaborators.salary (sem histórico mensal)",
     },
     pipelines: pipelinesR.data ?? [],
     stages: (stagesR.data ?? []).map((s: any) => ({ id: s.id, name: s.name, pipeline_id: s.pipeline_id, is_won: s.is_won, is_lost: s.is_lost })),
@@ -218,45 +333,235 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     loss_reasons: lossR.data ?? [],
     sales_goals: goalsR.data ?? [],
     deals_summary: {
-      total_created: totalCreated,
-      total_won: totalWon,
-      total_lost: totalLost,
-      total_won_value: totalWonValue,
-      total_lost_value: totalLostValue,
-      total_open_value: totalOpenValue,
-      win_rate: totalWon + totalLost > 0 ? totalWon / (totalWon + totalLost) : null,
-      avg_ticket_won: totalWon > 0 ? totalWonValue / totalWon : 0,
+      total_created: tCreated,
+      total_won: tWon,
+      total_lost: tLost,
+      total_won_value: tWonValue,
+      total_lost_value: tLostValue,
+      total_open_count: tOpenCount,
+      total_open_value: tOpenValue,
+      win_rate: tWon + tLost > 0 ? tWon / (tWon + tLost) : null,
+      avg_ticket_won: tWon > 0 ? tWonValue / tWon : 0,
     },
     deals_by_month: dealsByMonth,
-    won_by_owner: Object.values(wonByOwner).sort((a, b) => b.value - a.value).slice(0, 30),
-    lost_by_reason: Object.values(lostByReason).sort((a, b) => b.count - a.count).slice(0, 30),
+    deals_by_pipeline: Object.values(dealsByPipeline),
+    funnel_open_by_stage: Object.values(funnelByStage).sort((a, b) => b.count - a.count),
+    won_by_owner: Object.values(wonByOwner).sort((a, b) => b.value - a.value).slice(0, 50),
+    won_by_sdr: Object.values(wonBySdr).sort((a, b) => b.value - a.value).slice(0, 50),
+    lost_by_owner: Object.values(lostByOwner).sort((a, b) => b.lost - a.lost).slice(0, 50),
+    win_rate_by_owner: Object.values(winRateByOwner).sort((a, b) => (b.win_rate ?? 0) - (a.win_rate ?? 0)).slice(0, 50),
+    lost_by_reason: Object.values(lostByReason).sort((a, b) => b.value - a.value).slice(0, 50),
     deals_by_source: dealsBySource,
+    contracts_cancelled_by_month: cancelledByMonth,
+    new_clients_per_month: newClientsMonthly,
+    new_clients_revenue_per_month: newClientsValueByMonth,
     cost_by_month_by_dre_group: costByMonth,
     payroll_current_by_department: payrollByDept,
     payroll_aggregates: { sales_monthly: salesPayroll, marketing_monthly: marketingPayroll },
     commissions_by_user_by_month: commByUserMonth,
     commissions_total_by_month: totalCommByMonth,
     spiff_payouts_by_month: spiffByMonth,
-    new_clients_per_month: newClientsMonthly,
-    new_clients_revenue_per_month: newClientsValueByMonth,
     cac_by_month: cacByMonth,
+    meetings_by_month: meetingsByMonth,
+    activities_by_user: Object.values(activitiesByUser).sort((a, b) => b.total - a.total).slice(0, 50),
+    calls_by_user: Object.values(callsByUser).sort((a, b) => b.count - a.count).slice(0, 50),
+    churn_risk_distribution: churnByRisk,
     financial_categories: (finCatsR.data ?? []).map((c: any) => ({ id: c.id, name: c.name, dre_group: c.dre_group })),
   };
 }
 
-async function callJson(model: string, messages: any[]) {
-  const r = await fetch(GATEWAY, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, response_format: { type: "json_object" } }),
-    signal: AbortSignal.timeout(75_000),
-  });
-  if (!r.ok) throw new Error(`${model} ${r.status}: ${await r.text()}`);
-  const json = await r.json();
-  const text = json.choices?.[0]?.message?.content ?? "{}";
-  try { return JSON.parse(text); } catch { return { analysis: text, kpi: null }; }
+// ============= TOOLS para busca pontual =============
+const TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "search_user",
+      description: "Busca usuários/vendedores por nome parcial (case-insensitive). Use quando o gestor menciona o nome de uma pessoa.",
+      parameters: {
+        type: "object",
+        properties: { name: { type: "string", description: "Nome parcial do usuário" } },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "user_performance",
+      description: "Performance detalhada de um usuário no período: deals criados/ganhos/perdidos, valor, win rate, motivos de perda principais, reuniões.",
+      parameters: {
+        type: "object",
+        properties: { user_id: { type: "string" } },
+        required: ["user_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_client",
+      description: "Busca clientes por nome parcial. Retorna até 20 resultados com id, nome, status, contratos ativos.",
+      parameters: {
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "client_details",
+      description: "Detalhes completos de um cliente: contratos, deals associados, último contato, valor LTV.",
+      parameters: {
+        type: "object",
+        properties: { client_id: { type: "string" } },
+        required: ["client_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "pipeline_funnel",
+      description: "Funil completo de um pipeline (todas as etapas, count e valor por etapa).",
+      parameters: {
+        type: "object",
+        properties: { pipeline_id: { type: "string" } },
+        required: ["pipeline_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "deals_by_filter",
+      description: "Lista deals com filtros. Use para perguntas como 'top deals fechados', 'deals em aberto acima de X'.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["won", "lost", "open"] },
+          min_value: { type: "number" },
+          owner_user_id: { type: "string" },
+          source: { type: "string" },
+          limit: { type: "number", default: 20 },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "lost_deals_breakdown",
+      description: "Deals perdidos detalhados por motivo, com valor e count, opcional por período em dias.",
+      parameters: {
+        type: "object",
+        properties: { days_back: { type: "number", default: 90 } },
+      },
+    },
+  },
+];
+
+async function execTool(admin: ReturnType<typeof createClient>, accountId: string, sinceIso: string, name: string, args: any): Promise<any> {
+  try {
+    if (name === "search_user") {
+      const { data } = await admin.from("users").select("id,name,role,is_active").eq("account_id", accountId).ilike("name", `%${args.name}%`).limit(15);
+      return { results: data ?? [] };
+    }
+    if (name === "user_performance") {
+      const uid = args.user_id;
+      const [wonR, lostR, openR, meetR] = await Promise.all([
+        admin.from("deals").select("id,value,received_value,won_at,client_id,lost_reason,loss_reason_id,source").eq("account_id", accountId).eq("responsible_user_id", uid).eq("status", "won").gte("won_at", sinceIso).limit(2000),
+        admin.from("deals").select("id,value,received_value,lost_at,client_id,lost_reason,loss_reason_id,source").eq("account_id", accountId).eq("responsible_user_id", uid).eq("status", "lost").gte("lost_at", sinceIso).limit(2000),
+        admin.from("deals").select("id,value,received_value,client_id,source,created_at").eq("account_id", accountId).eq("responsible_user_id", uid).is("won_at", null).is("lost_at", null).limit(2000),
+        admin.from("sales_meetings").select("id,status").eq("account_id", accountId).eq("created_by", uid).gte("scheduled_at", sinceIso).limit(2000),
+      ]);
+      const won = wonR.data ?? []; const lost = lostR.data ?? []; const open = openR.data ?? [];
+      const wonVal = won.reduce((s: number, d: any) => s + Number(d.received_value ?? d.value ?? 0), 0);
+      const lostVal = lost.reduce((s: number, d: any) => s + Number(d.received_value ?? d.value ?? 0), 0);
+      const openVal = open.reduce((s: number, d: any) => s + Number(d.received_value ?? d.value ?? 0), 0);
+      const lossReasonsCount: Record<string, number> = {};
+      for (const d of lost) {
+        const r = d.lost_reason ?? "sem_motivo";
+        lossReasonsCount[r] = (lossReasonsCount[r] ?? 0) + 1;
+      }
+      const meetings = meetR.data ?? [];
+      return {
+        won_count: won.length, lost_count: lost.length, open_count: open.length,
+        won_value: wonVal, lost_value: lostVal, open_value: openVal,
+        win_rate: won.length + lost.length > 0 ? won.length / (won.length + lost.length) : null,
+        avg_ticket_won: won.length > 0 ? wonVal / won.length : 0,
+        top_loss_reasons: Object.entries(lossReasonsCount).sort((a, b) => b[1] - a[1]).slice(0, 5),
+        meetings_total: meetings.length,
+        meetings_completed: meetings.filter((m: any) => m.status === "completed" || m.status === "done").length,
+        meetings_no_show: meetings.filter((m: any) => m.status === "no_show" || m.status === "noshow").length,
+      };
+    }
+    if (name === "search_client") {
+      const { data: clients } = await admin.from("clients").select("id,full_name,status,phone_e164,business_segment").eq("account_id", accountId).ilike("full_name", `%${args.name}%`).limit(20);
+      return { results: clients ?? [] };
+    }
+    if (name === "client_details") {
+      const cid = args.client_id;
+      const [client, contracts, deals] = await Promise.all([
+        admin.from("clients").select("id,full_name,status,phone_e164,emails,business_segment,created_at,city,state").eq("account_id", accountId).eq("id", cid).maybeSingle(),
+        admin.from("client_contracts").select("id,status,value,start_date,end_date,cancelled_at,cancellation_reason,product_id").eq("account_id", accountId).eq("client_id", cid).limit(50),
+        admin.from("deals").select("id,title,status,value,received_value,won_at,lost_at,source").eq("account_id", accountId).eq("client_id", cid).limit(50),
+      ]);
+      const ltv = (contracts.data ?? []).reduce((s: number, c: any) => s + Number(c.value ?? 0), 0);
+      return { client: client.data, contracts: contracts.data ?? [], deals: deals.data ?? [], ltv };
+    }
+    if (name === "pipeline_funnel") {
+      const [stagesR, dealsR] = await Promise.all([
+        admin.from("deal_stages").select("id,name,order_index,is_won,is_lost").eq("account_id", accountId).eq("pipeline_id", args.pipeline_id).order("order_index"),
+        admin.from("deals").select("id,stage_id,value,received_value,status").eq("account_id", accountId).eq("pipeline_id", args.pipeline_id).is("won_at", null).is("lost_at", null).limit(5000),
+      ]);
+      const byStage: Record<string, { name: string; order: number; count: number; value: number }> = {};
+      for (const s of (stagesR.data ?? []) as any[]) byStage[s.id] = { name: s.name, order: s.order_index, count: 0, value: 0 };
+      for (const d of (dealsR.data ?? []) as any[]) {
+        if (!d.stage_id || !byStage[d.stage_id]) continue;
+        byStage[d.stage_id].count++;
+        byStage[d.stage_id].value += Number(d.received_value ?? d.value ?? 0);
+      }
+      return { funnel: Object.values(byStage).sort((a, b) => a.order - b.order) };
+    }
+    if (name === "deals_by_filter") {
+      let q = admin.from("deals").select("id,title,value,received_value,status,source,responsible_user_id,won_at,lost_at,created_at,client_id").eq("account_id", accountId);
+      if (args.status === "won") q = q.eq("status", "won").gte("won_at", sinceIso);
+      else if (args.status === "lost") q = q.eq("status", "lost").gte("lost_at", sinceIso);
+      else if (args.status === "open") q = q.is("won_at", null).is("lost_at", null);
+      if (args.owner_user_id) q = q.eq("responsible_user_id", args.owner_user_id);
+      if (args.source) q = q.eq("source", args.source);
+      q = q.order("value", { ascending: false }).limit(Math.min(args.limit ?? 20, 50));
+      const { data } = await q;
+      let result = data ?? [];
+      if (typeof args.min_value === "number") {
+        result = result.filter((d: any) => Number(d.received_value ?? d.value ?? 0) >= args.min_value);
+      }
+      return { deals: result };
+    }
+    if (name === "lost_deals_breakdown") {
+      const days = args.days_back ?? 90;
+      const since = new Date(); since.setDate(since.getDate() - days);
+      const { data } = await admin.from("deals").select("id,value,received_value,lost_reason,loss_reason_id,lost_at").eq("account_id", accountId).eq("status", "lost").gte("lost_at", since.toISOString()).limit(5000);
+      const [lossR] = await Promise.all([admin.from("deal_loss_reasons").select("id,name").eq("account_id", accountId)]);
+      const lossMap = new Map<string, string>((lossR.data ?? []).map((l: any) => [l.id, l.name]));
+      const by: Record<string, { count: number; value: number }> = {};
+      for (const d of (data ?? []) as any[]) {
+        const r = (d.loss_reason_id ? lossMap.get(d.loss_reason_id) : null) ?? d.lost_reason ?? "sem_motivo";
+        by[r] ??= { count: 0, value: 0 };
+        by[r].count++;
+        by[r].value += Number(d.received_value ?? d.value ?? 0);
+      }
+      return { days_back: days, breakdown: Object.entries(by).map(([reason, v]) => ({ reason, ...v })).sort((a, b) => b.value - a.value) };
+    }
+    return { error: `tool desconhecida: ${name}` };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
+// ============= HANDLER =============
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -297,61 +602,115 @@ Deno.serve(async (req) => {
 
     const monthsBack = Math.max(1, Math.min(24, Number(body.period_months ?? 12)));
     const question = body.question.trim();
-    const history = (body.history ?? []).slice(-6);
+    const history = (body.history ?? []).slice(-12);
     const encoder = new TextEncoder();
+
     const stream = new ReadableStream({
       async start(controller) {
         const send = (data: string) => controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        const decoder = new TextDecoder();
         const heartbeat = setInterval(() => {
           send(JSON.stringify({ type: "heartbeat", at: new Date().toISOString() }));
         }, 15_000);
         try {
-          send(JSON.stringify({ type: "status", stage: "gemini", content: "Analisando dados…" }));
+          send(JSON.stringify({ type: "status", stage: "gemini", content: "Coletando dados do período…" }));
           const snapshot = await buildSnapshot(admin, userRow.account_id, monthsBack);
+          const sinceIso = snapshot.period.start + "T00:00:00.000Z";
 
-          const analystSystem = `Você é analista de dados sênior. Receberá um snapshot JSON pré-calculado dos últimos ${monthsBack} meses.
+          // ============= FASE 1: ANALYST com tool-calling =============
+          const analystSystem = `Você é AION, analista de dados sênior do time comercial. Recebeu um snapshot JSON pré-agregado dos últimos ${monthsBack} meses E tem ferramentas para buscar dados específicos sob demanda.
 
-REGRAS DUROS:
-- O snapshot JÁ TRAZ \`cac_by_month\` calculado mês a mês com new_clients, sales_payroll_monthly, marketing_payroll_monthly, commissions, spiffs, total_cost e cac. USE ESSES NÚMEROS — não recalcule do zero.
-- \`data_quality_notes.ad_spend_available=false\` significa: não há ad spend rastreável; assuma 0 e sinalize na premissa.
-- \`payroll_aggregates\` traz salesPayroll e marketingPayroll mensais já somados.
-- Se a pergunta for sobre CAC, responda com o(s) mês(es) pedido(s) usando cac_by_month direto.
-- Se faltar mês específico, use o último mês com new_clients > 0.
-- NÃO peça mais dados ao usuário. Trabalhe com o que tem e seja explícito sobre limitações em 1 linha.
+USE AS FERRAMENTAS quando a pergunta exigir dados específicos não presentes no snapshot:
+- Pergunta cita nome de pessoa? → search_user → user_performance
+- Pergunta cita nome de cliente? → search_client → client_details
+- Pergunta sobre funil de um pipeline específico? → pipeline_funnel
+- Pergunta sobre lista de deals (top, em aberto, por filtro)? → deals_by_filter
+- Pergunta sobre motivos de perda detalhados? → lost_deals_breakdown
 
-Responda PURAMENTE em JSON:
+REGRAS:
+- O snapshot já tem agregados gerais (totals, by_month, by_owner, by_pipeline, cac_by_month). USE quando responder pergunta agregada.
+- NUNCA invente números. Se não tiver, busque com tool ou diga em 1 linha o que falta.
+- NÃO peça mais informação ao usuário se a ferramenta resolve.
+- Faça até 4 chamadas de ferramenta em paralelo se precisar (ex: buscar usuário E motivos de perda).
+- Quando terminar, responda em JSON PURO:
 {
-  "analysis": "análise factual + breakdown numérico curto (use os campos do snapshot) + 1 linha de premissa quando aplicável",
-  "kpi": null OU { "label": "string curta", "value": número, "value_text": "R$ X.XXX", "unit": "BRL|%|qtd|dias|null", "period": "ex: 'mai/2026'", "comparison": "opcional vs período anterior", "trend": "up|down|flat" },
+  "analysis": "análise factual curta com os números encontrados",
+  "kpi": null OU { "label": "string", "value": número, "value_text": "R$ X", "unit": "BRL|%|qtd|dias|null", "period": "ex: 'mai/2026'", "comparison": "opcional", "trend": "up|down|flat" },
   "chart_hint": null OU { "type": "bar|line|pie", "data": [{"label":"x","value":n}] }
-}
-Use kpi quando a pergunta produzir UM número principal. Para CAC, sempre retorne kpi.
-NUNCA invente números fora do snapshot.`;
+}`;
 
-          const analyst = await callJson("google/gemini-2.5-flash", [
+          const messages: any[] = [
             { role: "system", content: analystSystem },
-            { role: "user", content: `Pergunta do gestor: ${question}\n\nSnapshot (JSON):\n${JSON.stringify(snapshot).slice(0, 80_000)}` },
-          ]);
+            { role: "user", content: `Pergunta: ${question}\n\nSnapshot:\n${JSON.stringify(snapshot)}` },
+          ];
 
+          let analyst: any = null;
+          for (let iter = 0; iter < 4; iter++) {
+            const r = await fetch(GATEWAY, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-pro",
+                messages,
+                tools: TOOLS,
+                tool_choice: iter === 0 ? "auto" : "auto",
+              }),
+              signal: AbortSignal.timeout(90_000),
+            });
+            if (!r.ok) {
+              const t = await r.text();
+              throw new Error(r.status === 429 ? "Rate limit IA. Tente em instantes." : r.status === 402 ? "Créditos esgotados." : `AI ${r.status}: ${t}`);
+            }
+            const json = await r.json();
+            const msg = json.choices?.[0]?.message;
+            if (!msg) throw new Error("Resposta vazia do analista");
+            messages.push(msg);
+
+            const toolCalls = msg.tool_calls ?? [];
+            if (toolCalls.length === 0) {
+              // resposta final
+              const content = msg.content ?? "{}";
+              try {
+                const cleaned = content.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+                analyst = JSON.parse(cleaned);
+              } catch {
+                analyst = { analysis: content, kpi: null, chart_hint: null };
+              }
+              break;
+            }
+            send(JSON.stringify({ type: "status", stage: "gemini", content: `Consultando ${toolCalls.length} fonte(s) de dados…` }));
+            const results = await Promise.all(
+              toolCalls.map(async (tc: any) => {
+                let args: any = {};
+                try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* */ }
+                const result = await execTool(admin, userRow.account_id, sinceIso, tc.function.name, args);
+                return { tool_call_id: tc.id, role: "tool", name: tc.function.name, content: JSON.stringify(result) };
+              }),
+            );
+            messages.push(...results);
+          }
+
+          if (!analyst) analyst = { analysis: "Não foi possível concluir a análise.", kpi: null, chart_hint: null };
+
+          // ============= FASE 2: INSIGHT executivo (streaming) =============
           send(JSON.stringify({ type: "status", stage: "gpt", content: "Gerando insight…" }));
-          const insightSystem = `Você é o AION, copiloto executivo. Receberá a pergunta e a análise factual já com os números.
+          const insightSystem = `Você é AION, copiloto executivo. Receberá a pergunta e a análise factual com números reais.
 
 TOM: direto, executivo, brasileiro, sem floreio. Nada de "vou analisar", "é importante notar", "com base nos dados". Vá direto ao número.
 
-FORMATO obrigatório (markdown enxuto):
-**[Número principal em destaque na primeira linha]** — contexto em 1 frase.
+FORMATO (markdown enxuto):
+**[Número principal em destaque]** — contexto em 1 frase.
 
-**Composição** (tabela markdown ou bullets curtos com os valores em R$):
+**Composição** (tabela markdown ou bullets curtos com R$):
 | Componente | Valor |
 |---|---|
 | ... | R$ ... |
 
-**Leitura rápida**: 1-2 linhas com o que o número significa (bom/ruim, vs benchmark, tendência se houver).
+**Leitura rápida**: 1-2 linhas (bom/ruim, tendência).
 
-**Próximo passo**: 1 ação concreta (1 linha).
+**Próximo passo**: 1 ação concreta em 1 linha.
 
-Se houver limitação relevante de dado, adicione no fim em itálico: *Premissa: ...* (máx 1 linha). Não invente. Se a análise não tiver número, diga em 1 linha o que falta e pare.`;
+Se houver limitação, finalize com *Premissa: ...* (máx 1 linha).
+Se a análise não trouxer número, diga em 1 linha o que falta e pare. NUNCA invente.`;
 
           const insightModel = "openai/gpt-5-mini";
           const gptResp = await fetch(GATEWAY, {
@@ -363,17 +722,17 @@ Se houver limitação relevante de dado, adicione no fim em itálico: *Premissa:
               messages: [
                 { role: "system", content: insightSystem },
                 ...history,
-                { role: "user", content: `Pergunta: ${question}\n\nAnálise (JSON):\n${JSON.stringify(analyst)}` },
+                { role: "user", content: `Pergunta: ${question}\n\nAnálise factual:\n${JSON.stringify(analyst)}` },
               ],
             }),
             signal: AbortSignal.timeout(90_000),
           });
-
           if (!gptResp.ok || !gptResp.body) {
             const t = await gptResp.text();
-            throw new Error(gptResp.status === 429 ? "Rate limit. Tente em instantes." : gptResp.status === 402 ? "Créditos esgotados na workspace de IA." : `AI gateway error: ${t}`);
+            throw new Error(gptResp.status === 429 ? "Rate limit IA." : gptResp.status === 402 ? "Créditos esgotados." : `AI ${t}`);
           }
 
+          const decoder = new TextDecoder();
           const reader = gptResp.body.getReader();
           let buffer = "";
           while (true) {
@@ -398,7 +757,14 @@ Se houver limitação relevante de dado, adicione no fim em itálico: *Premissa:
               }
             }
           }
-          send(JSON.stringify({ type: "metadata", kpi: analyst.kpi ?? null, chart_hint: analyst.chart_hint ?? null, analysis: analyst.analysis ?? null, period_months: monthsBack, models: { analyst: "google/gemini-2.5-flash", insight: insightModel } }));
+          send(JSON.stringify({
+            type: "metadata",
+            kpi: analyst.kpi ?? null,
+            chart_hint: analyst.chart_hint ?? null,
+            analysis: analyst.analysis ?? null,
+            period_months: monthsBack,
+            models: { analyst: "google/gemini-2.5-pro", insight: insightModel },
+          }));
         } catch (e) {
           send(JSON.stringify({ type: "error", error: e instanceof Error ? e.message : String(e) }));
         } finally {
