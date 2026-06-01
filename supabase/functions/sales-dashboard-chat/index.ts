@@ -500,7 +500,25 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     meetings_by_month: meetingsByMonth,
     activities_by_user: Object.values(activitiesByUser).sort((a, b) => b.total - a.total).slice(0, 50),
     calls_by_user: Object.values(callsByUser).sort((a, b) => b.count - a.count).slice(0, 50),
-    churn_risk_distribution: churnByRisk,
+    churn_risk_distribution: (() => {
+      const m: Record<string, number> = {};
+      for (const c of (churnR.data ?? []) as any[]) {
+        const r = c.overall_risk ?? "unknown";
+        m[r] = (m[r] ?? 0) + 1;
+      }
+      return m;
+    })(),
+    sales_cycle: salesCycle,
+    forecast: {
+      weighted_open_value: forecastWeighted,
+      raw_open_value: tOpenValue,
+      by_pipeline: Object.values(forecastByPipeline),
+      method: "probability% se preenchido, senão (ordem_etapa+1)/total_etapas, fallback 0.2",
+    },
+    stagnant_open_deals: { over_30_days: stagnant30, over_60_days: stagnant60 },
+    closing_next_30_days: { count: closingSoonCount, value: closingSoonValue },
+    top_clients_by_ltv: topClients,
+    source_conversion: sourceConversion,
     financial_categories: (finCatsR.data ?? []).map((c: any) => ({ id: c.id, name: c.name, dre_group: c.dre_group })),
   };
 }
