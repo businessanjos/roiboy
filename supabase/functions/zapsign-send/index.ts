@@ -169,9 +169,11 @@ serve(async (req) => {
     const ALLOWED_AUTH_MODES = new Set([
       "assinaturaTela",
       "tokenEmail",
-      "tokenSms",
       "assinaturaTela-tokenEmail",
+      "tokenSms",
       "assinaturaTela-tokenSms",
+      "tokenWhatsapp",
+      "assinaturaTela-tokenWhatsapp",
       "certificadoDigital",
     ]);
 
