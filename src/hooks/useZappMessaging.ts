@@ -72,19 +72,38 @@ export function useZappMessaging({
    * Returns true if safe to send; false (and toasts the user) if not.
    */
   const assertIntegrationMatchesSector = useCallback(
-    async (integrationId: string | undefined | null): Promise<boolean> => {
-      if (!integrationId) {
-        toast.error("WhatsApp não configurado", {
-          description: "Nenhuma instância selecionada para este setor.",
-        });
-        return false;
-      }
+    async (
+      integrationId: string | undefined | null,
+      opts?: { isGroup?: boolean }
+    ): Promise<{ ok: boolean; integrationId?: string }> => {
       if (!selectedSectorId || !currentUser?.account_id) {
         toast.error("Setor não selecionado", {
           description: "Recarregue a página e selecione o setor novamente.",
         });
-        return false;
+        return { ok: false };
       }
+
+      // GROUPS são multi-setor: se a instância da conversa pertence a outro
+      // setor (foi recebida por outra instância), use a instância do setor
+      // atual automaticamente em vez de bloquear o envio.
+      if (opts?.isGroup && selectedIntegrationId && integrationId !== selectedIntegrationId) {
+        console.log(
+          `[ZAPP-SEND] Group override: usando instância do setor atual (${selectedIntegrationId}) em vez de ${integrationId}.`
+        );
+        return { ok: true, integrationId: selectedIntegrationId };
+      }
+
+      if (!integrationId) {
+        // Para grupos, ainda dá pra tentar com a do setor
+        if (opts?.isGroup && selectedIntegrationId) {
+          return { ok: true, integrationId: selectedIntegrationId };
+        }
+        toast.error("WhatsApp não configurado", {
+          description: "Nenhuma instância selecionada para este setor.",
+        });
+        return { ok: false };
+      }
+
       try {
         const { data, error } = await supabase
           .from("integrations")
@@ -97,9 +116,13 @@ export function useZappMessaging({
           toast.error("Instância do WhatsApp não encontrada", {
             description: "Recarregue a página e tente novamente.",
           });
-          return false;
+          return { ok: false };
         }
         if (data.sector_id !== selectedSectorId) {
+          // Fallback final: grupo sem selectedIntegrationId mas com instância de outro setor
+          if (opts?.isGroup && selectedIntegrationId) {
+            return { ok: true, integrationId: selectedIntegrationId };
+          }
           console.error(
             `[ZAPP-SEND] ABORT: integration ${integrationId} belongs to sector "${data.sector_id}" but current sector is "${selectedSectorId}".`
           );
@@ -107,17 +130,18 @@ export function useZappMessaging({
             description:
               "A instância selecionada não pertence ao setor atual. Recarregue a página e selecione o setor novamente para evitar envio pelo número errado.",
           });
-          return false;
+          return { ok: false };
         }
-        return true;
+        return { ok: true, integrationId };
       } catch (err) {
         console.error("[ZAPP-SEND] assertIntegrationMatchesSector error:", err);
         toast.error("Erro ao validar instância do WhatsApp");
-        return false;
+        return { ok: false };
       }
     },
-    [selectedSectorId, currentUser?.account_id]
+    [selectedSectorId, selectedIntegrationId, currentUser?.account_id]
   );
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -298,16 +322,19 @@ export function useZappMessaging({
     const conversationId = selectedConversation.zapp_conversation_id;
     const accountId = currentUser!.account_id;
     const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
-    const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
-    
-    if (!effectiveIntegrationId) {
+    let effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
+
+    if (!effectiveIntegrationId && !isGroup) {
       console.error("[ZAPP-SEND] No integration_id available for this conversation");
       toast.error("WhatsApp não configurado", { description: "Esta conversa não está vinculada a nenhuma instância do WhatsApp. Peça ao administrador para verificar." });
       return;
     }
 
     // Safety check: never route through a WhatsApp number from another sector
-    if (!(await assertIntegrationMatchesSector(effectiveIntegrationId))) return;
+    const sectorCheck = await assertIntegrationMatchesSector(effectiveIntegrationId, { isGroup });
+    if (!sectorCheck.ok) return;
+    effectiveIntegrationId = sectorCheck.integrationId || effectiveIntegrationId;
+
     
     const replyContext = replyingTo ? { ...replyingTo } : null;
     
@@ -591,17 +618,18 @@ export function useZappMessaging({
     const isGroup = contactInfo.isGroup;
     const groupJid = selectedConversation.zapp_conversation?.group_jid;
     const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
-    const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
-    
+    let effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
+
     if (!phone && !groupJid) {
       toast.error("Número de telefone não encontrado");
       return;
     }
 
     // Safety check: never route through a WhatsApp number from another sector
-    if (!(await assertIntegrationMatchesSector(effectiveIntegrationId))) {
-      return;
-    }
+    const sectorCheck = await assertIntegrationMatchesSector(effectiveIntegrationId, { isGroup });
+    if (!sectorCheck.ok) return;
+    effectiveIntegrationId = sectorCheck.integrationId || effectiveIntegrationId;
+
 
     setUploadingMedia(true);
     const tempMessageId = `temp-media-${Date.now()}`;
@@ -856,17 +884,18 @@ export function useZappMessaging({
     const isGroup = contactInfo.isGroup;
     const groupJid = selectedConversation.zapp_conversation?.group_jid;
     const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
-    const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
-    
+    let effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
+
     if (!phone && !groupJid) {
       toast.error("Número de telefone não encontrado");
       return;
     }
 
     // Safety check: never route through a WhatsApp number from another sector
-    if (!(await assertIntegrationMatchesSector(effectiveIntegrationId))) {
-      return;
-    }
+    const sectorCheck = await assertIntegrationMatchesSector(effectiveIntegrationId, { isGroup });
+    if (!sectorCheck.ok) return;
+    effectiveIntegrationId = sectorCheck.integrationId || effectiveIntegrationId;
+
 
     setUploadingMedia(true);
     const now = new Date().toISOString();
@@ -1042,14 +1071,18 @@ export function useZappMessaging({
       let whatsappDeleted = false;
       
       if (message.external_message_id) {
-        const intId = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
-        if (!(await assertIntegrationMatchesSector(intId))) return;
+        const isGroupDel = getContactInfo(selectedConversation).isGroup;
+        const intIdRaw = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
+        const sectorCheckDel = await assertIntegrationMatchesSector(intIdRaw, { isGroup: isGroupDel });
+        if (!sectorCheckDel.ok) return;
+        const intId = sectorCheckDel.integrationId || intIdRaw;
         const { data, error } = await invokeWhatsAppManager(intId, {
             action: "delete_message",
             message_id: message.external_message_id,
             phone: getContactInfo(selectedConversation).phone,
             sector_id: selectedSectorId || "",
         });
+
         
         if (!error && data?.data?.deleted) {
           whatsappDeleted = true;
@@ -1090,8 +1123,11 @@ export function useZappMessaging({
       let whatsappEdited = false;
       
       if (message.external_message_id) {
-        const intId2 = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
-        if (!(await assertIntegrationMatchesSector(intId2))) return;
+        const isGroupEdit = getContactInfo(selectedConversation).isGroup;
+        const intId2Raw = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
+        const sectorCheckEdit = await assertIntegrationMatchesSector(intId2Raw, { isGroup: isGroupEdit });
+        if (!sectorCheckEdit.ok) return;
+        const intId2 = sectorCheckEdit.integrationId || intId2Raw;
         const { data, error } = await invokeWhatsAppManager(intId2, {
             action: "edit_message",
             message_id: message.external_message_id,
@@ -1099,6 +1135,7 @@ export function useZappMessaging({
             phone: getContactInfo(selectedConversation).phone,
             sector_id: selectedSectorId || "",
         });
+
         
         if (!error && data?.data?.edited) whatsappEdited = true;
       }
@@ -1137,17 +1174,18 @@ export function useZappMessaging({
     const isGroup = contactInfo.isGroup;
     const groupJid = selectedConversation.zapp_conversation?.group_jid;
     const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
-    const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
-    
+    let effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
+
     if (!phone && !groupJid) {
       toast.error("Número de telefone não encontrado");
       return;
     }
 
     // Safety check: never route through a WhatsApp number from another sector
-    if (!(await assertIntegrationMatchesSector(effectiveIntegrationId))) {
-      return;
-    }
+    const sectorCheck = await assertIntegrationMatchesSector(effectiveIntegrationId, { isGroup });
+    if (!sectorCheck.ok) return;
+    effectiveIntegrationId = sectorCheck.integrationId || effectiveIntegrationId;
+
 
     setSendingContact(true);
     const contactMessage = `📇 *Contato*\n*Nome:* ${client.full_name}\n*Telefone:* ${client.phone_e164}`;
