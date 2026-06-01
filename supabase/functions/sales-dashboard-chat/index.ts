@@ -47,7 +47,7 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     admin.from("users").select("id,name,role,team_role_id,is_active").eq("account_id", accountId),
     admin.from("deal_loss_reasons").select("id,name").eq("account_id", accountId),
     admin.from("sales_goals").select("*").eq("account_id", accountId).gte("created_at", sinceIso).limit(500),
-    admin.from("pipelines").select("id,name,type").eq("account_id", accountId),
+    admin.from("pipelines").select("id,name").eq("account_id", accountId),
     admin.from("client_contracts").select("id,client_id,product_id,value,status,start_date,end_date,created_at,cancelled_at,status_changed_at,contract_type,cancellation_reason").eq("account_id", accountId).or(`created_at.gte.${sinceIso},status_changed_at.gte.${sinceIso},cancelled_at.gte.${sinceIso}`).limit(10000),
     admin.from("financial_entries").select("id,amount,entry_type,status,due_date,payment_date,category_id,description").eq("account_id", accountId).eq("entry_type", "payable").gte("due_date", sinceDate).limit(15000),
     admin.from("financial_categories").select("id,name,dre_group,type").eq("account_id", accountId),
