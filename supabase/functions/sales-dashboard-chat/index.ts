@@ -742,6 +742,77 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
       }
       return { days_back: days, breakdown: Object.entries(by).map(([reason, v]) => ({ reason, ...v })).sort((a, b) => b.value - a.value) };
     }
+    if (name === "period_comparison") {
+      const months = Math.max(1, Number(args.months ?? 1));
+      const end = new Date();
+      const startCurr = new Date(end); startCurr.setMonth(startCurr.getMonth() - months);
+      const startPrev = new Date(startCurr); startPrev.setMonth(startPrev.getMonth() - months);
+      const [currWon, currLost, prevWon, prevLost] = await Promise.all([
+        admin.from("deals").select("id,value,received_value").eq("account_id", accountId).eq("status", "won").gte("won_at", startCurr.toISOString()).lt("won_at", end.toISOString()).limit(8000),
+        admin.from("deals").select("id,value,received_value").eq("account_id", accountId).eq("status", "lost").gte("lost_at", startCurr.toISOString()).lt("lost_at", end.toISOString()).limit(8000),
+        admin.from("deals").select("id,value,received_value").eq("account_id", accountId).eq("status", "won").gte("won_at", startPrev.toISOString()).lt("won_at", startCurr.toISOString()).limit(8000),
+        admin.from("deals").select("id,value,received_value").eq("account_id", accountId).eq("status", "lost").gte("lost_at", startPrev.toISOString()).lt("lost_at", startCurr.toISOString()).limit(8000),
+      ]);
+      const sumV = (rows: any[] | null) => (rows ?? []).reduce((s, d) => s + Number(d.received_value ?? d.value ?? 0), 0);
+      const cWon = currWon.data?.length ?? 0, cLost = currLost.data?.length ?? 0;
+      const pWon = prevWon.data?.length ?? 0, pLost = prevLost.data?.length ?? 0;
+      const cWonV = sumV(currWon.data), pWonV = sumV(prevWon.data);
+      const pct = (a: number, b: number) => b > 0 ? (a - b) / b : null;
+      return {
+        period_months: months,
+        current: { start: startCurr.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10), won: cWon, lost: cLost, won_value: cWonV, win_rate: cWon + cLost > 0 ? cWon / (cWon + cLost) : null },
+        previous: { start: startPrev.toISOString().slice(0, 10), end: startCurr.toISOString().slice(0, 10), won: pWon, lost: pLost, won_value: pWonV, win_rate: pWon + pLost > 0 ? pWon / (pWon + pLost) : null },
+        delta: { won_pct: pct(cWon, pWon), won_value_pct: pct(cWonV, pWonV), lost_pct: pct(cLost, pLost) },
+      };
+    }
+    if (name === "stagnant_deals_list") {
+      const minDays = Math.max(1, Number(args.min_days ?? 30));
+      const cutoff = new Date(Date.now() - minDays * 86_400_000).toISOString();
+      const { data } = await admin.from("deals").select("id,title,value,received_value,stage_id,responsible_user_id,stage_changed_at,created_at,client_id").eq("account_id", accountId).is("won_at", null).is("lost_at", null).neq("status", "won").neq("status", "lost").or(`stage_changed_at.lte.${cutoff},and(stage_changed_at.is.null,created_at.lte.${cutoff})`).order("stage_changed_at", { ascending: true, nullsFirst: true }).limit(50);
+      const ids = [...new Set([...(data ?? []).map((d: any) => d.stage_id).filter(Boolean), ...(data ?? []).map((d: any) => d.responsible_user_id).filter(Boolean)])];
+      const [stagesR, usersR] = await Promise.all([
+        admin.from("deal_stages").select("id,name").in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]),
+        admin.from("users").select("id,name").in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]),
+      ]);
+      const sMap = new Map<string, string>((stagesR.data ?? []).map((s: any) => [s.id, s.name]));
+      const uMap = new Map<string, string>((usersR.data ?? []).map((u: any) => [u.id, u.name]));
+      const now = Date.now();
+      return {
+        min_days: minDays,
+        deals: (data ?? []).slice(0, 30).map((d: any) => {
+          const ref = d.stage_changed_at ?? d.created_at;
+          return {
+            id: d.id, title: d.title,
+            value: Number(d.received_value ?? d.value ?? 0),
+            stage: sMap.get(d.stage_id) ?? null,
+            responsible: uMap.get(d.responsible_user_id) ?? null,
+            days_stagnant: ref ? Math.floor((now - new Date(ref).getTime()) / 86_400_000) : null,
+          };
+        }),
+      };
+    }
+    if (name === "user_goal_attainment_detail") {
+      const uid = args.user_id;
+      const [goalsR, wonR] = await Promise.all([
+        admin.from("sales_monthly_goals").select("year_month,goal_value,super_goal_value,goal_type,cargo").eq("account_id", accountId).eq("user_id", uid).gte("year_month", sinceIso.slice(0, 7)).order("year_month"),
+        admin.from("deals").select("won_at,value,received_value").eq("account_id", accountId).eq("responsible_user_id", uid).eq("status", "won").gte("won_at", sinceIso).limit(5000),
+      ]);
+      const realizedByMonth: Record<string, number> = {};
+      for (const d of (wonR.data ?? []) as any[]) {
+        const m = (d.won_at ?? "").slice(0, 7);
+        if (!m) continue;
+        realizedByMonth[m] = (realizedByMonth[m] ?? 0) + Number(d.received_value ?? d.value ?? 0);
+      }
+      const detail = (goalsR.data ?? []).map((g: any) => ({
+        year_month: g.year_month,
+        goal: Number(g.goal_value ?? 0),
+        super_goal: Number(g.super_goal_value ?? 0),
+        realized: realizedByMonth[g.year_month] ?? 0,
+        attainment_pct: g.goal_value > 0 ? (realizedByMonth[g.year_month] ?? 0) / Number(g.goal_value) : null,
+        cargo: g.cargo, goal_type: g.goal_type,
+      }));
+      return { user_id: uid, months_with_goal: detail.length, detail };
+    }
     return { error: `tool desconhecida: ${name}` };
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) };
