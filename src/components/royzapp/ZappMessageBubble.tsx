@@ -67,15 +67,6 @@ async function handleFileDownload(url: string, filename: string) {
   window.URL.revokeObjectURL(blobUrl);
 }
 
-// Function to extract domain from URL for display
-function extractDomain(url: string): string {
-  try {
-    const urlObj = new URL(url);
-    return urlObj.hostname.replace('www.', '');
-  } catch {
-    return url.substring(0, 30);
-  }
-}
 
 // Function to resolve @<JID> mentions in text using mention_map
 function resolveMentions(text: string, mentionMap?: Record<string, string> | null): string {
@@ -224,17 +215,17 @@ function renderTextWithLinks(text: string, mentionMap?: Record<string, string> |
     if (urlRegex.test(part)) {
       // Reset regex lastIndex
       urlRegex.lastIndex = 0;
-      const domain = extractDomain(part);
       return (
         <a
           key={index}
           href={part}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[#53bdeb] hover:text-[#7dd3fc] underline underline-offset-2"
+          className="text-[#53bdeb] hover:text-[#7dd3fc] underline underline-offset-2 break-all"
           onClick={(e) => e.stopPropagation()}
+          title={part}
         >
-          🔗 {domain}
+          {part}
         </a>
       );
     }
