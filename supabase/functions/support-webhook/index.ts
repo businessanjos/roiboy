@@ -95,6 +95,25 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const expectedSecret = Deno.env.get("SUPPORT_WEBHOOK_SECRET");
+    if (!expectedSecret) {
+      console.error("SUPPORT_WEBHOOK_SECRET not configured");
+      return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const provided =
+      req.headers.get("x-webhook-secret") ||
+      req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
+      new URL(req.url).searchParams.get("secret");
+    if (provided !== expectedSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
