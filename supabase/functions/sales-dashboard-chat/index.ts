@@ -31,13 +31,17 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
   const sinceDate = sinceIso.slice(0, 10);
 
   // Deals: filtra QUALQUER deal tocado no período (criado, fechado, perdido OU em aberto criado antes)
-  const dealsCols = "id,title,value,received_value,status,stage_id,pipeline_id,source,responsible_user_id,sdr_user_id,won_at,lost_at,lost_reason,loss_reason_id,created_at,expected_close_date,client_id";
+  const dealsCols = "id,title,value,received_value,status,stage_id,pipeline_id,source,responsible_user_id,sdr_user_id,won_at,lost_at,lost_reason,loss_reason_id,created_at,expected_close_date,client_id,stage_changed_at,probability";
+
+  const currentYear = new Date().getFullYear();
+  const currentYM = new Date().toISOString().slice(0, 7);
 
   const [
     dealsCreatedR, dealsWonR, dealsLostR, dealsOpenR,
-    stagesR, usersR, lossR, goalsR, pipelinesR,
+    stagesR, usersR, lossR, pipelinesR,
     contractsR, finEntriesR, finCatsR, hrCollabR, spiffsR, commR,
     clientsR, meetingsR, activitiesR, churnR, callsR,
+    companyGoalsR, userMonthlyGoalsR, salesQuotasR,
   ] = await Promise.all([
     admin.from("deals").select(dealsCols).gte("created_at", sinceIso).eq("account_id", accountId).limit(8000),
     admin.from("deals").select(dealsCols).gte("won_at", sinceIso).eq("account_id", accountId).limit(8000),
@@ -46,9 +50,8 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     admin.from("deal_stages").select("id,name,pipeline_id,order_index,is_won,is_lost").eq("account_id", accountId),
     admin.from("users").select("id,name,role,team_role_id,is_active").eq("account_id", accountId),
     admin.from("deal_loss_reasons").select("id,name").eq("account_id", accountId),
-    admin.from("sales_goals").select("*").eq("account_id", accountId).gte("created_at", sinceIso).limit(500),
     admin.from("pipelines").select("id,name").eq("account_id", accountId),
-    admin.from("client_contracts").select("id,client_id,product_id,value,status,start_date,end_date,created_at,cancelled_at,status_changed_at,contract_type,cancellation_reason").eq("account_id", accountId).or(`created_at.gte.${sinceIso},status_changed_at.gte.${sinceIso},cancelled_at.gte.${sinceIso}`).limit(10000),
+    admin.from("client_contracts").select("id,client_id,product_id,value,status,start_date,end_date,created_at,cancelled_at,status_changed_at,contract_type,cancellation_reason,installments_count").eq("account_id", accountId).or(`created_at.gte.${sinceIso},status_changed_at.gte.${sinceIso},cancelled_at.gte.${sinceIso}`).limit(10000),
     admin.from("financial_entries").select("id,amount,entry_type,status,due_date,payment_date,category_id,description").eq("account_id", accountId).eq("entry_type", "payable").gte("due_date", sinceDate).limit(15000),
     admin.from("financial_categories").select("id,name,dre_group,type").eq("account_id", accountId),
     admin.from("hr_collaborators").select("id,full_name,department,hr_department_id,salary,status,hire_date,termination_date,employment_type").eq("account_id", accountId).neq("status", "inactive").limit(2000),
@@ -59,6 +62,9 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     admin.from("deal_activities").select("id,type,created_at,user_id,deal_id,scheduled_at,completed_at").eq("account_id", accountId).gte("created_at", sinceIso).limit(20000),
     admin.from("client_churn_analyses").select("id,client_id,overall_risk,created_at").eq("account_id", accountId).gte("created_at", sinceIso).limit(2000),
     admin.from("sales_call_analyses").select("id,call_date,seller_user_id,ai_score,call_outcome,deal_id").eq("account_id", accountId).gte("call_date", sinceDate).limit(3000),
+    admin.from("company_goals").select("year,annual_goal,monthly_goals,goal_type").eq("account_id", accountId).eq("year", currentYear),
+    admin.from("sales_monthly_goals").select("user_id,year_month,goal_value,super_goal_value,goal_type,cargo").eq("account_id", accountId).gte("year_month", sinceIso.slice(0, 7)).limit(3000),
+    admin.from("sales_quotas").select("user_id,product_id,year,month,target_value,achieved_value,target_quantity,achieved_quantity").eq("account_id", accountId).eq("year", currentYear).limit(2000),
   ]);
 
   // Mesclar deals (dedup por id)
