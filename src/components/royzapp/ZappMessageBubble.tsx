@@ -224,17 +224,17 @@ function renderTextWithLinks(text: string, mentionMap?: Record<string, string> |
     if (urlRegex.test(part)) {
       // Reset regex lastIndex
       urlRegex.lastIndex = 0;
-      const domain = extractDomain(part);
       return (
         <a
           key={index}
           href={part}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[#53bdeb] hover:text-[#7dd3fc] underline underline-offset-2"
+          className="text-[#53bdeb] hover:text-[#7dd3fc] underline underline-offset-2 break-all"
           onClick={(e) => e.stopPropagation()}
+          title={part}
         >
-          🔗 {domain}
+          {part}
         </a>
       );
     }
