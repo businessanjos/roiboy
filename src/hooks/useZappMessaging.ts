@@ -1166,17 +1166,18 @@ export function useZappMessaging({
     const isGroup = contactInfo.isGroup;
     const groupJid = selectedConversation.zapp_conversation?.group_jid;
     const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
-    const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
-    
+    let effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
+
     if (!phone && !groupJid) {
       toast.error("Número de telefone não encontrado");
       return;
     }
 
     // Safety check: never route through a WhatsApp number from another sector
-    if (!(await assertIntegrationMatchesSector(effectiveIntegrationId))) {
-      return;
-    }
+    const sectorCheck = await assertIntegrationMatchesSector(effectiveIntegrationId, { isGroup });
+    if (!sectorCheck.ok) return;
+    effectiveIntegrationId = sectorCheck.integrationId || effectiveIntegrationId;
+
 
     setSendingContact(true);
     const contactMessage = `📇 *Contato*\n*Nome:* ${client.full_name}\n*Telefone:* ${client.phone_e164}`;
