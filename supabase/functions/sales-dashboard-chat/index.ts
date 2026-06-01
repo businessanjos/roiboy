@@ -212,7 +212,7 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     const m = (c.created_at ?? "").slice(0, 7);
     if (!m) continue;
     commByUserMonth[uid] ??= {};
-    commByUserMonth[uid][m] = (commByUserMonth[uid][m] ?? 0) + Number(c.commission_amount ?? 0);
+    commByUserMonth[uid][m] = (commByUserMonth[uid][m] ?? 0) + Number(c.commission_total ?? 0);
   }
   const spiffByMonth: Record<string, number> = {};
   for (const s of (spiffsR.data ?? []) as any[]) {
