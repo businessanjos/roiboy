@@ -52,7 +52,28 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const expectedSecret = Deno.env.get("GOOGLE_MEET_WEBHOOK_SECRET");
+    if (!expectedSecret) {
+      console.error("GOOGLE_MEET_WEBHOOK_SECRET not configured");
+      return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const url = new URL(req.url);
+    const provided =
+      req.headers.get("x-goog-signature") ||
+      req.headers.get("x-webhook-secret") ||
+      req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
+      url.searchParams.get("secret") ||
+      url.searchParams.get("token");
+    if (provided !== expectedSecret) {
+      console.error("Invalid Google Meet webhook secret");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const accountIdFromQuery = url.searchParams.get("account_id");
     
     const body = await req.text();

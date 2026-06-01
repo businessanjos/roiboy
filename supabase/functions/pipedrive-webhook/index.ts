@@ -65,6 +65,28 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const expectedSecret = Deno.env.get("PIPEDRIVE_WEBHOOK_SECRET");
+    if (!expectedSecret) {
+      console.error("PIPEDRIVE_WEBHOOK_SECRET not configured");
+      return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const urlPre = new URL(req.url);
+    const provided =
+      req.headers.get("x-pipedrive-signature") ||
+      req.headers.get("x-webhook-secret") ||
+      req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
+      urlPre.searchParams.get("secret");
+    if (provided !== expectedSecret) {
+      console.error("Invalid Pipedrive webhook secret");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
