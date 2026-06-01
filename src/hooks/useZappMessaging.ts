@@ -1123,8 +1123,11 @@ export function useZappMessaging({
       let whatsappEdited = false;
       
       if (message.external_message_id) {
-        const intId2 = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
-        if (!(await assertIntegrationMatchesSector(intId2))) return;
+        const isGroupEdit = getContactInfo(selectedConversation).isGroup;
+        const intId2Raw = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
+        const sectorCheckEdit = await assertIntegrationMatchesSector(intId2Raw, { isGroup: isGroupEdit });
+        if (!sectorCheckEdit.ok) return;
+        const intId2 = sectorCheckEdit.integrationId || intId2Raw;
         const { data, error } = await invokeWhatsAppManager(intId2, {
             action: "edit_message",
             message_id: message.external_message_id,
@@ -1132,6 +1135,7 @@ export function useZappMessaging({
             phone: getContactInfo(selectedConversation).phone,
             sector_id: selectedSectorId || "",
         });
+
         
         if (!error && data?.data?.edited) whatsappEdited = true;
       }
