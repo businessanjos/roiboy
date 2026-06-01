@@ -1071,14 +1071,18 @@ export function useZappMessaging({
       let whatsappDeleted = false;
       
       if (message.external_message_id) {
-        const intId = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
-        if (!(await assertIntegrationMatchesSector(intId))) return;
+        const isGroupDel = getContactInfo(selectedConversation).isGroup;
+        const intIdRaw = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
+        const sectorCheckDel = await assertIntegrationMatchesSector(intIdRaw, { isGroup: isGroupDel });
+        if (!sectorCheckDel.ok) return;
+        const intId = sectorCheckDel.integrationId || intIdRaw;
         const { data, error } = await invokeWhatsAppManager(intId, {
             action: "delete_message",
             message_id: message.external_message_id,
             phone: getContactInfo(selectedConversation).phone,
             sector_id: selectedSectorId || "",
         });
+
         
         if (!error && data?.data?.deleted) {
           whatsappDeleted = true;
