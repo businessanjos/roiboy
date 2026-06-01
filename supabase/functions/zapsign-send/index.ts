@@ -164,18 +164,32 @@ serve(async (req) => {
       fiador: "Fiador",
     };
 
+    // Valores oficiais de auth_mode aceitos pela API ZapSign.
+    // Modos como selfie/documento NÃO são auth_mode — são flags separadas no signer.
     const ALLOWED_AUTH_MODES = new Set([
       "assinaturaTela",
       "tokenEmail",
       "tokenSms",
       "assinaturaTela-tokenEmail",
       "assinaturaTela-tokenSms",
-      "selfie",
-      "documentoSelfie",
-      "videoselfie",
-      "cpf",
       "certificadoDigital",
     ]);
+
+    // Mapeia nossos modos internos (selfie/documentoSelfie/videoselfie) para os
+    // parâmetros corretos da ZapSign: require_selfie_photo, require_document_photo,
+    // selfie_validation_type. Mantém auth_mode em "assinaturaTela" nesses casos.
+    const mapBiometric = (mode: string | undefined) => {
+      switch (mode) {
+        case "selfie":
+          return { require_selfie_photo: true };
+        case "documentoSelfie":
+          return { require_selfie_photo: true, require_document_photo: true };
+        case "videoselfie":
+          return { selfie_validation_type: "liveness-document-match" };
+        default:
+          return {};
+      }
+    };
 
     const zapSignPayload: any = {
       sandbox: sandbox === true,
@@ -185,14 +199,16 @@ serve(async (req) => {
       signers: signers.map((s: any) => {
         const roleLabel = roleLabels[s.role] || s.role || "";
         const phone = onlyDigits(s.phone);
-        const auth_mode =
-          s.auth_mode && ALLOWED_AUTH_MODES.has(s.auth_mode) ? s.auth_mode : "assinaturaTela";
+        const requested = typeof s.auth_mode === "string" ? s.auth_mode : "";
+        const auth_mode = ALLOWED_AUTH_MODES.has(requested) ? requested : "assinaturaTela";
+        const bio = mapBiometric(requested);
         return {
           name: roleLabel ? `${s.name} (${roleLabel})` : s.name,
           email: s.email || undefined,
           phone_country: phone ? "55" : undefined,
           phone_number: phone || undefined,
           auth_mode,
+          ...bio,
           send_automatic_email: !!s.email,
           send_automatic_whatsapp: !!phone,
         };
