@@ -17,15 +17,20 @@ serve(async (req) => {
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const WEBHOOK_SECRET = Deno.env.get("ZAPSIGN_WEBHOOK_SECRET");
 
-    if (WEBHOOK_SECRET) {
-      const url = new URL(req.url);
-      const provided = url.searchParams.get("secret") || req.headers.get("x-webhook-secret");
-      if (provided !== WEBHOOK_SECRET) {
-        return new Response(JSON.stringify({ error: "Invalid secret" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (!WEBHOOK_SECRET) {
+      console.error("ZAPSIGN_WEBHOOK_SECRET not configured");
+      return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const url = new URL(req.url);
+    const provided = url.searchParams.get("secret") || req.headers.get("x-webhook-secret");
+    if (provided !== WEBHOOK_SECRET) {
+      return new Response(JSON.stringify({ error: "Invalid secret" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const payload = await req.json();
