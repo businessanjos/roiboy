@@ -301,11 +301,136 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     }
   }
 
-  // ===== Churn risk =====
-  const churnByRisk: Record<string, number> = {};
-  for (const c of (churnR.data ?? []) as any[]) {
-    const r = c.overall_risk ?? "unknown";
-    churnByRisk[r] = (churnByRisk[r] ?? 0) + 1;
+  // ===== Sales cycle (dias médios entre criação e ganho) =====
+  const cycleDays: number[] = [];
+  for (const d of allDeals) {
+    if ((d.status === "won" || stageMap.get(d.stage_id)?.is_won) && d.won_at && d.created_at) {
+      const ms = new Date(d.won_at).getTime() - new Date(d.created_at).getTime();
+      if (ms > 0) cycleDays.push(ms / 86_400_000);
+    }
+  }
+  const salesCycle = cycleDays.length > 0 ? {
+    avg_days: cycleDays.reduce((a, b) => a + b, 0) / cycleDays.length,
+    median_days: cycleDays.sort((a, b) => a - b)[Math.floor(cycleDays.length / 2)],
+    sample: cycleDays.length,
+  } : { avg_days: null, median_days: null, sample: 0 };
+
+  // ===== Forecast: pipeline aberto ponderado por probability ou ordem da etapa =====
+  const stagesByPipeline: Record<string, any[]> = {};
+  for (const s of (stagesR.data ?? []) as any[]) {
+    stagesByPipeline[s.pipeline_id] ??= [];
+    stagesByPipeline[s.pipeline_id].push(s);
+  }
+  for (const arr of Object.values(stagesByPipeline)) arr.sort((a, b) => a.order_index - b.order_index);
+  let forecastWeighted = 0;
+  const forecastByPipeline: Record<string, { name: string; raw: number; weighted: number }> = {};
+  for (const d of allDeals) {
+    if (d.status === "won" || d.status === "lost" || d.won_at || d.lost_at) continue;
+    const val = Number(d.received_value ?? d.value ?? 0);
+    const pipName = d.pipeline_id ? pipelineMap.get(d.pipeline_id) ?? "sem_pipeline" : "sem_pipeline";
+    forecastByPipeline[pipName] ??= { name: pipName, raw: 0, weighted: 0 };
+    forecastByPipeline[pipName].raw += val;
+    let prob = typeof d.probability === "number" ? d.probability / 100 : null;
+    if (prob === null && d.pipeline_id && d.stage_id) {
+      const arr = stagesByPipeline[d.pipeline_id] ?? [];
+      const idx = arr.findIndex((s: any) => s.id === d.stage_id);
+      if (idx >= 0 && arr.length > 1) prob = (idx + 1) / arr.length;
+    }
+    if (prob === null) prob = 0.2;
+    const w = val * prob;
+    forecastWeighted += w;
+    forecastByPipeline[pipName].weighted += w;
+  }
+
+  // ===== Deals estagnados (open com stage_changed_at > 30 dias) =====
+  const now = Date.now();
+  const stagnant30 = { count: 0, value: 0 };
+  const stagnant60 = { count: 0, value: 0 };
+  for (const d of allDeals) {
+    if (d.status === "won" || d.status === "lost" || d.won_at || d.lost_at) continue;
+    const ref = d.stage_changed_at ?? d.created_at;
+    if (!ref) continue;
+    const days = (now - new Date(ref).getTime()) / 86_400_000;
+    const val = Number(d.received_value ?? d.value ?? 0);
+    if (days > 30) { stagnant30.count++; stagnant30.value += val; }
+    if (days > 60) { stagnant60.count++; stagnant60.value += val; }
+  }
+
+  // ===== Deals com previsão de fechamento nos próximos 30 dias =====
+  const next30 = now + 30 * 86_400_000;
+  let closingSoonCount = 0, closingSoonValue = 0;
+  for (const d of allDeals) {
+    if (d.status === "won" || d.status === "lost" || d.won_at || d.lost_at) continue;
+    if (!d.expected_close_date) continue;
+    const t = new Date(d.expected_close_date).getTime();
+    if (t >= now && t <= next30) {
+      closingSoonCount++; closingSoonValue += Number(d.received_value ?? d.value ?? 0);
+    }
+  }
+
+  // ===== Metas (company + por vendedor) vs realizado =====
+  const companyGoals = (companyGoalsR.data ?? []) as any[];
+  const monthlyGoalsMap: Record<string, number> = {};
+  let annualGoal = 0;
+  for (const g of companyGoals) {
+    annualGoal += Number(g.annual_goal ?? 0);
+    const mg = g.monthly_goals ?? {};
+    for (const [k, v] of Object.entries(mg as Record<string, any>)) {
+      monthlyGoalsMap[k] = (monthlyGoalsMap[k] ?? 0) + Number(v ?? 0);
+    }
+  }
+  const ytdWonValue = Object.entries(dealsByMonth)
+    .filter(([m]) => m.startsWith(String(currentYear)))
+    .reduce((s, [, v]) => s + v.won_value, 0);
+  const currentMonthGoal = monthlyGoalsMap[currentYM] ?? null;
+  const currentMonthRealized = dealsByMonth[currentYM]?.won_value ?? 0;
+  const goalAttainment = {
+    year: currentYear,
+    annual_goal: annualGoal || null,
+    ytd_realized: ytdWonValue,
+    ytd_pct: annualGoal > 0 ? ytdWonValue / annualGoal : null,
+    current_month: currentYM,
+    current_month_goal: currentMonthGoal,
+    current_month_realized: currentMonthRealized,
+    current_month_pct: currentMonthGoal && currentMonthGoal > 0 ? currentMonthRealized / currentMonthGoal : null,
+    monthly_goals_map: monthlyGoalsMap,
+  };
+
+  // Metas por vendedor (agrupado por user_id + soma realizada via wonByOwner)
+  const userGoalsAgg: Record<string, { name: string; total_goal: number; total_super: number; months: number }> = {};
+  for (const g of (userMonthlyGoalsR.data ?? []) as any[]) {
+    const uid = g.user_id;
+    userGoalsAgg[uid] ??= { name: userMap.get(uid) ?? "Desconhecido", total_goal: 0, total_super: 0, months: 0 };
+    userGoalsAgg[uid].total_goal += Number(g.goal_value ?? 0);
+    userGoalsAgg[uid].total_super += Number(g.super_goal_value ?? 0);
+    userGoalsAgg[uid].months++;
+  }
+  const userGoalAttainment = Object.entries(userGoalsAgg).map(([uid, g]) => ({
+    user_id: uid,
+    name: g.name,
+    period_goal_sum: g.total_goal,
+    period_super_goal_sum: g.total_super,
+    period_realized: wonByOwner[uid]?.value ?? 0,
+    attainment_pct: g.total_goal > 0 ? (wonByOwner[uid]?.value ?? 0) / g.total_goal : null,
+    months_with_goal: g.months,
+  })).sort((a, b) => (b.attainment_pct ?? 0) - (a.attainment_pct ?? 0));
+
+  // ===== Top clientes por LTV (a partir de contracts no período) =====
+  const clientLtv: Record<string, number> = {};
+  for (const c of (contractsR.data ?? []) as any[]) {
+    if (!c.client_id) continue;
+    clientLtv[c.client_id] = (clientLtv[c.client_id] ?? 0) + Number(c.value ?? 0);
+  }
+  const clientNameMap = new Map<string, any>((clientsR.data ?? []).map((c: any) => [c.id, c]));
+  const topClients = Object.entries(clientLtv)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20)
+    .map(([id, ltv]) => ({ client_id: id, ltv, status: clientNameMap.get(id)?.status ?? null }));
+
+  // ===== Conversão por fonte =====
+  const sourceConversion: Record<string, { count: number; won: number; won_value: number; conv_pct: number | null }> = {};
+  for (const [src, v] of Object.entries(dealsBySource)) {
+    sourceConversion[src] = { ...v, conv_pct: v.count > 0 ? v.won / v.count : null };
   }
 
   const finEntriesCategorized = (finEntriesR.data ?? []).filter((e: any) => e.category_id).length;
@@ -332,12 +457,16 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
       ad_spend_available: false,
       ad_spend_reason: "Lançamentos sem category_id/cost_center/supplier preenchidos. Ad spend não rastreável.",
       payroll_source: "snapshot atual hr_collaborators.salary (sem histórico mensal)",
+      company_goals_configured: companyGoals.length > 0,
+      user_monthly_goals_count: (userMonthlyGoalsR.data ?? []).length,
     },
     pipelines: pipelinesR.data ?? [],
-    stages: (stagesR.data ?? []).map((s: any) => ({ id: s.id, name: s.name, pipeline_id: s.pipeline_id, is_won: s.is_won, is_lost: s.is_lost })),
+    stages: (stagesR.data ?? []).map((s: any) => ({ id: s.id, name: s.name, pipeline_id: s.pipeline_id, is_won: s.is_won, is_lost: s.is_lost, order_index: s.order_index })),
     users: (usersR.data ?? []).filter((u: any) => u.is_active).map((u: any) => ({ id: u.id, name: u.name, role: u.role })),
     loss_reasons: lossR.data ?? [],
-    sales_goals: goalsR.data ?? [],
+    goal_attainment: goalAttainment,
+    user_goal_attainment: userGoalAttainment,
+    sales_quotas: (salesQuotasR.data ?? []).slice(0, 200),
     deals_summary: {
       total_created: tCreated,
       total_won: tWon,
