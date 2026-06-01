@@ -322,16 +322,19 @@ export function useZappMessaging({
     const conversationId = selectedConversation.zapp_conversation_id;
     const accountId = currentUser!.account_id;
     const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
-    const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
-    
-    if (!effectiveIntegrationId) {
+    let effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
+
+    if (!effectiveIntegrationId && !isGroup) {
       console.error("[ZAPP-SEND] No integration_id available for this conversation");
       toast.error("WhatsApp não configurado", { description: "Esta conversa não está vinculada a nenhuma instância do WhatsApp. Peça ao administrador para verificar." });
       return;
     }
 
     // Safety check: never route through a WhatsApp number from another sector
-    if (!(await assertIntegrationMatchesSector(effectiveIntegrationId))) return;
+    const sectorCheck = await assertIntegrationMatchesSector(effectiveIntegrationId, { isGroup });
+    if (!sectorCheck.ok) return;
+    effectiveIntegrationId = sectorCheck.integrationId || effectiveIntegrationId;
+
     
     const replyContext = replyingTo ? { ...replyingTo } : null;
     
