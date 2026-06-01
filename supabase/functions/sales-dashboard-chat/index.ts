@@ -31,13 +31,17 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
   const sinceDate = sinceIso.slice(0, 10);
 
   // Deals: filtra QUALQUER deal tocado no período (criado, fechado, perdido OU em aberto criado antes)
-  const dealsCols = "id,title,value,received_value,status,stage_id,pipeline_id,source,responsible_user_id,sdr_user_id,won_at,lost_at,lost_reason,loss_reason_id,created_at,expected_close_date,client_id";
+  const dealsCols = "id,title,value,received_value,status,stage_id,pipeline_id,source,responsible_user_id,sdr_user_id,won_at,lost_at,lost_reason,loss_reason_id,created_at,expected_close_date,client_id,stage_changed_at,probability";
+
+  const currentYear = new Date().getFullYear();
+  const currentYM = new Date().toISOString().slice(0, 7);
 
   const [
     dealsCreatedR, dealsWonR, dealsLostR, dealsOpenR,
-    stagesR, usersR, lossR, goalsR, pipelinesR,
+    stagesR, usersR, lossR, pipelinesR,
     contractsR, finEntriesR, finCatsR, hrCollabR, spiffsR, commR,
     clientsR, meetingsR, activitiesR, churnR, callsR,
+    companyGoalsR, userMonthlyGoalsR, salesQuotasR,
   ] = await Promise.all([
     admin.from("deals").select(dealsCols).gte("created_at", sinceIso).eq("account_id", accountId).limit(8000),
     admin.from("deals").select(dealsCols).gte("won_at", sinceIso).eq("account_id", accountId).limit(8000),
@@ -46,9 +50,8 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     admin.from("deal_stages").select("id,name,pipeline_id,order_index,is_won,is_lost").eq("account_id", accountId),
     admin.from("users").select("id,name,role,team_role_id,is_active").eq("account_id", accountId),
     admin.from("deal_loss_reasons").select("id,name").eq("account_id", accountId),
-    admin.from("sales_goals").select("*").eq("account_id", accountId).gte("created_at", sinceIso).limit(500),
     admin.from("pipelines").select("id,name").eq("account_id", accountId),
-    admin.from("client_contracts").select("id,client_id,product_id,value,status,start_date,end_date,created_at,cancelled_at,status_changed_at,contract_type,cancellation_reason").eq("account_id", accountId).or(`created_at.gte.${sinceIso},status_changed_at.gte.${sinceIso},cancelled_at.gte.${sinceIso}`).limit(10000),
+    admin.from("client_contracts").select("id,client_id,product_id,value,status,start_date,end_date,created_at,cancelled_at,status_changed_at,contract_type,cancellation_reason,installments_count").eq("account_id", accountId).or(`created_at.gte.${sinceIso},status_changed_at.gte.${sinceIso},cancelled_at.gte.${sinceIso}`).limit(10000),
     admin.from("financial_entries").select("id,amount,entry_type,status,due_date,payment_date,category_id,description").eq("account_id", accountId).eq("entry_type", "payable").gte("due_date", sinceDate).limit(15000),
     admin.from("financial_categories").select("id,name,dre_group,type").eq("account_id", accountId),
     admin.from("hr_collaborators").select("id,full_name,department,hr_department_id,salary,status,hire_date,termination_date,employment_type").eq("account_id", accountId).neq("status", "inactive").limit(2000),
@@ -59,6 +62,9 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     admin.from("deal_activities").select("id,type,created_at,user_id,deal_id,scheduled_at,completed_at").eq("account_id", accountId).gte("created_at", sinceIso).limit(20000),
     admin.from("client_churn_analyses").select("id,client_id,overall_risk,created_at").eq("account_id", accountId).gte("created_at", sinceIso).limit(2000),
     admin.from("sales_call_analyses").select("id,call_date,seller_user_id,ai_score,call_outcome,deal_id").eq("account_id", accountId).gte("call_date", sinceDate).limit(3000),
+    admin.from("company_goals").select("year,annual_goal,monthly_goals,goal_type").eq("account_id", accountId).eq("year", currentYear),
+    admin.from("sales_monthly_goals").select("user_id,year_month,goal_value,super_goal_value,goal_type,cargo").eq("account_id", accountId).gte("year_month", sinceIso.slice(0, 7)).limit(3000),
+    admin.from("sales_quotas").select("user_id,product_id,year,month,target_value,achieved_value,target_quantity,achieved_quantity").eq("account_id", accountId).eq("year", currentYear).limit(2000),
   ]);
 
   // Mesclar deals (dedup por id)
@@ -295,11 +301,136 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     }
   }
 
-  // ===== Churn risk =====
-  const churnByRisk: Record<string, number> = {};
-  for (const c of (churnR.data ?? []) as any[]) {
-    const r = c.overall_risk ?? "unknown";
-    churnByRisk[r] = (churnByRisk[r] ?? 0) + 1;
+  // ===== Sales cycle (dias médios entre criação e ganho) =====
+  const cycleDays: number[] = [];
+  for (const d of allDeals) {
+    if ((d.status === "won" || stageMap.get(d.stage_id)?.is_won) && d.won_at && d.created_at) {
+      const ms = new Date(d.won_at).getTime() - new Date(d.created_at).getTime();
+      if (ms > 0) cycleDays.push(ms / 86_400_000);
+    }
+  }
+  const salesCycle = cycleDays.length > 0 ? {
+    avg_days: cycleDays.reduce((a, b) => a + b, 0) / cycleDays.length,
+    median_days: cycleDays.sort((a, b) => a - b)[Math.floor(cycleDays.length / 2)],
+    sample: cycleDays.length,
+  } : { avg_days: null, median_days: null, sample: 0 };
+
+  // ===== Forecast: pipeline aberto ponderado por probability ou ordem da etapa =====
+  const stagesByPipeline: Record<string, any[]> = {};
+  for (const s of (stagesR.data ?? []) as any[]) {
+    stagesByPipeline[s.pipeline_id] ??= [];
+    stagesByPipeline[s.pipeline_id].push(s);
+  }
+  for (const arr of Object.values(stagesByPipeline)) arr.sort((a, b) => a.order_index - b.order_index);
+  let forecastWeighted = 0;
+  const forecastByPipeline: Record<string, { name: string; raw: number; weighted: number }> = {};
+  for (const d of allDeals) {
+    if (d.status === "won" || d.status === "lost" || d.won_at || d.lost_at) continue;
+    const val = Number(d.received_value ?? d.value ?? 0);
+    const pipName = d.pipeline_id ? pipelineMap.get(d.pipeline_id) ?? "sem_pipeline" : "sem_pipeline";
+    forecastByPipeline[pipName] ??= { name: pipName, raw: 0, weighted: 0 };
+    forecastByPipeline[pipName].raw += val;
+    let prob = typeof d.probability === "number" ? d.probability / 100 : null;
+    if (prob === null && d.pipeline_id && d.stage_id) {
+      const arr = stagesByPipeline[d.pipeline_id] ?? [];
+      const idx = arr.findIndex((s: any) => s.id === d.stage_id);
+      if (idx >= 0 && arr.length > 1) prob = (idx + 1) / arr.length;
+    }
+    if (prob === null) prob = 0.2;
+    const w = val * prob;
+    forecastWeighted += w;
+    forecastByPipeline[pipName].weighted += w;
+  }
+
+  // ===== Deals estagnados (open com stage_changed_at > 30 dias) =====
+  const now = Date.now();
+  const stagnant30 = { count: 0, value: 0 };
+  const stagnant60 = { count: 0, value: 0 };
+  for (const d of allDeals) {
+    if (d.status === "won" || d.status === "lost" || d.won_at || d.lost_at) continue;
+    const ref = d.stage_changed_at ?? d.created_at;
+    if (!ref) continue;
+    const days = (now - new Date(ref).getTime()) / 86_400_000;
+    const val = Number(d.received_value ?? d.value ?? 0);
+    if (days > 30) { stagnant30.count++; stagnant30.value += val; }
+    if (days > 60) { stagnant60.count++; stagnant60.value += val; }
+  }
+
+  // ===== Deals com previsão de fechamento nos próximos 30 dias =====
+  const next30 = now + 30 * 86_400_000;
+  let closingSoonCount = 0, closingSoonValue = 0;
+  for (const d of allDeals) {
+    if (d.status === "won" || d.status === "lost" || d.won_at || d.lost_at) continue;
+    if (!d.expected_close_date) continue;
+    const t = new Date(d.expected_close_date).getTime();
+    if (t >= now && t <= next30) {
+      closingSoonCount++; closingSoonValue += Number(d.received_value ?? d.value ?? 0);
+    }
+  }
+
+  // ===== Metas (company + por vendedor) vs realizado =====
+  const companyGoals = (companyGoalsR.data ?? []) as any[];
+  const monthlyGoalsMap: Record<string, number> = {};
+  let annualGoal = 0;
+  for (const g of companyGoals) {
+    annualGoal += Number(g.annual_goal ?? 0);
+    const mg = g.monthly_goals ?? {};
+    for (const [k, v] of Object.entries(mg as Record<string, any>)) {
+      monthlyGoalsMap[k] = (monthlyGoalsMap[k] ?? 0) + Number(v ?? 0);
+    }
+  }
+  const ytdWonValue = Object.entries(dealsByMonth)
+    .filter(([m]) => m.startsWith(String(currentYear)))
+    .reduce((s, [, v]) => s + v.won_value, 0);
+  const currentMonthGoal = monthlyGoalsMap[currentYM] ?? null;
+  const currentMonthRealized = dealsByMonth[currentYM]?.won_value ?? 0;
+  const goalAttainment = {
+    year: currentYear,
+    annual_goal: annualGoal || null,
+    ytd_realized: ytdWonValue,
+    ytd_pct: annualGoal > 0 ? ytdWonValue / annualGoal : null,
+    current_month: currentYM,
+    current_month_goal: currentMonthGoal,
+    current_month_realized: currentMonthRealized,
+    current_month_pct: currentMonthGoal && currentMonthGoal > 0 ? currentMonthRealized / currentMonthGoal : null,
+    monthly_goals_map: monthlyGoalsMap,
+  };
+
+  // Metas por vendedor (agrupado por user_id + soma realizada via wonByOwner)
+  const userGoalsAgg: Record<string, { name: string; total_goal: number; total_super: number; months: number }> = {};
+  for (const g of (userMonthlyGoalsR.data ?? []) as any[]) {
+    const uid = g.user_id;
+    userGoalsAgg[uid] ??= { name: userMap.get(uid) ?? "Desconhecido", total_goal: 0, total_super: 0, months: 0 };
+    userGoalsAgg[uid].total_goal += Number(g.goal_value ?? 0);
+    userGoalsAgg[uid].total_super += Number(g.super_goal_value ?? 0);
+    userGoalsAgg[uid].months++;
+  }
+  const userGoalAttainment = Object.entries(userGoalsAgg).map(([uid, g]) => ({
+    user_id: uid,
+    name: g.name,
+    period_goal_sum: g.total_goal,
+    period_super_goal_sum: g.total_super,
+    period_realized: wonByOwner[uid]?.value ?? 0,
+    attainment_pct: g.total_goal > 0 ? (wonByOwner[uid]?.value ?? 0) / g.total_goal : null,
+    months_with_goal: g.months,
+  })).sort((a, b) => (b.attainment_pct ?? 0) - (a.attainment_pct ?? 0));
+
+  // ===== Top clientes por LTV (a partir de contracts no período) =====
+  const clientLtv: Record<string, number> = {};
+  for (const c of (contractsR.data ?? []) as any[]) {
+    if (!c.client_id) continue;
+    clientLtv[c.client_id] = (clientLtv[c.client_id] ?? 0) + Number(c.value ?? 0);
+  }
+  const clientNameMap = new Map<string, any>((clientsR.data ?? []).map((c: any) => [c.id, c]));
+  const topClients = Object.entries(clientLtv)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20)
+    .map(([id, ltv]) => ({ client_id: id, ltv, status: clientNameMap.get(id)?.status ?? null }));
+
+  // ===== Conversão por fonte =====
+  const sourceConversion: Record<string, { count: number; won: number; won_value: number; conv_pct: number | null }> = {};
+  for (const [src, v] of Object.entries(dealsBySource)) {
+    sourceConversion[src] = { ...v, conv_pct: v.count > 0 ? v.won / v.count : null };
   }
 
   const finEntriesCategorized = (finEntriesR.data ?? []).filter((e: any) => e.category_id).length;
@@ -326,12 +457,16 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
       ad_spend_available: false,
       ad_spend_reason: "Lançamentos sem category_id/cost_center/supplier preenchidos. Ad spend não rastreável.",
       payroll_source: "snapshot atual hr_collaborators.salary (sem histórico mensal)",
+      company_goals_configured: companyGoals.length > 0,
+      user_monthly_goals_count: (userMonthlyGoalsR.data ?? []).length,
     },
     pipelines: pipelinesR.data ?? [],
-    stages: (stagesR.data ?? []).map((s: any) => ({ id: s.id, name: s.name, pipeline_id: s.pipeline_id, is_won: s.is_won, is_lost: s.is_lost })),
+    stages: (stagesR.data ?? []).map((s: any) => ({ id: s.id, name: s.name, pipeline_id: s.pipeline_id, is_won: s.is_won, is_lost: s.is_lost, order_index: s.order_index })),
     users: (usersR.data ?? []).filter((u: any) => u.is_active).map((u: any) => ({ id: u.id, name: u.name, role: u.role })),
     loss_reasons: lossR.data ?? [],
-    sales_goals: goalsR.data ?? [],
+    goal_attainment: goalAttainment,
+    user_goal_attainment: userGoalAttainment,
+    sales_quotas: (salesQuotasR.data ?? []).slice(0, 200),
     deals_summary: {
       total_created: tCreated,
       total_won: tWon,
@@ -365,7 +500,25 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     meetings_by_month: meetingsByMonth,
     activities_by_user: Object.values(activitiesByUser).sort((a, b) => b.total - a.total).slice(0, 50),
     calls_by_user: Object.values(callsByUser).sort((a, b) => b.count - a.count).slice(0, 50),
-    churn_risk_distribution: churnByRisk,
+    churn_risk_distribution: (() => {
+      const m: Record<string, number> = {};
+      for (const c of (churnR.data ?? []) as any[]) {
+        const r = c.overall_risk ?? "unknown";
+        m[r] = (m[r] ?? 0) + 1;
+      }
+      return m;
+    })(),
+    sales_cycle: salesCycle,
+    forecast: {
+      weighted_open_value: forecastWeighted,
+      raw_open_value: tOpenValue,
+      by_pipeline: Object.values(forecastByPipeline),
+      method: "probability% se preenchido, senão (ordem_etapa+1)/total_etapas, fallback 0.2",
+    },
+    stagnant_open_deals: { over_30_days: stagnant30, over_60_days: stagnant60 },
+    closing_next_30_days: { count: closingSoonCount, value: closingSoonValue },
+    top_clients_by_ltv: topClients,
+    source_conversion: sourceConversion,
     financial_categories: (finCatsR.data ?? []).map((c: any) => ({ id: c.id, name: c.name, dre_group: c.dre_group })),
   };
 }
@@ -457,6 +610,40 @@ const TOOLS = [
       parameters: {
         type: "object",
         properties: { days_back: { type: "number", default: 90 } },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "period_comparison",
+      description: "Compara o período corrente (N meses) vs o período anterior de mesmo tamanho. Retorna won_count, won_value, lost_count, lost_value e variações %.",
+      parameters: {
+        type: "object",
+        properties: { months: { type: "number", default: 1 } },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "stagnant_deals_list",
+      description: "Lista deals em aberto estagnados há mais de N dias sem mudança de etapa. Retorna até 30 deals com title, valor, dias parados, etapa, responsável.",
+      parameters: {
+        type: "object",
+        properties: { min_days: { type: "number", default: 30 } },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "user_goal_attainment_detail",
+      description: "Detalha o atingimento de meta de um vendedor mês a mês (goal, super_goal, realizado) no período.",
+      parameters: {
+        type: "object",
+        properties: { user_id: { type: "string" } },
+        required: ["user_id"],
       },
     },
   },
@@ -555,6 +742,77 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
       }
       return { days_back: days, breakdown: Object.entries(by).map(([reason, v]) => ({ reason, ...v })).sort((a, b) => b.value - a.value) };
     }
+    if (name === "period_comparison") {
+      const months = Math.max(1, Number(args.months ?? 1));
+      const end = new Date();
+      const startCurr = new Date(end); startCurr.setMonth(startCurr.getMonth() - months);
+      const startPrev = new Date(startCurr); startPrev.setMonth(startPrev.getMonth() - months);
+      const [currWon, currLost, prevWon, prevLost] = await Promise.all([
+        admin.from("deals").select("id,value,received_value").eq("account_id", accountId).eq("status", "won").gte("won_at", startCurr.toISOString()).lt("won_at", end.toISOString()).limit(8000),
+        admin.from("deals").select("id,value,received_value").eq("account_id", accountId).eq("status", "lost").gte("lost_at", startCurr.toISOString()).lt("lost_at", end.toISOString()).limit(8000),
+        admin.from("deals").select("id,value,received_value").eq("account_id", accountId).eq("status", "won").gte("won_at", startPrev.toISOString()).lt("won_at", startCurr.toISOString()).limit(8000),
+        admin.from("deals").select("id,value,received_value").eq("account_id", accountId).eq("status", "lost").gte("lost_at", startPrev.toISOString()).lt("lost_at", startCurr.toISOString()).limit(8000),
+      ]);
+      const sumV = (rows: any[] | null) => (rows ?? []).reduce((s, d) => s + Number(d.received_value ?? d.value ?? 0), 0);
+      const cWon = currWon.data?.length ?? 0, cLost = currLost.data?.length ?? 0;
+      const pWon = prevWon.data?.length ?? 0, pLost = prevLost.data?.length ?? 0;
+      const cWonV = sumV(currWon.data), pWonV = sumV(prevWon.data);
+      const pct = (a: number, b: number) => b > 0 ? (a - b) / b : null;
+      return {
+        period_months: months,
+        current: { start: startCurr.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10), won: cWon, lost: cLost, won_value: cWonV, win_rate: cWon + cLost > 0 ? cWon / (cWon + cLost) : null },
+        previous: { start: startPrev.toISOString().slice(0, 10), end: startCurr.toISOString().slice(0, 10), won: pWon, lost: pLost, won_value: pWonV, win_rate: pWon + pLost > 0 ? pWon / (pWon + pLost) : null },
+        delta: { won_pct: pct(cWon, pWon), won_value_pct: pct(cWonV, pWonV), lost_pct: pct(cLost, pLost) },
+      };
+    }
+    if (name === "stagnant_deals_list") {
+      const minDays = Math.max(1, Number(args.min_days ?? 30));
+      const cutoff = new Date(Date.now() - minDays * 86_400_000).toISOString();
+      const { data } = await admin.from("deals").select("id,title,value,received_value,stage_id,responsible_user_id,stage_changed_at,created_at,client_id").eq("account_id", accountId).is("won_at", null).is("lost_at", null).neq("status", "won").neq("status", "lost").or(`stage_changed_at.lte.${cutoff},and(stage_changed_at.is.null,created_at.lte.${cutoff})`).order("stage_changed_at", { ascending: true, nullsFirst: true }).limit(50);
+      const ids = [...new Set([...(data ?? []).map((d: any) => d.stage_id).filter(Boolean), ...(data ?? []).map((d: any) => d.responsible_user_id).filter(Boolean)])];
+      const [stagesR, usersR] = await Promise.all([
+        admin.from("deal_stages").select("id,name").in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]),
+        admin.from("users").select("id,name").in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]),
+      ]);
+      const sMap = new Map<string, string>((stagesR.data ?? []).map((s: any) => [s.id, s.name]));
+      const uMap = new Map<string, string>((usersR.data ?? []).map((u: any) => [u.id, u.name]));
+      const now = Date.now();
+      return {
+        min_days: minDays,
+        deals: (data ?? []).slice(0, 30).map((d: any) => {
+          const ref = d.stage_changed_at ?? d.created_at;
+          return {
+            id: d.id, title: d.title,
+            value: Number(d.received_value ?? d.value ?? 0),
+            stage: sMap.get(d.stage_id) ?? null,
+            responsible: uMap.get(d.responsible_user_id) ?? null,
+            days_stagnant: ref ? Math.floor((now - new Date(ref).getTime()) / 86_400_000) : null,
+          };
+        }),
+      };
+    }
+    if (name === "user_goal_attainment_detail") {
+      const uid = args.user_id;
+      const [goalsR, wonR] = await Promise.all([
+        admin.from("sales_monthly_goals").select("year_month,goal_value,super_goal_value,goal_type,cargo").eq("account_id", accountId).eq("user_id", uid).gte("year_month", sinceIso.slice(0, 7)).order("year_month"),
+        admin.from("deals").select("won_at,value,received_value").eq("account_id", accountId).eq("responsible_user_id", uid).eq("status", "won").gte("won_at", sinceIso).limit(5000),
+      ]);
+      const realizedByMonth: Record<string, number> = {};
+      for (const d of (wonR.data ?? []) as any[]) {
+        const m = (d.won_at ?? "").slice(0, 7);
+        if (!m) continue;
+        realizedByMonth[m] = (realizedByMonth[m] ?? 0) + Number(d.received_value ?? d.value ?? 0);
+      }
+      const detail = (goalsR.data ?? []).map((g: any) => ({
+        year_month: g.year_month,
+        goal: Number(g.goal_value ?? 0),
+        super_goal: Number(g.super_goal_value ?? 0),
+        realized: realizedByMonth[g.year_month] ?? 0,
+        attainment_pct: g.goal_value > 0 ? (realizedByMonth[g.year_month] ?? 0) / Number(g.goal_value) : null,
+        cargo: g.cargo, goal_type: g.goal_type,
+      }));
+      return { user_id: uid, months_with_goal: detail.length, detail };
+    }
     return { error: `tool desconhecida: ${name}` };
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) };
@@ -617,20 +875,43 @@ Deno.serve(async (req) => {
           const sinceIso = snapshot.period.start + "T00:00:00.000Z";
 
           // ============= FASE 1: ANALYST com tool-calling =============
-          const analystSystem = `Você é AION, analista de dados sênior do time comercial. Recebeu um snapshot JSON pré-agregado dos últimos ${monthsBack} meses E tem ferramentas para buscar dados específicos sob demanda.
+          const analystSystem = `Você é AION, analista de dados sênior do time comercial da Eternum. Recebeu um snapshot JSON pré-agregado dos últimos ${monthsBack} meses E tem ferramentas para buscar dados específicos sob demanda.
 
-USE AS FERRAMENTAS quando a pergunta exigir dados específicos não presentes no snapshot:
-- Pergunta cita nome de pessoa? → search_user → user_performance
-- Pergunta cita nome de cliente? → search_client → client_details
-- Pergunta sobre funil de um pipeline específico? → pipeline_funnel
-- Pergunta sobre lista de deals (top, em aberto, por filtro)? → deals_by_filter
-- Pergunta sobre motivos de perda detalhados? → lost_deals_breakdown
+DIMENSÕES NO SNAPSHOT (use direto, sem tool):
+- deals_summary: total criado/ganho/perdido/aberto, win_rate, ticket médio.
+- deals_by_month, deals_by_pipeline, deals_by_source, source_conversion (% de conversão por fonte).
+- won_by_owner / won_by_sdr / lost_by_owner / win_rate_by_owner.
+- lost_by_reason: ranking dos motivos de perda.
+- funnel_open_by_stage: pipeline aberto por etapa.
+- sales_cycle: tempo médio e mediano (dias) de criação ao ganho.
+- forecast: pipeline aberto ponderado por probabilidade ou ordem da etapa, total e por pipeline.
+- stagnant_open_deals (>30 e >60 dias): deals parados.
+- closing_next_30_days: previsão de fechamento.
+- goal_attainment: meta anual empresa, realizado YTD, %, meta mês atual vs realizado.
+- user_goal_attainment: meta vs realizado por vendedor no período.
+- sales_quotas: cotas por produto/vendedor.
+- new_clients_per_month, new_clients_revenue_per_month, contracts_cancelled_by_month (churn com motivos).
+- cac_by_month: CAC mensal com folha + comissão + spiff.
+- payroll_aggregates, commissions_by_user_by_month, commissions_total_by_month, spiff_payouts_by_month.
+- meetings_by_month (scheduled/completed/no_show), activities_by_user, calls_by_user (avg_score IA).
+- churn_risk_distribution, top_clients_by_ltv.
+- data_quality_notes: cobertura financeira, se metas estão configuradas.
 
-REGRAS:
-- O snapshot já tem agregados gerais (totals, by_month, by_owner, by_pipeline, cac_by_month). USE quando responder pergunta agregada.
-- NUNCA invente números. Se não tiver, busque com tool ou diga em 1 linha o que falta.
-- NÃO peça mais informação ao usuário se a ferramenta resolve.
-- Faça até 4 chamadas de ferramenta em paralelo se precisar (ex: buscar usuário E motivos de perda).
+USE FERRAMENTAS quando faltar:
+- Nome de pessoa → search_user + user_performance + (meta) user_goal_attainment_detail
+- Nome de cliente → search_client + client_details
+- Funil de um pipeline → pipeline_funnel
+- Lista de deals (top, por filtro, em aberto) → deals_by_filter
+- Motivos de perda em janela específica → lost_deals_breakdown
+- Comparação com período anterior → period_comparison
+- Deals estagnados (lista) → stagnant_deals_list
+
+REGRAS DURAS:
+- NUNCA invente números. Se não estiver no snapshot nem nas tools, diga em 1 linha o que falta e o que cadastrar/configurar (ex: "Cadastrar metas em /sales-team > Metas").
+- Quando a pergunta envolver meta e goal_attainment.annual_goal for null, recomende cadastrar metas — não improvise.
+- Quando a pergunta for sobre CAC e data_quality_notes mostrar baixa categorização, alertar a premissa.
+- NÃO peça mais informação ao usuário se a ferramenta resolve — chame a ferramenta.
+- Faça até 4 chamadas de ferramenta em paralelo se precisar.
 - Quando terminar, responda em JSON PURO:
 {
   "analysis": "análise factual curta com os números encontrados",
