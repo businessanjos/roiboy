@@ -34,9 +34,11 @@ import {
   ExternalLink,
   DollarSign,
   ArrowLeft,
+  Sparkles,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ProjectCopilotPanel } from "./ProjectCopilotPanel";
 
 export function ProjectDetailView({ projectId }: { projectId: string }) {
   const navigate = useNavigate();
@@ -101,8 +103,11 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         </div>
       </div>
 
-      <Tabs defaultValue="stakeholders" className="space-y-4">
-        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+      <Tabs defaultValue="copilot" className="space-y-4">
+        <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+          <TabsTrigger value="copilot" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white">
+            <Sparkles className="h-4 w-4 mr-1.5" />Copilot IA
+          </TabsTrigger>
           <TabsTrigger value="stakeholders"><Users className="h-4 w-4 mr-1.5" />Stakeholders</TabsTrigger>
           <TabsTrigger value="milestones"><Target className="h-4 w-4 mr-1.5" />Marcos</TabsTrigger>
           <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1.5" />Docs</TabsTrigger>
@@ -110,6 +115,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
           <TabsTrigger value="tasks"><ClipboardList className="h-4 w-4 mr-1.5" />Tarefas</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="copilot"><ProjectCopilotPanel projectId={project.id} /></TabsContent>
         <TabsContent value="stakeholders"><StakeholdersTab projectId={project.id} /></TabsContent>
         <TabsContent value="milestones"><MilestonesTab projectId={project.id} /></TabsContent>
         <TabsContent value="docs"><DocsTab projectId={project.id} /></TabsContent>
