@@ -1009,7 +1009,9 @@ DIMENSÕES NO SNAPSHOT (use direto, sem tool):
 - new_clients_per_month, new_clients_revenue_per_month, contracts_cancelled_by_month (churn com motivos).
 - cac_by_month: CAC mensal com folha + comissão + spiff.
 - payroll_aggregates, commissions_by_user_by_month, commissions_total_by_month, spiff_payouts_by_month.
-- meetings_by_month (scheduled/completed/no_show), activities_by_user, calls_by_user (avg_score IA).
+- meetings_by_month (tabela sales_meetings — agenda externa, NÃO é a métrica do dashboard).
+- held_meetings_total / held_meetings_by_month / held_meetings_by_user / held_meetings_by_user_by_month: FONTE OFICIAL de "reuniões realizadas" — espelha exatamente o Sales Dashboard (internal_tasks classificadas como concluída/realizada/alinhamento, deduplicadas por cliente/deal). SEMPRE use estes campos quando o gestor perguntar quantas reuniões um vendedor fez. NUNCA responda 0 baseado em sales_meetings.status sem antes checar held_meetings_by_user.
+- activities_by_user, calls_by_user (avg_score IA).
 - churn_risk_distribution, top_clients_by_ltv.
 - data_quality_notes: cobertura financeira, se metas estão configuradas.
 
