@@ -23,6 +23,57 @@ interface ReqBody {
 
 const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+// ===== Classificador de reuniões (DEVE espelhar src/lib/sales/meetingMetrics.ts) =====
+// Conta APENAS tasks classificadas como "held" (reunião realizada/concluída/alinhamento).
+// Dedupe: 2 reuniões com o mesmo cliente (por vendedor) contam como 1.
+type MeetingKind = "held" | "noshow" | "scheduled" | "none";
+function classifyMeetingTask(activityName?: string | null, title?: string | null): MeetingKind {
+  const s = ((activityName || "") + " " + (title || "")).toLowerCase();
+  if (!s.trim()) return "none";
+  if (s.includes("no-show") || s.includes("no show") || s.includes("noshow")) return "noshow";
+  if (s.includes("call comercial agendada") || s.includes("agendamento") || s.includes("agendada")) return "scheduled";
+  if (
+    s.includes("concluída") || s.includes("concluida") || s.includes("realizada") ||
+    s.includes("alinhamento") || s.includes("reunião") || s.includes("reuniao") || s.includes("meeting")
+  ) return "held";
+  return "none";
+}
+function meetingDedupeKey(assignedTo: string | null | undefined, t: { id?: string | null; client_id?: string | null; deal_id?: string | null; lead_id?: string | null }) {
+  return `${assignedTo || "unassigned"}|${t.client_id || t.deal_id || t.lead_id || t.id || "unknown"}`;
+}
+
+// Busca paginada de internal_tasks com completed_at no intervalo (mesmo padrão do SalesDashboard).
+async function fetchHeldMeetingTasks(admin: ReturnType<typeof createClient>, accountId: string, startIso: string, endIso: string) {
+  const PAGE = 1000;
+  let from = 0;
+  const all: any[] = [];
+  while (from < 50000) {
+    const { data, error } = await admin
+      .from("internal_tasks")
+      .select("id, assigned_to, title, completed_at, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
+      .eq("account_id", accountId)
+      .not("completed_at", "is", null)
+      .gte("completed_at", startIso)
+      .lte("completed_at", endIso)
+      .range(from, from + PAGE - 1);
+    if (error) break;
+    const batch = data || [];
+    all.push(...batch);
+    if (batch.length < PAGE) break;
+    from += PAGE;
+  }
+  const held = all.filter((t: any) => classifyMeetingTask(t.activity_types?.name, t.title) === "held");
+  const seen = new Set<string>();
+  const deduped: any[] = [];
+  for (const t of held) {
+    const k = meetingDedupeKey(t.assigned_to, t);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    deduped.push(t);
+  }
+  return deduped;
+}
+
 // ============= SNAPSHOT (compacto, agregado, completo) =============
 async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: string, monthsBack: number) {
   const since = new Date();
@@ -265,6 +316,24 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     if (m.status === "no_show" || m.status === "noshow") meetingsByMonth[mo].no_show++;
   }
 
+  // ===== Reuniões REALIZADAS (fonte oficial: internal_tasks classificadas como "held", deduplicadas) =====
+  // ESTA é a métrica que o Sales Dashboard mostra. Sempre prefira held_meetings_* a meetings_by_month.
+  const heldMeetingTasks = await fetchHeldMeetingTasks(admin, accountId, sinceIso, new Date().toISOString());
+  const heldMeetingsByUser: Record<string, { user_id: string; name: string; count: number }> = {};
+  const heldMeetingsByUserByMonth: Record<string, Record<string, number>> = {};
+  const heldMeetingsByMonth: Record<string, number> = {};
+  for (const t of heldMeetingTasks) {
+    const uid = t.assigned_to ?? "unknown";
+    const mo = (t.completed_at ?? "").slice(0, 7);
+    heldMeetingsByUser[uid] ??= { user_id: uid, name: userMap.get(uid) ?? "Desconhecido", count: 0 };
+    heldMeetingsByUser[uid].count++;
+    if (mo) {
+      heldMeetingsByMonth[mo] = (heldMeetingsByMonth[mo] ?? 0) + 1;
+      heldMeetingsByUserByMonth[uid] ??= {};
+      heldMeetingsByUserByMonth[uid][mo] = (heldMeetingsByUserByMonth[uid][mo] ?? 0) + 1;
+    }
+  }
+
   const activitiesByUser: Record<string, { name: string; total: number; by_type: Record<string, number> }> = {};
   for (const a of (activitiesR.data ?? []) as any[]) {
     const uid = a.user_id ?? "unknown";
@@ -498,6 +567,10 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     spiff_payouts_by_month: spiffByMonth,
     cac_by_month: cacByMonth,
     meetings_by_month: meetingsByMonth,
+    held_meetings_total: heldMeetingTasks.length,
+    held_meetings_by_month: heldMeetingsByMonth,
+    held_meetings_by_user: Object.values(heldMeetingsByUser).sort((a, b) => b.count - a.count).slice(0, 100),
+    held_meetings_by_user_by_month: heldMeetingsByUserByMonth,
     activities_by_user: Object.values(activitiesByUser).sort((a, b) => b.total - a.total).slice(0, 50),
     calls_by_user: Object.values(callsByUser).sort((a, b) => b.count - a.count).slice(0, 50),
     churn_risk_distribution: (() => {
@@ -647,6 +720,21 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "held_meetings_for_user",
+      description: "Retorna as reuniões REALIZADAS de um vendedor (fonte oficial: internal_tasks 'concluída/realizada/alinhamento', deduplicadas por cliente/deal). Use sempre que o gestor perguntar 'quantas reuniões fez X em mês Y'. Opcionalmente filtre por month (YYYY-MM).",
+      parameters: {
+        type: "object",
+        properties: {
+          user_id: { type: "string" },
+          month: { type: "string", description: "Filtro opcional YYYY-MM (ex: 2026-05)" },
+        },
+        required: ["user_id"],
+      },
+    },
+  },
 ];
 
 async function execTool(admin: ReturnType<typeof createClient>, accountId: string, sinceIso: string, name: string, args: any): Promise<any> {
@@ -657,11 +745,12 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
     }
     if (name === "user_performance") {
       const uid = args.user_id;
-      const [wonR, lostR, openR, meetR] = await Promise.all([
+      const endIso = new Date().toISOString();
+      const [wonR, lostR, openR, heldTasks] = await Promise.all([
         admin.from("deals").select("id,value,received_value,won_at,client_id,lost_reason,loss_reason_id,source").eq("account_id", accountId).eq("responsible_user_id", uid).eq("status", "won").gte("won_at", sinceIso).limit(2000),
         admin.from("deals").select("id,value,received_value,lost_at,client_id,lost_reason,loss_reason_id,source").eq("account_id", accountId).eq("responsible_user_id", uid).eq("status", "lost").gte("lost_at", sinceIso).limit(2000),
         admin.from("deals").select("id,value,received_value,client_id,source,created_at").eq("account_id", accountId).eq("responsible_user_id", uid).is("won_at", null).is("lost_at", null).limit(2000),
-        admin.from("sales_meetings").select("id,status").eq("account_id", accountId).eq("created_by", uid).gte("scheduled_at", sinceIso).limit(2000),
+        fetchHeldMeetingTasks(admin, accountId, sinceIso, endIso),
       ]);
       const won = wonR.data ?? []; const lost = lostR.data ?? []; const open = openR.data ?? [];
       const wonVal = won.reduce((s: number, d: any) => s + Number(d.received_value ?? d.value ?? 0), 0);
@@ -672,16 +761,43 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         const r = d.lost_reason ?? "sem_motivo";
         lossReasonsCount[r] = (lossReasonsCount[r] ?? 0) + 1;
       }
-      const meetings = meetR.data ?? [];
+      const userHeld = heldTasks.filter((t: any) => t.assigned_to === uid);
+      const heldByMonth: Record<string, number> = {};
+      for (const t of userHeld) {
+        const mo = (t.completed_at ?? "").slice(0, 7);
+        if (mo) heldByMonth[mo] = (heldByMonth[mo] ?? 0) + 1;
+      }
       return {
         won_count: won.length, lost_count: lost.length, open_count: open.length,
         won_value: wonVal, lost_value: lostVal, open_value: openVal,
         win_rate: won.length + lost.length > 0 ? won.length / (won.length + lost.length) : null,
         avg_ticket_won: won.length > 0 ? wonVal / won.length : 0,
         top_loss_reasons: Object.entries(lossReasonsCount).sort((a, b) => b[1] - a[1]).slice(0, 5),
-        meetings_total: meetings.length,
-        meetings_completed: meetings.filter((m: any) => m.status === "completed" || m.status === "done").length,
-        meetings_no_show: meetings.filter((m: any) => m.status === "no_show" || m.status === "noshow").length,
+        held_meetings_total: userHeld.length,
+        held_meetings_by_month: heldByMonth,
+        held_meetings_source: "internal_tasks classificadas como 'concluída/realizada/alinhamento', deduplicadas por cliente/deal (mesma lógica do Sales Dashboard).",
+      };
+    }
+    if (name === "held_meetings_for_user") {
+      const uid = args.user_id;
+      const month: string | undefined = args.month;
+      const endIso = new Date().toISOString();
+      const all = await fetchHeldMeetingTasks(admin, accountId, sinceIso, endIso);
+      let userHeld = all.filter((t: any) => t.assigned_to === uid);
+      if (month) userHeld = userHeld.filter((t: any) => (t.completed_at ?? "").slice(0, 7) === month);
+      const byMonth: Record<string, number> = {};
+      for (const t of userHeld) {
+        const mo = (t.completed_at ?? "").slice(0, 7);
+        if (mo) byMonth[mo] = (byMonth[mo] ?? 0) + 1;
+      }
+      return {
+        total: userHeld.length,
+        by_month: byMonth,
+        sample: userHeld.slice(0, 25).map((t: any) => ({
+          task_id: t.id, completed_at: t.completed_at, title: t.title,
+          activity_type: t.activity_types?.name, client_id: t.client_id, deal_id: t.deal_id, lead_id: t.lead_id,
+        })),
+        method: "internal_tasks com completed_at no período, classificadas como 'held' (concluída/realizada/alinhamento/reunião), deduplicadas por (vendedor + cliente|deal|lead).",
       };
     }
     if (name === "search_client") {
@@ -893,12 +1009,15 @@ DIMENSÕES NO SNAPSHOT (use direto, sem tool):
 - new_clients_per_month, new_clients_revenue_per_month, contracts_cancelled_by_month (churn com motivos).
 - cac_by_month: CAC mensal com folha + comissão + spiff.
 - payroll_aggregates, commissions_by_user_by_month, commissions_total_by_month, spiff_payouts_by_month.
-- meetings_by_month (scheduled/completed/no_show), activities_by_user, calls_by_user (avg_score IA).
+- meetings_by_month (tabela sales_meetings — agenda externa, NÃO é a métrica do dashboard).
+- held_meetings_total / held_meetings_by_month / held_meetings_by_user / held_meetings_by_user_by_month: FONTE OFICIAL de "reuniões realizadas" — espelha exatamente o Sales Dashboard (internal_tasks classificadas como concluída/realizada/alinhamento, deduplicadas por cliente/deal). SEMPRE use estes campos quando o gestor perguntar quantas reuniões um vendedor fez. NUNCA responda 0 baseado em sales_meetings.status sem antes checar held_meetings_by_user.
+- activities_by_user, calls_by_user (avg_score IA).
 - churn_risk_distribution, top_clients_by_ltv.
 - data_quality_notes: cobertura financeira, se metas estão configuradas.
 
 USE FERRAMENTAS quando faltar:
 - Nome de pessoa → search_user + user_performance + (meta) user_goal_attainment_detail
+- Quantas reuniões REALIZADAS um vendedor fez em um mês → primeiro olhe held_meetings_by_user_by_month no snapshot. Se precisar listar/auditar, use held_meetings_for_user com {user_id, month: "YYYY-MM"}.
 - Nome de cliente → search_client + client_details
 - Funil de um pipeline → pipeline_funnel
 - Lista de deals (top, por filtro, em aberto) → deals_by_filter
