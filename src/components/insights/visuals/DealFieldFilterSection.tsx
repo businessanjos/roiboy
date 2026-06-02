@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { FieldFilter } from "@/components/insights/visual-builder/types";
+import { Input } from "@/components/ui/input";
+import { FieldFilter, DEAL_CREATED_AT_FIELD_ID } from "@/components/insights/visual-builder/types";
 
 interface DealField {
   id: string;
