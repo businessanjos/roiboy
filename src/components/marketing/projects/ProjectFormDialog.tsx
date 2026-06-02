@@ -42,25 +42,13 @@ export function ProjectFormDialog({ open, onOpenChange, project, onSubmit }: Pro
         </DialogHeader>
 
         <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-          <div className="grid grid-cols-1 md:grid-cols-[80px_1fr] gap-3">
-            <div>
-              <Label>Emoji</Label>
-              <Input
-                value={form.cover_emoji ?? ""}
-                onChange={(e) => handleChange("cover_emoji", e.target.value.slice(0, 2))}
-                placeholder="🚀"
-                className="text-center text-xl"
-                maxLength={2}
-              />
-            </div>
-            <div>
-              <Label>Nome do projeto *</Label>
-              <Input
-                value={form.name ?? ""}
-                onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="Lançamento do Livro / Congresso Internacional..."
-              />
-            </div>
+          <div>
+            <Label>Nome do projeto *</Label>
+            <Input
+              value={form.name ?? ""}
+              onChange={(e) => handleChange("name", e.target.value)}
+              placeholder="Lançamento do Livro / Congresso Internacional..."
+            />
           </div>
 
           <div>
