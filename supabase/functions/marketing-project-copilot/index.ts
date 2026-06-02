@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
     const [{ data: project }, { data: milestones }, { data: stakeholders }, { data: docs }, { data: linkedTasks }, { data: linkedEvents }] =
       await Promise.all([
         supabase.from("marketing_projects").select("*").eq("id", projectId).maybeSingle(),
-        supabase.from("marketing_project_milestones").select("title, due_date, completed").eq("project_id", projectId).order("display_order"),
+        supabase.from("marketing_project_milestones").select("title, phase, priority, owner, start_date, due_date, completed, progress").eq("project_id", projectId).order("display_order"),
         supabase.from("marketing_project_stakeholders").select("name, role, type, user_id").eq("project_id", projectId),
         supabase.from("marketing_project_documents").select("title, kind, url").eq("project_id", projectId),
         supabase.from("marketing_project_tasks").select("task_id, marketing_tasks(title, status, priority, due_date)").eq("project_id", projectId),
