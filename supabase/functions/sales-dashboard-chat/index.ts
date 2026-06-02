@@ -1345,15 +1345,18 @@ Se a análise não trouxer número, diga em 1 linha o que falta e pare. NUNCA in
               try {
                 const parsed = JSON.parse(payload);
                 const delta = parsed.choices?.[0]?.delta?.content;
-                if (delta) insightText += delta;
+                if (delta) {
+                  insightText += delta;
+                  // Streaming real: envia cada chunk sanitizado na hora.
+                  send(JSON.stringify({ type: "delta", content: scrubExecutiveText(delta) }));
+                }
               } catch {
                 buffer = line + "\n" + buffer;
                 break;
               }
             }
           }
-          const safeInsightText = scrubExecutiveText(insightText);
-          send(JSON.stringify({ type: "delta", content: safeInsightText }));
+
           send(JSON.stringify({
             type: "metadata",
             kpi: scrubStringsOnly(analyst.kpi ?? null),
