@@ -145,9 +145,13 @@ export function useMarketingProjects() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...payload }: Partial<MarketingProject> & { id: string }) => {
+      const finalPayload: any = { ...payload };
+      if ("owner_user_id" in payload) {
+        finalPayload.owner_user_id = await resolveUserId(payload.owner_user_id ?? null);
+      }
       const { error } = await supabase
         .from("marketing_projects" as any)
-        .update(payload)
+        .update(finalPayload)
         .eq("id", id);
       if (error) throw error;
     },
