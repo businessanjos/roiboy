@@ -302,8 +302,24 @@ export function useProjectMilestones(projectId: string | undefined) {
         account_id: currentUser?.account_id,
         title: payload.title,
         due_date: payload.due_date,
+        start_date: payload.start_date,
         description: payload.description,
+        phase: payload.phase || "planning",
+        owner: payload.owner,
+        priority: payload.priority || "medium",
+        progress: payload.progress ?? 0,
       });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["project-milestones", projectId] }),
+    onError: (e: any) => toast.error(e.message),
+  });
+  const update = useMutation({
+    mutationFn: async ({ id, ...patch }: Partial<ProjectMilestone> & { id: string }) => {
+      const { error } = await supabase
+        .from("marketing_project_milestones" as any)
+        .update(patch)
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["project-milestones", projectId] }),
