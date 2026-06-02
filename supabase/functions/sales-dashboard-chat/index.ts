@@ -745,11 +745,12 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
     }
     if (name === "user_performance") {
       const uid = args.user_id;
-      const [wonR, lostR, openR, meetR] = await Promise.all([
+      const endIso = new Date().toISOString();
+      const [wonR, lostR, openR, heldTasks] = await Promise.all([
         admin.from("deals").select("id,value,received_value,won_at,client_id,lost_reason,loss_reason_id,source").eq("account_id", accountId).eq("responsible_user_id", uid).eq("status", "won").gte("won_at", sinceIso).limit(2000),
         admin.from("deals").select("id,value,received_value,lost_at,client_id,lost_reason,loss_reason_id,source").eq("account_id", accountId).eq("responsible_user_id", uid).eq("status", "lost").gte("lost_at", sinceIso).limit(2000),
         admin.from("deals").select("id,value,received_value,client_id,source,created_at").eq("account_id", accountId).eq("responsible_user_id", uid).is("won_at", null).is("lost_at", null).limit(2000),
-        admin.from("sales_meetings").select("id,status").eq("account_id", accountId).eq("created_by", uid).gte("scheduled_at", sinceIso).limit(2000),
+        fetchHeldMeetingTasks(admin, accountId, sinceIso, endIso),
       ]);
       const won = wonR.data ?? []; const lost = lostR.data ?? []; const open = openR.data ?? [];
       const wonVal = won.reduce((s: number, d: any) => s + Number(d.received_value ?? d.value ?? 0), 0);
@@ -760,16 +761,43 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         const r = d.lost_reason ?? "sem_motivo";
         lossReasonsCount[r] = (lossReasonsCount[r] ?? 0) + 1;
       }
-      const meetings = meetR.data ?? [];
+      const userHeld = heldTasks.filter((t: any) => t.assigned_to === uid);
+      const heldByMonth: Record<string, number> = {};
+      for (const t of userHeld) {
+        const mo = (t.completed_at ?? "").slice(0, 7);
+        if (mo) heldByMonth[mo] = (heldByMonth[mo] ?? 0) + 1;
+      }
       return {
         won_count: won.length, lost_count: lost.length, open_count: open.length,
         won_value: wonVal, lost_value: lostVal, open_value: openVal,
         win_rate: won.length + lost.length > 0 ? won.length / (won.length + lost.length) : null,
         avg_ticket_won: won.length > 0 ? wonVal / won.length : 0,
         top_loss_reasons: Object.entries(lossReasonsCount).sort((a, b) => b[1] - a[1]).slice(0, 5),
-        meetings_total: meetings.length,
-        meetings_completed: meetings.filter((m: any) => m.status === "completed" || m.status === "done").length,
-        meetings_no_show: meetings.filter((m: any) => m.status === "no_show" || m.status === "noshow").length,
+        held_meetings_total: userHeld.length,
+        held_meetings_by_month: heldByMonth,
+        held_meetings_source: "internal_tasks classificadas como 'concluída/realizada/alinhamento', deduplicadas por cliente/deal (mesma lógica do Sales Dashboard).",
+      };
+    }
+    if (name === "held_meetings_for_user") {
+      const uid = args.user_id;
+      const month: string | undefined = args.month;
+      const endIso = new Date().toISOString();
+      const all = await fetchHeldMeetingTasks(admin, accountId, sinceIso, endIso);
+      let userHeld = all.filter((t: any) => t.assigned_to === uid);
+      if (month) userHeld = userHeld.filter((t: any) => (t.completed_at ?? "").slice(0, 7) === month);
+      const byMonth: Record<string, number> = {};
+      for (const t of userHeld) {
+        const mo = (t.completed_at ?? "").slice(0, 7);
+        if (mo) byMonth[mo] = (byMonth[mo] ?? 0) + 1;
+      }
+      return {
+        total: userHeld.length,
+        by_month: byMonth,
+        sample: userHeld.slice(0, 25).map((t: any) => ({
+          task_id: t.id, completed_at: t.completed_at, title: t.title,
+          activity_type: t.activity_types?.name, client_id: t.client_id, deal_id: t.deal_id, lead_id: t.lead_id,
+        })),
+        method: "internal_tasks com completed_at no período, classificadas como 'held' (concluída/realizada/alinhamento/reunião), deduplicadas por (vendedor + cliente|deal|lead).",
       };
     }
     if (name === "search_client") {
