@@ -13586,6 +13586,63 @@ export type Database = {
           },
         ]
       }
+      marketing_project_copilot_messages: {
+        Row: {
+          account_id: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          project_id: string
+          role: string
+          tool_call_id: string | null
+          tool_calls: Json | null
+          tool_name: string | null
+          tool_result: Json | null
+        }
+        Insert: {
+          account_id: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id: string
+          role: string
+          tool_call_id?: string | null
+          tool_calls?: Json | null
+          tool_name?: string | null
+          tool_result?: Json | null
+        }
+        Update: {
+          account_id?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id?: string
+          role?: string
+          tool_call_id?: string | null
+          tool_calls?: Json | null
+          tool_name?: string | null
+          tool_result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_project_copilot_messages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_project_copilot_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_project_documents: {
         Row: {
           account_id: string
