@@ -720,6 +720,21 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "held_meetings_for_user",
+      description: "Retorna as reuniões REALIZADAS de um vendedor (fonte oficial: internal_tasks 'concluída/realizada/alinhamento', deduplicadas por cliente/deal). Use sempre que o gestor perguntar 'quantas reuniões fez X em mês Y'. Opcionalmente filtre por month (YYYY-MM).",
+      parameters: {
+        type: "object",
+        properties: {
+          user_id: { type: "string" },
+          month: { type: "string", description: "Filtro opcional YYYY-MM (ex: 2026-05)" },
+        },
+        required: ["user_id"],
+      },
+    },
+  },
 ];
 
 async function execTool(admin: ReturnType<typeof createClient>, accountId: string, sinceIso: string, name: string, args: any): Promise<any> {
