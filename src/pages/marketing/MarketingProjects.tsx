@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Search, FolderKanban, Users, Calendar, ClipboardList, Target, DollarSign, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useMarketingProjects, MarketingProject, PROJECT_STATUS_META, MarketingProjectStatus } from "@/hooks/useMarketingProjects";
 import { ProjectFormDialog } from "@/components/marketing/projects/ProjectFormDialog";
-import { ProjectDetailSheet } from "@/components/marketing/projects/ProjectDetailSheet";
+
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -32,7 +33,7 @@ export default function MarketingProjects() {
   const [statusFilter, setStatusFilter] = useState<MarketingProjectStatus | "all">("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MarketingProject | null>(null);
-  const [detailId, setDetailId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const filtered = projects.filter(p => {
     const matchesSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
@@ -104,7 +105,7 @@ export default function MarketingProjects() {
             <ProjectCard
               key={project.id}
               project={project}
-              onOpen={() => setDetailId(project.id)}
+              onOpen={() => navigate(`/marketing/projetos/${project.id}`)}
               onEdit={() => { setEditing(project); setFormOpen(true); }}
               onDelete={() => {
                 if (confirm(`Remover o projeto "${project.name}"? Esta ação não pode ser desfeita.`)) {
@@ -129,11 +130,6 @@ export default function MarketingProjects() {
         }}
       />
 
-      <ProjectDetailSheet
-        projectId={detailId}
-        open={!!detailId}
-        onOpenChange={(o) => !o && setDetailId(null)}
-      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useNavigate, useParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,70 +33,97 @@ import {
   Phone,
   ExternalLink,
   DollarSign,
+  ArrowLeft,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface Props {
-  projectId: string | null;
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-}
+export function ProjectDetailView({ projectId }: { projectId: string }) {
+  const navigate = useNavigate();
+  const { data: project, isLoading } = useMarketingProject(projectId);
 
-export function ProjectDetailSheet({ projectId, open, onOpenChange }: Props) {
-  const { data: project } = useMarketingProject(projectId ?? undefined);
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-12 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+  if (!project) {
+    return (
+      <div className="container mx-auto py-12 text-center space-y-3">
+        <p className="text-muted-foreground">Projeto não encontrado.</p>
+        <Button variant="outline" onClick={() => navigate("/marketing/projetos")}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+        </Button>
+      </div>
+    );
+  }
 
-  if (!project) return null;
   const status = PROJECT_STATUS_META[project.status];
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
-        <SheetHeader className="space-y-3">
-          <div className="flex items-start gap-3">
-            {project.cover_emoji && <span className="text-4xl">{project.cover_emoji}</span>}
-            <div className="flex-1">
-              <SheetTitle className="text-2xl">{project.name}</SheetTitle>
-              <div className="flex gap-2 mt-1 flex-wrap">
-                <Badge variant="outline" className={status.color}>{status.label}</Badge>
-                {project.target_date && (
-                  <Badge variant="outline">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {format(parseISO(project.target_date), "dd MMM yyyy", { locale: ptBR })}
-                  </Badge>
-                )}
-                {project.budget_planned && (
-                  <Badge variant="outline">
-                    <DollarSign className="h-3 w-3 mr-1" />
-                    R$ {project.budget_planned.toLocaleString("pt-BR")}
-                  </Badge>
-                )}
-              </div>
-              {project.description && (
-                <p className="text-sm text-muted-foreground mt-2">{project.description}</p>
+    <div className="container mx-auto py-6 space-y-6 max-w-6xl">
+      <Button variant="ghost" size="sm" onClick={() => navigate("/marketing/projetos")} className="-ml-2">
+        <ArrowLeft className="h-4 w-4 mr-2" /> Projetos
+      </Button>
+
+      <div
+        className="rounded-xl border p-6 space-y-3"
+        style={{
+          background: `linear-gradient(135deg, ${project.cover_color || "#8b5cf6"}18, transparent 70%)`,
+          borderLeft: `4px solid ${project.cover_color || "#8b5cf6"}`,
+        }}
+      >
+        <div className="flex items-start gap-4">
+          {project.cover_emoji && <span className="text-5xl leading-none">{project.cover_emoji}</span>}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold">{project.name}</h1>
+            <div className="flex gap-2 mt-2 flex-wrap">
+              <Badge variant="outline" className={status.color}>{status.label}</Badge>
+              {project.target_date && (
+                <Badge variant="outline">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {format(parseISO(project.target_date), "dd MMM yyyy", { locale: ptBR })}
+                </Badge>
+              )}
+              {project.budget_planned && (
+                <Badge variant="outline">
+                  <DollarSign className="h-3 w-3 mr-1" />
+                  R$ {project.budget_planned.toLocaleString("pt-BR")}
+                </Badge>
               )}
             </div>
+            {project.description && (
+              <p className="text-sm text-muted-foreground mt-3 max-w-3xl">{project.description}</p>
+            )}
           </div>
-        </SheetHeader>
+        </div>
+      </div>
 
-        <Tabs defaultValue="stakeholders" className="mt-6">
-          <TabsList className="grid grid-cols-5 w-full">
-            <TabsTrigger value="stakeholders"><Users className="h-4 w-4 mr-1.5" />Stakeholders</TabsTrigger>
-            <TabsTrigger value="milestones"><Target className="h-4 w-4 mr-1.5" />Marcos</TabsTrigger>
-            <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1.5" />Docs</TabsTrigger>
-            <TabsTrigger value="events"><Calendar className="h-4 w-4 mr-1.5" />Eventos</TabsTrigger>
-            <TabsTrigger value="tasks"><ClipboardList className="h-4 w-4 mr-1.5" />Tarefas</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="stakeholders" className="space-y-4">
+        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+          <TabsTrigger value="stakeholders"><Users className="h-4 w-4 mr-1.5" />Stakeholders</TabsTrigger>
+          <TabsTrigger value="milestones"><Target className="h-4 w-4 mr-1.5" />Marcos</TabsTrigger>
+          <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1.5" />Docs</TabsTrigger>
+          <TabsTrigger value="events"><Calendar className="h-4 w-4 mr-1.5" />Eventos</TabsTrigger>
+          <TabsTrigger value="tasks"><ClipboardList className="h-4 w-4 mr-1.5" />Tarefas</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="stakeholders" className="mt-4"><StakeholdersTab projectId={project.id} /></TabsContent>
-          <TabsContent value="milestones" className="mt-4"><MilestonesTab projectId={project.id} /></TabsContent>
-          <TabsContent value="docs" className="mt-4"><DocsTab projectId={project.id} /></TabsContent>
-          <TabsContent value="events" className="mt-4"><EventsTab projectId={project.id} /></TabsContent>
-          <TabsContent value="tasks" className="mt-4"><TasksTab projectId={project.id} /></TabsContent>
-        </Tabs>
-      </SheetContent>
-    </Sheet>
+        <TabsContent value="stakeholders"><StakeholdersTab projectId={project.id} /></TabsContent>
+        <TabsContent value="milestones"><MilestonesTab projectId={project.id} /></TabsContent>
+        <TabsContent value="docs"><DocsTab projectId={project.id} /></TabsContent>
+        <TabsContent value="events"><EventsTab projectId={project.id} /></TabsContent>
+        <TabsContent value="tasks"><TasksTab projectId={project.id} /></TabsContent>
+      </Tabs>
+    </div>
   );
+}
+
+export default function MarketingProjectDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  if (!id) return null;
+  return <ProjectDetailView projectId={id} />;
 }
 
 // ===== Stakeholders =====
