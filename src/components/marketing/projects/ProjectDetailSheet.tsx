@@ -44,6 +44,14 @@ import {
   DollarSign,
   ArrowLeft,
   Sparkles,
+  ChevronDown,
+  ChevronRight,
+  User as UserIcon,
+  Flag,
+  CalendarRange,
+  Pencil,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
