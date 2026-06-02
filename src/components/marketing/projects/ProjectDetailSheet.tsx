@@ -15,7 +15,16 @@ import {
   useProjectEvents,
   useProjectTasks,
   PROJECT_STATUS_META,
+  MILESTONE_PHASE_META,
+  MILESTONE_PHASE_ORDER,
+  MILESTONE_PRIORITY_META,
+  type MilestonePhase,
+  type MilestonePriority,
+  type ProjectMilestone,
 } from "@/hooks/useMarketingProjects";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTeamUsers } from "@/hooks/useTeamUsers";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
