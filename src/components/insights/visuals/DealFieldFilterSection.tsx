@@ -105,6 +105,16 @@ function SingleDealFilter({
       onRemove(index);
       return;
     }
+    if (value === DEAL_CREATED_AT_FIELD_ID) {
+      onUpdate(index, {
+        fieldId: DEAL_CREATED_AT_FIELD_ID,
+        fieldName: 'Data de criação do Negócio',
+        selectedValues: [],
+        dateFrom: '',
+        dateTo: '',
+      });
+      return;
+    }
     const field = dealFields.find(f => f.id === value);
     if (field) {
       onUpdate(index, { fieldId: field.id, fieldName: field.name, selectedValues: [] });
