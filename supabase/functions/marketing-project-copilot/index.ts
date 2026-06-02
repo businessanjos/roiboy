@@ -12,15 +12,19 @@ const TOOLS = [
     type: "function",
     function: {
       name: "criar_marco",
-      description: "Cria um novo marco (milestone) no projeto. Use para quebrar o projeto em entregas-chave.",
+      description: "Cria um marco no projeto. SEMPRE escolha uma das 6 fases do roadmap: discovery (descoberta/pesquisa/objetivos), planning (estratégia/cronograma/briefing), pre_production (fornecedores/contratos/setup), production (execução/criação das entregas), launch (go-live/mídia/evento), post_launch (resultados/retrospectiva/relatórios).",
       parameters: {
         type: "object",
         properties: {
           title: { type: "string" },
-          description: { type: "string" },
+          description: { type: "string", description: "Detalhe entregas, critérios de aceite e dependências" },
+          start_date: { type: "string", description: "YYYY-MM-DD" },
           due_date: { type: "string", description: "YYYY-MM-DD" },
+          phase: { type: "string", enum: ["discovery", "planning", "pre_production", "production", "launch", "post_launch"] },
+          priority: { type: "string", enum: ["low", "medium", "high", "critical"] },
+          owner: { type: "string", description: "Nome do responsável" },
         },
-        required: ["title"],
+        required: ["title", "phase"],
       },
     },
   },
