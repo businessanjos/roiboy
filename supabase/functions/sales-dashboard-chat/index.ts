@@ -873,7 +873,7 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
     }
     if (name === "search_client") {
       const { data: clients } = await admin.from("clients").select("id,full_name,status,phone_e164,business_segment").eq("account_id", accountId).ilike("full_name", `%${args.name}%`).limit(20);
-      return { results: (clients ?? []).map((c: any) => ({ nome: c.full_name, status: c.status, segmento: c.business_segment })) };
+      return { results: clients ?? [] };
     }
     if (name === "client_details") {
       const cid = args.client_id;
