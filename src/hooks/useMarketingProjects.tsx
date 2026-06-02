@@ -342,7 +342,7 @@ export function useProjectMilestones(projectId: string | undefined) {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["project-milestones", projectId] }),
   });
-  return { items: query.data || [], isLoading: query.isLoading, add, toggle, remove };
+  return { items: query.data || [], isLoading: query.isLoading, add, update, toggle, remove };
 }
 
 // --- Documents ---
