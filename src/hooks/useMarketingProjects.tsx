@@ -79,6 +79,15 @@ export const PROJECT_STATUS_META: Record<
   cancelled: { label: "Cancelado", color: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30" },
 };
 
+// Resolve a possibly-auth_user_id value into the matching users.id (FK target)
+async function resolveUserId(value: string | null): Promise<string | null> {
+  if (!value) return null;
+  const { data: byId } = await supabase.from("users").select("id").eq("id", value).maybeSingle();
+  if (byId?.id) return byId.id;
+  const { data: byAuth } = await supabase.from("users").select("id").eq("auth_user_id", value).maybeSingle();
+  return byAuth?.id ?? null;
+}
+
 export function useMarketingProjects() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
