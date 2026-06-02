@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useMarketingProjects, MarketingProject, PROJECT_STATUS_META, MarketingProjectStatus } from "@/hooks/useMarketingProjects";
 import { ProjectFormDialog } from "@/components/marketing/projects/ProjectFormDialog";
-import { ProjectDetailSheet } from "@/components/marketing/projects/ProjectDetailSheet";
+
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
