@@ -1,18 +1,63 @@
 import { supabase } from "@/integrations/supabase/client";
-import { VisualConfig, FieldFilter } from "@/components/insights/visual-builder/types";
+import { VisualConfig, FieldFilter, DEAL_CREATED_AT_FIELD_ID } from "@/components/insights/visual-builder/types";
 
 /**
  * Filters deal records by deal custom field values.
- * Supports select (value_text), multi_select (value_json), and free text fields.
+ * Supports select (value_text), multi_select (value_json), free text fields,
+ * and the virtual "deal created_at" date-range field.
  */
-export async function filterByDealField<T extends { id: string }>(
+export async function filterByDealField<T extends { id: string; created_at?: string }>(
   records: T[],
   accountId: string,
   dealFieldFilter: NonNullable<VisualConfig['dealFieldFilter']>
 ): Promise<T[]> {
+  // Special virtual field: filter by deals.created_at date range
+  if (dealFieldFilter.fieldId === DEAL_CREATED_AT_FIELD_ID) {
+    const from = (dealFieldFilter as FieldFilter).dateFrom;
+    const to = (dealFieldFilter as FieldFilter).dateTo;
+    if (!from && !to) return records;
+
+    if (records.length === 0) return records;
+
+    // Build a map of deal_id -> created_at. If records already include created_at, use it.
+    let createdAtById = new Map<string, string>();
+    const needFetch = records.some(r => !(r as any).created_at);
+
+    if (needFetch) {
+      const ids = records.map(r => r.id);
+      const batchSize = 500;
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
+        const { data } = await supabase
+          .from('deals')
+          .select('id, created_at')
+          .eq('account_id', accountId)
+          .in('id', batch);
+        for (const row of data || []) {
+          createdAtById.set((row as any).id, (row as any).created_at);
+        }
+      }
+    } else {
+      for (const r of records) {
+        createdAtById.set(r.id, (r as any).created_at);
+      }
+    }
+
+    const fromTs = from ? new Date(from + 'T00:00:00').getTime() : -Infinity;
+    const toTs = to ? new Date(to + 'T23:59:59.999').getTime() : Infinity;
+
+    return records.filter(r => {
+      const createdAt = createdAtById.get(r.id);
+      if (!createdAt) return false;
+      const ts = new Date(createdAt).getTime();
+      return ts >= fromTs && ts <= toTs;
+    });
+  }
+
   if (!dealFieldFilter.selectedValues || dealFieldFilter.selectedValues.length === 0) {
     return records;
   }
+
 
   if (records.length === 0) return records;
 
