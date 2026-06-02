@@ -162,7 +162,10 @@ export async function filterByDealFields<T extends { id: string }>(
 ): Promise<T[]> {
   let result = records;
   for (const filter of filters) {
-    if (filter.selectedValues?.length > 0) {
+    const hasValues = (filter.selectedValues?.length ?? 0) > 0;
+    const hasDateRange =
+      filter.fieldId === DEAL_CREATED_AT_FIELD_ID && (!!filter.dateFrom || !!filter.dateTo);
+    if (hasValues || hasDateRange) {
       result = await filterByDealField(result, accountId, filter);
     }
   }
