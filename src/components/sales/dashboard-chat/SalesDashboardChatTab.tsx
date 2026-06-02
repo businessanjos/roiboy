@@ -51,6 +51,29 @@ const PERIOD_OPTIONS = [
   { label: "24m", value: 24 },
 ];
 
+const EXECUTIVE_TERMS: Record<string, string> = {
+  deal_id: "negociação",
+  client_id: "cliente",
+  task_id: "atividade",
+  lead_id: "lead",
+  user_id: "responsável",
+  pipeline_id: "funil",
+  stage_id: "etapa",
+  responsible_user_id: "responsável",
+  sdr_user_id: "SDR",
+  seller_user_id: "vendedor",
+  internal_tasks: "atividades concluídas",
+  sales_meetings: "agenda comercial",
+};
+
+function sanitizeExecutiveText(text: string) {
+  let safe = text.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, "registro interno");
+  Object.entries(EXECUTIVE_TERMS).forEach(([raw, label]) => {
+    safe = safe.replace(new RegExp(`\\b${raw}\\b`, "gi"), label);
+  });
+  return safe;
+}
+
 function groupSessions(sessions: any[]) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -150,7 +173,7 @@ export function SalesDashboardChatTab() {
 
     const userMsgId = crypto.randomUUID();
     const assistantId = crypto.randomUUID();
-    const history = messages.slice(-6).map((m) => ({ role: m.role, content: m.content }));
+    const history = messages.slice(-6).map((m) => ({ role: m.role, content: m.role === "assistant" ? sanitizeExecutiveText(m.content) : m.content }));
     setMessages((prev) => [
       ...prev,
       { id: userMsgId, role: "user", content: question },
@@ -367,7 +390,7 @@ export function SalesDashboardChatTab() {
                             ),
                             tr: ({ node, ...props }) => <tr className="even:bg-muted/20" {...props} />,
                           }}
-                        >{m.content || "…"}</ReactMarkdown>
+                          >{sanitizeExecutiveText(m.content) || "…"}</ReactMarkdown>
                       </div>
                     )}
                     {m.metadata?.kpi && (
@@ -379,10 +402,10 @@ export function SalesDashboardChatTab() {
                             {m.metadata.kpi.trend === "down" && <TrendingDown className="w-3.5 h-3.5 text-rose-500" />}
                             {m.metadata.kpi.trend === "flat" && <Minus className="w-3.5 h-3.5 text-muted-foreground" />}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1.5">{m.metadata.kpi.label}</p>
+                          <p className="text-xs text-muted-foreground mt-1.5">{sanitizeExecutiveText(m.metadata.kpi.label)}</p>
                           <p className="text-2xl font-bold tracking-tight mt-0.5 tabular-nums">{m.metadata.kpi.value_text ?? m.metadata.kpi.value}</p>
                           {m.metadata.kpi.comparison && (
-                            <p className="text-xs text-muted-foreground mt-1">{m.metadata.kpi.comparison}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{sanitizeExecutiveText(m.metadata.kpi.comparison)}</p>
                           )}
                         </div>
                         <Button
@@ -447,7 +470,7 @@ export function SalesDashboardChatTab() {
               </Button>
             </div>
             <p className="text-[10px] text-muted-foreground/70 text-center mt-2">
-              AION usa Gemini + GPT-5 sobre seus dados. Sempre confirme números críticos.
+              AION responde com dados reais da operação. Números ausentes viram recomendação de cadastro.
             </p>
           </div>
         </div>

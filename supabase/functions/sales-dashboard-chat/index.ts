@@ -23,6 +23,91 @@ interface ReqBody {
 
 const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+const TECHNICAL_KEYS = new Set([
+  "id", "deal_id", "client_id", "task_id", "lead_id", "user_id", "product_id", "pipeline_id", "stage_id",
+  "account_id", "auth_user_id", "responsible_user_id", "sdr_user_id", "seller_user_id", "owner_user_id",
+]);
+
+const EXECUTIVE_LABELS: Record<string, string> = {
+  deal_id: "negociação",
+  client_id: "cliente",
+  task_id: "atividade",
+  lead_id: "lead",
+  user_id: "responsável",
+  product_id: "produto",
+  pipeline_id: "funil",
+  stage_id: "etapa",
+  responsible_user_id: "responsável",
+  sdr_user_id: "SDR",
+  seller_user_id: "vendedor",
+  won_count: "vendas ganhas",
+  lost_count: "vendas perdidas",
+  open_count: "negociações abertas",
+  won_value: "valor ganho",
+  lost_value: "valor perdido",
+  open_value: "valor em aberto",
+  win_rate: "taxa de conversão",
+  avg_ticket_won: "ticket médio ganho",
+  held_meetings_total: "reuniões realizadas",
+  held_meetings_by_month: "reuniões por mês",
+  days_stagnant: "dias parado",
+  year_month: "mês",
+  goal: "meta",
+  super_goal: "super meta",
+  realized: "realizado",
+  attainment_pct: "atingimento",
+  value: "valor",
+  title: "negociação",
+  source: "origem",
+  status: "status",
+  created_at: "criado em",
+  won_at: "ganho em",
+  lost_at: "perdido em",
+  completed_at: "concluído em",
+  activity_type: "tipo de atividade",
+};
+
+function isTechnicalKey(key: string) {
+  return TECHNICAL_KEYS.has(key) || /(^|_)id$/.test(key) || key.endsWith("_uuid");
+}
+
+function scrubExecutiveText(text: string) {
+  let out = text.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, "registro interno");
+  for (const [raw, label] of Object.entries(EXECUTIVE_LABELS)) {
+    out = out.replace(new RegExp(`\\b${raw}\\b`, "gi"), label);
+  }
+  out = out.replace(/\b([a-z]+(?:_[a-z0-9]+)+)\b/gi, (m) => EXECUTIVE_LABELS[m.toLowerCase()] ?? m.replace(/_/g, " "));
+  out = out.replace(/\b(?:public|supabase|internal_tasks|sales_meetings|deals|clients|client_contracts|deal_activities)\b/gi, "base interna");
+  return out;
+}
+
+function sanitizeForExecutive(input: any): any {
+  if (Array.isArray(input)) return input.map(sanitizeForExecutive);
+  if (!input || typeof input !== "object") return typeof input === "string" ? scrubExecutiveText(input) : input;
+  const output: Record<string, any> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (isTechnicalKey(key)) continue;
+    const safeKey = EXECUTIVE_LABELS[key] ?? key;
+    output[safeKey] = sanitizeForExecutive(value);
+  }
+  return output;
+}
+
+function scrubStringsOnly(input: any): any {
+  if (Array.isArray(input)) return input.map(scrubStringsOnly);
+  if (!input || typeof input !== "object") return typeof input === "string" ? scrubExecutiveText(input) : input;
+  return Object.fromEntries(Object.entries(input).map(([key, value]) => [key, scrubStringsOnly(value)]));
+}
+
+function sanitizeAnalystPayload(payload: any) {
+  const safe = scrubStringsOnly(payload ?? {});
+  return {
+    analysis: scrubExecutiveText(String(safe.analysis ?? "")),
+    kpi: safe.kpi ?? null,
+    chart_hint: safe.chart_hint ?? null,
+  };
+}
+
 // ===== Classificador de reuniões (DEVE espelhar src/lib/sales/meetingMetrics.ts) =====
 // Conta APENAS tasks classificadas como "held" (reunião realizada/concluída/alinhamento).
 // Dedupe: 2 reuniões com o mesmo cliente (por vendedor) contam como 1.
@@ -794,10 +879,11 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         total: userHeld.length,
         by_month: byMonth,
         sample: userHeld.slice(0, 25).map((t: any) => ({
-          task_id: t.id, completed_at: t.completed_at, title: t.title,
-          activity_type: t.activity_types?.name, client_id: t.client_id, deal_id: t.deal_id, lead_id: t.lead_id,
+          concluida_em: t.completed_at,
+          titulo: t.title,
+          tipo_de_atividade: t.activity_types?.name,
         })),
-        method: "internal_tasks com completed_at no período, classificadas como 'held' (concluída/realizada/alinhamento/reunião), deduplicadas por (vendedor + cliente|deal|lead).",
+        method: "Fonte oficial do dashboard: atividades concluídas classificadas como reunião realizada, sem duplicar o mesmo atendimento.",
       };
     }
     if (name === "search_client") {
@@ -812,7 +898,7 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         admin.from("deals").select("id,title,status,value,received_value,won_at,lost_at,source").eq("account_id", accountId).eq("client_id", cid).limit(50),
       ]);
       const ltv = (contracts.data ?? []).reduce((s: number, c: any) => s + Number(c.value ?? 0), 0);
-      return { client: client.data, contracts: contracts.data ?? [], deals: deals.data ?? [], ltv };
+      return sanitizeForExecutive({ cliente: client.data, contratos: contracts.data ?? [], negociacoes: deals.data ?? [], ltv });
     }
     if (name === "pipeline_funnel") {
       const [stagesR, dealsR] = await Promise.all([
@@ -841,7 +927,15 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
       if (typeof args.min_value === "number") {
         result = result.filter((d: any) => Number(d.received_value ?? d.value ?? 0) >= args.min_value);
       }
-      return { deals: result };
+      return { negociacoes: result.map((d: any) => ({
+        negociacao: d.title,
+        valor: Number(d.received_value ?? d.value ?? 0),
+        status: d.status,
+        origem: d.source,
+        ganho_em: d.won_at,
+        perdido_em: d.lost_at,
+        criado_em: d.created_at,
+      })) };
     }
     if (name === "lost_deals_breakdown") {
       const days = args.days_back ?? 90;
@@ -898,7 +992,7 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         deals: (data ?? []).slice(0, 30).map((d: any) => {
           const ref = d.stage_changed_at ?? d.created_at;
           return {
-            id: d.id, title: d.title,
+            negociacao: d.title,
             value: Number(d.received_value ?? d.value ?? 0),
             stage: sMap.get(d.stage_id) ?? null,
             responsible: uMap.get(d.responsible_user_id) ?? null,
@@ -1027,6 +1121,8 @@ USE FERRAMENTAS quando faltar:
 
 REGRAS DURAS:
 - NUNCA invente números. Se não estiver no snapshot nem nas tools, diga em 1 linha o que falta e o que cadastrar/configurar (ex: "Cadastrar metas em /sales-team > Metas").
+- NUNCA exponha nomes técnicos, ids ou colunas internas ao usuário: id, *_id, deal_id, client_id, task_id, user_id, pipeline_id, stage_id, internal_tasks, sales_meetings, nomes de tabelas ou UUIDs. Traduza tudo para linguagem executiva: cliente, negociação, responsável, etapa, reunião, mês, valor.
+- Não devolva JSON bruto de ferramenta. Agregue, traduza e explique o dado em português de negócio.
 - Quando a pergunta envolver meta e goal_attainment.annual_goal for null, recomende cadastrar metas — não improvise.
 - Quando a pergunta for sobre CAC e data_quality_notes mostrar baixa categorização, alertar a premissa.
 - NÃO peça mais informação ao usuário se a ferramenta resolve — chame a ferramenta.
@@ -1090,12 +1186,18 @@ REGRAS DURAS:
           }
 
           if (!analyst) analyst = { analysis: "Não foi possível concluir a análise.", kpi: null, chart_hint: null };
+          analyst = sanitizeAnalystPayload(analyst);
 
           // ============= FASE 2: INSIGHT executivo (streaming) =============
           send(JSON.stringify({ type: "status", stage: "gpt", content: "Gerando insight…" }));
           const insightSystem = `Você é AION, copiloto executivo. Receberá a pergunta e a análise factual com números reais.
 
 TOM: direto, executivo, brasileiro, sem floreio. Nada de "vou analisar", "é importante notar", "com base nos dados". Vá direto ao número.
+
+PROIBIDO NA RESPOSTA FINAL:
+- Nomes técnicos, colunas, ids, UUIDs, nomes de tabela, JSON bruto ou termos como deal_id, client_id, task_id, user_id, stage_id, pipeline_id, internal_tasks, sales_meetings.
+- Se precisar citar um registro, use o nome da negociação/cliente/responsável. Se não houver nome, escreva "registro interno" sem mostrar código.
+- Se o dado não existir ou estiver incompleto, diga exatamente o que falta cadastrar/configurar e onde agir, sem improvisar número.
 
 FORMATO (markdown enxuto):
 **[Número principal em destaque]** — contexto em 1 frase.
@@ -1135,6 +1237,7 @@ Se a análise não trouxer número, diga em 1 linha o que falta e pare. NUNCA in
           const decoder = new TextDecoder();
           const reader = gptResp.body.getReader();
           let buffer = "";
+          let insightText = "";
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -1150,18 +1253,20 @@ Se a análise não trouxer número, diga em 1 linha o que falta e pare. NUNCA in
               try {
                 const parsed = JSON.parse(payload);
                 const delta = parsed.choices?.[0]?.delta?.content;
-                if (delta) send(JSON.stringify({ type: "delta", content: delta }));
+                if (delta) insightText += delta;
               } catch {
                 buffer = line + "\n" + buffer;
                 break;
               }
             }
           }
+          const safeInsightText = scrubExecutiveText(insightText);
+          send(JSON.stringify({ type: "delta", content: safeInsightText }));
           send(JSON.stringify({
             type: "metadata",
-            kpi: analyst.kpi ?? null,
-            chart_hint: analyst.chart_hint ?? null,
-            analysis: analyst.analysis ?? null,
+            kpi: scrubStringsOnly(analyst.kpi ?? null),
+            chart_hint: scrubStringsOnly(analyst.chart_hint ?? null),
+            analysis: scrubExecutiveText(String(analyst.analysis ?? "")),
             period_months: monthsBack,
             models: { analyst: "google/gemini-2.5-pro", insight: insightModel },
           }));
