@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { FieldFilter } from "@/components/insights/visual-builder/types";
+import { Input } from "@/components/ui/input";
+import { FieldFilter, DEAL_CREATED_AT_FIELD_ID } from "@/components/insights/visual-builder/types";
 
 interface DealField {
   id: string;
@@ -54,8 +55,10 @@ function SingleDealFilter({
   const [fieldOptions, setFieldOptions] = useState<string[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
 
+  const isDateRangeField = filter.fieldId === DEAL_CREATED_AT_FIELD_ID;
+
   useEffect(() => {
-    if (!filter.fieldId || !currentUser?.account_id) {
+    if (!filter.fieldId || !currentUser?.account_id || isDateRangeField) {
       setFieldOptions([]);
       return;
     }
@@ -95,11 +98,21 @@ function SingleDealFilter({
     };
 
     fetchOptions();
-  }, [filter.fieldId, currentUser?.account_id, dealFields]);
+  }, [filter.fieldId, currentUser?.account_id, dealFields, isDateRangeField]);
 
   const handleFieldSelect = (value: string) => {
     if (value === 'none') {
       onRemove(index);
+      return;
+    }
+    if (value === DEAL_CREATED_AT_FIELD_ID) {
+      onUpdate(index, {
+        fieldId: DEAL_CREATED_AT_FIELD_ID,
+        fieldName: 'Data de criação do Negócio',
+        selectedValues: [],
+        dateFrom: '',
+        dateTo: '',
+      });
       return;
     }
     const field = dealFields.find(f => f.id === value);
@@ -143,7 +156,31 @@ function SingleDealFilter({
         </SelectContent>
       </Select>
 
-      {filter.fieldId && fieldOptions.length > 0 && (
+      {isDateRangeField && (
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">De</Label>
+            <Input
+              type="date"
+              value={filter.dateFrom || ''}
+              onChange={(e) => onUpdate(index, { ...filter, dateFrom: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Até</Label>
+            <Input
+              type="date"
+              value={filter.dateTo || ''}
+              onChange={(e) => onUpdate(index, { ...filter, dateTo: e.target.value })}
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Filtra negócios cuja data de criação está no intervalo selecionado.
+          </p>
+        </div>
+      )}
+
+      {!isDateRangeField && filter.fieldId && fieldOptions.length > 0 && (
         <div className="space-y-1 max-h-[150px] overflow-y-auto">
           {loadingOptions ? (
             <p className="text-xs text-muted-foreground">Carregando opções...</p>
@@ -164,7 +201,7 @@ function SingleDealFilter({
         </div>
       )}
 
-      {filter.fieldId && !loadingOptions && fieldOptions.length === 0 && (
+      {!isDateRangeField && filter.fieldId && !loadingOptions && fieldOptions.length === 0 && (
         <p className="text-xs text-muted-foreground">Nenhuma opção encontrada.</p>
       )}
     </div>
@@ -189,7 +226,14 @@ export function DealFieldFilterSection({ filters, onFiltersChange, dealStatusFil
           .order('display_order', { ascending: true });
 
         if (data) {
-          setDealFields(data as DealField[]);
+          // Prepend the virtual "Data de criação do Negócio" field so it appears at the top
+          const virtualDateField: DealField = {
+            id: DEAL_CREATED_AT_FIELD_ID,
+            name: 'Data de criação do Negócio',
+            field_type: 'date',
+            options: null,
+          };
+          setDealFields([virtualDateField, ...(data as DealField[])]);
         }
       } catch (error) {
         console.error('Error fetching deal custom fields:', error);

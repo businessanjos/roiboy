@@ -104,11 +104,17 @@ export interface VisualConfig {
   };
 }
 
+// Special virtual field id used to filter deals by their creation date
+export const DEAL_CREATED_AT_FIELD_ID = '__deal_created_at__';
+
 // Individual field filter for multi-filter support
 export interface FieldFilter {
   fieldId: string;
   fieldName: string;
   selectedValues: string[];
+  // Used only for date-range virtual fields (e.g. deal created_at)
+  dateFrom?: string; // ISO yyyy-mm-dd
+  dateTo?: string;   // ISO yyyy-mm-dd
 }
 
 // Normalize legacy single filter + new array filters into a unified array
