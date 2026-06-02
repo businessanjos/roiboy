@@ -825,7 +825,24 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "deals_with_multiple_meetings_for_user",
+      description: "Conta quantos NEGÓCIOS (deals) tiveram MAIS DE UMA reunião realizada (call comercial concluída) atribuída a um vendedor no período. Use SEMPRE que o gestor perguntar 'quantos deals tiveram mais de 1 reunião' ou 'quantos negócios precisaram de mais de uma call pra fechar'. Considera todas as atividades brutas (sem deduplicar) e agrupa por deal_id. Opcionalmente filtre por month (YYYY-MM) e min_meetings (default 2).",
+      parameters: {
+        type: "object",
+        properties: {
+          user_id: { type: "string" },
+          month: { type: "string", description: "Filtro opcional YYYY-MM (ex: 2026-05)" },
+          min_meetings: { type: "number", description: "Limite mínimo de reuniões por deal para entrar na contagem (default 2)." },
+        },
+        required: ["user_id"],
+      },
+    },
+  },
 ];
+
 
 async function execTool(admin: ReturnType<typeof createClient>, accountId: string, sinceIso: string, name: string, args: any): Promise<any> {
   try {
