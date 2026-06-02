@@ -105,7 +105,7 @@ export default function MarketingProjects() {
             <ProjectCard
               key={project.id}
               project={project}
-              onOpen={() => setDetailId(project.id)}
+              onOpen={() => navigate(`/marketing/projetos/${project.id}`)}
               onEdit={() => { setEditing(project); setFormOpen(true); }}
               onDelete={() => {
                 if (confirm(`Remover o projeto "${project.name}"? Esta ação não pode ser desfeita.`)) {
