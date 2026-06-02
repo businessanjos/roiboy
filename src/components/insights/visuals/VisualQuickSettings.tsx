@@ -324,8 +324,8 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
         // Save as array format (new multi-filter), clear legacy single filter
         leadFieldFilter: undefined,
         dealFieldFilter: undefined,
-        leadFieldFilters: leadFilters.filter(f => f.fieldId && f.selectedValues.length > 0),
-        dealFieldFilters: dealFilters.filter(f => f.fieldId && f.selectedValues.length > 0),
+        leadFieldFilters: leadFilters.filter(f => f.fieldId && (f.selectedValues.length > 0 || !!f.dateFrom || !!f.dateTo)),
+        dealFieldFilters: dealFilters.filter(f => f.fieldId && (f.selectedValues.length > 0 || !!f.dateFrom || !!f.dateTo)),
         dealStatusFilter: dealStatusFilter.length > 0 ? dealStatusFilter : undefined,
         stackByCustomField: stackByCustomField || undefined,
         seriesColors: Object.keys(seriesColors).length > 0 ? seriesColors : undefined,
