@@ -932,9 +932,11 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         const { data } = await admin
           .from("deals")
           .select("id, title, status, value, received_value, won_at, lost_at, client_id, clients(full_name)")
+          .eq("account_id", accountId)
           .in("id", dealIds)
           .limit(500);
         dealsInfo = data ?? [];
+
       }
       const dealsList = dealsAboveThreshold
         .map(([id, v]) => {
@@ -1214,7 +1216,7 @@ REGRAS DURAS:
 - Quando terminar, responda em JSON PURO:
 {
   "analysis": "análise factual curta com os números encontrados",
-  "kpi": null OU { "label": "string", "value": número, "value_text": "R$ X", "unit": "BRL|%|qtd|dias|null", "period": "ex: 'mai/2026'", "comparison": "opcional", "trend": "up|down|flat" },
+  "kpi": null OU { "label": "string", "value": número, "value_text": "string já formatada para o usuário (ex: '31 reuniões', 'R$ 12.500', '23%', '14 dias') — NUNCA force 'R$' em contagem", "unit": "BRL|%|qtd|dias|null — escolha a unidade real do dado", "period": "ex: 'mai/2026'", "comparison": "opcional", "trend": "up|down|flat" },
   "chart_hint": null OU { "type": "bar|line|pie", "data": [{"label":"x","value":n}] }
 }`;
 
@@ -1345,15 +1347,18 @@ Se a análise não trouxer número, diga em 1 linha o que falta e pare. NUNCA in
               try {
                 const parsed = JSON.parse(payload);
                 const delta = parsed.choices?.[0]?.delta?.content;
-                if (delta) insightText += delta;
+                if (delta) {
+                  insightText += delta;
+                  // Streaming real: envia cada chunk sanitizado na hora.
+                  send(JSON.stringify({ type: "delta", content: scrubExecutiveText(delta) }));
+                }
               } catch {
                 buffer = line + "\n" + buffer;
                 break;
               }
             }
           }
-          const safeInsightText = scrubExecutiveText(insightText);
-          send(JSON.stringify({ type: "delta", content: safeInsightText }));
+
           send(JSON.stringify({
             type: "metadata",
             kpi: scrubStringsOnly(analyst.kpi ?? null),
