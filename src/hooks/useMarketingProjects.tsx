@@ -79,6 +79,15 @@ export const PROJECT_STATUS_META: Record<
   cancelled: { label: "Cancelado", color: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30" },
 };
 
+// Resolve a possibly-auth_user_id value into the matching users.id (FK target)
+async function resolveUserId(value: string | null): Promise<string | null> {
+  if (!value) return null;
+  const { data: byId } = await supabase.from("users").select("id").eq("id", value).maybeSingle();
+  if (byId?.id) return byId.id;
+  const { data: byAuth } = await supabase.from("users").select("id").eq("auth_user_id", value).maybeSingle();
+  return byAuth?.id ?? null;
+}
+
 export function useMarketingProjects() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
@@ -114,6 +123,7 @@ export function useMarketingProjects() {
   const create = useMutation({
     mutationFn: async (payload: Partial<MarketingProject>) => {
       if (!accountId) throw new Error("no account");
+      const ownerId = await resolveUserId(payload.owner_user_id ?? null);
       const { data, error } = await supabase
         .from("marketing_projects" as any)
         .insert({
@@ -128,7 +138,7 @@ export function useMarketingProjects() {
           target_date: payload.target_date ?? null,
           budget_planned: payload.budget_planned ?? null,
           budget_actual: payload.budget_actual ?? null,
-          owner_user_id: payload.owner_user_id ?? null,
+          owner_user_id: ownerId,
         })
         .select()
         .single();
@@ -144,9 +154,13 @@ export function useMarketingProjects() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...payload }: Partial<MarketingProject> & { id: string }) => {
+      const finalPayload: any = { ...payload };
+      if ("owner_user_id" in payload) {
+        finalPayload.owner_user_id = await resolveUserId(payload.owner_user_id ?? null);
+      }
       const { error } = await supabase
         .from("marketing_projects" as any)
-        .update(payload)
+        .update(finalPayload)
         .eq("id", id);
       if (error) throw error;
     },
