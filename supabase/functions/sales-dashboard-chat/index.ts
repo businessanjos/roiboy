@@ -932,9 +932,11 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         const { data } = await admin
           .from("deals")
           .select("id, title, status, value, received_value, won_at, lost_at, client_id, clients(full_name)")
+          .eq("account_id", accountId)
           .in("id", dealIds)
           .limit(500);
         dealsInfo = data ?? [];
+
       }
       const dealsList = dealsAboveThreshold
         .map(([id, v]) => {
