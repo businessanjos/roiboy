@@ -93,6 +93,21 @@ function sanitizeForExecutive(input: any): any {
   return output;
 }
 
+function scrubStringsOnly(input: any): any {
+  if (Array.isArray(input)) return input.map(scrubStringsOnly);
+  if (!input || typeof input !== "object") return typeof input === "string" ? scrubExecutiveText(input) : input;
+  return Object.fromEntries(Object.entries(input).map(([key, value]) => [key, scrubStringsOnly(value)]));
+}
+
+function sanitizeAnalystPayload(payload: any) {
+  const safe = scrubStringsOnly(payload ?? {});
+  return {
+    analysis: scrubExecutiveText(String(safe.analysis ?? "")),
+    kpi: safe.kpi ?? null,
+    chart_hint: safe.chart_hint ?? null,
+  };
+}
+
 // ===== Classificador de reuniões (DEVE espelhar src/lib/sales/meetingMetrics.ts) =====
 // Conta APENAS tasks classificadas como "held" (reunião realizada/concluída/alinhamento).
 // Dedupe: 2 reuniões com o mesmo cliente (por vendedor) contam como 1.
