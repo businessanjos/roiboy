@@ -1186,7 +1186,7 @@ REGRAS DURAS:
           }
 
           if (!analyst) analyst = { analysis: "Não foi possível concluir a análise.", kpi: null, chart_hint: null };
-          analyst = sanitizeForExecutive(analyst);
+          analyst = sanitizeAnalystPayload(analyst);
 
           // ============= FASE 2: INSIGHT executivo (streaming) =============
           send(JSON.stringify({ type: "status", stage: "gpt", content: "Gerando insight…" }));
@@ -1264,8 +1264,8 @@ Se a análise não trouxer número, diga em 1 linha o que falta e pare. NUNCA in
           send(JSON.stringify({ type: "delta", content: safeInsightText }));
           send(JSON.stringify({
             type: "metadata",
-            kpi: sanitizeForExecutive(analyst.kpi ?? null),
-            chart_hint: sanitizeForExecutive(analyst.chart_hint ?? null),
+            kpi: scrubStringsOnly(analyst.kpi ?? null),
+            chart_hint: scrubStringsOnly(analyst.chart_hint ?? null),
             analysis: scrubExecutiveText(String(analyst.analysis ?? "")),
             period_months: monthsBack,
             models: { analyst: "google/gemini-2.5-pro", insight: insightModel },
