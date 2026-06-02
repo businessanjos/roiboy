@@ -908,6 +908,67 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         method: "Fonte oficial do dashboard: atividades concluídas classificadas como reunião realizada, sem duplicar o mesmo atendimento.",
       };
     }
+    if (name === "deals_with_multiple_meetings_for_user") {
+      const uid = args.user_id;
+      const month: string | undefined = args.month;
+      const minMeetings = Math.max(2, Number(args.min_meetings) || 2);
+      const endIso = new Date().toISOString();
+      const rawHeld = await fetchHeldMeetingTasksRaw(admin, accountId, sinceIso, endIso);
+      let userRaw = rawHeld.filter((t: any) => t.assigned_to === uid && t.deal_id);
+      if (month) userRaw = userRaw.filter((t: any) => (t.completed_at ?? "").slice(0, 7) === month);
+
+      const byDeal: Record<string, { count: number; dates: string[] }> = {};
+      for (const t of userRaw) {
+        const k = t.deal_id as string;
+        if (!byDeal[k]) byDeal[k] = { count: 0, dates: [] };
+        byDeal[k].count++;
+        if (t.completed_at) byDeal[k].dates.push(t.completed_at);
+      }
+      const dealsAboveThreshold = Object.entries(byDeal).filter(([, v]) => v.count >= minMeetings);
+      const dealIds = dealsAboveThreshold.map(([id]) => id);
+
+      let dealsInfo: any[] = [];
+      if (dealIds.length > 0) {
+        const { data } = await admin
+          .from("deals")
+          .select("id, title, status, value, received_value, won_at, lost_at, client_id, clients(full_name)")
+          .in("id", dealIds)
+          .limit(500);
+        dealsInfo = data ?? [];
+      }
+      const dealsList = dealsAboveThreshold
+        .map(([id, v]) => {
+          const d = dealsInfo.find((x: any) => x.id === id);
+          return {
+            negociacao: d?.title ?? "(sem título)",
+            cliente: d?.clients?.full_name ?? "(sem cliente)",
+            situacao: d?.status ?? "—",
+            reunioes_realizadas: v.count,
+            primeira: v.dates.sort()[0] ?? null,
+            ultima: v.dates.sort().slice(-1)[0] ?? null,
+          };
+        })
+        .sort((a, b) => b.reunioes_realizadas - a.reunioes_realizadas);
+
+      // distribuição
+      const distribution: Record<string, number> = {};
+      for (const [, v] of Object.entries(byDeal)) {
+        const k = String(v.count);
+        distribution[k] = (distribution[k] ?? 0) + 1;
+      }
+
+      return {
+        periodo: month ?? `últimos meses desde ${sinceIso.slice(0, 10)}`,
+        deals_com_pelo_menos_uma_reuniao: Object.keys(byDeal).length,
+        deals_com_mais_de_uma_reuniao: dealsAboveThreshold.length,
+        limite_minimo_aplicado: minMeetings,
+        atividades_brutas_consideradas: userRaw.length,
+        distribuicao_reunioes_por_deal: distribution,
+        lista: dealsList.slice(0, 50),
+        metodo: "Conta atividades brutas (sem deduplicar) classificadas como reunião realizada, agrupadas por negociação (deal_id). Atividades sem deal vinculado ficam fora.",
+      };
+    }
+
     if (name === "search_client") {
       const { data: clients } = await admin.from("clients").select("id,full_name,status,phone_e164,business_segment").eq("account_id", accountId).ilike("full_name", `%${args.name}%`).limit(20);
       return { results: clients ?? [] };
