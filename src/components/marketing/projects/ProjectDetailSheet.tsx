@@ -34,9 +34,11 @@ import {
   ExternalLink,
   DollarSign,
   ArrowLeft,
+  Sparkles,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ProjectCopilotPanel } from "./ProjectCopilotPanel";
 
 export function ProjectDetailView({ projectId }: { projectId: string }) {
   const navigate = useNavigate();
