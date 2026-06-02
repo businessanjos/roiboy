@@ -33,7 +33,7 @@ export default function MarketingProjects() {
   const [statusFilter, setStatusFilter] = useState<MarketingProjectStatus | "all">("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MarketingProject | null>(null);
-  const [detailId, setDetailId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const filtered = projects.filter(p => {
     const matchesSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
