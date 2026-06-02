@@ -23,6 +23,76 @@ interface ReqBody {
 
 const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+const TECHNICAL_KEYS = new Set([
+  "id", "deal_id", "client_id", "task_id", "lead_id", "user_id", "product_id", "pipeline_id", "stage_id",
+  "account_id", "auth_user_id", "responsible_user_id", "sdr_user_id", "seller_user_id", "owner_user_id",
+]);
+
+const EXECUTIVE_LABELS: Record<string, string> = {
+  deal_id: "negociação",
+  client_id: "cliente",
+  task_id: "atividade",
+  lead_id: "lead",
+  user_id: "responsável",
+  product_id: "produto",
+  pipeline_id: "funil",
+  stage_id: "etapa",
+  responsible_user_id: "responsável",
+  sdr_user_id: "SDR",
+  seller_user_id: "vendedor",
+  won_count: "vendas ganhas",
+  lost_count: "vendas perdidas",
+  open_count: "negociações abertas",
+  won_value: "valor ganho",
+  lost_value: "valor perdido",
+  open_value: "valor em aberto",
+  win_rate: "taxa de conversão",
+  avg_ticket_won: "ticket médio ganho",
+  held_meetings_total: "reuniões realizadas",
+  held_meetings_by_month: "reuniões por mês",
+  days_stagnant: "dias parado",
+  year_month: "mês",
+  goal: "meta",
+  super_goal: "super meta",
+  realized: "realizado",
+  attainment_pct: "atingimento",
+  value: "valor",
+  title: "negociação",
+  source: "origem",
+  status: "status",
+  created_at: "criado em",
+  won_at: "ganho em",
+  lost_at: "perdido em",
+  completed_at: "concluído em",
+  activity_type: "tipo de atividade",
+};
+
+function isTechnicalKey(key: string) {
+  return TECHNICAL_KEYS.has(key) || /(^|_)id$/.test(key) || key.endsWith("_uuid");
+}
+
+function scrubExecutiveText(text: string) {
+  let out = text.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, "registro interno");
+  for (const [raw, label] of Object.entries(EXECUTIVE_LABELS)) {
+    out = out.replace(new RegExp(`\\b${raw}\\b`, "gi"), label);
+  }
+  out = out.replace(/\b([a-z]+(?:_[a-z0-9]+)+)\b/gi, (m) => EXECUTIVE_LABELS[m.toLowerCase()] ?? m.replace(/_/g, " "));
+  out = out.replace(/\b(?:public|supabase|internal_tasks|sales_meetings|deals|clients|client_contracts|deal_activities)\b/gi, "base interna");
+  return out;
+}
+
+function sanitizeForExecutive(input: any): any {
+  if (Array.isArray(input)) return input.map(sanitizeForExecutive);
+  if (!input || typeof input !== "object") return typeof input === "string" ? scrubExecutiveText(input) : input;
+  const output: Record<string, any> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (isTechnicalKey(key)) continue;
+    const safeKey = EXECUTIVE_LABELS[key] ?? key;
+    output[safeKey] = sanitizeForExecutive(value);
+  }
+  return output;
+}
+
 // ===== Classificador de reuniões (DEVE espelhar src/lib/sales/meetingMetrics.ts) =====
 // Conta APENAS tasks classificadas como "held" (reunião realizada/concluída/alinhamento).
 // Dedupe: 2 reuniões com o mesmo cliente (por vendedor) contam como 1.
