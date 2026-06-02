@@ -1214,7 +1214,7 @@ REGRAS DURAS:
 - Quando terminar, responda em JSON PURO:
 {
   "analysis": "análise factual curta com os números encontrados",
-  "kpi": null OU { "label": "string", "value": número, "value_text": "R$ X", "unit": "BRL|%|qtd|dias|null", "period": "ex: 'mai/2026'", "comparison": "opcional", "trend": "up|down|flat" },
+  "kpi": null OU { "label": "string", "value": número, "value_text": "string já formatada para o usuário (ex: '31 reuniões', 'R$ 12.500', '23%', '14 dias') — NUNCA force 'R$' em contagem", "unit": "BRL|%|qtd|dias|null — escolha a unidade real do dado", "period": "ex: 'mai/2026'", "comparison": "opcional", "trend": "up|down|flat" },
   "chart_hint": null OU { "type": "bar|line|pie", "data": [{"label":"x","value":n}] }
 }`;
 
