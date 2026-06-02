@@ -1017,6 +1017,7 @@ DIMENSÕES NO SNAPSHOT (use direto, sem tool):
 
 USE FERRAMENTAS quando faltar:
 - Nome de pessoa → search_user + user_performance + (meta) user_goal_attainment_detail
+- Quantas reuniões REALIZADAS um vendedor fez em um mês → primeiro olhe held_meetings_by_user_by_month no snapshot. Se precisar listar/auditar, use held_meetings_for_user com {user_id, month: "YYYY-MM"}.
 - Nome de cliente → search_client + client_details
 - Funil de um pipeline → pipeline_funnel
 - Lista de deals (top, por filtro, em aberto) → deals_by_filter
