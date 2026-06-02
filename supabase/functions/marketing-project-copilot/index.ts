@@ -113,12 +113,16 @@ async function executeTool(
           account_id: accountId,
           title: args.title,
           description: args.description ?? null,
+          start_date: args.start_date ?? null,
           due_date: args.due_date ?? null,
+          phase: args.phase ?? "planning",
+          priority: args.priority ?? "medium",
+          owner: args.owner ?? null,
         })
         .select()
         .single();
       if (error) throw error;
-      return { success: true, milestone_id: data.id, title: data.title };
+      return { success: true, milestone_id: data.id, title: data.title, phase: data.phase };
     }
     if (name === "criar_tarefa") {
       const { data: task, error } = await supabase
