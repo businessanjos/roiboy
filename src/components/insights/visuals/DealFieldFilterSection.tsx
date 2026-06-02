@@ -226,7 +226,14 @@ export function DealFieldFilterSection({ filters, onFiltersChange, dealStatusFil
           .order('display_order', { ascending: true });
 
         if (data) {
-          setDealFields(data as DealField[]);
+          // Prepend the virtual "Data de criação do Negócio" field so it appears at the top
+          const virtualDateField: DealField = {
+            id: DEAL_CREATED_AT_FIELD_ID,
+            name: 'Data de criação do Negócio',
+            field_type: 'date',
+            options: null,
+          };
+          setDealFields([virtualDateField, ...(data as DealField[])]);
         }
       } catch (error) {
         console.error('Error fetching deal custom fields:', error);
