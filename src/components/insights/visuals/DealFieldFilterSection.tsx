@@ -156,7 +156,31 @@ function SingleDealFilter({
         </SelectContent>
       </Select>
 
-      {filter.fieldId && fieldOptions.length > 0 && (
+      {isDateRangeField && (
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">De</Label>
+            <Input
+              type="date"
+              value={filter.dateFrom || ''}
+              onChange={(e) => onUpdate(index, { ...filter, dateFrom: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Até</Label>
+            <Input
+              type="date"
+              value={filter.dateTo || ''}
+              onChange={(e) => onUpdate(index, { ...filter, dateTo: e.target.value })}
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Filtra negócios cuja data de criação está no intervalo selecionado.
+          </p>
+        </div>
+      )}
+
+      {!isDateRangeField && filter.fieldId && fieldOptions.length > 0 && (
         <div className="space-y-1 max-h-[150px] overflow-y-auto">
           {loadingOptions ? (
             <p className="text-xs text-muted-foreground">Carregando opções...</p>
@@ -177,7 +201,7 @@ function SingleDealFilter({
         </div>
       )}
 
-      {filter.fieldId && !loadingOptions && fieldOptions.length === 0 && (
+      {!isDateRangeField && filter.fieldId && !loadingOptions && fieldOptions.length === 0 && (
         <p className="text-xs text-muted-foreground">Nenhuma opção encontrada.</p>
       )}
     </div>
