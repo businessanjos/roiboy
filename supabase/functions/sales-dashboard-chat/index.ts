@@ -128,7 +128,7 @@ function meetingDedupeKey(assignedTo: string | null | undefined, t: { id?: strin
 }
 
 // Busca paginada de internal_tasks com completed_at no intervalo (mesmo padrão do SalesDashboard).
-async function fetchHeldMeetingTasks(admin: ReturnType<typeof createClient>, accountId: string, startIso: string, endIso: string) {
+async function fetchHeldMeetingTasksRaw(admin: ReturnType<typeof createClient>, accountId: string, startIso: string, endIso: string) {
   const PAGE = 1000;
   let from = 0;
   const all: any[] = [];
@@ -147,7 +147,11 @@ async function fetchHeldMeetingTasks(admin: ReturnType<typeof createClient>, acc
     if (batch.length < PAGE) break;
     from += PAGE;
   }
-  const held = all.filter((t: any) => classifyMeetingTask(t.activity_types?.name, t.title) === "held");
+  return all.filter((t: any) => classifyMeetingTask(t.activity_types?.name, t.title) === "held");
+}
+
+async function fetchHeldMeetingTasks(admin: ReturnType<typeof createClient>, accountId: string, startIso: string, endIso: string) {
+  const held = await fetchHeldMeetingTasksRaw(admin, accountId, startIso, endIso);
   const seen = new Set<string>();
   const deduped: any[] = [];
   for (const t of held) {
@@ -158,6 +162,7 @@ async function fetchHeldMeetingTasks(admin: ReturnType<typeof createClient>, acc
   }
   return deduped;
 }
+
 
 // ============= SNAPSHOT (compacto, agregado, completo) =============
 async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: string, monthsBack: number) {
