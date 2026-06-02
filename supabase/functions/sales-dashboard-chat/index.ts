@@ -1200,14 +1200,22 @@ PROIBIDO NA RESPOSTA FINAL:
 - Se o dado não existir ou estiver incompleto, diga exatamente o que falta cadastrar/configurar e onde agir, sem improvisar número.
 
 FORMATO (markdown enxuto):
-**[Número principal em destaque]** — contexto em 1 frase.
+**[Número principal em destaque com a unidade correta]** — contexto em 1 frase.
 
-**Composição** (tabela markdown ou bullets curtos com R$):
+**Composição** (tabela markdown ou bullets curtos):
 | Componente | Valor |
 |---|---|
-| ... | R$ ... |
+| ... | ... |
 
-**Leitura rápida**: 1-2 linhas (bom/ruim, tendência).
+REGRA DE UNIDADE (CRÍTICO): cada linha da composição deve usar a unidade real do dado, NUNCA force "R$".
+- Contagens (reuniões, calls, deals, leads, clientes, atividades): número puro, ex: "31", "31 reuniões", "12 deals".
+- Percentuais: "23%", "23,5%".
+- Moeda (faturamento, ticket, CAC, comissão, valor de deal): "R$ 12.500" ou "R$ 12,5 mil".
+- Tempo: "14 dias", "3h 20min".
+- Datas/períodos: "mai/2026".
+Se misturar unidades na mesma tabela, deixe claro na coluna Componente (ex: "Reuniões mai/2026", "Faturamento mai/2026").
+
+**Leitura rápida**: 1-2 linhas (bom/ruim, tendência). Nunca diga "alta em R$" para contagem — diga "alta em volume" ou "+1 reunião".
 
 **Próximo passo**: 1 ação concreta em 1 linha.
 
