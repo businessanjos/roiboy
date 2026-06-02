@@ -316,6 +316,24 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     if (m.status === "no_show" || m.status === "noshow") meetingsByMonth[mo].no_show++;
   }
 
+  // ===== Reuniões REALIZADAS (fonte oficial: internal_tasks classificadas como "held", deduplicadas) =====
+  // ESTA é a métrica que o Sales Dashboard mostra. Sempre prefira held_meetings_* a meetings_by_month.
+  const heldMeetingTasks = await fetchHeldMeetingTasks(admin, accountId, sinceIso, new Date().toISOString());
+  const heldMeetingsByUser: Record<string, { user_id: string; name: string; count: number }> = {};
+  const heldMeetingsByUserByMonth: Record<string, Record<string, number>> = {};
+  const heldMeetingsByMonth: Record<string, number> = {};
+  for (const t of heldMeetingTasks) {
+    const uid = t.assigned_to ?? "unknown";
+    const mo = (t.completed_at ?? "").slice(0, 7);
+    heldMeetingsByUser[uid] ??= { user_id: uid, name: userMap.get(uid) ?? "Desconhecido", count: 0 };
+    heldMeetingsByUser[uid].count++;
+    if (mo) {
+      heldMeetingsByMonth[mo] = (heldMeetingsByMonth[mo] ?? 0) + 1;
+      heldMeetingsByUserByMonth[uid] ??= {};
+      heldMeetingsByUserByMonth[uid][mo] = (heldMeetingsByUserByMonth[uid][mo] ?? 0) + 1;
+    }
+  }
+
   const activitiesByUser: Record<string, { name: string; total: number; by_type: Record<string, number> }> = {};
   for (const a of (activitiesR.data ?? []) as any[]) {
     const uid = a.user_id ?? "unknown";
