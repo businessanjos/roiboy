@@ -567,6 +567,10 @@ async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: 
     spiff_payouts_by_month: spiffByMonth,
     cac_by_month: cacByMonth,
     meetings_by_month: meetingsByMonth,
+    held_meetings_total: heldMeetingTasks.length,
+    held_meetings_by_month: heldMeetingsByMonth,
+    held_meetings_by_user: Object.values(heldMeetingsByUser).sort((a, b) => b.count - a.count).slice(0, 100),
+    held_meetings_by_user_by_month: heldMeetingsByUserByMonth,
     activities_by_user: Object.values(activitiesByUser).sort((a, b) => b.total - a.total).slice(0, 50),
     calls_by_user: Object.values(callsByUser).sort((a, b) => b.count - a.count).slice(0, 50),
     churn_risk_distribution: (() => {
