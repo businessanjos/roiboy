@@ -286,7 +286,7 @@ PROJETO ATUAL:
 - **Descrição**: ${project.description || "—"}
 
 ESTADO ATUAL:
-- **Marcos** (${milestones?.length || 0}): ${fmtList(milestones, (m) => `${m.completed ? "✅" : "⏳"} ${m.title}${m.due_date ? ` (${m.due_date})` : ""}`)}
+- **Marcos** (${milestones?.length || 0}): ${fmtList(milestones, (m: any) => `${m.completed ? "✅" : "⏳"} [${m.phase}] ${m.title}${m.due_date ? ` (até ${m.due_date})` : ""}${m.owner ? ` · @${m.owner}` : ""} · prio:${m.priority}`)}
 - **Stakeholders** (${stakeholders?.length || 0}): ${fmtList(stakeholders, (s) => `${s.name || "Interno"} — ${s.role}`)}
 - **Documentos** (${docs?.length || 0}): ${fmtList(docs, (d) => `[${d.kind}] ${d.title}`)}
 - **Tarefas vinculadas** (${linkedTasks?.length || 0}): ${fmtList(linkedTasks, (t: any) => t.marketing_tasks?.title)}
