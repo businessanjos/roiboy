@@ -864,15 +864,16 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         total: userHeld.length,
         by_month: byMonth,
         sample: userHeld.slice(0, 25).map((t: any) => ({
-          task_id: t.id, completed_at: t.completed_at, title: t.title,
-          activity_type: t.activity_types?.name, client_id: t.client_id, deal_id: t.deal_id, lead_id: t.lead_id,
+          concluida_em: t.completed_at,
+          titulo: t.title,
+          tipo_de_atividade: t.activity_types?.name,
         })),
-        method: "internal_tasks com completed_at no período, classificadas como 'held' (concluída/realizada/alinhamento/reunião), deduplicadas por (vendedor + cliente|deal|lead).",
+        method: "Fonte oficial do dashboard: atividades concluídas classificadas como reunião realizada, sem duplicar o mesmo atendimento.",
       };
     }
     if (name === "search_client") {
       const { data: clients } = await admin.from("clients").select("id,full_name,status,phone_e164,business_segment").eq("account_id", accountId).ilike("full_name", `%${args.name}%`).limit(20);
-      return { results: clients ?? [] };
+      return { results: (clients ?? []).map((c: any) => ({ nome: c.full_name, status: c.status, segmento: c.business_segment })) };
     }
     if (name === "client_details") {
       const cid = args.client_id;
@@ -882,7 +883,7 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         admin.from("deals").select("id,title,status,value,received_value,won_at,lost_at,source").eq("account_id", accountId).eq("client_id", cid).limit(50),
       ]);
       const ltv = (contracts.data ?? []).reduce((s: number, c: any) => s + Number(c.value ?? 0), 0);
-      return { client: client.data, contracts: contracts.data ?? [], deals: deals.data ?? [], ltv };
+      return sanitizeForExecutive({ cliente: client.data, contratos: contracts.data ?? [], negociacoes: deals.data ?? [], ltv });
     }
     if (name === "pipeline_funnel") {
       const [stagesR, dealsR] = await Promise.all([
@@ -911,7 +912,15 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
       if (typeof args.min_value === "number") {
         result = result.filter((d: any) => Number(d.received_value ?? d.value ?? 0) >= args.min_value);
       }
-      return { deals: result };
+      return { negociacoes: result.map((d: any) => ({
+        negociacao: d.title,
+        valor: Number(d.received_value ?? d.value ?? 0),
+        status: d.status,
+        origem: d.source,
+        ganho_em: d.won_at,
+        perdido_em: d.lost_at,
+        criado_em: d.created_at,
+      })) };
     }
     if (name === "lost_deals_breakdown") {
       const days = args.days_back ?? 90;
@@ -968,7 +977,7 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         deals: (data ?? []).slice(0, 30).map((d: any) => {
           const ref = d.stage_changed_at ?? d.created_at;
           return {
-            id: d.id, title: d.title,
+            negociacao: d.title,
             value: Number(d.received_value ?? d.value ?? 0),
             stage: sMap.get(d.stage_id) ?? null,
             responsible: uMap.get(d.responsible_user_id) ?? null,
