@@ -23,6 +23,57 @@ interface ReqBody {
 
 const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+// ===== Classificador de reuniões (DEVE espelhar src/lib/sales/meetingMetrics.ts) =====
+// Conta APENAS tasks classificadas como "held" (reunião realizada/concluída/alinhamento).
+// Dedupe: 2 reuniões com o mesmo cliente (por vendedor) contam como 1.
+type MeetingKind = "held" | "noshow" | "scheduled" | "none";
+function classifyMeetingTask(activityName?: string | null, title?: string | null): MeetingKind {
+  const s = ((activityName || "") + " " + (title || "")).toLowerCase();
+  if (!s.trim()) return "none";
+  if (s.includes("no-show") || s.includes("no show") || s.includes("noshow")) return "noshow";
+  if (s.includes("call comercial agendada") || s.includes("agendamento") || s.includes("agendada")) return "scheduled";
+  if (
+    s.includes("concluída") || s.includes("concluida") || s.includes("realizada") ||
+    s.includes("alinhamento") || s.includes("reunião") || s.includes("reuniao") || s.includes("meeting")
+  ) return "held";
+  return "none";
+}
+function meetingDedupeKey(assignedTo: string | null | undefined, t: { id?: string | null; client_id?: string | null; deal_id?: string | null; lead_id?: string | null }) {
+  return `${assignedTo || "unassigned"}|${t.client_id || t.deal_id || t.lead_id || t.id || "unknown"}`;
+}
+
+// Busca paginada de internal_tasks com completed_at no intervalo (mesmo padrão do SalesDashboard).
+async function fetchHeldMeetingTasks(admin: ReturnType<typeof createClient>, accountId: string, startIso: string, endIso: string) {
+  const PAGE = 1000;
+  let from = 0;
+  const all: any[] = [];
+  while (from < 50000) {
+    const { data, error } = await admin
+      .from("internal_tasks")
+      .select("id, assigned_to, title, completed_at, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
+      .eq("account_id", accountId)
+      .not("completed_at", "is", null)
+      .gte("completed_at", startIso)
+      .lte("completed_at", endIso)
+      .range(from, from + PAGE - 1);
+    if (error) break;
+    const batch = data || [];
+    all.push(...batch);
+    if (batch.length < PAGE) break;
+    from += PAGE;
+  }
+  const held = all.filter((t: any) => classifyMeetingTask(t.activity_types?.name, t.title) === "held");
+  const seen = new Set<string>();
+  const deduped: any[] = [];
+  for (const t of held) {
+    const k = meetingDedupeKey(t.assigned_to, t);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    deduped.push(t);
+  }
+  return deduped;
+}
+
 // ============= SNAPSHOT (compacto, agregado, completo) =============
 async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: string, monthsBack: number) {
   const since = new Date();
