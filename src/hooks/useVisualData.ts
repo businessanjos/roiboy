@@ -68,9 +68,18 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
       let result: AggregatedDataPoint[];
 
+      // For funnel by stage_name, exclude won/lost from the per-stage breakdown:
+      // won deals are appended separately as "Ganhos" (avoid double-counting),
+      // and lost deals already exited the active pipeline.
+      const isStageFunnel = chartType === 'funnel' && dimension.field === 'stage_name';
+      const effectiveDealStatusFilter =
+        isStageFunnel && (!dealStatusFilter || dealStatusFilter.length === 0)
+          ? ['open']
+          : dealStatusFilter;
+
       switch (dataSource) {
         case 'deals':
-          result = await fetchDealsData(accountId, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, dealStatusFilter);
+          result = await fetchDealsData(accountId, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, effectiveDealStatusFilter);
           break;
         case 'leads':
           result = await fetchLeadsData(accountId, measure, dimension, filters, dateDisplayFormat, leadFilters, dealFilters, dealStatusFilter);
