@@ -1106,6 +1106,8 @@ USE FERRAMENTAS quando faltar:
 
 REGRAS DURAS:
 - NUNCA invente números. Se não estiver no snapshot nem nas tools, diga em 1 linha o que falta e o que cadastrar/configurar (ex: "Cadastrar metas em /sales-team > Metas").
+- NUNCA exponha nomes técnicos, ids ou colunas internas ao usuário: id, *_id, deal_id, client_id, task_id, user_id, pipeline_id, stage_id, internal_tasks, sales_meetings, nomes de tabelas ou UUIDs. Traduza tudo para linguagem executiva: cliente, negociação, responsável, etapa, reunião, mês, valor.
+- Não devolva JSON bruto de ferramenta. Agregue, traduza e explique o dado em português de negócio.
 - Quando a pergunta envolver meta e goal_attainment.annual_goal for null, recomende cadastrar metas — não improvise.
 - Quando a pergunta for sobre CAC e data_quality_notes mostrar baixa categorização, alertar a premissa.
 - NÃO peça mais informação ao usuário se a ferramenta resolve — chame a ferramenta.
@@ -1169,12 +1171,18 @@ REGRAS DURAS:
           }
 
           if (!analyst) analyst = { analysis: "Não foi possível concluir a análise.", kpi: null, chart_hint: null };
+          analyst = sanitizeForExecutive(analyst);
 
           // ============= FASE 2: INSIGHT executivo (streaming) =============
           send(JSON.stringify({ type: "status", stage: "gpt", content: "Gerando insight…" }));
           const insightSystem = `Você é AION, copiloto executivo. Receberá a pergunta e a análise factual com números reais.
 
 TOM: direto, executivo, brasileiro, sem floreio. Nada de "vou analisar", "é importante notar", "com base nos dados". Vá direto ao número.
+
+PROIBIDO NA RESPOSTA FINAL:
+- Nomes técnicos, colunas, ids, UUIDs, nomes de tabela, JSON bruto ou termos como deal_id, client_id, task_id, user_id, stage_id, pipeline_id, internal_tasks, sales_meetings.
+- Se precisar citar um registro, use o nome da negociação/cliente/responsável. Se não houver nome, escreva "registro interno" sem mostrar código.
+- Se o dado não existir ou estiver incompleto, diga exatamente o que falta cadastrar/configurar e onde agir, sem improvisar número.
 
 FORMATO (markdown enxuto):
 **[Número principal em destaque]** — contexto em 1 frase.
@@ -1214,6 +1222,7 @@ Se a análise não trouxer número, diga em 1 linha o que falta e pare. NUNCA in
           const decoder = new TextDecoder();
           const reader = gptResp.body.getReader();
           let buffer = "";
+          let insightText = "";
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -1229,18 +1238,20 @@ Se a análise não trouxer número, diga em 1 linha o que falta e pare. NUNCA in
               try {
                 const parsed = JSON.parse(payload);
                 const delta = parsed.choices?.[0]?.delta?.content;
-                if (delta) send(JSON.stringify({ type: "delta", content: delta }));
+                if (delta) insightText += delta;
               } catch {
                 buffer = line + "\n" + buffer;
                 break;
               }
             }
           }
+          const safeInsightText = scrubExecutiveText(insightText);
+          send(JSON.stringify({ type: "delta", content: safeInsightText }));
           send(JSON.stringify({
             type: "metadata",
-            kpi: analyst.kpi ?? null,
-            chart_hint: analyst.chart_hint ?? null,
-            analysis: analyst.analysis ?? null,
+            kpi: sanitizeForExecutive(analyst.kpi ?? null),
+            chart_hint: sanitizeForExecutive(analyst.chart_hint ?? null),
+            analysis: scrubExecutiveText(String(analyst.analysis ?? "")),
             period_months: monthsBack,
             models: { analyst: "google/gemini-2.5-pro", insight: insightModel },
           }));
