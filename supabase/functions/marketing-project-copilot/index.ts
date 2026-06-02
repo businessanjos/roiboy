@@ -12,15 +12,19 @@ const TOOLS = [
     type: "function",
     function: {
       name: "criar_marco",
-      description: "Cria um novo marco (milestone) no projeto. Use para quebrar o projeto em entregas-chave.",
+      description: "Cria um marco no projeto. SEMPRE escolha uma das 6 fases do roadmap: discovery (descoberta/pesquisa/objetivos), planning (estratégia/cronograma/briefing), pre_production (fornecedores/contratos/setup), production (execução/criação das entregas), launch (go-live/mídia/evento), post_launch (resultados/retrospectiva/relatórios).",
       parameters: {
         type: "object",
         properties: {
           title: { type: "string" },
-          description: { type: "string" },
+          description: { type: "string", description: "Detalhe entregas, critérios de aceite e dependências" },
+          start_date: { type: "string", description: "YYYY-MM-DD" },
           due_date: { type: "string", description: "YYYY-MM-DD" },
+          phase: { type: "string", enum: ["discovery", "planning", "pre_production", "production", "launch", "post_launch"] },
+          priority: { type: "string", enum: ["low", "medium", "high", "critical"] },
+          owner: { type: "string", description: "Nome do responsável" },
         },
-        required: ["title"],
+        required: ["title", "phase"],
       },
     },
   },
@@ -109,12 +113,16 @@ async function executeTool(
           account_id: accountId,
           title: args.title,
           description: args.description ?? null,
+          start_date: args.start_date ?? null,
           due_date: args.due_date ?? null,
+          phase: args.phase ?? "planning",
+          priority: args.priority ?? "medium",
+          owner: args.owner ?? null,
         })
         .select()
         .single();
       if (error) throw error;
-      return { success: true, milestone_id: data.id, title: data.title };
+      return { success: true, milestone_id: data.id, title: data.title, phase: data.phase };
     }
     if (name === "criar_tarefa") {
       const { data: task, error } = await supabase
@@ -232,7 +240,7 @@ Deno.serve(async (req) => {
     const [{ data: project }, { data: milestones }, { data: stakeholders }, { data: docs }, { data: linkedTasks }, { data: linkedEvents }] =
       await Promise.all([
         supabase.from("marketing_projects").select("*").eq("id", projectId).maybeSingle(),
-        supabase.from("marketing_project_milestones").select("title, due_date, completed").eq("project_id", projectId).order("display_order"),
+        supabase.from("marketing_project_milestones").select("title, phase, priority, owner, start_date, due_date, completed, progress").eq("project_id", projectId).order("display_order"),
         supabase.from("marketing_project_stakeholders").select("name, role, type, user_id").eq("project_id", projectId),
         supabase.from("marketing_project_documents").select("title, kind, url").eq("project_id", projectId),
         supabase.from("marketing_project_tasks").select("task_id, marketing_tasks(title, status, priority, due_date)").eq("project_id", projectId),
@@ -278,7 +286,7 @@ PROJETO ATUAL:
 - **Descrição**: ${project.description || "—"}
 
 ESTADO ATUAL:
-- **Marcos** (${milestones?.length || 0}): ${fmtList(milestones, (m) => `${m.completed ? "✅" : "⏳"} ${m.title}${m.due_date ? ` (${m.due_date})` : ""}`)}
+- **Marcos** (${milestones?.length || 0}): ${fmtList(milestones, (m: any) => `${m.completed ? "✅" : "⏳"} [${m.phase}] ${m.title}${m.due_date ? ` (até ${m.due_date})` : ""}${m.owner ? ` · @${m.owner}` : ""} · prio:${m.priority}`)}
 - **Stakeholders** (${stakeholders?.length || 0}): ${fmtList(stakeholders, (s) => `${s.name || "Interno"} — ${s.role}`)}
 - **Documentos** (${docs?.length || 0}): ${fmtList(docs, (d) => `[${d.kind}] ${d.title}`)}
 - **Tarefas vinculadas** (${linkedTasks?.length || 0}): ${fmtList(linkedTasks, (t: any) => t.marketing_tasks?.title)}

@@ -15,7 +15,16 @@ import {
   useProjectEvents,
   useProjectTasks,
   PROJECT_STATUS_META,
+  MILESTONE_PHASE_META,
+  MILESTONE_PHASE_ORDER,
+  MILESTONE_PRIORITY_META,
+  type MilestonePhase,
+  type MilestonePriority,
+  type ProjectMilestone,
 } from "@/hooks/useMarketingProjects";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTeamUsers } from "@/hooks/useTeamUsers";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -35,6 +44,14 @@ import {
   DollarSign,
   ArrowLeft,
   Sparkles,
+  ChevronDown,
+  ChevronRight,
+  User as UserIcon,
+  Flag,
+  CalendarRange,
+  Pencil,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -237,45 +254,318 @@ function StakeholdersTab({ projectId }: { projectId: string }) {
 
 // ===== Milestones =====
 function MilestonesTab({ projectId }: { projectId: string }) {
-  const { items, add, toggle, remove } = useProjectMilestones(projectId);
-  const [show, setShow] = useState(false);
-  const [title, setTitle] = useState("");
-  const [due, setDue] = useState("");
+  const { items, add, update, toggle, remove } = useProjectMilestones(projectId);
+  const [editing, setEditing] = useState<ProjectMilestone | null>(null);
+  const [creatingPhase, setCreatingPhase] = useState<MilestonePhase | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const grouped = MILESTONE_PHASE_ORDER.map(phase => ({
+    phase,
+    meta: MILESTONE_PHASE_META[phase],
+    items: items
+      .filter(i => i.phase === phase)
+      .sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return a.due_date.localeCompare(b.due_date);
+      }),
+  }));
+
+  const totalDone = items.filter(i => i.completed).length;
+  const overallProgress = items.length ? Math.round((totalDone / items.length) * 100) : 0;
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">{items.filter(i => i.completed).length}/{items.length} concluídos</p>
-        <Button size="sm" variant="outline" onClick={() => setShow(s => !s)}><Plus className="h-4 w-4 mr-1" />Novo marco</Button>
-      </div>
-      {show && (
-        <div className="border rounded-lg p-3 bg-muted/30 space-y-2">
-          <Input placeholder="Ex.: Capa do livro aprovada" value={title} onChange={e => setTitle(e.target.value)} />
-          <Input type="date" value={due} onChange={e => setDue(e.target.value)} />
-          <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" onClick={() => { setShow(false); setTitle(""); setDue(""); }}>Cancelar</Button>
-            <Button size="sm" disabled={!title.trim()} onClick={() => {
-              add.mutate({ title, due_date: due || null }, { onSuccess: () => { setTitle(""); setDue(""); setShow(false); }});
-            }}>Adicionar</Button>
+    <div className="space-y-5">
+      {/* Header: overall progress */}
+      <div className="rounded-xl border bg-gradient-to-br from-muted/40 to-background p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold">Roadmap do projeto</h3>
+            <p className="text-xs text-muted-foreground">
+              {totalDone}/{items.length} marcos concluídos · {overallProgress}% do roadmap
+            </p>
+          </div>
+          <div className="text-3xl font-bold tabular-nums bg-gradient-to-br from-purple-500 to-pink-500 bg-clip-text text-transparent">
+            {overallProgress}%
           </div>
         </div>
-      )}
-      <div className="space-y-2">
-        {items.map(m => (
-          <div key={m.id} className="flex items-center gap-3 p-3 border rounded-lg group hover:bg-muted/30">
-            <Checkbox checked={m.completed} onCheckedChange={(v) => toggle.mutate({ id: m.id, completed: !!v })} />
-            <div className="flex-1">
-              <div className={`font-medium ${m.completed ? "line-through text-muted-foreground" : ""}`}>{m.title}</div>
-              {m.due_date && (
-                <div className="text-xs text-muted-foreground">{format(parseISO(m.due_date), "dd MMM yyyy", { locale: ptBR })}</div>
+        <Progress value={overallProgress} className="h-2" />
+      </div>
+
+      {/* Phases */}
+      <div className="space-y-4">
+        {grouped.map(({ phase, meta, items: phaseItems }, idx) => {
+          const done = phaseItems.filter(i => i.completed).length;
+          const pct = phaseItems.length ? Math.round((done / phaseItems.length) * 100) : 0;
+          const isCollapsed = collapsed[phase] ?? false;
+          const isEmpty = phaseItems.length === 0;
+
+          return (
+            <div key={phase} className="border rounded-xl overflow-hidden bg-background">
+              {/* Phase header */}
+              <div
+                className={`relative px-4 py-3 bg-gradient-to-r ${meta.color} text-white cursor-pointer`}
+                onClick={() => setCollapsed(c => ({ ...c, [phase]: !isCollapsed }))}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-white/20 backdrop-blur flex items-center justify-center font-bold text-sm shrink-0">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold">{meta.label}</h4>
+                      <Badge variant="secondary" className="bg-white/20 text-white border-0 text-[10px] h-5">
+                        {done}/{phaseItems.length}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-white/85 line-clamp-1">{meta.description}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-xs font-bold tabular-nums">{pct}%</div>
+                    <div className="w-20 h-1 bg-white/20 rounded-full overflow-hidden mt-0.5">
+                      <div className="h-full bg-white rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                  {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+              </div>
+
+              {!isCollapsed && (
+                <div className="p-3 space-y-2">
+                  {phaseItems.map(m => (
+                    <MilestoneRow
+                      key={m.id}
+                      milestone={m}
+                      onToggle={(v) => toggle.mutate({ id: m.id, completed: v })}
+                      onEdit={() => setEditing(m)}
+                      onRemove={() => remove.mutate(m.id)}
+                      onProgressChange={(p) => update.mutate({ id: m.id, progress: p })}
+                    />
+                  ))}
+                  {isEmpty && (
+                    <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
+                      Nenhum marco nessa fase ainda.
+                    </div>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="w-full justify-start text-muted-foreground hover:text-foreground"
+                    onClick={() => setCreatingPhase(phase)}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar marco em {meta.label}
+                  </Button>
+                </div>
               )}
             </div>
-            <Button size="icon" variant="ghost" onClick={() => remove.mutate(m.id)} className="opacity-0 group-hover:opacity-100">
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+          );
+        })}
+      </div>
+
+      {/* Create / Edit dialog (inline expanded form) */}
+      {(creatingPhase || editing) && (
+        <MilestoneFormDialog
+          phase={creatingPhase || editing!.phase}
+          milestone={editing}
+          onCancel={() => { setCreatingPhase(null); setEditing(null); }}
+          onSave={(data) => {
+            if (editing) {
+              update.mutate({ id: editing.id, ...data }, { onSuccess: () => setEditing(null) });
+            } else {
+              add.mutate({ ...data, phase: creatingPhase! }, { onSuccess: () => setCreatingPhase(null) });
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function MilestoneRow({
+  milestone, onToggle, onEdit, onRemove, onProgressChange,
+}: {
+  milestone: ProjectMilestone;
+  onToggle: (v: boolean) => void;
+  onEdit: () => void;
+  onRemove: () => void;
+  onProgressChange: (p: number) => void;
+}) {
+  const priority = MILESTONE_PRIORITY_META[milestone.priority];
+  const isOverdue = !milestone.completed && milestone.due_date && parseISO(milestone.due_date) < new Date();
+  const hasDates = milestone.start_date || milestone.due_date;
+
+  return (
+    <div className={`group border rounded-lg p-3 transition-colors ${milestone.completed ? "bg-muted/30" : "bg-background hover:bg-muted/20"}`}>
+      <div className="flex items-start gap-3">
+        <Checkbox
+          checked={milestone.completed}
+          onCheckedChange={(v) => onToggle(!!v)}
+          className="mt-0.5"
+        />
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className={`font-medium text-sm leading-tight ${milestone.completed ? "line-through text-muted-foreground" : ""}`}>
+                {milestone.title}
+              </div>
+              {milestone.description && (
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{milestone.description}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onRemove}>
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </div>
           </div>
-        ))}
-        {items.length === 0 && <EmptyState text="Nenhum marco criado. Comece com kickoff, entregas-chave e go-live." />}
+
+          {/* Meta line */}
+          <div className="flex items-center gap-2 flex-wrap text-[11px]">
+            <Badge variant="outline" className={`${priority.color} h-5 px-1.5`}>
+              <Flag className="h-2.5 w-2.5 mr-1" /> {priority.label}
+            </Badge>
+            {milestone.owner && (
+              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                <UserIcon className="h-3 w-3" /> {milestone.owner}
+              </span>
+            )}
+            {hasDates && (
+              <span className={`inline-flex items-center gap-1 ${isOverdue ? "text-red-600 font-medium" : "text-muted-foreground"}`}>
+                <CalendarRange className="h-3 w-3" />
+                {milestone.start_date && format(parseISO(milestone.start_date), "dd MMM", { locale: ptBR })}
+                {milestone.start_date && milestone.due_date && " → "}
+                {milestone.due_date && format(parseISO(milestone.due_date), "dd MMM yyyy", { locale: ptBR })}
+                {isOverdue && " · atrasado"}
+              </span>
+            )}
+            {milestone.completed && milestone.completed_at && (
+              <span className="inline-flex items-center gap-1 text-emerald-600">
+                <CheckCircle2 className="h-3 w-3" /> Concluído {format(parseISO(milestone.completed_at), "dd MMM", { locale: ptBR })}
+              </span>
+            )}
+          </div>
+
+          {/* Progress slider (only if not completed) */}
+          {!milestone.completed && (
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={milestone.progress}
+                onChange={(e) => onProgressChange(Number(e.target.value))}
+                className="flex-1 h-1 accent-purple-500 cursor-pointer"
+              />
+              <span className="text-[11px] font-medium tabular-nums text-muted-foreground w-9 text-right">{milestone.progress}%</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MilestoneFormDialog({
+  phase, milestone, onCancel, onSave,
+}: {
+  phase: MilestonePhase;
+  milestone: ProjectMilestone | null;
+  onCancel: () => void;
+  onSave: (data: Partial<ProjectMilestone>) => void;
+}) {
+  const [title, setTitle] = useState(milestone?.title || "");
+  const [description, setDescription] = useState(milestone?.description || "");
+  const [startDate, setStartDate] = useState(milestone?.start_date || "");
+  const [dueDate, setDueDate] = useState(milestone?.due_date || "");
+  const [owner, setOwner] = useState(milestone?.owner || "");
+  const [priority, setPriority] = useState<MilestonePriority>(milestone?.priority || "medium");
+  const [currentPhase, setCurrentPhase] = useState<MilestonePhase>(milestone?.phase || phase);
+
+  const meta = MILESTONE_PHASE_META[currentPhase];
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onCancel}>
+      <div className="bg-background border rounded-xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className={`px-5 py-3 bg-gradient-to-r ${meta.color} text-white`}>
+          <div className="text-xs opacity-90">Fase</div>
+          <div className="font-semibold">{meta.label}</div>
+        </div>
+        <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto">
+          <div>
+            <Label className="text-xs">Título *</Label>
+            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex.: Aprovar identidade visual do lançamento" autoFocus />
+          </div>
+          <div>
+            <Label className="text-xs">Descrição</Label>
+            <Textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Detalhe entregas, critérios de aceite, dependências..."
+              rows={3}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Início</Label>
+              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Prazo</Label>
+              <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Fase</Label>
+              <Select value={currentPhase} onValueChange={(v) => setCurrentPhase(v as MilestonePhase)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MILESTONE_PHASE_ORDER.map(p => (
+                    <SelectItem key={p} value={p}>{MILESTONE_PHASE_META[p].label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Prioridade</Label>
+              <Select value={priority} onValueChange={(v) => setPriority(v as MilestonePriority)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(MILESTONE_PRIORITY_META).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Responsável</Label>
+            <Input value={owner} onChange={e => setOwner(e.target.value)} placeholder="Nome do responsável" />
+          </div>
+        </div>
+        <div className="px-5 py-3 border-t flex justify-end gap-2 bg-muted/20">
+          <Button size="sm" variant="ghost" onClick={onCancel}>Cancelar</Button>
+          <Button
+            size="sm"
+            disabled={!title.trim()}
+            onClick={() => onSave({
+              title: title.trim(),
+              description: description.trim() || null,
+              start_date: startDate || null,
+              due_date: dueDate || null,
+              owner: owner.trim() || null,
+              priority,
+              phase: currentPhase,
+            })}
+          >
+            {milestone ? "Salvar" : "Criar marco"}
+          </Button>
+        </div>
       </div>
     </div>
   );

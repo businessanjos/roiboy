@@ -13758,7 +13758,12 @@ export type Database = {
           display_order: number
           due_date: string | null
           id: string
+          owner: string | null
+          phase: string
+          priority: string
+          progress: number
           project_id: string
+          start_date: string | null
           title: string
         }
         Insert: {
@@ -13770,7 +13775,12 @@ export type Database = {
           display_order?: number
           due_date?: string | null
           id?: string
+          owner?: string | null
+          phase?: string
+          priority?: string
+          progress?: number
           project_id: string
+          start_date?: string | null
           title: string
         }
         Update: {
@@ -13782,7 +13792,12 @@ export type Database = {
           display_order?: number
           due_date?: string | null
           id?: string
+          owner?: string | null
+          phase?: string
+          priority?: string
+          progress?: number
           project_id?: string
+          start_date?: string | null
           title?: string
         }
         Relationships: [

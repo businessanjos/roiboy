@@ -47,16 +47,49 @@ export interface ProjectStakeholder {
   notes: string | null;
 }
 
+export type MilestonePhase =
+  | "discovery"
+  | "planning"
+  | "pre_production"
+  | "production"
+  | "launch"
+  | "post_launch";
+
+export type MilestonePriority = "low" | "medium" | "high" | "critical";
+
 export interface ProjectMilestone {
   id: string;
   project_id: string;
   title: string;
   description: string | null;
   due_date: string | null;
+  start_date: string | null;
   completed: boolean;
   completed_at: string | null;
   display_order: number;
+  phase: MilestonePhase;
+  owner: string | null;
+  priority: MilestonePriority;
+  progress: number;
 }
+
+export const MILESTONE_PHASE_META: Record<MilestonePhase, { label: string; color: string; description: string }> = {
+  discovery: { label: "Descoberta", color: "from-sky-500 to-cyan-500", description: "Pesquisa, benchmarks, definição de objetivos e métricas" },
+  planning: { label: "Planejamento", color: "from-violet-500 to-purple-500", description: "Estratégia, cronograma, orçamento, briefings e aprovações" },
+  pre_production: { label: "Pré-Produção", color: "from-blue-500 to-indigo-500", description: "Fornecedores, contratos, conteúdo, setup de canais e ferramentas" },
+  production: { label: "Produção", color: "from-amber-500 to-orange-500", description: "Execução das entregas — criativos, filmagens, builds, materiais" },
+  launch: { label: "Lançamento", color: "from-pink-500 to-rose-500", description: "Go-live, mídia paga, eventos, ativação e comunicação" },
+  post_launch: { label: "Pós-Lançamento", color: "from-emerald-500 to-teal-500", description: "Resultados, retrospectiva, otimização e relatórios finais" },
+};
+
+export const MILESTONE_PHASE_ORDER: MilestonePhase[] = ["discovery", "planning", "pre_production", "production", "launch", "post_launch"];
+
+export const MILESTONE_PRIORITY_META: Record<MilestonePriority, { label: string; color: string }> = {
+  low: { label: "Baixa", color: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30" },
+  medium: { label: "Média", color: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30" },
+  high: { label: "Alta", color: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" },
+  critical: { label: "Crítica", color: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30" },
+};
 
 export interface ProjectDocument {
   id: string;
@@ -269,8 +302,24 @@ export function useProjectMilestones(projectId: string | undefined) {
         account_id: currentUser?.account_id,
         title: payload.title,
         due_date: payload.due_date,
+        start_date: payload.start_date,
         description: payload.description,
+        phase: payload.phase || "planning",
+        owner: payload.owner,
+        priority: payload.priority || "medium",
+        progress: payload.progress ?? 0,
       });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["project-milestones", projectId] }),
+    onError: (e: any) => toast.error(e.message),
+  });
+  const update = useMutation({
+    mutationFn: async ({ id, ...patch }: Partial<ProjectMilestone> & { id: string }) => {
+      const { error } = await supabase
+        .from("marketing_project_milestones" as any)
+        .update(patch)
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["project-milestones", projectId] }),
@@ -293,7 +342,7 @@ export function useProjectMilestones(projectId: string | undefined) {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["project-milestones", projectId] }),
   });
-  return { items: query.data || [], isLoading: query.isLoading, add, toggle, remove };
+  return { items: query.data || [], isLoading: query.isLoading, add, update, toggle, remove };
 }
 
 // --- Documents ---
