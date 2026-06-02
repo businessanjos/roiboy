@@ -130,11 +130,6 @@ export default function MarketingProjects() {
         }}
       />
 
-      <ProjectDetailSheet
-        projectId={detailId}
-        open={!!detailId}
-        onOpenChange={(o) => !o && setDetailId(null)}
-      />
     </div>
   );
 }
