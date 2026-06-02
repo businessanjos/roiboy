@@ -114,6 +114,7 @@ export function useMarketingProjects() {
   const create = useMutation({
     mutationFn: async (payload: Partial<MarketingProject>) => {
       if (!accountId) throw new Error("no account");
+      const ownerId = await resolveUserId(payload.owner_user_id ?? null);
       const { data, error } = await supabase
         .from("marketing_projects" as any)
         .insert({
@@ -128,7 +129,7 @@ export function useMarketingProjects() {
           target_date: payload.target_date ?? null,
           budget_planned: payload.budget_planned ?? null,
           budget_actual: payload.budget_actual ?? null,
-          owner_user_id: payload.owner_user_id ?? null,
+          owner_user_id: ownerId,
         })
         .select()
         .single();
