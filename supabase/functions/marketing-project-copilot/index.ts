@@ -211,9 +211,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims } = await userClient.auth.getClaims(token);
-    const authUserId = claims?.claims?.sub;
+    const { data: userData } = await userClient.auth.getUser();
+    const authUserId = userData?.user?.id;
     if (!authUserId) throw new Error("Sessão inválida");
 
     const { projectId, message, accountId } = await req.json();
