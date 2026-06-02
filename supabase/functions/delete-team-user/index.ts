@@ -48,7 +48,7 @@ Deno.serve(async (req: Request) => {
     // Get requesting user's account and check if admin
     const { data: requestingProfile, error: profileError } = await supabaseAdmin
       .from("users")
-      .select("id, account_id, role")
+      .select("id, account_id, role, is_also_admin")
       .eq("auth_user_id", requestingUser.id)
       .single();
 
@@ -59,7 +59,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (requestingProfile.role !== "admin") {
+    const isAdmin = requestingProfile.role === "admin" || requestingProfile.is_also_admin === true;
+    if (!isAdmin) {
       return new Response(
         JSON.stringify({ error: "Apenas administradores podem excluir usuários" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
