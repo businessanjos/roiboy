@@ -55,8 +55,10 @@ function SingleDealFilter({
   const [fieldOptions, setFieldOptions] = useState<string[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
 
+  const isDateRangeField = filter.fieldId === DEAL_CREATED_AT_FIELD_ID;
+
   useEffect(() => {
-    if (!filter.fieldId || !currentUser?.account_id) {
+    if (!filter.fieldId || !currentUser?.account_id || isDateRangeField) {
       setFieldOptions([]);
       return;
     }
@@ -96,7 +98,7 @@ function SingleDealFilter({
     };
 
     fetchOptions();
-  }, [filter.fieldId, currentUser?.account_id, dealFields]);
+  }, [filter.fieldId, currentUser?.account_id, dealFields, isDateRangeField]);
 
   const handleFieldSelect = (value: string) => {
     if (value === 'none') {
