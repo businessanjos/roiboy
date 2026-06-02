@@ -128,7 +128,7 @@ function meetingDedupeKey(assignedTo: string | null | undefined, t: { id?: strin
 }
 
 // Busca paginada de internal_tasks com completed_at no intervalo (mesmo padrão do SalesDashboard).
-async function fetchHeldMeetingTasks(admin: ReturnType<typeof createClient>, accountId: string, startIso: string, endIso: string) {
+async function fetchHeldMeetingTasksRaw(admin: ReturnType<typeof createClient>, accountId: string, startIso: string, endIso: string) {
   const PAGE = 1000;
   let from = 0;
   const all: any[] = [];
@@ -147,7 +147,11 @@ async function fetchHeldMeetingTasks(admin: ReturnType<typeof createClient>, acc
     if (batch.length < PAGE) break;
     from += PAGE;
   }
-  const held = all.filter((t: any) => classifyMeetingTask(t.activity_types?.name, t.title) === "held");
+  return all.filter((t: any) => classifyMeetingTask(t.activity_types?.name, t.title) === "held");
+}
+
+async function fetchHeldMeetingTasks(admin: ReturnType<typeof createClient>, accountId: string, startIso: string, endIso: string) {
+  const held = await fetchHeldMeetingTasksRaw(admin, accountId, startIso, endIso);
   const seen = new Set<string>();
   const deduped: any[] = [];
   for (const t of held) {
@@ -158,6 +162,7 @@ async function fetchHeldMeetingTasks(admin: ReturnType<typeof createClient>, acc
   }
   return deduped;
 }
+
 
 // ============= SNAPSHOT (compacto, agregado, completo) =============
 async function buildSnapshot(admin: ReturnType<typeof createClient>, accountId: string, monthsBack: number) {
@@ -820,7 +825,24 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "deals_with_multiple_meetings_for_user",
+      description: "Conta quantos NEGÓCIOS (deals) tiveram MAIS DE UMA reunião realizada (call comercial concluída) atribuída a um vendedor no período. Use SEMPRE que o gestor perguntar 'quantos deals tiveram mais de 1 reunião' ou 'quantos negócios precisaram de mais de uma call pra fechar'. Considera todas as atividades brutas (sem deduplicar) e agrupa por deal_id. Opcionalmente filtre por month (YYYY-MM) e min_meetings (default 2).",
+      parameters: {
+        type: "object",
+        properties: {
+          user_id: { type: "string" },
+          month: { type: "string", description: "Filtro opcional YYYY-MM (ex: 2026-05)" },
+          min_meetings: { type: "number", description: "Limite mínimo de reuniões por deal para entrar na contagem (default 2)." },
+        },
+        required: ["user_id"],
+      },
+    },
+  },
 ];
+
 
 async function execTool(admin: ReturnType<typeof createClient>, accountId: string, sinceIso: string, name: string, args: any): Promise<any> {
   try {
@@ -886,6 +908,67 @@ async function execTool(admin: ReturnType<typeof createClient>, accountId: strin
         method: "Fonte oficial do dashboard: atividades concluídas classificadas como reunião realizada, sem duplicar o mesmo atendimento.",
       };
     }
+    if (name === "deals_with_multiple_meetings_for_user") {
+      const uid = args.user_id;
+      const month: string | undefined = args.month;
+      const minMeetings = Math.max(2, Number(args.min_meetings) || 2);
+      const endIso = new Date().toISOString();
+      const rawHeld = await fetchHeldMeetingTasksRaw(admin, accountId, sinceIso, endIso);
+      let userRaw = rawHeld.filter((t: any) => t.assigned_to === uid && t.deal_id);
+      if (month) userRaw = userRaw.filter((t: any) => (t.completed_at ?? "").slice(0, 7) === month);
+
+      const byDeal: Record<string, { count: number; dates: string[] }> = {};
+      for (const t of userRaw) {
+        const k = t.deal_id as string;
+        if (!byDeal[k]) byDeal[k] = { count: 0, dates: [] };
+        byDeal[k].count++;
+        if (t.completed_at) byDeal[k].dates.push(t.completed_at);
+      }
+      const dealsAboveThreshold = Object.entries(byDeal).filter(([, v]) => v.count >= minMeetings);
+      const dealIds = dealsAboveThreshold.map(([id]) => id);
+
+      let dealsInfo: any[] = [];
+      if (dealIds.length > 0) {
+        const { data } = await admin
+          .from("deals")
+          .select("id, title, status, value, received_value, won_at, lost_at, client_id, clients(full_name)")
+          .in("id", dealIds)
+          .limit(500);
+        dealsInfo = data ?? [];
+      }
+      const dealsList = dealsAboveThreshold
+        .map(([id, v]) => {
+          const d = dealsInfo.find((x: any) => x.id === id);
+          return {
+            negociacao: d?.title ?? "(sem título)",
+            cliente: d?.clients?.full_name ?? "(sem cliente)",
+            situacao: d?.status ?? "—",
+            reunioes_realizadas: v.count,
+            primeira: v.dates.sort()[0] ?? null,
+            ultima: v.dates.sort().slice(-1)[0] ?? null,
+          };
+        })
+        .sort((a, b) => b.reunioes_realizadas - a.reunioes_realizadas);
+
+      // distribuição
+      const distribution: Record<string, number> = {};
+      for (const [, v] of Object.entries(byDeal)) {
+        const k = String(v.count);
+        distribution[k] = (distribution[k] ?? 0) + 1;
+      }
+
+      return {
+        periodo: month ?? `últimos meses desde ${sinceIso.slice(0, 10)}`,
+        deals_com_pelo_menos_uma_reuniao: Object.keys(byDeal).length,
+        deals_com_mais_de_uma_reuniao: dealsAboveThreshold.length,
+        limite_minimo_aplicado: minMeetings,
+        atividades_brutas_consideradas: userRaw.length,
+        distribuicao_reunioes_por_deal: distribution,
+        lista: dealsList.slice(0, 50),
+        metodo: "Conta atividades brutas (sem deduplicar) classificadas como reunião realizada, agrupadas por negociação (deal_id). Atividades sem deal vinculado ficam fora.",
+      };
+    }
+
     if (name === "search_client") {
       const { data: clients } = await admin.from("clients").select("id,full_name,status,phone_e164,business_segment").eq("account_id", accountId).ilike("full_name", `%${args.name}%`).limit(20);
       return { results: clients ?? [] };
@@ -1112,6 +1195,7 @@ DIMENSÕES NO SNAPSHOT (use direto, sem tool):
 USE FERRAMENTAS quando faltar:
 - Nome de pessoa → search_user + user_performance + (meta) user_goal_attainment_detail
 - Quantas reuniões REALIZADAS um vendedor fez em um mês → primeiro olhe held_meetings_by_user_by_month no snapshot. Se precisar listar/auditar, use held_meetings_for_user com {user_id, month: "YYYY-MM"}.
+- Quantos NEGÓCIOS/DEALS tiveram MAIS DE UMA reunião realizada (ex: "quantas dessas calls foram em deals com >1 reunião", "quantos deals precisaram de mais de uma call pra fechar"): use deals_with_multiple_meetings_for_user com {user_id, month, min_meetings (default 2)}. NUNCA responda que falta informação — esta ferramenta resolve.
 - Nome de cliente → search_client + client_details
 - Funil de um pipeline → pipeline_funnel
 - Lista de deals (top, por filtro, em aberto) → deals_by_filter
