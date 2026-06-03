@@ -175,12 +175,12 @@ export function useMarketingDashboardMetrics() {
 
       // ===== CONTEÚDO =====
       const last30Iso = last30.toISOString();
-      const [ytRes, igRes, ttRes] = await Promise.all([
-        supabase
+      const [ytRes, igRes, ttRes]: any[] = await Promise.all([
+        (supabase
           .from("youtube_videos")
           .select("id, views")
           .eq("account_id", accountId!)
-          .gte("posted_at", last30Iso),
+          .gte("posted_at", last30Iso) as any),
         (supabase
           .from("instagram_posts")
           .select("id, likes, comments")
