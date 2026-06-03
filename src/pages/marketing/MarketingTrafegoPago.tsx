@@ -96,6 +96,23 @@ export default function MarketingTrafegoPago() {
     } finally { setLoading(false); }
   }, [user?.id]);
 
+  const { data: agencies = [] } = useTrafficAgencies();
+
+  const assignAgency = useCallback(async (adId: string, agencyId: string | null) => {
+    const prev = adSets;
+    setAdSets((curr) => curr.map((a) => (a.id === adId ? { ...a, agency_id: agencyId } : a)));
+    const { error } = await supabase
+      .from('marketing_ad_sets')
+      .update({ agency_id: agencyId } as any)
+      .eq('id', adId);
+    if (error) {
+      setAdSets(prev);
+      toast.error('Não foi possível atribuir a agência');
+    } else {
+      toast.success(agencyId ? 'Agência atribuída' : 'Agência removida');
+    }
+  }, [adSets]);
+
   const syncCampaigns = useCallback(async () => {
     if (!accounts.length) { toast.error('Nenhuma conta de anúncios'); return; }
     setSyncing(true);
