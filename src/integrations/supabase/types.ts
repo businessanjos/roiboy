@@ -6083,6 +6083,7 @@ export type Database = {
       deals: {
         Row: {
           account_id: string
+          agency_id: string | null
           client_id: string | null
           contact_email: string | null
           contact_name: string | null
@@ -6119,6 +6120,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          agency_id?: string | null
           client_id?: string | null
           contact_email?: string | null
           contact_name?: string | null
@@ -6155,6 +6157,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          agency_id?: string | null
           client_id?: string | null
           contact_email?: string | null
           contact_name?: string | null
@@ -6195,6 +6198,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "traffic_agencies"
             referencedColumns: ["id"]
           },
           {
@@ -12697,6 +12707,8 @@ export type Database = {
       }
       marketing_ad_sets: {
         Row: {
+          account_id: string | null
+          agency_id: string | null
           clicks: number | null
           conversions: number | null
           cpl: number | null
@@ -12712,6 +12724,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_id?: string | null
+          agency_id?: string | null
           clicks?: number | null
           conversions?: number | null
           cpl?: number | null
@@ -12727,6 +12741,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_id?: string | null
+          agency_id?: string | null
           clicks?: number | null
           conversions?: number | null
           cpl?: number | null
@@ -12741,7 +12757,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "marketing_ad_sets_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "traffic_agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marketing_ai_suggestion_reviews: {
         Row: {
@@ -13354,6 +13378,103 @@ export type Database = {
           utm_term?: string | null
         }
         Relationships: []
+      }
+      marketing_material_request_comments: {
+        Row: {
+          attachments: Json
+          body: string
+          created_at: string
+          id: string
+          request_id: string
+          user_id: string
+        }
+        Insert: {
+          attachments?: Json
+          body: string
+          created_at?: string
+          id?: string
+          request_id: string
+          user_id: string
+        }
+        Update: {
+          attachments?: Json
+          body?: string
+          created_at?: string
+          id?: string
+          request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_material_request_comments_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_material_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_material_requests: {
+        Row: {
+          account_id: string
+          agency_id: string
+          assigned_to_user_id: string | null
+          attachments: Json
+          category: Database["public"]["Enums"]["material_request_category"]
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          payload: Json
+          priority: string
+          requested_by_user_id: string
+          status: Database["public"]["Enums"]["material_request_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          agency_id: string
+          assigned_to_user_id?: string | null
+          attachments?: Json
+          category: Database["public"]["Enums"]["material_request_category"]
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          payload?: Json
+          priority?: string
+          requested_by_user_id: string
+          status?: Database["public"]["Enums"]["material_request_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          agency_id?: string
+          assigned_to_user_id?: string | null
+          attachments?: Json
+          category?: Database["public"]["Enums"]["material_request_category"]
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          payload?: Json
+          priority?: string
+          requested_by_user_id?: string
+          status?: Database["public"]["Enums"]["material_request_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_material_requests_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "traffic_agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marketing_performance_insights: {
         Row: {
@@ -19775,6 +19896,80 @@ export type Database = {
           },
         ]
       }
+      traffic_agencies: {
+        Row: {
+          account_id: string
+          color: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      traffic_agency_members: {
+        Row: {
+          account_id: string
+          agency_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          agency_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          agency_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traffic_agency_members_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "traffic_agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       typeform_form_stats: {
         Row: {
           account_id: string
@@ -22145,6 +22340,7 @@ export type Database = {
         }[]
       }
       get_current_user_account_id: { Args: never; Returns: string }
+      get_current_user_agency_id: { Args: never; Returns: string }
       get_current_user_id: { Args: never; Returns: string }
       get_dashboard_contract_counts: {
         Args: { p_account_id: string }
@@ -22549,6 +22745,18 @@ export type Database = {
       marketing_ai_decision: "accepted" | "edited" | "rejected"
       marketing_task_priority: "low" | "medium" | "high"
       marketing_task_status: "pending" | "in_progress" | "done"
+      material_request_category:
+        | "criativo_estatico"
+        | "video"
+        | "copy"
+        | "landing_page"
+        | "outro"
+      material_request_status:
+        | "aberto"
+        | "em_producao"
+        | "em_revisao"
+        | "entregue"
+        | "cancelado"
       message_direction: "client_to_team" | "team_to_client"
       message_source: "whatsapp_text" | "whatsapp_audio_transcript"
       payment_status:
@@ -22880,6 +23088,20 @@ export const Constants = {
       marketing_ai_decision: ["accepted", "edited", "rejected"],
       marketing_task_priority: ["low", "medium", "high"],
       marketing_task_status: ["pending", "in_progress", "done"],
+      material_request_category: [
+        "criativo_estatico",
+        "video",
+        "copy",
+        "landing_page",
+        "outro",
+      ],
+      material_request_status: [
+        "aberto",
+        "em_producao",
+        "em_revisao",
+        "entregue",
+        "cancelado",
+      ],
       message_direction: ["client_to_team", "team_to_client"],
       message_source: ["whatsapp_text", "whatsapp_audio_transcript"],
       payment_status: [
