@@ -142,7 +142,38 @@ const formatNum = (v: number) => v.toLocaleString("pt-BR");
 
 export default function MarketingDashboard() {
   const navigate = useNavigate();
-  const { data, isLoading } = useMarketingDashboardMetrics();
+
+  const [preset, setPreset] = useState<DatePreset>("month");
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
+
+  const range = useMemo(() => {
+    const now = new Date();
+    switch (preset) {
+      case "today":
+        return { startDate: startOfDay(now), endDate: endOfDay(now) };
+      case "quarter":
+        return { startDate: startOfQuarter(now), endDate: endOfQuarter(now) };
+      case "custom":
+        if (customRange.from && customRange.to) {
+          return { startDate: startOfDay(customRange.from), endDate: endOfDay(customRange.to) };
+        }
+        return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
+      case "month":
+      default:
+        return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
+    }
+  }, [preset, customRange]);
+
+  const rangeLabel = useMemo(() => {
+    if (preset === "custom" && customRange.from && customRange.to) {
+      return `${format(customRange.from, "dd/MM/yy", { locale: ptBR })} – ${format(customRange.to, "dd/MM/yy", { locale: ptBR })}`;
+    }
+    return PRESETS.find((p) => p.value === preset)?.label ?? "Este Mês";
+  }, [preset, customRange]);
+
+  const { data, isLoading } = useMarketingDashboardMetrics(range);
 
   if (isLoading || !data) {
     return (
