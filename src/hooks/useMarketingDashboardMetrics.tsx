@@ -269,11 +269,11 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       // ===== TAREFAS =====
       const { data: tasks = [] } = await supabase
         .from("marketing_tasks")
-        .select("id, status, due_date, completed_at")
+        .select("id, status, due_date, completed_at, is_completed")
         .eq("account_id", accountId!);
       let tasksOpen = 0, tasksOverdue = 0, tasksDoneThisWeek = 0;
       for (const t of tasks as any[]) {
-        const isDone = t.status === "done" || !!t.completed_at;
+        const isDone = !!t.is_completed || t.status === "done" || !!t.completed_at;
         if (!isDone) {
           tasksOpen++;
           if (t.due_date && t.due_date < todayIso) tasksOverdue++;
