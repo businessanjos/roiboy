@@ -188,19 +188,28 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       // ===== CONTEÚDO =====
       const last30Iso = last30.toISOString();
       const sb: any = supabase;
-      const [ytRes, igRes, ttRes]: any[] = await Promise.all([
-        sb.from("youtube_videos").select("id, views").eq("account_id", accountId!).gte("posted_at", last30Iso),
-        sb.from("instagram_posts").select("id, likes, comments").eq("account_id", accountId!).gte("posted_at", last30Iso),
-        sb.from("tiktok_posts").select("id").eq("account_id", accountId!).gte("posted_at", last30Iso),
-      ]);
-      const ytVideos30d = (ytRes.data || []).length;
-      const ytViews30d = (ytRes.data || []).reduce((s: number, v: any) => s + (Number(v.views) || 0), 0);
-      const igPosts30d = (igRes.data || []).length;
-      const igEngagement30d = (igRes.data || []).reduce(
-        (s: number, p: any) => s + (Number(p.likes) || 0) + (Number(p.comments) || 0),
-        0
-      );
-      const ttPosts30d = (ttRes.data || []).length;
+      let ytVideos30d = 0, ytViews30d = 0, igPosts30d = 0, igEngagement30d = 0, ttPosts30d = 0;
+      try {
+        const igProfilesRes: any = await sb.from("instagram_profiles").select("id").eq("account_id", accountId!);
+        const igProfileIds = (igProfilesRes.data || []).map((p: any) => p.id);
+        const [ytRes, igRes, ttRes]: any[] = await Promise.all([
+          sb.from("youtube_videos").select("id, views").eq("account_id", accountId!).gte("posted_at", last30Iso),
+          igProfileIds.length
+            ? sb.from("instagram_posts").select("id, likes, comments").in("profile_id", igProfileIds).gte("posted_at", last30Iso)
+            : Promise.resolve({ data: [] }),
+          sb.from("tiktok_posts").select("id").eq("account_id", accountId!).gte("posted_at", last30Iso),
+        ]);
+        ytVideos30d = (ytRes.data || []).length;
+        ytViews30d = (ytRes.data || []).reduce((s: number, v: any) => s + (Number(v.views) || 0), 0);
+        igPosts30d = (igRes.data || []).length;
+        igEngagement30d = (igRes.data || []).reduce(
+          (s: number, p: any) => s + (Number(p.likes) || 0) + (Number(p.comments) || 0),
+          0
+        );
+        ttPosts30d = (ttRes.data || []).length;
+      } catch (e) {
+        console.warn("[MarketingDashboard] content metrics failed:", e);
+      }
 
       // ===== PROJETOS =====
       const { data: projects = [] } = await supabase
