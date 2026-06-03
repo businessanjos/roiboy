@@ -1,22 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, LayoutDashboard, Instagram, Music2, Youtube } from 'lucide-react';
+import { Users, LayoutDashboard, Instagram, Music2, Youtube, CalendarDays } from 'lucide-react';
 import { SocialMediaTab } from '@/components/marketing/SocialMediaTab';
 import { SocialMediaDashboard } from '@/components/marketing/SocialMediaDashboard';
 import { TikTokTab } from '@/components/marketing/TikTokTab';
 import { TikTokDashboard } from '@/components/marketing/TikTokDashboard';
 import { YouTubeTab } from '@/components/marketing/YouTubeTab';
 import { YouTubeDashboard } from '@/components/marketing/YouTubeDashboard';
+import { ContentCalendarView } from '@/components/marketing/ContentCalendarView';
 
 export default function SocialMedia() {
   const [searchParams, setSearchParams] = useSearchParams();
-  
-  const urlPlatform = searchParams.get('platform') as 'instagram' | 'tiktok' | 'youtube' | null;
+
+  const urlPlatform = searchParams.get('platform') as 'instagram' | 'tiktok' | 'youtube' | 'calendar' | null;
   const urlPostId = searchParams.get('postId');
-  
-  const [platform, setPlatform] = useState<'instagram' | 'tiktok' | 'youtube'>(urlPlatform || 'instagram');
+
+  const [platform, setPlatform] = useState<'instagram' | 'tiktok' | 'youtube' | 'calendar'>(urlPlatform || 'instagram');
   const [activeTab, setActiveTab] = useState('profiles');
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   useEffect(() => {
     if (urlPlatform && urlPlatform !== platform) {
@@ -35,6 +37,7 @@ export default function SocialMedia() {
     instagram: 'Gerencie e analise seus perfis do Instagram',
     tiktok: 'Gerencie e analise seus perfis do TikTok',
     youtube: 'Gerencie e analise seus canais do YouTube',
+    calendar: 'Visualize os posts publicados nas redes sociais',
   };
 
   return (
@@ -57,6 +60,10 @@ export default function SocialMedia() {
           <TabsTrigger value="youtube" className="gap-2">
             <Youtube className="h-4 w-4" />
             YouTube
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2">
+            <CalendarDays className="h-4 w-4" />
+            Calendário
           </TabsTrigger>
         </TabsList>
 
@@ -100,6 +107,11 @@ export default function SocialMedia() {
             </TabsContent>
             <TabsContent value="dashboard" className="mt-0"><YouTubeDashboard /></TabsContent>
           </Tabs>
+        </TabsContent>
+
+        {/* Content Calendar */}
+        <TabsContent value="calendar" className="mt-0">
+          <ContentCalendarView currentMonth={calendarMonth} onMonthChange={setCalendarMonth} />
         </TabsContent>
       </Tabs>
     </div>
