@@ -289,10 +289,9 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         }
       }
 
-      const mqlConversionRate =
-        (mqlOrganic + mqlPaid) > 0
-          ? ((wonMqlOrganic + wonMqlPaid) / (mqlOrganic + mqlPaid)) * 100
-          : 0;
+      const mqlTotal = mqlOrganic + mqlPaid + mqlOthers;
+      const wonTotal = wonMqlOrganic + wonMqlPaid + wonMqlOthers;
+      const mqlConversionRate = mqlTotal > 0 ? (wonTotal / mqlTotal) * 100 : 0;
 
       return {
         leadsThisMonth: rangeDeals.length,
