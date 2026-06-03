@@ -133,6 +133,13 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     // No sector selected - return empty (sidebar won't render)
     if (!currentSector) return [];
 
+    // Traffic-agency users only ever see the portal entry, regardless of sector.
+    if (isTrafficAgencyUser(currentUser)) {
+      return [
+        { to: "/marketing/portal-agencia", icon: Building2, label: "Portal da Agência" },
+      ] as typeof currentSector.navItems;
+    }
+
     // Super admins have access to everything
     if (isSuperAdmin) {
       return currentSector.navItems.filter(item => item.to !== "/notifications");
