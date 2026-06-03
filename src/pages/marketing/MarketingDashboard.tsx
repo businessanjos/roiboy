@@ -15,12 +15,23 @@ import {
   Sparkles,
   CalendarClock,
   DollarSign,
+  CalendarDays,
+  ChevronDown,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Bar,
   BarChart,
@@ -34,9 +45,26 @@ import {
   YAxis,
 } from "recharts";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { useMemo, useState } from "react";
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  startOfMonth,
+  endOfMonth,
+  startOfQuarter,
+  endOfQuarter,
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { useMarketingDashboardMetrics } from "@/hooks/useMarketingDashboardMetrics";
+
+type DatePreset = "today" | "month" | "quarter" | "custom";
+const PRESETS: { value: DatePreset; label: string }[] = [
+  { value: "today", label: "Hoje" },
+  { value: "month", label: "Este Mês" },
+  { value: "quarter", label: "Este Trimestre" },
+];
 
 function KpiCard({
   icon: Icon,
@@ -114,7 +142,38 @@ const formatNum = (v: number) => v.toLocaleString("pt-BR");
 
 export default function MarketingDashboard() {
   const navigate = useNavigate();
-  const { data, isLoading } = useMarketingDashboardMetrics();
+
+  const [preset, setPreset] = useState<DatePreset>("month");
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
+
+  const range = useMemo(() => {
+    const now = new Date();
+    switch (preset) {
+      case "today":
+        return { startDate: startOfDay(now), endDate: endOfDay(now) };
+      case "quarter":
+        return { startDate: startOfQuarter(now), endDate: endOfQuarter(now) };
+      case "custom":
+        if (customRange.from && customRange.to) {
+          return { startDate: startOfDay(customRange.from), endDate: endOfDay(customRange.to) };
+        }
+        return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
+      case "month":
+      default:
+        return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
+    }
+  }, [preset, customRange]);
+
+  const rangeLabel = useMemo(() => {
+    if (preset === "custom" && customRange.from && customRange.to) {
+      return `${format(customRange.from, "dd/MM/yy", { locale: ptBR })} – ${format(customRange.to, "dd/MM/yy", { locale: ptBR })}`;
+    }
+    return PRESETS.find((p) => p.value === preset)?.label ?? "Este Mês";
+  }, [preset, customRange]);
+
+  const { data, isLoading } = useMarketingDashboardMetrics(range);
 
   if (isLoading || !data) {
     return (
@@ -143,10 +202,73 @@ export default function MarketingDashboard() {
             Visão consolidada — {format(new Date(), "dd 'de' MMMM, yyyy", { locale: ptBR })}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate("/marketing-insights")}>
-          <Sparkles className="h-4 w-4 mr-2" />
-          Insights customizados
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Date Filter */}
+          {!datePickerOpen ? (
+            <DropdownMenu open={dateDropdownOpen} onOpenChange={setDateDropdownOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  {rangeLabel}
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {PRESETS.map((p) => (
+                  <DropdownMenuItem
+                    key={p.value}
+                    onClick={() => setPreset(p.value)}
+                    className={cn(preset === p.value && "bg-accent")}
+                  >
+                    {p.label}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setDateDropdownOpen(false);
+                    setTimeout(() => setDatePickerOpen(true), 100);
+                  }}
+                >
+                  Personalizado…
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  {rangeLabel}
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={customRange.from}
+                  selected={customRange as any}
+                  onSelect={(r: any) => {
+                    setCustomRange({ from: r?.from, to: r?.to });
+                    if (r?.from && r?.to) {
+                      setPreset("custom");
+                      setDatePickerOpen(false);
+                    }
+                  }}
+                  numberOfMonths={2}
+                  locale={ptBR}
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+          <Button variant="outline" size="sm" onClick={() => navigate("/marketing-insights")}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Insights customizados
+          </Button>
+        </div>
       </div>
 
       {/* ===== Funil de Leads & MQL ===== */}
@@ -154,19 +276,19 @@ export default function MarketingDashboard() {
         <SectionTitle
           icon={Users}
           title="Funil de Leads & MQL"
-          subtitle="Negócios criados no mês corrente por canal de origem"
+          subtitle={`Negócios criados no período (${rangeLabel}) por canal de origem`}
         />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KpiCard
             icon={Users}
-            label="Leads no mês"
+            label="Leads no período"
             value={formatNum(data.leadsThisMonth)}
             hint="Total de negócios criados"
             tone="info"
           />
           <KpiCard
             icon={Target}
-            label="MQL no mês"
+            label="MQL no período"
             value={formatNum(data.mqlThisMonth)}
             hint="Qualificados +30K"
             tone="purple"
@@ -184,6 +306,46 @@ export default function MarketingDashboard() {
             value={`${data.mqlPaid} × ${data.mqlOrganic}`}
             hint={`Vendas: ${data.wonMqlPaid} pago / ${data.wonMqlOrganic} orgânico`}
             tone="warning"
+          />
+        </div>
+
+        {/* Cards detalhados do MQL (Análise MKT) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KpiCard
+            icon={Target}
+            label="MQL — Orgânico (Leads)"
+            value={formatNum(data.mqlOrganic)}
+            hint="MQL vindos do canal Orgânico"
+            tone="purple"
+          />
+          <KpiCard
+            icon={Megaphone}
+            label="MQL — Tráfego Pago (Leads)"
+            value={formatNum(data.mqlPaid)}
+            hint="MQL vindos do canal Tráfego Pago"
+            tone="info"
+          />
+          <KpiCard
+            icon={CheckCircle2}
+            label="Vendas MQL — Orgânico"
+            value={formatNum(data.wonMqlOrganic)}
+            hint={
+              data.mqlOrganic > 0
+                ? `${((data.wonMqlOrganic / data.mqlOrganic) * 100).toFixed(1)}% de conversão`
+                : "Sem MQL no período"
+            }
+            tone="success"
+          />
+          <KpiCard
+            icon={CheckCircle2}
+            label="Vendas MQL — Tráfego Pago"
+            value={formatNum(data.wonMqlPaid)}
+            hint={
+              data.mqlPaid > 0
+                ? `${((data.wonMqlPaid / data.mqlPaid) * 100).toFixed(1)}% de conversão`
+                : "Sem MQL no período"
+            }
+            tone="success"
           />
         </div>
 

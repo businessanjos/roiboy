@@ -8,7 +8,7 @@ const CANAL_FIELD_ID = "16ebda9f-cd3b-412c-bb06-0950001963c5";
 const MQL_VALUE = "SIM - Lead Qualificado / +30K";
 
 export interface MarketingDashboardMetrics {
-  // Leads
+  // Leads (range filtrado)
   leadsThisMonth: number;
   mqlThisMonth: number;
   mqlOrganic: number;
@@ -43,51 +43,64 @@ export interface MarketingDashboardMetrics {
   tasksDoneThisWeek: number;
 }
 
-export function useMarketingDashboardMetrics() {
+export interface MarketingDashboardRange {
+  startDate: Date;
+  endDate: Date;
+}
+
+export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const userId = currentUser?.id;
 
+  const now = new Date();
+  const rStart = range?.startDate ?? startOfMonth(now);
+  const rEnd = range?.endDate ?? endOfMonth(now);
+
   return useQuery({
-    queryKey: ["marketing-dashboard-metrics", accountId],
+    queryKey: [
+      "marketing-dashboard-metrics",
+      accountId,
+      rStart.toISOString(),
+      rEnd.toISOString(),
+    ],
     enabled: !!accountId,
     queryFn: async (): Promise<MarketingDashboardMetrics> => {
-      const now = new Date();
-      const mStart = startOfMonth(now);
-      const mEnd = endOfMonth(now);
       const last30 = subDays(now, 30);
       const last7 = subDays(now, 7);
 
-      // ===== LEADS / MQL =====
-      const { data: monthDeals = [] } = await supabase
+      // ===== LEADS / MQL (no range filtrado) =====
+      const { data: rangeDeals = [] } = await supabase
         .from("deals")
         .select("id, status")
         .eq("account_id", accountId!)
-        .gte("created_at", mStart.toISOString())
-        .lte("created_at", mEnd.toISOString());
+        .gte("created_at", rStart.toISOString())
+        .lte("created_at", rEnd.toISOString());
 
-      const monthDealIds = (monthDeals as any[]).map((d) => d.id);
+      const rangeDealIds = (rangeDeals as any[]).map((d) => d.id);
 
-      // Field values for current month deals
       let mqlSet = new Set<string>();
       let channelByDeal = new Map<string, string>();
-      if (monthDealIds.length) {
-        const { data: fvs = [] } = await supabase
-          .from("deal_field_values")
-          .select("deal_id, field_id, value_text")
-          .in("deal_id", monthDealIds)
-          .in("field_id", [MQL_FIELD_ID, CANAL_FIELD_ID]);
-        for (const fv of fvs as any[]) {
-          if (fv.field_id === MQL_FIELD_ID && fv.value_text === MQL_VALUE) {
-            mqlSet.add(fv.deal_id);
-          } else if (fv.field_id === CANAL_FIELD_ID && fv.value_text) {
-            channelByDeal.set(fv.deal_id, fv.value_text);
+      if (rangeDealIds.length) {
+        for (let i = 0; i < rangeDealIds.length; i += 500) {
+          const chunk = rangeDealIds.slice(i, i + 500);
+          const { data: fvs = [] } = await supabase
+            .from("deal_field_values")
+            .select("deal_id, field_id, value_text")
+            .in("deal_id", chunk)
+            .in("field_id", [MQL_FIELD_ID, CANAL_FIELD_ID]);
+          for (const fv of fvs as any[]) {
+            if (fv.field_id === MQL_FIELD_ID && fv.value_text === MQL_VALUE) {
+              mqlSet.add(fv.deal_id);
+            } else if (fv.field_id === CANAL_FIELD_ID && fv.value_text) {
+              channelByDeal.set(fv.deal_id, fv.value_text);
+            }
           }
         }
       }
 
       const wonByDeal = new Map<string, string>();
-      (monthDeals as any[]).forEach((d) => wonByDeal.set(d.id, d.status));
+      (rangeDeals as any[]).forEach((d) => wonByDeal.set(d.id, d.status));
 
       let mqlOrganic = 0, mqlPaid = 0, wonMqlOrganic = 0, wonMqlPaid = 0;
       const channelCounts: Record<string, number> = {};
@@ -107,7 +120,7 @@ export function useMarketingDashboardMetrics() {
         .map(([channel, count]) => ({ channel, count }))
         .sort((a, b) => b.count - a.count);
 
-      // ===== HISTÓRICO 6 MESES =====
+      // ===== HISTÓRICO 6 MESES (sempre fixo p/ contexto) =====
       const monthlyHistory: { month: string; leads: number; mql: number; won: number }[] = [];
       const sixStart = startOfMonth(subMonths(now, 5));
       const { data: histDeals = [] } = await supabase
@@ -119,7 +132,6 @@ export function useMarketingDashboardMetrics() {
       const histIds = (histDeals as any[]).map((d) => d.id);
       const histMql = new Set<string>();
       if (histIds.length) {
-        // batch in chunks of 500 to be safe
         for (let i = 0; i < histIds.length; i += 500) {
           const chunk = histIds.slice(i, i + 500);
           const { data: fv = [] } = await supabase
@@ -150,7 +162,7 @@ export function useMarketingDashboardMetrics() {
         monthlyHistory.push({ month: format(mDate, "MMM/yy"), leads, mql, won });
       }
 
-      // ===== TRÁFEGO PAGO (marketing_ad_sets — user_id scoped) =====
+      // ===== TRÁFEGO PAGO =====
       let adSpend = 0, adLeads = 0, adImpressions = 0, adCpl = 0;
       let topCampaigns: { name: string; spend: number; leads: number; cpl: number }[] = [];
       if (userId) {
@@ -203,7 +215,6 @@ export function useMarketingDashboardMetrics() {
       }
       const projectNameById = new Map((projects as any[]).map((p) => [p.id, p.name]));
 
-      // Marcos próximos (próximos 30 dias)
       const in30 = subDays(now, -30).toISOString().split("T")[0];
       const todayIso = format(now, "yyyy-MM-dd");
       const projectIds = (projects as any[]).map((p) => p.id);
@@ -248,7 +259,7 @@ export function useMarketingDashboardMetrics() {
           : 0;
 
       return {
-        leadsThisMonth: monthDeals.length,
+        leadsThisMonth: rangeDeals.length,
         mqlThisMonth: mqlSet.size,
         mqlOrganic,
         mqlPaid,
