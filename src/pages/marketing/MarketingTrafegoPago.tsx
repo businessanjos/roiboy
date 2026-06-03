@@ -26,6 +26,7 @@ import { useMetaKpiPreferences } from '@/hooks/useMetaKpiPreferences';
 import { ManageAdAccountsModal } from '@/components/meta/ManageAdAccountsModal';
 import { CampaignsManager } from '@/components/meta/CampaignsManager';
 import { toast } from 'sonner';
+import { useTrafficAgencies } from '@/hooks/useTrafficAgencies';
 
 interface AdSet {
   id: string;
@@ -37,6 +38,7 @@ interface AdSet {
   clicks: number;
   conversions: number;
   cpl: number;
+  agency_id?: string | null;
 }
 
 interface Insights {
