@@ -5,7 +5,26 @@ import { startOfMonth, endOfMonth, subMonths, format, subDays } from "date-fns";
 
 const MQL_FIELD_ID = "448404cd-0344-4892-a574-2387b1c17578";
 const CANAL_FIELD_ID = "16ebda9f-cd3b-412c-bb06-0950001963c5";
-const MQL_VALUE = "SIM - Lead Qualificado / +30K";
+// MQL "SIM" — aceita slug atual e variantes legadas
+const MQL_VALUES = new Set([
+  "sim_acima_30k",
+  "SIM - Acima de 30k",
+  "SIM - Lead Qualificado / +30K",
+]);
+// Canal: slugs do banco → rótulos exibidos
+const CHANNEL_LABELS: Record<string, string> = {
+  organico: "Orgânico",
+  trafego_pago: "Tráfego Pago",
+  indicacao: "Indicação",
+  eventos: "Eventos",
+  carteira_esteira: "Carteira/Esteira",
+};
+const labelForChannel = (raw?: string | null) => {
+  if (!raw) return "Sem canal";
+  return CHANNEL_LABELS[raw] ?? raw;
+};
+const ORGANIC_SLUG = "organico";
+const PAID_SLUG = "trafego_pago";
 
 export interface MarketingDashboardMetrics {
   // Leads (range filtrado)
@@ -90,7 +109,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
             .in("deal_id", chunk)
             .in("field_id", [MQL_FIELD_ID, CANAL_FIELD_ID]);
           for (const fv of fvs as any[]) {
-            if (fv.field_id === MQL_FIELD_ID && fv.value_text === MQL_VALUE) {
+            if (fv.field_id === MQL_FIELD_ID && MQL_VALUES.has(fv.value_text)) {
               mqlSet.add(fv.deal_id);
             } else if (fv.field_id === CANAL_FIELD_ID && fv.value_text) {
               channelByDeal.set(fv.deal_id, fv.value_text);
@@ -105,12 +124,13 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       let mqlOrganic = 0, mqlPaid = 0, wonMqlOrganic = 0, wonMqlPaid = 0;
       const channelCounts: Record<string, number> = {};
       for (const id of mqlSet) {
-        const ch = channelByDeal.get(id) || "Sem canal";
-        channelCounts[ch] = (channelCounts[ch] || 0) + 1;
-        if (ch === "Orgânico") {
+        const rawCh = channelByDeal.get(id);
+        const friendly = labelForChannel(rawCh);
+        channelCounts[friendly] = (channelCounts[friendly] || 0) + 1;
+        if (rawCh === ORGANIC_SLUG) {
           mqlOrganic++;
           if (wonByDeal.get(id) === "won") wonMqlOrganic++;
-        } else if (ch === "Tráfego Pago") {
+        } else if (rawCh === PAID_SLUG) {
           mqlPaid++;
           if (wonByDeal.get(id) === "won") wonMqlPaid++;
         }
@@ -140,7 +160,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
             .eq("field_id", MQL_FIELD_ID)
             .in("deal_id", chunk);
           (fv as any[]).forEach((v) => {
-            if (v.value_text === MQL_VALUE) histMql.add(v.deal_id);
+            if (MQL_VALUES.has(v.value_text)) histMql.add(v.deal_id);
           });
         }
       }
@@ -249,11 +269,11 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       // ===== TAREFAS =====
       const { data: tasks = [] } = await supabase
         .from("marketing_tasks")
-        .select("id, status, due_date, completed_at")
+        .select("id, status, due_date, completed_at, is_completed")
         .eq("account_id", accountId!);
       let tasksOpen = 0, tasksOverdue = 0, tasksDoneThisWeek = 0;
       for (const t of tasks as any[]) {
-        const isDone = t.status === "done" || !!t.completed_at;
+        const isDone = !!t.is_completed || t.status === "done" || !!t.completed_at;
         if (!isDone) {
           tasksOpen++;
           if (t.due_date && t.due_date < todayIso) tasksOverdue++;

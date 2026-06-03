@@ -393,12 +393,12 @@ export default function MarketingDashboard() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">MQL por canal</CardTitle>
-              <CardDescription>Distribuição no mês</CardDescription>
+              <CardDescription>Distribuição no período ({rangeLabel})</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {data.channelBreakdown.length === 0 ? (
                 <div className="text-sm text-muted-foreground py-4 text-center">
-                  Sem MQL registrado neste mês
+                  Sem MQL registrado neste período
                 </div>
               ) : (
                 data.channelBreakdown.map((c) => {
@@ -427,7 +427,7 @@ export default function MarketingDashboard() {
         <SectionTitle
           icon={Megaphone}
           title="Tráfego Pago"
-          subtitle="Performance acumulada das campanhas sincronizadas"
+          subtitle="Acumulado das campanhas sincronizadas (não filtrado por período)"
           action={
             <Button variant="outline" size="sm" onClick={() => navigate("/marketing/trafego-pago")}>
               Abrir Meta Ads <ArrowRight className="h-3.5 w-3.5 ml-1" />
