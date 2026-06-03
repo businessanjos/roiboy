@@ -160,7 +160,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
             .eq("field_id", MQL_FIELD_ID)
             .in("deal_id", chunk);
           (fv as any[]).forEach((v) => {
-            if (v.value_text === MQL_VALUE) histMql.add(v.deal_id);
+            if (MQL_VALUES.has(v.value_text)) histMql.add(v.deal_id);
           });
         }
       }
