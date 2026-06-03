@@ -181,22 +181,22 @@ export function useMarketingDashboardMetrics() {
           .select("id, views")
           .eq("account_id", accountId!)
           .gte("posted_at", last30Iso),
-        supabase
+        (supabase
           .from("instagram_posts")
-          .select("id, like_count, comments_count")
+          .select("id, likes, comments")
           .eq("account_id", accountId!)
-          .gte("timestamp", last30Iso),
-        supabase
+          .gte("posted_at", last30Iso) as any),
+        (supabase
           .from("tiktok_posts")
           .select("id")
           .eq("account_id", accountId!)
-          .gte("create_time", last30Iso),
+          .gte("posted_at", last30Iso) as any),
       ]);
       const ytVideos30d = (ytRes.data || []).length;
       const ytViews30d = (ytRes.data || []).reduce((s: number, v: any) => s + (Number(v.views) || 0), 0);
       const igPosts30d = (igRes.data || []).length;
       const igEngagement30d = (igRes.data || []).reduce(
-        (s: number, p: any) => s + (Number(p.like_count) || 0) + (Number(p.comments_count) || 0),
+        (s: number, p: any) => s + (Number(p.likes) || 0) + (Number(p.comments) || 0),
         0
       );
       const ttPosts30d = (ttRes.data || []).length;
