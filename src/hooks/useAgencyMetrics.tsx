@@ -75,7 +75,7 @@ export function useAgencyMetrics(agencyId?: string, range?: AgencyMetricsRange) 
       // Deals tagged to this agency in the date range
       let dealsQuery = sb
         .from("deals")
-        .select("id, status, amount, created_at")
+        .select("id, status, value, created_at")
         .eq("account_id", accountId)
         .gte("created_at", rStart.toISOString())
         .lte("created_at", rEnd.toISOString());
@@ -103,7 +103,7 @@ export function useAgencyMetrics(agencyId?: string, range?: AgencyMetricsRange) 
       for (const d of deals as any[]) {
         if (d.status === "won") {
           vendas++;
-          receita += Number(d.amount) || 0;
+          receita += Number(d.value) || 0;
         }
       }
       const leadsRange = (deals as any[]).length;
