@@ -109,7 +109,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
             .in("deal_id", chunk)
             .in("field_id", [MQL_FIELD_ID, CANAL_FIELD_ID]);
           for (const fv of fvs as any[]) {
-            if (fv.field_id === MQL_FIELD_ID && fv.value_text === MQL_VALUE) {
+            if (fv.field_id === MQL_FIELD_ID && MQL_VALUES.has(fv.value_text)) {
               mqlSet.add(fv.deal_id);
             } else if (fv.field_id === CANAL_FIELD_ID && fv.value_text) {
               channelByDeal.set(fv.deal_id, fv.value_text);
@@ -124,12 +124,13 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       let mqlOrganic = 0, mqlPaid = 0, wonMqlOrganic = 0, wonMqlPaid = 0;
       const channelCounts: Record<string, number> = {};
       for (const id of mqlSet) {
-        const ch = channelByDeal.get(id) || "Sem canal";
-        channelCounts[ch] = (channelCounts[ch] || 0) + 1;
-        if (ch === "Orgânico") {
+        const rawCh = channelByDeal.get(id);
+        const friendly = labelForChannel(rawCh);
+        channelCounts[friendly] = (channelCounts[friendly] || 0) + 1;
+        if (rawCh === ORGANIC_SLUG) {
           mqlOrganic++;
           if (wonByDeal.get(id) === "won") wonMqlOrganic++;
-        } else if (ch === "Tráfego Pago") {
+        } else if (rawCh === PAID_SLUG) {
           mqlPaid++;
           if (wonByDeal.get(id) === "won") wonMqlPaid++;
         }
