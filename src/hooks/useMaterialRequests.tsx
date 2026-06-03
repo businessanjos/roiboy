@@ -19,10 +19,40 @@ export interface MaterialRequest {
   attachments: any[];
   created_at: string;
   updated_at: string;
-  // joined
+  // joined client-side
   agency?: { name: string; color: string } | null;
-  requested_by?: { name: string; avatar_url: string | null } | null;
-  assigned_to?: { name: string; avatar_url: string | null } | null;
+  requested_by?: { name: string | null; avatar_url: string | null } | null;
+  assigned_to?: { name: string | null; avatar_url: string | null } | null;
+}
+
+async function hydrate(rows: any[]) {
+  if (!rows.length) return rows as MaterialRequest[];
+  const sb: any = supabase;
+  const userIds = Array.from(
+    new Set(
+      rows.flatMap((r) => [r.requested_by_user_id, r.assigned_to_user_id]).filter(Boolean)
+    )
+  );
+  const agencyIds = Array.from(new Set(rows.map((r) => r.agency_id).filter(Boolean)));
+
+  const [usersRes, agRes] = await Promise.all([
+    userIds.length
+      ? sb.from("users").select("id, name, avatar_url").in("id", userIds)
+      : Promise.resolve({ data: [] }),
+    agencyIds.length
+      ? sb.from("traffic_agencies").select("id, name, color").in("id", agencyIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const usersById = new Map((usersRes.data || []).map((u: any) => [u.id, u]));
+  const agById = new Map((agRes.data || []).map((a: any) => [a.id, a]));
+
+  return rows.map((r) => ({
+    ...r,
+    requested_by: usersById.get(r.requested_by_user_id) ?? null,
+    assigned_to: r.assigned_to_user_id ? usersById.get(r.assigned_to_user_id) ?? null : null,
+    agency: agById.get(r.agency_id) ?? null,
+  })) as MaterialRequest[];
 }
 
 export function useMaterialRequests(agencyId?: string) {
@@ -30,27 +60,17 @@ export function useMaterialRequests(agencyId?: string) {
   const accountId = currentUser?.account_id;
   return useQuery({
     queryKey: ["material-requests", accountId, agencyId ?? "all"],
-    enabled: !!accountId,
+    enabled: !!currentUser,
     queryFn: async (): Promise<MaterialRequest[]> => {
       const sb: any = supabase;
       let q = sb
         .from("marketing_material_requests")
-        .select(
-          "*, agency:traffic_agencies(name,color), requested_by:users!marketing_material_requests_requested_by_user_id_fkey(name,avatar_url), assigned_to:users!marketing_material_requests_assigned_to_user_id_fkey(name,avatar_url)"
-        )
+        .select("*")
         .order("created_at", { ascending: false });
       if (agencyId) q = q.eq("agency_id", agencyId);
       const { data, error } = await q;
-      // Fallback: relationships may not exist as named, try without joins
-      if (error) {
-        const { data: d2 } = await sb
-          .from("marketing_material_requests")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .maybeSingle?.() ?? { data: [] };
-        return (Array.isArray(d2) ? d2 : []) as MaterialRequest[];
-      }
-      return (data || []) as MaterialRequest[];
+      if (error) throw error;
+      return hydrate((data || []) as any[]);
     },
   });
 }
@@ -89,6 +109,7 @@ export function useCreateMaterialRequest() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["material-requests"] });
+      qc.invalidateQueries({ queryKey: ["traffic-agencies"] });
     },
   });
 }
@@ -107,7 +128,10 @@ export function useUpdateMaterialRequest() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["material-requests"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["material-requests"] });
+      qc.invalidateQueries({ queryKey: ["traffic-agencies"] });
+    },
   });
 }
 
@@ -117,12 +141,21 @@ export function useRequestComments(requestId?: string) {
     enabled: !!requestId,
     queryFn: async () => {
       const sb: any = supabase;
-      const { data } = await sb
+      const { data, error } = await sb
         .from("marketing_material_request_comments")
-        .select("*, user:users(name,avatar_url)")
+        .select("*")
         .eq("request_id", requestId)
         .order("created_at", { ascending: true });
-      return (data || []) as any[];
+      if (error) throw error;
+      const rows = (data || []) as any[];
+      if (!rows.length) return rows;
+      const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
+      const { data: users = [] } = await sb
+        .from("users")
+        .select("id, name, avatar_url")
+        .in("id", userIds);
+      const byId = new Map((users as any[]).map((u) => [u.id, u]));
+      return rows.map((r) => ({ ...r, user: byId.get(r.user_id) ?? null }));
     },
   });
 }
