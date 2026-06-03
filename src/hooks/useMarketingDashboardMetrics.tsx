@@ -206,15 +206,18 @@ export function useMarketingDashboardMetrics() {
       // Marcos próximos (próximos 30 dias)
       const in30 = subDays(now, -30).toISOString().split("T")[0];
       const todayIso = format(now, "yyyy-MM-dd");
-      const { data: milestones = [] } = await supabase
-        .from("marketing_project_milestones")
-        .select("id, title, due_date, project_id, status")
-        .gte("due_date", todayIso)
-        .lte("due_date", in30)
-        .neq("status", "done")
-        .in("project_id", (projects as any[]).map((p) => p.id).length ? (projects as any[]).map((p) => p.id) : ["00000000-0000-0000-0000-000000000000"])
-        .order("due_date", { ascending: true })
-        .limit(6);
+      const projectIds = (projects as any[]).map((p) => p.id);
+      const { data: milestones = [] } = projectIds.length
+        ? await (supabase as any)
+            .from("marketing_project_milestones")
+            .select("id, title, due_date, project_id, status")
+            .gte("due_date", todayIso)
+            .lte("due_date", in30)
+            .neq("status", "done")
+            .in("project_id", projectIds)
+            .order("due_date", { ascending: true })
+            .limit(6)
+        : { data: [] as any[] };
 
       const upcomingMilestones = (milestones as any[]).map((m) => ({
         id: m.id,
