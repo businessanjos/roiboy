@@ -1,72 +1,101 @@
-## Objetivo
+# Agências de Tráfego — Plano
 
-Substituir os 6 contratos do Rykas Mentoring (PF/PJ × 3 formas de pagamento) por **1 template único** com blocos condicionais, mantendo o template atual como histórico.
+Nova área em Marketing para cadastrar agências parceiras, comparar performance lado a lado e dar a elas um acesso restrito ao ROY para solicitar materiais.
 
----
+## 1. Modelo de dados (1 migration)
 
-## Mapeamento do que muda entre os 6 arquivos
+**Novas tabelas (todas `account_id`-scoped, com RLS + GRANTs):**
 
-**Eixo PF vs PJ** — muda só o bloco de qualificação do CONTRATANTE e a linha de assinatura.
+- `traffic_agencies` — `id, account_id, name, color, contact_name, contact_email, contact_phone, notes, is_active, created_at, updated_at`
+- `traffic_agency_members` — vincula `user_id` ↔ `agency_id` (um usuário pode ser de uma agência; tabela separada para evoluir para multi-agência depois)
+- `marketing_material_requests` — `id, account_id, agency_id, requested_by_user_id, category` (enum: `criativo_estatico`, `video`, `copy`, `landing_page`, `outro`), `title, description, payload jsonb` (campos específicos por categoria), `status` (`aberto`, `em_producao`, `em_revisao`, `entregue`, `cancelado`), `priority, due_date, attachments jsonb, assigned_to_user_id, created_at, updated_at`
+- `marketing_material_request_comments` — thread interno (`request_id, user_id, body, created_at`)
 
-**Eixo Forma de Pagamento:**
-- **À vista (R$ 70.000):** cláusula simples.
-- **Cartão 12x (R$ 80.400):** + 4 parágrafos (chargeback, terceiros, limite, fatura) e parágrafo de atraso 2+ parcelas.
-- **Cheque 1+11 (R$ 80.400):** + bloco operacional (envio SEDEX p/ CAIXA POSTAL 2002 Arapongas-PR, e-mail `financeiro@anjosbusiness.com.br`, taxa R$ 2.000, PIX backup) e parágrafo de atraso 2+ parcelas.
+**Alterações em tabelas existentes:**
 
-Todo o resto (objeto, cláusulas de mentoria, responsabilidades, confidencialidade, rescisão, sistema Clínica Ryka 6 meses, autorização de imagem) é idêntico nos 6.
+- `marketing_ad_sets` → adicionar coluna `agency_id uuid` (nullable) + `account_id uuid` (preencher via backfill do `user_id`→`users.account_id`) e ajustar RLS para `account_id`. Sem isso, agências veem só os ad sets do usuário que sincronizou Meta.
+- `deals` → adicionar `agency_id uuid` (nullable) para atribuição direta de leads à agência (preenchido por regra: se `canal = trafego_pago` e existe ad set vinculado → usa agência do ad set; senão fica nulo e pode ser setado manualmente).
 
-**Bug encontrado nos 3 arquivos PJ:** valor à vista descrito como "setenta e nove mil reais" — vou corrigir para "setenta mil reais" (combinando com o valor numérico R$ 70.000,00). Se você quiser manter o erro original, é só avisar.
+## 2. RBAC — papel "Agência"
 
----
+- Criar `team_role` "Agência de Tráfego" (semente em migration).
+- Helper novo `isTrafficAgencyUser(currentUser)` lendo `team_role_names`.
+- Helper `getCurrentUserAgencyId()` lendo `traffic_agency_members`.
+- Gate na sidebar do Marketing: usuário-agência vê apenas **Dashboard da Agência** e **Solicitações**. Demais setores ficam ocultos (já controlado por `user_sector_access` — Marketing como `viewer`).
+- Filtro server-side: todas as queries de `marketing_ad_sets`, `deals`, `marketing_material_requests` aplicam `agency_id = currentUserAgencyId` quando o usuário é agência. Reforçado por RLS policy específica.
 
-## Mudanças no código
+## 3. UI — área interna (admin/marketing)
 
-### 1. Engine de templates — `src/lib/contractTemplates.ts`
+Nova entrada na sidebar Marketing: **Agências** (`/marketing/agencias`).
 
-Adicionar **suporte a blocos condicionais** antes do replace existente em `renderTemplate`:
+### 3.1 `/marketing/agencias` — lista + CRUD
+- Cards com nome, cor, contato, # campanhas ativas, investimento mês, leads mês.
+- Dialog de criar/editar agência.
+- Botão "Vincular usuário" abre seletor para criar `traffic_agency_members`.
 
-```
-{{#if FORMA_PAGAMENTO_RYKAS=CARTAO_12X}}...conteúdo...{{/if}}
-```
+### 3.2 `/marketing/agencias/:id` — detalhe da agência
+Tabs:
+- **Visão geral**: KPIs (Investimento, Leads, MQL, Vendas, CAC, ROAS, CPL) com seletor de período.
+- **Campanhas**: tabela de `marketing_ad_sets` da agência com ranking por ROAS/CPL.
+- **Funil**: Lead → MQL → SQL/Reunião → Venda com taxas entre etapas.
+- **Solicitações**: lista de `marketing_material_requests` daquela agência.
 
-Implementação: 1 regex extra que processa blocos antes da substituição de placeholders escalares. Suporta também `{{#if KEY!=value}}` para negação.
+### 3.3 `/marketing/agencias/comparativo` — comparação lado a lado
+- Seletor multi-agência (padrão: todas ativas).
+- Cards KPI lado a lado por agência.
+- Gráfico de linha temporal (Recharts) — investimento, leads, MQL, vendas (seletor de métrica).
+- Tabela de campanhas top de cada agência.
+- Funil comparado.
+- Reaproveita `useMarketingDashboardMetrics` parametrizado por `agencyId`.
 
-Atualizar `extractPlaceholders` para ignorar tokens dentro de blocos condicionais ao detectar variáveis de wizard, evitando duplicação.
+## 4. UI — portal da agência
 
-Adicionar tipo de variável `"select"` com `options: string[]` para o wizard renderizar um dropdown.
+Quando um usuário-agência loga, é direcionado para `/marketing/portal-agencia` (rota nova):
 
-### 2. Wizard — `src/components/sales/contracts/ContractWizard.tsx`
+- **Dashboard**: mesmos KPIs e gráficos da view interna, mas escopado à própria agência (sem ver outras).
+- **Minhas campanhas**: tabela de ad sets.
+- **Solicitar material**: botão grande que abre wizard tipado por categoria.
+- **Minhas solicitações**: kanban (Aberto → Em produção → Em revisão → Entregue) das próprias solicitações, com comentários.
 
-- Renderizar variáveis tipo `select` como dropdown (componente Select da shadcn).
-- Injetar automaticamente no `values` o placeholder `DOC_TYPE` = "PF" ou "PJ" baseado no `docType` já existente, para que o template condicional funcione sem o vendedor precisar selecionar manualmente.
+## 5. Solicitação de materiais — formulário tipado
 
-### 3. Banco — migration
+Wizard em 2 passos:
 
-- Criar 1 novo registro em `contract_templates` chamado **"Rykas Mentoring — v2 (PF/PJ + Pagamentos)"**, vinculado ao produto Rykas Mentoring (id `8d3e9bb6...`), com `is_default = true`.
-- HTML do template contém blocos condicionais para `DOC_TYPE` (PF/PJ) e `FORMA_PAGAMENTO_RYKAS` (A_VISTA / CARTAO_12X / CHEQUE_1_11).
-- Variáveis definidas: campos comuns + `FORMA_PAGAMENTO_RYKAS` (select com 3 opções) + `VALOR_TOTAL_RYKAS` (auto-preenchido conforme escolha).
-- Marcar o template Rykas antigo como `is_active = false` (preserva como histórico, contratos já gerados continuam funcionando — eles têm snapshot em `digital_contracts.template_html`).
+1. **Categoria**: criativo estático, vídeo, copy, landing page, outro.
+2. **Formulário específico** (salvo em `payload jsonb`):
+   - **Criativo estático**: campanha alvo, formato (feed/story/reels), objetivo, headline, CTA, referências (upload), data desejada.
+   - **Vídeo**: duração, plataforma, roteiro/ideia, voz-off (sim/não), referências, data.
+   - **Copy**: canal (email/ads/lp), tom, número de variações, briefing.
+   - **Landing page**: objetivo, produto, URL atual (se houver), seções desejadas, integrações.
+   - **Outro**: descrição livre.
 
-### 4. Produto Rykas — `data update`
+Workflow:
+- Status inicial `aberto`, notifica time de Marketing.
+- Marketing assume (`assigned_to_user_id`), move para `em_producao`.
+- Entrega arquivo/link, move para `em_revisao` → agência aprova → `entregue`.
+- Thread de comentários com anexos em ambos os lados.
 
-O produto **`Rykas Mentoring`** (id `8d3e9bb6...`) hoje tem `price = 70000`. Mantém como **preço base (à vista)**. As variações (80.400) ficam dentro do wizard via select, refletidas em `VALOR_TOTAL_RYKAS` e na cláusula condicional. Isso preserva métricas/dashboards baseadas em `products.price`.
+## 6. Detalhes técnicos
 
-Se você preferir 3 produtos separados (Rykas Mentoring À Vista / Cartão / Cheque) para dashboards distinguirem, me avise antes de eu rodar a migration — é uma decisão de modelagem.
+- `useTrafficAgencies()` — lista com counts agregados.
+- `useAgencyMetrics(agencyId, dateRange)` — encapsula leitura de `marketing_ad_sets` + `deals` filtrados.
+- `useMarketingDashboardMetrics` ganha parâmetro opcional `agencyId`.
+- Storage: bucket `material-requests` (RLS: agência só vê seus próprios anexos; marketing vê tudo da conta).
+- Realtime no `marketing_material_request_comments` para chat ao vivo.
+- Backfill: ad sets existentes ficam com `agency_id = null` (admin atribui depois pela UI).
 
----
+## 7. Itens fora desse escopo (perguntar antes se quiser)
 
-## Resumo dos arquivos
+- Integração Google Ads (hoje só Meta existe).
+- Atribuição automática de `deals.agency_id` por UTM — começamos com regra simples por ad set; UTM pode vir depois.
+- SLA/automações de cobrança em solicitações atrasadas.
 
-| Arquivo | Mudança |
-|---|---|
-| `src/lib/contractTemplates.ts` | + parser de `{{#if}}`, + tipo `select` |
-| `src/components/sales/contracts/ContractWizard.tsx` | + render select, + inject `DOC_TYPE` |
-| Migration nova | + template Rykas v2, desativa antigo |
+## 8. Ordem de execução
 
----
-
-## Pontos para você confirmar antes de eu rodar
-
-1. **Bug do extenso PJ** ("setenta e nove" → corrigir para "setenta")? Sim/não.
-2. **Produto único com select** (recomendado) ou **3 produtos separados** no cadastro?
-3. **Tudo o resto** segue como nos arquivos enviados, incluindo: Anjo Consultor como bônus, Clínica Ryka 6 meses, 3 usuários, mentoria quinta 07h, vigência 6 meses, taxa cheque R$ 2.000, CAIXA POSTAL 2002 Arapongas-PR, e-mail `financeiro@anjosbusiness.com.br`. Confirma esses dados?
+1. Migration (tabelas + colunas novas + RLS + GRANTs + seed do team role).
+2. Helpers RBAC e hooks (`useTrafficAgencies`, `useAgencyMetrics`).
+3. CRUD `/marketing/agencias` + vínculo de usuários.
+4. Detalhe da agência + comparativo.
+5. Portal externo da agência.
+6. Sistema de solicitação de materiais (wizard + kanban + comentários).
+7. Backfill manual via UI (você atribui as agências aos ad sets/contas existentes).
