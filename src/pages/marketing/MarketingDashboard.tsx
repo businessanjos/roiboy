@@ -173,7 +173,20 @@ export default function MarketingDashboard() {
     return PRESETS.find((p) => p.value === preset)?.label ?? "Este Mês";
   }, [preset, customRange]);
 
-  const { data, isLoading } = useMarketingDashboardMetrics(range);
+  const { data, isLoading, error } = useMarketingDashboardMetrics(range);
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-destructive">Erro ao carregar dashboard</CardTitle>
+            <CardDescription>{(error as any)?.message || "Erro desconhecido"}</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading || !data) {
     return (
