@@ -323,7 +323,7 @@ export default function MarketingDashboard() {
         </div>
 
         {/* Cards detalhados do MQL (Análise MKT) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <KpiCard
             icon={Target}
             label="MQL — Orgânico (Leads)"
@@ -337,6 +337,13 @@ export default function MarketingDashboard() {
             value={formatNum(data.mqlPaid)}
             hint="MQL vindos do canal Tráfego Pago"
             tone="info"
+          />
+          <KpiCard
+            icon={Users}
+            label="MQL — Outros canais (Leads)"
+            value={formatNum(data.mqlOthers)}
+            hint="Indicação, Eventos, Carteira/Esteira ou sem canal"
+            tone="default"
           />
           <KpiCard
             icon={CheckCircle2}
