@@ -202,10 +202,73 @@ export default function MarketingDashboard() {
             Visão consolidada — {format(new Date(), "dd 'de' MMMM, yyyy", { locale: ptBR })}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate("/marketing-insights")}>
-          <Sparkles className="h-4 w-4 mr-2" />
-          Insights customizados
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Date Filter */}
+          {!datePickerOpen ? (
+            <DropdownMenu open={dateDropdownOpen} onOpenChange={setDateDropdownOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  {rangeLabel}
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {PRESETS.map((p) => (
+                  <DropdownMenuItem
+                    key={p.value}
+                    onClick={() => setPreset(p.value)}
+                    className={cn(preset === p.value && "bg-accent")}
+                  >
+                    {p.label}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setDateDropdownOpen(false);
+                    setTimeout(() => setDatePickerOpen(true), 100);
+                  }}
+                >
+                  Personalizado…
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  {rangeLabel}
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={customRange.from}
+                  selected={customRange as any}
+                  onSelect={(r: any) => {
+                    setCustomRange({ from: r?.from, to: r?.to });
+                    if (r?.from && r?.to) {
+                      setPreset("custom");
+                      setDatePickerOpen(false);
+                    }
+                  }}
+                  numberOfMonths={2}
+                  locale={ptBR}
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+          <Button variant="outline" size="sm" onClick={() => navigate("/marketing-insights")}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Insights customizados
+          </Button>
+        </div>
       </div>
 
       {/* ===== Funil de Leads & MQL ===== */}
@@ -213,19 +276,19 @@ export default function MarketingDashboard() {
         <SectionTitle
           icon={Users}
           title="Funil de Leads & MQL"
-          subtitle="Negócios criados no mês corrente por canal de origem"
+          subtitle={`Negócios criados no período (${rangeLabel}) por canal de origem`}
         />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KpiCard
             icon={Users}
-            label="Leads no mês"
+            label="Leads no período"
             value={formatNum(data.leadsThisMonth)}
             hint="Total de negócios criados"
             tone="info"
           />
           <KpiCard
             icon={Target}
-            label="MQL no mês"
+            label="MQL no período"
             value={formatNum(data.mqlThisMonth)}
             hint="Qualificados +30K"
             tone="purple"
@@ -243,6 +306,46 @@ export default function MarketingDashboard() {
             value={`${data.mqlPaid} × ${data.mqlOrganic}`}
             hint={`Vendas: ${data.wonMqlPaid} pago / ${data.wonMqlOrganic} orgânico`}
             tone="warning"
+          />
+        </div>
+
+        {/* Cards detalhados do MQL (Análise MKT) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KpiCard
+            icon={Target}
+            label="MQL — Orgânico (Leads)"
+            value={formatNum(data.mqlOrganic)}
+            hint="MQL vindos do canal Orgânico"
+            tone="purple"
+          />
+          <KpiCard
+            icon={Megaphone}
+            label="MQL — Tráfego Pago (Leads)"
+            value={formatNum(data.mqlPaid)}
+            hint="MQL vindos do canal Tráfego Pago"
+            tone="info"
+          />
+          <KpiCard
+            icon={CheckCircle2}
+            label="Vendas MQL — Orgânico"
+            value={formatNum(data.wonMqlOrganic)}
+            hint={
+              data.mqlOrganic > 0
+                ? `${((data.wonMqlOrganic / data.mqlOrganic) * 100).toFixed(1)}% de conversão`
+                : "Sem MQL no período"
+            }
+            tone="success"
+          />
+          <KpiCard
+            icon={CheckCircle2}
+            label="Vendas MQL — Tráfego Pago"
+            value={formatNum(data.wonMqlPaid)}
+            hint={
+              data.mqlPaid > 0
+                ? `${((data.wonMqlPaid / data.mqlPaid) * 100).toFixed(1)}% de conversão`
+                : "Sem MQL no período"
+            }
+            tone="success"
           />
         </div>
 
