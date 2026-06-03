@@ -119,6 +119,15 @@ export function AppLayout() {
     return <Navigate to="/external/insights" replace />;
   }
 
+  // Traffic-agency users are locked into their portal experience.
+  // They can navigate within /marketing/portal-agencia/* but nothing else.
+  if (
+    isTrafficAgencyUser(currentUser) &&
+    !location.pathname.startsWith("/marketing/portal-agencia")
+  ) {
+    return <Navigate to="/marketing/portal-agencia" replace />;
+  }
+
   // Redirect to choose plan if trial expired and no active subscription
   if (isTrialExpired && !hasAccess) {
     return <Navigate to="/choose-plan" replace />;
