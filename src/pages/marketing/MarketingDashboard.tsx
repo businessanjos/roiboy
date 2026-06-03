@@ -427,7 +427,7 @@ export default function MarketingDashboard() {
         <SectionTitle
           icon={Megaphone}
           title="Tráfego Pago"
-          subtitle="Performance acumulada das campanhas sincronizadas"
+          subtitle="Acumulado das campanhas sincronizadas (não filtrado por período)"
           action={
             <Button variant="outline" size="sm" onClick={() => navigate("/marketing/trafego-pago")}>
               Abrir Meta Ads <ArrowRight className="h-3.5 w-3.5 ml-1" />
