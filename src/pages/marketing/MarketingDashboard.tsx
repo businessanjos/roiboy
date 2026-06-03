@@ -309,15 +309,15 @@ export default function MarketingDashboard() {
           <KpiCard
             icon={CheckCircle2}
             label="Vendas MQL"
-            value={formatNum(data.wonMqlOrganic + data.wonMqlPaid)}
+            value={formatNum(data.wonMqlOrganic + data.wonMqlPaid + data.wonMqlOthers)}
             hint={`${data.mqlConversionRate.toFixed(1)}% de conversão MQL→Venda`}
             tone="success"
           />
           <KpiCard
             icon={TrendingUp}
-            label="MQL Tráfego × Orgânico"
-            value={`${data.mqlPaid} × ${data.mqlOrganic}`}
-            hint={`Vendas: ${data.wonMqlPaid} pago / ${data.wonMqlOrganic} orgânico`}
+            label="MQL Pago × Orgânico × Outros"
+            value={`${data.mqlPaid} × ${data.mqlOrganic} × ${data.mqlOthers}`}
+            hint={`Vendas: ${data.wonMqlPaid}p / ${data.wonMqlOrganic}o / ${data.wonMqlOthers}out`}
             tone="warning"
           />
         </div>
