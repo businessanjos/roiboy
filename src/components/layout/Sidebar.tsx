@@ -58,6 +58,8 @@ import {
 import { toast } from "sonner";
 import { roleNameMatches } from "@/lib/roles";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { isTrafficAgencyUser } from "@/lib/agency";
+import { Building2 as AgencyPortalIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
