@@ -123,18 +123,23 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       const wonByDeal = new Map<string, string>();
       (rangeDeals as any[]).forEach((d) => wonByDeal.set(d.id, d.status));
 
-      let mqlOrganic = 0, mqlPaid = 0, wonMqlOrganic = 0, wonMqlPaid = 0;
+      let mqlOrganic = 0, mqlPaid = 0, mqlOthers = 0;
+      let wonMqlOrganic = 0, wonMqlPaid = 0, wonMqlOthers = 0;
       const channelCounts: Record<string, number> = {};
       for (const id of mqlSet) {
         const rawCh = channelByDeal.get(id);
         const friendly = labelForChannel(rawCh);
         channelCounts[friendly] = (channelCounts[friendly] || 0) + 1;
+        const isWon = wonByDeal.get(id) === "won";
         if (rawCh === ORGANIC_SLUG) {
           mqlOrganic++;
-          if (wonByDeal.get(id) === "won") wonMqlOrganic++;
+          if (isWon) wonMqlOrganic++;
         } else if (rawCh === PAID_SLUG) {
           mqlPaid++;
-          if (wonByDeal.get(id) === "won") wonMqlPaid++;
+          if (isWon) wonMqlPaid++;
+        } else {
+          mqlOthers++;
+          if (isWon) wonMqlOthers++;
         }
       }
 
