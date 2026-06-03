@@ -175,22 +175,11 @@ export function useMarketingDashboardMetrics() {
 
       // ===== CONTEÚDO =====
       const last30Iso = last30.toISOString();
+      const sb: any = supabase;
       const [ytRes, igRes, ttRes]: any[] = await Promise.all([
-        (supabase
-          .from("youtube_videos")
-          .select("id, views")
-          .eq("account_id", accountId!)
-          .gte("posted_at", last30Iso) as any),
-        (supabase
-          .from("instagram_posts")
-          .select("id, likes, comments")
-          .eq("account_id", accountId!)
-          .gte("posted_at", last30Iso) as any),
-        (supabase
-          .from("tiktok_posts")
-          .select("id")
-          .eq("account_id", accountId!)
-          .gte("posted_at", last30Iso) as any),
+        sb.from("youtube_videos").select("id, views").eq("account_id", accountId!).gte("posted_at", last30Iso),
+        sb.from("instagram_posts").select("id, likes, comments").eq("account_id", accountId!).gte("posted_at", last30Iso),
+        sb.from("tiktok_posts").select("id").eq("account_id", accountId!).gte("posted_at", last30Iso),
       ]);
       const ytVideos30d = (ytRes.data || []).length;
       const ytViews30d = (ytRes.data || []).reduce((s: number, v: any) => s + (Number(v.views) || 0), 0);
