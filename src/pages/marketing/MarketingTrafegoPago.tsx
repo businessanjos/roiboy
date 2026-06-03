@@ -26,6 +26,7 @@ import { useMetaKpiPreferences } from '@/hooks/useMetaKpiPreferences';
 import { ManageAdAccountsModal } from '@/components/meta/ManageAdAccountsModal';
 import { CampaignsManager } from '@/components/meta/CampaignsManager';
 import { toast } from 'sonner';
+import { useTrafficAgencies } from '@/hooks/useTrafficAgencies';
 
 interface AdSet {
   id: string;
@@ -37,6 +38,7 @@ interface AdSet {
   clicks: number;
   conversions: number;
   cpl: number;
+  agency_id?: string | null;
 }
 
 interface Insights {
@@ -93,6 +95,23 @@ export default function MarketingTrafegoPago() {
       setAdSets((data as any[]) || []);
     } finally { setLoading(false); }
   }, [user?.id]);
+
+  const { data: agencies = [] } = useTrafficAgencies();
+
+  const assignAgency = useCallback(async (adId: string, agencyId: string | null) => {
+    const prev = adSets;
+    setAdSets((curr) => curr.map((a) => (a.id === adId ? { ...a, agency_id: agencyId } : a)));
+    const { error } = await supabase
+      .from('marketing_ad_sets')
+      .update({ agency_id: agencyId } as any)
+      .eq('id', adId);
+    if (error) {
+      setAdSets(prev);
+      toast.error('Não foi possível atribuir a agência');
+    } else {
+      toast.success(agencyId ? 'Agência atribuída' : 'Agência removida');
+    }
+  }, [adSets]);
 
   const syncCampaigns = useCallback(async () => {
     if (!accounts.length) { toast.error('Nenhuma conta de anúncios'); return; }
@@ -364,6 +383,7 @@ export default function MarketingTrafegoPago() {
                             <table className="w-full text-sm">
                               <thead><tr className="border-b border-border/40">
                                 <th className="text-left p-3 text-muted-foreground font-medium">Campanha</th>
+                                <th className="text-left p-3 text-muted-foreground font-medium">Agência</th>
                                 <th className="text-left p-3 text-muted-foreground font-medium">Status</th>
                                 <th className="text-right p-3 text-muted-foreground font-medium">Gasto</th>
                                 <th className="text-right p-3 text-muted-foreground font-medium">Impressões</th>
@@ -377,6 +397,27 @@ export default function MarketingTrafegoPago() {
                                     <td className="p-3">
                                       <p className="font-medium text-foreground">{ad.name}</p>
                                       <p className="text-xs text-muted-foreground">{ad.platform}</p>
+                                    </td>
+                                    <td className="p-3">
+                                      <Select
+                                        value={ad.agency_id ?? '__none__'}
+                                        onValueChange={(v) => assignAgency(ad.id, v === '__none__' ? null : v)}
+                                      >
+                                        <SelectTrigger className="h-8 w-[160px] text-xs">
+                                          <SelectValue placeholder="Sem agência" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="__none__">Sem agência</SelectItem>
+                                          {agencies.map((ag) => (
+                                            <SelectItem key={ag.id} value={ag.id}>
+                                              <span className="inline-flex items-center gap-2">
+                                                <span className="inline-block h-2 w-2 rounded-full" style={{ background: ag.color }} />
+                                                {ag.name}
+                                              </span>
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
                                     </td>
                                     <td className="p-3">
                                       <Badge variant="outline" className={ad.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'}>

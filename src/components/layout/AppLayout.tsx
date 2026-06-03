@@ -21,6 +21,7 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
 import { isSkippedRoute } from "@/lib/access/routeAccess";
 import { useAppVersionCheck } from "@/hooks/useAppVersionCheck";
+import { isTrafficAgencyUser } from "@/lib/agency";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
@@ -117,6 +118,15 @@ export function AppLayout() {
   // If user has external dashboard access and role is viewer, redirect
   if (currentUser?.role === "viewer" && externalAccess && externalAccess.length > 0) {
     return <Navigate to="/external/insights" replace />;
+  }
+
+  // Traffic-agency users are locked into their portal experience.
+  // They can navigate within /marketing/portal-agencia/* but nothing else.
+  if (
+    isTrafficAgencyUser(currentUser) &&
+    !location.pathname.startsWith("/marketing/portal-agencia")
+  ) {
+    return <Navigate to="/marketing/portal-agencia" replace />;
   }
 
   // Redirect to choose plan if trial expired and no active subscription
