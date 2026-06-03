@@ -1,0 +1,1 @@
+DELETE FROM public.insights_visuals WHERE id = '5bcdd54d-cb68-44af-8d3b-e1812b0c7783';
