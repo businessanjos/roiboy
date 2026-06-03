@@ -15,12 +15,23 @@ import {
   Sparkles,
   CalendarClock,
   DollarSign,
+  CalendarDays,
+  ChevronDown,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Bar,
   BarChart,
@@ -34,9 +45,26 @@ import {
   YAxis,
 } from "recharts";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { useMemo, useState } from "react";
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  startOfMonth,
+  endOfMonth,
+  startOfQuarter,
+  endOfQuarter,
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { useMarketingDashboardMetrics } from "@/hooks/useMarketingDashboardMetrics";
+
+type DatePreset = "today" | "month" | "quarter" | "custom";
+const PRESETS: { value: DatePreset; label: string }[] = [
+  { value: "today", label: "Hoje" },
+  { value: "month", label: "Este Mês" },
+  { value: "quarter", label: "Este Trimestre" },
+];
 
 function KpiCard({
   icon: Icon,
