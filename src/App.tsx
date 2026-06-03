@@ -146,6 +146,10 @@ const Rebranding = lazyRetry(() => import("./pages/marketing/Rebranding"));
 const MarketingProjects = lazyRetry(() => import("./pages/marketing/MarketingProjects"));
 const MarketingProjectDetail = lazyRetry(() => import("@/components/marketing/projects/ProjectDetailSheet"));
 const MarketingDashboard = lazyRetry(() => import("./pages/marketing/MarketingDashboard"));
+const MarketingAgencies = lazyRetry(() => import("./pages/marketing/MarketingAgencies"));
+const MarketingAgencyDetail = lazyRetry(() => import("./pages/marketing/MarketingAgencyDetail"));
+const MarketingAgenciesCompare = lazyRetry(() => import("./pages/marketing/MarketingAgenciesCompare"));
+const MarketingAgencyPortal = lazyRetry(() => import("./pages/marketing/MarketingAgencyPortal"));
 
 const Insights = lazyRetry(() => import("./pages/Insights"));
 const RHDashboard = lazyRetry(() => import("./pages/RHDashboard"));
@@ -349,6 +353,10 @@ const App = () => (
                             <Route path="/marketing/rebranding" element={<Rebranding />} />
                             <Route path="/marketing/projetos" element={<MarketingProjects />} />
                             <Route path="/marketing/projetos/:id" element={<MarketingProjectDetail />} />
+                            <Route path="/marketing/agencias" element={<MarketingAgencies />} />
+                            <Route path="/marketing/agencias/comparativo" element={<MarketingAgenciesCompare />} />
+                            <Route path="/marketing/agencias/:id" element={<MarketingAgencyDetail />} />
+                            <Route path="/marketing/portal-agencia" element={<MarketingAgencyPortal />} />
                             <Route path="/insights" element={<Insights />} />
                             <Route path="/insights/:dashboardId" element={<Insights />} />
                             
