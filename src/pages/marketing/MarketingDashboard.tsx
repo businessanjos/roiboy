@@ -393,12 +393,12 @@ export default function MarketingDashboard() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">MQL por canal</CardTitle>
-              <CardDescription>Distribuição no mês</CardDescription>
+              <CardDescription>Distribuição no período ({rangeLabel})</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {data.channelBreakdown.length === 0 ? (
                 <div className="text-sm text-muted-foreground py-4 text-center">
-                  Sem MQL registrado neste mês
+                  Sem MQL registrado neste período
                 </div>
               ) : (
                 data.channelBreakdown.map((c) => {
