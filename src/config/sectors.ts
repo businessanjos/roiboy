@@ -236,6 +236,7 @@ export const sectors: Sector[] = [
     bgColor: "bg-purple-500/10",
     defaultRoute: "/marketing",
     navItems: [
+      { to: "/marketing/dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { to: "/marketing", icon: CalendarDays, label: "Calendário Anual" },
       { to: "/marketing/content-hq", icon: Crown, label: "Conteúdo" },
       { to: "/marketing/projetos", icon: FolderKanban, label: "Projetos" },
