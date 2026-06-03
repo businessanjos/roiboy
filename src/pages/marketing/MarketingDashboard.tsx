@@ -138,7 +138,7 @@ function SectionTitle({
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-const formatNum = (v: number) => v.toLocaleString("pt-BR");
+const formatNum = (v: number | null | undefined) => (v ?? 0).toLocaleString("pt-BR");
 
 export default function MarketingDashboard() {
   const navigate = useNavigate();
