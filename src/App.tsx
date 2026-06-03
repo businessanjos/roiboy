@@ -145,6 +145,7 @@ const ContentHQ = lazyRetry(() => import("./pages/marketing/ContentHQ"));
 const Rebranding = lazyRetry(() => import("./pages/marketing/Rebranding"));
 const MarketingProjects = lazyRetry(() => import("./pages/marketing/MarketingProjects"));
 const MarketingProjectDetail = lazyRetry(() => import("@/components/marketing/projects/ProjectDetailSheet"));
+const MarketingDashboard = lazyRetry(() => import("./pages/marketing/MarketingDashboard"));
 
 const Insights = lazyRetry(() => import("./pages/Insights"));
 const RHDashboard = lazyRetry(() => import("./pages/RHDashboard"));
@@ -337,6 +338,7 @@ const App = () => (
                             <Route path="/billing" element={<BillingPortal />} />
                             
                             <Route path="/marketing" element={<Marketing />} />
+                            <Route path="/marketing/dashboard" element={<MarketingDashboard />} />
                             <Route path="/content-calendar" element={<ContentCalendar />} />
                             <Route path="/social-media" element={<SocialMedia />} />
                             <Route path="/criacao" element={<Navigate to="/marketing/content-hq" replace />} />
