@@ -243,6 +243,7 @@ export const sectors: Sector[] = [
       
       { to: "/social-media", icon: Instagram, label: "Social Media" },
       { to: "/marketing/trafego-pago", icon: TrendingUp, label: "Tráfego Pago" },
+      { to: "/marketing/agencias", icon: Megaphone, label: "Agências" },
       { to: "/marketing-tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/marketing/rebranding", icon: Sparkles, label: "Rebranding" },
       { to: "/marketing-insights", icon: BarChart3, label: "Insights" },
