@@ -338,6 +338,7 @@ const App = () => (
                             <Route path="/billing" element={<BillingPortal />} />
                             
                             <Route path="/marketing" element={<Marketing />} />
+                            <Route path="/marketing/dashboard" element={<MarketingDashboard />} />
                             <Route path="/content-calendar" element={<ContentCalendar />} />
                             <Route path="/social-media" element={<SocialMedia />} />
                             <Route path="/criacao" element={<Navigate to="/marketing/content-hq" replace />} />
