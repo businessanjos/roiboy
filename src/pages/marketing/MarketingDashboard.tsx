@@ -309,21 +309,21 @@ export default function MarketingDashboard() {
           <KpiCard
             icon={CheckCircle2}
             label="Vendas MQL"
-            value={formatNum(data.wonMqlOrganic + data.wonMqlPaid)}
+            value={formatNum(data.wonMqlOrganic + data.wonMqlPaid + data.wonMqlOthers)}
             hint={`${data.mqlConversionRate.toFixed(1)}% de conversão MQL→Venda`}
             tone="success"
           />
           <KpiCard
             icon={TrendingUp}
-            label="MQL Tráfego × Orgânico"
-            value={`${data.mqlPaid} × ${data.mqlOrganic}`}
-            hint={`Vendas: ${data.wonMqlPaid} pago / ${data.wonMqlOrganic} orgânico`}
+            label="MQL Pago × Orgânico × Outros"
+            value={`${data.mqlPaid} × ${data.mqlOrganic} × ${data.mqlOthers}`}
+            hint={`Vendas: ${data.wonMqlPaid}p / ${data.wonMqlOrganic}o / ${data.wonMqlOthers}out`}
             tone="warning"
           />
         </div>
 
         {/* Cards detalhados do MQL (Análise MKT) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <KpiCard
             icon={Target}
             label="MQL — Orgânico (Leads)"
@@ -337,6 +337,13 @@ export default function MarketingDashboard() {
             value={formatNum(data.mqlPaid)}
             hint="MQL vindos do canal Tráfego Pago"
             tone="info"
+          />
+          <KpiCard
+            icon={Users}
+            label="MQL — Outros canais (Leads)"
+            value={formatNum(data.mqlOthers)}
+            hint="Indicação, Eventos, Carteira/Esteira ou sem canal"
+            tone="default"
           />
           <KpiCard
             icon={CheckCircle2}

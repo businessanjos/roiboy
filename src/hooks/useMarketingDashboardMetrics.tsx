@@ -32,8 +32,10 @@ export interface MarketingDashboardMetrics {
   mqlThisMonth: number;
   mqlOrganic: number;
   mqlPaid: number;
+  mqlOthers: number;
   wonMqlOrganic: number;
   wonMqlPaid: number;
+  wonMqlOthers: number;
   mqlConversionRate: number;
   monthlyHistory: { month: string; leads: number; mql: number; won: number }[];
   channelBreakdown: { channel: string; count: number }[];
@@ -121,18 +123,23 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       const wonByDeal = new Map<string, string>();
       (rangeDeals as any[]).forEach((d) => wonByDeal.set(d.id, d.status));
 
-      let mqlOrganic = 0, mqlPaid = 0, wonMqlOrganic = 0, wonMqlPaid = 0;
+      let mqlOrganic = 0, mqlPaid = 0, mqlOthers = 0;
+      let wonMqlOrganic = 0, wonMqlPaid = 0, wonMqlOthers = 0;
       const channelCounts: Record<string, number> = {};
       for (const id of mqlSet) {
         const rawCh = channelByDeal.get(id);
         const friendly = labelForChannel(rawCh);
         channelCounts[friendly] = (channelCounts[friendly] || 0) + 1;
+        const isWon = wonByDeal.get(id) === "won";
         if (rawCh === ORGANIC_SLUG) {
           mqlOrganic++;
-          if (wonByDeal.get(id) === "won") wonMqlOrganic++;
+          if (isWon) wonMqlOrganic++;
         } else if (rawCh === PAID_SLUG) {
           mqlPaid++;
-          if (wonByDeal.get(id) === "won") wonMqlPaid++;
+          if (isWon) wonMqlPaid++;
+        } else {
+          mqlOthers++;
+          if (isWon) wonMqlOthers++;
         }
       }
 
@@ -282,18 +289,19 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         }
       }
 
-      const mqlConversionRate =
-        (mqlOrganic + mqlPaid) > 0
-          ? ((wonMqlOrganic + wonMqlPaid) / (mqlOrganic + mqlPaid)) * 100
-          : 0;
+      const mqlTotal = mqlOrganic + mqlPaid + mqlOthers;
+      const wonTotal = wonMqlOrganic + wonMqlPaid + wonMqlOthers;
+      const mqlConversionRate = mqlTotal > 0 ? (wonTotal / mqlTotal) * 100 : 0;
 
       return {
         leadsThisMonth: rangeDeals.length,
         mqlThisMonth: mqlSet.size,
         mqlOrganic,
         mqlPaid,
+        mqlOthers,
         wonMqlOrganic,
         wonMqlPaid,
+        wonMqlOthers,
         mqlConversionRate,
         monthlyHistory,
         channelBreakdown,
