@@ -230,16 +230,16 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       const { data: milestones = [] } = projectIds.length
         ? await (supabase as any)
             .from("marketing_project_milestones")
-            .select("id, title, due_date, project_id, status")
+            .select("id, title, due_date, project_id, completed")
             .gte("due_date", todayIso)
             .lte("due_date", in30)
-            .neq("status", "done")
+            .eq("completed", false)
             .in("project_id", projectIds)
             .order("due_date", { ascending: true })
             .limit(6)
         : { data: [] as any[] };
 
-      const upcomingMilestones = (milestones as any[]).map((m) => ({
+      const upcomingMilestones = ((milestones || []) as any[]).map((m) => ({
         id: m.id,
         title: m.title,
         due_date: m.due_date,
