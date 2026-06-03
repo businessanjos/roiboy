@@ -5,7 +5,26 @@ import { startOfMonth, endOfMonth, subMonths, format, subDays } from "date-fns";
 
 const MQL_FIELD_ID = "448404cd-0344-4892-a574-2387b1c17578";
 const CANAL_FIELD_ID = "16ebda9f-cd3b-412c-bb06-0950001963c5";
-const MQL_VALUE = "SIM - Lead Qualificado / +30K";
+// MQL "SIM" — aceita slug atual e variantes legadas
+const MQL_VALUES = new Set([
+  "sim_acima_30k",
+  "SIM - Acima de 30k",
+  "SIM - Lead Qualificado / +30K",
+]);
+// Canal: slugs do banco → rótulos exibidos
+const CHANNEL_LABELS: Record<string, string> = {
+  organico: "Orgânico",
+  trafego_pago: "Tráfego Pago",
+  indicacao: "Indicação",
+  eventos: "Eventos",
+  carteira_esteira: "Carteira/Esteira",
+};
+const labelForChannel = (raw?: string | null) => {
+  if (!raw) return "Sem canal";
+  return CHANNEL_LABELS[raw] ?? raw;
+};
+const ORGANIC_SLUG = "organico";
+const PAID_SLUG = "trafego_pago";
 
 export interface MarketingDashboardMetrics {
   // Leads (range filtrado)
