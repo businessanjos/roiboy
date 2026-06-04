@@ -295,9 +295,13 @@ export default function RHOfferWizard() {
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-semibold tracking-tight">
-            {isEdit ? "Editar Offer" : "Nova Offer"}
+            {isEdit || recordId ? "Editar Offer" : "Nova Offer"}
           </h1>
-          <p className="text-sm text-muted-foreground">Wizard para gerar uma carta-proposta linda</p>
+          <p className="text-sm text-muted-foreground">
+            Wizard para gerar uma carta-proposta linda
+            {autoSaving && <span className="ml-2 inline-flex items-center gap-1 text-xs"><Loader2 className="h-3 w-3 animate-spin" /> salvando…</span>}
+            {!autoSaving && lastSavedAt && <span className="ml-2 text-xs text-emerald-600">✓ salvo {lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
+          </p>
         </div>
         <Sparkles className="h-6 w-6 text-indigo-500" />
       </div>
