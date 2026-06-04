@@ -237,6 +237,7 @@ export default function RHOfferWizard() {
     if (!opts.silent) {
       toast({ title: status === "sent" ? "Offer gerada!" : "Rascunho salvo", description: token ? `${getPublicOrigin()}/oferta/${token}` : undefined });
     }
+    return token;
   };
 
   // Autosave debounced as draft once we have a candidate name
