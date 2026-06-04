@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -147,9 +147,50 @@ export default function MarketingTrafegoPago() {
 
   useEffect(() => { if (selectedAccount && isConnected) loadInsights(); }, [selectedAccount, isConnected, loadInsights]);
   useEffect(() => { if (isConnected) fetchAdSets(); }, [isConnected, fetchAdSets]);
+
+  // Smart background sync: on page open, silently sync any account whose data
+  // is stale (>30 min) or missing. Runs once per mount per user/account set.
+  const bgSyncRanRef = useRef(false);
   useEffect(() => {
-    if (isConnected && !loading && adSets.length === 0 && accounts.length > 0) syncCampaigns();
-  }, [isConnected, loading, adSets.length, accounts.length]);
+    if (!isConnected || !user?.id || accounts.length === 0 || bgSyncRanRef.current) return;
+    bgSyncRanRef.current = true;
+    const STALE_MS = 30 * 60 * 1000;
+    (async () => {
+      try {
+        const { data: rows } = await supabase
+          .from('marketing_ad_sets')
+          .select('meta_ad_account_id, updated_at')
+          .eq('user_id', user.id);
+        const latestByAccount = new Map<string, number>();
+        for (const r of (rows as any[]) || []) {
+          if (!r.meta_ad_account_id) continue;
+          const t = r.updated_at ? new Date(r.updated_at).getTime() : 0;
+          const prev = latestByAccount.get(r.meta_ad_account_id) || 0;
+          if (t > prev) latestByAccount.set(r.meta_ad_account_id, t);
+        }
+        const now = Date.now();
+        const stale = accounts.filter((a) => {
+          const accId = a.id.startsWith('act_') ? a.id : `act_${a.id}`;
+          const last = latestByAccount.get(accId) || 0;
+          return now - last > STALE_MS;
+        });
+        if (stale.length === 0) return;
+        let synced = 0;
+        for (const a of stale) {
+          try {
+            await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: a.id, ...periodPayload } });
+            synced++;
+          } catch (err) { console.warn('[bg-sync] failed for', a.id, err); }
+        }
+        if (synced > 0) {
+          await fetchAdSets();
+          toast.success(`${synced} ${synced === 1 ? 'conta atualizada' : 'contas atualizadas'} em background`);
+        }
+      } catch (err) {
+        console.warn('[bg-sync] error', err);
+      }
+    })();
+  }, [isConnected, user?.id, accounts, periodPayload, fetchAdSets]);
 
   if (isLoadingConnection) {
     return (
