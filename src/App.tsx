@@ -93,6 +93,10 @@ const Products = lazyRetry(() => import("./pages/Products"));
 const Events = lazyRetry(() => import("./pages/Events"));
 const EventDetail = lazyRetry(() => import("./pages/EventDetail"));
 const EventSuppliers = lazyRetry(() => import("./pages/EventSuppliers"));
+const EventsCalendar = lazyRetry(() => import("./pages/events/EventsCalendar"));
+const EventsInventory = lazyRetry(() => import("./pages/events/EventsInventory"));
+const EventsPlaybooks = lazyRetry(() => import("./pages/events/EventsPlaybooks"));
+const EventsKpis = lazyRetry(() => import("./pages/events/EventsKpis"));
 // Team moved to Settings
 const Tasks = lazyRetry(() => import("./pages/Tasks"));
 
@@ -326,6 +330,10 @@ const App = () => (
                             </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
+                            <Route path="/events/calendar" element={<EventsCalendar />} />
+                            <Route path="/events/inventory" element={<EventsInventory />} />
+                            <Route path="/events/playbooks" element={<EventsPlaybooks />} />
+                            <Route path="/events/kpis" element={<EventsKpis />} />
                             <Route path="/events/suppliers" element={<EventSuppliers />} />
                             <Route path="/events/:id" element={<EventDetail />} />
                             <Route path="/tasks" element={<Tasks />} />

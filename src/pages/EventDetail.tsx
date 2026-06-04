@@ -57,6 +57,7 @@ import EventTeamTab from "@/components/events/EventTeamTab";
 import EventMediaTab from "@/components/events/EventMediaTab";
 import EventFeedbackTab from "@/components/events/EventFeedbackTab";
 import EventDesignTab from "@/components/events/EventDesignTab";
+import EventBriefingTab from "@/components/events/EventBriefingTab";
 import EventGalleryShareBar from "@/components/events/EventGalleryShareBar";
 
 
@@ -479,6 +480,10 @@ export default function EventDetail() {
               <Settings className="h-4 w-4" />
               Geral
             </TabsTrigger>
+            <TabsTrigger value="briefing" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <FileText className="h-4 w-4" />
+              Briefing
+            </TabsTrigger>
             <TabsTrigger value="schedule" className="gap-2 text-xs sm:text-sm px-3 py-2">
               <ListOrdered className="h-4 w-4" />
               Agenda
@@ -533,6 +538,10 @@ export default function EventDetail() {
             }}
             isLocked={isLocked}
           />
+        </TabsContent>
+
+        <TabsContent value="briefing">
+          <EventBriefingTab eventId={event.id} accountId={accountId} />
         </TabsContent>
 
         <TabsContent value="schedule">
