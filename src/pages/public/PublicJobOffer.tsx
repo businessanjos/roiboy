@@ -255,7 +255,7 @@ export default function PublicJobOffer() {
       </header>
 
       {/* CORPO */}
-      <main className="max-w-4xl mx-auto px-6 py-16 md:py-24 space-y-20">
+      <main className="max-w-4xl mx-auto px-5 sm:px-6 py-12 sm:py-16 md:py-24 space-y-12 sm:space-y-16 md:space-y-20">
         {/* SOBRE A ETERNUM */}
         <section>
           <SectionLabel>A Eternum</SectionLabel>
