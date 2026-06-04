@@ -123,22 +123,23 @@ export default function PublicEventAlbum() {
             Galeria do evento
           </Badge>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            {event?.name || album.name}
+            {event?.title || album.name}
           </h1>
           {event && (
             <div className="text-muted-foreground mt-2 text-sm flex flex-wrap gap-x-4">
-              {event.event_date && (
+              {event.scheduled_at && (
                 <span>
-                  {new Date(event.event_date).toLocaleDateString("pt-BR", {
+                  {new Date(event.scheduled_at).toLocaleDateString("pt-BR", {
                     day: "2-digit",
                     month: "long",
                     year: "numeric",
                   })}
                 </span>
               )}
-              {event.location && <span>{event.location}</span>}
+              {event.address && <span>{event.address}</span>}
             </div>
           )}
+
           {album.description && (
             <p className="mt-4 text-sm text-muted-foreground max-w-2xl">
               {album.description}
