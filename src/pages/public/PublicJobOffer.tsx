@@ -469,7 +469,7 @@ export default function PublicJobOffer() {
               >
                 <div className="text-center">
                   <h3 className="text-xl md:text-2xl" style={{ fontFamily: SERIF, fontWeight: 400 }}>
-                    {firstName}, pronto(a) para iniciar?
+                    {firstName}, {pronto} para iniciar?
                   </h3>
                   <p className="text-sm mt-2 opacity-70">Sua resposta será registrada e enviada ao nosso time imediatamente.</p>
                 </div>
