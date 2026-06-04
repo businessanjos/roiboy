@@ -134,6 +134,7 @@ export default function RHOfferWizard() {
         variable_compensation: data.variable_compensation || "",
         benefits: data.benefits || [],
         perks: (data.perks as any) || [],
+        success_metrics: ((data as any).success_metrics as any) || [],
         start_date: data.start_date || "",
         offer_expires_at: data.offer_expires_at || "",
         hero_headline: data.hero_headline || "",
