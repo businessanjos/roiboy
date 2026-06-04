@@ -334,8 +334,12 @@ export default function MarketingTrafegoPago() {
                 </div>
               ) : (
                 (() => {
-                  const platforms = Array.from(new Set(adSets.map(a => a.platform).filter(Boolean)));
-                  const filtered = adSets.filter(ad => {
+                  const selectedAcc = selectedAccount ? (selectedAccount.startsWith('act_') ? selectedAccount : `act_${selectedAccount}`) : '';
+                  const accountScoped = selectedAcc
+                    ? adSets.filter(a => !a.meta_ad_account_id || a.meta_ad_account_id === selectedAcc)
+                    : adSets;
+                  const platforms = Array.from(new Set(accountScoped.map(a => a.platform).filter(Boolean)));
+                  const filtered = accountScoped.filter(ad => {
                     if (campaignStatusFilter !== 'all' && ad.status !== campaignStatusFilter) return false;
                     if (campaignPlatformFilter !== 'all' && ad.platform !== campaignPlatformFilter) return false;
                     if (campaignSearch && !ad.name?.toLowerCase().includes(campaignSearch.toLowerCase())) return false;
