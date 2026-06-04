@@ -9,7 +9,7 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SectorsHealthBanner } from "@/components/sectors/SectorsHealthBanner";
-import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase, AlertTriangle, RefreshCw } from "lucide-react";
+import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase, CalendarDays, AlertTriangle, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
 
@@ -78,6 +78,14 @@ const SECTOR_IDENTITY: Record<string, {
     patternClass: "sector-pattern-rh",
     overrideIcon: Briefcase,
   },
+  eventos: {
+    accent: "border-l-pink-500",
+    hoverBorder: "hover:border-pink-500/30",
+    hoverIconBg: "group-hover:bg-pink-500/10",
+    hoverIconColor: "group-hover:text-pink-600",
+    patternClass: "sector-pattern-events",
+    overrideIcon: CalendarDays,
+  },
 };
 
 function SectorPattern({ sectorId }: { sectorId: string }) {
@@ -127,6 +135,14 @@ function SectorPattern({ sectorId }: { sectorId: string }) {
         <circle cx="30" cy="25" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
         <circle cx="50" cy="25" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
         <path d="M15 55 Q15 40 30 40 Q40 40 40 45 Q40 40 50 40 Q65 40 65 55" stroke="currentColor" strokeWidth="2" fill="none" />
+      </svg>
+    ),
+    eventos: (
+      <svg className="absolute right-3 bottom-3 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500" width="80" height="80" viewBox="0 0 80 80">
+        <rect x="12" y="18" width="56" height="50" rx="4" stroke="currentColor" strokeWidth="2" fill="none" />
+        <line x1="12" y1="32" x2="68" y2="32" stroke="currentColor" strokeWidth="2" />
+        <line x1="26" y1="10" x2="26" y2="24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <line x1="54" y1="10" x2="54" y2="24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       </svg>
     ),
   };
@@ -227,7 +243,7 @@ export default function Sectors() {
     return filtered;
   }, [hasSectorAccess, sectorAccessLoading, sectorAccess, currentUser, isSuperAdmin]);
 
-  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "everia", "rh"];
+  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "eventos", "royzapp", "everia", "rh"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
 
   // Timed-out fallback: replaces the full page (not just the banner) so the

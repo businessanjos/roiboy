@@ -66,7 +66,7 @@ import {
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "rh" | "configuracoes";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "rh" | "eventos" | "configuracoes";
 
 export interface NavItem {
   to: string;
@@ -110,7 +110,7 @@ export const sectors: Sector[] = [
       { to: "/operations/instagram-ranking", icon: Instagram, label: "Ranking Instagram" },
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
-      { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
+
       
       { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
       { to: "/reminders", icon: BellRing, label: "Lembretes", permission: PERMISSIONS.SETTINGS_VIEW },
@@ -290,6 +290,20 @@ export const sectors: Sector[] = [
     ],
   },
   {
+    id: "eventos",
+    name: "Eventos",
+    description: "Gestão de eventos, RSVPs e check-ins",
+    icon: CalendarDays,
+    color: "text-pink-600",
+    bgColor: "bg-pink-500/10",
+    defaultRoute: "/events",
+    navItems: [
+      { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
+    ],
+  },
+  {
+
     id: "configuracoes",
     name: "Configurações",
     description: "Configurações gerais do sistema",
