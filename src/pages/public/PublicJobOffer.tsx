@@ -170,40 +170,40 @@ export default function PublicJobOffer() {
 
           {offer.candidate_photo_url ? (
             // Hero personalizado com foto do candidato
-            <div className="grid md:grid-cols-[1.1fr_0.9fr] gap-8 md:gap-12 items-center">
+            <div className="grid md:grid-cols-[1.1fr_0.9fr] gap-10 sm:gap-12 md:gap-12 items-center">
               <div className="order-2 md:order-1 text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-4 mb-6">
-                  <span className="h-px w-10" style={{ background: GOLD }} />
+                <div className="flex items-center justify-center md:justify-start gap-3 sm:gap-4 mb-5 sm:mb-6">
+                  <span className="h-px w-8 sm:w-10" style={{ background: GOLD }} />
                   <span
-                    className="text-[11px] uppercase tracking-[0.4em] font-light"
+                    className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-light"
                     style={{ color: GOLD, fontFamily: SANS }}
                   >
                     Carta-Proposta · Confidencial
                   </span>
                 </div>
                 <p
-                  className="text-sm md:text-base uppercase tracking-[0.3em] mb-4"
+                  className="text-xs sm:text-sm md:text-base uppercase tracking-[0.25em] sm:tracking-[0.3em] mb-3 sm:mb-4"
                   style={{ color: GOLD, fontFamily: SANS, fontWeight: 500 }}
                 >
                   Para {firstName}
                 </p>
                 <h1
-                  className="text-3xl md:text-5xl lg:text-6xl leading-[1.1]"
+                  className="text-[28px] leading-[1.1] sm:text-4xl md:text-5xl lg:text-6xl"
                   style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
                 >
                   {offer.hero_headline || `Bem-${gender === "f" ? "vinda" : "vindo"} à sua nova jornada.`}
                 </h1>
                 <p
-                  className="mt-6 text-base md:text-lg max-w-xl mx-auto md:mx-0"
+                  className="mt-5 sm:mt-6 text-[15px] sm:text-base md:text-lg max-w-xl mx-auto md:mx-0 leading-relaxed"
                   style={{ color: "#e8dcc0", fontFamily: SERIF, fontWeight: 300, fontStyle: "italic", opacity: 0.85 }}
                 >
                   Esta é a sua cadeira na Eternum — feita sob medida, com o seu nome.
                 </p>
               </div>
-              <div className="order-1 md:order-2 relative">
+              <div className="order-1 md:order-2 relative px-2 sm:px-0">
                 {/* moldura dourada premium */}
                 <div
-                  className="relative mx-auto aspect-[4/5] w-full max-w-sm rounded-sm overflow-hidden"
+                  className="relative mx-auto aspect-[4/5] w-full max-w-[280px] sm:max-w-sm rounded-sm overflow-hidden"
                   style={{
                     boxShadow: `0 40px 100px -30px rgba(0,0,0,0.85), 0 0 0 1px ${GOLD}66, 0 0 60px ${GOLD}22`,
                   }}
@@ -213,40 +213,38 @@ export default function PublicJobOffer() {
                     alt={offer.candidate_name}
                     className="w-full h-full object-cover object-top"
                   />
-                  {/* glow sutil */}
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{ background: `linear-gradient(180deg, transparent 55%, ${BG_DEEP}66 100%)` }}
                   />
-                  {/* canto inferior com nome */}
-                  <div className="absolute bottom-0 left-0 right-0 px-5 py-4" style={{ background: `linear-gradient(0deg, ${BG_DEEP}f5, transparent)` }}>
-                    <p className="text-[10px] uppercase tracking-[0.35em]" style={{ color: GOLD }}>Eternum · Time</p>
-                    <p className="text-lg md:text-xl mt-1" style={{ fontFamily: SERIF, color: CARD, fontWeight: 400 }}>
+                  <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-5 py-3 sm:py-4" style={{ background: `linear-gradient(0deg, ${BG_DEEP}f5, transparent)` }}>
+                    <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.35em]" style={{ color: GOLD }}>Eternum · Time</p>
+                    <p className="text-base sm:text-lg md:text-xl mt-1" style={{ fontFamily: SERIF, color: CARD, fontWeight: 400 }}>
                       {offer.candidate_name}
                     </p>
                   </div>
                 </div>
                 {/* ornamento dourado */}
-                <div className="absolute -top-3 -left-3 w-12 h-12 border-t-2 border-l-2 pointer-events-none" style={{ borderColor: GOLD }} />
-                <div className="absolute -bottom-3 -right-3 w-12 h-12 border-b-2 border-r-2 pointer-events-none" style={{ borderColor: GOLD }} />
+                <div className="absolute -top-2 -left-0 sm:-top-3 sm:-left-3 w-10 h-10 sm:w-12 sm:h-12 border-t-2 border-l-2 pointer-events-none" style={{ borderColor: GOLD }} />
+                <div className="absolute -bottom-2 -right-0 sm:-bottom-3 sm:-right-3 w-10 h-10 sm:w-12 sm:h-12 border-b-2 border-r-2 pointer-events-none" style={{ borderColor: GOLD }} />
               </div>
             </div>
           ) : (
             <>
               {/* Linha dourada + tag */}
-              <div className="flex items-center justify-center gap-4 mb-8">
-                <span className="h-px w-12" style={{ background: GOLD }} />
+              <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <span className="h-px w-10 sm:w-12" style={{ background: GOLD }} />
                 <span
-                  className="text-[11px] uppercase tracking-[0.4em] font-light"
+                  className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-light"
                   style={{ color: GOLD, fontFamily: SANS }}
                 >
                   Carta-Proposta · Confidencial
                 </span>
-                <span className="h-px w-12" style={{ background: GOLD }} />
+                <span className="h-px w-10 sm:w-12" style={{ background: GOLD }} />
               </div>
 
               <h1
-                className="text-center text-3xl md:text-5xl lg:text-6xl leading-[1.15] max-w-3xl mx-auto pb-4"
+                className="text-center text-[30px] leading-[1.15] sm:text-4xl md:text-5xl lg:text-6xl max-w-3xl mx-auto pb-4"
                 style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
               >
                 {offer.hero_headline || `Uma jornada feita para quem busca o extraordinário.`}
