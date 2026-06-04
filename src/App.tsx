@@ -92,6 +92,7 @@ const AccountSettings = lazyRetry(() => import("./pages/AccountSettings"));
 const Products = lazyRetry(() => import("./pages/Products"));
 const Events = lazyRetry(() => import("./pages/Events"));
 const EventDetail = lazyRetry(() => import("./pages/EventDetail"));
+const EventSuppliers = lazyRetry(() => import("./pages/EventSuppliers"));
 // Team moved to Settings
 const Tasks = lazyRetry(() => import("./pages/Tasks"));
 
