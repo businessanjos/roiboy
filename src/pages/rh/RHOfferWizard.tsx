@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,19 @@ export default function RHOfferWizard() {
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadedRef = useRef(false);
   const inFlightRef = useRef(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+
+  const openPreview = async () => {
+    let token = savedToken;
+    if (!token) {
+      setPreviewing(true);
+      try { token = await save("draft", { silent: true }) as any; } catch {}
+      setPreviewing(false);
+    }
+    if (token) setPreviewOpen(true);
+    else toast({ title: "Preencha o candidato para pré-visualizar", variant: "destructive" });
+  };
 
   useEffect(() => {
     if (!isEdit) return;
@@ -223,6 +237,7 @@ export default function RHOfferWizard() {
     if (!opts.silent) {
       toast({ title: status === "sent" ? "Offer gerada!" : "Rascunho salvo", description: token ? `${getPublicOrigin()}/oferta/${token}` : undefined });
     }
+    return token;
   };
 
   // Autosave debounced as draft once we have a candidate name
@@ -590,7 +605,10 @@ export default function RHOfferWizard() {
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button variant="outline" onClick={openPreview} disabled={previewing || saving} className="gap-2">
+                  {previewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />} Pré-visualizar
+                </Button>
                 <Button variant="outline" onClick={() => save("draft")} disabled={saving} className="gap-2">
                   <Save className="h-4 w-4" /> Salvar rascunho
                 </Button>
@@ -615,6 +633,34 @@ export default function RHOfferWizard() {
           <Button variant="ghost" onClick={() => navigate("/rh/offers")}>Concluir</Button>
         )}
       </div>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-4 py-3 border-b">
+            <DialogTitle className="flex items-center justify-between gap-4">
+              <span className="flex items-center gap-2"><Eye className="h-4 w-4" /> Pré-visualização da Offer</span>
+              {savedToken && (
+                <a
+                  href={`${window.location.origin}/oferta/${savedToken}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-normal text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                >
+                  Abrir em nova aba <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {savedToken && (
+            <iframe
+              key={savedToken + (lastSavedAt?.getTime() || 0)}
+              src={`${window.location.origin}/oferta/${savedToken}`}
+              className="flex-1 w-full border-0 bg-background"
+              title="Pré-visualização"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
