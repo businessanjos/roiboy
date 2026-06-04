@@ -66,7 +66,7 @@ const EMPTY: Form = {
   position_title: "", department: "Customer Success", seniority: "", work_model: "",
   contract_type: "clt", unit: "", reports_to: "",
   salary_amount: "", salary_currency: "BRL", salary_note: "", variable_compensation: "",
-  benefits: [], perks: [],
+  benefits: [], perks: [], success_metrics: [],
   start_date: "", offer_expires_at: "",
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
   signer_name: "", signer_role: "",
