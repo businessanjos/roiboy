@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { JOB_BENEFITS, WORK_MODEL_LABELS, CONTRACT_TYPE_LABELS, JOB_SENIORITY_LABELS } from "@/constants/jobOptions";
+import { suggestKpis, type KpiSuggestion } from "@/constants/kpiSuggestions";
 import { getPublicOrigin } from "@/lib/publicLink";
 import { cn } from "@/lib/utils";
 
