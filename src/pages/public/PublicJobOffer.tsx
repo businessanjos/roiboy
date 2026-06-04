@@ -121,6 +121,20 @@ export default function PublicJobOffer() {
   const isResolved = offer.status === "accepted" || offer.status === "declined";
   const firstName = (offer.candidate_name || "").split(" ")[0] || offer.candidate_name;
 
+  // Heurística simples de gênero pelo primeiro nome (pt-BR)
+  const guessGender = (name: string): "f" | "m" => {
+    const n = (name || "").toLowerCase().trim();
+    if (!n) return "m";
+    const maleExceptions = ["luca", "costa", "kostya", "joshua", "elias", "tobias", "matias", "matheus", "lucas", "thomas", "andrea", "noah"];
+    const femaleExceptions = ["beatriz", "isis", "ines", "inês", "carmen", "miriam", "raquel", "esther", "ester", "abigail", "rute", "ruth", "agar"];
+    if (femaleExceptions.includes(n)) return "f";
+    if (maleExceptions.includes(n)) return "m";
+    if (/(a|ah|ce|ene|isa|ine|elle|ette)$/.test(n)) return "f";
+    return "m";
+  };
+  const gender = guessGender(firstName);
+  const pronto = gender === "f" ? "pronta" : "pronto";
+
   const formatMoney = (v: number) => {
     const symbols: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€" };
     return `${symbols[offer.salary_currency] || offer.salary_currency} ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -455,7 +469,7 @@ export default function PublicJobOffer() {
               >
                 <div className="text-center">
                   <h3 className="text-xl md:text-2xl" style={{ fontFamily: SERIF, fontWeight: 400 }}>
-                    {firstName}, pronto(a) para iniciar?
+                    {firstName}, {pronto} para iniciar?
                   </h3>
                   <p className="text-sm mt-2 opacity-70">Sua resposta será registrada e enviada ao nosso time imediatamente.</p>
                 </div>
