@@ -52,6 +52,10 @@ export default function MarketingAgencies() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleReapplyRules} disabled={reapplying}>
+            <Wand2 className="h-4 w-4 mr-2" />
+            {reapplying ? "Reaplicando..." : "Reaplicar regras"}
+          </Button>
           <Button variant="outline" onClick={() => navigate("/marketing/agencias/comparativo")}>
             <GitCompare className="h-4 w-4 mr-2" />
             Comparar agências
