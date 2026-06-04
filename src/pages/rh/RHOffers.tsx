@@ -261,6 +261,7 @@ export default function RHOffers() {
               </Card>
             );
           })}
+          </div>
         </div>
       )}
 
