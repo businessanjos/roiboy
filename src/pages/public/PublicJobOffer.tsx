@@ -29,6 +29,7 @@ type Offer = {
   variable_compensation: string | null;
   benefits: string[];
   perks: { title: string; description: string }[];
+  success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string | null;
   offer_expires_at: string | null;
   hero_headline: string | null;
@@ -323,6 +324,65 @@ export default function PublicJobOffer() {
                 >
                   <p className="font-semibold text-base" style={{ fontFamily: SERIF }}>{p.title}</p>
                   {p.description && <p className="text-sm mt-2 leading-relaxed opacity-80">{p.description}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+
+        {/* MÉTRICAS DE SUCESSO */}
+        {offer.success_metrics?.length > 0 && (
+          <section>
+            <SectionLabel>Como o sucesso será medido</SectionLabel>
+            <p className="text-sm md:text-base mb-6 leading-relaxed opacity-80" style={{ color: CARD }}>
+              Transparência total desde o dia um. Estes são os indicadores que vamos acompanhar juntos.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {offer.success_metrics.map((m, i) => (
+                <div
+                  key={i}
+                  className="relative p-6 md:p-7 rounded-sm overflow-hidden group"
+                  style={{
+                    background: CARD,
+                    color: TEXT_DARK,
+                    boxShadow: `inset 0 0 0 1px ${GOLD}50, 0 20px 50px -30px rgba(0,0,0,0.6)`,
+                  }}
+                >
+                  <div
+                    className="absolute top-0 left-0 right-0 h-1"
+                    style={{ background: `linear-gradient(90deg, ${GOLD}, ${GOLD_SOFT})` }}
+                  />
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div
+                      className="text-[10px] uppercase tracking-[0.3em] font-semibold"
+                      style={{ color: GOLD, fontFamily: SANS }}
+                    >
+                      KPI {String(i + 1).padStart(2, "0")}
+                    </div>
+                    {m.horizon && (
+                      <div
+                        className="text-[10px] uppercase tracking-[0.2em] px-2 py-1 rounded-sm"
+                        style={{ background: `${TEXT_DARK}10`, color: TEXT_DARK, fontFamily: SANS }}
+                      >
+                        {m.horizon}
+                      </div>
+                    )}
+                  </div>
+                  <p
+                    className="text-base md:text-lg font-semibold leading-tight mb-3"
+                    style={{ fontFamily: SANS }}
+                  >
+                    {m.label}
+                  </p>
+                  {m.target && (
+                    <p
+                      className="text-2xl md:text-3xl leading-tight"
+                      style={{ fontFamily: SERIF, color: TEXT_DARK, fontWeight: 400 }}
+                    >
+                      {m.target}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

@@ -48,6 +48,7 @@ type Form = {
   variable_compensation: string;
   benefits: string[];
   perks: { title: string; description: string }[];
+  success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string;
   offer_expires_at: string;
   hero_headline: string;
@@ -65,7 +66,7 @@ const EMPTY: Form = {
   position_title: "", department: "Customer Success", seniority: "", work_model: "",
   contract_type: "clt", unit: "", reports_to: "",
   salary_amount: "", salary_currency: "BRL", salary_note: "", variable_compensation: "",
-  benefits: [], perks: [],
+  benefits: [], perks: [], success_metrics: [],
   start_date: "", offer_expires_at: "",
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
   signer_name: "", signer_role: "",
@@ -133,6 +134,7 @@ export default function RHOfferWizard() {
         variable_compensation: data.variable_compensation || "",
         benefits: data.benefits || [],
         perks: (data.perks as any) || [],
+        success_metrics: ((data as any).success_metrics as any) || [],
         start_date: data.start_date || "",
         offer_expires_at: data.offer_expires_at || "",
         hero_headline: data.hero_headline || "",
@@ -161,6 +163,10 @@ export default function RHOfferWizard() {
   const removePerk = (i: number) => set("perks", form.perks.filter((_, idx) => idx !== i));
   const updatePerk = (i: number, key: "title" | "description", v: string) =>
     set("perks", form.perks.map((p, idx) => idx === i ? { ...p, [key]: v } : p));
+  const addMetric = () => set("success_metrics", [...form.success_metrics, { label: "", target: "", horizon: "" }]);
+  const removeMetric = (i: number) => set("success_metrics", form.success_metrics.filter((_, idx) => idx !== i));
+  const updateMetric = (i: number, key: "label" | "target" | "horizon", v: string) =>
+    set("success_metrics", form.success_metrics.map((m, idx) => idx === i ? { ...m, [key]: v } : m));
 
   const canNext = () => {
     if (step === 1) return form.candidate_name.trim().length > 1;
@@ -195,6 +201,7 @@ export default function RHOfferWizard() {
       variable_compensation: form.variable_compensation || null,
       benefits: form.benefits,
       perks: form.perks.filter(p => p.title.trim()),
+      success_metrics: form.success_metrics.filter(m => m.label.trim()),
       start_date: form.start_date || null,
       offer_expires_at: form.offer_expires_at || null,
       hero_headline: form.hero_headline || null,
@@ -508,6 +515,43 @@ export default function RHOfferWizard() {
               <div>
                 <Label>Sobre a vaga / Pitch</Label>
                 <Textarea rows={6} value={form.role_pitch} onChange={(e) => set("role_pitch", e.target.value)} placeholder="Por que esse papel é estratégico, o que a pessoa vai fazer, com quem vai trabalhar, como o sucesso será medido..." />
+              </div>
+
+              <div className="space-y-3 p-4 rounded-lg border border-dashed border-amber-300 bg-amber-50/40 dark:bg-amber-950/10">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label className="text-base">Como o sucesso será medido</Label>
+                    <p className="text-xs text-muted-foreground">Métricas/KPIs claros que esta pessoa será avaliada. Aparecem com destaque na carta.</p>
+                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={addMetric} className="gap-1">
+                    <Plus className="h-3.5 w-3.5" /> Adicionar métrica
+                  </Button>
+                </div>
+                {form.success_metrics.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">Ex.: NPS ≥ 70 nos primeiros 6 meses · Reduzir churn em 20% até dez/26 · Implementar onboarding em 90 dias.</p>
+                )}
+                {form.success_metrics.map((m, i) => (
+                  <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_180px_auto] gap-2 items-start">
+                    <Input
+                      placeholder="Métrica (ex.: NPS, Churn, Receita)"
+                      value={m.label}
+                      onChange={(e) => updateMetric(i, "label", e.target.value)}
+                    />
+                    <Input
+                      placeholder="Meta (ex.: ≥ 70, -20%, R$ 1M)"
+                      value={m.target}
+                      onChange={(e) => updateMetric(i, "target", e.target.value)}
+                    />
+                    <Input
+                      placeholder="Prazo (ex.: 6 meses)"
+                      value={m.horizon}
+                      onChange={(e) => updateMetric(i, "horizon", e.target.value)}
+                    />
+                    <Button type="button" size="icon" variant="ghost" onClick={() => removeMetric(i)} className="text-rose-600">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
               <div>
                 <Label>Próximos passos</Label>
