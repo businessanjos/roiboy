@@ -371,8 +371,18 @@ export default function RHOfferWizard() {
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2 flex-wrap">
             {isEdit || recordId ? "Editar Offer" : "Nova Offer"}
+            {form.is_template && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 border border-amber-300">
+                <LayoutTemplate className="h-3 w-3" /> Modelo
+              </span>
+            )}
+            {usedTemplateName && !isEdit && !recordId && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-700 border border-indigo-300">
+                <LayoutTemplate className="h-3 w-3" /> a partir de "{usedTemplateName}"
+              </span>
+            )}
           </h1>
           <p className="text-sm text-muted-foreground">
             Wizard para gerar uma carta-proposta linda
