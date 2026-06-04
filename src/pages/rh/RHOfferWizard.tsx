@@ -225,6 +225,7 @@ export default function RHOfferWizard() {
       signer_role: form.signer_role || null,
       accent_color: form.accent_color,
       cover_image_url: form.cover_image_url || null,
+      candidate_photo_url: form.candidate_photo_url || null,
       status,
       sent_at: status === "sent" ? new Date().toISOString() : null,
     };
