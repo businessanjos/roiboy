@@ -3,10 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, BarChart3, Pencil, Inbox, GitCompare } from "lucide-react";
+import { Plus, Users, BarChart3, Pencil, Inbox, GitCompare, Wand2 } from "lucide-react";
 import { useTrafficAgencies } from "@/hooks/useTrafficAgencies";
 import { AgencyFormDialog } from "@/components/marketing/agencies/AgencyFormDialog";
 import { AgencyMembersDialog } from "@/components/marketing/agencies/AgencyMembersDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
