@@ -204,8 +204,15 @@ export function useMarketingProjects() {
         .update(finalPayload)
         .eq("id", id);
       if (error) throw error;
+      return finalPayload;
     },
-    onSuccess: (_d, vars) => {
+    onSuccess: (patch, vars) => {
+      qc.setQueriesData<MarketingProject[]>({ queryKey: ["marketing-projects"] }, (old) =>
+        old?.map((project) => project.id === vars.id ? { ...project, ...patch } : project) ?? old
+      );
+      qc.setQueryData<MarketingProject | null>(["marketing-project", vars.id], (old) =>
+        old ? { ...old, ...patch } : old
+      );
       qc.invalidateQueries({ queryKey: ["marketing-projects"] });
       qc.invalidateQueries({ queryKey: ["marketing-project", vars.id] });
       toast.success("Projeto atualizado");
