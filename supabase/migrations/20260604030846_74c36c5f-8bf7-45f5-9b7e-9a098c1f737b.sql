@@ -1,0 +1,1 @@
+DELETE FROM public.marketing_ad_sets WHERE meta_ad_account_id IS NULL;

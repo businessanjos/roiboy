@@ -33,11 +33,16 @@ serve(async (req) => {
     const insightsParam = (since && until)
       ? `insights.time_range({'since':'${since}','until':'${until}'})`
       : `insights.date_preset(${datePreset})`;
-    const url = `https://graph.facebook.com/v21.0/${accountId}/campaigns?fields=id,name,status,effective_status,objective,${insightsParam}{impressions,clicks,spend,actions,ctr,cpc,cpm}&limit=50&access_token=${tokenData.access_token}`;
-    const res = await (await fetch(url)).json();
-    if (res.error) return new Response(JSON.stringify({ error: res.error.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-
-    const campaigns = res.data || [];
+    let url: string | null = `https://graph.facebook.com/v21.0/${accountId}/campaigns?fields=id,name,status,effective_status,objective,${insightsParam}{impressions,clicks,spend,actions,ctr,cpc,cpm}&limit=200&access_token=${tokenData.access_token}`;
+    const campaigns: any[] = [];
+    let pages = 0;
+    while (url && pages < 20) {
+      const res: any = await (await fetch(url)).json();
+      if (res.error) return new Response(JSON.stringify({ error: res.error.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      campaigns.push(...(res.data || []));
+      url = res.paging?.next || null;
+      pages++;
+    }
     const statusMap: Record<string, string> = { ACTIVE: 'active', PAUSED: 'paused', DELETED: 'deleted', ARCHIVED: 'archived' };
     const rows = campaigns.map((c: any) => {
       const ins = c.insights?.data?.[0] || {};
