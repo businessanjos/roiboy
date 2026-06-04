@@ -243,7 +243,7 @@ export default function Sectors() {
     return filtered;
   }, [hasSectorAccess, sectorAccessLoading, sectorAccess, currentUser, isSuperAdmin]);
 
-  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "everia", "rh"];
+  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "eventos", "royzapp", "everia", "rh"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
 
   // Timed-out fallback: replaces the full page (not just the banner) so the
