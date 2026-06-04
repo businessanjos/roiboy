@@ -13,6 +13,7 @@ export interface TrafficAgency {
   contact_phone: string | null;
   notes: string | null;
   is_active: boolean;
+  name_patterns: string[];
   created_at: string;
   updated_at: string;
   // computed
