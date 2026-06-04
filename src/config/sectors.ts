@@ -290,6 +290,20 @@ export const sectors: Sector[] = [
     ],
   },
   {
+    id: "eventos",
+    name: "Eventos",
+    description: "Gestão de eventos, RSVPs e check-ins",
+    icon: CalendarDays,
+    color: "text-pink-600",
+    bgColor: "bg-pink-500/10",
+    defaultRoute: "/events",
+    navItems: [
+      { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
+    ],
+  },
+  {
+
     id: "configuracoes",
     name: "Configurações",
     description: "Configurações gerais do sistema",
