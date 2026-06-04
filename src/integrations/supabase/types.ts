@@ -6698,6 +6698,78 @@ export type Database = {
           },
         ]
       }
+      event_briefings: {
+        Row: {
+          account_id: string
+          additional_notes: string | null
+          created_at: string
+          dress_code: string | null
+          event_id: string
+          id: string
+          key_messages: string | null
+          logistics: string | null
+          objective: string | null
+          responsible_user_id: string | null
+          risks: string | null
+          speakers: Json
+          sponsors: Json
+          success_metrics: string | null
+          target_audience: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          additional_notes?: string | null
+          created_at?: string
+          dress_code?: string | null
+          event_id: string
+          id?: string
+          key_messages?: string | null
+          logistics?: string | null
+          objective?: string | null
+          responsible_user_id?: string | null
+          risks?: string | null
+          speakers?: Json
+          sponsors?: Json
+          success_metrics?: string | null
+          target_audience?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          additional_notes?: string | null
+          created_at?: string
+          dress_code?: string | null
+          event_id?: string
+          id?: string
+          key_messages?: string | null
+          logistics?: string | null
+          objective?: string | null
+          responsible_user_id?: string | null
+          risks?: string | null
+          speakers?: Json
+          sponsors?: Json
+          success_metrics?: string | null
+          target_audience?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_briefings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_briefings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_checklist: {
         Row: {
           account_id: string
@@ -7247,6 +7319,124 @@ export type Database = {
           },
         ]
       }
+      event_inventory_items: {
+        Row: {
+          account_id: string
+          acquisition_cost: number | null
+          acquisition_date: string | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          photo_url: string | null
+          quantity_total: number
+          status: string
+          tags: Json
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          acquisition_cost?: number | null
+          acquisition_date?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          notes?: string | null
+          photo_url?: string | null
+          quantity_total?: number
+          status?: string
+          tags?: Json
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          acquisition_cost?: number | null
+          acquisition_date?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          notes?: string | null
+          photo_url?: string | null
+          quantity_total?: number
+          status?: string
+          tags?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      event_inventory_usage: {
+        Row: {
+          account_id: string
+          checked_out_at: string | null
+          condition_on_return: string | null
+          created_at: string
+          event_id: string
+          id: string
+          item_id: string
+          notes: string | null
+          quantity: number
+          returned_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          checked_out_at?: string | null
+          condition_on_return?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          item_id: string
+          notes?: string | null
+          quantity?: number
+          returned_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          checked_out_at?: string | null
+          condition_on_return?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          item_id?: string
+          notes?: string | null
+          quantity?: number
+          returned_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_inventory_usage_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_inventory_usage_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_inventory_usage_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "event_inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_media: {
         Row: {
           account_id: string
@@ -7573,6 +7763,101 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      event_playbook_items: {
+        Row: {
+          account_id: string
+          category: string | null
+          created_at: string
+          days_offset: number
+          description: string | null
+          id: string
+          is_critical: boolean
+          playbook_id: string
+          position: number
+          responsible_role: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          category?: string | null
+          created_at?: string
+          days_offset?: number
+          description?: string | null
+          id?: string
+          is_critical?: boolean
+          playbook_id: string
+          position?: number
+          responsible_role?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          category?: string | null
+          created_at?: string
+          days_offset?: number
+          description?: string | null
+          id?: string
+          is_critical?: boolean
+          playbook_id?: string
+          position?: number
+          responsible_role?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_playbook_items_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "event_playbooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_playbooks: {
+        Row: {
+          account_id: string
+          cover_color: string | null
+          created_at: string
+          created_by_user_id: string | null
+          description: string | null
+          event_type: string | null
+          id: string
+          is_default: boolean
+          modality: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          cover_color?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          description?: string | null
+          event_type?: string | null
+          id?: string
+          is_default?: boolean
+          modality?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          cover_color?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          description?: string | null
+          event_type?: string | null
+          id?: string
+          is_default?: boolean
+          modality?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       event_products: {
         Row: {
