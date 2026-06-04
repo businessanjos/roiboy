@@ -147,8 +147,21 @@ export function AgencyFormDialog({ open, onOpenChange, agency }: Props) {
             />
           </div>
           <div>
+            <Label>Padrões de nome de campanha (um por linha)</Label>
+            <Textarea
+              value={form.name_patterns_text}
+              onChange={(e) => setForm({ ...form, name_patterns_text: e.target.value })}
+              rows={3}
+              placeholder={"Ex.:\nSN -\n[AMO]\nAnjos-"}
+              className="font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Toda campanha Meta cujo nome começa com algum desses prefixos (case-insensitive) é atribuída automaticamente a esta agência.
+            </p>
+          </div>
+          <div>
             <Label>Observações</Label>
-            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} />
+            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
           </div>
           <div className="flex items-center justify-between">
             <Label>Ativa</Label>
