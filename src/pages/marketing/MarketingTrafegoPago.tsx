@@ -375,7 +375,7 @@ export default function MarketingTrafegoPago() {
                             </SelectContent>
                           </Select>
                         )}
-                        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {adSets.length}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {accountScoped.length}</span>
                       </div>
 
                       {filtered.length === 0 ? (
