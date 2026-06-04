@@ -181,6 +181,26 @@ export default function RHOfferWizard() {
     set("success_metrics", merged);
   };
 
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const handlePhotoUpload = async (file: File) => {
+    if (!currentUser?.account_id) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: "Imagem muito grande", description: "Use uma foto de até 8MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingPhoto(true);
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `offer-photos/${currentUser.account_id}/${recordId || crypto.randomUUID()}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+    if (error) {
+      toast({ title: "Erro ao enviar foto", description: error.message, variant: "destructive" });
+    } else {
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      set("candidate_photo_url", data.publicUrl);
+    }
+    setUploadingPhoto(false);
+  };
+
   const canNext = () => {
     if (step === 1) return form.candidate_name.trim().length > 1;
     if (step === 2) return form.position_title.trim().length > 1;
