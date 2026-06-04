@@ -162,10 +162,10 @@ export default function PublicJobOffer() {
             backgroundSize: "32px 32px",
           }}
         />
-        <div className="relative max-w-6xl mx-auto px-6 pt-12 pb-16 md:pt-16 md:pb-24">
+        <div className="relative max-w-6xl mx-auto px-5 sm:px-6 pt-10 pb-14 sm:pt-12 sm:pb-16 md:pt-16 md:pb-24">
           {/* Logo */}
-          <div className="flex justify-center mb-10">
-            <img src={letreiro.url} alt="Eternum" className="h-7 md:h-9 object-contain opacity-95" />
+          <div className="flex justify-center mb-8 sm:mb-10">
+            <img src={letreiro.url} alt="Eternum" className="h-6 sm:h-7 md:h-9 object-contain opacity-95" />
           </div>
 
           {offer.candidate_photo_url ? (
