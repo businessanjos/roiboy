@@ -299,6 +299,7 @@ export const sectors: Sector[] = [
     defaultRoute: "/events",
     navItems: [
       { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
+      { to: "/events/suppliers", icon: Briefcase, label: "Fornecedores", permission: PERMISSIONS.EVENTS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
