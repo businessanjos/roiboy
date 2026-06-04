@@ -31,6 +31,7 @@ export function AgencyFormDialog({ open, onOpenChange, agency }: Props) {
     contact_phone: "",
     notes: "",
     is_active: true,
+    name_patterns_text: "",
   });
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function AgencyFormDialog({ open, onOpenChange, agency }: Props) {
         contact_phone: agency.contact_phone ?? "",
         notes: agency.notes ?? "",
         is_active: agency.is_active,
+        name_patterns_text: (agency.name_patterns ?? []).join("\n"),
       });
     } else {
       setForm({
@@ -53,6 +55,7 @@ export function AgencyFormDialog({ open, onOpenChange, agency }: Props) {
         contact_phone: "",
         notes: "",
         is_active: true,
+        name_patterns_text: "",
       });
     }
   }, [agency, open]);
