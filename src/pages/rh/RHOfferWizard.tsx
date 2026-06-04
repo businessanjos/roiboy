@@ -61,6 +61,8 @@ type Form = {
   accent_color: string;
   cover_image_url: string;
   candidate_photo_url: string;
+  is_template: boolean;
+  template_name: string;
 };
 
 const EMPTY: Form = {
@@ -73,6 +75,7 @@ const EMPTY: Form = {
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
   signer_name: "", signer_role: "",
   accent_color: "#6366F1", cover_image_url: "", candidate_photo_url: "",
+  is_template: false, template_name: "",
 };
 
 const DEFAULT_COMPANY_INTRO = `A Eternum é o ecossistema de mentoria, tecnologia e gestão que está redesenhando a forma como negócios escalam no Brasil. Acreditamos que talento, propósito e execução são os três pilares de qualquer empresa que quer crescer com consistência.
