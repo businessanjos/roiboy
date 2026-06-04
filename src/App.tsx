@@ -171,6 +171,9 @@ const HRServiceProviderProfile = lazyRetry(() => import("./pages/rh/HRServicePro
 const HRPartners = lazyRetry(() => import("./pages/rh/HRPartners"));
 const HRPartnerProfile = lazyRetry(() => import("./pages/rh/HRPartnerProfile"));
 const RHPositions = lazyRetry(() => import("./pages/rh/RHPositions"));
+const RHOffers = lazyRetry(() => import("./pages/rh/RHOffers"));
+const RHOfferWizard = lazyRetry(() => import("./pages/rh/RHOfferWizard"));
+const PublicJobOffer = lazyRetry(() => import("./pages/public/PublicJobOffer"));
 const SharedInsights = lazyRetry(() => import("./pages/SharedInsights"));
 const ExternalDashboard = lazyRetry(() => import("./pages/ExternalDashboard"));
 const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
@@ -258,6 +261,7 @@ const App = () => (
                           <Route path="/contrato/:token" element={<PublicDigitalContract />} />
                           <Route path="/portal/prestador/:token" element={<PublicProviderPortal />} />
                           <Route path="/external/incentive-plan/:token" element={<PublicIncentivePresentation />} />
+                          <Route path="/oferta/:token" element={<PublicJobOffer />} />
                           
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/terms-of-service" element={<TermsOfService />} />
@@ -390,6 +394,9 @@ const App = () => (
                             <Route path="/rh/service-providers/:id" element={<HRServiceProviderProfile />} />
                             <Route path="/rh/partners" element={<HRPartners />} />
                             <Route path="/rh/partners/:id" element={<HRPartnerProfile />} />
+                            <Route path="/rh/offers" element={<RHOffers />} />
+                            <Route path="/rh/offers/new" element={<RHOfferWizard />} />
+                            <Route path="/rh/offers/:id/edit" element={<RHOfferWizard />} />
                             
                           </Route>
                           <Route path="*" element={<NotFound />} />
