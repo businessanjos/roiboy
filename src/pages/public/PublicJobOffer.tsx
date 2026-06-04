@@ -197,7 +197,7 @@ export default function PublicJobOffer() {
                   className="mt-5 sm:mt-6 text-[15px] sm:text-base md:text-lg max-w-xl mx-auto md:mx-0 leading-relaxed"
                   style={{ color: "#e8dcc0", fontFamily: SERIF, fontWeight: 300, fontStyle: "italic", opacity: 0.85 }}
                 >
-                  Esta é a sua cadeira na Eternum — feita sob medida, com o seu nome.
+                  Esta é a sua cadeira na Eternum, feita sob medida, com o seu nome.
                 </p>
               </div>
               <div className="order-1 md:order-2 relative px-2 sm:px-0">
