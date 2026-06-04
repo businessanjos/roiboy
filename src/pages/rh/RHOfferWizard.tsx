@@ -88,6 +88,8 @@ Caso tenha qualquer dúvida, responda este e-mail ou fale diretamente com a pess
 
 export default function RHOfferWizard() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const templateId = searchParams.get("template");
   const isEdit = !!id;
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -100,6 +102,7 @@ export default function RHOfferWizard() {
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [usedTemplateName, setUsedTemplateName] = useState<string | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadedRef = useRef(false);
   const inFlightRef = useRef(false);
@@ -117,15 +120,21 @@ export default function RHOfferWizard() {
     else toast({ title: "Preencha o candidato para pré-visualizar", variant: "destructive" });
   };
 
+  // Carrega offer existente (edição) OU clona modelo (novo a partir de template)
   useEffect(() => {
-    if (!isEdit) return;
+    if (!isEdit && !templateId) return;
     (async () => {
-      const { data, error } = await supabase.from("hr_job_offers").select("*").eq("id", id).maybeSingle();
+      const sourceId = isEdit ? id : templateId;
+      const { data, error } = await supabase.from("hr_job_offers").select("*").eq("id", sourceId).maybeSingle();
       if (error || !data) { toast({ title: "Não encontrado", variant: "destructive" }); navigate("/rh/offers"); return; }
+      const cloning = !isEdit && !!templateId;
       setForm({
-        candidate_name: data.candidate_name || "",
-        candidate_email: data.candidate_email || "",
-        candidate_phone: data.candidate_phone || "",
+        // Dados do candidato: zerar ao clonar modelo
+        candidate_name: cloning ? "" : (data.candidate_name || ""),
+        candidate_email: cloning ? "" : (data.candidate_email || ""),
+        candidate_phone: cloning ? "" : (data.candidate_phone || ""),
+        candidate_photo_url: cloning ? "" : ((data as any).candidate_photo_url || ""),
+        // Demais campos são copiados
         position_title: data.position_title || "",
         department: data.department || "",
         seniority: data.seniority || "",
@@ -140,9 +149,9 @@ export default function RHOfferWizard() {
         benefits: data.benefits || [],
         perks: (data.perks as any) || [],
         success_metrics: ((data as any).success_metrics as any) || [],
-        start_date: data.start_date || "",
-        offer_expires_at: data.offer_expires_at || "",
-        hero_headline: data.hero_headline || "",
+        start_date: cloning ? "" : (data.start_date || ""),
+        offer_expires_at: cloning ? "" : (data.offer_expires_at || ""),
+        hero_headline: cloning ? "" : (data.hero_headline || ""),
         company_intro: data.company_intro || "",
         role_pitch: data.role_pitch || "",
         next_steps: data.next_steps || "",
@@ -150,13 +159,20 @@ export default function RHOfferWizard() {
         signer_role: data.signer_role || "",
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
-        candidate_photo_url: (data as any).candidate_photo_url || "",
+        // Ao clonar, a nova offer não é modelo; ao editar, mantém flag
+        is_template: cloning ? false : !!(data as any).is_template,
+        template_name: cloning ? "" : ((data as any).template_name || ""),
       });
-      setSavedToken(data.public_token);
-      setRecordId(data.id);
+      if (!cloning) {
+        setSavedToken(data.public_token);
+        setRecordId(data.id);
+      } else {
+        setUsedTemplateName((data as any).template_name || data.position_title || "modelo");
+        toast({ title: "Modelo carregado", description: "Ajuste o nome, foto e o que mais quiser." });
+      }
       isLoadedRef.current = true;
     })();
-  }, [id]);
+  }, [id, templateId]);
 
   // Mark as loaded once for new offers too
   useEffect(() => {
