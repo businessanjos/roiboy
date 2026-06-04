@@ -1,50 +1,89 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, ChevronRight, CalendarDays, MapPin, Monitor } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
+  MapPin,
+  Monitor,
+  Plus,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  ExternalLink,
+} from "lucide-react";
+import { EventQuickFormDialog, QuickEvent } from "@/components/events/EventQuickFormDialog";
 
 interface EventRow {
   id: string;
   title: string;
   scheduled_at: string | null;
   ends_at: string | null;
-  modality: string;
+  modality: "online" | "presencial";
   event_type: string;
   status: string | null;
   color: string | null;
+  address: string | null;
+  description: string | null;
 }
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 export default function EventsCalendar() {
   const { currentUser } = useCurrentUser();
+  const { toast } = useToast();
   const accountId = currentUser?.account_id ?? null;
   const [year, setYear] = useState(new Date().getFullYear());
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<QuickEvent | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const fetchEvents = useCallback(async () => {
     if (!accountId) return;
-    (async () => {
-      setLoading(true);
-      const start = new Date(year, 0, 1).toISOString();
-      const end = new Date(year + 1, 0, 1).toISOString();
-      const { data } = await supabase
-        .from("events")
-        .select("id,title,scheduled_at,ends_at,modality,event_type,status,color")
-        .eq("account_id", accountId)
-        .gte("scheduled_at", start)
-        .lt("scheduled_at", end)
-        .order("scheduled_at", { ascending: true });
-      setEvents((data as any) ?? []);
-      setLoading(false);
-    })();
+    setLoading(true);
+    const start = new Date(year, 0, 1).toISOString();
+    const end = new Date(year + 1, 0, 1).toISOString();
+    const { data } = await supabase
+      .from("events")
+      .select("id,title,scheduled_at,ends_at,modality,event_type,status,color,address,description")
+      .eq("account_id", accountId)
+      .gte("scheduled_at", start)
+      .lt("scheduled_at", end)
+      .order("scheduled_at", { ascending: true });
+    setEvents((data as any) ?? []);
+    setLoading(false);
   }, [accountId, year]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   const byMonth = useMemo(() => {
     const buckets: EventRow[][] = Array.from({ length: 12 }, () => []);
@@ -57,6 +96,38 @@ export default function EventsCalendar() {
   }, [events]);
 
   const total = events.length;
+
+  const openCreate = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
+
+  const openEdit = (e: EventRow) => {
+    setEditing({
+      id: e.id,
+      title: e.title,
+      event_type: e.event_type,
+      modality: e.modality,
+      scheduled_at: e.scheduled_at,
+      ends_at: e.ends_at,
+      address: e.address,
+      description: e.description,
+      color: e.color,
+    });
+    setFormOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    const { error } = await supabase.from("events").delete().eq("id", deleteId);
+    if (error) {
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Evento excluído" });
+      fetchEvents();
+    }
+    setDeleteId(null);
+  };
 
   return (
     <div className="container max-w-7xl mx-auto py-6 space-y-6">
@@ -77,6 +148,10 @@ export default function EventsCalendar() {
           <div className="text-2xl font-semibold w-20 text-center">{year}</div>
           <Button variant="outline" size="icon" onClick={() => setYear((y) => y + 1)}>
             <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button onClick={openCreate} className="ml-2">
+            <Plus className="h-4 w-4" />
+            Novo evento
           </Button>
         </div>
       </div>
@@ -111,18 +186,22 @@ export default function EventsCalendar() {
                     const d = e.scheduled_at ? new Date(e.scheduled_at) : null;
                     const day = d ? String(d.getDate()).padStart(2, "0") : "--";
                     return (
-                      <Link
+                      <div
                         key={e.id}
-                        to={`/events/${e.id}`}
-                        className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
+                        className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors group"
                       >
-                        <div
+                        <button
+                          onClick={() => openEdit(e)}
                           className="flex-shrink-0 w-9 h-9 rounded-md flex items-center justify-center text-xs font-bold text-white"
                           style={{ backgroundColor: e.color || "hsl(var(--primary))" }}
+                          aria-label="Editar evento"
                         >
                           {day}
-                        </div>
-                        <div className="flex-1 min-w-0">
+                        </button>
+                        <button
+                          onClick={() => openEdit(e)}
+                          className="flex-1 min-w-0 text-left"
+                        >
                           <div className="text-sm font-medium truncate">{e.title}</div>
                           <div className="flex items-center gap-1 mt-0.5">
                             {e.modality === "online" ? (
@@ -132,8 +211,36 @@ export default function EventsCalendar() {
                             )}
                             <span className="text-xs text-muted-foreground capitalize">{e.modality}</span>
                           </div>
-                        </div>
-                      </Link>
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(e)}>
+                              <Pencil className="h-4 w-4 mr-2" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/events/${e.id}`}>
+                                <ExternalLink className="h-4 w-4 mr-2" /> Abrir detalhes
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setDeleteId(e.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     );
                   })
                 )}
@@ -142,6 +249,31 @@ export default function EventsCalendar() {
           ))}
         </div>
       )}
+
+      <EventQuickFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        event={editing}
+        defaultYear={year}
+        onSaved={fetchEvents}
+      />
+
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir evento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O evento será removido permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
