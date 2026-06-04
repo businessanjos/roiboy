@@ -511,7 +511,12 @@ export default function EventDetail() {
               <Image className="h-4 w-4" />
               Mídia
             </TabsTrigger>
+            <TabsTrigger value="design" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <Palette className="h-4 w-4" />
+              Design
+            </TabsTrigger>
             <TabsTrigger value="feedback" className="gap-2 text-xs sm:text-sm px-3 py-2">
+
               <MessageSquare className="h-4 w-4" />
               Feedback
             </TabsTrigger>
