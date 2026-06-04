@@ -28,6 +28,8 @@ import {
   QrCode,
   ExternalLink,
   Image,
+  Palette,
+
   MessageSquare,
   CheckCircle2,
   AlertTriangle,
