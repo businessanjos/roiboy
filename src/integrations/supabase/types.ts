@@ -10774,6 +10774,7 @@ export type Database = {
           candidate_email: string | null
           candidate_name: string
           candidate_phone: string | null
+          candidate_photo_url: string | null
           company_intro: string | null
           contract_type: string | null
           cover_image_url: string | null
@@ -10816,6 +10817,7 @@ export type Database = {
           candidate_email?: string | null
           candidate_name: string
           candidate_phone?: string | null
+          candidate_photo_url?: string | null
           company_intro?: string | null
           contract_type?: string | null
           cover_image_url?: string | null
@@ -10858,6 +10860,7 @@ export type Database = {
           candidate_email?: string | null
           candidate_name?: string
           candidate_phone?: string | null
+          candidate_photo_url?: string | null
           company_intro?: string | null
           contract_type?: string | null
           cover_image_url?: string | null
