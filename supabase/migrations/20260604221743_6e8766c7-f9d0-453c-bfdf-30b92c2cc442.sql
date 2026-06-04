@@ -1,0 +1,1 @@
+ALTER TABLE public.hr_job_offers ADD COLUMN success_metrics jsonb NOT NULL DEFAULT '[]'::jsonb;

@@ -10802,6 +10802,7 @@ export type Database = {
           signer_role: string | null
           start_date: string | null
           status: string
+          success_metrics: Json
           unit: string | null
           updated_at: string
           variable_compensation: string | null
@@ -10843,6 +10844,7 @@ export type Database = {
           signer_role?: string | null
           start_date?: string | null
           status?: string
+          success_metrics?: Json
           unit?: string | null
           updated_at?: string
           variable_compensation?: string | null
@@ -10884,6 +10886,7 @@ export type Database = {
           signer_role?: string | null
           start_date?: string | null
           status?: string
+          success_metrics?: Json
           unit?: string | null
           updated_at?: string
           variable_compensation?: string | null
