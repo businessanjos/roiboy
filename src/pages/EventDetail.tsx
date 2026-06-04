@@ -54,6 +54,9 @@ import EventParticipantsTab from "@/components/events/EventParticipantsTab";
 import EventTeamTab from "@/components/events/EventTeamTab";
 import EventMediaTab from "@/components/events/EventMediaTab";
 import EventFeedbackTab from "@/components/events/EventFeedbackTab";
+import EventDesignTab from "@/components/events/EventDesignTab";
+import EventGalleryShareBar from "@/components/events/EventGalleryShareBar";
+
 
 interface Event {
   id: string;
