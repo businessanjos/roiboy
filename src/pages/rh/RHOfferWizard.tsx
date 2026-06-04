@@ -154,19 +154,21 @@ export default function RHOfferWizard() {
     return true;
   };
 
-  const save = async (status: "draft" | "sent") => {
+  const save = async (status: "draft" | "sent", opts: { silent?: boolean } = {}) => {
     if (!currentUser?.account_id) {
-      toast({ title: "Sessão expirada", description: "Faça login novamente", variant: "destructive" });
+      if (!opts.silent) toast({ title: "Sessão expirada", description: "Faça login novamente", variant: "destructive" });
       return;
     }
-    setSaving(true);
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    if (opts.silent) setAutoSaving(true); else setSaving(true);
     const payload: any = {
       account_id: currentUser.account_id,
       created_by: currentUser.auth_user_id || currentUser.id,
       candidate_name: form.candidate_name,
       candidate_email: form.candidate_email || null,
       candidate_phone: form.candidate_phone || null,
-      position_title: form.position_title,
+      position_title: form.position_title || "(rascunho)",
       department: form.department || null,
       seniority: form.seniority || null,
       work_model: form.work_model || null,
@@ -193,20 +195,90 @@ export default function RHOfferWizard() {
       sent_at: status === "sent" ? new Date().toISOString() : null,
     };
     let token = savedToken;
-    if (isEdit) {
-      const { data, error } = await supabase.from("hr_job_offers").update(payload).eq("id", id).select("public_token").maybeSingle();
-      if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); setSaving(false); return; }
+    const existingId = recordId;
+    if (existingId) {
+      const { data, error } = await supabase.from("hr_job_offers").update(payload).eq("id", existingId).select("public_token").maybeSingle();
+      if (error) {
+        if (!opts.silent) toast({ title: "Erro", description: error.message, variant: "destructive" });
+        inFlightRef.current = false; setSaving(false); setAutoSaving(false); return;
+      }
       token = data?.public_token || token;
     } else {
       const { data, error } = await supabase.from("hr_job_offers").insert(payload).select("public_token,id").maybeSingle();
-      if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); setSaving(false); return; }
+      if (error) {
+        if (!opts.silent) toast({ title: "Erro", description: error.message, variant: "destructive" });
+        inFlightRef.current = false; setSaving(false); setAutoSaving(false); return;
+      }
       token = data?.public_token || null;
-      if (data?.id) navigate(`/rh/offers/${data.id}/edit`, { replace: true });
+      if (data?.id) {
+        setRecordId(data.id);
+        // Update URL silently so future refreshes resume the same record
+        window.history.replaceState(null, "", `/rh/offers/${data.id}/edit`);
+      }
     }
     setSavedToken(token);
-    setSaving(false);
-    toast({ title: status === "sent" ? "Offer gerada!" : "Rascunho salvo", description: token ? `${getPublicOrigin()}/oferta/${token}` : undefined });
+    setLastSavedAt(new Date());
+    inFlightRef.current = false;
+    setSaving(false); setAutoSaving(false);
+    if (!opts.silent) {
+      toast({ title: status === "sent" ? "Offer gerada!" : "Rascunho salvo", description: token ? `${getPublicOrigin()}/oferta/${token}` : undefined });
+    }
   };
+
+  // Autosave debounced as draft once we have a candidate name
+  useEffect(() => {
+    if (!isLoadedRef.current) return;
+    if (!currentUser?.account_id) return;
+    if (form.candidate_name.trim().length < 2) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      save("draft", { silent: true });
+    }, 1500);
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, currentUser?.account_id]);
+
+  const fillWithAI = async () => {
+    if (!form.position_title.trim()) {
+      toast({ title: "Preencha o cargo", description: "Volte ao passo 2 e informe o cargo antes de usar a IA.", variant: "destructive" });
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-offer-content", {
+        body: {
+          candidate_name: form.candidate_name,
+          position_title: form.position_title,
+          seniority: form.seniority,
+          work_model: form.work_model,
+          department: form.department,
+          salary_amount: form.salary_amount,
+          salary_currency: form.salary_currency,
+          benefits: form.benefits,
+          perks: form.perks,
+          unit: form.unit,
+          reports_to: form.reports_to,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      setForm((f) => ({
+        ...f,
+        hero_headline: (data as any).hero_headline || f.hero_headline,
+        company_intro: (data as any).company_intro || f.company_intro,
+        role_pitch: (data as any).role_pitch || f.role_pitch,
+        next_steps: (data as any).next_steps || f.next_steps,
+        signer_name: f.signer_name || (data as any).signer_name || "",
+        signer_role: f.signer_role || (data as any).signer_role || "",
+      }));
+      toast({ title: "Conteúdo gerado!", description: "Revise e ajuste conforme necessário." });
+    } catch (e: any) {
+      toast({ title: "Erro na IA", description: e?.message || "Tente novamente", variant: "destructive" });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
 
   const copyLink = () => {
     if (!savedToken) return;
