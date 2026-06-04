@@ -113,6 +113,7 @@
 - [HubDev CPF Integration](mem://features/rh/hubdev-integration) — Edge function population of Name, DOB, Status
 - [HR Service Providers (PJ)](mem://features/rh/service-providers-management-pt) — Separation from employees
 - [Payroll Inactive Exclusion](mem://features/rh/payroll-inactive-exclusion-pt) — Status `inactive` sempre excluído
+- [Job Offers (Cartas-Proposta)](mem://features/rh/job-offers-pt) — Wizard /rh/offers + link público iamroy.app/oferta/:token com aceite/recusa
 
 ### UI, Forms & General Architecture
 - [Sidebar Navigation Pattern](mem://style/universal-sidebar-navigation-pattern-pt) — Vertical sub-navigation
