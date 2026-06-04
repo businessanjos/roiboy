@@ -472,6 +472,16 @@ export default function RHOfferWizard() {
 
           {step === 4 && (
             <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/20">
+                <div className="text-sm">
+                  <p className="font-medium text-indigo-900 dark:text-indigo-200">Preencher com IA</p>
+                  <p className="text-xs text-muted-foreground">Gera headline, intro, pitch e próximos passos com base nos dados já informados.</p>
+                </div>
+                <Button type="button" size="sm" onClick={fillWithAI} disabled={aiLoading} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
+                  {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                  {aiLoading ? "Gerando…" : "Preencher com IA"}
+                </Button>
+              </div>
               <div>
                 <Label>Headline da capa</Label>
                 <Input value={form.hero_headline} onChange={(e) => set("hero_headline", e.target.value)} placeholder={`Ex.: ${form.candidate_name || "Mariana"}, esta proposta é para você.`} />
