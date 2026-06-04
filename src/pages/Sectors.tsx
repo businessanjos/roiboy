@@ -78,6 +78,14 @@ const SECTOR_IDENTITY: Record<string, {
     patternClass: "sector-pattern-rh",
     overrideIcon: Briefcase,
   },
+  eventos: {
+    accent: "border-l-pink-500",
+    hoverBorder: "hover:border-pink-500/30",
+    hoverIconBg: "group-hover:bg-pink-500/10",
+    hoverIconColor: "group-hover:text-pink-600",
+    patternClass: "sector-pattern-events",
+    overrideIcon: CalendarDays,
+  },
 };
 
 function SectorPattern({ sectorId }: { sectorId: string }) {
