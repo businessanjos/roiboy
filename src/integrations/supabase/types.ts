@@ -6867,6 +6867,81 @@ export type Database = {
           },
         ]
       }
+      event_design_files: {
+        Row: {
+          account_id: string
+          category: string
+          created_at: string
+          description: string | null
+          event_id: string
+          external_url: string | null
+          file_size: number | null
+          file_url: string | null
+          id: string
+          mime_type: string | null
+          name: string
+          status: string
+          tags: string[] | null
+          thumbnail_url: string | null
+          updated_at: string
+          uploaded_by: string | null
+          version: number
+        }
+        Insert: {
+          account_id: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          event_id: string
+          external_url?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          mime_type?: string | null
+          name: string
+          status?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Update: {
+          account_id?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          event_id?: string
+          external_url?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          mime_type?: string | null
+          name?: string
+          status?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_design_files_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_design_files_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_feedback: {
         Row: {
           account_id: string
@@ -7175,6 +7250,7 @@ export type Database = {
       event_media: {
         Row: {
           account_id: string
+          album_id: string | null
           caption: string | null
           created_at: string
           display_order: number | null
@@ -7184,12 +7260,15 @@ export type Database = {
           file_url: string
           id: string
           is_cover: boolean
+          is_favorite: boolean
           media_type: Database["public"]["Enums"]["event_media_type"]
+          tags: string[] | null
           thumbnail_url: string | null
           uploaded_by: string | null
         }
         Insert: {
           account_id: string
+          album_id?: string | null
           caption?: string | null
           created_at?: string
           display_order?: number | null
@@ -7199,12 +7278,15 @@ export type Database = {
           file_url: string
           id?: string
           is_cover?: boolean
+          is_favorite?: boolean
           media_type?: Database["public"]["Enums"]["event_media_type"]
+          tags?: string[] | null
           thumbnail_url?: string | null
           uploaded_by?: string | null
         }
         Update: {
           account_id?: string
+          album_id?: string | null
           caption?: string | null
           created_at?: string
           display_order?: number | null
@@ -7214,7 +7296,9 @@ export type Database = {
           file_url?: string
           id?: string
           is_cover?: boolean
+          is_favorite?: boolean
           media_type?: Database["public"]["Enums"]["event_media_type"]
+          tags?: string[] | null
           thumbnail_url?: string | null
           uploaded_by?: string | null
         }
@@ -7224,6 +7308,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_media_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "event_media_albums"
             referencedColumns: ["id"]
           },
           {
@@ -7245,6 +7336,66 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_media_albums: {
+        Row: {
+          account_id: string
+          allow_public_download: boolean
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          event_id: string
+          id: string
+          is_public: boolean
+          name: string
+          public_token: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          allow_public_download?: boolean
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_id: string
+          id?: string
+          is_public?: boolean
+          name: string
+          public_token?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          allow_public_download?: boolean
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_id?: string
+          id?: string
+          is_public?: boolean
+          name?: string
+          public_token?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_media_albums_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_media_albums_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
             referencedColumns: ["id"]
           },
         ]

@@ -28,6 +28,8 @@ import {
   QrCode,
   ExternalLink,
   Image,
+  Palette,
+
   MessageSquare,
   CheckCircle2,
   AlertTriangle,
@@ -54,6 +56,9 @@ import EventParticipantsTab from "@/components/events/EventParticipantsTab";
 import EventTeamTab from "@/components/events/EventTeamTab";
 import EventMediaTab from "@/components/events/EventMediaTab";
 import EventFeedbackTab from "@/components/events/EventFeedbackTab";
+import EventDesignTab from "@/components/events/EventDesignTab";
+import EventGalleryShareBar from "@/components/events/EventGalleryShareBar";
+
 
 interface Event {
   id: string;
@@ -506,7 +511,12 @@ export default function EventDetail() {
               <Image className="h-4 w-4" />
               Mídia
             </TabsTrigger>
+            <TabsTrigger value="design" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <Palette className="h-4 w-4" />
+              Design
+            </TabsTrigger>
             <TabsTrigger value="feedback" className="gap-2 text-xs sm:text-sm px-3 py-2">
+
               <MessageSquare className="h-4 w-4" />
               Feedback
             </TabsTrigger>
@@ -572,9 +582,15 @@ export default function EventDetail() {
           <EventTeamTab eventId={event.id} accountId={accountId} />
         </TabsContent>
 
-        <TabsContent value="media">
+        <TabsContent value="media" className="space-y-4">
+          <EventGalleryShareBar eventId={event.id} accountId={accountId} eventName={event.title} />
           <EventMediaTab eventId={event.id} accountId={accountId} />
         </TabsContent>
+
+        <TabsContent value="design">
+          <EventDesignTab eventId={event.id} accountId={accountId} />
+        </TabsContent>
+
 
         <TabsContent value="feedback">
           <EventFeedbackTab eventId={event.id} accountId={accountId} />
