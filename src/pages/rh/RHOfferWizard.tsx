@@ -163,6 +163,10 @@ export default function RHOfferWizard() {
   const removePerk = (i: number) => set("perks", form.perks.filter((_, idx) => idx !== i));
   const updatePerk = (i: number, key: "title" | "description", v: string) =>
     set("perks", form.perks.map((p, idx) => idx === i ? { ...p, [key]: v } : p));
+  const addMetric = () => set("success_metrics", [...form.success_metrics, { label: "", target: "", horizon: "" }]);
+  const removeMetric = (i: number) => set("success_metrics", form.success_metrics.filter((_, idx) => idx !== i));
+  const updateMetric = (i: number, key: "label" | "target" | "horizon", v: string) =>
+    set("success_metrics", form.success_metrics.map((m, idx) => idx === i ? { ...m, [key]: v } : m));
 
   const canNext = () => {
     if (step === 1) return form.candidate_name.trim().length > 1;
