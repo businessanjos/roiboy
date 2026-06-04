@@ -29,6 +29,7 @@ type Offer = {
   variable_compensation: string | null;
   benefits: string[];
   perks: { title: string; description: string }[];
+  success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string | null;
   offer_expires_at: string | null;
   hero_headline: string | null;
