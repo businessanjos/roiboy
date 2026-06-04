@@ -47,7 +47,8 @@ serve(async (req) => {
       }
       const spend = parseFloat(ins.spend) || 0;
       return {
-        user_id: user.id, meta_campaign_id: c.id, name: c.name, platform: 'Meta Ads',
+        user_id: user.id, meta_campaign_id: c.id, meta_ad_account_id: accountId,
+        name: c.name, platform: 'Meta Ads',
         status: statusMap[c.effective_status] || 'paused',
         spend, impressions: parseInt(ins.impressions) || 0, clicks: parseInt(ins.clicks) || 0,
         conversions, cpl: conversions > 0 ? +(spend / conversions).toFixed(2) : 0,
@@ -55,7 +56,11 @@ serve(async (req) => {
       };
     });
 
-    await supabase.from('marketing_ad_sets').delete().eq('user_id', user.id);
+    // Scope delete to THIS account only so multiple accounts can coexist
+    await supabase.from('marketing_ad_sets')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('meta_ad_account_id', accountId);
     if (rows.length > 0) {
       const { error: insErr } = await supabase.from('marketing_ad_sets').insert(rows as any);
       if (insErr) return new Response(JSON.stringify({ error: 'Erro ao salvar' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

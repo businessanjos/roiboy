@@ -39,6 +39,7 @@ interface AdSet {
   conversions: number;
   cpl: number;
   agency_id?: string | null;
+  meta_ad_account_id?: string | null;
 }
 
 interface Insights {
@@ -114,16 +115,17 @@ export default function MarketingTrafegoPago() {
   }, [adSets]);
 
   const syncCampaigns = useCallback(async () => {
-    if (!accounts.length) { toast.error('Nenhuma conta de anúncios'); return; }
+    const acc = selectedAccount || accounts[0]?.id;
+    if (!acc) { toast.error('Nenhuma conta de anúncios'); return; }
     setSyncing(true);
     try {
-      const { data, error: e } = await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: accounts[0].id, ...periodPayload } });
+      const { data, error: e } = await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: acc, ...periodPayload } });
       if (e) throw e;
       if (data?.error) toast.error(data.error);
       else { toast.success(`${data?.count || 0} campanhas sincronizadas!`); await fetchAdSets(); }
     } catch (err) { console.error(err); toast.error('Erro ao sincronizar'); }
     finally { setSyncing(false); }
-  }, [accounts, periodPayload, fetchAdSets]);
+  }, [accounts, selectedAccount, periodPayload, fetchAdSets]);
 
   useEffect(() => {
     if (accounts.length > 0 && (!selectedAccount || !accounts.find(a => a.id === selectedAccount))) {
@@ -332,8 +334,12 @@ export default function MarketingTrafegoPago() {
                 </div>
               ) : (
                 (() => {
-                  const platforms = Array.from(new Set(adSets.map(a => a.platform).filter(Boolean)));
-                  const filtered = adSets.filter(ad => {
+                  const selectedAcc = selectedAccount ? (selectedAccount.startsWith('act_') ? selectedAccount : `act_${selectedAccount}`) : '';
+                  const accountScoped = selectedAcc
+                    ? adSets.filter(a => !a.meta_ad_account_id || a.meta_ad_account_id === selectedAcc)
+                    : adSets;
+                  const platforms = Array.from(new Set(accountScoped.map(a => a.platform).filter(Boolean)));
+                  const filtered = accountScoped.filter(ad => {
                     if (campaignStatusFilter !== 'all' && ad.status !== campaignStatusFilter) return false;
                     if (campaignPlatformFilter !== 'all' && ad.platform !== campaignPlatformFilter) return false;
                     if (campaignSearch && !ad.name?.toLowerCase().includes(campaignSearch.toLowerCase())) return false;
@@ -369,7 +375,7 @@ export default function MarketingTrafegoPago() {
                             </SelectContent>
                           </Select>
                         )}
-                        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {adSets.length}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} de {accountScoped.length}</span>
                       </div>
 
                       {filtered.length === 0 ? (
