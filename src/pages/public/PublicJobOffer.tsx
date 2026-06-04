@@ -329,7 +329,7 @@ export default function PublicJobOffer() {
           <section>
             <SectionLabel>Remuneração</SectionLabel>
             <div
-              className="rounded-sm p-8 md:p-12 text-center relative overflow-hidden"
+              className="rounded-sm p-6 sm:p-8 md:p-12 text-center relative overflow-hidden"
               style={{
                 background: `linear-gradient(135deg, ${CARD} 0%, #f4eed5 100%)`,
                 boxShadow: `0 30px 80px -30px rgba(0,0,0,0.5), inset 0 0 0 1px ${GOLD}40`,
