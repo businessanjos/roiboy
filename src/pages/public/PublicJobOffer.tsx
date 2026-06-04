@@ -482,12 +482,12 @@ export default function PublicJobOffer() {
               className="absolute inset-0 pointer-events-none"
               style={{ background: `linear-gradient(180deg, ${BG_DEEP}40 0%, transparent 30%, ${BG_DEEP}ee 100%)` }}
             />
-            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-center">
-              <Sparkles className="h-5 w-5 mx-auto mb-3" style={{ color: GOLD }} />
-              <p className="text-lg md:text-2xl" style={{ fontFamily: SERIF, color: CARD, fontWeight: 300 }}>
+            <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6 md:p-10 text-center">
+              <Sparkles className="h-5 w-5 mx-auto mb-2 sm:mb-3" style={{ color: GOLD }} />
+              <p className="text-base sm:text-lg md:text-2xl leading-snug" style={{ fontFamily: SERIF, color: CARD, fontWeight: 300 }}>
                 Centenas de líderes que escolheram construir algo memorável.
               </p>
-              <p className="text-xs uppercase tracking-[0.3em] mt-3" style={{ color: GOLD }}>
+              <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] mt-2 sm:mt-3" style={{ color: GOLD }}>
                 Eternum Club
               </p>
             </div>
