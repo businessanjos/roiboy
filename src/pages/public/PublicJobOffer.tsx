@@ -143,12 +143,13 @@ export default function PublicJobOffer() {
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen overflow-x-hidden"
       style={{
         background: BG,
         color: CARD,
         fontFamily: SANS,
         backgroundImage: `radial-gradient(circle at 20% 0%, ${GOLD}15, transparent 50%), radial-gradient(circle at 80% 100%, ${GOLD}10, transparent 50%)`,
+        paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
       {/* HERO */}
@@ -161,48 +162,48 @@ export default function PublicJobOffer() {
             backgroundSize: "32px 32px",
           }}
         />
-        <div className="relative max-w-6xl mx-auto px-6 pt-12 pb-16 md:pt-16 md:pb-24">
+        <div className="relative max-w-6xl mx-auto px-5 sm:px-6 pt-10 pb-14 sm:pt-12 sm:pb-16 md:pt-16 md:pb-24">
           {/* Logo */}
-          <div className="flex justify-center mb-10">
-            <img src={letreiro.url} alt="Eternum" className="h-7 md:h-9 object-contain opacity-95" />
+          <div className="flex justify-center mb-8 sm:mb-10">
+            <img src={letreiro.url} alt="Eternum" className="h-6 sm:h-7 md:h-9 object-contain opacity-95" />
           </div>
 
           {offer.candidate_photo_url ? (
             // Hero personalizado com foto do candidato
-            <div className="grid md:grid-cols-[1.1fr_0.9fr] gap-8 md:gap-12 items-center">
+            <div className="grid md:grid-cols-[1.1fr_0.9fr] gap-10 sm:gap-12 md:gap-12 items-center">
               <div className="order-2 md:order-1 text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-4 mb-6">
-                  <span className="h-px w-10" style={{ background: GOLD }} />
+                <div className="flex items-center justify-center md:justify-start gap-3 sm:gap-4 mb-5 sm:mb-6">
+                  <span className="h-px w-8 sm:w-10" style={{ background: GOLD }} />
                   <span
-                    className="text-[11px] uppercase tracking-[0.4em] font-light"
+                    className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-light"
                     style={{ color: GOLD, fontFamily: SANS }}
                   >
                     Carta-Proposta · Confidencial
                   </span>
                 </div>
                 <p
-                  className="text-sm md:text-base uppercase tracking-[0.3em] mb-4"
+                  className="text-xs sm:text-sm md:text-base uppercase tracking-[0.25em] sm:tracking-[0.3em] mb-3 sm:mb-4"
                   style={{ color: GOLD, fontFamily: SANS, fontWeight: 500 }}
                 >
                   Para {firstName}
                 </p>
                 <h1
-                  className="text-3xl md:text-5xl lg:text-6xl leading-[1.1]"
+                  className="text-[28px] leading-[1.1] sm:text-4xl md:text-5xl lg:text-6xl"
                   style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
                 >
                   {offer.hero_headline || `Bem-${gender === "f" ? "vinda" : "vindo"} à sua nova jornada.`}
                 </h1>
                 <p
-                  className="mt-6 text-base md:text-lg max-w-xl mx-auto md:mx-0"
+                  className="mt-5 sm:mt-6 text-[15px] sm:text-base md:text-lg max-w-xl mx-auto md:mx-0 leading-relaxed"
                   style={{ color: "#e8dcc0", fontFamily: SERIF, fontWeight: 300, fontStyle: "italic", opacity: 0.85 }}
                 >
                   Esta é a sua cadeira na Eternum — feita sob medida, com o seu nome.
                 </p>
               </div>
-              <div className="order-1 md:order-2 relative">
+              <div className="order-1 md:order-2 relative px-2 sm:px-0">
                 {/* moldura dourada premium */}
                 <div
-                  className="relative mx-auto aspect-[4/5] w-full max-w-sm rounded-sm overflow-hidden"
+                  className="relative mx-auto aspect-[4/5] w-full max-w-[280px] sm:max-w-sm rounded-sm overflow-hidden"
                   style={{
                     boxShadow: `0 40px 100px -30px rgba(0,0,0,0.85), 0 0 0 1px ${GOLD}66, 0 0 60px ${GOLD}22`,
                   }}
@@ -212,40 +213,38 @@ export default function PublicJobOffer() {
                     alt={offer.candidate_name}
                     className="w-full h-full object-cover object-top"
                   />
-                  {/* glow sutil */}
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{ background: `linear-gradient(180deg, transparent 55%, ${BG_DEEP}66 100%)` }}
                   />
-                  {/* canto inferior com nome */}
-                  <div className="absolute bottom-0 left-0 right-0 px-5 py-4" style={{ background: `linear-gradient(0deg, ${BG_DEEP}f5, transparent)` }}>
-                    <p className="text-[10px] uppercase tracking-[0.35em]" style={{ color: GOLD }}>Eternum · Time</p>
-                    <p className="text-lg md:text-xl mt-1" style={{ fontFamily: SERIF, color: CARD, fontWeight: 400 }}>
+                  <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-5 py-3 sm:py-4" style={{ background: `linear-gradient(0deg, ${BG_DEEP}f5, transparent)` }}>
+                    <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.35em]" style={{ color: GOLD }}>Eternum · Time</p>
+                    <p className="text-base sm:text-lg md:text-xl mt-1" style={{ fontFamily: SERIF, color: CARD, fontWeight: 400 }}>
                       {offer.candidate_name}
                     </p>
                   </div>
                 </div>
                 {/* ornamento dourado */}
-                <div className="absolute -top-3 -left-3 w-12 h-12 border-t-2 border-l-2 pointer-events-none" style={{ borderColor: GOLD }} />
-                <div className="absolute -bottom-3 -right-3 w-12 h-12 border-b-2 border-r-2 pointer-events-none" style={{ borderColor: GOLD }} />
+                <div className="absolute -top-2 -left-0 sm:-top-3 sm:-left-3 w-10 h-10 sm:w-12 sm:h-12 border-t-2 border-l-2 pointer-events-none" style={{ borderColor: GOLD }} />
+                <div className="absolute -bottom-2 -right-0 sm:-bottom-3 sm:-right-3 w-10 h-10 sm:w-12 sm:h-12 border-b-2 border-r-2 pointer-events-none" style={{ borderColor: GOLD }} />
               </div>
             </div>
           ) : (
             <>
               {/* Linha dourada + tag */}
-              <div className="flex items-center justify-center gap-4 mb-8">
-                <span className="h-px w-12" style={{ background: GOLD }} />
+              <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <span className="h-px w-10 sm:w-12" style={{ background: GOLD }} />
                 <span
-                  className="text-[11px] uppercase tracking-[0.4em] font-light"
+                  className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-light"
                   style={{ color: GOLD, fontFamily: SANS }}
                 >
                   Carta-Proposta · Confidencial
                 </span>
-                <span className="h-px w-12" style={{ background: GOLD }} />
+                <span className="h-px w-10 sm:w-12" style={{ background: GOLD }} />
               </div>
 
               <h1
-                className="text-center text-3xl md:text-5xl lg:text-6xl leading-[1.15] max-w-3xl mx-auto pb-4"
+                className="text-center text-[30px] leading-[1.15] sm:text-4xl md:text-5xl lg:text-6xl max-w-3xl mx-auto pb-4"
                 style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
               >
                 {offer.hero_headline || `Uma jornada feita para quem busca o extraordinário.`}
@@ -256,7 +255,7 @@ export default function PublicJobOffer() {
       </header>
 
       {/* CORPO */}
-      <main className="max-w-4xl mx-auto px-6 py-16 md:py-24 space-y-20">
+      <main className="max-w-4xl mx-auto px-5 sm:px-6 py-12 sm:py-16 md:py-24 space-y-12 sm:space-y-16 md:space-y-20">
         {/* SOBRE A ETERNUM */}
         <section>
           <SectionLabel>A Eternum</SectionLabel>
@@ -330,7 +329,7 @@ export default function PublicJobOffer() {
           <section>
             <SectionLabel>Remuneração</SectionLabel>
             <div
-              className="rounded-sm p-8 md:p-12 text-center relative overflow-hidden"
+              className="rounded-sm p-6 sm:p-8 md:p-12 text-center relative overflow-hidden"
               style={{
                 background: `linear-gradient(135deg, ${CARD} 0%, #f4eed5 100%)`,
                 boxShadow: `0 30px 80px -30px rgba(0,0,0,0.5), inset 0 0 0 1px ${GOLD}40`,
@@ -339,11 +338,11 @@ export default function PublicJobOffer() {
               <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
               {offer.salary_amount && (
                 <>
-                  <p className="text-[10px] uppercase tracking-[0.4em] mb-3" style={{ color: GOLD, fontWeight: 600 }}>
+                  <p className="text-[10px] uppercase tracking-[0.35em] sm:tracking-[0.4em] mb-3" style={{ color: GOLD, fontWeight: 600 }}>
                     Investimento mensal em você
                   </p>
                   <p
-                    className="text-5xl md:text-7xl font-light"
+                    className="text-4xl sm:text-5xl md:text-7xl font-light break-words"
                     style={{ fontFamily: SERIF, color: TEXT_DARK, letterSpacing: "-0.02em" }}
                   >
                     {formatMoney(Number(offer.salary_amount))}
@@ -401,7 +400,7 @@ export default function PublicJobOffer() {
               {offer.perks.map((p, i) => (
                 <div
                   key={i}
-                  className="p-6 rounded-sm"
+                  className="p-5 sm:p-6 rounded-sm"
                   style={{ background: CARD, color: TEXT_DARK, boxShadow: `inset 0 0 0 1px ${GOLD}30` }}
                 >
                   <p className="font-semibold text-base" style={{ fontFamily: SERIF }}>{p.title}</p>
@@ -424,7 +423,7 @@ export default function PublicJobOffer() {
               {offer.success_metrics.map((m, i) => (
                 <div
                   key={i}
-                  className="relative p-6 md:p-7 rounded-sm overflow-hidden group"
+                  className="relative p-5 sm:p-6 md:p-7 rounded-sm overflow-hidden group"
                   style={{
                     background: CARD,
                     color: TEXT_DARK,
@@ -483,12 +482,12 @@ export default function PublicJobOffer() {
               className="absolute inset-0 pointer-events-none"
               style={{ background: `linear-gradient(180deg, ${BG_DEEP}40 0%, transparent 30%, ${BG_DEEP}ee 100%)` }}
             />
-            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-center">
-              <Sparkles className="h-5 w-5 mx-auto mb-3" style={{ color: GOLD }} />
-              <p className="text-lg md:text-2xl" style={{ fontFamily: SERIF, color: CARD, fontWeight: 300 }}>
+            <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6 md:p-10 text-center">
+              <Sparkles className="h-5 w-5 mx-auto mb-2 sm:mb-3" style={{ color: GOLD }} />
+              <p className="text-base sm:text-lg md:text-2xl leading-snug" style={{ fontFamily: SERIF, color: CARD, fontWeight: 300 }}>
                 Centenas de líderes que escolheram construir algo memorável.
               </p>
-              <p className="text-xs uppercase tracking-[0.3em] mt-3" style={{ color: GOLD }}>
+              <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] mt-2 sm:mt-3" style={{ color: GOLD }}>
                 Eternum Club
               </p>
             </div>
@@ -544,16 +543,16 @@ export default function PublicJobOffer() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
                     onClick={() => setResponse("accept")}
-                    className="flex-1 gap-2 text-base h-14 rounded-sm font-semibold uppercase tracking-wider hover:opacity-90 transition-opacity"
-                    style={{ background: TEXT_DARK, color: CARD, fontFamily: SANS, letterSpacing: "0.15em", fontSize: 13 }}
+                    className="flex-1 gap-2 h-14 rounded-sm font-semibold uppercase hover:opacity-90 transition-opacity"
+                    style={{ background: TEXT_DARK, color: CARD, fontFamily: SANS, letterSpacing: "0.1em", fontSize: 13 }}
                   >
-                    <CheckCircle2 className="h-5 w-5" /> Aceitar a proposta
+                    <CheckCircle2 className="h-5 w-5 shrink-0" /> <span className="whitespace-nowrap">Aceitar proposta</span>
                   </Button>
                   <Button
                     onClick={() => setResponse("decline")}
                     variant="outline"
-                    className="flex-1 gap-2 h-14 rounded-sm hover:bg-transparent"
-                    style={{ borderColor: `${TEXT_DARK}40`, color: TEXT_DARK, background: "transparent", fontFamily: SANS, fontSize: 13, letterSpacing: "0.15em" }}
+                    className="flex-1 gap-2 h-14 rounded-sm hover:bg-transparent uppercase"
+                    style={{ borderColor: `${TEXT_DARK}40`, color: TEXT_DARK, background: "transparent", fontFamily: SANS, fontSize: 13, letterSpacing: "0.1em" }}
                   >
                     Recusar
                   </Button>
@@ -638,9 +637,9 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-4 mb-8">
+    <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
       <span className="h-px flex-1" style={{ background: `${GOLD}40` }} />
-      <h2 className="text-[11px] uppercase tracking-[0.4em] font-semibold" style={{ color: GOLD, fontFamily: SANS }}>
+      <h2 className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-semibold text-center" style={{ color: GOLD, fontFamily: SANS }}>
         {children}
       </h2>
       <span className="h-px flex-1" style={{ background: `${GOLD}40` }} />
@@ -651,7 +650,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function Card({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="rounded-sm p-8 md:p-10"
+      className="rounded-sm p-6 sm:p-8 md:p-10"
       style={{
         background: CARD,
         color: TEXT_DARK,
@@ -666,18 +665,18 @@ function Card({ children }: { children: React.ReactNode }) {
 function DetailCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div
-      className="p-5 rounded-sm flex items-start gap-4"
+      className="p-4 sm:p-5 rounded-sm flex items-start gap-3 sm:gap-4"
       style={{ background: CARD, color: TEXT_DARK, boxShadow: `inset 0 0 0 1px ${GOLD}30` }}
     >
       <div
-        className="p-2.5 rounded-sm flex-shrink-0"
+        className="p-2 sm:p-2.5 rounded-sm flex-shrink-0"
         style={{ background: `${GOLD}25`, color: TEXT_DARK }}
       >
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-[0.3em] opacity-60 font-semibold">{label}</p>
-        <p className="font-medium text-sm mt-1.5" style={{ fontFamily: SERIF }}>{value}</p>
+        <p className="text-[10px] uppercase tracking-[0.25em] sm:tracking-[0.3em] opacity-60 font-semibold">{label}</p>
+        <p className="font-medium text-sm mt-1 sm:mt-1.5 break-words" style={{ fontFamily: SERIF }}>{value}</p>
       </div>
     </div>
   );
