@@ -332,7 +332,7 @@ export default function RHOfferWizard() {
           {STEPS.map((s) => (
             <button
               key={s.id}
-              onClick={() => s.id < step && setStep(s.id)}
+              onClick={() => (isEdit || s.id < step) && setStep(s.id)}
               className="flex flex-col items-center gap-2"
             >
               <div className={cn(
