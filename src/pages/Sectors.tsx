@@ -137,6 +137,14 @@ function SectorPattern({ sectorId }: { sectorId: string }) {
         <path d="M15 55 Q15 40 30 40 Q40 40 40 45 Q40 40 50 40 Q65 40 65 55" stroke="currentColor" strokeWidth="2" fill="none" />
       </svg>
     ),
+    eventos: (
+      <svg className="absolute right-3 bottom-3 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500" width="80" height="80" viewBox="0 0 80 80">
+        <rect x="12" y="18" width="56" height="50" rx="4" stroke="currentColor" strokeWidth="2" fill="none" />
+        <line x1="12" y1="32" x2="68" y2="32" stroke="currentColor" strokeWidth="2" />
+        <line x1="26" y1="10" x2="26" y2="24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <line x1="54" y1="10" x2="54" y2="24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    ),
   };
   return <>{patterns[sectorId] || null}</>;
 }
