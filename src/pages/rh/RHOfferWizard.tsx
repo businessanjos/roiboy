@@ -831,6 +831,37 @@ export default function RHOfferWizard() {
                 <div><strong>Perks:</strong> {form.perks.filter(p => p.title.trim()).length}</div>
               </div>
 
+              {/* Salvar como modelo */}
+              <div className="rounded-xl border-2 border-dashed border-amber-300/60 p-4 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-950/10 space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={form.is_template}
+                    onCheckedChange={(v) => set("is_template", !!v)}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <LayoutTemplate className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-semibold">Salvar esta offer como modelo</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Modelos aparecem na tela de offers e podem ser reaproveitados em 1 clique para o próximo candidato. Os dados pessoais (nome, e-mail, foto, data) ficam em branco na nova offer.
+                    </p>
+                  </div>
+                </label>
+                {form.is_template && (
+                  <div className="pl-8 space-y-1.5">
+                    <Label className="text-xs">Nome do modelo</Label>
+                    <Input
+                      value={form.template_name}
+                      onChange={(e) => set("template_name", e.target.value)}
+                      placeholder={form.position_title ? `Ex.: ${form.position_title} – padrão` : "Ex.: CS Júnior – padrão Eternum"}
+                      className="bg-background"
+                    />
+                  </div>
+                )}
+              </div>
+
               {savedToken && (
                 <div className="p-4 rounded-lg border bg-emerald-50 dark:bg-emerald-950/30 space-y-2">
                   <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
