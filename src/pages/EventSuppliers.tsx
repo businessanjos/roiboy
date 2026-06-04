@@ -78,18 +78,32 @@ interface Supplier {
   name: string;
   category: string;
   contact_name: string | null;
+  contact_role: string | null;
   phone: string | null;
   email: string | null;
   website: string | null;
   instagram: string | null;
   address: string | null;
+  neighborhood: string | null;
   city: string | null;
   state: string | null;
+  zip_code: string | null;
   price_range: string | null;
   rating: number | null;
   status: string;
   notes: string | null;
   tags: string[] | null;
+  cnpj: string | null;
+  cpf: string | null;
+  razao_social: string | null;
+  nome_fantasia: string | null;
+  inscricao_estadual: string | null;
+  inscricao_municipal: string | null;
+  payment_terms: string | null;
+  bank_info: string | null;
+  pix_key: string | null;
+  services_offered: string | null;
+  contract_url: string | null;
 }
 
 interface Quote {
@@ -107,18 +121,32 @@ const EMPTY_SUPPLIER: Omit<Supplier, "id"> = {
   name: "",
   category: "outros",
   contact_name: "",
+  contact_role: "",
   phone: "",
   email: "",
   website: "",
   instagram: "",
   address: "",
+  neighborhood: "",
   city: "",
   state: "",
+  zip_code: "",
   price_range: "",
   rating: null,
   status: "active",
   notes: "",
   tags: [],
+  cnpj: "",
+  cpf: "",
+  razao_social: "",
+  nome_fantasia: "",
+  inscricao_estadual: "",
+  inscricao_municipal: "",
+  payment_terms: "",
+  bank_info: "",
+  pix_key: "",
+  services_offered: "",
+  contract_url: "",
 };
 
 export default function EventSuppliers() {
