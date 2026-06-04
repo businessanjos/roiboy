@@ -141,17 +141,14 @@ export default function RHOfferWizard() {
   };
 
   const save = async (status: "draft" | "sent") => {
-    if (!currentUser?.id) return;
-    setSaving(true);
-    const { data: userRow } = await supabase.from("users").select("account_id").eq("auth_user_id", currentUser.id).maybeSingle();
-    if (!userRow?.account_id) {
-      toast({ title: "Conta não encontrada", variant: "destructive" });
-      setSaving(false);
+    if (!currentUser?.account_id) {
+      toast({ title: "Sessão expirada", description: "Faça login novamente", variant: "destructive" });
       return;
     }
+    setSaving(true);
     const payload: any = {
-      account_id: userRow.account_id,
-      created_by: currentUser.id,
+      account_id: currentUser.account_id,
+      created_by: currentUser.auth_user_id || currentUser.id,
       candidate_name: form.candidate_name,
       candidate_email: form.candidate_email || null,
       candidate_phone: form.candidate_phone || null,
