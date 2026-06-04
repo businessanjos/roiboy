@@ -131,8 +131,15 @@ export default function RHOfferWizard() {
         cover_image_url: data.cover_image_url || "",
       });
       setSavedToken(data.public_token);
+      setRecordId(data.id);
+      isLoadedRef.current = true;
     })();
   }, [id]);
+
+  // Mark as loaded once for new offers too
+  useEffect(() => {
+    if (!isEdit) isLoadedRef.current = true;
+  }, [isEdit]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const toggleBenefit = (b: string) => set("benefits", form.benefits.includes(b) ? form.benefits.filter(x => x !== b) : [...form.benefits, b]);
