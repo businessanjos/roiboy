@@ -78,18 +78,32 @@ interface Supplier {
   name: string;
   category: string;
   contact_name: string | null;
+  contact_role: string | null;
   phone: string | null;
   email: string | null;
   website: string | null;
   instagram: string | null;
   address: string | null;
+  neighborhood: string | null;
   city: string | null;
   state: string | null;
+  zip_code: string | null;
   price_range: string | null;
   rating: number | null;
   status: string;
   notes: string | null;
   tags: string[] | null;
+  cnpj: string | null;
+  cpf: string | null;
+  razao_social: string | null;
+  nome_fantasia: string | null;
+  inscricao_estadual: string | null;
+  inscricao_municipal: string | null;
+  payment_terms: string | null;
+  bank_info: string | null;
+  pix_key: string | null;
+  services_offered: string | null;
+  contract_url: string | null;
 }
 
 interface Quote {
@@ -107,18 +121,32 @@ const EMPTY_SUPPLIER: Omit<Supplier, "id"> = {
   name: "",
   category: "outros",
   contact_name: "",
+  contact_role: "",
   phone: "",
   email: "",
   website: "",
   instagram: "",
   address: "",
+  neighborhood: "",
   city: "",
   state: "",
+  zip_code: "",
   price_range: "",
   rating: null,
   status: "active",
   notes: "",
   tags: [],
+  cnpj: "",
+  cpf: "",
+  razao_social: "",
+  nome_fantasia: "",
+  inscricao_estadual: "",
+  inscricao_municipal: "",
+  payment_terms: "",
+  bank_info: "",
+  pix_key: "",
+  services_offered: "",
+  contract_url: "",
 };
 
 export default function EventSuppliers() {
@@ -414,6 +442,12 @@ export default function EventSuppliers() {
                   {s.contact_name && (
                     <p className="text-muted-foreground">
                       <span className="font-medium text-foreground">Contato:</span> {s.contact_name}
+                      {s.contact_role ? ` · ${s.contact_role}` : ""}
+                    </p>
+                  )}
+                  {s.cnpj && (
+                    <p className="text-muted-foreground text-xs">
+                      <span className="font-medium text-foreground">CNPJ:</span> {s.cnpj}
                     </p>
                   )}
                   {s.phone && (
@@ -603,97 +637,202 @@ function SupplierDialog({
 
   return (
     <Dialog open={state.open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
         <DialogHeader>
           <DialogTitle>{form.id ? "Editar fornecedor" : "Novo fornecedor"}</DialogTitle>
+          <DialogDescription>Dados cadastrais, fiscais, contato e financeiro</DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2">
-            <Label>Nome *</Label>
-            <Input value={form.name || ""} onChange={(e) => set("name", e.target.value)} />
-          </div>
-          <div>
-            <Label>Categoria *</Label>
-            <Select value={form.category || "outros"} onValueChange={(v) => set("category", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Status</Label>
-            <Select value={form.status || "active"} onValueChange={(v) => set("status", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Ativo</SelectItem>
-                <SelectItem value="inactive">Inativo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Contato</Label>
-            <Input value={form.contact_name || ""} onChange={(e) => set("contact_name", e.target.value)} />
-          </div>
-          <div>
-            <Label>Telefone / WhatsApp</Label>
-            <Input value={form.phone || ""} onChange={(e) => set("phone", e.target.value)} placeholder="55 11 99999-9999" />
-          </div>
-          <div>
-            <Label>E-mail</Label>
-            <Input type="email" value={form.email || ""} onChange={(e) => set("email", e.target.value)} />
-          </div>
-          <div>
-            <Label>Website</Label>
-            <Input value={form.website || ""} onChange={(e) => set("website", e.target.value)} placeholder="https://" />
-          </div>
-          <div>
-            <Label>Instagram</Label>
-            <Input value={form.instagram || ""} onChange={(e) => set("instagram", e.target.value)} placeholder="@usuario" />
-          </div>
-          <div>
-            <Label>Cidade</Label>
-            <Input value={form.city || ""} onChange={(e) => set("city", e.target.value)} />
-          </div>
-          <div>
-            <Label>Estado</Label>
-            <Input value={form.state || ""} onChange={(e) => set("state", e.target.value)} maxLength={2} />
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Endereço</Label>
-            <Input value={form.address || ""} onChange={(e) => set("address", e.target.value)} />
-          </div>
-          <div>
-            <Label>Faixa de preço</Label>
-            <Input value={form.price_range || ""} onChange={(e) => set("price_range", e.target.value)} placeholder="Ex: R$ 5k - R$ 12k" />
-          </div>
-          <div>
-            <Label>Avaliação (1-5)</Label>
-            <Select
-              value={form.rating ? String(form.rating) : "0"}
-              onValueChange={(v) => set("rating", v === "0" ? null : Number(v))}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Sem avaliação</SelectItem>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <SelectItem key={n} value={String(n)}>{"★".repeat(n)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Observações</Label>
-            <Textarea
-              value={form.notes || ""}
-              onChange={(e) => set("notes", e.target.value)}
-              rows={3}
-              placeholder="Detalhes, condições, histórico..."
-            />
+
+        {/* Identificação */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Identificação</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2">
+              <Label>Nome / Apelido *</Label>
+              <Input value={form.name || ""} onChange={(e) => set("name", e.target.value)} />
+            </div>
+            <div>
+              <Label>Categoria *</Label>
+              <Select value={form.category || "outros"} onValueChange={(v) => set("category", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select value={form.status || "active"} onValueChange={(v) => set("status", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
+
+        {/* Dados fiscais */}
+        <div className="space-y-2 pt-2">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Dados fiscais</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label>CNPJ</Label>
+              <Input value={form.cnpj || ""} onChange={(e) => set("cnpj", e.target.value)} placeholder="00.000.000/0000-00" />
+            </div>
+            <div>
+              <Label>CPF (se PF)</Label>
+              <Input value={form.cpf || ""} onChange={(e) => set("cpf", e.target.value)} placeholder="000.000.000-00" />
+            </div>
+            <div>
+              <Label>Razão Social</Label>
+              <Input value={form.razao_social || ""} onChange={(e) => set("razao_social", e.target.value)} />
+            </div>
+            <div>
+              <Label>Nome Fantasia</Label>
+              <Input value={form.nome_fantasia || ""} onChange={(e) => set("nome_fantasia", e.target.value)} />
+            </div>
+            <div>
+              <Label>Inscrição Estadual</Label>
+              <Input value={form.inscricao_estadual || ""} onChange={(e) => set("inscricao_estadual", e.target.value)} />
+            </div>
+            <div>
+              <Label>Inscrição Municipal</Label>
+              <Input value={form.inscricao_municipal || ""} onChange={(e) => set("inscricao_municipal", e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        {/* Contato */}
+        <div className="space-y-2 pt-2">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Contato</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label>Pessoa de contato</Label>
+              <Input value={form.contact_name || ""} onChange={(e) => set("contact_name", e.target.value)} />
+            </div>
+            <div>
+              <Label>Cargo</Label>
+              <Input value={form.contact_role || ""} onChange={(e) => set("contact_role", e.target.value)} placeholder="Ex: Comercial" />
+            </div>
+            <div>
+              <Label>Telefone / WhatsApp</Label>
+              <Input value={form.phone || ""} onChange={(e) => set("phone", e.target.value)} placeholder="55 11 99999-9999" />
+            </div>
+            <div>
+              <Label>E-mail</Label>
+              <Input type="email" value={form.email || ""} onChange={(e) => set("email", e.target.value)} />
+            </div>
+            <div>
+              <Label>Website</Label>
+              <Input value={form.website || ""} onChange={(e) => set("website", e.target.value)} placeholder="https://" />
+            </div>
+            <div>
+              <Label>Instagram</Label>
+              <Input value={form.instagram || ""} onChange={(e) => set("instagram", e.target.value)} placeholder="@usuario" />
+            </div>
+          </div>
+        </div>
+
+        {/* Endereço */}
+        <div className="space-y-2 pt-2">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Endereço</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label>CEP</Label>
+              <Input value={form.zip_code || ""} onChange={(e) => set("zip_code", e.target.value)} placeholder="00000-000" />
+            </div>
+            <div>
+              <Label>Bairro</Label>
+              <Input value={form.neighborhood || ""} onChange={(e) => set("neighborhood", e.target.value)} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Endereço (rua, número, complemento)</Label>
+              <Input value={form.address || ""} onChange={(e) => set("address", e.target.value)} />
+            </div>
+            <div>
+              <Label>Cidade</Label>
+              <Input value={form.city || ""} onChange={(e) => set("city", e.target.value)} />
+            </div>
+            <div>
+              <Label>Estado (UF)</Label>
+              <Input value={form.state || ""} onChange={(e) => set("state", e.target.value)} maxLength={2} />
+            </div>
+          </div>
+        </div>
+
+        {/* Financeiro & Serviços */}
+        <div className="space-y-2 pt-2">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Financeiro & Serviços</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label>Faixa de preço</Label>
+              <Input value={form.price_range || ""} onChange={(e) => set("price_range", e.target.value)} placeholder="Ex: R$ 5k - R$ 12k" />
+            </div>
+            <div>
+              <Label>Avaliação (1-5)</Label>
+              <Select
+                value={form.rating ? String(form.rating) : "0"}
+                onValueChange={(v) => set("rating", v === "0" ? null : Number(v))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Sem avaliação</SelectItem>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{"★".repeat(n)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Condições de pagamento</Label>
+              <Input
+                value={form.payment_terms || ""}
+                onChange={(e) => set("payment_terms", e.target.value)}
+                placeholder="Ex: 50% sinal + 50% no evento, boleto 30d, etc."
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Dados bancários</Label>
+              <Textarea
+                value={form.bank_info || ""}
+                onChange={(e) => set("bank_info", e.target.value)}
+                rows={2}
+                placeholder="Banco, agência, conta, titular"
+              />
+            </div>
+            <div>
+              <Label>Chave PIX</Label>
+              <Input value={form.pix_key || ""} onChange={(e) => set("pix_key", e.target.value)} />
+            </div>
+            <div>
+              <Label>Link do contrato</Label>
+              <Input value={form.contract_url || ""} onChange={(e) => set("contract_url", e.target.value)} placeholder="https://" />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Serviços oferecidos</Label>
+              <Textarea
+                value={form.services_offered || ""}
+                onChange={(e) => set("services_offered", e.target.value)}
+                rows={2}
+                placeholder="O que esse fornecedor entrega? Pacotes, especialidades, restrições..."
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Observações internas</Label>
+              <Textarea
+                value={form.notes || ""}
+                onChange={(e) => set("notes", e.target.value)}
+                rows={3}
+                placeholder="Detalhes, histórico, alertas..."
+              />
+            </div>
+          </div>
+        </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
