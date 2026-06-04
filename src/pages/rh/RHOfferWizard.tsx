@@ -89,6 +89,13 @@ export default function RHOfferWizard() {
   const [form, setForm] = useState<Form>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [savedToken, setSavedToken] = useState<string | null>(null);
+  const [recordId, setRecordId] = useState<string | null>(id || null);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLoadedRef = useRef(false);
+  const inFlightRef = useRef(false);
 
   useEffect(() => {
     if (!isEdit) return;
