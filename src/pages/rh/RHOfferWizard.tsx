@@ -265,8 +265,9 @@ export default function RHOfferWizard() {
       accent_color: form.accent_color,
       cover_image_url: form.cover_image_url || null,
       candidate_photo_url: form.candidate_photo_url || null,
-      is_template: form.is_template,
-      template_name: form.is_template ? (form.template_name?.trim() || form.position_title || "Modelo sem nome") : null,
+      // Keep the main record as a real offer; template duplicate is created separately below
+      is_template: false,
+      template_name: null,
       status,
       sent_at: status === "sent" ? new Date().toISOString() : null,
     };
@@ -292,6 +293,35 @@ export default function RHOfferWizard() {
         window.history.replaceState(null, "", `/rh/offers/${data.id}/edit`);
       }
     }
+
+    // If user asked to save this as a reusable template, create a SEPARATE template duplicate
+    // (without candidate data). This keeps the original offer intact in the list.
+    if (form.is_template && !opts.silent) {
+      const templatePayload = {
+        ...payload,
+        is_template: true,
+        template_name: form.template_name?.trim() || form.position_title || "Modelo sem nome",
+        status: "draft" as const,
+        sent_at: null,
+        // Strip candidate-specific data so the template is reusable
+        candidate_name: "(modelo)",
+        candidate_email: null,
+        candidate_phone: null,
+        candidate_photo_url: null,
+        hero_headline: null,
+        start_date: null,
+        offer_expires_at: null,
+      };
+      const { error: tplError } = await supabase.from("hr_job_offers").insert(templatePayload);
+      if (tplError) {
+        toast({ title: "Modelo não foi salvo", description: tplError.message, variant: "destructive" });
+      } else {
+        toast({ title: "Modelo salvo!", description: `"${templatePayload.template_name}" está disponível para reuso.` });
+        // Avoid creating duplicate templates on subsequent saves of the same offer
+        set("is_template", false);
+      }
+    }
+
     setSavedToken(token);
     setLastSavedAt(new Date());
     inFlightRef.current = false;

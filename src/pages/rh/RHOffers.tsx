@@ -191,7 +191,15 @@ export default function RHOffers() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-indigo-600" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Offers geradas
+            </h2>
+            <span className="text-xs text-muted-foreground">({realOffers.length})</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {realOffers.map((o) => {
             const status = STATUS_MAP[o.status] || STATUS_MAP.draft;
             const StatusIcon = status.icon;
@@ -253,6 +261,7 @@ export default function RHOffers() {
               </Card>
             );
           })}
+          </div>
         </div>
       )}
 
