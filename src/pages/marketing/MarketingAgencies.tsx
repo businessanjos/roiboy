@@ -3,19 +3,44 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, BarChart3, Pencil, Inbox, GitCompare } from "lucide-react";
+import { Plus, Users, BarChart3, Pencil, Inbox, GitCompare, Wand2 } from "lucide-react";
 import { useTrafficAgencies } from "@/hooks/useTrafficAgencies";
 import { AgencyFormDialog } from "@/components/marketing/agencies/AgencyFormDialog";
 import { AgencyMembersDialog } from "@/components/marketing/agencies/AgencyMembersDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function MarketingAgencies() {
   const { data: agencies = [], isLoading } = useTrafficAgencies();
+  const { currentUser } = useCurrentUser();
+  const qc = useQueryClient();
   const navigate = useNavigate();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [membersFor, setMembersFor] = useState<string | null>(null);
+  const [reapplying, setReapplying] = useState(false);
+
+  async function handleReapplyRules() {
+    if (!currentUser?.account_id) return;
+    setReapplying(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("apply_agency_rules", {
+        p_account_id: currentUser.account_id,
+      });
+      if (error) throw error;
+      toast.success(`${data ?? 0} campanha(s) reatribuída(s)`);
+      qc.invalidateQueries({ queryKey: ["traffic-agencies"] });
+      qc.invalidateQueries({ queryKey: ["marketing-ad-sets"] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao reaplicar regras");
+    } finally {
+      setReapplying(false);
+    }
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -27,6 +52,10 @@ export default function MarketingAgencies() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleReapplyRules} disabled={reapplying}>
+            <Wand2 className="h-4 w-4 mr-2" />
+            {reapplying ? "Reaplicando..." : "Reaplicar regras"}
+          </Button>
           <Button variant="outline" onClick={() => navigate("/marketing/agencias/comparativo")}>
             <GitCompare className="h-4 w-4 mr-2" />
             Comparar agências

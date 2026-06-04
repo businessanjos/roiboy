@@ -31,6 +31,7 @@ export function AgencyFormDialog({ open, onOpenChange, agency }: Props) {
     contact_phone: "",
     notes: "",
     is_active: true,
+    name_patterns_text: "",
   });
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function AgencyFormDialog({ open, onOpenChange, agency }: Props) {
         contact_phone: agency.contact_phone ?? "",
         notes: agency.notes ?? "",
         is_active: agency.is_active,
+        name_patterns_text: (agency.name_patterns ?? []).join("\n"),
       });
     } else {
       setForm({
@@ -53,6 +55,7 @@ export function AgencyFormDialog({ open, onOpenChange, agency }: Props) {
         contact_phone: "",
         notes: "",
         is_active: true,
+        name_patterns_text: "",
       });
     }
   }, [agency, open]);
@@ -64,19 +67,28 @@ export function AgencyFormDialog({ open, onOpenChange, agency }: Props) {
     }
     setSaving(true);
     const sb: any = supabase;
+    const { name_patterns_text, ...rest } = form;
+    const name_patterns = name_patterns_text
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const payload = { ...rest, name_patterns };
     try {
       if (agency) {
-        const { error } = await sb.from("traffic_agencies").update(form).eq("id", agency.id);
+        const { error } = await sb.from("traffic_agencies").update(payload).eq("id", agency.id);
         if (error) throw error;
-        toast.success("Agência atualizada");
+        await sb.rpc("apply_agency_rules", { p_account_id: agency.account_id });
+        toast.success("Agência atualizada — regras reaplicadas");
       } else {
         const { error } = await sb
           .from("traffic_agencies")
-          .insert({ ...form, account_id: currentUser!.account_id });
+          .insert({ ...payload, account_id: currentUser!.account_id });
         if (error) throw error;
+        await sb.rpc("apply_agency_rules", { p_account_id: currentUser!.account_id });
         toast.success("Agência criada");
       }
       qc.invalidateQueries({ queryKey: ["traffic-agencies"] });
+      qc.invalidateQueries({ queryKey: ["marketing-ad-sets"] });
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar");
@@ -135,8 +147,21 @@ export function AgencyFormDialog({ open, onOpenChange, agency }: Props) {
             />
           </div>
           <div>
+            <Label>Padrões de nome de campanha (um por linha)</Label>
+            <Textarea
+              value={form.name_patterns_text}
+              onChange={(e) => setForm({ ...form, name_patterns_text: e.target.value })}
+              rows={3}
+              placeholder={"Ex.:\nSN -\n[AMO]\nAnjos-"}
+              className="font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Toda campanha Meta cujo nome começa com algum desses prefixos (case-insensitive) é atribuída automaticamente a esta agência.
+            </p>
+          </div>
+          <div>
             <Label>Observações</Label>
-            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} />
+            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
           </div>
           <div className="flex items-center justify-between">
             <Label>Ativa</Label>

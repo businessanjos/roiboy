@@ -19907,6 +19907,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          name_patterns: string[]
           notes: string | null
           updated_at: string
         }
@@ -19920,6 +19921,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          name_patterns?: string[]
           notes?: string | null
           updated_at?: string
         }
@@ -19933,6 +19935,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          name_patterns?: string[]
           notes?: string | null
           updated_at?: string
         }
@@ -22225,6 +22228,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      apply_agency_rules: { Args: { p_account_id: string }; Returns: number }
       can_access_consultant_bonus: { Args: never; Returns: boolean }
       can_manage_spiff_payments: {
         Args: { _auth_user_id: string }
