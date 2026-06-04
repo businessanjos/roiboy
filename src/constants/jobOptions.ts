@@ -94,6 +94,7 @@ export const JOB_BENEFITS = [
   "Previdência privada",
   "Convênio farmácia",
   "Licença maternidade/paternidade estendida",
+  "Banco de horas (pago a cada 6 meses)",
 ];
 
 export const LANGUAGE_OPTIONS = [
