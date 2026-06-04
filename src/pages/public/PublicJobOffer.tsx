@@ -161,30 +161,97 @@ export default function PublicJobOffer() {
             backgroundSize: "32px 32px",
           }}
         />
-        <div className="relative max-w-5xl mx-auto px-6 pt-12 pb-20 md:pt-16 md:pb-28">
+        <div className="relative max-w-6xl mx-auto px-6 pt-12 pb-16 md:pt-16 md:pb-24">
           {/* Logo */}
-          <div className="flex justify-center mb-12">
+          <div className="flex justify-center mb-10">
             <img src={letreiro.url} alt="Eternum" className="h-7 md:h-9 object-contain opacity-95" />
           </div>
 
-          {/* Linha dourada + tag */}
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <span className="h-px w-12" style={{ background: GOLD }} />
-            <span
-              className="text-[11px] uppercase tracking-[0.4em] font-light"
-              style={{ color: GOLD, fontFamily: SANS }}
-            >
-              Carta-Proposta · Confidencial
-            </span>
-            <span className="h-px w-12" style={{ background: GOLD }} />
-          </div>
+          {offer.candidate_photo_url ? (
+            // Hero personalizado com foto do candidato
+            <div className="grid md:grid-cols-[1.1fr_0.9fr] gap-8 md:gap-12 items-center">
+              <div className="order-2 md:order-1 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-4 mb-6">
+                  <span className="h-px w-10" style={{ background: GOLD }} />
+                  <span
+                    className="text-[11px] uppercase tracking-[0.4em] font-light"
+                    style={{ color: GOLD, fontFamily: SANS }}
+                  >
+                    Carta-Proposta · Confidencial
+                  </span>
+                </div>
+                <p
+                  className="text-sm md:text-base uppercase tracking-[0.3em] mb-4"
+                  style={{ color: GOLD, fontFamily: SANS, fontWeight: 500 }}
+                >
+                  Para {firstName}
+                </p>
+                <h1
+                  className="text-3xl md:text-5xl lg:text-6xl leading-[1.1]"
+                  style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
+                >
+                  {offer.hero_headline || `Bem-${gender === "f" ? "vinda" : "vindo"} à sua nova jornada.`}
+                </h1>
+                <p
+                  className="mt-6 text-base md:text-lg max-w-xl mx-auto md:mx-0"
+                  style={{ color: "#e8dcc0", fontFamily: SERIF, fontWeight: 300, fontStyle: "italic", opacity: 0.85 }}
+                >
+                  Esta é a sua cadeira na Eternum — feita sob medida, com o seu nome.
+                </p>
+              </div>
+              <div className="order-1 md:order-2 relative">
+                {/* moldura dourada premium */}
+                <div
+                  className="relative mx-auto aspect-[4/5] w-full max-w-sm rounded-sm overflow-hidden"
+                  style={{
+                    boxShadow: `0 40px 100px -30px rgba(0,0,0,0.85), 0 0 0 1px ${GOLD}66, 0 0 60px ${GOLD}22`,
+                  }}
+                >
+                  <img
+                    src={offer.candidate_photo_url}
+                    alt={offer.candidate_name}
+                    className="w-full h-full object-cover object-top"
+                  />
+                  {/* glow sutil */}
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ background: `linear-gradient(180deg, transparent 55%, ${BG_DEEP}66 100%)` }}
+                  />
+                  {/* canto inferior com nome */}
+                  <div className="absolute bottom-0 left-0 right-0 px-5 py-4" style={{ background: `linear-gradient(0deg, ${BG_DEEP}f5, transparent)` }}>
+                    <p className="text-[10px] uppercase tracking-[0.35em]" style={{ color: GOLD }}>Eternum · Time</p>
+                    <p className="text-lg md:text-xl mt-1" style={{ fontFamily: SERIF, color: CARD, fontWeight: 400 }}>
+                      {offer.candidate_name}
+                    </p>
+                  </div>
+                </div>
+                {/* ornamento dourado */}
+                <div className="absolute -top-3 -left-3 w-12 h-12 border-t-2 border-l-2 pointer-events-none" style={{ borderColor: GOLD }} />
+                <div className="absolute -bottom-3 -right-3 w-12 h-12 border-b-2 border-r-2 pointer-events-none" style={{ borderColor: GOLD }} />
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Linha dourada + tag */}
+              <div className="flex items-center justify-center gap-4 mb-8">
+                <span className="h-px w-12" style={{ background: GOLD }} />
+                <span
+                  className="text-[11px] uppercase tracking-[0.4em] font-light"
+                  style={{ color: GOLD, fontFamily: SANS }}
+                >
+                  Carta-Proposta · Confidencial
+                </span>
+                <span className="h-px w-12" style={{ background: GOLD }} />
+              </div>
 
-          <h1
-            className="text-center text-3xl md:text-5xl lg:text-6xl leading-[1.15] max-w-3xl mx-auto"
-            style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
-          >
-            {offer.hero_headline || `Uma jornada feita para quem busca o extraordinário.`}
-          </h1>
+              <h1
+                className="text-center text-3xl md:text-5xl lg:text-6xl leading-[1.15] max-w-3xl mx-auto pb-4"
+                style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
+              >
+                {offer.hero_headline || `Uma jornada feita para quem busca o extraordinário.`}
+              </h1>
+            </>
+          )}
         </div>
       </header>
 
