@@ -10766,6 +10766,140 @@ export type Database = {
           },
         ]
       }
+      hr_job_offers: {
+        Row: {
+          accent_color: string
+          account_id: string
+          benefits: string[]
+          candidate_email: string | null
+          candidate_name: string
+          candidate_phone: string | null
+          company_intro: string | null
+          contract_type: string | null
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          department: string | null
+          first_viewed_at: string | null
+          hero_headline: string | null
+          id: string
+          job_id: string | null
+          next_steps: string | null
+          offer_expires_at: string | null
+          perks: Json
+          position_title: string
+          public_token: string
+          reports_to: string | null
+          responded_at: string | null
+          response_message: string | null
+          role_pitch: string | null
+          salary_amount: number | null
+          salary_currency: string
+          salary_note: string | null
+          seniority: string | null
+          sent_at: string | null
+          signer_name: string | null
+          signer_role: string | null
+          start_date: string | null
+          status: string
+          unit: string | null
+          updated_at: string
+          variable_compensation: string | null
+          view_count: number
+          work_model: string | null
+        }
+        Insert: {
+          accent_color?: string
+          account_id: string
+          benefits?: string[]
+          candidate_email?: string | null
+          candidate_name: string
+          candidate_phone?: string | null
+          company_intro?: string | null
+          contract_type?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          first_viewed_at?: string | null
+          hero_headline?: string | null
+          id?: string
+          job_id?: string | null
+          next_steps?: string | null
+          offer_expires_at?: string | null
+          perks?: Json
+          position_title: string
+          public_token?: string
+          reports_to?: string | null
+          responded_at?: string | null
+          response_message?: string | null
+          role_pitch?: string | null
+          salary_amount?: number | null
+          salary_currency?: string
+          salary_note?: string | null
+          seniority?: string | null
+          sent_at?: string | null
+          signer_name?: string | null
+          signer_role?: string | null
+          start_date?: string | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+          variable_compensation?: string | null
+          view_count?: number
+          work_model?: string | null
+        }
+        Update: {
+          accent_color?: string
+          account_id?: string
+          benefits?: string[]
+          candidate_email?: string | null
+          candidate_name?: string
+          candidate_phone?: string | null
+          company_intro?: string | null
+          contract_type?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          first_viewed_at?: string | null
+          hero_headline?: string | null
+          id?: string
+          job_id?: string | null
+          next_steps?: string | null
+          offer_expires_at?: string | null
+          perks?: Json
+          position_title?: string
+          public_token?: string
+          reports_to?: string | null
+          responded_at?: string | null
+          response_message?: string | null
+          role_pitch?: string | null
+          salary_amount?: number | null
+          salary_currency?: string
+          salary_note?: string | null
+          seniority?: string | null
+          sent_at?: string | null
+          signer_name?: string | null
+          signer_role?: string | null
+          start_date?: string | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+          variable_compensation?: string | null
+          view_count?: number
+          work_model?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_job_offers_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_jobs: {
         Row: {
           account_id: string
