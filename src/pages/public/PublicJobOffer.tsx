@@ -383,7 +383,7 @@ export default function PublicJobOffer() {
 
         {/* CTA */}
         {!isResolved ? (
-          <section className="sticky bottom-4 z-10">
+          <section>
             {response === null ? (
               <div
                 className="rounded-sm p-6 md:p-8 space-y-5"
