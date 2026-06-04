@@ -76,13 +76,14 @@ export default function PublicEventAlbum() {
         .order("created_at", { ascending: false }),
       supabase
         .from("events")
-        .select("name, event_date, location")
+        .select("title, scheduled_at, address")
         .eq("id", albumData.event_id)
         .maybeSingle(),
     ]);
 
     setMedia((mediaRes.data as MediaItem[]) || []);
     setEvent((eventRes.data as EventInfo) || null);
+
     setLoading(false);
   };
 
