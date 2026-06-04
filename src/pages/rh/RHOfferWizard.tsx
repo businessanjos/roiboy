@@ -197,6 +197,7 @@ export default function RHOfferWizard() {
       variable_compensation: form.variable_compensation || null,
       benefits: form.benefits,
       perks: form.perks.filter(p => p.title.trim()),
+      success_metrics: form.success_metrics.filter(m => m.label.trim()),
       start_date: form.start_date || null,
       offer_expires_at: form.offer_expires_at || null,
       hero_headline: form.hero_headline || null,
