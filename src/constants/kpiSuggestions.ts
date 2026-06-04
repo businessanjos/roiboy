@@ -1,5 +1,5 @@
 // Sugestões inteligentes de KPIs por cargo/departamento
-// Cada item já vem com label, target sugerido e horizonte — basta clicar pra adicionar.
+// Cada item já vem com label, target sugerido e horizonte. Basta clicar pra adicionar.
 
 export type KpiSuggestion = { label: string; target: string; horizon: string };
 

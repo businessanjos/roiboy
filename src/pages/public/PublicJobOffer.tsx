@@ -197,7 +197,7 @@ export default function PublicJobOffer() {
                   className="mt-5 sm:mt-6 text-[15px] sm:text-base md:text-lg max-w-xl mx-auto md:mx-0 leading-relaxed"
                   style={{ color: "#e8dcc0", fontFamily: SERIF, fontWeight: 300, fontStyle: "italic", opacity: 0.85 }}
                 >
-                  Esta é a sua cadeira na Eternum — feita sob medida, com o seu nome.
+                  Esta é a sua cadeira na Eternum, feita sob medida, com o seu nome.
                 </p>
               </div>
               <div className="order-1 md:order-2 relative px-2 sm:px-0">
@@ -684,8 +684,8 @@ function DetailCard({ icon, label, value }: { icon: React.ReactNode; label: stri
 
 const DEFAULT_COMPANY_INTRO = `A Eternum é o ecossistema de mentoria, tecnologia e gestão que ajuda líderes a construírem negócios memoráveis no Brasil.
 
-Não nos contentamos com o comum. Atraímos quem busca legado, profundidade e excelência em cada detalhe — porque é assim que se constrói algo eterno.`;
+Não nos contentamos com o comum. Atraímos quem busca legado, profundidade e excelência em cada detalhe, porque é assim que se constrói algo eterno.`;
 
 const DEFAULT_ROLE_PITCH = `Esta é mais do que uma vaga. É um convite para escrever um capítulo importante da sua trajetória ao lado de pessoas que jogam o jogo no mais alto nível.
 
-Aqui, você terá autonomia para construir, recursos para executar e uma cultura que cobra entrega — mas devolve crescimento real.`;
+Aqui, você terá autonomia para construir, recursos para executar e uma cultura que cobra entrega e devolve crescimento real.`;
