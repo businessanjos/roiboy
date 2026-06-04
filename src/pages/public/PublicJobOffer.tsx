@@ -143,12 +143,13 @@ export default function PublicJobOffer() {
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen overflow-x-hidden"
       style={{
         background: BG,
         color: CARD,
         fontFamily: SANS,
         backgroundImage: `radial-gradient(circle at 20% 0%, ${GOLD}15, transparent 50%), radial-gradient(circle at 80% 100%, ${GOLD}10, transparent 50%)`,
+        paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
       {/* HERO */}
