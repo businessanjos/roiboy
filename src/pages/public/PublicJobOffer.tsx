@@ -637,9 +637,9 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-4 mb-8">
+    <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
       <span className="h-px flex-1" style={{ background: `${GOLD}40` }} />
-      <h2 className="text-[11px] uppercase tracking-[0.4em] font-semibold" style={{ color: GOLD, fontFamily: SANS }}>
+      <h2 className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-semibold text-center" style={{ color: GOLD, fontFamily: SANS }}>
         {children}
       </h2>
       <span className="h-px flex-1" style={{ background: `${GOLD}40` }} />
@@ -650,7 +650,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function Card({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="rounded-sm p-8 md:p-10"
+      className="rounded-sm p-6 sm:p-8 md:p-10"
       style={{
         background: CARD,
         color: TEXT_DARK,
@@ -665,18 +665,18 @@ function Card({ children }: { children: React.ReactNode }) {
 function DetailCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div
-      className="p-5 rounded-sm flex items-start gap-4"
+      className="p-4 sm:p-5 rounded-sm flex items-start gap-3 sm:gap-4"
       style={{ background: CARD, color: TEXT_DARK, boxShadow: `inset 0 0 0 1px ${GOLD}30` }}
     >
       <div
-        className="p-2.5 rounded-sm flex-shrink-0"
+        className="p-2 sm:p-2.5 rounded-sm flex-shrink-0"
         style={{ background: `${GOLD}25`, color: TEXT_DARK }}
       >
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-[0.3em] opacity-60 font-semibold">{label}</p>
-        <p className="font-medium text-sm mt-1.5" style={{ fontFamily: SERIF }}>{value}</p>
+        <p className="text-[10px] uppercase tracking-[0.25em] sm:tracking-[0.3em] opacity-60 font-semibold">{label}</p>
+        <p className="font-medium text-sm mt-1 sm:mt-1.5 break-words" style={{ fontFamily: SERIF }}>{value}</p>
       </div>
     </div>
   );
