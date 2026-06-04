@@ -516,6 +516,43 @@ export default function RHOfferWizard() {
                 <Label>Sobre a vaga / Pitch</Label>
                 <Textarea rows={6} value={form.role_pitch} onChange={(e) => set("role_pitch", e.target.value)} placeholder="Por que esse papel é estratégico, o que a pessoa vai fazer, com quem vai trabalhar, como o sucesso será medido..." />
               </div>
+
+              <div className="space-y-3 p-4 rounded-lg border border-dashed border-amber-300 bg-amber-50/40 dark:bg-amber-950/10">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label className="text-base">Como o sucesso será medido</Label>
+                    <p className="text-xs text-muted-foreground">Métricas/KPIs claros que esta pessoa será avaliada. Aparecem com destaque na carta.</p>
+                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={addMetric} className="gap-1">
+                    <Plus className="h-3.5 w-3.5" /> Adicionar métrica
+                  </Button>
+                </div>
+                {form.success_metrics.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">Ex.: NPS ≥ 70 nos primeiros 6 meses · Reduzir churn em 20% até dez/26 · Implementar onboarding em 90 dias.</p>
+                )}
+                {form.success_metrics.map((m, i) => (
+                  <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_180px_auto] gap-2 items-start">
+                    <Input
+                      placeholder="Métrica (ex.: NPS, Churn, Receita)"
+                      value={m.label}
+                      onChange={(e) => updateMetric(i, "label", e.target.value)}
+                    />
+                    <Input
+                      placeholder="Meta (ex.: ≥ 70, -20%, R$ 1M)"
+                      value={m.target}
+                      onChange={(e) => updateMetric(i, "target", e.target.value)}
+                    />
+                    <Input
+                      placeholder="Prazo (ex.: 6 meses)"
+                      value={m.horizon}
+                      onChange={(e) => updateMetric(i, "horizon", e.target.value)}
+                    />
+                    <Button type="button" size="icon" variant="ghost" onClick={() => removeMetric(i)} className="text-rose-600">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
               <div>
                 <Label>Próximos passos</Label>
                 <Textarea rows={4} value={form.next_steps} onChange={(e) => set("next_steps", e.target.value)} placeholder={DEFAULT_NEXT_STEPS} />
