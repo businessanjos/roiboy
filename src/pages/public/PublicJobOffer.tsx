@@ -42,6 +42,7 @@ type Offer = {
   responded_at: string | null;
   first_viewed_at: string | null;
   view_count: number;
+  candidate_photo_url: string | null;
 };
 
 // Paleta Eternum
