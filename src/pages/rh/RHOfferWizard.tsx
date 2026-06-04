@@ -633,6 +633,34 @@ export default function RHOfferWizard() {
           <Button variant="ghost" onClick={() => navigate("/rh/offers")}>Concluir</Button>
         )}
       </div>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-4 py-3 border-b">
+            <DialogTitle className="flex items-center justify-between gap-4">
+              <span className="flex items-center gap-2"><Eye className="h-4 w-4" /> Pré-visualização da Offer</span>
+              {savedToken && (
+                <a
+                  href={`${window.location.origin}/oferta/${savedToken}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-normal text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                >
+                  Abrir em nova aba <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {savedToken && (
+            <iframe
+              key={savedToken + (lastSavedAt?.getTime() || 0)}
+              src={`${window.location.origin}/oferta/${savedToken}`}
+              className="flex-1 w-full border-0 bg-background"
+              title="Pré-visualização"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
