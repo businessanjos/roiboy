@@ -582,9 +582,15 @@ export default function EventDetail() {
           <EventTeamTab eventId={event.id} accountId={accountId} />
         </TabsContent>
 
-        <TabsContent value="media">
+        <TabsContent value="media" className="space-y-4">
+          <EventGalleryShareBar eventId={event.id} accountId={accountId} eventName={event.title} />
           <EventMediaTab eventId={event.id} accountId={accountId} />
         </TabsContent>
+
+        <TabsContent value="design">
+          <EventDesignTab eventId={event.id} accountId={accountId} />
+        </TabsContent>
+
 
         <TabsContent value="feedback">
           <EventFeedbackTab eventId={event.id} accountId={accountId} />
