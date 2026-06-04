@@ -168,6 +168,16 @@ export default function RHOfferWizard() {
   const removeMetric = (i: number) => set("success_metrics", form.success_metrics.filter((_, idx) => idx !== i));
   const updateMetric = (i: number, key: "label" | "target" | "horizon", v: string) =>
     set("success_metrics", form.success_metrics.map((m, idx) => idx === i ? { ...m, [key]: v } : m));
+  const addSuggestedMetric = (m: KpiSuggestion) => {
+    const exists = form.success_metrics.some((x) => x.label.trim().toLowerCase() === m.label.trim().toLowerCase());
+    if (exists) return;
+    set("success_metrics", [...form.success_metrics, { ...m }]);
+  };
+  const applyAllFromPack = (metrics: KpiSuggestion[]) => {
+    const existing = new Set(form.success_metrics.map((x) => x.label.trim().toLowerCase()));
+    const merged = [...form.success_metrics, ...metrics.filter((m) => !existing.has(m.label.trim().toLowerCase()))];
+    set("success_metrics", merged);
+  };
 
   const canNext = () => {
     if (step === 1) return form.candidate_name.trim().length > 1;
