@@ -7546,6 +7546,143 @@ export type Database = {
           },
         ]
       }
+      event_supplier_quotes: {
+        Row: {
+          account_id: string
+          amount: number | null
+          attachment_url: string | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          decided_at: string | null
+          description: string | null
+          event_id: string | null
+          id: string
+          notes: string | null
+          requested_at: string | null
+          responded_at: string | null
+          status: string
+          supplier_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          amount?: number | null
+          attachment_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          decided_at?: string | null
+          description?: string | null
+          event_id?: string | null
+          id?: string
+          notes?: string | null
+          requested_at?: string | null
+          responded_at?: string | null
+          status?: string
+          supplier_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number | null
+          attachment_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          decided_at?: string | null
+          description?: string | null
+          event_id?: string | null
+          id?: string
+          notes?: string | null
+          requested_at?: string | null
+          responded_at?: string | null
+          status?: string
+          supplier_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_supplier_quotes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "event_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_suppliers: {
+        Row: {
+          account_id: string
+          address: string | null
+          category: string
+          city: string | null
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          instagram: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          price_range: string | null
+          rating: number | null
+          state: string | null
+          status: string
+          tags: string[] | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          account_id: string
+          address?: string | null
+          category?: string
+          city?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          instagram?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          price_range?: string | null
+          rating?: number | null
+          state?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          account_id?: string
+          address?: string | null
+          category?: string
+          city?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          instagram?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          price_range?: string | null
+          rating?: number | null
+          state?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       event_team: {
         Row: {
           account_id: string

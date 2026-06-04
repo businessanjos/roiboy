@@ -92,6 +92,7 @@ const AccountSettings = lazyRetry(() => import("./pages/AccountSettings"));
 const Products = lazyRetry(() => import("./pages/Products"));
 const Events = lazyRetry(() => import("./pages/Events"));
 const EventDetail = lazyRetry(() => import("./pages/EventDetail"));
+const EventSuppliers = lazyRetry(() => import("./pages/EventSuppliers"));
 // Team moved to Settings
 const Tasks = lazyRetry(() => import("./pages/Tasks"));
 
@@ -323,6 +324,7 @@ const App = () => (
                             </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
+                            <Route path="/events/suppliers" element={<EventSuppliers />} />
                             <Route path="/events/:id" element={<EventDetail />} />
                             <Route path="/tasks" element={<Tasks />} />
                             <Route path="/forms" element={<Forms />} />
