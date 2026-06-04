@@ -147,6 +147,7 @@ export default function RHOfferWizard() {
         signer_role: data.signer_role || "",
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
+        candidate_photo_url: (data as any).candidate_photo_url || "",
       });
       setSavedToken(data.public_token);
       setRecordId(data.id);
