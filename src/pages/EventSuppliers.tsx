@@ -442,6 +442,12 @@ export default function EventSuppliers() {
                   {s.contact_name && (
                     <p className="text-muted-foreground">
                       <span className="font-medium text-foreground">Contato:</span> {s.contact_name}
+                      {s.contact_role ? ` · ${s.contact_role}` : ""}
+                    </p>
+                  )}
+                  {s.cnpj && (
+                    <p className="text-muted-foreground text-xs">
+                      <span className="font-medium text-foreground">CNPJ:</span> {s.cnpj}
                     </p>
                   )}
                   {s.phone && (
