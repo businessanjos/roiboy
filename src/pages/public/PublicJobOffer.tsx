@@ -400,7 +400,7 @@ export default function PublicJobOffer() {
               {offer.perks.map((p, i) => (
                 <div
                   key={i}
-                  className="p-6 rounded-sm"
+                  className="p-5 sm:p-6 rounded-sm"
                   style={{ background: CARD, color: TEXT_DARK, boxShadow: `inset 0 0 0 1px ${GOLD}30` }}
                 >
                   <p className="font-semibold text-base" style={{ fontFamily: SERIF }}>{p.title}</p>
