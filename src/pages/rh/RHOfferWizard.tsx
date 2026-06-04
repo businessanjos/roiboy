@@ -700,21 +700,90 @@ export default function RHOfferWizard() {
                 <p className="text-xs text-muted-foreground mt-1">Opcional. Aparece atrás da headline na capa.</p>
               </div>
 
+              {/* Foto personalizada do candidato */}
+              <div className="rounded-xl border-2 border-dashed p-5 space-y-4 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-950/10">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-600" />
+                      <Label className="text-base font-semibold">Foto do candidato com o uniforme</Label>
+                      <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700">Opcional</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Quando o candidato abrir o link, vai se ver vestindo a Eternum. Impacto instantâneo.
+                    </p>
+                  </div>
+                  {form.candidate_photo_url && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => set("candidate_photo_url", "")} className="text-rose-600 gap-1">
+                      <Trash2 className="h-3.5 w-3.5" /> Remover
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {form.candidate_photo_url ? (
+                    <div
+                      className="relative w-28 h-36 rounded-lg overflow-hidden ring-2 ring-amber-500/40 shadow-lg shrink-0"
+                      style={{ backgroundImage: `url(${form.candidate_photo_url})`, backgroundSize: "cover", backgroundPosition: "center top" }}
+                    />
+                  ) : (
+                    <div className="w-28 h-36 rounded-lg bg-muted/40 flex items-center justify-center shrink-0 border">
+                      <ImageIcon className="h-7 w-7 text-muted-foreground/50" />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-2">
+                    <label className={cn(
+                      "flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed cursor-pointer transition-all",
+                      "hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-950/20",
+                      uploadingPhoto && "opacity-60 pointer-events-none"
+                    )}>
+                      {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      <span className="text-sm font-medium">
+                        {uploadingPhoto ? "Enviando..." : form.candidate_photo_url ? "Trocar foto" : "Enviar foto (JPG/PNG, até 8MB)"}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f); e.target.value = ""; }}
+                      />
+                    </label>
+                    <p className="text-[11px] text-muted-foreground">
+                      💡 Dica: foto vertical de corpo até a cintura, fundo neutro, sorriso natural. A foto do uniforme da Eternum fica linda na capa.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Preview Hero */}
               <div className="rounded-xl overflow-hidden border">
                 <div
-                  className="relative p-10 text-white"
+                  className="relative min-h-[280px] flex items-center text-white"
                   style={{
                     background: form.cover_image_url
                       ? `linear-gradient(135deg, ${form.accent_color}DD, ${form.accent_color}99), url(${form.cover_image_url}) center/cover`
                       : `linear-gradient(135deg, ${form.accent_color}, ${form.accent_color}99)`,
                   }}
                 >
-                  <p className="text-xs uppercase tracking-widest opacity-80 mb-2">Carta-Proposta</p>
-                  <h2 className="text-3xl font-bold leading-tight">
-                    {form.hero_headline || `${form.candidate_name || "Nome do candidato"}, esta proposta é para você.`}
-                  </h2>
-                  <p className="mt-3 opacity-90">{form.position_title || "Cargo"}</p>
+                  <div className={cn("flex-1 p-10", form.candidate_photo_url && "pr-4")}>
+                    <p className="text-xs uppercase tracking-widest opacity-80 mb-2">Carta-Proposta</p>
+                    <h2 className="text-3xl font-bold leading-tight">
+                      {form.hero_headline || `${form.candidate_name || "Nome do candidato"}, esta proposta é para você.`}
+                    </h2>
+                    <p className="mt-3 opacity-90">{form.position_title || "Cargo"}</p>
+                  </div>
+                  {form.candidate_photo_url && (
+                    <div
+                      className="hidden sm:block h-[280px] w-[220px] shrink-0 self-stretch"
+                      style={{
+                        backgroundImage: `url(${form.candidate_photo_url})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center top",
+                        maskImage: "linear-gradient(to left, black 70%, transparent 100%)",
+                        WebkitMaskImage: "linear-gradient(to left, black 70%, transparent 100%)",
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             </div>
