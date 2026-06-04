@@ -91,8 +91,8 @@ export interface Sector {
 export const sectors: Sector[] = [
   {
     id: "operacoes",
-    name: "Operações",
-    description: "Dashboard, clientes, eventos, tarefas e atendimento",
+    name: "Customer Success",
+    description: "Dashboard, clientes, tarefas e atendimento",
     icon: LayoutDashboard,
     color: "text-primary",
     bgColor: "bg-primary/10",
