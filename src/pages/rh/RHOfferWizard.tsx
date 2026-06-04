@@ -97,6 +97,19 @@ export default function RHOfferWizard() {
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadedRef = useRef(false);
   const inFlightRef = useRef(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+
+  const openPreview = async () => {
+    let token = savedToken;
+    if (!token) {
+      setPreviewing(true);
+      try { token = await save("draft", { silent: true }) as any; } catch {}
+      setPreviewing(false);
+    }
+    if (token) setPreviewOpen(true);
+    else toast({ title: "Preencha o candidato para pré-visualizar", variant: "destructive" });
+  };
 
   useEffect(() => {
     if (!isEdit) return;
