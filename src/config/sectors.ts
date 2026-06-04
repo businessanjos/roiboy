@@ -66,7 +66,7 @@ import {
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "rh" | "configuracoes";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "rh" | "eventos" | "configuracoes";
 
 export interface NavItem {
   to: string;
