@@ -538,8 +538,73 @@ export default function RHOfferWizard() {
                     <Plus className="h-3.5 w-3.5" /> Adicionar métrica
                   </Button>
                 </div>
+                {/* Sugestões inteligentes baseadas no cargo/departamento */}
+                {(() => {
+                  const packs = suggestKpis(form.position_title, form.department);
+                  if (!form.position_title.trim()) {
+                    return (
+                      <p className="text-xs text-muted-foreground italic">
+                        Preencha o cargo no passo 2 para receber sugestões inteligentes de KPIs.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-3">
+                      {packs.map((p) => (
+                        <div key={p.pack} className="rounded-md border bg-background/60 p-3">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                Sugestões · {p.pack}
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => applyAllFromPack(p.metrics)}
+                            >
+                              Adicionar todas
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {p.metrics.map((m, idx) => {
+                              const already = form.success_metrics.some(
+                                (x) => x.label.trim().toLowerCase() === m.label.trim().toLowerCase()
+                              );
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  disabled={already}
+                                  onClick={() => addSuggestedMetric(m)}
+                                  className={cn(
+                                    "group text-left rounded-full border px-3 py-1.5 text-xs transition-all",
+                                    already
+                                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 cursor-default dark:bg-emerald-950/20"
+                                      : "border-amber-300/60 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                                  )}
+                                  title={`${m.target} · ${m.horizon}`}
+                                >
+                                  {already ? <Check className="inline h-3 w-3 mr-1" /> : <Plus className="inline h-3 w-3 mr-1" />}
+                                  <span className="font-medium">{m.label}</span>
+                                  <span className="ml-1 text-muted-foreground">· {m.target}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
                 {form.success_metrics.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic">Ex.: NPS ≥ 70 nos primeiros 6 meses · Reduzir churn em 20% até dez/26 · Implementar onboarding em 90 dias.</p>
+                  <p className="text-xs text-muted-foreground italic">
+                    Clique nas sugestões acima ou adicione manualmente. Ex.: NPS ≥ 70 em 6 meses · Reduzir churn em 20%.
+                  </p>
                 )}
                 {form.success_metrics.map((m, i) => (
                   <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_180px_auto] gap-2 items-start">
