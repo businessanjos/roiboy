@@ -338,11 +338,11 @@ export default function PublicJobOffer() {
               <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
               {offer.salary_amount && (
                 <>
-                  <p className="text-[10px] uppercase tracking-[0.4em] mb-3" style={{ color: GOLD, fontWeight: 600 }}>
+                  <p className="text-[10px] uppercase tracking-[0.35em] sm:tracking-[0.4em] mb-3" style={{ color: GOLD, fontWeight: 600 }}>
                     Investimento mensal em você
                   </p>
                   <p
-                    className="text-5xl md:text-7xl font-light"
+                    className="text-4xl sm:text-5xl md:text-7xl font-light break-words"
                     style={{ fontFamily: SERIF, color: TEXT_DARK, letterSpacing: "-0.02em" }}
                   >
                     {formatMoney(Number(offer.salary_amount))}
