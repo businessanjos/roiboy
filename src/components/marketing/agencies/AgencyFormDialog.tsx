@@ -67,19 +67,28 @@ export function AgencyFormDialog({ open, onOpenChange, agency }: Props) {
     }
     setSaving(true);
     const sb: any = supabase;
+    const { name_patterns_text, ...rest } = form;
+    const name_patterns = name_patterns_text
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const payload = { ...rest, name_patterns };
     try {
       if (agency) {
-        const { error } = await sb.from("traffic_agencies").update(form).eq("id", agency.id);
+        const { error } = await sb.from("traffic_agencies").update(payload).eq("id", agency.id);
         if (error) throw error;
-        toast.success("Agência atualizada");
+        await sb.rpc("apply_agency_rules", { p_account_id: agency.account_id });
+        toast.success("Agência atualizada — regras reaplicadas");
       } else {
         const { error } = await sb
           .from("traffic_agencies")
-          .insert({ ...form, account_id: currentUser!.account_id });
+          .insert({ ...payload, account_id: currentUser!.account_id });
         if (error) throw error;
+        await sb.rpc("apply_agency_rules", { p_account_id: currentUser!.account_id });
         toast.success("Agência criada");
       }
       qc.invalidateQueries({ queryKey: ["traffic-agencies"] });
+      qc.invalidateQueries({ queryKey: ["marketing-ad-sets"] });
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar");
