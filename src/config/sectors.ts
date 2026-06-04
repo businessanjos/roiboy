@@ -61,6 +61,9 @@ import {
   Gift,
   Plug,
   Rocket,
+  BookOpenCheck,
+  Boxes,
+  TrendingUp,
   
   type LucideIcon,
 } from "lucide-react";
