@@ -16,10 +16,31 @@ const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", cur
 
 export default function MarketingAgencies() {
   const { data: agencies = [], isLoading } = useTrafficAgencies();
+  const { currentUser } = useCurrentUser();
+  const qc = useQueryClient();
   const navigate = useNavigate();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [membersFor, setMembersFor] = useState<string | null>(null);
+  const [reapplying, setReapplying] = useState(false);
+
+  async function handleReapplyRules() {
+    if (!currentUser?.account_id) return;
+    setReapplying(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("apply_agency_rules", {
+        p_account_id: currentUser.account_id,
+      });
+      if (error) throw error;
+      toast.success(`${data ?? 0} campanha(s) reatribuída(s)`);
+      qc.invalidateQueries({ queryKey: ["traffic-agencies"] });
+      qc.invalidateQueries({ queryKey: ["marketing-ad-sets"] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao reaplicar regras");
+    } finally {
+      setReapplying(false);
+    }
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
