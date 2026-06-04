@@ -163,25 +163,12 @@ export default function PublicJobOffer() {
             <span className="h-px w-12" style={{ background: GOLD }} />
           </div>
 
-          <p
-            className="text-center text-sm md:text-base italic mb-4 opacity-80"
-            style={{ fontFamily: SERIF, color: CARD }}
-          >
-            Para {firstName},
-          </p>
-
           <h1
             className="text-center text-3xl md:text-5xl lg:text-6xl leading-[1.15] max-w-3xl mx-auto"
             style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
           >
             {offer.hero_headline || `Uma jornada feita para quem busca o extraordinário.`}
           </h1>
-
-          <div className="mt-10 flex flex-wrap justify-center gap-2">
-            <Chip>{offer.position_title}</Chip>
-            {offer.department && <Chip>{offer.department}</Chip>}
-            {offer.seniority && <Chip>{JOB_SENIORITY_LABELS[offer.seniority as keyof typeof JOB_SENIORITY_LABELS] || offer.seniority}</Chip>}
-          </div>
         </div>
       </header>
 
