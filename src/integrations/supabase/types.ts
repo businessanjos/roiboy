@@ -7618,68 +7618,110 @@ export type Database = {
         Row: {
           account_id: string
           address: string | null
+          bank_info: string | null
           category: string
           city: string | null
+          cnpj: string | null
           contact_name: string | null
+          contact_role: string | null
+          contract_url: string | null
+          cpf: string | null
           created_at: string
           created_by: string | null
           email: string | null
           id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
           instagram: string | null
           name: string
+          neighborhood: string | null
+          nome_fantasia: string | null
           notes: string | null
+          payment_terms: string | null
           phone: string | null
+          pix_key: string | null
           price_range: string | null
           rating: number | null
+          razao_social: string | null
+          services_offered: string | null
           state: string | null
           status: string
           tags: string[] | null
           updated_at: string
           website: string | null
+          zip_code: string | null
         }
         Insert: {
           account_id: string
           address?: string | null
+          bank_info?: string | null
           category?: string
           city?: string | null
+          cnpj?: string | null
           contact_name?: string | null
+          contact_role?: string | null
+          contract_url?: string | null
+          cpf?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           instagram?: string | null
           name: string
+          neighborhood?: string | null
+          nome_fantasia?: string | null
           notes?: string | null
+          payment_terms?: string | null
           phone?: string | null
+          pix_key?: string | null
           price_range?: string | null
           rating?: number | null
+          razao_social?: string | null
+          services_offered?: string | null
           state?: string | null
           status?: string
           tags?: string[] | null
           updated_at?: string
           website?: string | null
+          zip_code?: string | null
         }
         Update: {
           account_id?: string
           address?: string | null
+          bank_info?: string | null
           category?: string
           city?: string | null
+          cnpj?: string | null
           contact_name?: string | null
+          contact_role?: string | null
+          contract_url?: string | null
+          cpf?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           instagram?: string | null
           name?: string
+          neighborhood?: string | null
+          nome_fantasia?: string | null
           notes?: string | null
+          payment_terms?: string | null
           phone?: string | null
+          pix_key?: string | null
           price_range?: string | null
           rating?: number | null
+          razao_social?: string | null
+          services_offered?: string | null
           state?: string | null
           status?: string
           tags?: string[] | null
           updated_at?: string
           website?: string | null
+          zip_code?: string | null
         }
         Relationships: []
       }
