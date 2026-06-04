@@ -206,6 +206,8 @@ const FinancialPayersPage = lazyRetry(() => import("./pages/financial/FinancialP
 const FinancialFiscalSettingsPage = lazyRetry(() => import("./pages/financial/FinancialFiscalSettingsPage"));
 const PublicProviderPortal = lazyRetry(() => import("./pages/public/PublicProviderPortal"));
 const PublicIncentivePresentation = lazyRetry(() => import("./pages/public/PublicIncentivePresentation"));
+const PublicEventAlbum = lazyRetry(() => import("./pages/public/PublicEventAlbum"));
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
