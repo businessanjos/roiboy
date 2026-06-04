@@ -265,6 +265,8 @@ export default function RHOfferWizard() {
       accent_color: form.accent_color,
       cover_image_url: form.cover_image_url || null,
       candidate_photo_url: form.candidate_photo_url || null,
+      is_template: form.is_template,
+      template_name: form.is_template ? (form.template_name?.trim() || form.position_title || "Modelo sem nome") : null,
       status,
       sent_at: status === "sent" ? new Date().toISOString() : null,
     };
