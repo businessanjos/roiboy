@@ -39,6 +39,7 @@ interface AdSet {
   conversions: number;
   cpl: number;
   agency_id?: string | null;
+  meta_ad_account_id?: string | null;
 }
 
 interface Insights {
