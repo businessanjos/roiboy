@@ -187,7 +187,15 @@ export function useMarketingProjects() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...payload }: Partial<MarketingProject> & { id: string }) => {
-      const finalPayload: any = { ...payload };
+      const allowedFields = [
+        "name", "description", "status", "cover_color", "cover_emoji",
+        "start_date", "target_date", "budget_planned", "budget_actual",
+        "owner_user_id",
+      ];
+      const finalPayload: any = {};
+      for (const key of allowedFields) {
+        if (key in payload) finalPayload[key] = (payload as any)[key];
+      }
       if ("owner_user_id" in payload) {
         finalPayload.owner_user_id = await resolveUserId(payload.owner_user_id ?? null);
       }
