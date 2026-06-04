@@ -12715,6 +12715,7 @@ export type Database = {
           created_at: string
           id: string
           impressions: number | null
+          meta_ad_account_id: string | null
           meta_campaign_id: string | null
           name: string
           platform: string | null
@@ -12732,6 +12733,7 @@ export type Database = {
           created_at?: string
           id?: string
           impressions?: number | null
+          meta_ad_account_id?: string | null
           meta_campaign_id?: string | null
           name: string
           platform?: string | null
@@ -12749,6 +12751,7 @@ export type Database = {
           created_at?: string
           id?: string
           impressions?: number | null
+          meta_ad_account_id?: string | null
           meta_campaign_id?: string | null
           name?: string
           platform?: string | null
