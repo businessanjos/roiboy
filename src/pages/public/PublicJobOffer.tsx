@@ -423,7 +423,7 @@ export default function PublicJobOffer() {
               {offer.success_metrics.map((m, i) => (
                 <div
                   key={i}
-                  className="relative p-6 md:p-7 rounded-sm overflow-hidden group"
+                  className="relative p-5 sm:p-6 md:p-7 rounded-sm overflow-hidden group"
                   style={{
                     background: CARD,
                     color: TEXT_DARK,
