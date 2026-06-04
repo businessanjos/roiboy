@@ -299,6 +299,10 @@ export const sectors: Sector[] = [
     defaultRoute: "/events",
     navItems: [
       { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
+      { to: "/events/calendar", icon: CalendarDays, label: "Calendário Anual", permission: PERMISSIONS.EVENTS_VIEW },
+      { to: "/events/kpis", icon: TrendingUp, label: "KPIs Anuais", permission: PERMISSIONS.EVENTS_VIEW },
+      { to: "/events/playbooks", icon: BookOpenCheck, label: "Playbooks", permission: PERMISSIONS.EVENTS_VIEW },
+      { to: "/events/inventory", icon: Boxes, label: "Inventário", permission: PERMISSIONS.EVENTS_VIEW },
       { to: "/events/suppliers", icon: Briefcase, label: "Fornecedores", permission: PERMISSIONS.EVENTS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
