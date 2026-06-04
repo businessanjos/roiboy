@@ -22,7 +22,8 @@ interface EventRow {
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 export default function EventsCalendar() {
-  const { accountId } = useCurrentUser();
+  const { user } = useCurrentUser();
+  const accountId = user?.account_id ?? null;
   const [year, setYear] = useState(new Date().getFullYear());
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
