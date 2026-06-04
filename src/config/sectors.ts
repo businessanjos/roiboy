@@ -63,8 +63,6 @@ import {
   Rocket,
   BookOpenCheck,
   Boxes,
-  BookOpenCheck,
-  Boxes,
   
   type LucideIcon,
 } from "lucide-react";

@@ -71,8 +71,8 @@ const EMPTY: Partial<Item> = {
 };
 
 export default function EventsInventory() {
-  const { user } = useCurrentUser();
-  const accountId = user?.account_id ?? null;
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id ?? null;
   const { toast } = useToast();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);

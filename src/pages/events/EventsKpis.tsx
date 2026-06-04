@@ -21,8 +21,8 @@ const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "
 const COLORS = ["hsl(var(--primary))", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#3b82f6"];
 
 export default function EventsKpis() {
-  const { user } = useCurrentUser();
-  const accountId = user?.account_id ?? null;
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id ?? null;
   const [year, setYear] = useState(new Date().getFullYear());
   const [events, setEvents] = useState<EventRow[]>([]);
   const [actualCosts, setActualCosts] = useState<Record<string, number>>({});

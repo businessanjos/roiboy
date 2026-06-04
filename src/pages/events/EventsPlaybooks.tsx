@@ -65,8 +65,8 @@ const MODALITIES = [
 ];
 
 export default function EventsPlaybooks() {
-  const { user } = useCurrentUser();
-  const accountId = user?.account_id ?? null;
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id ?? null;
   const { toast } = useToast();
   const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
   const [loading, setLoading] = useState(true);
