@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2, Eye, Upload, Image as ImageIcon, Trash2 } from "lucide-react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Check, Save, Sparkles, ExternalLink, Copy, Plus, X, Loader2, Wand2, Eye, Upload, Image as ImageIcon, Trash2, LayoutTemplate } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -61,6 +61,8 @@ type Form = {
   accent_color: string;
   cover_image_url: string;
   candidate_photo_url: string;
+  is_template: boolean;
+  template_name: string;
 };
 
 const EMPTY: Form = {
@@ -73,6 +75,7 @@ const EMPTY: Form = {
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
   signer_name: "", signer_role: "",
   accent_color: "#6366F1", cover_image_url: "", candidate_photo_url: "",
+  is_template: false, template_name: "",
 };
 
 const DEFAULT_COMPANY_INTRO = `A Eternum é o ecossistema de mentoria, tecnologia e gestão que está redesenhando a forma como negócios escalam no Brasil. Acreditamos que talento, propósito e execução são os três pilares de qualquer empresa que quer crescer com consistência.
@@ -85,6 +88,8 @@ Caso tenha qualquer dúvida, responda este e-mail ou fale diretamente com a pess
 
 export default function RHOfferWizard() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const templateId = searchParams.get("template");
   const isEdit = !!id;
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -97,6 +102,7 @@ export default function RHOfferWizard() {
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [usedTemplateName, setUsedTemplateName] = useState<string | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadedRef = useRef(false);
   const inFlightRef = useRef(false);
@@ -114,15 +120,21 @@ export default function RHOfferWizard() {
     else toast({ title: "Preencha o candidato para pré-visualizar", variant: "destructive" });
   };
 
+  // Carrega offer existente (edição) OU clona modelo (novo a partir de template)
   useEffect(() => {
-    if (!isEdit) return;
+    if (!isEdit && !templateId) return;
     (async () => {
-      const { data, error } = await supabase.from("hr_job_offers").select("*").eq("id", id).maybeSingle();
+      const sourceId = isEdit ? id : templateId;
+      const { data, error } = await supabase.from("hr_job_offers").select("*").eq("id", sourceId).maybeSingle();
       if (error || !data) { toast({ title: "Não encontrado", variant: "destructive" }); navigate("/rh/offers"); return; }
+      const cloning = !isEdit && !!templateId;
       setForm({
-        candidate_name: data.candidate_name || "",
-        candidate_email: data.candidate_email || "",
-        candidate_phone: data.candidate_phone || "",
+        // Dados do candidato: zerar ao clonar modelo
+        candidate_name: cloning ? "" : (data.candidate_name || ""),
+        candidate_email: cloning ? "" : (data.candidate_email || ""),
+        candidate_phone: cloning ? "" : (data.candidate_phone || ""),
+        candidate_photo_url: cloning ? "" : ((data as any).candidate_photo_url || ""),
+        // Demais campos são copiados
         position_title: data.position_title || "",
         department: data.department || "",
         seniority: data.seniority || "",
@@ -137,9 +149,9 @@ export default function RHOfferWizard() {
         benefits: data.benefits || [],
         perks: (data.perks as any) || [],
         success_metrics: ((data as any).success_metrics as any) || [],
-        start_date: data.start_date || "",
-        offer_expires_at: data.offer_expires_at || "",
-        hero_headline: data.hero_headline || "",
+        start_date: cloning ? "" : (data.start_date || ""),
+        offer_expires_at: cloning ? "" : (data.offer_expires_at || ""),
+        hero_headline: cloning ? "" : (data.hero_headline || ""),
         company_intro: data.company_intro || "",
         role_pitch: data.role_pitch || "",
         next_steps: data.next_steps || "",
@@ -147,13 +159,20 @@ export default function RHOfferWizard() {
         signer_role: data.signer_role || "",
         accent_color: data.accent_color || "#6366F1",
         cover_image_url: data.cover_image_url || "",
-        candidate_photo_url: (data as any).candidate_photo_url || "",
+        // Ao clonar, a nova offer não é modelo; ao editar, mantém flag
+        is_template: cloning ? false : !!(data as any).is_template,
+        template_name: cloning ? "" : ((data as any).template_name || ""),
       });
-      setSavedToken(data.public_token);
-      setRecordId(data.id);
+      if (!cloning) {
+        setSavedToken(data.public_token);
+        setRecordId(data.id);
+      } else {
+        setUsedTemplateName((data as any).template_name || data.position_title || "modelo");
+        toast({ title: "Modelo carregado", description: "Ajuste o nome, foto e o que mais quiser." });
+      }
       isLoadedRef.current = true;
     })();
-  }, [id]);
+  }, [id, templateId]);
 
   // Mark as loaded once for new offers too
   useEffect(() => {
@@ -246,6 +265,8 @@ export default function RHOfferWizard() {
       accent_color: form.accent_color,
       cover_image_url: form.cover_image_url || null,
       candidate_photo_url: form.candidate_photo_url || null,
+      is_template: form.is_template,
+      template_name: form.is_template ? (form.template_name?.trim() || form.position_title || "Modelo sem nome") : null,
       status,
       sent_at: status === "sent" ? new Date().toISOString() : null,
     };
@@ -350,8 +371,18 @@ export default function RHOfferWizard() {
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2 flex-wrap">
             {isEdit || recordId ? "Editar Offer" : "Nova Offer"}
+            {form.is_template && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 border border-amber-300">
+                <LayoutTemplate className="h-3 w-3" /> Modelo
+              </span>
+            )}
+            {usedTemplateName && !isEdit && !recordId && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-700 border border-indigo-300">
+                <LayoutTemplate className="h-3 w-3" /> a partir de "{usedTemplateName}"
+              </span>
+            )}
           </h1>
           <p className="text-sm text-muted-foreground">
             Wizard para gerar uma carta-proposta linda
@@ -798,6 +829,37 @@ export default function RHOfferWizard() {
                 {form.salary_amount && <div><strong>Salário:</strong> {form.salary_currency} {Number(form.salary_amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>}
                 <div><strong>Benefícios:</strong> {form.benefits.length} selecionados</div>
                 <div><strong>Perks:</strong> {form.perks.filter(p => p.title.trim()).length}</div>
+              </div>
+
+              {/* Salvar como modelo */}
+              <div className="rounded-xl border-2 border-dashed border-amber-300/60 p-4 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-950/10 space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={form.is_template}
+                    onCheckedChange={(v) => set("is_template", !!v)}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <LayoutTemplate className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-semibold">Salvar esta offer como modelo</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Modelos aparecem na tela de offers e podem ser reaproveitados em 1 clique para o próximo candidato. Os dados pessoais (nome, e-mail, foto, data) ficam em branco na nova offer.
+                    </p>
+                  </div>
+                </label>
+                {form.is_template && (
+                  <div className="pl-8 space-y-1.5">
+                    <Label className="text-xs">Nome do modelo</Label>
+                    <Input
+                      value={form.template_name}
+                      onChange={(e) => set("template_name", e.target.value)}
+                      placeholder={form.position_title ? `Ex.: ${form.position_title} – padrão` : "Ex.: CS Júnior – padrão Eternum"}
+                      className="bg-background"
+                    />
+                  </div>
+                )}
               </div>
 
               {savedToken && (

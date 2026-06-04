@@ -10784,6 +10784,7 @@ export type Database = {
           first_viewed_at: string | null
           hero_headline: string | null
           id: string
+          is_template: boolean
           job_id: string | null
           next_steps: string | null
           offer_expires_at: string | null
@@ -10804,6 +10805,7 @@ export type Database = {
           start_date: string | null
           status: string
           success_metrics: Json
+          template_name: string | null
           unit: string | null
           updated_at: string
           variable_compensation: string | null
@@ -10827,6 +10829,7 @@ export type Database = {
           first_viewed_at?: string | null
           hero_headline?: string | null
           id?: string
+          is_template?: boolean
           job_id?: string | null
           next_steps?: string | null
           offer_expires_at?: string | null
@@ -10847,6 +10850,7 @@ export type Database = {
           start_date?: string | null
           status?: string
           success_metrics?: Json
+          template_name?: string | null
           unit?: string | null
           updated_at?: string
           variable_compensation?: string | null
@@ -10870,6 +10874,7 @@ export type Database = {
           first_viewed_at?: string | null
           hero_headline?: string | null
           id?: string
+          is_template?: boolean
           job_id?: string | null
           next_steps?: string | null
           offer_expires_at?: string | null
@@ -10890,6 +10895,7 @@ export type Database = {
           start_date?: string | null
           status?: string
           success_metrics?: Json
+          template_name?: string | null
           unit?: string | null
           updated_at?: string
           variable_compensation?: string | null
