@@ -114,16 +114,17 @@ export default function MarketingTrafegoPago() {
   }, [adSets]);
 
   const syncCampaigns = useCallback(async () => {
-    if (!accounts.length) { toast.error('Nenhuma conta de anúncios'); return; }
+    const acc = selectedAccount || accounts[0]?.id;
+    if (!acc) { toast.error('Nenhuma conta de anúncios'); return; }
     setSyncing(true);
     try {
-      const { data, error: e } = await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: accounts[0].id, ...periodPayload } });
+      const { data, error: e } = await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: acc, ...periodPayload } });
       if (e) throw e;
       if (data?.error) toast.error(data.error);
       else { toast.success(`${data?.count || 0} campanhas sincronizadas!`); await fetchAdSets(); }
     } catch (err) { console.error(err); toast.error('Erro ao sincronizar'); }
     finally { setSyncing(false); }
-  }, [accounts, periodPayload, fetchAdSets]);
+  }, [accounts, selectedAccount, periodPayload, fetchAdSets]);
 
   useEffect(() => {
     if (accounts.length > 0 && (!selectedAccount || !accounts.find(a => a.id === selectedAccount))) {
