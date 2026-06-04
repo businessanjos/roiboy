@@ -48,6 +48,7 @@ type Form = {
   variable_compensation: string;
   benefits: string[];
   perks: { title: string; description: string }[];
+  success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string;
   offer_expires_at: string;
   hero_headline: string;
