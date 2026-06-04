@@ -543,16 +543,16 @@ export default function PublicJobOffer() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
                     onClick={() => setResponse("accept")}
-                    className="flex-1 gap-2 text-base h-14 rounded-sm font-semibold uppercase tracking-wider hover:opacity-90 transition-opacity"
-                    style={{ background: TEXT_DARK, color: CARD, fontFamily: SANS, letterSpacing: "0.15em", fontSize: 13 }}
+                    className="flex-1 gap-2 h-14 rounded-sm font-semibold uppercase hover:opacity-90 transition-opacity"
+                    style={{ background: TEXT_DARK, color: CARD, fontFamily: SANS, letterSpacing: "0.1em", fontSize: 13 }}
                   >
-                    <CheckCircle2 className="h-5 w-5" /> Aceitar a proposta
+                    <CheckCircle2 className="h-5 w-5 shrink-0" /> <span className="whitespace-nowrap">Aceitar proposta</span>
                   </Button>
                   <Button
                     onClick={() => setResponse("decline")}
                     variant="outline"
-                    className="flex-1 gap-2 h-14 rounded-sm hover:bg-transparent"
-                    style={{ borderColor: `${TEXT_DARK}40`, color: TEXT_DARK, background: "transparent", fontFamily: SANS, fontSize: 13, letterSpacing: "0.15em" }}
+                    className="flex-1 gap-2 h-14 rounded-sm hover:bg-transparent uppercase"
+                    style={{ borderColor: `${TEXT_DARK}40`, color: TEXT_DARK, background: "transparent", fontFamily: SANS, fontSize: 13, letterSpacing: "0.1em" }}
                   >
                     Recusar
                   </Button>
