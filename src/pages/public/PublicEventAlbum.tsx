@@ -31,10 +31,11 @@ interface MediaItem {
 }
 
 interface EventInfo {
-  name: string;
-  event_date: string | null;
-  location: string | null;
+  title: string;
+  scheduled_at: string | null;
+  address: string | null;
 }
+
 
 export default function PublicEventAlbum() {
   const { token } = useParams<{ token: string }>();
