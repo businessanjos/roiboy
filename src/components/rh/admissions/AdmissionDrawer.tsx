@@ -61,6 +61,8 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
   const updateDoc = useUpdateAdmissionDoc();
   const deleteAdmission = useDeleteAdmission();
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   if (!admission) return null;
@@ -69,6 +71,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
   const requiredDocs = (docs || []).filter((d) => d.required);
   const approvedCount = requiredDocs.filter((d) => d.status === "approved").length;
   const docsProgress = requiredDocs.length > 0 ? Math.round((approvedCount / requiredDocs.length) * 100) : 0;
+  const awaitingReview = (docs || []).filter((d) => d.status === "received" && d.uploaded_via === "candidate").length;
 
   const handleUpload = async (docId: string, file: File) => {
     if (!currentUser?.account_id) return;
@@ -86,10 +89,13 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
         file_url: signed?.signedUrl || path,
         file_name: file.name,
         uploaded_at: new Date().toISOString(),
+        uploaded_via: "rh",
+        notes: null,
       });
       toast.success("Arquivo enviado");
-    } catch (e: any) {
-      toast.error("Erro ao enviar: " + e.message);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "erro";
+      toast.error("Erro ao enviar: " + msg);
     } finally {
       setUploadingId(null);
     }
