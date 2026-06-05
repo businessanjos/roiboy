@@ -457,6 +457,12 @@ export default function PublicAdmissionPortal() {
               const rejected = d.status === "rejected";
               const up = uploads[d.id];
               const isUploading = up?.status === "uploading";
+              const isForm = d.doc_type === "form";
+              const hasFormData = isForm && d.form_data && Object.values(d.form_data).some((v) => (v || "").toString().trim().length > 0);
+              const showFormFields = isForm && (!hasFormData || formEditing[d.id] || rejected);
+              const fields = (d.form_schema || []) as FormField[];
+              const values = formValues[d.id] || {};
+              const saving = !!formSaving[d.id];
               return (
                 <div
                   key={d.id}
