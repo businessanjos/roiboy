@@ -125,9 +125,11 @@ export function MarketingTaskDialog({
 
     setIsSubmitting(true);
     try {
-      // Converter "none" para undefined para evitar erro de UUID
       const finalSectionId = sectionId === "none" ? undefined : sectionId;
       const finalAssigneeId = assigneeId === "none" ? undefined : assigneeId;
+      const finalColumn = columns.find((c) => c.id === columnId);
+      const derivedStatus: MarketingTaskStatus = finalColumn?.is_done ? "done" : "pending";
+      const derivedCompleted = !!finalColumn?.is_done;
 
       if (isEditing && taskId) {
         await updateTask.mutateAsync({
@@ -135,10 +137,12 @@ export function MarketingTaskDialog({
           title: title.trim(),
           description: description.trim() || undefined,
           section_id: finalSectionId,
+          column_id: finalColumn?.id,
           assignee_id: finalAssigneeId,
           due_date: dueDate?.toISOString().split("T")[0],
           priority,
-          status,
+          status: derivedStatus,
+          is_completed: derivedCompleted,
           media_attachments: mediaAttachments,
         });
       } else {
@@ -146,10 +150,11 @@ export function MarketingTaskDialog({
           title: title.trim(),
           description: description.trim() || undefined,
           section_id: finalSectionId,
+          column_id: finalColumn?.id,
           assignee_id: finalAssigneeId,
           due_date: dueDate?.toISOString().split("T")[0],
           priority,
-          status,
+          status: derivedStatus,
           media_attachments: mediaAttachments,
         });
       }
