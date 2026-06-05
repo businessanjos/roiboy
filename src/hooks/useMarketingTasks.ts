@@ -132,6 +132,7 @@ export function useMarketingTasks() {
           title: input.title,
           description: input.description,
           section_id: sanitizeUuid(input.section_id),
+          column_id: sanitizeUuid(input.column_id),
           assignee_id: sanitizeUuid(input.assignee_id),
           due_date: input.due_date,
           priority: input.priority || "medium",
