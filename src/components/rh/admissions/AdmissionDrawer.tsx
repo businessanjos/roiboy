@@ -381,13 +381,37 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                               <><Eye className="h-3 w-3" /> visível ao candidato</>
                             )}
                           </button>
+                          {isForm && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 border-indigo-500/40 text-indigo-700 bg-indigo-500/10">
+                              formulário
+                            </Badge>
+                          )}
                           {fromCandidate && (
                             <Badge variant="outline" className="text-[10px] h-4 px-1 border-blue-500/40 text-blue-700">
                               enviado pelo candidato
                             </Badge>
                           )}
                         </div>
-                        {doc.attachments && doc.attachments.length > 0 && (
+                        {isForm && hasFormData && (
+                          <ul className="mt-2 space-y-1 text-xs bg-muted/40 rounded p-2 border">
+                            {(doc.form_schema || []).map((f) => {
+                              const v = (doc.form_data || {})[f.key];
+                              if (!v) return null;
+                              return (
+                                <li key={f.key} className="flex gap-2">
+                                  <span className="text-muted-foreground font-medium w-32 shrink-0">{f.label}:</span>
+                                  <span className="break-all">{v}</span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                        {isForm && !hasFormData && (
+                          <p className="text-xs text-muted-foreground mt-2 italic">
+                            Aguardando o candidato preencher pelo portal.
+                          </p>
+                        )}
+                        {!isForm && doc.attachments && doc.attachments.length > 0 && (
                           <ul className="mt-2 space-y-1">
                             {doc.attachments.map((att, idx) => (
                               <li key={`${doc.id}-${idx}`} className="flex items-center gap-2 text-xs">
