@@ -507,8 +507,8 @@ export default function PublicAdmissionPortal() {
                     </span>
                   </div>
 
-                  {/* Lista de anexos */}
-                  {d.attachments && d.attachments.length > 0 && (
+                  {/* Lista de anexos (apenas docs do tipo upload) */}
+                  {!isForm && d.attachments && d.attachments.length > 0 && (
                     <ul className="space-y-1.5 mb-3">
                       {d.attachments.map((att, idx) => (
                         <li
