@@ -62,13 +62,22 @@ const STATUS_META: Record<Doc["status"], { label: string; bg: string; border: st
   rejected: { label: "Reenviar",  bg: "rgba(220,120,120,0.12)", border: "rgba(220,120,120,0.45)", color: "#e8a8a8", icon: AlertCircle },
 };
 
+type UploadState = {
+  fileName: string;
+  progress: number; // 0..100
+  status: "uploading" | "success" | "error";
+  error?: string;
+  retry?: () => void;
+};
+
 export default function PublicAdmissionPortal() {
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploads, setUploads] = useState<Record<string, UploadState | undefined>>({});
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const cameraInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const successTimers = useRef<Record<string, number>>({});
 
   const load = async () => {
     if (!token) return;
@@ -88,34 +97,98 @@ export default function PublicAdmissionPortal() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [token]);
 
-  const handleUpload = async (docId: string, file: File) => {
+  useEffect(() => () => {
+    Object.values(successTimers.current).forEach((id) => window.clearTimeout(id));
+  }, []);
+
+  const setUpload = (docId: string, patch: UploadState | undefined) => {
+    setUploads((prev) => ({ ...prev, [docId]: patch }));
+  };
+
+  const flashSuccess = (docId: string, fileName: string) => {
+    setUpload(docId, { fileName, progress: 100, status: "success" });
+    if (successTimers.current[docId]) window.clearTimeout(successTimers.current[docId]);
+    successTimers.current[docId] = window.setTimeout(() => {
+      setUploads((prev) => {
+        const next = { ...prev };
+        if (next[docId]?.status === "success") delete next[docId];
+        return next;
+      });
+    }, 2500);
+  };
+
+  const handleUpload = (docId: string, file: File) => {
     if (!token) return;
     if (file.size > 15 * 1024 * 1024) {
-      toast.error("Arquivo acima de 15MB. Tente uma foto em qualidade menor ou um PDF.");
+      const msg = "Arquivo acima de 15MB. Tente uma foto em qualidade menor ou um PDF.";
+      toast.error(msg);
+      setUpload(docId, { fileName: file.name, progress: 0, status: "error", error: msg });
       return;
     }
-    setUploadingId(docId);
+
     const fd = new FormData();
     fd.append("token", token);
     fd.append("doc_id", docId);
     fd.append("file", file);
-    try {
-      const res = await fetch(`${FN_URL}?action=upload`, {
-        method: "POST",
-        headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
-        body: fd,
+
+    setUpload(docId, {
+      fileName: file.name,
+      progress: 0,
+      status: "uploading",
+      retry: () => handleUpload(docId, file),
+    });
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${FN_URL}?action=upload`);
+    xhr.setRequestHeader("apikey", ANON);
+    xhr.setRequestHeader("Authorization", `Bearer ${ANON}`);
+
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const pct = Math.min(99, Math.round((e.loaded / e.total) * 100));
+      setUploads((prev) => {
+        const cur = prev[docId];
+        if (!cur || cur.status !== "uploading") return prev;
+        return { ...prev, [docId]: { ...cur, progress: pct } };
       });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "falha no envio");
-      toast.success("Documento enviado com sucesso ✨");
-      await load();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "erro no envio";
+    };
+
+    const fail = (msg: string) => {
       toast.error(msg);
-    } finally {
-      setUploadingId(null);
-    }
+      setUpload(docId, {
+        fileName: file.name,
+        progress: 0,
+        status: "error",
+        error: msg,
+        retry: () => handleUpload(docId, file),
+      });
+    };
+
+    xhr.onload = async () => {
+      let body: { error?: string } = {};
+      try { body = JSON.parse(xhr.responseText || "{}"); } catch { /* noop */ }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        toast.success(`${file.name} enviado ✨`);
+        flashSuccess(docId, file.name);
+        await load();
+      } else {
+        fail(body.error || `Falha no envio (HTTP ${xhr.status})`);
+      }
+    };
+    xhr.onerror = () => fail("Sem conexão. Verifique sua internet e tente de novo.");
+    xhr.ontimeout = () => fail("Tempo esgotado. Tente novamente.");
+    xhr.timeout = 120000;
+    xhr.send(fd);
   };
+
+  const dismissUpload = (docId: string) => {
+    setUploads((prev) => {
+      const next = { ...prev };
+      delete next[docId];
+      return next;
+    });
+  };
+
 
   const handleDelete = async (docId: string, path: string | null) => {
     if (!token || !path) {
