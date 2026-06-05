@@ -236,6 +236,39 @@ export default function PublicAdmissionPortal() {
     }
   };
 
+  const setFieldValue = (docId: string, key: string, value: string) => {
+    setFormValues((prev) => ({ ...prev, [docId]: { ...(prev[docId] || {}), [key]: value } }));
+  };
+
+  const handleSubmitForm = async (doc: Doc) => {
+    if (!token) return;
+    const schema = doc.form_schema || [];
+    const values = formValues[doc.id] || {};
+    const missing = schema.filter((f) => f.required && !(values[f.key] || "").trim());
+    if (missing.length > 0) {
+      toast.error(`Preencha: ${missing.map((m) => m.label).join(", ")}`);
+      return;
+    }
+    setFormSaving((p) => ({ ...p, [doc.id]: true }));
+    try {
+      const res = await fetch(`${FN_URL}?action=submit_form`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ token, doc_id: doc.id, form_data: values }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "falha ao salvar");
+      toast.success("Informações salvas ✨");
+      setFormEditing((p) => ({ ...p, [doc.id]: false }));
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "erro ao salvar");
+    } finally {
+      setFormSaving((p) => ({ ...p, [doc.id]: false }));
+    }
+  };
+
+
   const { docs, required, sent, progress, allDone } = useMemo(() => {
     const docs = data?.documents || [];
     const required = docs.filter((d) => d.required);
