@@ -49,7 +49,7 @@ interface MarketingTaskDialogProps {
   onOpenChange: (open: boolean) => void;
   taskId?: string | null;
   defaultSectionId?: string | null;
-  defaultStatus?: MarketingTaskStatus;
+  defaultColumnId?: string | null;
 }
 
 export function MarketingTaskDialog({
@@ -57,10 +57,11 @@ export function MarketingTaskDialog({
   onOpenChange,
   taskId,
   defaultSectionId,
-  defaultStatus,
+  defaultColumnId,
 }: MarketingTaskDialogProps) {
   const { tasks, createTask, updateTask, deleteTask } = useMarketingTasks();
   const { sections } = useMarketingTaskSections();
+  const { columns } = useMarketingTaskColumns();
   const { currentUser } = useCurrentUser();
 
   const existingTask = taskId ? tasks.find((t) => t.id === taskId) : null;
