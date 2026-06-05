@@ -46,6 +46,18 @@ export function MarketingTaskKanban({
 }: MarketingTaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<MarketingTask | null>(null);
 
+  // Prefer pointer-based collision; fallback to rect intersection. Then snap to
+  // the column the pointer is over (avoids picking a card in another column).
+  const collisionDetectionStrategy: CollisionDetection = useCallback((args) => {
+    const pointerCollisions = pointerWithin(args);
+    const intersections = pointerCollisions.length > 0 ? pointerCollisions : rectIntersection(args);
+    const columnIds = columns.map((c) => c.status as string);
+    const columnHit = intersections.find((c) => columnIds.includes(String(c.id)));
+    if (columnHit) return [columnHit];
+    const first = getFirstCollision(intersections);
+    return first ? [{ id: first } as any] : [];
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
