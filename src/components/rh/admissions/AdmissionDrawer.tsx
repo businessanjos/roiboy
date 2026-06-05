@@ -77,20 +77,39 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
     if (!currentUser?.account_id) return;
     setUploadingId(docId);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `${currentUser.account_id}/${admission.id}/${docId}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("admission-docs").upload(path, file, { upsert: true });
+      const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+      const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const path = `${currentUser.account_id}/${admission.id}/${docId}/${unique}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("admission-docs").upload(path, file, { upsert: false });
       if (upErr) throw upErr;
       const { data: signed } = await supabase.storage.from("admission-docs").createSignedUrl(path, 60 * 60 * 24 * 365);
+      const url = signed?.signedUrl || path;
+
+      // Lê anexos atuais para fazer append
+      const { data: current } = await supabase
+        .from("hr_admission_documents" as any)
+        .select("attachments")
+        .eq("id", docId)
+        .maybeSingle();
+      const currentAttachments = ((current as any)?.attachments || []) as any[];
+      const newAttachment = {
+        name: file.name,
+        url,
+        path,
+        uploaded_at: new Date().toISOString(),
+        uploaded_via: "rh" as const,
+      };
+
       await updateDoc.mutateAsync({
         id: docId,
         admission_id: admission.id,
         status: "received",
-        file_url: signed?.signedUrl || path,
+        file_url: url,
         file_name: file.name,
         uploaded_at: new Date().toISOString(),
         uploaded_via: "rh",
         notes: null,
+        attachments: [...currentAttachments, newAttachment] as any,
       });
       toast.success("Arquivo enviado");
     } catch (e) {
@@ -104,32 +123,35 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
   const setDocStatus = (docId: string, status: "approved" | "rejected" | "pending") =>
     updateDoc.mutate({ id: docId, admission_id: admission.id, status });
 
-  const handleRemoveFile = async (docId: string) => {
-    if (!currentUser?.account_id) return;
-    if (!confirm("Remover o arquivo enviado deste documento?")) return;
+  const handleRemoveAttachment = async (docId: string, path: string | null) => {
+    if (!confirm("Remover este arquivo?")) return;
     try {
-      // Remove de ambos os caminhos: RH ({account_id}/...) e candidato (portal/...)
-      const removeFromPath = async (prefix: string) => {
-        const { data: list } = await supabase.storage.from("admission-docs").list(prefix);
-        const matches = (list || []).filter((f) => f.name.startsWith(`${docId}.`));
-        if (matches.length > 0) {
-          await supabase.storage
-            .from("admission-docs")
-            .remove(matches.map((f) => `${prefix}/${f.name}`));
-        }
-      };
-      await removeFromPath(`${currentUser.account_id}/${admission.id}`);
-      await removeFromPath(`portal/${admission.id}`);
+      // Apaga do storage se houver path conhecido
+      if (path) {
+        await supabase.storage.from("admission-docs").remove([path]).catch(() => {});
+      }
+      // Lê anexos atuais e remove o que bate
+      const { data: current } = await supabase
+        .from("hr_admission_documents" as any)
+        .select("attachments, status")
+        .eq("id", docId)
+        .maybeSingle();
+      const list = (((current as any)?.attachments || []) as any[]).filter(
+        (a) => (a?.path || "") !== (path || "")
+      );
+      const last = list.length > 0 ? list[list.length - 1] : null;
+      const currentStatus = (current as any)?.status as string | undefined;
+      const nextStatus =
+        list.length === 0 ? "pending" : currentStatus === "approved" ? "received" : currentStatus;
 
       await updateDoc.mutateAsync({
         id: docId,
         admission_id: admission.id,
-        status: "pending",
-        file_url: null,
-        file_name: null,
-        uploaded_at: null,
-        uploaded_via: null,
-        notes: null,
+        status: nextStatus as any,
+        file_url: last?.url || null,
+        file_name: last?.name || null,
+        uploaded_at: last ? new Date().toISOString() : null,
+        attachments: list as any,
       });
       toast.success("Arquivo removido");
     } catch (e) {
@@ -137,6 +159,8 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
       toast.error("Erro ao remover: " + msg);
     }
   };
+
+
 
   const handleReject = async (docId: string) => {
     const reason = rejectReason.trim();
