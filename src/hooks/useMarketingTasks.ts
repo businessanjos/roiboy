@@ -43,6 +43,7 @@ export interface MarketingTask {
   id: string;
   account_id: string;
   section_id: string | null;
+  column_id: string | null;
   title: string;
   description: string | null;
   assignee_id: string | null;
@@ -69,6 +70,7 @@ export interface CreateMarketingTaskInput {
   title: string;
   description?: string;
   section_id?: string;
+  column_id?: string;
   assignee_id?: string;
   due_date?: string;
   priority?: MarketingTaskPriority;
