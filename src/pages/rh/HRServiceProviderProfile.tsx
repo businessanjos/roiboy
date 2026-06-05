@@ -24,7 +24,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const RH_ALLOWED_EMAIL = "m.quintana@me.com";
+const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com"];
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Ativo" },

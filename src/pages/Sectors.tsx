@@ -211,7 +211,7 @@ export default function Sectors() {
     navigate(defaultRoute);
   };
 
-  const RH_ALLOWED_EMAIL = "m.quintana@me.com";
+  const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com"];
 
   const availableSectors = useMemo(() => {
     // While the access list is still loading, render nothing instead of

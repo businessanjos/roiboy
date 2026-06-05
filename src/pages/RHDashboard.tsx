@@ -65,7 +65,7 @@ const rhGroups: { title: string; modules: RHModule[] }[] = [
   },
 ];
 
-const RH_ALLOWED_EMAIL = "m.quintana@me.com";
+const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com"];
 
 export default function RHDashboard() {
   const navigate = useNavigate();

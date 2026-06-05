@@ -17,7 +17,7 @@ import {
   Search, Plus, Crown, Building2, Phone, Mail, Percent,
 } from "lucide-react";
 
-const RH_ALLOWED_EMAIL = "m.quintana@me.com";
+const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com"];
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   active: { label: "Ativo", variant: "default" },
