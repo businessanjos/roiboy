@@ -427,7 +427,7 @@ export default function PublicAdmissionPortal() {
                   />
 
                   {!locked && (
-                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-2 mt-2">
+                    <div className="grid grid-cols-2 gap-2 mt-2">
                       <Button
                         type="button"
                         disabled={uploadingId === d.id}
