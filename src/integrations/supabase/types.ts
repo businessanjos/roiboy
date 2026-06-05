@@ -10261,9 +10261,11 @@ export type Database = {
           offer_id: string | null
           onboarding_scheduled_at: string | null
           position_title: string | null
+          public_token: string | null
           responsible_user_id: string | null
           stage: string
           start_date: string | null
+          token_expires_at: string | null
           updated_at: string
         }
         Insert: {
@@ -10288,9 +10290,11 @@ export type Database = {
           offer_id?: string | null
           onboarding_scheduled_at?: string | null
           position_title?: string | null
+          public_token?: string | null
           responsible_user_id?: string | null
           stage?: string
           start_date?: string | null
+          token_expires_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -10315,9 +10319,11 @@ export type Database = {
           offer_id?: string | null
           onboarding_scheduled_at?: string | null
           position_title?: string | null
+          public_token?: string | null
           responsible_user_id?: string | null
           stage?: string
           start_date?: string | null
+          token_expires_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -23260,6 +23266,7 @@ export type Database = {
       }
       generate_registration_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
+      get_admission_portal: { Args: { _token: string }; Returns: Json }
       get_ai_queue_stats: { Args: never; Returns: Json }
       get_avg_won_to_onboarding_days: {
         Args: { p_account_id: string; p_months_back?: number }
@@ -23583,6 +23590,15 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      submit_admission_doc: {
+        Args: {
+          _doc_id: string
+          _file_name: string
+          _file_url: string
+          _token: string
+        }
+        Returns: boolean
+      }
       submit_rsvp_response: {
         Args: { p_status: string; p_token: string }
         Returns: Json

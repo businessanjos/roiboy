@@ -61,9 +61,12 @@ export interface HRAdmission {
   admitted_at: string | null;
   notes: string | null;
   responsible_user_id: string | null;
+  public_token: string | null;
+  token_expires_at: string | null;
   created_at: string;
   updated_at: string;
 }
+
 
 export interface HRAdmissionDocument {
   id: string;
