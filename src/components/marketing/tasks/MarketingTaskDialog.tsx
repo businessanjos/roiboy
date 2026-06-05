@@ -99,6 +99,7 @@ export function MarketingTaskDialog({
         setTitle(existingTask.title);
         setDescription(existingTask.description || "");
         setSectionId(existingTask.section_id || undefined);
+        setColumnId(existingTask.column_id || undefined);
         setAssigneeId(existingTask.assignee_id || undefined);
         setDueDate(existingTask.due_date ? (parseLocalDate(existingTask.due_date) || undefined) : undefined);
         setPriority(existingTask.priority);
@@ -108,14 +109,15 @@ export function MarketingTaskDialog({
         setTitle("");
         setDescription("");
         setSectionId(defaultSectionId || undefined);
+        setColumnId(defaultColumnId || columns[0]?.id);
         setAssigneeId(undefined);
         setDueDate(undefined);
         setPriority("medium");
-        setStatus(defaultStatus || "pending");
+        setStatus("pending");
         setMediaAttachments([]);
       }
     }
-  }, [open, existingTask, defaultSectionId, defaultStatus]);
+  }, [open, existingTask, defaultSectionId, defaultColumnId, columns]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
