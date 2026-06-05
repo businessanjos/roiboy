@@ -213,6 +213,8 @@ const FinancialProvidersPortalPage = lazyRetry(() => import("./pages/financial/F
 const FinancialPayersPage = lazyRetry(() => import("./pages/financial/FinancialPayersPage"));
 const FinancialFiscalSettingsPage = lazyRetry(() => import("./pages/financial/FinancialFiscalSettingsPage"));
 const PublicProviderPortal = lazyRetry(() => import("./pages/public/PublicProviderPortal"));
+const PublicAdmissionPortal = lazyRetry(() => import("./pages/public/PublicAdmissionPortal"));
+
 const PublicIncentivePresentation = lazyRetry(() => import("./pages/public/PublicIncentivePresentation"));
 const PublicEventAlbum = lazyRetry(() => import("./pages/public/PublicEventAlbum"));
 
