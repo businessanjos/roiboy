@@ -263,6 +263,8 @@ const App = () => (
                           <Route path="/onboarding" element={<Onboarding />} />
                           <Route path="/contrato/:token" element={<PublicDigitalContract />} />
                           <Route path="/portal/prestador/:token" element={<PublicProviderPortal />} />
+                          <Route path="/admissao/:token" element={<PublicAdmissionPortal />} />
+
                           <Route path="/external/incentive-plan/:token" element={<PublicIncentivePresentation />} />
                           <Route path="/oferta/:token" element={<PublicJobOffer />} />
                           
