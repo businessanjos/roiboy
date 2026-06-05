@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
 import { exportPayrollCSV, exportPayrollXLSX } from "./components/payrollExport";
 
-const RH_ALLOWED_EMAIL = "m.quintana@me.com";
+const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com"];
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   active: { label: "Ativo", variant: "default" },
@@ -327,7 +327,7 @@ export default function HRCollaborators() {
     }
   };
 
-  if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
+  if (currentUser && !RH_ALLOWED_EMAILS.includes((currentUser.email || "").toLowerCase())) {
     return <Navigate to="/" replace />;
   }
 
