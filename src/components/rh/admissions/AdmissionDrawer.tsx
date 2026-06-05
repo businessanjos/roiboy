@@ -53,6 +53,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
   const { data: docs, isLoading } = useHRAdmissionDocuments(admission?.id);
   const updateAdmission = useUpdateAdmission();
   const updateDoc = useUpdateAdmissionDoc();
+  const deleteAdmission = useDeleteAdmission();
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
