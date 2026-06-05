@@ -334,10 +334,30 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                             </Badge>
                           )}
                         </div>
-                        {doc.file_name && (
-                          <a href={doc.file_url || "#"} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-1">
-                            <ExternalLink className="h-3 w-3" />{doc.file_name}
-                          </a>
+                        {doc.attachments && doc.attachments.length > 0 && (
+                          <ul className="mt-2 space-y-1">
+                            {doc.attachments.map((att, idx) => (
+                              <li key={`${doc.id}-${idx}`} className="flex items-center gap-2 text-xs">
+                                <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
+                                <a
+                                  href={att.url || "#"}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-blue-600 hover:underline truncate flex-1"
+                                >
+                                  {att.name || "arquivo"}
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveAttachment(doc.id, att.path)}
+                                  title="Remover este arquivo"
+                                  className="text-rose-500 hover:text-rose-700 shrink-0"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                         )}
                         {doc.status === "rejected" && doc.notes && (
                           <p className="text-xs text-rose-600 mt-1">Motivo enviado: {doc.notes}</p>
@@ -349,16 +369,11 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                         ref={(el) => (fileInputs.current[doc.id] = el)}
                         type="file"
                         className="hidden"
-                        onChange={(e) => e.target.files?.[0] && handleUpload(doc.id, e.target.files[0])}
+                        onChange={(e) => { if (e.target.files?.[0]) { handleUpload(doc.id, e.target.files[0]); e.target.value = ""; } }}
                       />
-                      <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.file_name ? "Substituir arquivo" : "Enviar arquivo"}>
+                      <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.attachments?.length ? "Adicionar outro arquivo" : "Enviar arquivo"}>
                         {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                       </Button>
-                      {doc.file_name && (
-                        <Button size="sm" variant="ghost" onClick={() => handleRemoveFile(doc.id)} title="Excluir arquivo">
-                          <Trash2 className="h-4 w-4 text-rose-600" />
-                        </Button>
-                      )}
                       {doc.status !== "approved" ? (
                         <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-emerald-600" /></Button>
                       ) : (
