@@ -442,15 +442,19 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                       </div>
                       <Badge className={`text-xs ${DOC_STATUS_COLOR[doc.status]}`} variant="secondary">{DOC_STATUS_LABEL[doc.status]}</Badge>
 
-                      <input
-                        ref={(el) => (fileInputs.current[doc.id] = el)}
-                        type="file"
-                        className="hidden"
-                        onChange={(e) => { if (e.target.files?.[0]) { handleUpload(doc.id, e.target.files[0]); e.target.value = ""; } }}
-                      />
-                      <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.attachments?.length ? "Adicionar outro arquivo" : "Enviar arquivo"}>
-                        {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                      </Button>
+                      {!isForm && (
+                        <>
+                          <input
+                            ref={(el) => (fileInputs.current[doc.id] = el)}
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => { if (e.target.files?.[0]) { handleUpload(doc.id, e.target.files[0]); e.target.value = ""; } }}
+                          />
+                          <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.attachments?.length ? "Adicionar outro arquivo" : "Enviar arquivo"}>
+                            {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                          </Button>
+                        </>
+                      )}
                       {doc.status !== "approved" ? (
                         <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-emerald-600" /></Button>
                       ) : (
