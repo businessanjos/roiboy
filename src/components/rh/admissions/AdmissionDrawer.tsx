@@ -86,6 +86,33 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
   const setDocStatus = (docId: string, status: "approved" | "rejected" | "pending") =>
     updateDoc.mutate({ id: docId, admission_id: admission.id, status });
 
+  const handleRemoveFile = async (docId: string) => {
+    if (!currentUser?.account_id) return;
+    if (!confirm("Remover o arquivo enviado deste documento?")) return;
+    try {
+      const { data: list } = await supabase.storage
+        .from("admission-docs")
+        .list(`${currentUser.account_id}/${admission.id}`);
+      const matches = (list || []).filter((f) => f.name.startsWith(`${docId}.`));
+      if (matches.length > 0) {
+        await supabase.storage.from("admission-docs").remove(
+          matches.map((f) => `${currentUser.account_id}/${admission.id}/${f.name}`)
+        );
+      }
+      await updateDoc.mutateAsync({
+        id: docId,
+        admission_id: admission.id,
+        status: "pending",
+        file_url: null,
+        file_name: null,
+        uploaded_at: null,
+      });
+      toast.success("Arquivo removido");
+    } catch (e: any) {
+      toast.error("Erro ao remover: " + e.message);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
@@ -227,9 +254,14 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                       className="hidden"
                       onChange={(e) => e.target.files?.[0] && handleUpload(doc.id, e.target.files[0])}
                     />
-                    <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()}>
+                    <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.file_name ? "Substituir arquivo" : "Enviar arquivo"}>
                       {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                     </Button>
+                    {doc.file_name && (
+                      <Button size="sm" variant="ghost" onClick={() => handleRemoveFile(doc.id)} title="Excluir arquivo">
+                        <Trash2 className="h-4 w-4 text-rose-600" />
+                      </Button>
+                    )}
                     {doc.status !== "approved" ? (
                       <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-emerald-600" /></Button>
                     ) : (
