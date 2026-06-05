@@ -254,9 +254,14 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                       className="hidden"
                       onChange={(e) => e.target.files?.[0] && handleUpload(doc.id, e.target.files[0])}
                     />
-                    <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()}>
+                    <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.file_name ? "Substituir arquivo" : "Enviar arquivo"}>
                       {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                     </Button>
+                    {doc.file_name && (
+                      <Button size="sm" variant="ghost" onClick={() => handleRemoveFile(doc.id)} title="Excluir arquivo">
+                        <Trash2 className="h-4 w-4 text-rose-600" />
+                      </Button>
+                    )}
                     {doc.status !== "approved" ? (
                       <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-emerald-600" /></Button>
                     ) : (
