@@ -427,31 +427,31 @@ export default function PublicAdmissionPortal() {
                   />
 
                   {!locked && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-2 mt-2">
                       <Button
-                        size="sm"
+                        type="button"
                         disabled={uploadingId === d.id}
                         onClick={() => cameraInputs.current[d.id]?.click()}
-                        className="h-9 border-0 hover:opacity-90"
+                        className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
                         style={{ background: `${TEXT_DARK}`, color: CARD, fontFamily: SANS, fontWeight: 500, letterSpacing: "0.05em" }}
                       >
                         {uploadingId === d.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <><Camera className="h-3.5 w-3.5 mr-1.5" />{d.attachments?.length ? "Outra foto" : "Tirar foto"}</>
+                          <><Camera className="h-4 w-4 mr-1.5" />{d.attachments?.length ? "Outra foto" : "Tirar foto"}</>
                         )}
                       </Button>
                       <Button
-                        size="sm"
+                        type="button"
                         disabled={uploadingId === d.id}
                         onClick={() => fileInputs.current[d.id]?.click()}
-                        className="h-9 border-0 hover:opacity-90"
+                        className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
                         style={{ background: GOLD, color: TEXT_DARK, fontFamily: SANS, fontWeight: 600, letterSpacing: "0.05em" }}
                       >
                         {uploadingId === d.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <>{d.attachments?.length ? <Plus className="h-3.5 w-3.5 mr-1.5" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}{d.attachments?.length ? "Adicionar arquivo" : "Enviar arquivo"}</>
+                          <>{d.attachments?.length ? <Plus className="h-4 w-4 mr-1.5" /> : <Upload className="h-4 w-4 mr-1.5" />}{d.attachments?.length ? "Adicionar arquivo" : "Enviar arquivo"}</>
                         )}
                       </Button>
                     </div>
