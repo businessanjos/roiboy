@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   Upload, CheckCircle2, Clock, AlertCircle, Loader2, FileCheck2,
-  Camera, FileText, ExternalLink, PartyPopper, ShieldCheck, X, Plus,
+  Camera, FileText, ExternalLink, PartyPopper, ShieldCheck, X, Plus, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
