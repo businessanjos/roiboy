@@ -589,6 +589,39 @@ export default function PublicJobOffer() {
                 <h3 className="text-xl" style={{ fontFamily: SERIF }}>
                   {response === "accept" ? `Bem-vindo(a) à Eternum, ${firstName}.` : "Agradecemos sua sinceridade."}
                 </h3>
+                {response === "accept" && (
+                  <div className="space-y-3">
+                    <p className="text-sm opacity-75">
+                      Confirme seus dados de contato para que o RH possa dar sequência ao seu processo de admissão:
+                    </p>
+                    <div className="space-y-2">
+                      <label className="text-[11px] uppercase tracking-[0.2em] font-semibold" style={{ color: GOLD }}>
+                        E-mail <span style={{ color: "#8a1a1a" }}>*</span>
+                      </label>
+                      <Input
+                        type="email"
+                        required
+                        placeholder="seu@email.com"
+                        value={acceptEmail}
+                        onChange={(e) => setAcceptEmail(e.target.value)}
+                        style={{ background: "#fff", borderColor: `${TEXT_DARK}30`, color: TEXT_DARK }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] uppercase tracking-[0.2em] font-semibold" style={{ color: GOLD }}>
+                        WhatsApp (com DDD) <span style={{ color: "#8a1a1a" }}>*</span>
+                      </label>
+                      <Input
+                        type="tel"
+                        required
+                        placeholder="(11) 91234-5678"
+                        value={acceptPhone}
+                        onChange={(e) => setAcceptPhone(e.target.value)}
+                        style={{ background: "#fff", borderColor: `${TEXT_DARK}30`, color: TEXT_DARK }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <Textarea
                   placeholder={response === "accept" ? "Deixe uma mensagem para o time (opcional)..." : "Conte rapidamente o motivo (opcional)..."}
                   value={message}
