@@ -226,6 +226,37 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
 
           <Separator />
 
+          {/* Public candidate link */}
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-sm">
+              <LinkIcon className="h-4 w-4 text-amber-600" />
+              Link para o candidato enviar os documentos
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Compartilhe este link com {admission.candidate_name.split(" ")[0]} (WhatsApp/e-mail). Ele/ela poderá enviar os documentos diretamente, sem precisar de login.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={admission.public_token ? `${getPublicOrigin()}/admissao/${admission.public_token}` : "Gerando…"}
+                className="font-mono text-xs bg-background"
+                onFocus={(e) => e.target.select()}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!admission.public_token}
+                onClick={async () => {
+                  if (!admission.public_token) return;
+                  await navigator.clipboard.writeText(`${getPublicOrigin()}/admissao/${admission.public_token}`);
+                  toast.success("Link copiado!");
+                }}
+              >
+                <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
+              </Button>
+            </div>
+          </div>
+
           {/* Documents checklist */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -235,6 +266,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
               </div>
               <Badge variant="outline" className="text-xs">{approvedCount}/{requiredDocs.length} aprovados · {docsProgress}%</Badge>
             </div>
+
 
             {isLoading ? (
               <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
