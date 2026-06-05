@@ -291,15 +291,20 @@ export function MarketingTaskDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select value={status} onValueChange={(v) => setStatus(v as MarketingTaskStatus)}>
+                    <Label>Etapa</Label>
+                    <Select value={columnId} onValueChange={setColumnId}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione a etapa" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">A Fazer</SelectItem>
-                        <SelectItem value="in_progress">Fazendo</SelectItem>
-                        <SelectItem value="done">Concluído</SelectItem>
+                        {columns.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            <span className="inline-flex items-center gap-2">
+                              <span className="inline-block w-2 h-2 rounded-full" style={{ background: c.color }} />
+                              {c.title}
+                            </span>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
