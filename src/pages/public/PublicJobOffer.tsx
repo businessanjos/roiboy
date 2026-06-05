@@ -64,6 +64,8 @@ export default function PublicJobOffer() {
   const [responding, setResponding] = useState(false);
   const [response, setResponse] = useState<"accept" | "decline" | null>(null);
   const [message, setMessage] = useState("");
+  const [acceptEmail, setAcceptEmail] = useState("");
+  const [acceptPhone, setAcceptPhone] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,6 +74,8 @@ export default function PublicJobOffer() {
       const { data } = await supabase.from("hr_job_offers").select("*").eq("public_token", token).maybeSingle();
       if (data) {
         setOffer(data as any);
+        setAcceptEmail(((data as any).candidate_email as string) || "");
+        setAcceptPhone(((data as any).candidate_phone as string) || "");
         if (!data.first_viewed_at || data.status === "sent") {
           await supabase
             .from("hr_job_offers")
@@ -89,13 +93,30 @@ export default function PublicJobOffer() {
 
   const respond = async (status: "accepted" | "declined") => {
     if (!offer) return;
+    const patch: any = { status, responded_at: new Date().toISOString(), response_message: message || null };
+    if (status === "accepted") {
+      const email = acceptEmail.trim();
+      const phone = acceptPhone.trim();
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      const phoneDigits = phone.replace(/\D/g, "");
+      if (!emailOk) {
+        toast({ title: "E-mail inválido", description: "Informe um e-mail válido para continuarmos.", variant: "destructive" });
+        return;
+      }
+      if (phoneDigits.length < 10) {
+        toast({ title: "WhatsApp inválido", description: "Informe um número de WhatsApp válido com DDD.", variant: "destructive" });
+        return;
+      }
+      patch.candidate_email = email;
+      patch.candidate_phone = phone;
+    }
     setResponding(true);
     const { error } = await supabase
       .from("hr_job_offers")
-      .update({ status, responded_at: new Date().toISOString(), response_message: message || null })
+      .update(patch)
       .eq("public_token", offer.public_token);
     if (error) toast({ title: "Erro ao registrar resposta", description: error.message, variant: "destructive" });
-    else setOffer({ ...offer, status, responded_at: new Date().toISOString() });
+    else setOffer({ ...offer, ...patch });
     setResponding(false);
     setResponse(null);
   };
