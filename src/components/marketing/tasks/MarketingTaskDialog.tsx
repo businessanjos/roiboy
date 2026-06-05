@@ -25,6 +25,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMarketingTasks, MarketingTask, MarketingTaskPriority, MarketingTaskStatus, MediaAttachment } from "@/hooks/useMarketingTasks";
 import { useMarketingTaskSections } from "@/hooks/useMarketingTaskSections";
+import { useMarketingTaskColumns } from "@/hooks/useMarketingTaskColumns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -48,7 +49,7 @@ interface MarketingTaskDialogProps {
   onOpenChange: (open: boolean) => void;
   taskId?: string | null;
   defaultSectionId?: string | null;
-  defaultStatus?: MarketingTaskStatus;
+  defaultColumnId?: string | null;
 }
 
 export function MarketingTaskDialog({
@@ -56,10 +57,11 @@ export function MarketingTaskDialog({
   onOpenChange,
   taskId,
   defaultSectionId,
-  defaultStatus,
+  defaultColumnId,
 }: MarketingTaskDialogProps) {
   const { tasks, createTask, updateTask, deleteTask } = useMarketingTasks();
   const { sections } = useMarketingTaskSections();
+  const { columns } = useMarketingTaskColumns();
   const { currentUser } = useCurrentUser();
 
   const existingTask = taskId ? tasks.find((t) => t.id === taskId) : null;
@@ -68,6 +70,7 @@ export function MarketingTaskDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [sectionId, setSectionId] = useState<string | undefined>(undefined);
+  const [columnId, setColumnId] = useState<string | undefined>(undefined);
   const [assigneeId, setAssigneeId] = useState<string | undefined>(undefined);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [priority, setPriority] = useState<MarketingTaskPriority>("medium");
@@ -96,6 +99,7 @@ export function MarketingTaskDialog({
         setTitle(existingTask.title);
         setDescription(existingTask.description || "");
         setSectionId(existingTask.section_id || undefined);
+        setColumnId(existingTask.column_id || undefined);
         setAssigneeId(existingTask.assignee_id || undefined);
         setDueDate(existingTask.due_date ? (parseLocalDate(existingTask.due_date) || undefined) : undefined);
         setPriority(existingTask.priority);
@@ -105,14 +109,15 @@ export function MarketingTaskDialog({
         setTitle("");
         setDescription("");
         setSectionId(defaultSectionId || undefined);
+        setColumnId(defaultColumnId || columns[0]?.id);
         setAssigneeId(undefined);
         setDueDate(undefined);
         setPriority("medium");
-        setStatus(defaultStatus || "pending");
+        setStatus("pending");
         setMediaAttachments([]);
       }
     }
-  }, [open, existingTask, defaultSectionId, defaultStatus]);
+  }, [open, existingTask, defaultSectionId, defaultColumnId, columns]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,9 +125,11 @@ export function MarketingTaskDialog({
 
     setIsSubmitting(true);
     try {
-      // Converter "none" para undefined para evitar erro de UUID
       const finalSectionId = sectionId === "none" ? undefined : sectionId;
       const finalAssigneeId = assigneeId === "none" ? undefined : assigneeId;
+      const finalColumn = columns.find((c) => c.id === columnId);
+      const derivedStatus: MarketingTaskStatus = finalColumn?.is_done ? "done" : "pending";
+      const derivedCompleted = !!finalColumn?.is_done;
 
       if (isEditing && taskId) {
         await updateTask.mutateAsync({
@@ -130,10 +137,12 @@ export function MarketingTaskDialog({
           title: title.trim(),
           description: description.trim() || undefined,
           section_id: finalSectionId,
+          column_id: finalColumn?.id,
           assignee_id: finalAssigneeId,
           due_date: dueDate?.toISOString().split("T")[0],
           priority,
-          status,
+          status: derivedStatus,
+          is_completed: derivedCompleted,
           media_attachments: mediaAttachments,
         });
       } else {
@@ -141,10 +150,11 @@ export function MarketingTaskDialog({
           title: title.trim(),
           description: description.trim() || undefined,
           section_id: finalSectionId,
+          column_id: finalColumn?.id,
           assignee_id: finalAssigneeId,
           due_date: dueDate?.toISOString().split("T")[0],
           priority,
-          status,
+          status: derivedStatus,
           media_attachments: mediaAttachments,
         });
       }
@@ -281,15 +291,20 @@ export function MarketingTaskDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select value={status} onValueChange={(v) => setStatus(v as MarketingTaskStatus)}>
+                    <Label>Etapa</Label>
+                    <Select value={columnId} onValueChange={setColumnId}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione a etapa" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">A Fazer</SelectItem>
-                        <SelectItem value="in_progress">Fazendo</SelectItem>
-                        <SelectItem value="done">Concluído</SelectItem>
+                        {columns.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            <span className="inline-flex items-center gap-2">
+                              <span className="inline-block w-2 h-2 rounded-full" style={{ background: c.color }} />
+                              {c.title}
+                            </span>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

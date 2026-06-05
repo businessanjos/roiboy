@@ -15165,6 +15165,47 @@ export type Database = {
           },
         ]
       }
+      marketing_task_columns: {
+        Row: {
+          account_id: string
+          color: string
+          created_at: string
+          display_order: number
+          id: string
+          is_done: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_done?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_done?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_task_columns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_task_sections: {
         Row: {
           account_id: string
@@ -15271,6 +15312,7 @@ export type Database = {
         Row: {
           account_id: string
           assignee_id: string | null
+          column_id: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
@@ -15291,6 +15333,7 @@ export type Database = {
         Insert: {
           account_id: string
           assignee_id?: string | null
+          column_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -15311,6 +15354,7 @@ export type Database = {
         Update: {
           account_id?: string
           assignee_id?: string | null
+          column_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -15341,6 +15385,13 @@ export type Database = {
             columns: ["assignee_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_tasks_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_task_columns"
             referencedColumns: ["id"]
           },
           {

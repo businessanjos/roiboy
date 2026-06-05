@@ -43,6 +43,7 @@ export interface MarketingTask {
   id: string;
   account_id: string;
   section_id: string | null;
+  column_id: string | null;
   title: string;
   description: string | null;
   assignee_id: string | null;
@@ -69,6 +70,7 @@ export interface CreateMarketingTaskInput {
   title: string;
   description?: string;
   section_id?: string;
+  column_id?: string;
   assignee_id?: string;
   due_date?: string;
   priority?: MarketingTaskPriority;
@@ -130,6 +132,7 @@ export function useMarketingTasks() {
           title: input.title,
           description: input.description,
           section_id: sanitizeUuid(input.section_id),
+          column_id: sanitizeUuid(input.column_id),
           assignee_id: sanitizeUuid(input.assignee_id),
           due_date: input.due_date,
           priority: input.priority || "medium",
@@ -167,6 +170,9 @@ export function useMarketingTasks() {
       const updateData: Record<string, unknown> = { ...rawData };
       if ('section_id' in rawData) {
         updateData.section_id = sanitizeUuid(rawData.section_id);
+      }
+      if ('column_id' in rawData) {
+        updateData.column_id = sanitizeUuid(rawData.column_id);
       }
       if ('assignee_id' in rawData) {
         updateData.assignee_id = sanitizeUuid(rawData.assignee_id);
