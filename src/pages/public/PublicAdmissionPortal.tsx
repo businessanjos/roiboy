@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import {
   Upload, CheckCircle2, Clock, AlertCircle, Loader2, FileCheck2,
   Camera, FileText, ExternalLink, PartyPopper, ShieldCheck, X, Plus, Trash2,
+  Pencil, Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -14,6 +15,15 @@ interface Attachment {
   path: string | null;
   uploaded_at: string | null;
   uploaded_via: "rh" | "candidate" | null;
+}
+
+interface FormField {
+  key: string;
+  label: string;
+  type: "text" | "select" | "textarea";
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
 }
 
 interface Doc {
@@ -29,6 +39,9 @@ interface Doc {
   attachments: Attachment[];
   notes: string | null;
   sort_order: number;
+  doc_type?: "file" | "form";
+  form_schema?: FormField[] | null;
+  form_data?: Record<string, string> | null;
 }
 
 interface PortalData {
