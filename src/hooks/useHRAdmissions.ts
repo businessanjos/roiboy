@@ -74,6 +74,7 @@ export interface HRAdmissionDocument {
   doc_key: string;
   label: string;
   required: boolean;
+  visible_to_candidate: boolean;
   status: "pending" | "received" | "approved" | "rejected";
   file_url: string | null;
   file_name: string | null;
