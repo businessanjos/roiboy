@@ -292,14 +292,21 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
 
           {/* Documents checklist */}
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <FileCheck2 className="h-4 w-4" />
                 <h3 className="font-semibold">Checklist de Documentos</h3>
               </div>
-              <Badge variant="outline" className="text-xs">{approvedCount}/{requiredDocs.length} aprovados · {docsProgress}%</Badge>
+              <div className="flex items-center gap-2">
+                {awaitingReview > 0 && (
+                  <Badge className="text-xs bg-blue-500/15 text-blue-700 border-blue-500/30" variant="outline">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    {awaitingReview} novo{awaitingReview > 1 ? "s" : ""} envio{awaitingReview > 1 ? "s" : ""} do candidato
+                  </Badge>
+                )}
+                <Badge variant="outline" className="text-xs">{approvedCount}/{requiredDocs.length} aprovados · {docsProgress}%</Badge>
+              </div>
             </div>
-
 
             {isLoading ? (
               <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
@@ -307,42 +314,97 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
               <p className="text-sm text-muted-foreground text-center py-6">Nenhum documento configurado.</p>
             ) : (
               <div className="space-y-2">
-                {(docs || []).map((doc) => (
-                  <div key={doc.id} className="border rounded-lg p-3 flex flex-wrap items-center gap-3">
-                    <div className="flex-1 min-w-[200px]">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{doc.label}</p>
-                        {doc.required && <Badge variant="outline" className="text-[10px] h-4 px-1">obrigatório</Badge>}
+                {(docs || []).map((doc) => {
+                  const fromCandidate = doc.uploaded_via === "candidate";
+                  const highlight = doc.status === "received" && fromCandidate;
+                  return (
+                    <div
+                      key={doc.id}
+                      className={`border rounded-lg p-3 flex flex-wrap items-center gap-3 transition ${
+                        highlight ? "border-blue-500/40 bg-blue-500/5 ring-1 ring-blue-500/20" : ""
+                      }`}
+                    >
+                      <div className="flex-1 min-w-[200px]">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium">{doc.label}</p>
+                          {doc.required && <Badge variant="outline" className="text-[10px] h-4 px-1">obrigatório</Badge>}
+                          {fromCandidate && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 border-blue-500/40 text-blue-700">
+                              enviado pelo candidato
+                            </Badge>
+                          )}
+                        </div>
+                        {doc.file_name && (
+                          <a href={doc.file_url || "#"} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-1">
+                            <ExternalLink className="h-3 w-3" />{doc.file_name}
+                          </a>
+                        )}
+                        {doc.status === "rejected" && doc.notes && (
+                          <p className="text-xs text-rose-600 mt-1">Motivo enviado: {doc.notes}</p>
+                        )}
                       </div>
+                      <Badge className={`text-xs ${DOC_STATUS_COLOR[doc.status]}`} variant="secondary">{DOC_STATUS_LABEL[doc.status]}</Badge>
+
+                      <input
+                        ref={(el) => (fileInputs.current[doc.id] = el)}
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => e.target.files?.[0] && handleUpload(doc.id, e.target.files[0])}
+                      />
+                      <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.file_name ? "Substituir arquivo" : "Enviar arquivo"}>
+                        {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                      </Button>
                       {doc.file_name && (
-                        <a href={doc.file_url || "#"} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-1">
-                          <ExternalLink className="h-3 w-3" />{doc.file_name}
-                        </a>
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveFile(doc.id)} title="Excluir arquivo">
+                          <Trash2 className="h-4 w-4 text-rose-600" />
+                        </Button>
+                      )}
+                      {doc.status !== "approved" ? (
+                        <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-emerald-600" /></Button>
+                      ) : (
+                        <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "pending")} title="Reabrir"><X className="h-4 w-4 text-muted-foreground" /></Button>
+                      )}
+                      {doc.file_name && doc.status !== "approved" && (
+                        <Dialog
+                          open={rejectingId === doc.id}
+                          onOpenChange={(o) => { if (!o) { setRejectingId(null); setRejectReason(""); } }}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Rejeitar com motivo"
+                              onClick={() => { setRejectingId(doc.id); setRejectReason(doc.notes || ""); }}
+                            >
+                              <MessageSquareWarning className="h-4 w-4 text-amber-600" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Rejeitar "{doc.label}"</DialogTitle>
+                              <DialogDescription>
+                                O motivo abaixo será mostrado ao candidato no portal para que ele reenvie corretamente.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <Textarea
+                              autoFocus
+                              rows={3}
+                              placeholder="Ex.: A foto está desfocada, não dá pra ler o número. Pode reenviar uma foto mais nítida?"
+                              value={rejectReason}
+                              onChange={(e) => setRejectReason(e.target.value)}
+                            />
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => { setRejectingId(null); setRejectReason(""); }}>Cancelar</Button>
+                              <Button className="bg-amber-600 hover:bg-amber-700" onClick={() => handleReject(doc.id)}>
+                                Rejeitar e notificar
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       )}
                     </div>
-                    <Badge className={`text-xs ${DOC_STATUS_COLOR[doc.status]}`} variant="secondary">{DOC_STATUS_LABEL[doc.status]}</Badge>
-
-                    <input
-                      ref={(el) => (fileInputs.current[doc.id] = el)}
-                      type="file"
-                      className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleUpload(doc.id, e.target.files[0])}
-                    />
-                    <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.file_name ? "Substituir arquivo" : "Enviar arquivo"}>
-                      {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                    </Button>
-                    {doc.file_name && (
-                      <Button size="sm" variant="ghost" onClick={() => handleRemoveFile(doc.id)} title="Excluir arquivo">
-                        <Trash2 className="h-4 w-4 text-rose-600" />
-                      </Button>
-                    )}
-                    {doc.status !== "approved" ? (
-                      <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-emerald-600" /></Button>
-                    ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "pending")} title="Reabrir"><X className="h-4 w-4 text-muted-foreground" /></Button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
