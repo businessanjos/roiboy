@@ -79,6 +79,7 @@ export interface HRAdmissionDocument {
   file_name: string | null;
   uploaded_at: string | null;
   uploaded_via: "rh" | "candidate" | null;
+  attachments: Array<{ name: string; url: string; path: string | null; uploaded_at: string | null; uploaded_via: "rh" | "candidate" | null }> | null;
   notes: string | null;
   sort_order: number;
 }
