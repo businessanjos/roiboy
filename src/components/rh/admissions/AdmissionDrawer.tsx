@@ -86,6 +86,33 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
   const setDocStatus = (docId: string, status: "approved" | "rejected" | "pending") =>
     updateDoc.mutate({ id: docId, admission_id: admission.id, status });
 
+  const handleRemoveFile = async (docId: string) => {
+    if (!currentUser?.account_id) return;
+    if (!confirm("Remover o arquivo enviado deste documento?")) return;
+    try {
+      const { data: list } = await supabase.storage
+        .from("admission-docs")
+        .list(`${currentUser.account_id}/${admission.id}`);
+      const matches = (list || []).filter((f) => f.name.startsWith(`${docId}.`));
+      if (matches.length > 0) {
+        await supabase.storage.from("admission-docs").remove(
+          matches.map((f) => `${currentUser.account_id}/${admission.id}/${f.name}`)
+        );
+      }
+      await updateDoc.mutateAsync({
+        id: docId,
+        admission_id: admission.id,
+        status: "pending",
+        file_url: null,
+        file_name: null,
+        uploaded_at: null,
+      });
+      toast.success("Arquivo removido");
+    } catch (e: any) {
+      toast.error("Erro ao remover: " + e.message);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
