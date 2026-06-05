@@ -12,8 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, FileCheck2, Check, X, Loader2, Mail, Phone,
   Calendar, Stethoscope, FileSignature, GraduationCap, Trash2, ExternalLink,
-  Copy, Link as LinkIcon,
+  Copy, Link as LinkIcon, Sparkles, MessageSquareWarning,
 } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
 import { getPublicOrigin } from "@/lib/publicLink";
 
 import { format } from "date-fns";
