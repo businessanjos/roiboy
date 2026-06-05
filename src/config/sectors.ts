@@ -275,6 +275,8 @@ export const sectors: Sector[] = [
       { to: "/rh/departments", icon: Building, label: "Departamentos" },
       { to: "/rh/job-descriptions", icon: FileText, label: "Cargos" },
       { to: "/rh/vacancies", icon: UserPlus, label: "Vagas" },
+      { to: "/rh/offers", icon: Sparkles, label: "Cartas-Proposta" },
+      { to: "/rh/admissions", icon: UserCheck, label: "Admissões" },
       { to: "/rh/resumes", icon: BookOpen, label: "Banco de Talentos" },
       { to: "/rh/offboarding", icon: UserMinus, label: "Desligamentos" },
       // Desenvolvimento
