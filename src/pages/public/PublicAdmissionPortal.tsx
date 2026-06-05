@@ -397,11 +397,12 @@ export default function PublicAdmissionPortal() {
                             <button
                               type="button"
                               onClick={() => handleDelete(d.id, att.path)}
+                              aria-label="Remover este arquivo"
                               title="Remover este arquivo"
-                              className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-sm hover:opacity-100 opacity-60 transition"
+                              className="shrink-0 inline-flex items-center justify-center h-9 w-9 -mr-1.5 rounded-sm active:bg-black/5 opacity-70 hover:opacity-100 transition touch-manipulation"
                               style={{ color: "#a83232" }}
                             >
-                              <X className="h-3.5 w-3.5" />
+                              <X className="h-4 w-4" />
                             </button>
                           )}
                         </li>
