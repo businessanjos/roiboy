@@ -3,6 +3,10 @@ project_id = "mtzoavtbtqflufyccern"
 [functions.provider-portal]
 verify_jwt = false
 
+[functions.admission-portal]
+verify_jwt = false
+
+
 
 [functions.generate-oauth-state]
 verify_jwt = false
