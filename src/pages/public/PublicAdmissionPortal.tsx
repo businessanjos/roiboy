@@ -468,17 +468,34 @@ export default function PublicAdmissionPortal() {
                               {att.name || "arquivo"}
                             </span>
                           )}
-                          {!locked && att.path && (
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(d.id, att.path)}
-                              aria-label="Remover este arquivo"
-                              title="Remover este arquivo"
-                              className="shrink-0 inline-flex items-center justify-center h-9 w-9 -mr-1.5 rounded-sm active:bg-black/5 opacity-70 hover:opacity-100 transition touch-manipulation"
-                              style={{ color: "#a83232" }}
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
+                          {!locked && (
+                            att.path ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(d.id, att.path)}
+                                aria-label={`Remover ${att.name || "arquivo"}`}
+                                title="Remover este arquivo"
+                                className="shrink-0 inline-flex items-center gap-1.5 h-9 px-2.5 rounded-sm font-semibold touch-manipulation active:scale-95 transition"
+                                style={{
+                                  background: "rgba(168,50,50,0.10)",
+                                  border: "1px solid rgba(168,50,50,0.45)",
+                                  color: "#a83232",
+                                  fontSize: 11,
+                                  letterSpacing: "0.05em",
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                <span className="hidden xs:inline sm:inline">Remover</span>
+                              </button>
+                            ) : (
+                              <span
+                                className="shrink-0 text-[10px] uppercase tracking-[0.15em] opacity-60"
+                                style={{ color: TEXT_DARK }}
+                                title="Enviado pelo RH — peça remoção ao time"
+                              >
+                                via RH
+                              </span>
+                            )
                           )}
                         </li>
                       ))}
