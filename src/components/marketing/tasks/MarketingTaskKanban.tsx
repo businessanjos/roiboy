@@ -2,15 +2,19 @@ import { useState, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
+  getFirstCollision,
   PointerSensor,
   useSensor,
   useSensors,
   DragStartEvent,
   DragEndEvent,
   DragOverEvent,
+  CollisionDetection,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import { useCallback } from "react";
 import { MarketingKanbanColumn } from "./MarketingKanbanColumn";
 import { MarketingKanbanCard } from "./MarketingKanbanCard";
 import { MarketingTask, MarketingTaskStatus } from "@/hooks/useMarketingTasks";
@@ -41,6 +45,18 @@ export function MarketingTaskKanban({
   onReorderTasks,
 }: MarketingTaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<MarketingTask | null>(null);
+
+  // Prefer pointer-based collision; fallback to rect intersection. Then snap to
+  // the column the pointer is over (avoids picking a card in another column).
+  const collisionDetectionStrategy: CollisionDetection = useCallback((args) => {
+    const pointerCollisions = pointerWithin(args);
+    const intersections = pointerCollisions.length > 0 ? pointerCollisions : rectIntersection(args);
+    const columnIds = columns.map((c) => c.status as string);
+    const columnHit = intersections.find((c) => columnIds.includes(String(c.id)));
+    if (columnHit) return [columnHit];
+    const first = getFirstCollision(intersections);
+    return first ? [{ id: first } as any] : [];
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -156,7 +172,7 @@ export function MarketingTaskKanban({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetectionStrategy}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragOver={handleDragOver}
