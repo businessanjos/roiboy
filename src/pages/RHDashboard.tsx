@@ -37,6 +37,7 @@ const rhGroups: { title: string; modules: RHModule[] }[] = [
       { icon: FileText, label: "Cargos", route: "/rh/job-descriptions", description: "Cargos, competências e requisitos", color: "text-cyan-600", bg: "bg-cyan-500/10" },
       { icon: UserPlus, label: "Vagas", route: "/rh/vacancies", description: "Vagas abertas e processo seletivo", color: "text-green-600", bg: "bg-green-500/10" },
       { icon: Sparkles, label: "Cartas-Proposta", route: "/rh/offers", description: "Crie ofertas lindas com link público compartilhável", color: "text-indigo-600", bg: "bg-indigo-500/10" },
+      { icon: UserPlus, label: "Admissões", route: "/rh/admissions", description: "Pipeline pós-aceite: exame, documentos e contrato", color: "text-emerald-600", bg: "bg-emerald-500/10" },
       { icon: BookOpen, label: "Banco de Talentos", route: "/rh/resumes", description: "Currículos e candidatos potenciais", color: "text-orange-600", bg: "bg-orange-500/10" },
       { icon: UserMinus, label: "Desligamentos", route: "/rh/offboarding", description: "Processos de desligamento", color: "text-red-600", bg: "bg-red-500/10" },
       { icon: Crown, label: "Quadro Societário", route: "/rh/partners", description: "Sócios e composição societária", color: "text-primary", bg: "bg-primary/10" },
