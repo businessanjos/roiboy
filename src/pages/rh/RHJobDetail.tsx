@@ -105,7 +105,64 @@ export default function RHJobDetail() {
           <Button variant="outline" onClick={handleCopyLink}>{copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}{copied ? "Copiado!" : "Copiar Link"}</Button>
         </div>
       </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Cartas-Proposta ({offers.length})
+          </CardTitle>
+          <Button size="sm" variant="outline" onClick={() => navigate(`/rh/offers/new?job=${job.id}`)}>
+            Nova carta-proposta
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {offers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma carta-proposta vinculada a esta vaga ainda.</p>
+          ) : (
+            <div className="space-y-2">
+              {offers.map((o) => (
+                <div key={o.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border p-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium truncate">{o.candidate_name || "Sem nome"}</span>
+                      <Badge variant="outline" className={OFFER_STATUS_COLORS[o.status] || ""}>
+                        {OFFER_STATUS_LABELS[o.status] || o.status}
+                      </Badge>
+                      {o.salary_amount && (
+                        <span className="text-xs text-muted-foreground">
+                          {o.salary_currency || "BRL"} {Number(o.salary_amount).toLocaleString("pt-BR")}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      {o.candidate_email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{o.candidate_email}</span>}
+                      <span>Criada em {format(new Date(o.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                      {o.sent_at && <span>Enviada em {format(new Date(o.sent_at), "dd/MM/yyyy", { locale: ptBR })}</span>}
+                      {typeof o.view_count === "number" && o.view_count > 0 && <span>{o.view_count} visualização(ões)</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button size="sm" variant="ghost" onClick={() => copyOfferLink(o.public_token)} title="Copiar link">
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" asChild title="Abrir carta-proposta">
+                      <a href={`${getPublicOrigin()}/oferta/${o.public_token}`} target="_blank" rel="noreferrer">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </Button>
+                    <Button size="sm" variant="ghost" asChild title="Editar">
+                      <Link to={`/rh/offers/${o.id}/edit`}><Pencil className="h-3.5 w-3.5" /></Link>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <CandidateKanbanBoard jobId={job.id} jobTitle={job.title} />
     </div>
+
   );
 }
