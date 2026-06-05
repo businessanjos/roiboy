@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, FileCheck2, Check, X, Loader2, Mail, Phone,
   Calendar, Stethoscope, FileSignature, GraduationCap, Trash2, ExternalLink,
-  Copy, Link as LinkIcon, Sparkles, MessageSquareWarning,
+  Copy, Link as LinkIcon, Sparkles, MessageSquareWarning, Eye, EyeOff,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
