@@ -10185,8 +10185,11 @@ export type Database = {
           attachments: Json
           created_at: string
           doc_key: string
+          doc_type: string
           file_name: string | null
           file_url: string | null
+          form_data: Json | null
+          form_schema: Json | null
           id: string
           label: string
           notes: string | null
@@ -10204,8 +10207,11 @@ export type Database = {
           attachments?: Json
           created_at?: string
           doc_key: string
+          doc_type?: string
           file_name?: string | null
           file_url?: string | null
+          form_data?: Json | null
+          form_schema?: Json | null
           id?: string
           label: string
           notes?: string | null
@@ -10223,8 +10229,11 @@ export type Database = {
           attachments?: Json
           created_at?: string
           doc_key?: string
+          doc_type?: string
           file_name?: string | null
           file_url?: string | null
+          form_data?: Json | null
+          form_schema?: Json | null
           id?: string
           label?: string
           notes?: string | null
@@ -23623,6 +23632,10 @@ export type Database = {
             }
             Returns: boolean
           }
+      submit_admission_form: {
+        Args: { _doc_id: string; _form_data: Json; _token: string }
+        Returns: boolean
+      }
       submit_rsvp_response: {
         Args: { p_status: string; p_token: string }
         Returns: Json
