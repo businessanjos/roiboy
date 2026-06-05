@@ -10195,6 +10195,7 @@ export type Database = {
           updated_at: string
           uploaded_at: string | null
           uploaded_by: string | null
+          uploaded_via: string | null
         }
         Insert: {
           admission_id: string
@@ -10211,6 +10212,7 @@ export type Database = {
           updated_at?: string
           uploaded_at?: string | null
           uploaded_by?: string | null
+          uploaded_via?: string | null
         }
         Update: {
           admission_id?: string
@@ -10227,6 +10229,7 @@ export type Database = {
           updated_at?: string
           uploaded_at?: string | null
           uploaded_by?: string | null
+          uploaded_via?: string | null
         }
         Relationships: [
           {
