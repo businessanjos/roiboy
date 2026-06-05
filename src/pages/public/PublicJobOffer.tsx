@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, MapPin, Briefcase, Calendar, Gift, ArrowRight, L
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { WORK_MODEL_LABELS, CONTRACT_TYPE_LABELS, JOB_SENIORITY_LABELS } from "@/constants/jobOptions";
 import { format } from "date-fns";
@@ -64,6 +65,8 @@ export default function PublicJobOffer() {
   const [responding, setResponding] = useState(false);
   const [response, setResponse] = useState<"accept" | "decline" | null>(null);
   const [message, setMessage] = useState("");
+  const [acceptEmail, setAcceptEmail] = useState("");
+  const [acceptPhone, setAcceptPhone] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,6 +75,8 @@ export default function PublicJobOffer() {
       const { data } = await supabase.from("hr_job_offers").select("*").eq("public_token", token).maybeSingle();
       if (data) {
         setOffer(data as any);
+        setAcceptEmail(((data as any).candidate_email as string) || "");
+        setAcceptPhone(((data as any).candidate_phone as string) || "");
         if (!data.first_viewed_at || data.status === "sent") {
           await supabase
             .from("hr_job_offers")
@@ -89,13 +94,30 @@ export default function PublicJobOffer() {
 
   const respond = async (status: "accepted" | "declined") => {
     if (!offer) return;
+    const patch: any = { status, responded_at: new Date().toISOString(), response_message: message || null };
+    if (status === "accepted") {
+      const email = acceptEmail.trim();
+      const phone = acceptPhone.trim();
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      const phoneDigits = phone.replace(/\D/g, "");
+      if (!emailOk) {
+        toast({ title: "E-mail inválido", description: "Informe um e-mail válido para continuarmos.", variant: "destructive" });
+        return;
+      }
+      if (phoneDigits.length < 10) {
+        toast({ title: "WhatsApp inválido", description: "Informe um número de WhatsApp válido com DDD.", variant: "destructive" });
+        return;
+      }
+      patch.candidate_email = email;
+      patch.candidate_phone = phone;
+    }
     setResponding(true);
     const { error } = await supabase
       .from("hr_job_offers")
-      .update({ status, responded_at: new Date().toISOString(), response_message: message || null })
+      .update(patch)
       .eq("public_token", offer.public_token);
     if (error) toast({ title: "Erro ao registrar resposta", description: error.message, variant: "destructive" });
-    else setOffer({ ...offer, status, responded_at: new Date().toISOString() });
+    else setOffer({ ...offer, ...patch });
     setResponding(false);
     setResponse(null);
   };
@@ -567,6 +589,39 @@ export default function PublicJobOffer() {
                 <h3 className="text-xl" style={{ fontFamily: SERIF }}>
                   {response === "accept" ? `Bem-vindo(a) à Eternum, ${firstName}.` : "Agradecemos sua sinceridade."}
                 </h3>
+                {response === "accept" && (
+                  <div className="space-y-3">
+                    <p className="text-sm opacity-75">
+                      Confirme seus dados de contato para que o RH possa dar sequência ao seu processo de admissão:
+                    </p>
+                    <div className="space-y-2">
+                      <label className="text-[11px] uppercase tracking-[0.2em] font-semibold" style={{ color: GOLD }}>
+                        E-mail <span style={{ color: "#8a1a1a" }}>*</span>
+                      </label>
+                      <Input
+                        type="email"
+                        required
+                        placeholder="seu@email.com"
+                        value={acceptEmail}
+                        onChange={(e) => setAcceptEmail(e.target.value)}
+                        style={{ background: "#fff", borderColor: `${TEXT_DARK}30`, color: TEXT_DARK }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] uppercase tracking-[0.2em] font-semibold" style={{ color: GOLD }}>
+                        WhatsApp (com DDD) <span style={{ color: "#8a1a1a" }}>*</span>
+                      </label>
+                      <Input
+                        type="tel"
+                        required
+                        placeholder="(11) 91234-5678"
+                        value={acceptPhone}
+                        onChange={(e) => setAcceptPhone(e.target.value)}
+                        style={{ background: "#fff", borderColor: `${TEXT_DARK}30`, color: TEXT_DARK }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <Textarea
                   placeholder={response === "accept" ? "Deixe uma mensagem para o time (opcional)..." : "Conte rapidamente o motivo (opcional)..."}
                   value={message}
