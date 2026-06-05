@@ -12,7 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, FileCheck2, Check, X, Loader2, Mail, Phone,
   Calendar, Stethoscope, FileSignature, GraduationCap, Trash2, ExternalLink,
+  Copy, Link as LinkIcon,
 } from "lucide-react";
+import { getPublicOrigin } from "@/lib/publicLink";
+
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
