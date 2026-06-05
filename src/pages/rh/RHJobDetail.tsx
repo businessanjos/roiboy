@@ -52,7 +52,18 @@ export default function RHJobDetail() {
   const navigate = useNavigate();
   const { data: job, isLoading } = useHRJobById(id);
   const [copied, setCopied] = useState(false);
+  const [offers, setOffers] = useState<JobOfferRow[]>([]);
   const applicationUrl = `${window.location.origin}/rh/vacancies/${id}/aplicar`;
+
+  useEffect(() => {
+    if (!id) return;
+    supabase
+      .from("hr_job_offers")
+      .select("id,public_token,candidate_name,candidate_email,status,salary_amount,salary_currency,sent_at,responded_at,view_count,created_at")
+      .eq("job_id", id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setOffers((data as JobOfferRow[]) || []));
+  }, [id]);
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(applicationUrl);
@@ -60,6 +71,12 @@ export default function RHJobDetail() {
     toast.success("Link copiado!");
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const copyOfferLink = async (token: string) => {
+    await navigator.clipboard.writeText(`${getPublicOrigin()}/oferta/${token}`);
+    toast.success("Link da carta-proposta copiado!");
+  };
+
 
   if (isLoading) return <div className="p-6 space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-32 w-full" /></div>;
   if (!job) return (
