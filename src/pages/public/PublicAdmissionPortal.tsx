@@ -327,25 +327,6 @@ export default function PublicAdmissionPortal() {
                           </span>
                         )}
                       </div>
-                      {d.file_name && (
-                        <div className="mt-1.5">
-                          {d.file_url ? (
-                            <a
-                              href={d.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 text-xs max-w-full hover:underline"
-                              style={{ color: TEXT_DARK, opacity: 0.7 }}
-                            >
-                              <FileText className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{d.file_name}</span>
-                              <ExternalLink className="h-3 w-3 shrink-0" />
-                            </a>
-                          ) : (
-                            <p className="text-xs truncate" style={{ color: TEXT_DARK, opacity: 0.6 }}>📎 {d.file_name}</p>
-                          )}
-                        </div>
-                      )}
                       {d.notes && rejected && (
                         <p className="text-xs mt-2 leading-relaxed" style={{ color: "#a83232" }}>
                           <span className="font-semibold">Motivo:</span> {d.notes}
@@ -361,12 +342,53 @@ export default function PublicAdmissionPortal() {
                     </span>
                   </div>
 
+                  {/* Lista de anexos */}
+                  {d.attachments && d.attachments.length > 0 && (
+                    <ul className="space-y-1.5 mb-3">
+                      {d.attachments.map((att, idx) => (
+                        <li
+                          key={`${d.id}-${idx}`}
+                          className="flex items-center gap-2 rounded-sm px-2.5 py-1.5"
+                          style={{ background: `${TEXT_DARK}0d`, border: `1px solid ${GOLD}26` }}
+                        >
+                          <FileText className="h-3.5 w-3.5 shrink-0" style={{ color: GOLD }} />
+                          {att.url ? (
+                            <a
+                              href={att.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs truncate flex-1 hover:underline"
+                              style={{ color: TEXT_DARK }}
+                            >
+                              {att.name || "arquivo"}
+                            </a>
+                          ) : (
+                            <span className="text-xs truncate flex-1" style={{ color: TEXT_DARK }}>
+                              {att.name || "arquivo"}
+                            </span>
+                          )}
+                          {!locked && att.path && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(d.id, att.path)}
+                              title="Remover este arquivo"
+                              className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-sm hover:opacity-100 opacity-60 transition"
+                              style={{ color: "#a83232" }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
                   <input
                     ref={(el) => (fileInputs.current[d.id] = el)}
                     type="file"
                     className="hidden"
                     accept="image/*,application/pdf"
-                    onChange={(e) => e.target.files?.[0] && handleUpload(d.id, e.target.files[0])}
+                    onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
                   />
                   <input
                     ref={(el) => (cameraInputs.current[d.id] = el)}
@@ -374,7 +396,7 @@ export default function PublicAdmissionPortal() {
                     className="hidden"
                     accept="image/*"
                     capture="environment"
-                    onChange={(e) => e.target.files?.[0] && handleUpload(d.id, e.target.files[0])}
+                    onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
                   />
 
                   {!locked && (
@@ -389,7 +411,7 @@ export default function PublicAdmissionPortal() {
                         {uploadingId === d.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <><Camera className="h-3.5 w-3.5 mr-1.5" />Tirar foto</>
+                          <><Camera className="h-3.5 w-3.5 mr-1.5" />{d.attachments?.length ? "Outra foto" : "Tirar foto"}</>
                         )}
                       </Button>
                       <Button
@@ -402,7 +424,7 @@ export default function PublicAdmissionPortal() {
                         {uploadingId === d.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <><Upload className="h-3.5 w-3.5 mr-1.5" />{d.file_name ? "Substituir" : "Enviar"}</>
+                          <>{d.attachments?.length ? <Plus className="h-3.5 w-3.5 mr-1.5" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}{d.attachments?.length ? "Adicionar arquivo" : "Enviar arquivo"}</>
                         )}
                       </Button>
                     </div>
