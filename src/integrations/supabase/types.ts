@@ -10182,6 +10182,7 @@ export type Database = {
       hr_admission_documents: {
         Row: {
           admission_id: string
+          attachments: Json
           created_at: string
           doc_key: string
           file_name: string | null
@@ -10199,6 +10200,7 @@ export type Database = {
         }
         Insert: {
           admission_id: string
+          attachments?: Json
           created_at?: string
           doc_key: string
           file_name?: string | null
@@ -10216,6 +10218,7 @@ export type Database = {
         }
         Update: {
           admission_id?: string
+          attachments?: Json
           created_at?: string
           doc_key?: string
           file_name?: string | null
@@ -23248,6 +23251,10 @@ export type Database = {
       }
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
+      delete_admission_doc_attachment: {
+        Args: { _doc_id: string; _path: string; _token: string }
+        Returns: Json
+      }
       dunning_default_sla: { Args: { p_stage: string }; Returns: string }
       ensure_default_contratada: {
         Args: { p_account_id: string }
@@ -23593,15 +23600,26 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
-      submit_admission_doc: {
-        Args: {
-          _doc_id: string
-          _file_name: string
-          _file_url: string
-          _token: string
-        }
-        Returns: boolean
-      }
+      submit_admission_doc:
+        | {
+            Args: {
+              _doc_id: string
+              _file_name: string
+              _file_url: string
+              _token: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              _doc_id: string
+              _file_name: string
+              _file_url: string
+              _path?: string
+              _token: string
+            }
+            Returns: boolean
+          }
       submit_rsvp_response: {
         Args: { p_status: string; p_token: string }
         Returns: Json
