@@ -171,6 +171,9 @@ export function useMarketingTasks() {
       if ('section_id' in rawData) {
         updateData.section_id = sanitizeUuid(rawData.section_id);
       }
+      if ('column_id' in rawData) {
+        updateData.column_id = sanitizeUuid(rawData.column_id);
+      }
       if ('assignee_id' in rawData) {
         updateData.assignee_id = sanitizeUuid(rawData.assignee_id);
       }
