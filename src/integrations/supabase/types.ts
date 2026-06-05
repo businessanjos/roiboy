@@ -10197,6 +10197,7 @@ export type Database = {
           uploaded_at: string | null
           uploaded_by: string | null
           uploaded_via: string | null
+          visible_to_candidate: boolean
         }
         Insert: {
           admission_id: string
@@ -10215,6 +10216,7 @@ export type Database = {
           uploaded_at?: string | null
           uploaded_by?: string | null
           uploaded_via?: string | null
+          visible_to_candidate?: boolean
         }
         Update: {
           admission_id?: string
@@ -10233,6 +10235,7 @@ export type Database = {
           uploaded_at?: string | null
           uploaded_by?: string | null
           uploaded_via?: string | null
+          visible_to_candidate?: boolean
         }
         Relationships: [
           {
