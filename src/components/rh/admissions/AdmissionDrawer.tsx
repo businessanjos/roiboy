@@ -20,8 +20,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   HRAdmission, useHRAdmissionDocuments, useUpdateAdmission, useUpdateAdmissionDoc,
-  ADMISSION_STAGES, ADMISSION_STAGE_LABELS,
+  useDeleteAdmission, ADMISSION_STAGES, ADMISSION_STAGE_LABELS,
 } from "@/hooks/useHRAdmissions";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Props {
   admission: HRAdmission | null;
