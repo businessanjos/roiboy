@@ -398,6 +398,7 @@ const App = () => (
                             <Route path="/rh/offers" element={<RHOffers />} />
                             <Route path="/rh/offers/new" element={<RHOfferWizard />} />
                             <Route path="/rh/offers/:id/edit" element={<RHOfferWizard />} />
+                            <Route path="/rh/admissions" element={<RHAdmissions />} />
                             
                           </Route>
                           <Route path="*" element={<NotFound />} />
