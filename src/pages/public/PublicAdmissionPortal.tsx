@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import {
   Upload, CheckCircle2, Clock, AlertCircle, Loader2, FileCheck2,
   Camera, FileText, ExternalLink, PartyPopper, ShieldCheck, X, Plus, Trash2,
+  Pencil, Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -14,6 +15,15 @@ interface Attachment {
   path: string | null;
   uploaded_at: string | null;
   uploaded_via: "rh" | "candidate" | null;
+}
+
+interface FormField {
+  key: string;
+  label: string;
+  type: "text" | "select" | "textarea";
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
 }
 
 interface Doc {
@@ -29,6 +39,9 @@ interface Doc {
   attachments: Attachment[];
   notes: string | null;
   sort_order: number;
+  doc_type?: "file" | "form";
+  form_schema?: FormField[] | null;
+  form_data?: Record<string, string> | null;
 }
 
 interface PortalData {
@@ -75,6 +88,9 @@ export default function PublicAdmissionPortal() {
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploads, setUploads] = useState<Record<string, UploadState | undefined>>({});
+  const [formValues, setFormValues] = useState<Record<string, Record<string, string>>>({});
+  const [formSaving, setFormSaving] = useState<Record<string, boolean>>({});
+  const [formEditing, setFormEditing] = useState<Record<string, boolean>>({});
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const cameraInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const successTimers = useRef<Record<string, number>>({});
@@ -87,7 +103,16 @@ export default function PublicAdmissionPortal() {
         headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
       });
       if (!res.ok) throw new Error("not_found");
-      setData(await res.json());
+      const json: PortalData = await res.json();
+      setData(json);
+      // hydrate form values
+      const next: Record<string, Record<string, string>> = {};
+      (json.documents || []).forEach((d) => {
+        if (d.doc_type === "form") {
+          next[d.id] = { ...(d.form_data || {}) };
+        }
+      });
+      setFormValues((prev) => ({ ...next, ...prev }));
     } catch {
       setData(null);
     } finally {
@@ -210,6 +235,39 @@ export default function PublicAdmissionPortal() {
       toast.error(e instanceof Error ? e.message : "erro ao remover");
     }
   };
+
+  const setFieldValue = (docId: string, key: string, value: string) => {
+    setFormValues((prev) => ({ ...prev, [docId]: { ...(prev[docId] || {}), [key]: value } }));
+  };
+
+  const handleSubmitForm = async (doc: Doc) => {
+    if (!token) return;
+    const schema = doc.form_schema || [];
+    const values = formValues[doc.id] || {};
+    const missing = schema.filter((f) => f.required && !(values[f.key] || "").trim());
+    if (missing.length > 0) {
+      toast.error(`Preencha: ${missing.map((m) => m.label).join(", ")}`);
+      return;
+    }
+    setFormSaving((p) => ({ ...p, [doc.id]: true }));
+    try {
+      const res = await fetch(`${FN_URL}?action=submit_form`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ token, doc_id: doc.id, form_data: values }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "falha ao salvar");
+      toast.success("Informações salvas ✨");
+      setFormEditing((p) => ({ ...p, [doc.id]: false }));
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "erro ao salvar");
+    } finally {
+      setFormSaving((p) => ({ ...p, [doc.id]: false }));
+    }
+  };
+
 
   const { docs, required, sent, progress, allDone } = useMemo(() => {
     const docs = data?.documents || [];
@@ -399,6 +457,12 @@ export default function PublicAdmissionPortal() {
               const rejected = d.status === "rejected";
               const up = uploads[d.id];
               const isUploading = up?.status === "uploading";
+              const isForm = d.doc_type === "form";
+              const hasFormData = isForm && d.form_data && Object.values(d.form_data).some((v) => (v || "").toString().trim().length > 0);
+              const showFormFields = isForm && (!hasFormData || formEditing[d.id] || rejected);
+              const fields = (d.form_schema || []) as FormField[];
+              const values = formValues[d.id] || {};
+              const saving = !!formSaving[d.id];
               return (
                 <div
                   key={d.id}
@@ -443,8 +507,8 @@ export default function PublicAdmissionPortal() {
                     </span>
                   </div>
 
-                  {/* Lista de anexos */}
-                  {d.attachments && d.attachments.length > 0 && (
+                  {/* Lista de anexos (apenas docs do tipo upload) */}
+                  {!isForm && d.attachments && d.attachments.length > 0 && (
                     <ul className="space-y-1.5 mb-3">
                       {d.attachments.map((att, idx) => (
                         <li
@@ -584,51 +648,161 @@ export default function PublicAdmissionPortal() {
                     </div>
                   )}
 
-                  <input
-                    ref={(el) => (fileInputs.current[d.id] = el)}
-                    type="file"
-                    className="hidden"
-                    accept="image/*,.heic,.heif,application/pdf"
-                    onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
-                  />
-                  <input
-                    ref={(el) => (cameraInputs.current[d.id] = el)}
-                    type="file"
-                    className="hidden"
-                    accept="image/*,.heic,.heif"
-                    capture="environment"
-                    onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
-                  />
+                  {/* Form-type doc: render fields */}
+                  {isForm && (
+                    <div className="space-y-3">
+                      {!showFormFields && hasFormData && (
+                        <>
+                          <ul className="space-y-1.5">
+                            {fields.map((f) => {
+                              const v = (d.form_data || {})[f.key];
+                              if (!v) return null;
+                              return (
+                                <li
+                                  key={f.key}
+                                  className="flex items-start gap-2 rounded-sm px-2.5 py-1.5"
+                                  style={{ background: `${TEXT_DARK}0d`, border: `1px solid ${GOLD}26` }}
+                                >
+                                  <span className="text-[11px] uppercase tracking-[0.15em] shrink-0 w-32" style={{ color: TEXT_DARK, opacity: 0.65, fontWeight: 600 }}>
+                                    {f.label}
+                                  </span>
+                                  <span className="text-xs break-all flex-1" style={{ color: TEXT_DARK }}>{v}</span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                          {!locked && (
+                            <Button
+                              type="button"
+                              onClick={() => setFormEditing((p) => ({ ...p, [d.id]: true }))}
+                              className="h-10 w-full border-0 hover:opacity-90 touch-manipulation"
+                              style={{ background: `${TEXT_DARK}`, color: CARD, fontFamily: SANS, fontWeight: 500, letterSpacing: "0.05em" }}
+                            >
+                              <Pencil className="h-4 w-4 mr-1.5" /> Editar informações
+                            </Button>
+                          )}
+                        </>
+                      )}
 
-                  {!locked && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <Button
-                        type="button"
-                        disabled={isUploading}
-                        onClick={() => cameraInputs.current[d.id]?.click()}
-                        className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
-                        style={{ background: `${TEXT_DARK}`, color: CARD, fontFamily: SANS, fontWeight: 500, letterSpacing: "0.05em" }}
-                      >
-                        {isUploading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <><Camera className="h-4 w-4 mr-1.5" />{d.attachments?.length ? "Outra foto" : "Tirar foto"}</>
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        disabled={isUploading}
-                        onClick={() => fileInputs.current[d.id]?.click()}
-                        className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
-                        style={{ background: GOLD, color: TEXT_DARK, fontFamily: SANS, fontWeight: 600, letterSpacing: "0.05em" }}
-                      >
-                        {isUploading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>{d.attachments?.length ? <Plus className="h-4 w-4 mr-1.5" /> : <Upload className="h-4 w-4 mr-1.5" />}{d.attachments?.length ? "Adicionar arquivo" : "Enviar arquivo"}</>
-                        )}
-                      </Button>
+                      {showFormFields && (
+                        <>
+                          <div className="space-y-2.5">
+                            {fields.map((f) => (
+                              <div key={f.key} className="space-y-1">
+                                <label className="text-[11px] uppercase tracking-[0.15em] block" style={{ color: TEXT_DARK, opacity: 0.75, fontWeight: 600, fontFamily: SANS }}>
+                                  {f.label}{f.required && <span style={{ color: "#a83232" }}> *</span>}
+                                </label>
+                                {f.type === "select" ? (
+                                  <select
+                                    value={values[f.key] || ""}
+                                    onChange={(e) => setFieldValue(d.id, f.key, e.target.value)}
+                                    className="w-full h-11 rounded-sm px-3 text-sm outline-none focus:ring-2 focus:ring-offset-0"
+                                    style={{ background: "#fff", color: TEXT_DARK, border: `1px solid ${GOLD}66`, fontFamily: SANS }}
+                                  >
+                                    <option value="">Selecione…</option>
+                                    {(f.options || []).map((opt) => (
+                                      <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                  </select>
+                                ) : f.type === "textarea" ? (
+                                  <textarea
+                                    value={values[f.key] || ""}
+                                    onChange={(e) => setFieldValue(d.id, f.key, e.target.value)}
+                                    placeholder={f.placeholder}
+                                    rows={3}
+                                    className="w-full rounded-sm px-3 py-2 text-sm outline-none"
+                                    style={{ background: "#fff", color: TEXT_DARK, border: `1px solid ${GOLD}66`, fontFamily: SANS }}
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={values[f.key] || ""}
+                                    onChange={(e) => setFieldValue(d.id, f.key, e.target.value)}
+                                    placeholder={f.placeholder}
+                                    className="w-full h-11 rounded-sm px-3 text-sm outline-none"
+                                    style={{ background: "#fff", color: TEXT_DARK, border: `1px solid ${GOLD}66`, fontFamily: SANS }}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <div className={hasFormData ? "grid grid-cols-2 gap-2" : ""}>
+                            {hasFormData && (
+                              <Button
+                                type="button"
+                                disabled={saving}
+                                onClick={() => { setFormEditing((p) => ({ ...p, [d.id]: false })); setFormValues((p) => ({ ...p, [d.id]: { ...(d.form_data || {}) } })); }}
+                                className="h-11 w-full border-0 hover:opacity-90 touch-manipulation"
+                                style={{ background: `${TEXT_DARK}1a`, color: TEXT_DARK, fontFamily: SANS, fontWeight: 500 }}
+                              >
+                                Cancelar
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              disabled={saving}
+                              onClick={() => handleSubmitForm(d)}
+                              className="h-11 w-full border-0 hover:opacity-90 touch-manipulation"
+                              style={{ background: GOLD, color: TEXT_DARK, fontFamily: SANS, fontWeight: 600, letterSpacing: "0.05em" }}
+                            >
+                              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><Save className="h-4 w-4 mr-1.5" />Salvar informações</>)}
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
+                  )}
+
+                  {/* Upload-type doc: inputs e botões */}
+                  {!isForm && (
+                    <>
+                      <input
+                        ref={(el) => (fileInputs.current[d.id] = el)}
+                        type="file"
+                        className="hidden"
+                        accept="image/*,.heic,.heif,application/pdf"
+                        onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
+                      />
+                      <input
+                        ref={(el) => (cameraInputs.current[d.id] = el)}
+                        type="file"
+                        className="hidden"
+                        accept="image/*,.heic,.heif"
+                        capture="environment"
+                        onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
+                      />
+
+                      {!locked && (
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <Button
+                            type="button"
+                            disabled={isUploading}
+                            onClick={() => cameraInputs.current[d.id]?.click()}
+                            className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
+                            style={{ background: `${TEXT_DARK}`, color: CARD, fontFamily: SANS, fontWeight: 500, letterSpacing: "0.05em" }}
+                          >
+                            {isUploading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <><Camera className="h-4 w-4 mr-1.5" />{d.attachments?.length ? "Outra foto" : "Tirar foto"}</>
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            disabled={isUploading}
+                            onClick={() => fileInputs.current[d.id]?.click()}
+                            className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
+                            style={{ background: GOLD, color: TEXT_DARK, fontFamily: SANS, fontWeight: 600, letterSpacing: "0.05em" }}
+                          >
+                            {isUploading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>{d.attachments?.length ? <Plus className="h-4 w-4 mr-1.5" /> : <Upload className="h-4 w-4 mr-1.5" />}{d.attachments?.length ? "Adicionar arquivo" : "Enviar arquivo"}</>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               );

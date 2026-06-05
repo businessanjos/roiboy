@@ -341,6 +341,8 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                 {(docs || []).map((doc) => {
                   const fromCandidate = doc.uploaded_via === "candidate";
                   const highlight = doc.status === "received" && fromCandidate;
+                  const isForm = doc.doc_type === "form";
+                  const hasFormData = isForm && doc.form_data && Object.values(doc.form_data).some((v) => (v || "").toString().trim().length > 0);
                   return (
                     <div
                       key={doc.id}
@@ -379,13 +381,37 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                               <><Eye className="h-3 w-3" /> visível ao candidato</>
                             )}
                           </button>
+                          {isForm && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 border-indigo-500/40 text-indigo-700 bg-indigo-500/10">
+                              formulário
+                            </Badge>
+                          )}
                           {fromCandidate && (
                             <Badge variant="outline" className="text-[10px] h-4 px-1 border-blue-500/40 text-blue-700">
                               enviado pelo candidato
                             </Badge>
                           )}
                         </div>
-                        {doc.attachments && doc.attachments.length > 0 && (
+                        {isForm && hasFormData && (
+                          <ul className="mt-2 space-y-1 text-xs bg-muted/40 rounded p-2 border">
+                            {(doc.form_schema || []).map((f) => {
+                              const v = (doc.form_data || {})[f.key];
+                              if (!v) return null;
+                              return (
+                                <li key={f.key} className="flex gap-2">
+                                  <span className="text-muted-foreground font-medium w-32 shrink-0">{f.label}:</span>
+                                  <span className="break-all">{v}</span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                        {isForm && !hasFormData && (
+                          <p className="text-xs text-muted-foreground mt-2 italic">
+                            Aguardando o candidato preencher pelo portal.
+                          </p>
+                        )}
+                        {!isForm && doc.attachments && doc.attachments.length > 0 && (
                           <ul className="mt-2 space-y-1">
                             {doc.attachments.map((att, idx) => (
                               <li key={`${doc.id}-${idx}`} className="flex items-center gap-2 text-xs">
@@ -416,21 +442,25 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                       </div>
                       <Badge className={`text-xs ${DOC_STATUS_COLOR[doc.status]}`} variant="secondary">{DOC_STATUS_LABEL[doc.status]}</Badge>
 
-                      <input
-                        ref={(el) => (fileInputs.current[doc.id] = el)}
-                        type="file"
-                        className="hidden"
-                        onChange={(e) => { if (e.target.files?.[0]) { handleUpload(doc.id, e.target.files[0]); e.target.value = ""; } }}
-                      />
-                      <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.attachments?.length ? "Adicionar outro arquivo" : "Enviar arquivo"}>
-                        {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                      </Button>
+                      {!isForm && (
+                        <>
+                          <input
+                            ref={(el) => (fileInputs.current[doc.id] = el)}
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => { if (e.target.files?.[0]) { handleUpload(doc.id, e.target.files[0]); e.target.value = ""; } }}
+                          />
+                          <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.attachments?.length ? "Adicionar outro arquivo" : "Enviar arquivo"}>
+                            {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                          </Button>
+                        </>
+                      )}
                       {doc.status !== "approved" ? (
                         <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-emerald-600" /></Button>
                       ) : (
                         <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "pending")} title="Reabrir"><X className="h-4 w-4 text-muted-foreground" /></Button>
                       )}
-                      {doc.file_name && doc.status !== "approved" && (
+                      {((doc.file_name || hasFormData) && doc.status !== "approved") && (
                         <Dialog
                           open={rejectingId === doc.id}
                           onOpenChange={(o) => { if (!o) { setRejectingId(null); setRejectReason(""); } }}

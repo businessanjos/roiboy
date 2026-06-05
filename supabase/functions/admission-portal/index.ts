@@ -122,6 +122,24 @@ Deno.serve(async (req) => {
       return json(res || { ok: true });
     }
 
+    if (action === "submit_form" && req.method === "POST") {
+      const body = await req.json().catch(() => ({}));
+      const token = String(body.token || "");
+      const docId = String(body.doc_id || "");
+      const formData = body.form_data;
+      if (!token || !docId || !formData || typeof formData !== "object") {
+        return json({ error: "Campos obrigatórios faltando" }, 400);
+      }
+      const { data: ok, error: rpcErr } = await supabase.rpc("submit_admission_form", {
+        _token: token,
+        _doc_id: docId,
+        _form_data: formData,
+      });
+      if (rpcErr) throw rpcErr;
+      if (!ok) return json({ error: "Não foi possível salvar. Link inválido ou documento inexistente." }, 400);
+      return json({ ok: true });
+    }
+
     return json({ error: "Ação desconhecida" }, 400);
   } catch (e) {
     console.error("admission-portal error", e);

@@ -83,6 +83,9 @@ export interface HRAdmissionDocument {
   attachments: Array<{ name: string; url: string; path: string | null; uploaded_at: string | null; uploaded_via: "rh" | "candidate" | null }> | null;
   notes: string | null;
   sort_order: number;
+  doc_type?: "file" | "form";
+  form_schema?: Array<{ key: string; label: string; type: "text" | "select" | "textarea"; required?: boolean; placeholder?: string; options?: string[] }> | null;
+  form_data?: Record<string, string> | null;
 }
 
 export function useHRAdmissions() {
