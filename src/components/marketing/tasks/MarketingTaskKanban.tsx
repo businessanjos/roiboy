@@ -2,15 +2,19 @@ import { useState, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
+  getFirstCollision,
   PointerSensor,
   useSensor,
   useSensors,
   DragStartEvent,
   DragEndEvent,
   DragOverEvent,
+  CollisionDetection,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import { useCallback } from "react";
 import { MarketingKanbanColumn } from "./MarketingKanbanColumn";
 import { MarketingKanbanCard } from "./MarketingKanbanCard";
 import { MarketingTask, MarketingTaskStatus } from "@/hooks/useMarketingTasks";
