@@ -70,6 +70,7 @@ export function MarketingTaskDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [sectionId, setSectionId] = useState<string | undefined>(undefined);
+  const [columnId, setColumnId] = useState<string | undefined>(undefined);
   const [assigneeId, setAssigneeId] = useState<string | undefined>(undefined);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [priority, setPriority] = useState<MarketingTaskPriority>("medium");
