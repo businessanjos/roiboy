@@ -229,7 +229,33 @@ export default function PublicAdmissionPortal() {
       </header>
 
       {/* CORPO */}
-      <main className="max-w-3xl mx-auto px-5 sm:px-6 py-10 sm:py-14 space-y-6">
+      {/* Sticky mini-progress (mobile) */}
+      {!allDone && required.length > 0 && (
+        <div
+          className="sm:hidden sticky top-0 z-30 px-4 py-2.5 backdrop-blur"
+          style={{
+            background: `${BG_DEEP}ee`,
+            borderBottom: `1px solid ${GOLD}33`,
+          }}
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] uppercase tracking-[0.25em]" style={{ color: GOLD, fontWeight: 600 }}>
+              Progresso
+            </span>
+            <span className="text-[11px] tabular-nums" style={{ color: CARD, opacity: 0.85 }}>
+              {sent}/{required.length} · {progress}%
+            </span>
+          </div>
+          <div className="h-1 rounded-full overflow-hidden" style={{ background: `${GOLD}1f` }}>
+            <div
+              className="h-full transition-all duration-500"
+              style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${GOLD}, #e8c98a)` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-14 space-y-5 sm:space-y-6">
         {/* Conclusão */}
         {allDone && (
           <div
@@ -371,11 +397,12 @@ export default function PublicAdmissionPortal() {
                             <button
                               type="button"
                               onClick={() => handleDelete(d.id, att.path)}
+                              aria-label="Remover este arquivo"
                               title="Remover este arquivo"
-                              className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-sm hover:opacity-100 opacity-60 transition"
+                              className="shrink-0 inline-flex items-center justify-center h-9 w-9 -mr-1.5 rounded-sm active:bg-black/5 opacity-70 hover:opacity-100 transition touch-manipulation"
                               style={{ color: "#a83232" }}
                             >
-                              <X className="h-3.5 w-3.5" />
+                              <X className="h-4 w-4" />
                             </button>
                           )}
                         </li>
@@ -387,14 +414,14 @@ export default function PublicAdmissionPortal() {
                     ref={(el) => (fileInputs.current[d.id] = el)}
                     type="file"
                     className="hidden"
-                    accept="image/*,application/pdf"
+                    accept="image/*,.heic,.heif,application/pdf"
                     onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
                   />
                   <input
                     ref={(el) => (cameraInputs.current[d.id] = el)}
                     type="file"
                     className="hidden"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     capture="environment"
                     onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
                   />
@@ -402,29 +429,29 @@ export default function PublicAdmissionPortal() {
                   {!locked && (
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       <Button
-                        size="sm"
+                        type="button"
                         disabled={uploadingId === d.id}
                         onClick={() => cameraInputs.current[d.id]?.click()}
-                        className="h-9 border-0 hover:opacity-90"
+                        className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
                         style={{ background: `${TEXT_DARK}`, color: CARD, fontFamily: SANS, fontWeight: 500, letterSpacing: "0.05em" }}
                       >
                         {uploadingId === d.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <><Camera className="h-3.5 w-3.5 mr-1.5" />{d.attachments?.length ? "Outra foto" : "Tirar foto"}</>
+                          <><Camera className="h-4 w-4 mr-1.5" />{d.attachments?.length ? "Outra foto" : "Tirar foto"}</>
                         )}
                       </Button>
                       <Button
-                        size="sm"
+                        type="button"
                         disabled={uploadingId === d.id}
                         onClick={() => fileInputs.current[d.id]?.click()}
-                        className="h-9 border-0 hover:opacity-90"
+                        className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
                         style={{ background: GOLD, color: TEXT_DARK, fontFamily: SANS, fontWeight: 600, letterSpacing: "0.05em" }}
                       >
                         {uploadingId === d.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <>{d.attachments?.length ? <Plus className="h-3.5 w-3.5 mr-1.5" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}{d.attachments?.length ? "Adicionar arquivo" : "Enviar arquivo"}</>
+                          <>{d.attachments?.length ? <Plus className="h-4 w-4 mr-1.5" /> : <Upload className="h-4 w-4 mr-1.5" />}{d.attachments?.length ? "Adicionar arquivo" : "Enviar arquivo"}</>
                         )}
                       </Button>
                     </div>
