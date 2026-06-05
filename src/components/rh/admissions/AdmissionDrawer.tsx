@@ -108,15 +108,19 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
     if (!currentUser?.account_id) return;
     if (!confirm("Remover o arquivo enviado deste documento?")) return;
     try {
-      const { data: list } = await supabase.storage
-        .from("admission-docs")
-        .list(`${currentUser.account_id}/${admission.id}`);
-      const matches = (list || []).filter((f) => f.name.startsWith(`${docId}.`));
-      if (matches.length > 0) {
-        await supabase.storage.from("admission-docs").remove(
-          matches.map((f) => `${currentUser.account_id}/${admission.id}/${f.name}`)
-        );
-      }
+      // Remove de ambos os caminhos: RH ({account_id}/...) e candidato (portal/...)
+      const removeFromPath = async (prefix: string) => {
+        const { data: list } = await supabase.storage.from("admission-docs").list(prefix);
+        const matches = (list || []).filter((f) => f.name.startsWith(`${docId}.`));
+        if (matches.length > 0) {
+          await supabase.storage
+            .from("admission-docs")
+            .remove(matches.map((f) => `${prefix}/${f.name}`));
+        }
+      };
+      await removeFromPath(`${currentUser.account_id}/${admission.id}`);
+      await removeFromPath(`portal/${admission.id}`);
+
       await updateDoc.mutateAsync({
         id: docId,
         admission_id: admission.id,
@@ -124,11 +128,31 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
         file_url: null,
         file_name: null,
         uploaded_at: null,
+        uploaded_via: null,
+        notes: null,
       });
       toast.success("Arquivo removido");
-    } catch (e: any) {
-      toast.error("Erro ao remover: " + e.message);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "erro";
+      toast.error("Erro ao remover: " + msg);
     }
+  };
+
+  const handleReject = async (docId: string) => {
+    const reason = rejectReason.trim();
+    if (!reason) {
+      toast.error("Informe o motivo da rejeição para o candidato.");
+      return;
+    }
+    await updateDoc.mutateAsync({
+      id: docId,
+      admission_id: admission.id,
+      status: "rejected",
+      notes: reason,
+    });
+    setRejectingId(null);
+    setRejectReason("");
+    toast.success("Documento rejeitado. O candidato verá o motivo no portal.");
   };
 
   return (
