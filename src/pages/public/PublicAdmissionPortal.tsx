@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-  Upload, CheckCircle2, Clock, AlertCircle, Loader2, FileCheck2, Sparkles,
+  Upload, CheckCircle2, Clock, AlertCircle, Loader2, FileCheck2,
   Camera, FileText, ExternalLink, PartyPopper, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import letreiro from "@/assets/eternum/letreiro.png.asset.json";
 
 interface Doc {
   id: string;
@@ -36,11 +36,21 @@ interface PortalData {
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admission-portal`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-const STATUS_META: Record<Doc["status"], { label: string; cls: string; icon: typeof Clock }> = {
-  pending: { label: "Pendente", cls: "bg-amber-500/15 text-amber-300 border-amber-500/30", icon: Clock },
-  received: { label: "Recebido", cls: "bg-blue-500/15 text-blue-300 border-blue-500/30", icon: FileCheck2 },
-  approved: { label: "Aprovado", cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", icon: CheckCircle2 },
-  rejected: { label: "Reenviar", cls: "bg-rose-500/15 text-rose-300 border-rose-500/30", icon: AlertCircle },
+// Paleta Eternum (mesma da Carta-Proposta)
+const BG = "#2a1b0f";
+const BG_DEEP = "#1d1208";
+const CARD = "#ede6cb";
+const TEXT_DARK = "#3b2510";
+const GOLD = "#c9a86a";
+
+const SANS = "'Montserrat', system-ui, sans-serif";
+const SERIF = "'Merriweather', Georgia, serif";
+
+const STATUS_META: Record<Doc["status"], { label: string; bg: string; border: string; color: string; icon: typeof Clock }> = {
+  pending:  { label: "Pendente",  bg: "rgba(201,168,106,0.10)", border: "rgba(201,168,106,0.40)", color: "#d7b46a", icon: Clock },
+  received: { label: "Recebido",  bg: "rgba(120,170,200,0.12)", border: "rgba(120,170,200,0.40)", color: "#a8c8e0", icon: FileCheck2 },
+  approved: { label: "Aprovado",  bg: "rgba(140,190,140,0.12)", border: "rgba(140,190,140,0.40)", color: "#b8d8b8", icon: CheckCircle2 },
+  rejected: { label: "Reenviar",  bg: "rgba(220,120,120,0.12)", border: "rgba(220,120,120,0.45)", color: "#e8a8a8", icon: AlertCircle },
 };
 
 export default function PublicAdmissionPortal() {
@@ -88,7 +98,7 @@ export default function PublicAdmissionPortal() {
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "falha no envio");
-      toast.success("Documento enviado com sucesso! ✨");
+      toast.success("Documento enviado com sucesso ✨");
       await load();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "erro no envio";
@@ -109,19 +119,19 @@ export default function PublicAdmissionPortal() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-400">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: BG }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: GOLD }} />
       </div>
     );
   }
 
   if (!data || data.expired) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6 text-center">
-        <div>
-          <AlertCircle className="h-12 w-12 mx-auto text-rose-400 mb-3" />
-          <h1 className="text-xl font-semibold text-zinc-100">Link inválido ou expirado</h1>
-          <p className="text-sm text-zinc-400 mt-2 max-w-sm mx-auto">
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: BG, fontFamily: SANS }}>
+        <div className="text-center max-w-md space-y-3" style={{ color: CARD }}>
+          <AlertCircle className="h-12 w-12 mx-auto opacity-60" />
+          <h1 className="text-xl font-semibold" style={{ fontFamily: SERIF }}>Link inválido ou expirado</h1>
+          <p className="text-sm opacity-70">
             Entre em contato com o RH da Eternum para receber um novo link de envio de documentos.
           </p>
         </div>
@@ -129,33 +139,82 @@ export default function PublicAdmissionPortal() {
     );
   }
 
+  const firstName = (data.candidate_name || "").split(" ")[0] || data.candidate_name;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-black text-zinc-100">
-      <div className="max-w-2xl mx-auto px-5 py-10 sm:py-14">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-medium mb-4">
-            <Sparkles className="h-3 w-3" />
-            Eternum · Onboarding
+    <div
+      className="min-h-screen overflow-x-hidden"
+      style={{
+        background: BG,
+        color: CARD,
+        fontFamily: SANS,
+        backgroundImage: `radial-gradient(circle at 20% 0%, ${GOLD}15, transparent 50%), radial-gradient(circle at 80% 100%, ${GOLD}10, transparent 50%)`,
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
+      {/* HERO */}
+      <header className="relative overflow-hidden" style={{ background: `linear-gradient(180deg, ${BG_DEEP} 0%, ${BG} 100%)` }}>
+        <div
+          className="absolute inset-0 opacity-[0.08] pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(${GOLD} 1px, transparent 1px)`,
+            backgroundSize: "32px 32px",
+          }}
+        />
+        <div className="relative max-w-3xl mx-auto px-5 sm:px-6 pt-10 pb-12 sm:pt-12 sm:pb-16">
+          {/* Logo */}
+          <div className="flex justify-center mb-8 sm:mb-10">
+            <img src={letreiro.url} alt="Eternum" className="h-6 sm:h-7 md:h-9 object-contain opacity-95" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Olá, {data.candidate_name.split(" ")[0]}!
+
+          {/* Linha dourada + tag */}
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <span className="h-px w-10 sm:w-12" style={{ background: GOLD }} />
+            <span
+              className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-light"
+              style={{ color: GOLD, fontFamily: SANS }}
+            >
+              Admissão · Confidencial
+            </span>
+            <span className="h-px w-10 sm:w-12" style={{ background: GOLD }} />
+          </div>
+
+          <h1
+            className="text-center text-[28px] leading-[1.15] sm:text-4xl md:text-5xl max-w-2xl mx-auto"
+            style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
+          >
+            Bem-vindo, {firstName}.
           </h1>
-          <p className="text-zinc-400 mt-3 text-base">
-            Que bom te ter por aqui. Pra começar sua admissão
+          <p
+            className="mt-5 sm:mt-6 text-center text-[15px] sm:text-base md:text-lg max-w-xl mx-auto leading-relaxed"
+            style={{ color: "#e8dcc0", fontFamily: SERIF, fontWeight: 300, fontStyle: "italic", opacity: 0.9 }}
+          >
+            Pra começar a sua jornada
             {data.position_title && (
-              <> como <span className="text-zinc-200 font-medium">{data.position_title}</span></>
+              <> como <span style={{ color: GOLD, fontStyle: "normal" }}>{data.position_title}</span></>
             )}
-            , precisamos de alguns documentos.
+            , precisamos de alguns documentos. Pode enviar tudo por aqui — é seguro e rápido.
           </p>
         </div>
+      </header>
 
+      {/* CORPO */}
+      <main className="max-w-3xl mx-auto px-5 sm:px-6 py-10 sm:py-14 space-y-6">
         {/* Conclusão */}
         {allDone && (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 mb-6 text-center">
-            <PartyPopper className="h-8 w-8 mx-auto text-emerald-300 mb-2" />
-            <h2 className="text-lg font-semibold text-emerald-100">Tudo enviado! 🎉</h2>
-            <p className="text-sm text-emerald-200/80 mt-1">
+          <div
+            className="rounded-sm p-6 text-center relative overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, ${CARD} 0%, #f4eed5 100%)`,
+              boxShadow: `0 20px 60px -20px rgba(0,0,0,0.5), inset 0 0 0 1px ${GOLD}40`,
+            }}
+          >
+            <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
+            <PartyPopper className="h-8 w-8 mx-auto mb-2" style={{ color: GOLD }} />
+            <h2 className="text-xl" style={{ fontFamily: SERIF, color: TEXT_DARK, fontWeight: 400 }}>
+              Tudo enviado.
+            </h2>
+            <p className="text-sm mt-2 max-w-md mx-auto" style={{ color: TEXT_DARK, opacity: 0.75 }}>
               Nosso time de RH vai revisar os documentos e te avisar sobre os próximos passos.
               Você pode fechar essa página — ou substituir um arquivo abaixo, se quiser.
             </p>
@@ -163,45 +222,79 @@ export default function PublicAdmissionPortal() {
         )}
 
         {/* Progress */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 backdrop-blur p-5 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-zinc-300">Seu progresso</span>
-            <span className="text-sm text-zinc-400">{sent}/{required.length} enviados · {progress}%</span>
+        <div
+          className="rounded-sm p-5"
+          style={{
+            background: `${BG_DEEP}cc`,
+            boxShadow: `0 10px 40px -15px rgba(0,0,0,0.5), inset 0 0 0 1px ${GOLD}30`,
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: GOLD, fontWeight: 600 }}>
+              Seu progresso
+            </span>
+            <span className="text-xs" style={{ color: CARD, opacity: 0.75 }}>
+              {sent}/{required.length} enviados · {progress}%
+            </span>
           </div>
-          <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: `${GOLD}1f` }}>
             <div
-              className="h-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500"
-              style={{ width: `${progress}%` }}
+              className="h-full transition-all duration-500"
+              style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${GOLD}, #e8c98a)` }}
             />
           </div>
+        </div>
+
+        {/* Section label */}
+        <div className="flex items-center gap-3 pt-4">
+          <span className="h-px w-8" style={{ background: GOLD }} />
+          <span
+            className="text-[10px] uppercase tracking-[0.35em]"
+            style={{ color: GOLD, fontWeight: 600 }}
+          >
+            Documentos
+          </span>
         </div>
 
         {/* Docs list */}
         <div className="space-y-3">
           {docs.length === 0 ? (
-            <p className="text-center text-zinc-500 py-8">Nenhum documento configurado ainda. Fale com o RH.</p>
+            <p className="text-center py-8 text-sm" style={{ color: CARD, opacity: 0.6 }}>
+              Nenhum documento configurado ainda. Fale com o RH.
+            </p>
           ) : (
             docs.map((d) => {
               const meta = STATUS_META[d.status];
               const Icon = meta.icon;
               const locked = d.status === "approved";
+              const rejected = d.status === "rejected";
               return (
                 <div
                   key={d.id}
-                  className={`rounded-xl border p-4 transition ${
-                    d.status === "rejected"
-                      ? "border-rose-500/40 bg-rose-500/5"
-                      : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
-                  }`}
+                  className="relative rounded-sm p-5 transition"
+                  style={{
+                    background: CARD,
+                    boxShadow: rejected
+                      ? `0 10px 30px -10px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(220,120,120,0.55)`
+                      : `0 10px 30px -10px rgba(0,0,0,0.4), inset 0 0 0 1px ${GOLD}33`,
+                  }}
                 >
+                  {/* fio dourado superior */}
+                  <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}66, transparent)` }} />
+
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-medium text-zinc-100">{d.label}</h3>
+                        <h3 className="font-medium" style={{ color: TEXT_DARK, fontFamily: SERIF, fontWeight: 500 }}>
+                          {d.label}
+                        </h3>
                         {d.required && (
-                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-zinc-700 text-zinc-400">
+                          <span
+                            className="text-[9px] uppercase tracking-[0.25em] px-1.5 py-0.5 rounded-sm"
+                            style={{ color: GOLD, border: `1px solid ${GOLD}66`, fontWeight: 600 }}
+                          >
                             obrigatório
-                          </Badge>
+                          </span>
                         )}
                       </div>
                       {d.file_name && (
@@ -211,27 +304,31 @@ export default function PublicAdmissionPortal() {
                               href={d.file_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 max-w-full"
+                              className="inline-flex items-center gap-1.5 text-xs max-w-full hover:underline"
+                              style={{ color: TEXT_DARK, opacity: 0.7 }}
                             >
                               <FileText className="h-3 w-3 shrink-0" />
                               <span className="truncate">{d.file_name}</span>
                               <ExternalLink className="h-3 w-3 shrink-0" />
                             </a>
                           ) : (
-                            <p className="text-xs text-zinc-500 truncate">📎 {d.file_name}</p>
+                            <p className="text-xs truncate" style={{ color: TEXT_DARK, opacity: 0.6 }}>📎 {d.file_name}</p>
                           )}
                         </div>
                       )}
-                      {d.notes && d.status === "rejected" && (
-                        <p className="text-xs text-rose-300 mt-2 leading-relaxed">
-                          <span className="font-medium">Motivo:</span> {d.notes}
+                      {d.notes && rejected && (
+                        <p className="text-xs mt-2 leading-relaxed" style={{ color: "#a83232" }}>
+                          <span className="font-semibold">Motivo:</span> {d.notes}
                         </p>
                       )}
                     </div>
-                    <Badge variant="outline" className={`text-xs shrink-0 ${meta.cls}`}>
-                      <Icon className="h-3 w-3 mr-1" />
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.2em] px-2 py-1 rounded-sm shrink-0 font-semibold"
+                      style={{ background: meta.bg, border: `1px solid ${meta.border}`, color: meta.color }}
+                    >
+                      <Icon className="h-3 w-3" />
                       {meta.label}
-                    </Badge>
+                    </span>
                   </div>
 
                   <input
@@ -251,13 +348,13 @@ export default function PublicAdmissionPortal() {
                   />
 
                   {!locked && (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-2 mt-2">
                       <Button
                         size="sm"
-                        variant="outline"
                         disabled={uploadingId === d.id}
                         onClick={() => cameraInputs.current[d.id]?.click()}
-                        className="border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-200"
+                        className="h-9 border-0 hover:opacity-90"
+                        style={{ background: `${TEXT_DARK}`, color: CARD, fontFamily: SANS, fontWeight: 500, letterSpacing: "0.05em" }}
                       >
                         {uploadingId === d.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -267,10 +364,10 @@ export default function PublicAdmissionPortal() {
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
                         disabled={uploadingId === d.id}
                         onClick={() => fileInputs.current[d.id]?.click()}
-                        className="border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-200"
+                        className="h-9 border-0 hover:opacity-90"
+                        style={{ background: GOLD, color: TEXT_DARK, fontFamily: SANS, fontWeight: 600, letterSpacing: "0.05em" }}
                       >
                         {uploadingId === d.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -287,19 +384,22 @@ export default function PublicAdmissionPortal() {
         </div>
 
         {/* Footer */}
-        <div className="mt-10 space-y-2.5 text-center">
-          <div className="flex items-center justify-center gap-2 text-xs text-zinc-500">
-            <ShieldCheck className="h-3.5 w-3.5" />
+        <div className="mt-12 space-y-2.5 text-center pt-8" style={{ borderTop: `1px solid ${GOLD}22` }}>
+          <div className="flex items-center justify-center gap-2 text-xs" style={{ color: CARD, opacity: 0.65 }}>
+            <ShieldCheck className="h-3.5 w-3.5" style={{ color: GOLD }} />
             Seus documentos são confidenciais e usados apenas para sua admissão.
           </div>
-          <p className="text-xs text-zinc-600">
+          <p className="text-xs" style={{ color: CARD, opacity: 0.5 }}>
             Aceitos: imagens (JPG, PNG, HEIC) ou PDF · até 15MB cada
           </p>
-          <p className="text-xs text-zinc-600">
+          <p className="text-xs" style={{ color: CARD, opacity: 0.5 }}>
             Dúvidas? Fale com o RH no WhatsApp informado na sua carta-proposta.
           </p>
+          <div className="pt-4">
+            <img src={letreiro.url} alt="Eternum" className="h-4 mx-auto opacity-40" />
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
