@@ -346,7 +346,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                       key={doc.id}
                       className={`border rounded-lg p-3 flex flex-wrap items-center gap-3 transition ${
                         highlight ? "border-blue-500/40 bg-blue-500/5 ring-1 ring-blue-500/20" : ""
-                      }`}
+                      } ${doc.visible_to_candidate === false ? "opacity-60 bg-muted/30" : ""}`}
                     >
                       <div className="flex-1 min-w-[200px]">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -362,6 +362,22 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                             }`}
                           >
                             {doc.required ? "obrigatório" : "opcional"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateDoc.mutate({ id: doc.id, admission_id: admission.id, visible_to_candidate: !(doc.visible_to_candidate !== false) } as any)}
+                            title={doc.visible_to_candidate === false ? "Mostrar para o candidato no portal" : "Ocultar do candidato (uso interno do RH)"}
+                            className={`text-[10px] h-5 px-1.5 rounded border transition inline-flex items-center gap-1 ${
+                              doc.visible_to_candidate === false
+                                ? "border-muted-foreground/30 bg-muted text-muted-foreground hover:bg-muted/70"
+                                : "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20"
+                            }`}
+                          >
+                            {doc.visible_to_candidate === false ? (
+                              <><EyeOff className="h-3 w-3" /> oculto do candidato</>
+                            ) : (
+                              <><Eye className="h-3 w-3" /> visível ao candidato</>
+                            )}
                           </button>
                           {fromCandidate && (
                             <Badge variant="outline" className="text-[10px] h-4 px-1 border-blue-500/40 text-blue-700">
