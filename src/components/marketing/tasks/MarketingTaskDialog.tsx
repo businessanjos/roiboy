@@ -25,6 +25,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMarketingTasks, MarketingTask, MarketingTaskPriority, MarketingTaskStatus, MediaAttachment } from "@/hooks/useMarketingTasks";
 import { useMarketingTaskSections } from "@/hooks/useMarketingTaskSections";
+import { useMarketingTaskColumns } from "@/hooks/useMarketingTaskColumns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
