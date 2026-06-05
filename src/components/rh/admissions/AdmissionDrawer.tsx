@@ -341,6 +341,8 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                 {(docs || []).map((doc) => {
                   const fromCandidate = doc.uploaded_via === "candidate";
                   const highlight = doc.status === "received" && fromCandidate;
+                  const isForm = doc.doc_type === "form";
+                  const hasFormData = isForm && doc.form_data && Object.values(doc.form_data).some((v) => (v || "").toString().trim().length > 0);
                   return (
                     <div
                       key={doc.id}
