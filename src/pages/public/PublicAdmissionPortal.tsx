@@ -229,7 +229,33 @@ export default function PublicAdmissionPortal() {
       </header>
 
       {/* CORPO */}
-      <main className="max-w-3xl mx-auto px-5 sm:px-6 py-10 sm:py-14 space-y-6">
+      {/* Sticky mini-progress (mobile) */}
+      {!allDone && required.length > 0 && (
+        <div
+          className="sm:hidden sticky top-0 z-30 px-4 py-2.5 backdrop-blur"
+          style={{
+            background: `${BG_DEEP}ee`,
+            borderBottom: `1px solid ${GOLD}33`,
+          }}
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] uppercase tracking-[0.25em]" style={{ color: GOLD, fontWeight: 600 }}>
+              Progresso
+            </span>
+            <span className="text-[11px] tabular-nums" style={{ color: CARD, opacity: 0.85 }}>
+              {sent}/{required.length} · {progress}%
+            </span>
+          </div>
+          <div className="h-1 rounded-full overflow-hidden" style={{ background: `${GOLD}1f` }}>
+            <div
+              className="h-full transition-all duration-500"
+              style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${GOLD}, #e8c98a)` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-14 space-y-5 sm:space-y-6">
         {/* Conclusão */}
         {allDone && (
           <div
