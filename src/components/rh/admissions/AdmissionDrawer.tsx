@@ -163,7 +163,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                 <Label className="text-xs">Clínica</Label>
                 <Input
                   defaultValue={admission.exam_clinic || ""}
-                  placeholder="Ex.: Clínica Ryka"
+                  placeholder="Nome da clínica"
                   onBlur={(e) => e.target.value !== (admission.exam_clinic || "") && updateAdmission.mutate({ id: admission.id, exam_clinic: e.target.value || null })}
                 />
               </div>
