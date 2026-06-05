@@ -1,4 +1,4 @@
-// Public portal for admission candidates: read checklist and upload documents.
+// Public portal for admission candidates: read checklist, upload e remover documentos.
 // No auth required — protected by per-admission public_token.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
@@ -11,7 +11,7 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BUCKET = "admission-docs";
-const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
+const MAX_BYTES = 15 * 1024 * 1024;
 const ALLOWED_MIME = [
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
   "application/pdf",
@@ -58,22 +58,20 @@ Deno.serve(async (req) => {
         return json({ error: "Formato não permitido. Envie JPG, PNG, HEIC ou PDF." }, 400);
       }
 
-      // Resolve admission via token e valida que o doc pertence
       const { data: portal, error: pErr } = await supabase.rpc("get_admission_portal", { _token: token });
       if (pErr) throw pErr;
       if (!portal || portal.expired) return json({ error: "Link inválido ou expirado" }, 403);
 
       const docs = (portal.documents || []) as Array<{ id: string }>;
-      if (!docs.find((d) => d.id === docId)) {
-        return json({ error: "Documento não encontrado" }, 404);
-      }
+      if (!docs.find((d) => d.id === docId)) return json({ error: "Documento não encontrado" }, 404);
 
       const admissionId = portal.id as string;
-      const path = `portal/${admissionId}/${docId}.${ext}`;
+      const unique = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+      const path = `portal/${admissionId}/${docId}/${unique}.${ext}`;
       const buf = new Uint8Array(await file.arrayBuffer());
 
       const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, buf, {
-        upsert: true,
+        upsert: false,
         contentType: mime || "application/octet-stream",
       });
       if (upErr) throw upErr;
@@ -88,11 +86,40 @@ Deno.serve(async (req) => {
         _doc_id: docId,
         _file_url: signed.signedUrl,
         _file_name: file.name.slice(0, 200),
+        _path: path,
       });
       if (rpcErr) throw rpcErr;
       if (!ok) return json({ error: "Documento não encontrado" }, 404);
 
-      return json({ ok: true, file_url: signed.signedUrl });
+      return json({ ok: true, file_url: signed.signedUrl, path });
+    }
+
+    if (action === "delete" && req.method === "POST") {
+      const body = await req.json().catch(() => ({}));
+      const token = String(body.token || "");
+      const docId = String(body.doc_id || "");
+      const path = String(body.path || "");
+      if (!token || !docId || !path) return json({ error: "Campos obrigatórios faltando" }, 400);
+
+      // Valida que o caminho pertence a um doc dessa admissão (portal/{adm}/{docId}/...)
+      const { data: portal, error: pErr } = await supabase.rpc("get_admission_portal", { _token: token });
+      if (pErr) throw pErr;
+      if (!portal || portal.expired) return json({ error: "Link inválido ou expirado" }, 403);
+      const expectedPrefix = `portal/${portal.id}/${docId}/`;
+      if (!path.startsWith(expectedPrefix)) {
+        return json({ error: "Caminho inválido" }, 400);
+      }
+
+      // Remove do storage (ignora erro de "não encontrado")
+      await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
+
+      const { data: res, error: rpcErr } = await supabase.rpc("delete_admission_doc_attachment", {
+        _token: token,
+        _doc_id: docId,
+        _path: path,
+      });
+      if (rpcErr) throw rpcErr;
+      return json(res || { ok: true });
     }
 
     return json({ error: "Ação desconhecida" }, 400);
