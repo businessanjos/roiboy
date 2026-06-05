@@ -221,7 +221,7 @@ export default function Sectors() {
 
     let filtered = sectors.filter((s) => hasSectorAccess(s.id));
     // RH is only visible to the allowed email
-    if (currentUser?.email !== RH_ALLOWED_EMAIL) {
+    if (!RH_ALLOWED_EMAILS.includes((currentUser?.email || "").toLowerCase())) {
       filtered = filtered.filter(s => s.id !== "rh");
     }
 

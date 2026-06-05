@@ -231,7 +231,7 @@ export default function HRServiceProviderProfile() {
     setCnpjLooking(false);
   };
 
-  if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
+  if (currentUser && !RH_ALLOWED_EMAILS.includes((currentUser.email || "").toLowerCase())) {
     return <Navigate to="/" replace />;
   }
 
