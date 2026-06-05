@@ -88,6 +88,9 @@ export default function PublicAdmissionPortal() {
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploads, setUploads] = useState<Record<string, UploadState | undefined>>({});
+  const [formValues, setFormValues] = useState<Record<string, Record<string, string>>>({});
+  const [formSaving, setFormSaving] = useState<Record<string, boolean>>({});
+  const [formEditing, setFormEditing] = useState<Record<string, boolean>>({});
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const cameraInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const successTimers = useRef<Record<string, number>>({});
@@ -100,7 +103,16 @@ export default function PublicAdmissionPortal() {
         headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
       });
       if (!res.ok) throw new Error("not_found");
-      setData(await res.json());
+      const json: PortalData = await res.json();
+      setData(json);
+      // hydrate form values
+      const next: Record<string, Record<string, string>> = {};
+      (json.documents || []).forEach((d) => {
+        if (d.doc_type === "form") {
+          next[d.id] = { ...(d.form_data || {}) };
+        }
+      });
+      setFormValues((prev) => ({ ...next, ...prev }));
     } catch {
       setData(null);
     } finally {
