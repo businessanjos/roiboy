@@ -16,6 +16,7 @@ import { JOB_BENEFITS, WORK_MODEL_LABELS, CONTRACT_TYPE_LABELS, JOB_SENIORITY_LA
 import { suggestKpis, type KpiSuggestion } from "@/constants/kpiSuggestions";
 import { getPublicOrigin } from "@/lib/publicLink";
 import { cn } from "@/lib/utils";
+import { OfferRichTextarea } from "@/components/rh/offers/OfferRichTextarea";
 
 const STEPS = [
   { id: 1, title: "Candidato" },
@@ -552,7 +553,7 @@ export default function RHOfferWizard() {
               </div>
               <div>
                 <Label>Remuneração variável</Label>
-                <Textarea rows={2} value={form.variable_compensation} onChange={(e) => set("variable_compensation", e.target.value)} placeholder="Ex.: PLR semestral atrelada a metas..." />
+                <OfferRichTextarea rows={2} value={form.variable_compensation} onChange={(v) => set("variable_compensation", v)} placeholder="Ex.: PLR semestral atrelada a metas..." />
               </div>
               <div>
                 <Label className="mb-2 block">Benefícios</Label>
@@ -605,11 +606,11 @@ export default function RHOfferWizard() {
               </div>
               <div>
                 <Label>Sobre a Eternum</Label>
-                <Textarea rows={6} value={form.company_intro} onChange={(e) => set("company_intro", e.target.value)} placeholder={DEFAULT_COMPANY_INTRO} />
+                <OfferRichTextarea rows={6} value={form.company_intro} onChange={(v) => set("company_intro", v)} placeholder={DEFAULT_COMPANY_INTRO} />
               </div>
               <div>
                 <Label>Sobre a vaga / Pitch</Label>
-                <Textarea rows={6} value={form.role_pitch} onChange={(e) => set("role_pitch", e.target.value)} placeholder="Por que esse papel é estratégico, o que a pessoa vai fazer, com quem vai trabalhar, como o sucesso será medido..." />
+                <OfferRichTextarea rows={6} value={form.role_pitch} onChange={(v) => set("role_pitch", v)} placeholder="Por que esse papel é estratégico, o que a pessoa vai fazer, com quem vai trabalhar, como o sucesso será medido..." />
               </div>
 
               <div className="space-y-3 p-4 rounded-lg border border-dashed border-amber-300 bg-amber-50/40 dark:bg-amber-950/10">
@@ -715,7 +716,7 @@ export default function RHOfferWizard() {
               </div>
               <div>
                 <Label>Próximos passos</Label>
-                <Textarea rows={4} value={form.next_steps} onChange={(e) => set("next_steps", e.target.value)} placeholder={DEFAULT_NEXT_STEPS} />
+                <OfferRichTextarea rows={4} value={form.next_steps} onChange={(v) => set("next_steps", v)} placeholder={DEFAULT_NEXT_STEPS} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
