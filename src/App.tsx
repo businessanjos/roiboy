@@ -173,6 +173,7 @@ const HRPartnerProfile = lazyRetry(() => import("./pages/rh/HRPartnerProfile"));
 const RHPositions = lazyRetry(() => import("./pages/rh/RHPositions"));
 const RHOffers = lazyRetry(() => import("./pages/rh/RHOffers"));
 const RHOfferWizard = lazyRetry(() => import("./pages/rh/RHOfferWizard"));
+const RHAdmissions = lazyRetry(() => import("./pages/rh/RHAdmissions"));
 const PublicJobOffer = lazyRetry(() => import("./pages/public/PublicJobOffer"));
 const SharedInsights = lazyRetry(() => import("./pages/SharedInsights"));
 const ExternalDashboard = lazyRetry(() => import("./pages/ExternalDashboard"));
