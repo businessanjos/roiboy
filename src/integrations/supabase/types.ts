@@ -10179,6 +10179,164 @@ export type Database = {
           },
         ]
       }
+      hr_admission_documents: {
+        Row: {
+          admission_id: string
+          created_at: string
+          doc_key: string
+          file_name: string | null
+          file_url: string | null
+          id: string
+          label: string
+          notes: string | null
+          required: boolean
+          sort_order: number
+          status: string
+          updated_at: string
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          admission_id: string
+          created_at?: string
+          doc_key: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          label: string
+          notes?: string | null
+          required?: boolean
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          admission_id?: string
+          created_at?: string
+          doc_key?: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          label?: string
+          notes?: string | null
+          required?: boolean
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_admission_documents_admission_id_fkey"
+            columns: ["admission_id"]
+            isOneToOne: false
+            referencedRelation: "hr_admissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_admissions: {
+        Row: {
+          account_id: string
+          admitted_at: string | null
+          candidate_email: string | null
+          candidate_name: string
+          candidate_phone: string | null
+          candidate_photo_url: string | null
+          contract_signed_at: string | null
+          contract_type: string
+          created_at: string
+          created_by: string | null
+          department: string | null
+          exam_clinic: string | null
+          exam_done_at: string | null
+          exam_result: string | null
+          exam_scheduled_at: string | null
+          id: string
+          job_id: string | null
+          notes: string | null
+          offer_id: string | null
+          onboarding_scheduled_at: string | null
+          position_title: string | null
+          responsible_user_id: string | null
+          stage: string
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          admitted_at?: string | null
+          candidate_email?: string | null
+          candidate_name: string
+          candidate_phone?: string | null
+          candidate_photo_url?: string | null
+          contract_signed_at?: string | null
+          contract_type?: string
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          exam_clinic?: string | null
+          exam_done_at?: string | null
+          exam_result?: string | null
+          exam_scheduled_at?: string | null
+          id?: string
+          job_id?: string | null
+          notes?: string | null
+          offer_id?: string | null
+          onboarding_scheduled_at?: string | null
+          position_title?: string | null
+          responsible_user_id?: string | null
+          stage?: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          admitted_at?: string | null
+          candidate_email?: string | null
+          candidate_name?: string
+          candidate_phone?: string | null
+          candidate_photo_url?: string | null
+          contract_signed_at?: string | null
+          contract_type?: string
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          exam_clinic?: string | null
+          exam_done_at?: string | null
+          exam_result?: string | null
+          exam_scheduled_at?: string | null
+          id?: string
+          job_id?: string | null
+          notes?: string | null
+          offer_id?: string | null
+          onboarding_scheduled_at?: string | null
+          position_title?: string | null
+          responsible_user_id?: string | null
+          stage?: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_admissions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_admissions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "hr_job_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_benefits: {
         Row: {
           account_id: string
@@ -23363,6 +23521,10 @@ export type Database = {
           p_reason: string
         }
         Returns: Json
+      }
+      seed_clt_admission_docs: {
+        Args: { _admission_id: string }
+        Returns: undefined
       }
       settle_installment_from_import: {
         Args: { p_payment_status?: string; p_row_id: string }
