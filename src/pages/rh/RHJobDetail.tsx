@@ -1,15 +1,51 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Share2, Pencil, Copy, Check } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail } from "lucide-react";
 import { useHRJobById } from "@/hooks/useHRJobs";
 import CandidateKanbanBoard from "@/components/rh/jobs/CandidateKanbanBoard";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/types/job";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { getPublicOrigin } from "@/lib/publicLink";
+
+interface JobOfferRow {
+  id: string;
+  public_token: string;
+  candidate_name: string | null;
+  candidate_email: string | null;
+  status: string;
+  salary_amount: number | null;
+  salary_currency: string | null;
+  sent_at: string | null;
+  responded_at: string | null;
+  view_count: number | null;
+  created_at: string;
+}
+
+const OFFER_STATUS_LABELS: Record<string, string> = {
+  draft: "Rascunho",
+  sent: "Enviada",
+  viewed: "Visualizada",
+  accepted: "Aceita",
+  declined: "Recusada",
+  expired: "Expirada",
+};
+
+const OFFER_STATUS_COLORS: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  sent: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+  viewed: "bg-amber-500/10 text-amber-600 border-amber-500/30",
+  accepted: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+  declined: "bg-red-500/10 text-red-600 border-red-500/30",
+  expired: "bg-muted text-muted-foreground",
+};
+
 
 export default function RHJobDetail() {
   const { id } = useParams<{ id: string }>();
