@@ -117,6 +117,27 @@ export default function PublicAdmissionPortal() {
     }
   };
 
+  const handleDelete = async (docId: string, path: string | null) => {
+    if (!token || !path) {
+      toast.error("Esse arquivo não pode ser removido por aqui — fale com o RH.");
+      return;
+    }
+    if (!confirm("Remover este arquivo? Você pode enviar outro em seguida.")) return;
+    try {
+      const res = await fetch(`${FN_URL}?action=delete`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ token, doc_id: docId, path }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "falha ao remover");
+      toast.success("Arquivo removido");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "erro ao remover");
+    }
+  };
+
   const { docs, required, sent, progress, allDone } = useMemo(() => {
     const docs = data?.documents || [];
     const required = docs.filter((d) => d.required);
