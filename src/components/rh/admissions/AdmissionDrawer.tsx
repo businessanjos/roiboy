@@ -351,7 +351,18 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                       <div className="flex-1 min-w-[200px]">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-medium">{doc.label}</p>
-                          {doc.required && <Badge variant="outline" className="text-[10px] h-4 px-1">obrigatório</Badge>}
+                          <button
+                            type="button"
+                            onClick={() => updateDoc.mutate({ id: doc.id, admission_id: admission.id, required: !doc.required })}
+                            title={doc.required ? "Tornar opcional" : "Tornar obrigatório"}
+                            className={`text-[10px] h-5 px-1.5 rounded border transition ${
+                              doc.required
+                                ? "border-rose-500/40 bg-rose-500/10 text-rose-700 hover:bg-rose-500/20"
+                                : "border-muted-foreground/30 bg-muted text-muted-foreground hover:bg-muted/70"
+                            }`}
+                          >
+                            {doc.required ? "obrigatório" : "opcional"}
+                          </button>
                           {fromCandidate && (
                             <Badge variant="outline" className="text-[10px] h-4 px-1 border-blue-500/40 text-blue-700">
                               enviado pelo candidato
