@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, MapPin, Briefcase, Calendar, Gift, ArrowRight, L
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { WORK_MODEL_LABELS, CONTRACT_TYPE_LABELS, JOB_SENIORITY_LABELS } from "@/constants/jobOptions";
 import { format } from "date-fns";
