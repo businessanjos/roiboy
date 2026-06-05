@@ -12,8 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, FileCheck2, Check, X, Loader2, Mail, Phone,
   Calendar, Stethoscope, FileSignature, GraduationCap, Trash2, ExternalLink,
-  Copy, Link as LinkIcon,
+  Copy, Link as LinkIcon, Sparkles, MessageSquareWarning,
 } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
 import { getPublicOrigin } from "@/lib/publicLink";
 
 import { format } from "date-fns";
@@ -58,6 +61,8 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
   const updateDoc = useUpdateAdmissionDoc();
   const deleteAdmission = useDeleteAdmission();
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   if (!admission) return null;
@@ -66,6 +71,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
   const requiredDocs = (docs || []).filter((d) => d.required);
   const approvedCount = requiredDocs.filter((d) => d.status === "approved").length;
   const docsProgress = requiredDocs.length > 0 ? Math.round((approvedCount / requiredDocs.length) * 100) : 0;
+  const awaitingReview = (docs || []).filter((d) => d.status === "received" && d.uploaded_via === "candidate").length;
 
   const handleUpload = async (docId: string, file: File) => {
     if (!currentUser?.account_id) return;
@@ -83,10 +89,13 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
         file_url: signed?.signedUrl || path,
         file_name: file.name,
         uploaded_at: new Date().toISOString(),
+        uploaded_via: "rh",
+        notes: null,
       });
       toast.success("Arquivo enviado");
-    } catch (e: any) {
-      toast.error("Erro ao enviar: " + e.message);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "erro";
+      toast.error("Erro ao enviar: " + msg);
     } finally {
       setUploadingId(null);
     }
@@ -99,15 +108,19 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
     if (!currentUser?.account_id) return;
     if (!confirm("Remover o arquivo enviado deste documento?")) return;
     try {
-      const { data: list } = await supabase.storage
-        .from("admission-docs")
-        .list(`${currentUser.account_id}/${admission.id}`);
-      const matches = (list || []).filter((f) => f.name.startsWith(`${docId}.`));
-      if (matches.length > 0) {
-        await supabase.storage.from("admission-docs").remove(
-          matches.map((f) => `${currentUser.account_id}/${admission.id}/${f.name}`)
-        );
-      }
+      // Remove de ambos os caminhos: RH ({account_id}/...) e candidato (portal/...)
+      const removeFromPath = async (prefix: string) => {
+        const { data: list } = await supabase.storage.from("admission-docs").list(prefix);
+        const matches = (list || []).filter((f) => f.name.startsWith(`${docId}.`));
+        if (matches.length > 0) {
+          await supabase.storage
+            .from("admission-docs")
+            .remove(matches.map((f) => `${prefix}/${f.name}`));
+        }
+      };
+      await removeFromPath(`${currentUser.account_id}/${admission.id}`);
+      await removeFromPath(`portal/${admission.id}`);
+
       await updateDoc.mutateAsync({
         id: docId,
         admission_id: admission.id,
@@ -115,11 +128,31 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
         file_url: null,
         file_name: null,
         uploaded_at: null,
+        uploaded_via: null,
+        notes: null,
       });
       toast.success("Arquivo removido");
-    } catch (e: any) {
-      toast.error("Erro ao remover: " + e.message);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "erro";
+      toast.error("Erro ao remover: " + msg);
     }
+  };
+
+  const handleReject = async (docId: string) => {
+    const reason = rejectReason.trim();
+    if (!reason) {
+      toast.error("Informe o motivo da rejeição para o candidato.");
+      return;
+    }
+    await updateDoc.mutateAsync({
+      id: docId,
+      admission_id: admission.id,
+      status: "rejected",
+      notes: reason,
+    });
+    setRejectingId(null);
+    setRejectReason("");
+    toast.success("Documento rejeitado. O candidato verá o motivo no portal.");
   };
 
   return (
@@ -259,14 +292,21 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
 
           {/* Documents checklist */}
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <FileCheck2 className="h-4 w-4" />
                 <h3 className="font-semibold">Checklist de Documentos</h3>
               </div>
-              <Badge variant="outline" className="text-xs">{approvedCount}/{requiredDocs.length} aprovados · {docsProgress}%</Badge>
+              <div className="flex items-center gap-2">
+                {awaitingReview > 0 && (
+                  <Badge className="text-xs bg-blue-500/15 text-blue-700 border-blue-500/30" variant="outline">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    {awaitingReview} novo{awaitingReview > 1 ? "s" : ""} envio{awaitingReview > 1 ? "s" : ""} do candidato
+                  </Badge>
+                )}
+                <Badge variant="outline" className="text-xs">{approvedCount}/{requiredDocs.length} aprovados · {docsProgress}%</Badge>
+              </div>
             </div>
-
 
             {isLoading ? (
               <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
@@ -274,42 +314,97 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
               <p className="text-sm text-muted-foreground text-center py-6">Nenhum documento configurado.</p>
             ) : (
               <div className="space-y-2">
-                {(docs || []).map((doc) => (
-                  <div key={doc.id} className="border rounded-lg p-3 flex flex-wrap items-center gap-3">
-                    <div className="flex-1 min-w-[200px]">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{doc.label}</p>
-                        {doc.required && <Badge variant="outline" className="text-[10px] h-4 px-1">obrigatório</Badge>}
+                {(docs || []).map((doc) => {
+                  const fromCandidate = doc.uploaded_via === "candidate";
+                  const highlight = doc.status === "received" && fromCandidate;
+                  return (
+                    <div
+                      key={doc.id}
+                      className={`border rounded-lg p-3 flex flex-wrap items-center gap-3 transition ${
+                        highlight ? "border-blue-500/40 bg-blue-500/5 ring-1 ring-blue-500/20" : ""
+                      }`}
+                    >
+                      <div className="flex-1 min-w-[200px]">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium">{doc.label}</p>
+                          {doc.required && <Badge variant="outline" className="text-[10px] h-4 px-1">obrigatório</Badge>}
+                          {fromCandidate && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 border-blue-500/40 text-blue-700">
+                              enviado pelo candidato
+                            </Badge>
+                          )}
+                        </div>
+                        {doc.file_name && (
+                          <a href={doc.file_url || "#"} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-1">
+                            <ExternalLink className="h-3 w-3" />{doc.file_name}
+                          </a>
+                        )}
+                        {doc.status === "rejected" && doc.notes && (
+                          <p className="text-xs text-rose-600 mt-1">Motivo enviado: {doc.notes}</p>
+                        )}
                       </div>
+                      <Badge className={`text-xs ${DOC_STATUS_COLOR[doc.status]}`} variant="secondary">{DOC_STATUS_LABEL[doc.status]}</Badge>
+
+                      <input
+                        ref={(el) => (fileInputs.current[doc.id] = el)}
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => e.target.files?.[0] && handleUpload(doc.id, e.target.files[0])}
+                      />
+                      <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.file_name ? "Substituir arquivo" : "Enviar arquivo"}>
+                        {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                      </Button>
                       {doc.file_name && (
-                        <a href={doc.file_url || "#"} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-1">
-                          <ExternalLink className="h-3 w-3" />{doc.file_name}
-                        </a>
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveFile(doc.id)} title="Excluir arquivo">
+                          <Trash2 className="h-4 w-4 text-rose-600" />
+                        </Button>
+                      )}
+                      {doc.status !== "approved" ? (
+                        <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-emerald-600" /></Button>
+                      ) : (
+                        <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "pending")} title="Reabrir"><X className="h-4 w-4 text-muted-foreground" /></Button>
+                      )}
+                      {doc.file_name && doc.status !== "approved" && (
+                        <Dialog
+                          open={rejectingId === doc.id}
+                          onOpenChange={(o) => { if (!o) { setRejectingId(null); setRejectReason(""); } }}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Rejeitar com motivo"
+                              onClick={() => { setRejectingId(doc.id); setRejectReason(doc.notes || ""); }}
+                            >
+                              <MessageSquareWarning className="h-4 w-4 text-amber-600" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Rejeitar "{doc.label}"</DialogTitle>
+                              <DialogDescription>
+                                O motivo abaixo será mostrado ao candidato no portal para que ele reenvie corretamente.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <Textarea
+                              autoFocus
+                              rows={3}
+                              placeholder="Ex.: A foto está desfocada, não dá pra ler o número. Pode reenviar uma foto mais nítida?"
+                              value={rejectReason}
+                              onChange={(e) => setRejectReason(e.target.value)}
+                            />
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => { setRejectingId(null); setRejectReason(""); }}>Cancelar</Button>
+                              <Button className="bg-amber-600 hover:bg-amber-700" onClick={() => handleReject(doc.id)}>
+                                Rejeitar e notificar
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       )}
                     </div>
-                    <Badge className={`text-xs ${DOC_STATUS_COLOR[doc.status]}`} variant="secondary">{DOC_STATUS_LABEL[doc.status]}</Badge>
-
-                    <input
-                      ref={(el) => (fileInputs.current[doc.id] = el)}
-                      type="file"
-                      className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleUpload(doc.id, e.target.files[0])}
-                    />
-                    <Button size="sm" variant="outline" disabled={uploadingId === doc.id} onClick={() => fileInputs.current[doc.id]?.click()} title={doc.file_name ? "Substituir arquivo" : "Enviar arquivo"}>
-                      {uploadingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                    </Button>
-                    {doc.file_name && (
-                      <Button size="sm" variant="ghost" onClick={() => handleRemoveFile(doc.id)} title="Excluir arquivo">
-                        <Trash2 className="h-4 w-4 text-rose-600" />
-                      </Button>
-                    )}
-                    {doc.status !== "approved" ? (
-                      <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-emerald-600" /></Button>
-                    ) : (
-                      <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "pending")} title="Reabrir"><X className="h-4 w-4 text-muted-foreground" /></Button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

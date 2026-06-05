@@ -78,6 +78,7 @@ export interface HRAdmissionDocument {
   file_url: string | null;
   file_name: string | null;
   uploaded_at: string | null;
+  uploaded_via: "rh" | "candidate" | null;
   notes: string | null;
   sort_order: number;
 }

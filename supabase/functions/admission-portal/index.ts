@@ -12,6 +12,11 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BUCKET = "admission-docs";
 const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
+const ALLOWED_MIME = [
+  "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
+  "application/pdf",
+];
+const ALLOWED_EXT = ["jpg", "jpeg", "png", "webp", "heic", "heif", "pdf"];
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -30,7 +35,7 @@ Deno.serve(async (req) => {
   try {
     if (action === "get") {
       const token = url.searchParams.get("token");
-      if (!token) return json({ error: "token obrigatório" }, 400);
+      if (!token || token.length < 16) return json({ error: "token inválido" }, 400);
       const { data, error } = await supabase.rpc("get_admission_portal", { _token: token });
       if (error) throw error;
       if (!data) return json({ error: "not_found" }, 404);
@@ -42,22 +47,34 @@ Deno.serve(async (req) => {
       const token = form.get("token") as string;
       const docId = form.get("doc_id") as string;
       const file = form.get("file") as File;
-      if (!token || !docId || !file) return json({ error: "campos obrigatórios faltando" }, 400);
+      if (!token || !docId || !file) return json({ error: "Campos obrigatórios faltando" }, 400);
+      if (file.size === 0) return json({ error: "Arquivo vazio" }, 400);
       if (file.size > MAX_BYTES) return json({ error: "Arquivo acima de 15MB" }, 400);
 
-      // Resolve admission via token
+      const ext = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const mime = (file.type || "").toLowerCase();
+      const mimeOk = mime ? ALLOWED_MIME.includes(mime) : true;
+      if (!mimeOk || !ALLOWED_EXT.includes(ext)) {
+        return json({ error: "Formato não permitido. Envie JPG, PNG, HEIC ou PDF." }, 400);
+      }
+
+      // Resolve admission via token e valida que o doc pertence
       const { data: portal, error: pErr } = await supabase.rpc("get_admission_portal", { _token: token });
       if (pErr) throw pErr;
       if (!portal || portal.expired) return json({ error: "Link inválido ou expirado" }, 403);
 
+      const docs = (portal.documents || []) as Array<{ id: string }>;
+      if (!docs.find((d) => d.id === docId)) {
+        return json({ error: "Documento não encontrado" }, 404);
+      }
+
       const admissionId = portal.id as string;
-      const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
       const path = `portal/${admissionId}/${docId}.${ext}`;
       const buf = new Uint8Array(await file.arrayBuffer());
 
       const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, buf, {
         upsert: true,
-        contentType: file.type || "application/octet-stream",
+        contentType: mime || "application/octet-stream",
       });
       if (upErr) throw upErr;
 
@@ -70,12 +87,12 @@ Deno.serve(async (req) => {
         _token: token,
         _doc_id: docId,
         _file_url: signed.signedUrl,
-        _file_name: file.name,
+        _file_name: file.name.slice(0, 200),
       });
       if (rpcErr) throw rpcErr;
       if (!ok) return json({ error: "Documento não encontrado" }, 404);
 
-      return json({ ok: true });
+      return json({ ok: true, file_url: signed.signedUrl });
     }
 
     return json({ error: "Ação desconhecida" }, 400);
