@@ -460,7 +460,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                       ) : (
                         <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "pending")} title="Reabrir"><X className="h-4 w-4 text-muted-foreground" /></Button>
                       )}
-                      {doc.file_name && doc.status !== "approved" && (
+                      {((doc.file_name || hasFormData) && doc.status !== "approved") && (
                         <Dialog
                           open={rejectingId === doc.id}
                           onOpenChange={(o) => { if (!o) { setRejectingId(null); setRejectReason(""); } }}
