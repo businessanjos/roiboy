@@ -414,14 +414,14 @@ export default function PublicAdmissionPortal() {
                     ref={(el) => (fileInputs.current[d.id] = el)}
                     type="file"
                     className="hidden"
-                    accept="image/*,application/pdf"
+                    accept="image/*,.heic,.heif,application/pdf"
                     onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
                   />
                   <input
                     ref={(el) => (cameraInputs.current[d.id] = el)}
                     type="file"
                     className="hidden"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     capture="environment"
                     onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
                   />
