@@ -2,11 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   Upload, CheckCircle2, Clock, AlertCircle, Loader2, FileCheck2,
-  Camera, FileText, ExternalLink, PartyPopper, ShieldCheck,
+  Camera, FileText, ExternalLink, PartyPopper, ShieldCheck, X, Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import letreiro from "@/assets/eternum/letreiro.png.asset.json";
+
+interface Attachment {
+  name: string;
+  url: string;
+  path: string | null;
+  uploaded_at: string | null;
+  uploaded_via: "rh" | "candidate" | null;
+}
 
 interface Doc {
   id: string;
@@ -18,6 +26,7 @@ interface Doc {
   file_url: string | null;
   uploaded_at: string | null;
   uploaded_via: "rh" | "candidate" | null;
+  attachments: Attachment[];
   notes: string | null;
   sort_order: number;
 }
