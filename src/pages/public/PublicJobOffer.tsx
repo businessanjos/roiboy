@@ -11,6 +11,7 @@ import { ptBR } from "date-fns/locale";
 import letreiro from "@/assets/eternum/letreiro.png.asset.json";
 import everBru from "@/assets/eternum/ever-bru.png.asset.json";
 import clientesFoto from "@/assets/eternum/clientes.jpg.asset.json";
+import { renderOfferRichInline } from "@/components/rh/offers/OfferRichTextarea";
 
 type Offer = {
   id: string;
@@ -267,7 +268,7 @@ export default function PublicJobOffer() {
                   className="text-[15px] md:text-base leading-relaxed"
                   style={{ fontFamily: SERIF, color: "#e8dcc0", fontWeight: 300 }}
                 >
-                  {p}
+                  {renderOfferRichInline(p, GOLD)}
                 </p>
               ))}
             </div>
@@ -304,7 +305,7 @@ export default function PublicJobOffer() {
                   className="text-[15px] md:text-base leading-relaxed"
                   style={{ color: TEXT_DARK, fontFamily: i === 0 ? SERIF : SANS, fontWeight: i === 0 ? 400 : 400, fontStyle: i === 0 ? "italic" : "normal" }}
                 >
-                  {p}
+                  {renderOfferRichInline(p, GOLD)}
                 </p>
               ))}
             </div>
@@ -360,7 +361,7 @@ export default function PublicJobOffer() {
                     Remuneração variável
                   </p>
                   <p className="text-sm md:text-base whitespace-pre-line" style={{ color: TEXT_DARK }}>
-                    {offer.variable_compensation}
+                    {renderOfferRichInline(offer.variable_compensation, GOLD)}
                   </p>
                 </div>
               )}
@@ -502,7 +503,7 @@ export default function PublicJobOffer() {
               className="text-[15px] md:text-base leading-relaxed whitespace-pre-line"
               style={{ fontFamily: SERIF, color: "#e8dcc0", fontWeight: 300 }}
             >
-              {offer.next_steps}
+              {renderOfferRichInline(offer.next_steps, GOLD)}
             </p>
           </section>
         )}
