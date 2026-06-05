@@ -62,13 +62,22 @@ const STATUS_META: Record<Doc["status"], { label: string; bg: string; border: st
   rejected: { label: "Reenviar",  bg: "rgba(220,120,120,0.12)", border: "rgba(220,120,120,0.45)", color: "#e8a8a8", icon: AlertCircle },
 };
 
+type UploadState = {
+  fileName: string;
+  progress: number; // 0..100
+  status: "uploading" | "success" | "error";
+  error?: string;
+  retry?: () => void;
+};
+
 export default function PublicAdmissionPortal() {
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploads, setUploads] = useState<Record<string, UploadState | undefined>>({});
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const cameraInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const successTimers = useRef<Record<string, number>>({});
 
   const load = async () => {
     if (!token) return;
@@ -88,34 +97,98 @@ export default function PublicAdmissionPortal() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [token]);
 
-  const handleUpload = async (docId: string, file: File) => {
+  useEffect(() => () => {
+    Object.values(successTimers.current).forEach((id) => window.clearTimeout(id));
+  }, []);
+
+  const setUpload = (docId: string, patch: UploadState | undefined) => {
+    setUploads((prev) => ({ ...prev, [docId]: patch }));
+  };
+
+  const flashSuccess = (docId: string, fileName: string) => {
+    setUpload(docId, { fileName, progress: 100, status: "success" });
+    if (successTimers.current[docId]) window.clearTimeout(successTimers.current[docId]);
+    successTimers.current[docId] = window.setTimeout(() => {
+      setUploads((prev) => {
+        const next = { ...prev };
+        if (next[docId]?.status === "success") delete next[docId];
+        return next;
+      });
+    }, 2500);
+  };
+
+  const handleUpload = (docId: string, file: File) => {
     if (!token) return;
     if (file.size > 15 * 1024 * 1024) {
-      toast.error("Arquivo acima de 15MB. Tente uma foto em qualidade menor ou um PDF.");
+      const msg = "Arquivo acima de 15MB. Tente uma foto em qualidade menor ou um PDF.";
+      toast.error(msg);
+      setUpload(docId, { fileName: file.name, progress: 0, status: "error", error: msg });
       return;
     }
-    setUploadingId(docId);
+
     const fd = new FormData();
     fd.append("token", token);
     fd.append("doc_id", docId);
     fd.append("file", file);
-    try {
-      const res = await fetch(`${FN_URL}?action=upload`, {
-        method: "POST",
-        headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
-        body: fd,
+
+    setUpload(docId, {
+      fileName: file.name,
+      progress: 0,
+      status: "uploading",
+      retry: () => handleUpload(docId, file),
+    });
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${FN_URL}?action=upload`);
+    xhr.setRequestHeader("apikey", ANON);
+    xhr.setRequestHeader("Authorization", `Bearer ${ANON}`);
+
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const pct = Math.min(99, Math.round((e.loaded / e.total) * 100));
+      setUploads((prev) => {
+        const cur = prev[docId];
+        if (!cur || cur.status !== "uploading") return prev;
+        return { ...prev, [docId]: { ...cur, progress: pct } };
       });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "falha no envio");
-      toast.success("Documento enviado com sucesso ✨");
-      await load();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "erro no envio";
+    };
+
+    const fail = (msg: string) => {
       toast.error(msg);
-    } finally {
-      setUploadingId(null);
-    }
+      setUpload(docId, {
+        fileName: file.name,
+        progress: 0,
+        status: "error",
+        error: msg,
+        retry: () => handleUpload(docId, file),
+      });
+    };
+
+    xhr.onload = async () => {
+      let body: { error?: string } = {};
+      try { body = JSON.parse(xhr.responseText || "{}"); } catch { /* noop */ }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        toast.success(`${file.name} enviado ✨`);
+        flashSuccess(docId, file.name);
+        await load();
+      } else {
+        fail(body.error || `Falha no envio (HTTP ${xhr.status})`);
+      }
+    };
+    xhr.onerror = () => fail("Sem conexão. Verifique sua internet e tente de novo.");
+    xhr.ontimeout = () => fail("Tempo esgotado. Tente novamente.");
+    xhr.timeout = 120000;
+    xhr.send(fd);
   };
+
+  const dismissUpload = (docId: string) => {
+    setUploads((prev) => {
+      const next = { ...prev };
+      delete next[docId];
+      return next;
+    });
+  };
+
 
   const handleDelete = async (docId: string, path: string | null) => {
     if (!token || !path) {
@@ -324,6 +397,8 @@ export default function PublicAdmissionPortal() {
               const Icon = meta.icon;
               const locked = d.status === "approved";
               const rejected = d.status === "rejected";
+              const up = uploads[d.id];
+              const isUploading = up?.status === "uploading";
               return (
                 <div
                   key={d.id}
@@ -410,6 +485,88 @@ export default function PublicAdmissionPortal() {
                     </ul>
                   )}
 
+                  {/* Feedback de upload por arquivo */}
+                  {up && (
+                    <div
+                      className="mb-3 rounded-sm px-3 py-2.5"
+                      style={{
+                        background:
+                          up.status === "error"
+                            ? "rgba(220,120,120,0.10)"
+                            : up.status === "success"
+                            ? "rgba(140,190,140,0.14)"
+                            : `${GOLD}14`,
+                        border: `1px solid ${
+                          up.status === "error"
+                            ? "rgba(168,50,50,0.45)"
+                            : up.status === "success"
+                            ? "rgba(90,150,90,0.45)"
+                            : `${GOLD}55`
+                        }`,
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        {up.status === "uploading" && <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: TEXT_DARK }} />}
+                        {up.status === "success" && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" style={{ color: "#2f7a3a" }} />}
+                        {up.status === "error" && <AlertCircle className="h-3.5 w-3.5 shrink-0" style={{ color: "#a83232" }} />}
+                        <span className="text-xs truncate flex-1" style={{ color: TEXT_DARK, fontWeight: 500 }}>
+                          {up.fileName}
+                        </span>
+                        {up.status === "uploading" && (
+                          <span className="text-[11px] tabular-nums shrink-0" style={{ color: TEXT_DARK, opacity: 0.7 }}>
+                            {up.progress}%
+                          </span>
+                        )}
+                        {up.status === "success" && (
+                          <span className="text-[10px] uppercase tracking-[0.2em] shrink-0" style={{ color: "#2f7a3a", fontWeight: 600 }}>
+                            enviado
+                          </span>
+                        )}
+                        {up.status === "error" && (
+                          <button
+                            type="button"
+                            onClick={() => dismissUpload(d.id)}
+                            aria-label="Dispensar erro"
+                            className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-sm opacity-60 hover:opacity-100 touch-manipulation"
+                            style={{ color: TEXT_DARK }}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {up.status !== "error" && (
+                        <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: `${TEXT_DARK}1a` }}>
+                          <div
+                            className={up.status === "uploading" ? "h-full transition-all duration-200" : "h-full"}
+                            style={{
+                              width: `${up.progress}%`,
+                              background: up.status === "success" ? "#5ea76a" : `linear-gradient(90deg, ${GOLD}, #e8c98a)`,
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {up.status === "error" && (
+                        <div className="mt-1.5 flex items-start justify-between gap-2">
+                          <p className="text-[11px] leading-snug" style={{ color: "#a83232" }}>
+                            {up.error || "Falha no envio."}
+                          </p>
+                          {up.retry && (
+                            <button
+                              type="button"
+                              onClick={() => up.retry?.()}
+                              className="text-[11px] underline shrink-0 touch-manipulation"
+                              style={{ color: "#a83232", fontWeight: 600 }}
+                            >
+                              Tentar de novo
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <input
                     ref={(el) => (fileInputs.current[d.id] = el)}
                     type="file"
@@ -430,12 +587,12 @@ export default function PublicAdmissionPortal() {
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       <Button
                         type="button"
-                        disabled={uploadingId === d.id}
+                        disabled={isUploading}
                         onClick={() => cameraInputs.current[d.id]?.click()}
                         className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
                         style={{ background: `${TEXT_DARK}`, color: CARD, fontFamily: SANS, fontWeight: 500, letterSpacing: "0.05em" }}
                       >
-                        {uploadingId === d.id ? (
+                        {isUploading ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <><Camera className="h-4 w-4 mr-1.5" />{d.attachments?.length ? "Outra foto" : "Tirar foto"}</>
@@ -443,12 +600,12 @@ export default function PublicAdmissionPortal() {
                       </Button>
                       <Button
                         type="button"
-                        disabled={uploadingId === d.id}
+                        disabled={isUploading}
                         onClick={() => fileInputs.current[d.id]?.click()}
                         className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
                         style={{ background: GOLD, color: TEXT_DARK, fontFamily: SANS, fontWeight: 600, letterSpacing: "0.05em" }}
                       >
-                        {uploadingId === d.id ? (
+                        {isUploading ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>{d.attachments?.length ? <Plus className="h-4 w-4 mr-1.5" /> : <Upload className="h-4 w-4 mr-1.5" />}{d.attachments?.length ? "Adicionar arquivo" : "Enviar arquivo"}</>
