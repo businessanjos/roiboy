@@ -292,9 +292,41 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
             />
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            Criada em {format(new Date(admission.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-          </p>
+          <Separator />
+
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              Criada em {format(new Date(admission.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            </p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700">
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Excluir admissão
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir admissão de {admission.candidate_name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação remove permanentemente o card e todos os documentos vinculados a esta admissão. Não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-rose-600 hover:bg-rose-700"
+                    onClick={async () => {
+                      await deleteAdmission.mutateAsync(admission.id);
+                      onOpenChange(false);
+                    }}
+                  >
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
