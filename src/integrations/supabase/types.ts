@@ -11217,6 +11217,167 @@ export type Database = {
           },
         ]
       }
+      hr_offboarding_checklist_items: {
+        Row: {
+          account_id: string
+          category: string
+          created_at: string
+          done: boolean
+          done_at: string | null
+          done_by: string | null
+          id: string
+          item_key: string
+          label: string
+          notes: string | null
+          offboarding_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          category?: string
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          item_key: string
+          label: string
+          notes?: string | null
+          offboarding_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          category?: string
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          item_key?: string
+          label?: string
+          notes?: string | null
+          offboarding_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_offboarding_checklist_items_offboarding_id_fkey"
+            columns: ["offboarding_id"]
+            isOneToOne: false
+            referencedRelation: "hr_offboardings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_offboardings: {
+        Row: {
+          access_cutoff_at: string | null
+          access_cutoff_done: boolean
+          account_id: string
+          cancelled_at: string | null
+          collaborator_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          exit_interview: Json
+          exit_nps: number | null
+          id: string
+          initiated_by: string
+          last_day_worked: string | null
+          notes: string | null
+          notice_communicated_at: string | null
+          notice_days: number | null
+          notice_type: Database["public"]["Enums"]["hr_notice_type"]
+          reason: string | null
+          reason_details: string | null
+          replacement_job_id: string | null
+          rescission_calc: Json
+          responsible_user_id: string | null
+          stage: Database["public"]["Enums"]["hr_offboarding_stage"]
+          termination_date: string | null
+          termination_type: Database["public"]["Enums"]["hr_offboarding_type"]
+          updated_at: string
+          will_replace: boolean
+        }
+        Insert: {
+          access_cutoff_at?: string | null
+          access_cutoff_done?: boolean
+          account_id: string
+          cancelled_at?: string | null
+          collaborator_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          exit_interview?: Json
+          exit_nps?: number | null
+          id?: string
+          initiated_by?: string
+          last_day_worked?: string | null
+          notes?: string | null
+          notice_communicated_at?: string | null
+          notice_days?: number | null
+          notice_type?: Database["public"]["Enums"]["hr_notice_type"]
+          reason?: string | null
+          reason_details?: string | null
+          replacement_job_id?: string | null
+          rescission_calc?: Json
+          responsible_user_id?: string | null
+          stage?: Database["public"]["Enums"]["hr_offboarding_stage"]
+          termination_date?: string | null
+          termination_type?: Database["public"]["Enums"]["hr_offboarding_type"]
+          updated_at?: string
+          will_replace?: boolean
+        }
+        Update: {
+          access_cutoff_at?: string | null
+          access_cutoff_done?: boolean
+          account_id?: string
+          cancelled_at?: string | null
+          collaborator_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          exit_interview?: Json
+          exit_nps?: number | null
+          id?: string
+          initiated_by?: string
+          last_day_worked?: string | null
+          notes?: string | null
+          notice_communicated_at?: string | null
+          notice_days?: number | null
+          notice_type?: Database["public"]["Enums"]["hr_notice_type"]
+          reason?: string | null
+          reason_details?: string | null
+          replacement_job_id?: string | null
+          rescission_calc?: Json
+          responsible_user_id?: string | null
+          stage?: Database["public"]["Enums"]["hr_offboarding_stage"]
+          termination_date?: string | null
+          termination_type?: Database["public"]["Enums"]["hr_offboarding_type"]
+          updated_at?: string
+          will_replace?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_offboardings_collaborator_id_fkey"
+            columns: ["collaborator_id"]
+            isOneToOne: false
+            referencedRelation: "hr_collaborators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_offboardings_replacement_job_id_fkey"
+            columns: ["replacement_job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_partners: {
         Row: {
           account_id: string
@@ -23755,6 +23916,23 @@ export type Database = {
         | "hired"
         | "rejected"
       hr_job_status: "draft" | "active" | "on_hold" | "closed"
+      hr_notice_type: "trabalhado" | "indenizado" | "dispensado" | "nao_aplica"
+      hr_offboarding_stage:
+        | "opened"
+        | "documentation"
+        | "rescission"
+        | "access_cutoff"
+        | "exit_interview"
+        | "completed"
+        | "cancelled"
+      hr_offboarding_type:
+        | "sem_justa_causa"
+        | "pedido_demissao"
+        | "acordo"
+        | "justa_causa"
+        | "termino_contrato"
+        | "termino_experiencia"
+        | "rescisao_indireta"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
       integration_type:
@@ -24096,6 +24274,25 @@ export const Constants = {
         "rejected",
       ],
       hr_job_status: ["draft", "active", "on_hold", "closed"],
+      hr_notice_type: ["trabalhado", "indenizado", "dispensado", "nao_aplica"],
+      hr_offboarding_stage: [
+        "opened",
+        "documentation",
+        "rescission",
+        "access_cutoff",
+        "exit_interview",
+        "completed",
+        "cancelled",
+      ],
+      hr_offboarding_type: [
+        "sem_justa_causa",
+        "pedido_demissao",
+        "acordo",
+        "justa_causa",
+        "termino_contrato",
+        "termino_experiencia",
+        "rescisao_indireta",
+      ],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
       integration_type: [
