@@ -200,14 +200,16 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         monthlyHistory.push({ month: format(mDate, "MMM/yy"), leads, mql, won });
       }
 
-      // ===== TRÁFEGO PAGO =====
+      // ===== TRÁFEGO PAGO (filtrado por período via updated_at do ad set) =====
       let adSpend = 0, adLeads = 0, adImpressions = 0, adCpl = 0;
       let topCampaigns: { name: string; spend: number; leads: number; cpl: number }[] = [];
       if (userId) {
         const { data: ads = [] } = await supabase
           .from("marketing_ad_sets")
-          .select("name, spend, conversions, impressions, cpl")
+          .select("name, spend, conversions, impressions, cpl, updated_at")
           .eq("user_id", userId)
+          .gte("updated_at", rStart.toISOString())
+          .lte("updated_at", rEnd.toISOString())
           .order("spend", { ascending: false });
         for (const a of ads as any[]) {
           adSpend += Number(a.spend) || 0;
@@ -223,8 +225,9 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         }));
       }
 
-      // ===== CONTEÚDO =====
-      const last30Iso = last30.toISOString();
+      // ===== CONTEÚDO (filtrado por período) =====
+      const contentStartIso = rStart.toISOString();
+      const contentEndIso = rEnd.toISOString();
       const sb: any = supabase;
       let ytVideos30d = 0, ytViews30d = 0, igPosts30d = 0, igEngagement30d = 0, ttPosts30d = 0;
       try {
