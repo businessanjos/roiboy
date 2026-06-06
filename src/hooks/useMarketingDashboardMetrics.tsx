@@ -319,6 +319,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         mqlConversionRate,
         monthlyHistory,
         channelBreakdown,
+        leadsChannelBreakdown,
         adSpend,
         adLeads,
         adImpressions,
