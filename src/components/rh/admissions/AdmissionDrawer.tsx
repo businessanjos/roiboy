@@ -562,6 +562,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
           </div>
         </div>
       </SheetContent>
+      <ExamReferralDialog admission={admission} open={referralOpen} onOpenChange={setReferralOpen} />
     </Sheet>
   );
 }
