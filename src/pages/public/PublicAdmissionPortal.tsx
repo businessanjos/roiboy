@@ -242,6 +242,11 @@ export default function PublicAdmissionPortal() {
         toast.success(`${file.name} enviado ✨`);
         flashSuccess(docId, file.name);
         await load();
+        // dispara OCR se for documento com ocr_kind
+        const doc = data?.documents.find((d) => d.id === docId);
+        if (doc?.ocr_kind) {
+          runOcr(docId);
+        }
       } else {
         fail(body.error || `Falha no envio (HTTP ${xhr.status})`);
       }
