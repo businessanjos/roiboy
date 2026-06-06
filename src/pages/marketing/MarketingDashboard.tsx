@@ -399,17 +399,17 @@ export default function MarketingDashboard() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">MQL por canal</CardTitle>
-              <CardDescription>Distribuição no período ({rangeLabel})</CardDescription>
+              <CardTitle className="text-sm">Leads por canal</CardTitle>
+              <CardDescription>Todos os leads no período ({rangeLabel})</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {data.channelBreakdown.length === 0 ? (
+              {data.leadsChannelBreakdown.length === 0 ? (
                 <div className="text-sm text-muted-foreground py-4 text-center">
-                  Sem MQL registrado neste período
+                  Sem leads neste período
                 </div>
               ) : (
-                data.channelBreakdown.map((c) => {
-                  const total = data.channelBreakdown.reduce((s, x) => s + x.count, 0) || 1;
+                data.leadsChannelBreakdown.map((c) => {
+                  const total = data.leadsChannelBreakdown.reduce((s, x) => s + x.count, 0) || 1;
                   const pct = (c.count / total) * 100;
                   return (
                     <div key={c.channel} className="space-y-1">
@@ -427,6 +427,36 @@ export default function MarketingDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">MQL por canal</CardTitle>
+            <CardDescription>Distribuição dos MQL no período ({rangeLabel})</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {data.channelBreakdown.length === 0 ? (
+              <div className="text-sm text-muted-foreground py-4 text-center">
+                Sem MQL registrado neste período
+              </div>
+            ) : (
+              data.channelBreakdown.map((c) => {
+                const total = data.channelBreakdown.reduce((s, x) => s + x.count, 0) || 1;
+                const pct = (c.count / total) * 100;
+                return (
+                  <div key={c.channel} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">{c.channel}</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {c.count} <span className="text-xs">({pct.toFixed(0)}%)</span>
+                      </span>
+                    </div>
+                    <Progress value={pct} className="h-2" />
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
       </section>
 
       {/* ===== Tráfego Pago ===== */}
