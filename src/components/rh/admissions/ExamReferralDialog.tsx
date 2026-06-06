@@ -249,6 +249,11 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
         exam_type: existing.exam_type ?? "admissional",
         exams: existing.exams ?? ["EXAME CLÍNICO"],
       });
+      // Se o candidato já enviou documentos com OCR pronto e ainda não temos identificação preenchida, puxa silenciosamente
+      const hasIdentity = !!(existing.cpf || existing.doc_id || existing.birth_date);
+      if (!hasIdentity) {
+        await pullFromCandidateDocs(true);
+      }
     })();
     return () => { cancelled = true; };
   }, [open, currentUser?.account_id, admission]);
