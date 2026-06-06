@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Camera, X, Loader2, RotateCcw, Check } from "lucide-react";
 
 type Kind = "id" | "address" | "generic";
@@ -99,12 +100,12 @@ export default function DocumentCameraCapture({ open, kind, title, onClose, onCa
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+  return createPortal(
+    <div className="fixed inset-0 z-[2147483646] bg-black flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 text-white">
+      <div className="relative z-10 flex items-center justify-between px-4 py-3 text-white">
         <div className="text-xs uppercase tracking-[0.25em] opacity-80">{title || "Tirar foto"}</div>
-        <button onClick={() => { stop(); onClose(); }} aria-label="Fechar" className="h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/10 active:bg-white/20">
+        <button type="button" onClick={(e) => { e.stopPropagation(); stop(); onClose(); }} aria-label="Fechar" className="h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/10 active:bg-white/20">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -173,7 +174,8 @@ export default function DocumentCameraCapture({ open, kind, title, onClose, onCa
       </div>
 
       <canvas ref={canvasRef} className="hidden" />
-    </div>
+    </div>,
+    document.body
   );
 }
 
