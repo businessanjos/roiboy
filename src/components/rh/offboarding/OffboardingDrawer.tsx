@@ -322,7 +322,7 @@ export default function OffboardingDrawer({
 
               <div className="flex items-center gap-2 p-3 rounded border">
                 <Checkbox
-                  checked={!!form.access_cutoff_done ?? offboarding.access_cutoff_done}
+                  checked={form.access_cutoff_done ?? offboarding.access_cutoff_done}
                   onCheckedChange={(v) => setForm({ ...form, access_cutoff_done: !!v, access_cutoff_at: v ? new Date().toISOString() : null })}
                 />
                 <div className="flex-1">
