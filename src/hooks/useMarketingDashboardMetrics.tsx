@@ -127,6 +127,13 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       let mqlOrganic = 0, mqlPaid = 0, mqlOthers = 0;
       let wonMqlOrganic = 0, wonMqlPaid = 0, wonMqlOthers = 0;
       const channelCounts: Record<string, number> = {};
+      const leadsChannelCounts: Record<string, number> = {};
+      // Leads (todos) por canal
+      for (const d of rangeDeals as any[]) {
+        const rawCh = channelByDeal.get(d.id);
+        const friendly = labelForChannel(rawCh);
+        leadsChannelCounts[friendly] = (leadsChannelCounts[friendly] || 0) + 1;
+      }
       for (const id of mqlSet) {
         const rawCh = channelByDeal.get(id);
         const friendly = labelForChannel(rawCh);
@@ -145,6 +152,9 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       }
 
       const channelBreakdown = Object.entries(channelCounts)
+        .map(([channel, count]) => ({ channel, count }))
+        .sort((a, b) => b.count - a.count);
+      const leadsChannelBreakdown = Object.entries(leadsChannelCounts)
         .map(([channel, count]) => ({ channel, count }))
         .sort((a, b) => b.count - a.count);
 
