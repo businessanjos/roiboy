@@ -140,6 +140,24 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === "confirm_ocr" && req.method === "POST") {
+      const body = await req.json().catch(() => ({}));
+      const token = String(body.token || "");
+      const docId = String(body.doc_id || "");
+      const data = body.data;
+      if (!token || !docId || !data || typeof data !== "object") {
+        return json({ error: "Campos obrigatórios faltando" }, 400);
+      }
+      const { data: ok, error: rpcErr } = await supabase.rpc("confirm_admission_ocr", {
+        _token: token,
+        _doc_id: docId,
+        _data: data,
+      });
+      if (rpcErr) throw rpcErr;
+      if (!ok) return json({ error: "Não foi possível salvar OCR." }, 400);
+      return json({ ok: true });
+    }
+
     return json({ error: "Ação desconhecida" }, 400);
   } catch (e) {
     console.error("admission-portal error", e);

@@ -3,11 +3,44 @@ import { useParams } from "react-router-dom";
 import {
   Upload, CheckCircle2, Clock, AlertCircle, Loader2, FileCheck2,
   Camera, FileText, ExternalLink, PartyPopper, ShieldCheck, X, Plus, Trash2,
-  Pencil, Save,
+  Pencil, Save, Sparkles, ScanLine, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import letreiro from "@/assets/eternum/letreiro.png.asset.json";
+import DocumentCameraCapture from "@/components/admission/DocumentCameraCapture";
+
+// Labels amigáveis dos campos extraídos por OCR
+const OCR_LABELS: Record<string, string> = {
+  tipo: "Tipo de documento",
+  nome: "Nome completo",
+  cpf: "CPF",
+  rg: "RG",
+  rg_orgao_emissor: "Órgão emissor",
+  data_nascimento: "Data de nascimento",
+  nome_mae: "Nome da mãe",
+  nome_pai: "Nome do pai",
+  naturalidade: "Naturalidade",
+  cnh_numero: "Registro CNH",
+  cnh_categoria: "Categoria CNH",
+  cnh_validade: "Validade CNH",
+  cnh_primeira_habilitacao: "1ª habilitação",
+  titular: "Titular da conta",
+  logradouro: "Logradouro",
+  numero: "Número",
+  complemento: "Complemento",
+  bairro: "Bairro",
+  cidade: "Cidade",
+  uf: "UF",
+  cep: "CEP",
+  data_emissao: "Data de emissão",
+};
+
+const OCR_KIND_ORDER: Record<string, string[]> = {
+  id: ["tipo", "nome", "cpf", "rg", "rg_orgao_emissor", "data_nascimento", "nome_mae", "nome_pai", "naturalidade", "cnh_numero", "cnh_categoria", "cnh_validade", "cnh_primeira_habilitacao"],
+  cpf: ["cpf", "nome"],
+  address: ["titular", "cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf", "data_emissao"],
+};
 
 interface Attachment {
   name: string;
@@ -42,6 +75,10 @@ interface Doc {
   doc_type?: "file" | "form";
   form_schema?: FormField[] | null;
   form_data?: Record<string, string> | null;
+  ocr_kind?: "id" | "cpf" | "address" | null;
+  ocr_status?: "idle" | "processing" | "ready" | "confirmed" | "failed";
+  ocr_data?: Record<string, string> | null;
+  ocr_error?: string | null;
 }
 
 interface PortalData {
@@ -91,6 +128,10 @@ export default function PublicAdmissionPortal() {
   const [formValues, setFormValues] = useState<Record<string, Record<string, string>>>({});
   const [formSaving, setFormSaving] = useState<Record<string, boolean>>({});
   const [formEditing, setFormEditing] = useState<Record<string, boolean>>({});
+  const [ocrRunning, setOcrRunning] = useState<Record<string, boolean>>({});
+  const [ocrValues, setOcrValues] = useState<Record<string, Record<string, string>>>({});
+  const [ocrSaving, setOcrSaving] = useState<Record<string, boolean>>({});
+  const [cameraDocId, setCameraDocId] = useState<string | null>(null);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const cameraInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const successTimers = useRef<Record<string, number>>({});
@@ -105,14 +146,19 @@ export default function PublicAdmissionPortal() {
       if (!res.ok) throw new Error("not_found");
       const json: PortalData = await res.json();
       setData(json);
-      // hydrate form values
-      const next: Record<string, Record<string, string>> = {};
+      // hydrate form values + ocr values
+      const nextForm: Record<string, Record<string, string>> = {};
+      const nextOcr: Record<string, Record<string, string>> = {};
       (json.documents || []).forEach((d) => {
         if (d.doc_type === "form") {
-          next[d.id] = { ...(d.form_data || {}) };
+          nextForm[d.id] = { ...(d.form_data || {}) };
+        }
+        if (d.ocr_kind && d.ocr_data) {
+          nextOcr[d.id] = { ...(d.ocr_data || {}) };
         }
       });
-      setFormValues((prev) => ({ ...next, ...prev }));
+      setFormValues((prev) => ({ ...nextForm, ...prev }));
+      setOcrValues((prev) => ({ ...nextOcr, ...prev }));
     } catch {
       setData(null);
     } finally {
@@ -196,6 +242,11 @@ export default function PublicAdmissionPortal() {
         toast.success(`${file.name} enviado ✨`);
         flashSuccess(docId, file.name);
         await load();
+        // dispara OCR se for documento com ocr_kind
+        const doc = data?.documents.find((d) => d.id === docId);
+        if (doc?.ocr_kind) {
+          runOcr(docId);
+        }
       } else {
         fail(body.error || `Falha no envio (HTTP ${xhr.status})`);
       }
@@ -267,6 +318,56 @@ export default function PublicAdmissionPortal() {
       setFormSaving((p) => ({ ...p, [doc.id]: false }));
     }
   };
+
+  // ===== OCR =====
+  const OCR_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admission-ocr`;
+
+  const runOcr = async (docId: string) => {
+    if (!token) return;
+    setOcrRunning((p) => ({ ...p, [docId]: true }));
+    try {
+      const res = await fetch(OCR_FN_URL, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ token, doc_id: docId }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "Falha ao ler o documento");
+      toast.success("Dados extraídos — confira abaixo ✨");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro no OCR");
+      await load();
+    } finally {
+      setOcrRunning((p) => ({ ...p, [docId]: false }));
+    }
+  };
+
+  const setOcrField = (docId: string, key: string, value: string) => {
+    setOcrValues((prev) => ({ ...prev, [docId]: { ...(prev[docId] || {}), [key]: value } }));
+  };
+
+  const confirmOcr = async (doc: Doc) => {
+    if (!token) return;
+    setOcrSaving((p) => ({ ...p, [doc.id]: true }));
+    try {
+      const res = await fetch(`${FN_URL}?action=confirm_ocr`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ token, doc_id: doc.id, data: ocrValues[doc.id] || {} }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "falha ao confirmar");
+      toast.success("Dados confirmados ✓");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "erro ao salvar");
+    } finally {
+      setOcrSaving((p) => ({ ...p, [doc.id]: false }));
+    }
+  };
+
+
 
 
   const { docs, required, sent, progress, allDone } = useMemo(() => {
@@ -772,19 +873,109 @@ export default function PublicAdmissionPortal() {
                         onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
                       />
 
+                      {/* Painel OCR — leitura automática */}
+                      {d.ocr_kind && (d.attachments?.length || 0) > 0 && (
+                        <div
+                          className="mt-2 mb-2 rounded-sm p-3.5"
+                          style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}55` }}
+                        >
+                          {(d.ocr_status === "processing" || ocrRunning[d.id]) && (
+                            <div className="flex items-center gap-2 text-xs" style={{ color: TEXT_DARK }}>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: GOLD }} />
+                              <span style={{ fontWeight: 500 }}>Lendo seu documento com IA…</span>
+                            </div>
+                          )}
+
+                          {d.ocr_status === "failed" && !ocrRunning[d.id] && (
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2 flex-1">
+                                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: "#a83232" }} />
+                                <p className="text-[11px] leading-snug" style={{ color: TEXT_DARK }}>
+                                  {d.ocr_error || "Não consegui ler o documento."}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => runOcr(d.id)}
+                                className="text-[11px] underline shrink-0"
+                                style={{ color: TEXT_DARK, fontWeight: 600 }}
+                              >
+                                Tentar de novo
+                              </button>
+                            </div>
+                          )}
+
+                          {(d.ocr_status === "ready" || d.ocr_status === "confirmed") && !ocrRunning[d.id] && (
+                            <>
+                              <div className="flex items-center justify-between mb-2.5">
+                                <div className="flex items-center gap-2">
+                                  <Sparkles className="h-3.5 w-3.5" style={{ color: GOLD }} />
+                                  <span className="text-[10px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, opacity: 0.75, fontWeight: 600 }}>
+                                    {d.ocr_status === "confirmed" ? "Dados confirmados" : "Confira e ajuste se precisar"}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => runOcr(d.id)}
+                                  className="text-[10px] underline opacity-70 hover:opacity-100"
+                                  style={{ color: TEXT_DARK }}
+                                >
+                                  Ler de novo
+                                </button>
+                              </div>
+                              <div className="space-y-2">
+                                {(OCR_KIND_ORDER[d.ocr_kind] || Object.keys(ocrValues[d.id] || d.ocr_data || {})).map((k) => {
+                                  const hasValue = (ocrValues[d.id]?.[k] ?? d.ocr_data?.[k] ?? "").length > 0;
+                                  if (!hasValue && !["nome","cpf","rg","cep","logradouro"].includes(k)) return null;
+                                  return (
+                                    <div key={k} className="grid grid-cols-[110px_1fr] gap-2 items-center">
+                                      <label className="text-[10px] uppercase tracking-[0.15em]" style={{ color: TEXT_DARK, opacity: 0.7, fontWeight: 600 }}>
+                                        {OCR_LABELS[k] || k}
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={ocrValues[d.id]?.[k] ?? ""}
+                                        onChange={(e) => setOcrField(d.id, k, e.target.value)}
+                                        className="h-9 rounded-sm px-2.5 text-xs outline-none"
+                                        style={{ background: "#fff", color: TEXT_DARK, border: `1px solid ${GOLD}55`, fontFamily: SANS }}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <Button
+                                type="button"
+                                disabled={!!ocrSaving[d.id]}
+                                onClick={() => confirmOcr(d)}
+                                className="h-10 w-full border-0 hover:opacity-90 mt-3"
+                                style={{ background: GOLD, color: TEXT_DARK, fontFamily: SANS, fontWeight: 600, letterSpacing: "0.05em" }}
+                              >
+                                {ocrSaving[d.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><Check className="h-4 w-4 mr-1.5" />Confirmar dados</>)}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      )}
+
                       {!locked && (
                         <div className="grid grid-cols-2 gap-2 mt-2">
                           <Button
                             type="button"
                             disabled={isUploading}
-                            onClick={() => cameraInputs.current[d.id]?.click()}
+                            onClick={() => {
+                              if (d.ocr_kind) setCameraDocId(d.id);
+                              else cameraInputs.current[d.id]?.click();
+                            }}
                             className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
                             style={{ background: `${TEXT_DARK}`, color: CARD, fontFamily: SANS, fontWeight: 500, letterSpacing: "0.05em" }}
                           >
                             {isUploading ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <><Camera className="h-4 w-4 mr-1.5" />{d.attachments?.length ? "Outra foto" : "Tirar foto"}</>
+                              <>
+                                {d.ocr_kind ? <ScanLine className="h-4 w-4 mr-1.5" /> : <Camera className="h-4 w-4 mr-1.5" />}
+                                {d.attachments?.length ? "Outra foto" : "Tirar foto"}
+                              </>
                             )}
                           </Button>
                           <Button
