@@ -28,16 +28,15 @@ export default function NewOffboardingDialog({
     will_replace: false,
   });
 
-  // load active collaborators
-  useState(() => {
-    if (!currentUser?.account_id) return;
+  useEffect(() => {
+    if (!currentUser?.account_id || !open) return;
     supabase.from("hr_collaborators")
       .select("id, full_name, position")
       .eq("account_id", currentUser.account_id)
       .eq("status", "active")
       .order("full_name")
       .then(({ data }) => setCollabs((data || []) as any));
-  });
+  }, [currentUser?.account_id, open]);
 
   async function handleCreate() {
     if (!form.collaborator_id) return;
