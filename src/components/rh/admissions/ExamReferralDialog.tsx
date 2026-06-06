@@ -84,6 +84,73 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<ReferralData>({});
   const [saveAsDefault, setSaveAsDefault] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState<null | "id" | "cpf">(null);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputCpfRef = useRef<HTMLInputElement | null>(null);
+
+  const dateBRtoISO = (s: string | undefined | null): string | undefined => {
+    if (!s) return undefined;
+    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!m) return undefined;
+    return `${m[3]}-${m[2]}-${m[1]}`;
+  };
+
+  const runOcr = async (kind: "id" | "cpf", files: File[]) => {
+    if (files.length === 0) return;
+    setOcrBusy(true);
+    try {
+      // Converte para data URLs
+      const dataUrls = await Promise.all(
+        files.slice(0, 4).map((f) =>
+          new Promise<string>((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => resolve(String(r.result || ""));
+            r.onerror = reject;
+            r.readAsDataURL(f);
+          })
+        )
+      );
+      const { data: res, error } = await supabase.functions.invoke("ocr-document", {
+        body: { kind, images: dataUrls },
+      });
+      if (error) throw error;
+      const d = (res as any)?.data || {};
+      if (!d || Object.keys(d).length === 0) {
+        toast.error("Não consegui ler. Tente outra foto, com mais luz e foco.");
+        return;
+      }
+      // Aplica nos campos
+      setData((prev) => {
+        const next = { ...prev };
+        if (kind === "id") {
+          if (d.nome) next.employee_name = d.nome;
+          if (d.cpf) next.cpf = d.cpf;
+          if (d.tipo && /CNH/i.test(d.tipo)) {
+            if (d.cnh_numero) next.cnh_number = d.cnh_numero;
+            const iso = dateBRtoISO(d.cnh_validade);
+            if (iso) next.cnh_validity = iso;
+            // doc_id pode ser CNH se for o documento principal
+            if (!next.doc_id && d.cnh_numero) next.doc_id = `CNH ${d.cnh_numero}`;
+          } else if (d.rg) {
+            next.doc_id = `RG ${d.rg}${d.rg_orgao_emissor ? " " + d.rg_orgao_emissor : ""}`;
+          }
+          const bn = dateBRtoISO(d.data_nascimento);
+          if (bn) next.birth_date = bn;
+        } else if (kind === "cpf") {
+          if (d.cpf) next.cpf = d.cpf;
+          if (d.nome && !next.employee_name) next.employee_name = d.nome;
+        }
+        return next;
+      });
+      const filled = Object.keys(d).length;
+      toast.success(`${filled} campo${filled > 1 ? "s" : ""} preenchido${filled > 1 ? "s" : ""} automaticamente`);
+    } catch (e: any) {
+      toast.error("Erro no OCR: " + (e?.message || e));
+    } finally {
+      setOcrBusy(false);
+    }
+  };
 
   // Load defaults + existing referral_data
   useEffect(() => {
