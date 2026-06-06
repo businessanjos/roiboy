@@ -10295,6 +10295,7 @@ export type Database = {
           onboarding_scheduled_at: string | null
           position_title: string | null
           public_token: string | null
+          referral_data: Json | null
           responsible_user_id: string | null
           stage: string
           start_date: string | null
@@ -10324,6 +10325,7 @@ export type Database = {
           onboarding_scheduled_at?: string | null
           position_title?: string | null
           public_token?: string | null
+          referral_data?: Json | null
           responsible_user_id?: string | null
           stage?: string
           start_date?: string | null
@@ -10353,6 +10355,7 @@ export type Database = {
           onboarding_scheduled_at?: string | null
           position_title?: string | null
           public_token?: string | null
+          referral_data?: Json | null
           responsible_user_id?: string | null
           stage?: string
           start_date?: string | null
@@ -10845,6 +10848,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hr_exam_referral_defaults: {
+        Row: {
+          account_id: string
+          company_cnpj: string | null
+          company_name: string | null
+          created_at: string
+          default_city: string | null
+          default_state: string | null
+          default_unit: string | null
+          doctor_crm_uf: string | null
+          doctor_name: string | null
+          doctor_rqe: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          company_cnpj?: string | null
+          company_name?: string | null
+          created_at?: string
+          default_city?: string | null
+          default_state?: string | null
+          default_unit?: string | null
+          doctor_crm_uf?: string | null
+          doctor_name?: string | null
+          doctor_rqe?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          company_cnpj?: string | null
+          company_name?: string | null
+          created_at?: string
+          default_city?: string | null
+          default_state?: string | null
+          default_unit?: string | null
+          doctor_crm_uf?: string | null
+          doctor_name?: string | null
+          doctor_rqe?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       hr_job_applications: {
         Row: {
