@@ -174,7 +174,8 @@ export default function DocumentCameraCapture({ open, kind, title, onClose, onCa
       </div>
 
       <canvas ref={canvasRef} className="hidden" />
-    </div>
+    </div>,
+    document.body
   );
 }
 
