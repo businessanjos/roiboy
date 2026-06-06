@@ -10193,6 +10193,11 @@ export type Database = {
           id: string
           label: string
           notes: string | null
+          ocr_data: Json | null
+          ocr_error: string | null
+          ocr_kind: string | null
+          ocr_processed_at: string | null
+          ocr_status: string
           required: boolean
           sort_order: number
           status: string
@@ -10215,6 +10220,11 @@ export type Database = {
           id?: string
           label: string
           notes?: string | null
+          ocr_data?: Json | null
+          ocr_error?: string | null
+          ocr_kind?: string | null
+          ocr_processed_at?: string | null
+          ocr_status?: string
           required?: boolean
           sort_order?: number
           status?: string
@@ -10237,6 +10247,11 @@ export type Database = {
           id?: string
           label?: string
           notes?: string | null
+          ocr_data?: Json | null
+          ocr_error?: string | null
+          ocr_kind?: string | null
+          ocr_processed_at?: string | null
+          ocr_status?: string
           required?: boolean
           sort_order?: number
           status?: string
@@ -23422,6 +23437,10 @@ export type Database = {
         }
         Returns: number
       }
+      confirm_admission_ocr: {
+        Args: { _data: Json; _doc_id: string; _token: string }
+        Returns: boolean
+      }
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
       delete_admission_doc_attachment: {
@@ -23766,6 +23785,16 @@ export type Database = {
       seed_clt_admission_docs: {
         Args: { _admission_id: string }
         Returns: undefined
+      }
+      set_admission_ocr_result: {
+        Args: {
+          _data: Json
+          _doc_id: string
+          _error?: string
+          _status: string
+          _token: string
+        }
+        Returns: boolean
       }
       settle_installment_from_import: {
         Args: { p_payment_status?: string; p_row_id: string }
