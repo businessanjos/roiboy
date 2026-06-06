@@ -295,7 +295,47 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
             </div>
 
             <div className="rounded-lg border p-3 space-y-3">
-              <p className="text-xs font-semibold text-muted-foreground">FUNCIONÁRIO</p>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <p className="text-xs font-semibold text-muted-foreground">FUNCIONÁRIO</p>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={ocrBusy} onClick={() => setCameraOpen("id")}>
+                    {ocrBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Camera className="h-3 w-3 mr-1" />} RG/CNH
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" disabled={ocrBusy} onClick={() => setCameraOpen("cpf")}>
+                    <Camera className="h-3 w-3 mr-1" /> CPF
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={ocrBusy} onClick={() => fileInputRef.current?.click()} title="Enviar arquivo (RG/CNH)">
+                    <Upload className="h-3 w-3" />
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    hidden
+                    onChange={(e) => {
+                      const fs = Array.from(e.target.files || []);
+                      if (fs.length) runOcr("id", fs);
+                      e.target.value = "";
+                    }}
+                  />
+                  <input
+                    ref={fileInputCpfRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(e) => {
+                      const fs = Array.from(e.target.files || []);
+                      if (fs.length) runOcr("cpf", fs);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-amber-500" />
+                Use a câmera ou envie a foto — o sistema preenche os campos automaticamente.
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 <div className="col-span-2"><Label className="text-xs">Nome</Label><Input value={data.employee_name || ""} onChange={(e) => upd({ employee_name: e.target.value })} /></div>
                 <div><Label className="text-xs">Doc. Identificação</Label><Input value={data.doc_id || ""} onChange={(e) => upd({ doc_id: e.target.value })} placeholder="RG xx.xxx.xxx-x" /></div>
