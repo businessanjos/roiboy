@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Camera, X, Loader2, RotateCcw, Check } from "lucide-react";
 
 type Kind = "id" | "address" | "generic";
