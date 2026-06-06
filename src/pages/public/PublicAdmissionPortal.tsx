@@ -319,6 +319,56 @@ export default function PublicAdmissionPortal() {
     }
   };
 
+  // ===== OCR =====
+  const OCR_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admission-ocr`;
+
+  const runOcr = async (docId: string) => {
+    if (!token) return;
+    setOcrRunning((p) => ({ ...p, [docId]: true }));
+    try {
+      const res = await fetch(OCR_FN_URL, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ token, doc_id: docId }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "Falha ao ler o documento");
+      toast.success("Dados extraídos — confira abaixo ✨");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro no OCR");
+      await load();
+    } finally {
+      setOcrRunning((p) => ({ ...p, [docId]: false }));
+    }
+  };
+
+  const setOcrField = (docId: string, key: string, value: string) => {
+    setOcrValues((prev) => ({ ...prev, [docId]: { ...(prev[docId] || {}), [key]: value } }));
+  };
+
+  const confirmOcr = async (doc: Doc) => {
+    if (!token) return;
+    setOcrSaving((p) => ({ ...p, [doc.id]: true }));
+    try {
+      const res = await fetch(`${FN_URL}?action=confirm_ocr`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ token, doc_id: doc.id, data: ocrValues[doc.id] || {} }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "falha ao confirmar");
+      toast.success("Dados confirmados ✓");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "erro ao salvar");
+    } finally {
+      setOcrSaving((p) => ({ ...p, [doc.id]: false }));
+    }
+  };
+
+
+
 
   const { docs, required, sent, progress, allDone } = useMemo(() => {
     const docs = data?.documents || [];
