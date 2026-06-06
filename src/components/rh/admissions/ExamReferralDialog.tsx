@@ -457,6 +457,18 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
           </Button>
         </DialogFooter>
       </DialogContent>
+      {cameraOpen && (
+        <DocumentCameraCapture
+          open={!!cameraOpen}
+          kind="id"
+          title={cameraOpen === "id" ? "Foto do RG ou CNH" : "Foto do CPF"}
+          onClose={() => setCameraOpen(null)}
+          onCapture={(file) => {
+            const kind = cameraOpen;
+            if (kind) runOcr(kind, [file]);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
