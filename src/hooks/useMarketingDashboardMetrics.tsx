@@ -39,6 +39,7 @@ export interface MarketingDashboardMetrics {
   mqlConversionRate: number;
   monthlyHistory: { month: string; leads: number; mql: number; won: number }[];
   channelBreakdown: { channel: string; count: number }[];
+  leadsChannelBreakdown: { channel: string; count: number }[];
 
   // Tráfego pago
   adSpend: number;
@@ -126,6 +127,13 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       let mqlOrganic = 0, mqlPaid = 0, mqlOthers = 0;
       let wonMqlOrganic = 0, wonMqlPaid = 0, wonMqlOthers = 0;
       const channelCounts: Record<string, number> = {};
+      const leadsChannelCounts: Record<string, number> = {};
+      // Leads (todos) por canal
+      for (const d of rangeDeals as any[]) {
+        const rawCh = channelByDeal.get(d.id);
+        const friendly = labelForChannel(rawCh);
+        leadsChannelCounts[friendly] = (leadsChannelCounts[friendly] || 0) + 1;
+      }
       for (const id of mqlSet) {
         const rawCh = channelByDeal.get(id);
         const friendly = labelForChannel(rawCh);
@@ -144,6 +152,9 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       }
 
       const channelBreakdown = Object.entries(channelCounts)
+        .map(([channel, count]) => ({ channel, count }))
+        .sort((a, b) => b.count - a.count);
+      const leadsChannelBreakdown = Object.entries(leadsChannelCounts)
         .map(([channel, count]) => ({ channel, count }))
         .sort((a, b) => b.count - a.count);
 
@@ -189,14 +200,16 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         monthlyHistory.push({ month: format(mDate, "MMM/yy"), leads, mql, won });
       }
 
-      // ===== TRÁFEGO PAGO =====
+      // ===== TRÁFEGO PAGO (filtrado por período via updated_at do ad set) =====
       let adSpend = 0, adLeads = 0, adImpressions = 0, adCpl = 0;
       let topCampaigns: { name: string; spend: number; leads: number; cpl: number }[] = [];
       if (userId) {
         const { data: ads = [] } = await supabase
           .from("marketing_ad_sets")
-          .select("name, spend, conversions, impressions, cpl")
+          .select("name, spend, conversions, impressions, cpl, updated_at")
           .eq("user_id", userId)
+          .gte("updated_at", rStart.toISOString())
+          .lte("updated_at", rEnd.toISOString())
           .order("spend", { ascending: false });
         for (const a of ads as any[]) {
           adSpend += Number(a.spend) || 0;
@@ -212,19 +225,20 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         }));
       }
 
-      // ===== CONTEÚDO =====
-      const last30Iso = last30.toISOString();
+      // ===== CONTEÚDO (filtrado por período) =====
+      const contentStartIso = rStart.toISOString();
+      const contentEndIso = rEnd.toISOString();
       const sb: any = supabase;
       let ytVideos30d = 0, ytViews30d = 0, igPosts30d = 0, igEngagement30d = 0, ttPosts30d = 0;
       try {
         const igProfilesRes: any = await sb.from("instagram_profiles").select("id").eq("account_id", accountId!);
         const igProfileIds = (igProfilesRes.data || []).map((p: any) => p.id);
         const [ytRes, igRes, ttRes]: any[] = await Promise.all([
-          sb.from("youtube_videos").select("id, views").eq("account_id", accountId!).gte("posted_at", last30Iso),
+          sb.from("youtube_videos").select("id, views").eq("account_id", accountId!).gte("posted_at", contentStartIso).lte("posted_at", contentEndIso),
           igProfileIds.length
-            ? sb.from("instagram_posts").select("id, likes, comments").in("profile_id", igProfileIds).gte("posted_at", last30Iso)
+            ? sb.from("instagram_posts").select("id, likes, comments").in("profile_id", igProfileIds).gte("posted_at", contentStartIso).lte("posted_at", contentEndIso)
             : Promise.resolve({ data: [] }),
-          sb.from("tiktok_posts").select("id").eq("account_id", accountId!).gte("posted_at", last30Iso),
+          sb.from("tiktok_posts").select("id").eq("account_id", accountId!).gte("posted_at", contentStartIso).lte("posted_at", contentEndIso),
         ]);
         ytVideos30d = (ytRes.data || []).length;
         ytViews30d = (ytRes.data || []).reduce((s: number, v: any) => s + (Number(v.views) || 0), 0);
@@ -305,6 +319,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         mqlConversionRate,
         monthlyHistory,
         channelBreakdown,
+        leadsChannelBreakdown,
         adSpend,
         adLeads,
         adImpressions,
