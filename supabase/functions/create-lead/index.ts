@@ -26,6 +26,14 @@ interface CreateLeadPayload {
   notes?: string;
   segment?: string;
   specialty?: string;
+  // Optional: also create a deal in a pipeline
+  create_deal?: boolean;
+  pipeline_id?: string;
+  pipeline_name?: string;
+  responsible_user_id?: string;
+  responsible_email?: string;
+  deal_title?: string;
+  deal_value?: number;
 }
 
 /**
