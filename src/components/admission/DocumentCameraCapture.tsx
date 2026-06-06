@@ -100,7 +100,6 @@ export default function DocumentCameraCapture({ open, kind, title, onClose, onCa
 
   if (!open) return null;
 
-  return (
   return createPortal(
     <div className="fixed inset-0 z-[2147483646] bg-black flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {/* Header */}
