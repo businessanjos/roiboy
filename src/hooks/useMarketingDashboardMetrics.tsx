@@ -39,6 +39,7 @@ export interface MarketingDashboardMetrics {
   mqlConversionRate: number;
   monthlyHistory: { month: string; leads: number; mql: number; won: number }[];
   channelBreakdown: { channel: string; count: number }[];
+  leadsChannelBreakdown: { channel: string; count: number }[];
 
   // Tráfego pago
   adSpend: number;
