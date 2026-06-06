@@ -329,6 +329,80 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Optionally create a deal in a pipeline assigned to a responsible user
+    let createdDeal: any = null;
+    if (newLead && payload.create_deal) {
+      try {
+        // Resolve pipeline
+        let pipelineId = payload.pipeline_id || null;
+        if (!pipelineId && payload.pipeline_name) {
+          const { data: pipe } = await supabase
+            .from("pipelines")
+            .select("id")
+            .eq("account_id", accountId)
+            .ilike("name", payload.pipeline_name)
+            .maybeSingle();
+          pipelineId = pipe?.id || null;
+        }
+
+        // Resolve responsible user
+        let responsibleUserId = payload.responsible_user_id || null;
+        if (!responsibleUserId && payload.responsible_email) {
+          const { data: u } = await supabase
+            .from("users")
+            .select("id")
+            .ilike("email", payload.responsible_email)
+            .maybeSingle();
+          responsibleUserId = u?.id || null;
+        }
+
+        if (pipelineId) {
+          // First stage of the pipeline
+          const { data: firstStage } = await supabase
+            .from("deal_stages")
+            .select("id")
+            .eq("pipeline_id", pipelineId)
+            .order("display_order", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          if (firstStage) {
+            const { data: deal, error: dealErr } = await supabase
+              .from("deals")
+              .insert({
+                account_id: accountId,
+                lead_id: newLead.id,
+                pipeline_id: pipelineId,
+                stage_id: firstStage.id,
+                responsible_user_id: responsibleUserId,
+                title: payload.deal_title?.trim() || newLead.full_name,
+                contact_name: newLead.full_name,
+                contact_phone: normalizedPhone || null,
+                contact_email: normalizedEmail || null,
+                value: payload.deal_value ?? null,
+                source: payload.source?.trim() || null,
+                status: "open",
+                stage_changed_at: new Date().toISOString(),
+              })
+              .select("id, title, pipeline_id, stage_id, responsible_user_id")
+              .single();
+            if (dealErr) {
+              console.error("Error creating deal:", dealErr);
+            } else {
+              createdDeal = deal;
+            }
+          } else {
+            console.warn("No stages found for pipeline", pipelineId);
+          }
+        } else {
+          console.warn("create_deal=true but no pipeline could be resolved");
+        }
+      } catch (e) {
+        console.error("Deal creation failed:", e);
+      }
+    }
+
+
     if (auth.method === "api_key" && auth.apiKeyId) {
       await logApiKeyUsage(supabase, auth.apiKeyId, req, 201);
     }
