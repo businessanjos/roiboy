@@ -170,8 +170,8 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
       const d = (defaults as any) || {};
       const examDate = admission.exam_scheduled_at ? new Date(admission.exam_scheduled_at) : null;
       setData({
-        cnpj: existing.cnpj ?? d.company_cnpj ?? "",
-        company_name: existing.company_name ?? d.company_name ?? "Eternum Mentoring Club Ltda",
+        cnpj: "53.844.206/0001-64",
+        company_name: "Eternum Mentoring Club Ltda",
         unit: existing.unit ?? d.default_unit ?? "",
         city: existing.city ?? d.default_city ?? "",
         state: existing.state ?? d.default_state ?? "",
