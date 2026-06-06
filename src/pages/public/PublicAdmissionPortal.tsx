@@ -873,19 +873,109 @@ export default function PublicAdmissionPortal() {
                         onChange={(e) => { if (e.target.files?.[0]) { handleUpload(d.id, e.target.files[0]); e.target.value = ""; } }}
                       />
 
+                      {/* Painel OCR — leitura automática */}
+                      {d.ocr_kind && (d.attachments?.length || 0) > 0 && (
+                        <div
+                          className="mt-2 mb-2 rounded-sm p-3.5"
+                          style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}55` }}
+                        >
+                          {(d.ocr_status === "processing" || ocrRunning[d.id]) && (
+                            <div className="flex items-center gap-2 text-xs" style={{ color: TEXT_DARK }}>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: GOLD }} />
+                              <span style={{ fontWeight: 500 }}>Lendo seu documento com IA…</span>
+                            </div>
+                          )}
+
+                          {d.ocr_status === "failed" && !ocrRunning[d.id] && (
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2 flex-1">
+                                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: "#a83232" }} />
+                                <p className="text-[11px] leading-snug" style={{ color: TEXT_DARK }}>
+                                  {d.ocr_error || "Não consegui ler o documento."}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => runOcr(d.id)}
+                                className="text-[11px] underline shrink-0"
+                                style={{ color: TEXT_DARK, fontWeight: 600 }}
+                              >
+                                Tentar de novo
+                              </button>
+                            </div>
+                          )}
+
+                          {(d.ocr_status === "ready" || d.ocr_status === "confirmed") && !ocrRunning[d.id] && (
+                            <>
+                              <div className="flex items-center justify-between mb-2.5">
+                                <div className="flex items-center gap-2">
+                                  <Sparkles className="h-3.5 w-3.5" style={{ color: GOLD }} />
+                                  <span className="text-[10px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, opacity: 0.75, fontWeight: 600 }}>
+                                    {d.ocr_status === "confirmed" ? "Dados confirmados" : "Confira e ajuste se precisar"}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => runOcr(d.id)}
+                                  className="text-[10px] underline opacity-70 hover:opacity-100"
+                                  style={{ color: TEXT_DARK }}
+                                >
+                                  Ler de novo
+                                </button>
+                              </div>
+                              <div className="space-y-2">
+                                {(OCR_KIND_ORDER[d.ocr_kind] || Object.keys(ocrValues[d.id] || d.ocr_data || {})).map((k) => {
+                                  const hasValue = (ocrValues[d.id]?.[k] ?? d.ocr_data?.[k] ?? "").length > 0;
+                                  if (!hasValue && !["nome","cpf","rg","cep","logradouro"].includes(k)) return null;
+                                  return (
+                                    <div key={k} className="grid grid-cols-[110px_1fr] gap-2 items-center">
+                                      <label className="text-[10px] uppercase tracking-[0.15em]" style={{ color: TEXT_DARK, opacity: 0.7, fontWeight: 600 }}>
+                                        {OCR_LABELS[k] || k}
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={ocrValues[d.id]?.[k] ?? ""}
+                                        onChange={(e) => setOcrField(d.id, k, e.target.value)}
+                                        className="h-9 rounded-sm px-2.5 text-xs outline-none"
+                                        style={{ background: "#fff", color: TEXT_DARK, border: `1px solid ${GOLD}55`, fontFamily: SANS }}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <Button
+                                type="button"
+                                disabled={!!ocrSaving[d.id]}
+                                onClick={() => confirmOcr(d)}
+                                className="h-10 w-full border-0 hover:opacity-90 mt-3"
+                                style={{ background: GOLD, color: TEXT_DARK, fontFamily: SANS, fontWeight: 600, letterSpacing: "0.05em" }}
+                              >
+                                {ocrSaving[d.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><Check className="h-4 w-4 mr-1.5" />Confirmar dados</>)}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      )}
+
                       {!locked && (
                         <div className="grid grid-cols-2 gap-2 mt-2">
                           <Button
                             type="button"
                             disabled={isUploading}
-                            onClick={() => cameraInputs.current[d.id]?.click()}
+                            onClick={() => {
+                              if (d.ocr_kind) setCameraDocId(d.id);
+                              else cameraInputs.current[d.id]?.click();
+                            }}
                             className="h-11 sm:h-9 w-full border-0 hover:opacity-90 touch-manipulation"
                             style={{ background: `${TEXT_DARK}`, color: CARD, fontFamily: SANS, fontWeight: 500, letterSpacing: "0.05em" }}
                           >
                             {isUploading ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <><Camera className="h-4 w-4 mr-1.5" />{d.attachments?.length ? "Outra foto" : "Tirar foto"}</>
+                              <>
+                                {d.ocr_kind ? <ScanLine className="h-4 w-4 mr-1.5" /> : <Camera className="h-4 w-4 mr-1.5" />}
+                                {d.attachments?.length ? "Outra foto" : "Tirar foto"}
+                              </>
                             )}
                           </Button>
                           <Button
