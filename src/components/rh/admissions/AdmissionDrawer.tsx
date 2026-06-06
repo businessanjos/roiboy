@@ -64,6 +64,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [referralOpen, setReferralOpen] = useState(false);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   if (!admission) return null;
