@@ -75,6 +75,10 @@ interface Doc {
   doc_type?: "file" | "form";
   form_schema?: FormField[] | null;
   form_data?: Record<string, string> | null;
+  ocr_kind?: "id" | "cpf" | "address" | null;
+  ocr_status?: "idle" | "processing" | "ready" | "confirmed" | "failed";
+  ocr_data?: Record<string, string> | null;
+  ocr_error?: string | null;
 }
 
 interface PortalData {
