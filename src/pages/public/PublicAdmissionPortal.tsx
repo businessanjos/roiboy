@@ -146,14 +146,19 @@ export default function PublicAdmissionPortal() {
       if (!res.ok) throw new Error("not_found");
       const json: PortalData = await res.json();
       setData(json);
-      // hydrate form values
-      const next: Record<string, Record<string, string>> = {};
+      // hydrate form values + ocr values
+      const nextForm: Record<string, Record<string, string>> = {};
+      const nextOcr: Record<string, Record<string, string>> = {};
       (json.documents || []).forEach((d) => {
         if (d.doc_type === "form") {
-          next[d.id] = { ...(d.form_data || {}) };
+          nextForm[d.id] = { ...(d.form_data || {}) };
+        }
+        if (d.ocr_kind && d.ocr_data) {
+          nextOcr[d.id] = { ...(d.ocr_data || {}) };
         }
       });
-      setFormValues((prev) => ({ ...next, ...prev }));
+      setFormValues((prev) => ({ ...nextForm, ...prev }));
+      setOcrValues((prev) => ({ ...nextOcr, ...prev }));
     } catch {
       setData(null);
     } finally {
