@@ -529,7 +529,7 @@ export default function MarketingDashboard() {
         <SectionTitle
           icon={Youtube}
           title="Conteúdo & Social"
-          subtitle="Publicações dos últimos 30 dias"
+          subtitle={`Publicações no período (${rangeLabel})`}
           action={
             <Button variant="outline" size="sm" onClick={() => navigate("/marketing/content-hq")}>
               Content HQ <ArrowRight className="h-3.5 w-3.5 ml-1" />
