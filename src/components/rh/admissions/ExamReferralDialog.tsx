@@ -266,7 +266,12 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-5xl max-h-[92vh] overflow-y-auto"
+        onPointerDownOutside={(e) => { if (cameraOpen) e.preventDefault(); }}
+        onInteractOutside={(e) => { if (cameraOpen) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (cameraOpen) e.preventDefault(); }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Stethoscope className="h-5 w-5 text-rose-600" />
