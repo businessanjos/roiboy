@@ -234,11 +234,11 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         const igProfilesRes: any = await sb.from("instagram_profiles").select("id").eq("account_id", accountId!);
         const igProfileIds = (igProfilesRes.data || []).map((p: any) => p.id);
         const [ytRes, igRes, ttRes]: any[] = await Promise.all([
-          sb.from("youtube_videos").select("id, views").eq("account_id", accountId!).gte("posted_at", last30Iso),
+          sb.from("youtube_videos").select("id, views").eq("account_id", accountId!).gte("posted_at", contentStartIso).lte("posted_at", contentEndIso),
           igProfileIds.length
-            ? sb.from("instagram_posts").select("id, likes, comments").in("profile_id", igProfileIds).gte("posted_at", last30Iso)
+            ? sb.from("instagram_posts").select("id, likes, comments").in("profile_id", igProfileIds).gte("posted_at", contentStartIso).lte("posted_at", contentEndIso)
             : Promise.resolve({ data: [] }),
-          sb.from("tiktok_posts").select("id").eq("account_id", accountId!).gte("posted_at", last30Iso),
+          sb.from("tiktok_posts").select("id").eq("account_id", accountId!).gte("posted_at", contentStartIso).lte("posted_at", contentEndIso),
         ]);
         ytVideos30d = (ytRes.data || []).length;
         ytViews30d = (ytRes.data || []).reduce((s: number, v: any) => s + (Number(v.views) || 0), 0);
