@@ -407,7 +407,7 @@ Deno.serve(async (req) => {
       await logApiKeyUsage(supabase, auth.apiKeyId, req, 201);
     }
 
-    return new Response(JSON.stringify({ success: true, lead: newLead }), {
+    return new Response(JSON.stringify({ success: true, lead: newLead, deal: createdDeal }), {
       status: 201,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
