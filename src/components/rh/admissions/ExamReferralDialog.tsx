@@ -362,6 +362,9 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <p className="text-xs font-semibold text-muted-foreground">FUNCIONÁRIO</p>
                 <div className="flex items-center gap-1 flex-wrap">
+                  <Button size="sm" variant="default" className="h-7 text-xs" disabled={pullingDocs || ocrBusy} onClick={() => pullFromCandidateDocs(false)} title="Usar os documentos já enviados pelo candidato no portal">
+                    {pullingDocs ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <FileText className="h-3 w-3 mr-1" />} Puxar dos documentos
+                  </Button>
                   <Button size="sm" variant="outline" className="h-7 text-xs" disabled={ocrBusy} onClick={() => setCameraOpen("id")}>
                     {ocrBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Camera className="h-3 w-3 mr-1" />} RG/CNH
                   </Button>
