@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Save, Printer, Stethoscope, Loader2, Camera, Sparkles, Upload } from "lucide-react";
+import { Save, Printer, Stethoscope, Loader2, Camera, Sparkles, Upload, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -153,6 +153,64 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
     }
   };
 
+  // Aplica dados de OCR (vindos do portal ou de captura nova) nos campos do formulário
+  const applyOcrData = (kind: "id" | "cpf", d: Record<string, any>) => {
+    setData((prev) => {
+      const next = { ...prev };
+      if (kind === "id") {
+        if (d.nome) next.employee_name = d.nome;
+        if (d.cpf) next.cpf = d.cpf;
+        if (d.rg) next.doc_id = `RG ${d.rg}${d.rg_orgao_emissor ? " " + d.rg_orgao_emissor : ""}`;
+        if (d.tipo && /CNH/i.test(d.tipo)) {
+          if (d.cnh_numero) next.cnh_number = d.cnh_numero;
+          const iso = dateBRtoISO(d.cnh_validade);
+          if (iso) next.cnh_validity = iso;
+        }
+        const bn = dateBRtoISO(d.data_nascimento);
+        if (bn) next.birth_date = bn;
+      } else if (kind === "cpf") {
+        if (d.cpf) next.cpf = d.cpf;
+        if (d.nome && !next.employee_name) next.employee_name = d.nome;
+      }
+      return next;
+    });
+  };
+
+  // Puxa OCR já processado dos documentos enviados pelo candidato no portal
+  const [pullingDocs, setPullingDocs] = useState(false);
+  const pullFromCandidateDocs = async (silent = false) => {
+    setPullingDocs(true);
+    try {
+      const { data: docs, error } = await supabase
+        .from("hr_admission_documents" as any)
+        .select("ocr_kind, ocr_data, ocr_status, form_data")
+        .eq("admission_id", admission.id);
+      if (error) throw error;
+      const list = (docs || []) as any[];
+      let applied = 0;
+      // ID/CNH primeiro (tem mais campos), depois CPF para complementar
+      for (const kind of ["id", "cpf"] as const) {
+        const doc = list.find(
+          (x) => x.ocr_kind === kind && x.ocr_data && Object.keys(x.ocr_data || {}).length > 0
+        );
+        if (doc) {
+          applyOcrData(kind, doc.ocr_data);
+          applied++;
+        }
+      }
+      if (!silent) {
+        if (applied === 0) toast.info("Nenhum documento com OCR disponível ainda no portal do candidato.");
+        else toast.success(`Dados preenchidos a partir dos documentos do candidato (${applied}).`);
+      }
+      return applied;
+    } catch (e: any) {
+      if (!silent) toast.error("Erro ao puxar documentos: " + (e?.message || e));
+      return 0;
+    } finally {
+      setPullingDocs(false);
+    }
+  };
+
   // Load defaults + existing referral_data
   useEffect(() => {
     if (!open || !currentUser?.account_id) return;
@@ -191,6 +249,11 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
         exam_type: existing.exam_type ?? "admissional",
         exams: existing.exams ?? ["EXAME CLÍNICO"],
       });
+      // Se o candidato já enviou documentos com OCR pronto e ainda não temos identificação preenchida, puxa silenciosamente
+      const hasIdentity = !!(existing.cpf || existing.doc_id || existing.birth_date);
+      if (!hasIdentity) {
+        await pullFromCandidateDocs(true);
+      }
     })();
     return () => { cancelled = true; };
   }, [open, currentUser?.account_id, admission]);
@@ -304,6 +367,9 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <p className="text-xs font-semibold text-muted-foreground">FUNCIONÁRIO</p>
                 <div className="flex items-center gap-1 flex-wrap">
+                  <Button size="sm" variant="default" className="h-7 text-xs" disabled={pullingDocs || ocrBusy} onClick={() => pullFromCandidateDocs(false)} title="Usar os documentos já enviados pelo candidato no portal">
+                    {pullingDocs ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <FileText className="h-3 w-3 mr-1" />} Puxar dos documentos
+                  </Button>
                   <Button size="sm" variant="outline" className="h-7 text-xs" disabled={ocrBusy} onClick={() => setCameraOpen("id")}>
                     {ocrBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Camera className="h-3 w-3 mr-1" />} RG/CNH
                   </Button>
