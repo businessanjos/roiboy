@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Save, Printer, Stethoscope, Loader2, Camera, Sparkles, Upload } from "lucide-react";
+import { Save, Printer, Stethoscope, Loader2, Camera, Sparkles, Upload, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
