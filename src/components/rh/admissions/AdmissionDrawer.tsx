@@ -12,8 +12,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, FileCheck2, Check, X, Loader2, Mail, Phone,
   Calendar, Stethoscope, FileSignature, GraduationCap, Trash2, ExternalLink,
-  Copy, Link as LinkIcon, Sparkles, MessageSquareWarning, Eye, EyeOff,
+  Copy, Link as LinkIcon, Sparkles, MessageSquareWarning, Eye, EyeOff, FileText,
 } from "lucide-react";
+import ExamReferralDialog from "./ExamReferralDialog";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -63,6 +64,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [referralOpen, setReferralOpen] = useState(false);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   if (!admission) return null;
@@ -223,7 +225,12 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
 
           {/* Exam admissional */}
           <div className="rounded-lg border bg-rose-500/5 p-4 space-y-3">
-            <div className="flex items-center gap-2 font-semibold text-sm"><Stethoscope className="h-4 w-4 text-rose-600" />Exame Admissional</div>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 font-semibold text-sm"><Stethoscope className="h-4 w-4 text-rose-600" />Exame Admissional</div>
+              <Button size="sm" variant="outline" onClick={() => setReferralOpen(true)} className="h-7">
+                <FileText className="h-3.5 w-3.5 mr-1" /> Guia de Encaminhamento
+              </Button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Clínica</Label>
@@ -555,6 +562,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
           </div>
         </div>
       </SheetContent>
+      <ExamReferralDialog admission={admission} open={referralOpen} onOpenChange={setReferralOpen} />
     </Sheet>
   );
 }
