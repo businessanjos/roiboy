@@ -3,11 +3,44 @@ import { useParams } from "react-router-dom";
 import {
   Upload, CheckCircle2, Clock, AlertCircle, Loader2, FileCheck2,
   Camera, FileText, ExternalLink, PartyPopper, ShieldCheck, X, Plus, Trash2,
-  Pencil, Save,
+  Pencil, Save, Sparkles, ScanLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import letreiro from "@/assets/eternum/letreiro.png.asset.json";
+import DocumentCameraCapture from "@/components/admission/DocumentCameraCapture";
+
+// Labels amigáveis dos campos extraídos por OCR
+const OCR_LABELS: Record<string, string> = {
+  tipo: "Tipo de documento",
+  nome: "Nome completo",
+  cpf: "CPF",
+  rg: "RG",
+  rg_orgao_emissor: "Órgão emissor",
+  data_nascimento: "Data de nascimento",
+  nome_mae: "Nome da mãe",
+  nome_pai: "Nome do pai",
+  naturalidade: "Naturalidade",
+  cnh_numero: "Registro CNH",
+  cnh_categoria: "Categoria CNH",
+  cnh_validade: "Validade CNH",
+  cnh_primeira_habilitacao: "1ª habilitação",
+  titular: "Titular da conta",
+  logradouro: "Logradouro",
+  numero: "Número",
+  complemento: "Complemento",
+  bairro: "Bairro",
+  cidade: "Cidade",
+  uf: "UF",
+  cep: "CEP",
+  data_emissao: "Data de emissão",
+};
+
+const OCR_KIND_ORDER: Record<string, string[]> = {
+  id: ["tipo", "nome", "cpf", "rg", "rg_orgao_emissor", "data_nascimento", "nome_mae", "nome_pai", "naturalidade", "cnh_numero", "cnh_categoria", "cnh_validade", "cnh_primeira_habilitacao"],
+  cpf: ["cpf", "nome"],
+  address: ["titular", "cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf", "data_emissao"],
+};
 
 interface Attachment {
   name: string;
