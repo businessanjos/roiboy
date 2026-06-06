@@ -153,6 +153,64 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
     }
   };
 
+  // Aplica dados de OCR (vindos do portal ou de captura nova) nos campos do formulário
+  const applyOcrData = (kind: "id" | "cpf", d: Record<string, any>) => {
+    setData((prev) => {
+      const next = { ...prev };
+      if (kind === "id") {
+        if (d.nome) next.employee_name = d.nome;
+        if (d.cpf) next.cpf = d.cpf;
+        if (d.rg) next.doc_id = `RG ${d.rg}${d.rg_orgao_emissor ? " " + d.rg_orgao_emissor : ""}`;
+        if (d.tipo && /CNH/i.test(d.tipo)) {
+          if (d.cnh_numero) next.cnh_number = d.cnh_numero;
+          const iso = dateBRtoISO(d.cnh_validade);
+          if (iso) next.cnh_validity = iso;
+        }
+        const bn = dateBRtoISO(d.data_nascimento);
+        if (bn) next.birth_date = bn;
+      } else if (kind === "cpf") {
+        if (d.cpf) next.cpf = d.cpf;
+        if (d.nome && !next.employee_name) next.employee_name = d.nome;
+      }
+      return next;
+    });
+  };
+
+  // Puxa OCR já processado dos documentos enviados pelo candidato no portal
+  const [pullingDocs, setPullingDocs] = useState(false);
+  const pullFromCandidateDocs = async (silent = false) => {
+    setPullingDocs(true);
+    try {
+      const { data: docs, error } = await supabase
+        .from("hr_admission_documents" as any)
+        .select("ocr_kind, ocr_data, ocr_status, form_data")
+        .eq("admission_id", admission.id);
+      if (error) throw error;
+      const list = (docs || []) as any[];
+      let applied = 0;
+      // ID/CNH primeiro (tem mais campos), depois CPF para complementar
+      for (const kind of ["id", "cpf"] as const) {
+        const doc = list.find(
+          (x) => x.ocr_kind === kind && x.ocr_data && Object.keys(x.ocr_data || {}).length > 0
+        );
+        if (doc) {
+          applyOcrData(kind, doc.ocr_data);
+          applied++;
+        }
+      }
+      if (!silent) {
+        if (applied === 0) toast.info("Nenhum documento com OCR disponível ainda no portal do candidato.");
+        else toast.success(`Dados preenchidos a partir dos documentos do candidato (${applied}).`);
+      }
+      return applied;
+    } catch (e: any) {
+      if (!silent) toast.error("Erro ao puxar documentos: " + (e?.message || e));
+      return 0;
+    } finally {
+      setPullingDocs(false);
+    }
+  };
+
   // Load defaults + existing referral_data
   useEffect(() => {
     if (!open || !currentUser?.account_id) return;
