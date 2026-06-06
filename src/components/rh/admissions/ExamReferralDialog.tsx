@@ -126,14 +126,15 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
         if (kind === "id") {
           if (d.nome) next.employee_name = d.nome;
           if (d.cpf) next.cpf = d.cpf;
+          // Doc Identificação: sempre preenche com RG (tanto RG quanto CNH costumam ter o nº do RG)
+          if (d.rg) {
+            next.doc_id = `RG ${d.rg}${d.rg_orgao_emissor ? " " + d.rg_orgao_emissor : ""}`;
+          }
+          // CNH vai pros campos próprios
           if (d.tipo && /CNH/i.test(d.tipo)) {
             if (d.cnh_numero) next.cnh_number = d.cnh_numero;
             const iso = dateBRtoISO(d.cnh_validade);
             if (iso) next.cnh_validity = iso;
-            // doc_id pode ser CNH se for o documento principal
-            if (!next.doc_id && d.cnh_numero) next.doc_id = `CNH ${d.cnh_numero}`;
-          } else if (d.rg) {
-            next.doc_id = `RG ${d.rg}${d.rg_orgao_emissor ? " " + d.rg_orgao_emissor : ""}`;
           }
           const bn = dateBRtoISO(d.data_nascimento);
           if (bn) next.birth_date = bn;
