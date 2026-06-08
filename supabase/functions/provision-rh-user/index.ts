@@ -48,7 +48,7 @@ Deno.serve(async (req: Request) => {
         account_id,
         name,
         email,
-        role: "mentor",
+        role: "member",
         is_also_admin: false,
         is_active: true,
       }).select("id").single();
