@@ -219,7 +219,10 @@ export default function Sectors() {
     // briefly seeing all sectors before the RLS data finishes loading.
     if (sectorAccessLoading) return [];
 
-    let filtered = sectors.filter((s) => hasSectorAccess(s.id));
+    // Super admins / admins see every sector regardless of explicit grants —
+    // protects against transient RPC failures leaving the page empty.
+    const bypassAccess = isSuperAdmin || isAdmin;
+    let filtered = bypassAccess ? sectors.slice() : sectors.filter((s) => hasSectorAccess(s.id));
     // RH is only visible to the allowed email
     if (!RH_ALLOWED_EMAILS.includes((currentUser?.email || "").toLowerCase())) {
       filtered = filtered.filter(s => s.id !== "rh");
@@ -241,7 +244,7 @@ export default function Sectors() {
     }
 
     return filtered;
-  }, [hasSectorAccess, sectorAccessLoading, sectorAccess, currentUser, isSuperAdmin]);
+  }, [hasSectorAccess, sectorAccessLoading, sectorAccess, currentUser, isSuperAdmin, isAdmin]);
 
   const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "eventos", "royzapp", "everia", "rh"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
