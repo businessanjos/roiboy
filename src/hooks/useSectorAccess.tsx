@@ -73,10 +73,9 @@ export function useSectorAccess() {
   const { isSuperAdmin } = useSuperAdmin();
 
   const hasSectorAccess = (sectorId: SectorId): boolean => {
-    
-    // Only explicit admin flags bypass the per-user sector settings from the admin panel.
-    if (userRole === "admin" || isAlsoAdmin) return true;
-    
+    // Explicit admin flags + super admin always have access to every sector.
+    if (userRole === "admin" || isAlsoAdmin || isSuperAdmin) return true;
+
     return sectorAccess.some((access) => access.sector_id === sectorId);
   };
 
