@@ -219,7 +219,10 @@ export default function Sectors() {
     // briefly seeing all sectors before the RLS data finishes loading.
     if (sectorAccessLoading) return [];
 
-    let filtered = sectors.filter((s) => hasSectorAccess(s.id));
+    // Super admins / admins see every sector regardless of explicit grants —
+    // protects against transient RPC failures leaving the page empty.
+    const bypassAccess = isSuperAdmin || isAdmin;
+    let filtered = bypassAccess ? sectors.slice() : sectors.filter((s) => hasSectorAccess(s.id));
     // RH is only visible to the allowed email
     if (!RH_ALLOWED_EMAILS.includes((currentUser?.email || "").toLowerCase())) {
       filtered = filtered.filter(s => s.id !== "rh");
