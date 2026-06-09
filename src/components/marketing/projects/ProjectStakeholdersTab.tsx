@@ -283,16 +283,7 @@ function StakeholderFormDialog({
   const [notes, setNotes] = useState(editing?.notes || "");
   const [saving, setSaving] = useState(false);
 
-  // re-sync when opening with different record
-  useState(() => {
-    if (editing) {
-      setType(editing.type); setUserId(editing.user_id || ""); setName(editing.name || "");
-      setRole(editing.role || ""); setCompany(editing.company || ""); setTitle(editing.title || "");
-      setWebsite(editing.website || ""); setLinkedin(editing.linkedin_url || "");
-      setInstagram(editing.instagram_url || ""); setEmail(editing.email || "");
-      setPhone(editing.phone || ""); setNotes(editing.notes || "");
-    }
-  });
+  // initial values come from `editing`; parent passes a `key` so this remounts per record
 
   const handle = async () => {
     if (!role.trim()) { toast.error("Papel é obrigatório"); return; }
