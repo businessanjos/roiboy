@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail, Clock, User as UserIcon, Calendar as CalIcon, AlertTriangle } from "lucide-react";
 import { useHRJobById } from "@/hooks/useHRJobs";
 import { useHRJobStages, useAccountUsersForJobs } from "@/hooks/useHRJobStages";
+import { useRecruitmentPartners } from "@/hooks/useRecruitmentPartners";
 import CandidateKanbanBoard from "@/components/rh/jobs/CandidateKanbanBoard";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, OPENING_REASON_LABELS } from "@/types/job";
 import { format, differenceInCalendarDays } from "date-fns";
@@ -50,8 +51,13 @@ const OFFER_STATUS_COLORS: Record<string, string> = {
 
 function JobManagementPanel({ jobId, job }: { jobId: string; job: any }) {
   const { data: users } = useAccountUsersForJobs();
+  const { data: partners } = useRecruitmentPartners();
   const manager = users?.find(u => u.id === job.hiring_manager_id);
-  const recruiter = users?.find(u => u.id === job.recruiter_id);
+  const recruiterUser = users?.find(u => u.id === job.recruiter_id);
+  const recruiterPartner = partners?.find(p => p.id === job.recruiter_provider_id);
+  const recruiterLabel = recruiterPartner
+    ? (recruiterPartner.company_name ? `${recruiterPartner.company_name} (parceiro)` : `${recruiterPartner.full_name} (parceiro)`)
+    : (recruiterUser?.name || recruiterUser?.email || "—");
   const openedAt = job.opened_at || job.created_at;
   const daysOpen = differenceInCalendarDays(new Date(), new Date(openedAt));
   const target = job.target_fill_date ? new Date(job.target_fill_date) : null;
@@ -68,7 +74,7 @@ function JobManagementPanel({ jobId, job }: { jobId: string; job: any }) {
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div><p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><UserIcon className="h-3 w-3" />Gestor</p><p className="font-medium">{manager?.name || manager?.email || "—"}</p></div>
-          <div><p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><UserIcon className="h-3 w-3" />Recrutador</p><p className="font-medium">{recruiter?.name || recruiter?.email || "—"}</p></div>
+          <div><p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><UserIcon className="h-3 w-3" />Recrutador</p><p className="font-medium">{recruiterLabel}</p></div>
           <div><p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Clock className="h-3 w-3" />Em aberto</p><p className="font-medium">{daysOpen}d</p></div>
           <div>
             <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><CalIcon className="h-3 w-3" />Prazo</p>
@@ -90,31 +96,42 @@ function JobManagementPanel({ jobId, job }: { jobId: string; job: any }) {
 
 function JobStagesPanel({ jobId }: { jobId: string }) {
   const { data: stages } = useHRJobStages(jobId);
+  const { data: partners } = useRecruitmentPartners();
   if (!stages || stages.length === 0) return null;
+  const partnerName = (id: string | null) => {
+    if (!id) return null;
+    const p = partners?.find(x => x.id === id);
+    if (!p) return null;
+    return p.company_name ? `${p.company_name} (parceiro)` : `${p.full_name} (parceiro)`;
+  };
   return (
     <Card>
       <CardHeader><CardTitle className="text-lg">Etapas do processo seletivo</CardTitle></CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {stages.map((s, i) => (
-            <div key={s.id} className="border rounded-lg p-3">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <p className="font-medium text-sm flex items-center gap-2"><Badge variant="secondary">{i + 1}</Badge>{s.name}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {s.owner_role && <Badge variant="outline" className="text-[10px]">{s.owner_role}</Badge>}
-                  {s.sla_days && <span>{s.sla_days}d SLA</span>}
+          {stages.map((s, i) => {
+            const pName = partnerName((s as any).owner_provider_id);
+            const conduz = pName || s.owner_name;
+            return (
+              <div key={s.id} className="border rounded-lg p-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="font-medium text-sm flex items-center gap-2"><Badge variant="secondary">{i + 1}</Badge>{s.name}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {s.owner_role && <Badge variant="outline" className="text-[10px]">{s.owner_role}</Badge>}
+                    {s.sla_days && <span>{s.sla_days}d SLA</span>}
+                  </div>
                 </div>
+                {conduz && <p className="text-xs text-muted-foreground mb-1"><strong>Conduz:</strong> {conduz}</p>}
+                {s.what_to_do && <p className="text-xs mb-1">{s.what_to_do}</p>}
+                {s.test_or_material && <p className="text-xs mb-2"><Badge variant="outline" className="text-[10px] mr-1">Teste/Material</Badge>{s.test_or_material}</p>}
+                {s.evaluation_criteria?.length > 0 && (
+                  <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+                    {s.evaluation_criteria.map((c, j) => <li key={j}>{c}</li>)}
+                  </ul>
+                )}
               </div>
-              {s.owner_name && <p className="text-xs text-muted-foreground mb-1"><strong>Conduz:</strong> {s.owner_name}</p>}
-              {s.what_to_do && <p className="text-xs mb-1">{s.what_to_do}</p>}
-              {s.test_or_material && <p className="text-xs mb-2"><Badge variant="outline" className="text-[10px] mr-1">Teste/Material</Badge>{s.test_or_material}</p>}
-              {s.evaluation_criteria?.length > 0 && (
-                <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
-                  {s.evaluation_criteria.map((c, j) => <li key={j}>{c}</li>)}
-                </ul>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

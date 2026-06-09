@@ -47,6 +47,9 @@ export interface HRServiceProvider {
   contract_installments_count: number | null;
   contract_installment_value: number | null;
   contract_auto_renewal: boolean | null;
+  is_recruitment_partner: boolean | null;
+  recruitment_commission_pct: number | null;
+  recruitment_notes: string | null;
   created_at: string;
   updated_at: string;
 }

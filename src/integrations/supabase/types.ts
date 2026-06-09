@@ -11277,6 +11277,7 @@ export type Database = {
           name: string
           order_index: number
           owner_name: string | null
+          owner_provider_id: string | null
           owner_role: string | null
           sla_days: number | null
           test_or_material: string | null
@@ -11293,6 +11294,7 @@ export type Database = {
           name: string
           order_index?: number
           owner_name?: string | null
+          owner_provider_id?: string | null
           owner_role?: string | null
           sla_days?: number | null
           test_or_material?: string | null
@@ -11309,6 +11311,7 @@ export type Database = {
           name?: string
           order_index?: number
           owner_name?: string | null
+          owner_provider_id?: string | null
           owner_role?: string | null
           sla_days?: number | null
           test_or_material?: string | null
@@ -11328,6 +11331,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_stages_owner_provider_id_fkey"
+            columns: ["owner_provider_id"]
+            isOneToOne: false
+            referencedRelation: "hr_service_providers"
             referencedColumns: ["id"]
           },
         ]
@@ -11357,6 +11367,7 @@ export type Database = {
           openings_count: number | null
           position: string | null
           recruiter_id: string | null
+          recruiter_provider_id: string | null
           require_cover_letter: boolean | null
           required_skills: string[] | null
           requirements: string | null
@@ -11397,6 +11408,7 @@ export type Database = {
           openings_count?: number | null
           position?: string | null
           recruiter_id?: string | null
+          recruiter_provider_id?: string | null
           require_cover_letter?: boolean | null
           required_skills?: string[] | null
           requirements?: string | null
@@ -11437,6 +11449,7 @@ export type Database = {
           openings_count?: number | null
           position?: string | null
           recruiter_id?: string | null
+          recruiter_provider_id?: string | null
           require_cover_letter?: boolean | null
           required_skills?: string[] | null
           requirements?: string | null
@@ -11480,6 +11493,13 @@ export type Database = {
             columns: ["recruiter_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_jobs_recruiter_provider_id_fkey"
+            columns: ["recruiter_provider_id"]
+            isOneToOne: false
+            referencedRelation: "hr_service_providers"
             referencedColumns: ["id"]
           },
         ]
@@ -12061,6 +12081,7 @@ export type Database = {
           hire_date: string | null
           hr_department_id: string | null
           id: string
+          is_recruitment_partner: boolean
           marital_status: string | null
           notes: string | null
           payment_method: string | null
@@ -12068,6 +12089,8 @@ export type Database = {
           portal_token: string | null
           position: string | null
           preferred_payment_day: number | null
+          recruitment_commission_pct: number | null
+          recruitment_notes: string | null
           rg: string | null
           service_type: string | null
           state: string | null
@@ -12111,6 +12134,7 @@ export type Database = {
           hire_date?: string | null
           hr_department_id?: string | null
           id?: string
+          is_recruitment_partner?: boolean
           marital_status?: string | null
           notes?: string | null
           payment_method?: string | null
@@ -12118,6 +12142,8 @@ export type Database = {
           portal_token?: string | null
           position?: string | null
           preferred_payment_day?: number | null
+          recruitment_commission_pct?: number | null
+          recruitment_notes?: string | null
           rg?: string | null
           service_type?: string | null
           state?: string | null
@@ -12161,6 +12187,7 @@ export type Database = {
           hire_date?: string | null
           hr_department_id?: string | null
           id?: string
+          is_recruitment_partner?: boolean
           marital_status?: string | null
           notes?: string | null
           payment_method?: string | null
@@ -12168,6 +12195,8 @@ export type Database = {
           portal_token?: string | null
           position?: string | null
           preferred_payment_day?: number | null
+          recruitment_commission_pct?: number | null
+          recruitment_notes?: string | null
           rg?: string | null
           service_type?: string | null
           state?: string | null
