@@ -252,13 +252,30 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
             </div>
           )}
 
+          {/* Travel info */}
+          {travelMeta && (
+            <div className="space-y-2 rounded-lg border p-3 bg-muted/30">
+              <p className="text-sm font-medium">Viagem</p>
+              {travelMeta.destination && <p className="text-sm"><span className="text-muted-foreground">Destino:</span> {travelMeta.destination}</p>}
+              {travelMeta.reason && <p className="text-sm"><span className="text-muted-foreground">Motivo:</span> {travelMeta.reason}</p>}
+              {travelMeta.companions && <p className="text-sm"><span className="text-muted-foreground">Quem vai:</span> {travelMeta.companions}</p>}
+              {travelMeta.audience && <p className="text-sm"><span className="text-muted-foreground">Público:</span> {travelMeta.audience}</p>}
+              {travelMeta.impact && (
+                <div className="text-sm">
+                  <p className="text-muted-foreground">Posicionamento / impacto:</p>
+                  <p className="whitespace-pre-wrap">{travelMeta.impact}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Notes */}
-          {event.notes && (
+          {cleanNotes && (
             <div className="flex items-start gap-3">
               <StickyNote className="h-4 w-4 mt-0.5 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Notas</p>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{event.notes}</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{cleanNotes}</p>
               </div>
             </div>
           )}
