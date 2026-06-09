@@ -210,11 +210,6 @@ export default function HRServiceProviders() {
                         ? provider.company_name
                         : provider.full_name}
                     </p>
-                    {(provider as any).provider_kind === "director" && (
-                      <Badge variant="outline" className="text-[10px] gap-1 border-amber-300 text-amber-700 bg-amber-50">
-                        <Crown className="h-3 w-3" /> Diretor PJ
-                      </Badge>
-                    )}
                     <Badge variant={statusInfo.variant} className="text-[10px]">
                       {statusInfo.label}
                     </Badge>
