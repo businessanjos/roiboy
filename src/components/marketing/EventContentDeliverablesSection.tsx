@@ -31,7 +31,7 @@ interface Props {
   event?: MarketingEvent;
 }
 
-export function EventContentDeliverablesSection({ eventId, eventDate }: Props) {
+export function EventContentDeliverablesSection({ eventId, eventDate, event }: Props) {
   const navigate = useNavigate();
   const {
     deliverables,
@@ -46,6 +46,7 @@ export function EventContentDeliverablesSection({ eventId, eventDate }: Props) {
 
   const [newTitle, setNewTitle] = useState('');
   const [newKind, setNewKind] = useState<DeliverableKind>('custom');
+  const [aiOpen, setAiOpen] = useState(false);
 
   const total = deliverables.length;
   const done = deliverables.filter((d) => d.status === 'done').length;
