@@ -51,9 +51,10 @@ serve(async (req) => {
       supabase.from("content_pillars").select("name,description").eq("account_id", accountId).limit(10),
       supabase
         .from("content_strategies")
-        .select("title,summary")
+        .select("year,quarter,positioning,audience,tone")
         .eq("account_id", accountId)
-        .order("created_at", { ascending: false })
+        .order("year", { ascending: false })
+        .order("quarter", { ascending: false })
         .limit(3),
     ]);
 
