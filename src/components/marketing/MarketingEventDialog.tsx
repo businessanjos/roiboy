@@ -106,7 +106,10 @@ export function MarketingEventDialog({
     project_name: '',
   });
 
+  // Only re-initialize when the dialog opens or the event ID changes — not on every
+  // refetch (which would clobber unsaved edits like "Quem vai").
   useEffect(() => {
+    if (!open) return;
     if (event) {
       const { meta, clean } = extractMeta(event.notes);
       setFormData({
