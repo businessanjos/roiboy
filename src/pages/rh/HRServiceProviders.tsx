@@ -196,15 +196,6 @@ export default function HRServiceProviders() {
                     <Badge variant={statusInfo.variant} className="text-[10px]">
                       {statusInfo.label}
                     </Badge>
-                    {(provider as any).is_recruitment_partner && (
-                      <Badge variant="outline" className="text-[10px] gap-1 border-violet-400 text-violet-700 bg-violet-50">
-                        <UserSearch className="h-3 w-3" />
-                        Parceiro R&S
-                        {(provider as any).recruitment_commission_pct != null && (
-                          <span className="font-semibold">· {(provider as any).recruitment_commission_pct}%</span>
-                        )}
-                      </Badge>
-                    )}
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                     {provider.company_name && (
