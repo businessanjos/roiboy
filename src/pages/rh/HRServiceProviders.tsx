@@ -189,12 +189,20 @@ export default function HRServiceProviders() {
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={provider.avatar_url || ""} />
                   <AvatarFallback className="bg-amber-100 text-amber-700 font-semibold">
-                    {getInitials(provider.full_name)}
+                    {getInitials(
+                      (provider as any).provider_kind === "on_demand" && provider.company_name
+                        ? provider.company_name
+                        : provider.full_name
+                    )}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-foreground truncate">{provider.full_name}</p>
+                    <p className="font-semibold text-foreground truncate">
+                      {(provider as any).provider_kind === "on_demand" && provider.company_name
+                        ? provider.company_name
+                        : provider.full_name}
+                    </p>
                     {(provider as any).provider_kind === "director" && (
                       <Badge variant="outline" className="text-[10px] gap-1 border-amber-300 text-amber-700 bg-amber-50">
                         <Crown className="h-3 w-3" /> Diretor PJ
@@ -205,7 +213,13 @@ export default function HRServiceProviders() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                    {provider.company_name && (
+                    {(provider as any).provider_kind === "on_demand" && provider.full_name && (
+                      <span className="flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        Contato: {provider.full_name}
+                      </span>
+                    )}
+                    {(provider as any).provider_kind !== "on_demand" && provider.company_name && (
                       <span className="flex items-center gap-1">
                         <Building2 className="h-3 w-3" />
                         {provider.company_name}
