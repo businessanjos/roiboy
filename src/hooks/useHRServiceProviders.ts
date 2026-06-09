@@ -50,6 +50,7 @@ export interface HRServiceProvider {
   is_recruitment_partner: boolean | null;
   recruitment_commission_pct: number | null;
   recruitment_notes: string | null;
+  provider_kind: string | null;
   created_at: string;
   updated_at: string;
 }
