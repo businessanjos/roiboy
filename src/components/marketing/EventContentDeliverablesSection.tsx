@@ -18,14 +18,17 @@ import {
   type DeliverableStatus,
   type EventContentDeliverable,
 } from '@/hooks/useEventContentDeliverables';
-import { Plus, Trash2, MoreHorizontal, ListChecks, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, MoreHorizontal, ListChecks, CheckCircle2, ExternalLink, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { AiSuggestEventContentDialog } from './AiSuggestEventContentDialog';
+import type { MarketingEvent } from '@/hooks/useMarketingEvents';
 
 interface Props {
   eventId: string;
   eventDate: string | null;
+  event?: MarketingEvent;
 }
 
 export function EventContentDeliverablesSection({ eventId, eventDate }: Props) {
