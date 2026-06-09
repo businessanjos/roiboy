@@ -122,6 +122,7 @@ export function DestinationAutocomplete({ value, onChange, placeholder, id }: Pr
 
   const pick = (s: Suggestion) => {
     const final = s.flag ? `${s.flag} ${s.label}` : s.label;
+    userTypingRef.current = false;
     setQuery(final);
     onChange(final);
     setOpen(false);
@@ -149,6 +150,7 @@ export function DestinationAutocomplete({ value, onChange, placeholder, id }: Pr
         id={id}
         value={query}
         onChange={(e) => {
+          userTypingRef.current = true;
           setQuery(e.target.value);
           onChange(e.target.value);
         }}
