@@ -56,6 +56,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ProjectCopilotPanel } from "./ProjectCopilotPanel";
+import { ProjectStakeholdersTab } from "./ProjectStakeholdersTab";
 
 export function ProjectDetailView({ projectId }: { projectId: string }) {
   const navigate = useNavigate();
