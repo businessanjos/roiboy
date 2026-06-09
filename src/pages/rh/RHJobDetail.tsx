@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail } from "lucide-react";
+import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail, Clock, User as UserIcon, Calendar as CalIcon, AlertTriangle } from "lucide-react";
 import { useHRJobById } from "@/hooks/useHRJobs";
+import { useHRJobStages, useAccountUsersForJobs } from "@/hooks/useHRJobStages";
 import CandidateKanbanBoard from "@/components/rh/jobs/CandidateKanbanBoard";
-import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/types/job";
-import { format } from "date-fns";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, OPENING_REASON_LABELS } from "@/types/job";
+import { format, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -105,6 +106,8 @@ export default function RHJobDetail() {
           <Button variant="outline" onClick={handleCopyLink}>{copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}{copied ? "Copiado!" : "Copiar Link"}</Button>
         </div>
       </div>
+      <JobManagementPanel jobId={job.id} job={job as any} />
+      <JobStagesPanel jobId={job.id} />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -164,5 +167,76 @@ export default function RHJobDetail() {
       <CandidateKanbanBoard jobId={job.id} jobTitle={job.title} />
     </div>
 
+  );
+}
+
+function JobManagementPanel({ jobId, job }: { jobId: string; job: any }) {
+  const { data: users } = useAccountUsersForJobs();
+  const manager = users?.find(u => u.id === job.hiring_manager_id);
+  const recruiter = users?.find(u => u.id === job.recruiter_id);
+  const openedAt = job.opened_at || job.created_at;
+  const daysOpen = differenceInCalendarDays(new Date(), new Date(openedAt));
+  const target = job.target_fill_date ? new Date(job.target_fill_date) : null;
+  const daysLeft = target ? differenceInCalendarDays(target, new Date()) : null;
+  let slaTone = ""; let slaText: string | null = null;
+  if (daysLeft !== null) {
+    if (daysLeft < 0) { slaTone = "bg-red-500/15 text-red-700 border-red-300"; slaText = `Atrasada ${Math.abs(daysLeft)}d`; }
+    else if (daysLeft <= 7) { slaTone = "bg-amber-500/15 text-amber-700 border-amber-300"; slaText = `${daysLeft}d para o prazo`; }
+    else { slaTone = "bg-emerald-500/15 text-emerald-700 border-emerald-300"; slaText = `${daysLeft}d no prazo`; }
+  }
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-lg">Gestão da vaga</CardTitle></CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div><p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><UserIcon className="h-3 w-3" />Gestor</p><p className="font-medium">{manager?.name || manager?.email || "—"}</p></div>
+          <div><p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><UserIcon className="h-3 w-3" />Recrutador</p><p className="font-medium">{recruiter?.name || recruiter?.email || "—"}</p></div>
+          <div><p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Clock className="h-3 w-3" />Em aberto</p><p className="font-medium">{daysOpen}d</p></div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><CalIcon className="h-3 w-3" />Prazo</p>
+            {target ? (
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{format(target, "dd/MM/yyyy", { locale: ptBR })}</p>
+                {slaText && <Badge variant="outline" className={`text-[10px] ${slaTone}`}>{daysLeft! < 0 && <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />}{slaText}</Badge>}
+              </div>
+            ) : <p className="text-muted-foreground">—</p>}
+          </div>
+        </div>
+        {job.opening_reason && OPENING_REASON_LABELS[job.opening_reason] && (
+          <p className="text-xs text-muted-foreground mt-3">Motivo da abertura: <span className="font-medium text-foreground">{OPENING_REASON_LABELS[job.opening_reason]}</span></p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function JobStagesPanel({ jobId }: { jobId: string }) {
+  const { data: stages } = useHRJobStages(jobId);
+  if (!stages || stages.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-lg">Etapas do processo seletivo</CardTitle></CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {stages.map((s, i) => (
+            <div key={s.id} className="border rounded-lg p-3">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="font-medium text-sm flex items-center gap-2"><Badge variant="secondary">{i + 1}</Badge>{s.name}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {s.owner_role && <Badge variant="outline" className="text-[10px]">{s.owner_role}</Badge>}
+                  {s.sla_days && <span>{s.sla_days}d SLA</span>}
+                </div>
+              </div>
+              {s.evaluation_criteria?.length > 0 && (
+                <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+                  {s.evaluation_criteria.map((c, j) => <li key={j}>{c}</li>)}
+                </ul>
+              )}
+              {s.ai_focus && <p className="text-xs mt-2 italic text-violet-600 dark:text-violet-400">IA observa: {s.ai_focus}</p>}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -10987,6 +10987,9 @@ export type Database = {
           ai_analysis_status:
             | Database["public"]["Enums"]["hr_ai_analysis_status"]
             | null
+          ai_match_analyzed_at: string | null
+          ai_match_report: Json | null
+          ai_match_score: number | null
           ai_report: string | null
           ai_score: number | null
           applied_at: string
@@ -11002,6 +11005,7 @@ export type Database = {
           candidate_sexual_orientation: string | null
           candidate_state: string | null
           cover_letter: string | null
+          current_stage_id: string | null
           desired_position: string | null
           desired_seniority: string | null
           id: string
@@ -11012,6 +11016,7 @@ export type Database = {
           profiler_result_detail: Json | null
           resume_url: string | null
           stage: Database["public"]["Enums"]["hr_candidate_stage"]
+          stage_entered_at: string | null
           status: string
           updated_at: string
         }
@@ -11020,6 +11025,9 @@ export type Database = {
           ai_analysis_status?:
             | Database["public"]["Enums"]["hr_ai_analysis_status"]
             | null
+          ai_match_analyzed_at?: string | null
+          ai_match_report?: Json | null
+          ai_match_score?: number | null
           ai_report?: string | null
           ai_score?: number | null
           applied_at?: string
@@ -11035,6 +11043,7 @@ export type Database = {
           candidate_sexual_orientation?: string | null
           candidate_state?: string | null
           cover_letter?: string | null
+          current_stage_id?: string | null
           desired_position?: string | null
           desired_seniority?: string | null
           id?: string
@@ -11045,6 +11054,7 @@ export type Database = {
           profiler_result_detail?: Json | null
           resume_url?: string | null
           stage?: Database["public"]["Enums"]["hr_candidate_stage"]
+          stage_entered_at?: string | null
           status?: string
           updated_at?: string
         }
@@ -11053,6 +11063,9 @@ export type Database = {
           ai_analysis_status?:
             | Database["public"]["Enums"]["hr_ai_analysis_status"]
             | null
+          ai_match_analyzed_at?: string | null
+          ai_match_report?: Json | null
+          ai_match_score?: number | null
           ai_report?: string | null
           ai_score?: number | null
           applied_at?: string
@@ -11068,6 +11081,7 @@ export type Database = {
           candidate_sexual_orientation?: string | null
           candidate_state?: string | null
           cover_letter?: string | null
+          current_stage_id?: string | null
           desired_position?: string | null
           desired_seniority?: string | null
           id?: string
@@ -11078,6 +11092,7 @@ export type Database = {
           profiler_result_detail?: Json | null
           resume_url?: string | null
           stage?: Database["public"]["Enums"]["hr_candidate_stage"]
+          stage_entered_at?: string | null
           status?: string
           updated_at?: string
         }
@@ -11087,6 +11102,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_applications_current_stage_id_fkey"
+            columns: ["current_stage_id"]
+            isOneToOne: false
+            referencedRelation: "hr_job_stages"
             referencedColumns: ["id"]
           },
           {
@@ -11244,6 +11266,63 @@ export type Database = {
           },
         ]
       }
+      hr_job_stages: {
+        Row: {
+          account_id: string
+          ai_focus: string | null
+          created_at: string
+          evaluation_criteria: string[]
+          id: string
+          job_id: string
+          name: string
+          order_index: number
+          owner_role: string | null
+          sla_days: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          ai_focus?: string | null
+          created_at?: string
+          evaluation_criteria?: string[]
+          id?: string
+          job_id: string
+          name: string
+          order_index?: number
+          owner_role?: string | null
+          sla_days?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          ai_focus?: string | null
+          created_at?: string
+          evaluation_criteria?: string[]
+          id?: string
+          job_id?: string
+          name?: string
+          order_index?: number
+          owner_role?: string | null
+          sla_days?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_job_stages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_stages_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_jobs: {
         Row: {
           account_id: string
@@ -11261,10 +11340,14 @@ export type Database = {
           education_level: string | null
           expected_start_date: string | null
           experience_years: number | null
+          hiring_manager_id: string | null
           id: string
           languages: Json | null
+          opened_at: string
+          opening_reason: string | null
           openings_count: number | null
           position: string | null
+          recruiter_id: string | null
           require_cover_letter: boolean | null
           required_skills: string[] | null
           requirements: string | null
@@ -11274,6 +11357,7 @@ export type Database = {
           seniority: string | null
           status: Database["public"]["Enums"]["hr_job_status"]
           tags: string[] | null
+          target_fill_date: string | null
           title: string
           unit: string | null
           updated_at: string
@@ -11296,10 +11380,14 @@ export type Database = {
           education_level?: string | null
           expected_start_date?: string | null
           experience_years?: number | null
+          hiring_manager_id?: string | null
           id?: string
           languages?: Json | null
+          opened_at?: string
+          opening_reason?: string | null
           openings_count?: number | null
           position?: string | null
+          recruiter_id?: string | null
           require_cover_letter?: boolean | null
           required_skills?: string[] | null
           requirements?: string | null
@@ -11309,6 +11397,7 @@ export type Database = {
           seniority?: string | null
           status?: Database["public"]["Enums"]["hr_job_status"]
           tags?: string[] | null
+          target_fill_date?: string | null
           title: string
           unit?: string | null
           updated_at?: string
@@ -11331,10 +11420,14 @@ export type Database = {
           education_level?: string | null
           expected_start_date?: string | null
           experience_years?: number | null
+          hiring_manager_id?: string | null
           id?: string
           languages?: Json | null
+          opened_at?: string
+          opening_reason?: string | null
           openings_count?: number | null
           position?: string | null
+          recruiter_id?: string | null
           require_cover_letter?: boolean | null
           required_skills?: string[] | null
           requirements?: string | null
@@ -11344,6 +11437,7 @@ export type Database = {
           seniority?: string | null
           status?: Database["public"]["Enums"]["hr_job_status"]
           tags?: string[] | null
+          target_fill_date?: string | null
           title?: string
           unit?: string | null
           updated_at?: string
@@ -11361,6 +11455,20 @@ export type Database = {
           {
             foreignKeyName: "hr_jobs_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_jobs_hiring_manager_id_fkey"
+            columns: ["hiring_manager_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_jobs_recruiter_id_fkey"
+            columns: ["recruiter_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]

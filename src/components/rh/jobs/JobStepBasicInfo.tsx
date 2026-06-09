@@ -4,13 +4,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WORK_MODEL_LABELS, CONTRACT_TYPE_LABELS, JOB_SENIORITY_LABELS } from "@/constants/jobOptions";
 import type { JobFormData, WorkModel, JobContractType, JobSeniority } from "@/types/job";
+import { OPENING_REASON_LABELS } from "@/types/job";
 import { useHRCollaborators } from "@/hooks/useHRCollaborators";
+import { useAccountUsersForJobs } from "@/hooks/useHRJobStages";
 import { useMemo } from "react";
 
 interface Props { form: UseFormReturn<JobFormData>; }
 
 export function JobStepBasicInfo({ form }: Props) {
   const { collaborators } = useHRCollaborators();
+  const { data: users } = useAccountUsersForJobs();
 
   const departments = useMemo(() => {
     const set = new Set<string>();
@@ -128,6 +131,64 @@ export function JobStepBasicInfo({ form }: Props) {
               <FormMessage />
             </FormItem>
           )} />
+        </div>
+
+        {/* Gestão da vaga */}
+        <div className="border-t pt-6 space-y-4">
+          <h3 className="font-semibold">Gestão da vaga</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField control={form.control} name="hiring_manager_id" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Gestor responsável</FormLabel>
+                <Select value={field.value || "_none"} onValueChange={(v) => field.onChange(v === "_none" ? null : v)}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Quem aprova candidatos" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="_none">Nenhum</SelectItem>
+                    {(users || []).map(u => <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="recruiter_id" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Recrutador (RH)</FormLabel>
+                <Select value={field.value || "_none"} onValueChange={(v) => field.onChange(v === "_none" ? null : v)}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Quem toca o processo" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="_none">Nenhum</SelectItem>
+                    {(users || []).map(u => <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField control={form.control} name="target_fill_date" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Prazo ideal para fechar a vaga</FormLabel>
+                <FormControl>
+                  <Input type="date" value={field.value ? field.value.toISOString().split("T")[0] : ""}
+                    onChange={e => field.onChange(e.target.value ? new Date(e.target.value) : null)} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="opening_reason" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Motivo da abertura</FormLabel>
+                <Select value={field.value || "_none"} onValueChange={(v) => field.onChange(v === "_none" ? "" : v)}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="_none">—</SelectItem>
+                    {Object.entries(OPENING_REASON_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </div>
         </div>
       </div>
     </div>

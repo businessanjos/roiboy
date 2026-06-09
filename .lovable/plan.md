@@ -1,113 +1,79 @@
-## Visão geral
+# Evolução da área de Vagas (RH)
 
-Transformar `/marketing` (calendário) no **hub central** que conecta:
+Hoje a vaga tem descrição, requisitos, salário e tags — mas falta clareza sobre **quem é o dono**, **quando precisa fechar**, **como é o processo** e **o que avaliar em cada candidato**. Vamos resolver isso em 4 frentes.
 
-```text
-                  ┌─────────────────────┐
-                  │  Calendário (hub)   │
-                  └──────────┬──────────┘
-        ┌────────────┬───────┼───────┬─────────────┐
-        ▼            ▼       ▼       ▼             ▼
-   Projetos      Tasks    Pautas   Posts       Campanhas
-  (marketing_  (marketing_(content_(content_   (meta_campaign
-   projects)    tasks)    pieces /  platform_   _alerts /
-                          marketing_posts)      ad_sets)
-                          _ideas)
-```
+## 1. Gestão da vaga (dono + prazo)
 
-Cada evento vira um "objeto-âncora" do qual nascem entregáveis de conteúdo, com IA opcional para gerar pautas, e tudo aparece sobreposto no mesmo calendário (camadas filtráveis).
+Adicionar no wizard (passo "Básico" e "Processo"):
+- **Gestor responsável (Hiring Manager)** — usuário do sistema que aprova candidatos.
+- **Recrutador responsável** — quem toca o processo (RH).
+- **Prazo ideal para fechar a vaga** (`target_fill_date`) — diferente de "prazo para candidatura".
+- **Data de abertura** automática + **dias em aberto** visível no card.
+- **Motivo da abertura**: nova posição / reposição / expansão.
+- Badge de **SLA** no card: verde (no prazo), amarelo (próximo do prazo), vermelho (atrasada).
 
----
+## 2. Etapas do processo (pipeline customizável por vaga)
 
-## Fase 1 — Visão unificada no calendário (base visual)
+Hoje as etapas são fixas (`applied → screening → interview → technical_test → offer → hired`). Vamos permitir **etapas customizadas por vaga**, mantendo as default:
 
-Sem novas tabelas. Sobrepor camadas no `MonthlyCalendarView` e `YearlyCalendarView`:
-- **Eventos** (já existe)
-- **Posts/Pautas** de `content_pieces` e `marketing_ideas` (campo `scheduled_at`/`publish_date`)
-- **Tasks** de `marketing_tasks` (campo `due_date`)
-- **Marcos de projeto** de `marketing_project_milestones` (`target_date`)
-- **Janelas de campanha** Meta de `meta_campaign_alerts` (período `start_date`→`end_date`)
+- Nova tabela `hr_job_stages` (job_id, name, order, type, sla_days, ai_focus).
+- Cada etapa tem:
+  - **Nome** (ex: "Entrevista com gestor", "Case prático", "Cultural fit")
+  - **SLA em dias** (quanto tempo o candidato pode ficar parado)
+  - **Responsável** (RH, gestor, técnico)
+  - **O que avaliar** (campo livre + sugerido pela IA)
+- Wizard ganha passo **"Processo Seletivo"** onde IA sugere etapas com base no cargo/senioridade.
 
-UI:
-- Toolbar com toggles de camada (Eventos / Pautas / Tasks / Marcos / Campanhas) e cor distinta por camada (badge + barra lateral colorida no item).
-- Clique no item abre a sheet correspondente já existente (reusa `MarketingEventSheet`, drawer de task, etc.).
-- Item compacto: ícone da camada + título + horário/projeto.
+## 3. IA: matching candidato ↔ vaga
 
-Hook novo `useMarketingCalendarLayers(year, month)` que faz fetches paralelos e devolve `Record<dateKey, LayerItem[]>`.
+Nova edge function `analyze-candidate-match` (Lovable AI, `google/gemini-3-flash-preview`):
 
----
+**Input:** vaga (descrição, requisitos, etapas, o-que-avaliar) + currículo/resposta do candidato.
 
-## Fase 2 — Checklist de conteúdo por evento
+**Output estruturado:**
+- `match_score` (0-100)
+- `strengths[]` — pontos fortes alinhados à vaga
+- `gaps[]` — lacunas vs requisitos
+- `red_flags[]` — alertas
+- `stage_focus[]` — por etapa: "o que investigar neste candidato"
+- `recommended_questions[]` — perguntas sugeridas para a entrevista
+- `verdict` — `strong_match` | `possible` | `weak` | `reject`
 
-Nova tabela `event_content_deliverables`:
-- `event_id` (FK events)
-- `kind` ('teaser' | 'save_the_date' | 'reels' | 'carrossel' | 'stories' | 'email' | 'cobertura_ao_vivo' | 'pos_evento' | 'custom')
-- `title`, `description`
-- `due_offset_days` (negativo = antes do evento, positivo = depois)
-- `due_date` (calculado: `scheduled_at + due_offset_days`)
-- `status` ('todo' | 'in_progress' | 'done' | 'cancelled')
-- `assigned_to` (FK users)
-- `marketing_task_id` (FK opcional — quando virar task no board)
-- `content_piece_id` (FK opcional — quando virar pauta no editorial)
+Exibido no detalhe do candidato (`RHJobDetail`) em um painel "Análise IA" + na coluna do Kanban como badge de score.
 
-UI:
-- Nova aba "Conteúdo" dentro de `MarketingEventSheet` com:
-  - Botão **"Aplicar template padrão"** (cria automaticamente: D-30 save the date, D-14 teaser, D-7 reels, D-1 stories, D+0 cobertura, D+3 pós).
-  - Lista editável (status, responsável, datas).
-  - Botão por item: **"Criar task"** (insere em `marketing_tasks`) e **"Criar pauta"** (insere em `content_pieces`).
-- Esses deliverables aparecem na camada "Pautas/Tasks" da Fase 1.
+## 4. IA: sugestão de etapas e critérios
 
-Templates configuráveis por `event_type` em `account_settings` (JSONB).
-
----
-
-## Fase 3 — Sugestões de IA por evento
-
-Edge function `suggest-event-content` (já existe `suggest-marketing-event-field` como referência) usando Lovable AI Gateway (`google/gemini-3-flash-preview`).
-
-Input: evento (`title`, `description`, `goals`, `event_type`, `scheduled_at`) + `marketing_brand_voice` + `marketing_personas` + últimas `content_strategies` + `content_pillars`.
-
-Output estruturado (zod):
-```ts
-{
-  deliverables: [{
-    kind, title, hook, big_idea, format,
-    due_offset_days, channel, persona_target
-  }]
-}
-```
-
-UI:
-- Botão **"✨ Gerar pautas com IA"** na aba Conteúdo do evento.
-- Modal preview com as sugestões editáveis (toggle "incluir"/"editar").
-- Confirmar → cria deliverables (+ opcional cria pautas em `content_pieces` direto).
-
----
-
-## Fase 4 — Auto-criação no editorial e integração com campanhas
-
-- Trigger no `events`: ao criar/editar evento marcado como `auto_generate_content = true`, aplica template padrão (Fase 2) automaticamente.
-- Ao marcar deliverable como `done` com `content_piece_id`, marcar a pauta como produzida.
-- Camada de **campanhas Meta** mostra janelas D-7/durante/D+3 do evento sugeridas em `meta_campaign_alerts` (apenas leitura cruzada — sem criar campanhas).
-- Indicador de saúde no card do evento: "3/8 entregáveis prontos" com barra de progresso.
+Botão **"Sugerir etapas com IA"** no wizard, na etapa "Processo":
+- IA lê título + descrição + senioridade + contract_type.
+- Devolve 3-6 etapas com nome, SLA sugerido e bullets de "o que observar".
+- Usuário aceita / edita / remove.
 
 ---
 
 ## Detalhes técnicos
 
-- **Tabelas novas**: `event_content_deliverables` (Fase 2), `event_content_templates` opcional (ou JSONB em `account_settings`).
-- **RLS**: `account_id` herda do evento; políticas `authenticated` com `has_role`.
-- **Performance**: `useMarketingCalendarLayers` usa `Promise.all` com `select` mínimo (id, title, date, color) — não puxa colunas pesadas.
-- **Reuso**: posts já têm `MarketingEventSheet`-like drawers; tasks usam o drawer existente de `marketing_tasks`. Sem duplicar UI.
-- **Sem migrações na Fase 1** — começamos com mudança puramente visual para você validar UX antes de criar schema.
+**Migrações:**
+1. `hr_jobs`: adicionar `hiring_manager_id uuid`, `recruiter_id uuid`, `target_fill_date date`, `opening_reason text`, `opened_at timestamptz default now()`.
+2. Nova tabela `hr_job_stages` (id, job_id, name, order_index, sla_days, owner_role, evaluation_criteria text[], ai_focus text). GRANTs + RLS por account.
+3. `hr_job_applications`: adicionar `current_stage_id uuid` (substitui gradualmente `stage` enum), `ai_match_score int`, `ai_match_report jsonb`, `stage_entered_at timestamptz`.
+
+**Edge functions novas:**
+- `suggest-job-stages` — gera etapas sugeridas.
+- `analyze-candidate-match` — análise candidato↔vaga.
+
+**Frontend:**
+- `JobStepBasicInfo`: campos de gestor/recrutador/prazo.
+- Novo `JobStepProcess` (substitui o atual) com editor de etapas + botão IA.
+- `RHVagas` (lista): badge de SLA, contagem de dias em aberto, gestor visível.
+- `RHJobDetail`: painel "Análise IA" por candidato + foco por etapa.
+- Kanban: colunas dinâmicas (etapas da vaga) + badge de score IA.
 
 ---
 
-## Ordem de entrega
+## Posso fazer tudo de uma vez, mas sugiro entregar em 2 PRs:
 
-1. ✅ **Fase 1** (camadas + filtros no calendário) — entregue.
-2. ✅ **Fase 2** (checklist + tabela `event_content_deliverables` + seção "Conteúdo" no sheet) — entregue.
-3. ✅ **Fase 3** (botão "Gerar com IA" + edge function `suggest-event-content` com preview editável) — entregue.
-4. ✅ **Fase 4** (toggle `auto_generate_content` + trigger auto-template + trigger marca pauta como publicada + badge de saúde X/N no card do evento) — entregue. *Camada Meta foi descartada porque `meta_campaign_alerts` não tem janela de datas; ficaria como leitura ruidosa.*
+**PR1 (rápido):** gestor + recrutador + prazo + opening_reason + SLA visual na lista. Sem mudar etapas.
 
-Cada fase é independente e testável.
+**PR2 (maior):** etapas customizadas + IA de sugestão + IA de match no candidato.
+
+Confirma se topa o plano e por qual PR começo (ou faço os dois seguidos)?

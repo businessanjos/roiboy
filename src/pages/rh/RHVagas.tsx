@@ -12,8 +12,11 @@ import { useHRJobs, useDeleteHRJob, useUpdateHRJob, useHRJobStats } from "@/hook
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { HRJob, JobStatus } from "@/types/job";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/types/job";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAccountUsersForJobs } from "@/hooks/useHRJobStages";
+import { OPENING_REASON_LABELS } from "@/types/job";
+import { Clock, User as UserIcon, AlertTriangle } from "lucide-react";
 
 export default function RHVagas() {
   const navigate = useNavigate();
@@ -99,9 +102,9 @@ export default function RHVagas() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                {job.department && <p className="text-sm text-muted-foreground mb-1">Departamento: {job.department}</p>}
-                <p className="text-xs text-muted-foreground">Criada em {format(new Date(job.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+              <CardContent className="space-y-1.5">
+                {job.department && <p className="text-sm text-muted-foreground">Departamento: {job.department}</p>}
+                <JobMetaRow job={job} />
               </CardContent>
             </Card>
           ))}
@@ -119,6 +122,38 @@ export default function RHVagas() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function JobMetaRow({ job }: { job: HRJob }) {
+  const { data: users } = useAccountUsersForJobs();
+  const manager = users?.find(u => u.id === (job as any).hiring_manager_id);
+  const openedAt = (job as any).opened_at || job.created_at;
+  const daysOpen = differenceInCalendarDays(new Date(), new Date(openedAt));
+  const target = (job as any).target_fill_date ? new Date((job as any).target_fill_date) : null;
+  const daysLeft = target ? differenceInCalendarDays(target, new Date()) : null;
+
+  let slaTone: string | null = null;
+  let slaText: string | null = null;
+  if (job.status === "active" && daysLeft !== null) {
+    if (daysLeft < 0) { slaTone = "bg-red-500/15 text-red-700 border-red-300"; slaText = `Atrasada ${Math.abs(daysLeft)}d`; }
+    else if (daysLeft <= 7) { slaTone = "bg-amber-500/15 text-amber-700 border-amber-300"; slaText = `${daysLeft}d para o prazo`; }
+    else { slaTone = "bg-emerald-500/15 text-emerald-700 border-emerald-300"; slaText = `${daysLeft}d no prazo`; }
+  }
+  const reason = (job as any).opening_reason;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{daysOpen}d em aberto</span>
+      {manager && <span className="inline-flex items-center gap-1"><UserIcon className="h-3 w-3" />{manager.name?.split(" ")[0] || manager.email}</span>}
+      {reason && OPENING_REASON_LABELS[reason] && <Badge variant="outline" className="text-[10px] py-0">{OPENING_REASON_LABELS[reason]}</Badge>}
+      {slaText && (
+        <Badge variant="outline" className={`text-[10px] py-0 ${slaTone}`}>
+          {daysLeft! < 0 && <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />}{slaText}
+        </Badge>
+      )}
+      <span className="ml-auto">{format(new Date(job.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
     </div>
   );
 }

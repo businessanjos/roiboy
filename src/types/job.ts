@@ -47,6 +47,11 @@ export interface HRJob {
   closed_at: string | null;
   created_at: string;
   updated_at: string;
+  hiring_manager_id?: string | null;
+  recruiter_id?: string | null;
+  target_fill_date?: string | null;
+  opening_reason?: string | null;
+  opened_at?: string | null;
 }
 
 export interface HRJobApplication {
@@ -109,7 +114,18 @@ export interface JobFormData {
   require_cover_letter: boolean;
   tags: string[];
   status: JobStatus;
+  hiring_manager_id: string | null;
+  recruiter_id: string | null;
+  target_fill_date: Date | null;
+  opening_reason: string;
 }
+
+export const OPENING_REASON_LABELS: Record<string, string> = {
+  new_position: "Nova posição",
+  replacement: "Reposição",
+  expansion: "Expansão de time",
+  temporary: "Temporária",
+};
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   active: "Ativa",
@@ -182,4 +198,8 @@ export const DEFAULT_JOB_FORM_DATA: JobFormData = {
   require_cover_letter: false,
   tags: [],
   status: "draft",
+  hiring_manager_id: null,
+  recruiter_id: null,
+  target_fill_date: null,
+  opening_reason: "",
 };
