@@ -55,26 +55,34 @@ export function JobStepBasicInfo({ form }: Props) {
           <FormField control={form.control} name="position" render={({ field }) => (
             <FormItem>
               <FormLabel>Cargo</FormLabel>
-              <Select value={field.value || "_none"} onValueChange={(v) => field.onChange(v === "_none" ? "" : v)}>
-                <FormControl><SelectTrigger><SelectValue placeholder="Selecione ou digite" /></SelectTrigger></FormControl>
-                <SelectContent>
-                  <SelectItem value="_none">Nenhum</SelectItem>
-                  {positions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <Input
+                  list="job-position-options"
+                  placeholder="Ex: SDR, Closer, Analista Financeiro…"
+                  value={field.value || ""}
+                  onChange={(e) => field.onChange(e.target.value)}
+                />
+              </FormControl>
+              <datalist id="job-position-options">
+                {positions.map(p => <option key={p} value={p} />)}
+              </datalist>
               <FormMessage />
             </FormItem>
           )} />
           <FormField control={form.control} name="department" render={({ field }) => (
             <FormItem>
               <FormLabel>Departamento</FormLabel>
-              <Select value={field.value || "_none"} onValueChange={(v) => field.onChange(v === "_none" ? "" : v)}>
-                <FormControl><SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger></FormControl>
-                <SelectContent>
-                  <SelectItem value="_none">Nenhum</SelectItem>
-                  {departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <Input
+                  list="job-department-options"
+                  placeholder="Ex: Comercial, Marketing, Financeiro…"
+                  value={field.value || ""}
+                  onChange={(e) => field.onChange(e.target.value)}
+                />
+              </FormControl>
+              <datalist id="job-department-options">
+                {departments.map(d => <option key={d} value={d} />)}
+              </datalist>
               <FormMessage />
             </FormItem>
           )} />
