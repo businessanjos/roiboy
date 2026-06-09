@@ -47,6 +47,7 @@ interface MonthlyCalendarViewProps {
   extraLayers?: Record<string, CalendarLayerItem[]>;
   onLayerItemClick?: (item: CalendarLayerItem) => void;
   toolbarExtra?: React.ReactNode;
+  eventHealth?: Record<string, { done: number; total: number }>;
 }
 
 export function MonthlyCalendarView({ 
@@ -60,6 +61,7 @@ export function MonthlyCalendarView({
   extraLayers,
   onLayerItemClick,
   toolbarExtra,
+  eventHealth,
 }: MonthlyCalendarViewProps) {
   // Calculate calendar days
   const calendarDays = useMemo(() => {
