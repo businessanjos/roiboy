@@ -108,6 +108,6 @@ UI:
 1. ✅ **Fase 1** (camadas + filtros no calendário) — entregue.
 2. ✅ **Fase 2** (checklist + tabela `event_content_deliverables` + seção "Conteúdo" no sheet) — entregue.
 3. ✅ **Fase 3** (botão "Gerar com IA" + edge function `suggest-event-content` com preview editável) — entregue.
-4. **Fase 4** (auto-criação + integração com Meta + indicadores).
+4. ✅ **Fase 4** (toggle `auto_generate_content` + trigger auto-template + trigger marca pauta como publicada + badge de saúde X/N no card do evento) — entregue. *Camada Meta foi descartada porque `meta_campaign_alerts` não tem janela de datas; ficaria como leitura ruidosa.*
 
 Cada fase é independente e testável.
