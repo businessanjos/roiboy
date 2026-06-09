@@ -133,6 +133,7 @@ export function MarketingEventDialog({
         travel_impact: meta?.travel?.impact || '',
         create_project: false, // can't undo project link from here
         project_name: '',
+        auto_generate_content: (event as any).auto_generate_content ?? false,
       });
     } else {
       let dateToUse: Date;
