@@ -205,6 +205,7 @@ export default function Marketing() {
               extraLayers={layerData}
               onLayerItemClick={(item) => { if (item.href) navigate(item.href); }}
               toolbarExtra={<CalendarLayersToolbar layers={layers} onToggle={toggleLayer} />}
+              eventHealth={eventHealth}
             />
           ) : (
             <YearlyCalendarView
