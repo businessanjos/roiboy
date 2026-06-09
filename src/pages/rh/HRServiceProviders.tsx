@@ -84,12 +84,13 @@ export default function HRServiceProviders() {
       company_name: form.company_name || null,
       service_type: form.is_recruitment_partner ? (form.service_type || "Recrutamento & Seleção") : (form.service_type || null),
       position: form.position || null,
+      provider_kind: form.provider_kind,
       is_recruitment_partner: form.is_recruitment_partner,
       recruitment_commission_pct: form.recruitment_commission_pct ? Number(form.recruitment_commission_pct) : null,
     } as any);
     if (result) {
       setDialogOpen(false);
-      setForm({ full_name: "", email: "", phone: "", cpf: "", cnpj: "", company_name: "", service_type: "", position: "", is_recruitment_partner: false, recruitment_commission_pct: "" });
+      setForm({ full_name: "", email: "", phone: "", cpf: "", cnpj: "", company_name: "", service_type: "", position: "", provider_kind: "on_demand", is_recruitment_partner: false, recruitment_commission_pct: "" });
     }
   };
 
