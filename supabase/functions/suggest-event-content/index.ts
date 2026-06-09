@@ -76,7 +76,15 @@ serve(async (req) => {
 
     const strategiesBlock = (strategies || []).length
       ? `\n=== ESTRATÉGIAS RECENTES ===\n${(strategies || [])
-          .map((s: any) => `- ${s.title}${s.summary ? `: ${s.summary}` : ""}`)
+          .map((s: any) => {
+            const head = `${s.year ?? ""}${s.quarter ? `/Q${s.quarter}` : ""}`.trim();
+            const parts = [
+              s.positioning && `posicionamento: ${s.positioning}`,
+              s.audience && `audiência: ${s.audience}`,
+              s.tone && `tom: ${s.tone}`,
+            ].filter(Boolean).join(" | ");
+            return `- ${head ? `[${head}] ` : ""}${parts}`;
+          })
           .join("\n")}`
       : "";
 
