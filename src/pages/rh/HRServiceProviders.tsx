@@ -24,6 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Search, Plus, Handshake, Building2, Phone, Mail, UserSearch, Crown,
 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br"];
 
@@ -44,6 +45,7 @@ export default function HRServiceProviders() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [tab, setTab] = useState<"on_demand" | "director">("on_demand");
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const [form, setForm] = useState({
@@ -62,6 +64,8 @@ export default function HRServiceProviders() {
 
   const filtered = useMemo(() => {
     return providers.filter(p => {
+      const kind = (p as any).provider_kind === "director" ? "director" : "on_demand";
+      if (kind !== tab) return false;
       const matchSearch =
         !search ||
         p.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -71,7 +75,10 @@ export default function HRServiceProviders() {
       const matchStatus = statusFilter === "all" || p.status === statusFilter;
       return matchSearch && matchStatus;
     });
-  }, [providers, search, statusFilter]);
+  }, [providers, search, statusFilter, tab]);
+
+  const countDirector = providers.filter(p => (p as any).provider_kind === "director").length;
+  const countOnDemand = providers.length - countDirector;
 
   const handleCreate = async () => {
     if (!form.full_name.trim()) return;
@@ -107,11 +114,29 @@ export default function HRServiceProviders() {
             Gerencie seus prestadores de serviço e parceiros PJ
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} className="gap-2">
+        <Button
+          onClick={() => {
+            setForm(f => ({ ...f, provider_kind: tab }));
+            setDialogOpen(true);
+          }}
+          className="gap-2"
+        >
           <Plus className="h-4 w-4" />
-          Novo Prestador
+          {tab === "director" ? "Novo Cargo de Confiança" : "Novo Prestador"}
         </Button>
       </div>
+
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="on_demand" className="gap-2">
+            <Handshake className="h-4 w-4" /> Prestadores
+            <span className="ml-1 text-xs text-muted-foreground">({countOnDemand})</span>
+          </TabsTrigger>
+          <TabsTrigger value="director" className="gap-2">
+            <Crown className="h-4 w-4" /> Cargo de Confiança
+            <span className="ml-1 text-xs text-muted-foreground">({countDirector})</span>
+          </TabsTrigger>
+        </TabsList>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -203,11 +228,6 @@ export default function HRServiceProviders() {
                         ? provider.company_name
                         : provider.full_name}
                     </p>
-                    {(provider as any).provider_kind === "director" && (
-                      <Badge variant="outline" className="text-[10px] gap-1 border-amber-300 text-amber-700 bg-amber-50">
-                        <Crown className="h-3 w-3" /> Diretor PJ
-                      </Badge>
-                    )}
                     <Badge variant={statusInfo.variant} className="text-[10px]">
                       {statusInfo.label}
                     </Badge>
@@ -247,6 +267,9 @@ export default function HRServiceProviders() {
           })}
         </div>
       )}
+      </Tabs>
+
+
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
