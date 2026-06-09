@@ -283,3 +283,103 @@ function InfoRow({ icon, label, href }: { icon: React.ReactNode; label: string; 
   );
   return href ? <a href={href} className="block">{content}</a> : content;
 }
+
+function AiMatchPanel({ candidate }: { candidate: HRJobApplication }) {
+  const [running, setRunning] = useState(false);
+  const [report, setReport] = useState<any>((candidate as any).ai_match_report || null);
+  const [score, setScore] = useState<number | null>((candidate as any).ai_match_score ?? null);
+
+  const runAnalysis = async () => {
+    setRunning(true);
+    try {
+      const res = await analyzeCandidateMatchAI(candidate.id);
+      setScore(res.score);
+      setReport(res.report);
+      toast.success("Análise IA concluída");
+    } catch (e: any) {
+      toast.error("Erro IA: " + (e?.message || e));
+    } finally { setRunning(false); }
+  };
+
+  const verdictColor: Record<string, string> = {
+    strong_match: "bg-emerald-500/15 text-emerald-700 border-emerald-300",
+    possible: "bg-blue-500/15 text-blue-700 border-blue-300",
+    weak: "bg-amber-500/15 text-amber-700 border-amber-300",
+    reject: "bg-red-500/15 text-red-700 border-red-300",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold">Match candidato ↔ vaga</h4>
+        <Button size="sm" variant="outline" onClick={runAnalysis} disabled={running}>
+          {running ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
+          {report ? "Atualizar análise" : "Analisar com IA"}
+        </Button>
+      </div>
+
+      {!report ? (
+        <div className="text-center py-10 text-muted-foreground border rounded-lg">
+          <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-40" />
+          <p className="text-sm">Nenhuma análise ainda. Clique em "Analisar com IA".</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-4xl font-bold">{score ?? "—"}</span>
+            <span className="text-sm text-muted-foreground">/ 100</span>
+            {report.verdict && (
+              <Badge variant="outline" className={verdictColor[report.verdict] || ""}>
+                {report.verdict.replace("_", " ")}
+              </Badge>
+            )}
+          </div>
+          {report.summary && <p className="text-sm">{report.summary}</p>}
+          {Array.isArray(report.strengths) && report.strengths.length > 0 && (
+            <Block title="Pontos fortes" items={report.strengths} tone="emerald" />
+          )}
+          {Array.isArray(report.gaps) && report.gaps.length > 0 && (
+            <Block title="Lacunas" items={report.gaps} tone="amber" />
+          )}
+          {Array.isArray(report.red_flags) && report.red_flags.length > 0 && (
+            <Block title="Alertas" items={report.red_flags} tone="red" />
+          )}
+          {Array.isArray(report.recommended_questions) && report.recommended_questions.length > 0 && (
+            <Block title="Perguntas sugeridas para entrevista" items={report.recommended_questions} tone="muted" />
+          )}
+          {Array.isArray(report.stage_focus) && report.stage_focus.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Foco por etapa</p>
+              <div className="space-y-2">
+                {report.stage_focus.map((s: any, i: number) => (
+                  <div key={i} className="border rounded-lg p-3">
+                    <p className="text-sm font-medium">{s.stage}</p>
+                    <p className="text-sm text-muted-foreground">{s.focus}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Block({ title, items, tone }: { title: string; items: string[]; tone: "emerald" | "amber" | "red" | "muted" }) {
+  const toneClass = {
+    emerald: "border-emerald-200 bg-emerald-500/5",
+    amber: "border-amber-200 bg-amber-500/5",
+    red: "border-red-200 bg-red-500/5",
+    muted: "border-border bg-muted/30",
+  }[tone];
+  return (
+    <div className={`border rounded-lg p-3 ${toneClass}`}>
+      <p className="text-xs font-semibold uppercase mb-2">{title}</p>
+      <ul className="space-y-1 text-sm list-disc pl-4">
+        {items.map((it, i) => <li key={i}>{it}</li>)}
+      </ul>
+    </div>
+  );
+}
+
