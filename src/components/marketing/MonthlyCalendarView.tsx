@@ -258,21 +258,49 @@ export function MonthlyCalendarView({
                         </Tooltip>
                       );
                     })}
-                    
+
+                    {dayLayerItems.slice(0, maxVisibleLayers).map((item) => (
+                      <Tooltip key={item.id}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="text-[11px] px-1.5 py-0.5 rounded truncate cursor-pointer transition-opacity hover:opacity-80 flex items-center gap-1 border-l-2 bg-muted/40"
+                            style={{ borderLeftColor: item.color }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onLayerItemClick?.(item);
+                            }}
+                          >
+                            <span
+                              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: item.color }}
+                            />
+                            <span className="truncate text-foreground/80">
+                              {item.title}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[250px]">
+                          <div className="space-y-1">
+                            <p className="font-medium text-xs">{item.title}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                              {item.kind === 'pauta' ? 'Pauta de conteúdo' : item.kind === 'task' ? 'Task de marketing' : 'Marco de projeto'}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+
                     {hiddenCount > 0 && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div 
+                          <div
                             className="text-[10px] text-muted-foreground px-1 cursor-pointer hover:text-foreground"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Could open a popover with all events
-                            }}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             +{hiddenCount} mais
                           </div>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-[250px]">
+                        <TooltipContent side="bottom" className="max-w-[260px]">
                           <div className="space-y-1">
                             <p className="text-xs font-medium mb-2">
                               {format(day, "dd 'de' MMMM", { locale: ptBR })}
@@ -281,19 +309,23 @@ export function MonthlyCalendarView({
                               <div
                                 key={event.id}
                                 className="flex items-center gap-1.5 text-xs cursor-pointer hover:opacity-80"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEventClick(event);
-                                }}
+                                onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
                               >
-                                <div
-                                  className="w-2 h-2 rounded-full flex-shrink-0"
-                                  style={{ backgroundColor: event.color || '#6366f1' }}
-                                />
+                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: event.color || '#6366f1' }} />
                                 <span className="truncate">
                                   {event.start_time && `${event.start_time.slice(0, 5)} - `}
                                   {event.title}
                                 </span>
+                              </div>
+                            ))}
+                            {dayLayerItems.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center gap-1.5 text-xs cursor-pointer hover:opacity-80"
+                                onClick={(e) => { e.stopPropagation(); onLayerItemClick?.(item); }}
+                              >
+                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                                <span className="truncate">{item.title}</span>
                               </div>
                             ))}
                           </div>
