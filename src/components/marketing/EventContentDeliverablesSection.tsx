@@ -18,17 +18,20 @@ import {
   type DeliverableStatus,
   type EventContentDeliverable,
 } from '@/hooks/useEventContentDeliverables';
-import { Plus, Trash2, MoreHorizontal, ListChecks, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, MoreHorizontal, ListChecks, CheckCircle2, ExternalLink, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { AiSuggestEventContentDialog } from './AiSuggestEventContentDialog';
+import type { MarketingEvent } from '@/hooks/useMarketingEvents';
 
 interface Props {
   eventId: string;
   eventDate: string | null;
+  event?: MarketingEvent;
 }
 
-export function EventContentDeliverablesSection({ eventId, eventDate }: Props) {
+export function EventContentDeliverablesSection({ eventId, eventDate, event }: Props) {
   const navigate = useNavigate();
   const {
     deliverables,
@@ -43,6 +46,7 @@ export function EventContentDeliverablesSection({ eventId, eventDate }: Props) {
 
   const [newTitle, setNewTitle] = useState('');
   const [newKind, setNewKind] = useState<DeliverableKind>('custom');
+  const [aiOpen, setAiOpen] = useState(false);
 
   const total = deliverables.length;
   const done = deliverables.filter((d) => d.status === 'done').length;
@@ -67,17 +71,28 @@ export function EventContentDeliverablesSection({ eventId, eventDate }: Props) {
             </Badge>
           )}
         </div>
-        {total === 0 && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!eventDate || applyTemplate.isPending}
-            onClick={() => applyTemplate.mutate()}
-          >
-            Aplicar template padrão
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {event && (
+            <Button size="sm" variant="outline" onClick={() => setAiOpen(true)}>
+              <Sparkles className="h-3.5 w-3.5 mr-1" /> Gerar com IA
+            </Button>
+          )}
+          {total === 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!eventDate || applyTemplate.isPending}
+              onClick={() => applyTemplate.mutate()}
+            >
+              Aplicar template padrão
+            </Button>
+          )}
+        </div>
       </div>
+
+      {event && (
+        <AiSuggestEventContentDialog open={aiOpen} onOpenChange={setAiOpen} event={event} />
+      )}
 
       {isLoading && <p className="text-xs text-muted-foreground">Carregando…</p>}
 
