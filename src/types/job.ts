@@ -114,7 +114,18 @@ export interface JobFormData {
   require_cover_letter: boolean;
   tags: string[];
   status: JobStatus;
+  hiring_manager_id: string | null;
+  recruiter_id: string | null;
+  target_fill_date: Date | null;
+  opening_reason: string;
 }
+
+export const OPENING_REASON_LABELS: Record<string, string> = {
+  new_position: "Nova posição",
+  replacement: "Reposição",
+  expansion: "Expansão de time",
+  temporary: "Temporária",
+};
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   active: "Ativa",
