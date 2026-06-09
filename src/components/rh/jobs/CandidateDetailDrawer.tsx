@@ -17,6 +17,8 @@ import { useUpdateCandidateStage } from "@/hooks/useHRJobs";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { analyzeCandidateMatchAI } from "@/hooks/useHRJobStages";
+import { Sparkles, Loader2 } from "lucide-react";
 
 const SENIORITY_LABELS: Record<string, string> = {
   intern: "Estágio", junior: "Júnior", pleno: "Pleno", senior: "Sênior",
@@ -247,40 +249,10 @@ export default function CandidateDetailDrawer({ open, onOpenChange, candidate, j
 
           {/* Analysis Tab */}
           <TabsContent value="analysis" className="space-y-4 mt-0">
-            {candidate.ai_score !== null ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl font-bold">{candidate.ai_score}</span>
-                  <span className="text-sm text-muted-foreground">/ 100</span>
-                </div>
-                {candidate.ai_report && (
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <p className="text-sm whitespace-pre-wrap">{candidate.ai_report}</p>
-                  </div>
-                )}
-                {candidate.profiler_result_code && (
-                  <>
-                    <Separator />
-                    <div>
-                      <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Perfil Comportamental</p>
-                      <Badge variant="outline" className="text-base">{candidate.profiler_result_code}</Badge>
-                      {candidate.profiler_result_detail && (
-                        <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
-                          {typeof candidate.profiler_result_detail === "string" ? candidate.profiler_result_detail : JSON.stringify(candidate.profiler_result_detail, null, 2)}
-                        </p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                <p className="text-sm">Nenhuma análise de IA disponível</p>
-                <p className="text-xs mt-1">A análise será gerada automaticamente</p>
-              </div>
-            )}
+            <AiMatchPanel candidate={candidate} />
           </TabsContent>
+
+
 
           {/* Notes Tab */}
           <TabsContent value="notes" className="space-y-4 mt-0">
