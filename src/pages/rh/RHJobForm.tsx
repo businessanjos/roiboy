@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronLeft, ChevronRight, Save, Send, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, Send, ArrowLeft, Check, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
@@ -17,6 +17,12 @@ import { JobStepReview } from "@/components/rh/jobs/JobStepReview";
 import { useCreateHRJob, useUpdateHRJob, useHRJobById } from "@/hooks/useHRJobs";
 import { JOB_WIZARD_STEPS } from "@/constants/jobOptions";
 import { DEFAULT_JOB_FORM_DATA, type JobFormData, type JobSeniority, type EducationLevel } from "@/types/job";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
 
 const formSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -44,17 +50,29 @@ const formSchema = z.object({
 
 export default function RHJobForm() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditing = !!id;
+  const { id: routeId } = useParams<{ id: string }>();
+  const [jobId, setJobId] = useState<string | undefined>(routeId);
+  const isEditing = !!jobId;
   const [currentStep, setCurrentStep] = useState(1);
-  const { data: existingJob, isLoading } = useHRJobById(id);
+  const { data: existingJob, isLoading } = useHRJobById(jobId);
   const createJob = useCreateHRJob();
   const updateJob = useUpdateHRJob();
+  const { currentUser } = useCurrentUser();
+  const queryClient = useQueryClient();
+
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isAutosavingRef = useRef(false);
+  const jobIdRef = useRef<string | undefined>(routeId);
+  const hydratedRef = useRef(false);
+  useEffect(() => { jobIdRef.current = jobId; }, [jobId]);
 
   const form = useForm<JobFormData>({ resolver: zodResolver(formSchema), defaultValues: DEFAULT_JOB_FORM_DATA });
 
   useEffect(() => {
-    if (existingJob && isEditing) {
+    if (existingJob && routeId) {
+
       form.reset({
         title: existingJob.title || "", department: existingJob.department || "", unit: existingJob.unit || "",
         work_model: (existingJob.work_model as any) || "onsite", contract_type: (existingJob.contract_type as any) || "clt",
@@ -86,25 +104,109 @@ export default function RHJobForm() {
     if (isValid && currentStep < totalSteps) setCurrentStep(s => s + 1);
   };
 
-  const submitJob = async (values: JobFormData, status: "draft" | "active") => {
-    const jobData: any = {
-      title: values.title, description: values.description || null, requirements: values.requirements || null,
-      position: values.position || null, department: values.department || null, unit: values.unit || null,
-      status, work_model: values.work_model, contract_type: values.contract_type, seniority: values.seniority || null,
-      openings_count: values.openings_count, description_tone: values.description_tone || null,
-      required_skills: values.required_skills, desired_skills: values.desired_skills, experience_years: values.experience_years,
-      education_level: values.education_level || null, languages: values.languages, salary_type: values.salary_type,
-      salary_min: values.salary_min, salary_max: values.salary_max, benefits: values.benefits,
-      application_deadline: values.application_deadline?.toISOString().split("T")[0] || null,
-      expected_start_date: values.expected_start_date?.toISOString().split("T")[0] || null,
-      urgency: values.urgency, require_cover_letter: values.require_cover_letter, tags: values.tags,
-      hiring_manager_id: values.hiring_manager_id,
-      recruiter_id: values.recruiter_id,
-      target_fill_date: values.target_fill_date?.toISOString().split("T")[0] || null,
-      opening_reason: values.opening_reason || null,
-    };
+  const buildPayload = useCallback((values: JobFormData, status?: "draft" | "active") => ({
+    title: values.title || "Sem título",
+    description: values.description || null,
+    requirements: values.requirements || null,
+    position: values.position || null,
+    department: values.department || null,
+    unit: values.unit || null,
+    ...(status ? { status } : {}),
+    work_model: values.work_model,
+    contract_type: values.contract_type,
+    seniority: values.seniority || null,
+    openings_count: values.openings_count,
+    description_tone: values.description_tone || null,
+    description_context: values.description_context || null,
+    required_skills: values.required_skills,
+    desired_skills: values.desired_skills,
+    experience_years: values.experience_years,
+    education_level: values.education_level || null,
+    languages: values.languages,
+    salary_type: values.salary_type,
+    salary_min: values.salary_min,
+    salary_max: values.salary_max,
+    benefits: values.benefits,
+    application_deadline: values.application_deadline?.toISOString().split("T")[0] || null,
+    expected_start_date: values.expected_start_date?.toISOString().split("T")[0] || null,
+    urgency: values.urgency,
+    require_cover_letter: values.require_cover_letter,
+    tags: values.tags,
+    hiring_manager_id: values.hiring_manager_id,
+    recruiter_id: values.recruiter_id,
+    target_fill_date: values.target_fill_date?.toISOString().split("T")[0] || null,
+    opening_reason: values.opening_reason || null,
+  }), []);
+
+  // ─── Autosave silencioso ───
+  const performAutosave = useCallback(async () => {
+    if (!currentUser?.account_id) return;
+    const values = form.getValues();
+    if (!values.title?.trim()) return; // título obrigatório p/ persistir
+    if (isAutosavingRef.current) return;
+    isAutosavingRef.current = true;
+    setSaveStatus("saving");
     try {
-      if (isEditing && id) await updateJob.mutateAsync({ id, ...jobData });
+      const payload = buildPayload(values);
+      const currentId = jobIdRef.current;
+      if (!currentId) {
+        const { data, error } = await supabase
+          .from("hr_jobs")
+          .insert({ ...payload, status: "draft", account_id: currentUser.account_id, created_by: currentUser.id } as any)
+          .select("id")
+          .single();
+        if (error) throw error;
+        const newId = (data as any).id as string;
+        setJobId(newId);
+        jobIdRef.current = newId;
+        // Atualiza URL para /edit sem recarregar o componente
+        window.history.replaceState(null, "", `/rh/vacancies/${newId}/edit`);
+      } else {
+        const { error } = await supabase.from("hr_jobs").update(payload as any).eq("id", currentId);
+        if (error) throw error;
+      }
+      setLastSavedAt(new Date());
+      setSaveStatus("saved");
+      queryClient.invalidateQueries({ queryKey: ["hr-jobs"] });
+      if (jobIdRef.current) queryClient.invalidateQueries({ queryKey: ["hr-job", jobIdRef.current] });
+    } catch (e) {
+      console.error("[autosave]", e);
+      setSaveStatus("error");
+    } finally {
+      isAutosavingRef.current = false;
+    }
+  }, [buildPayload, currentUser, form, queryClient]);
+
+  // Debounce em mudanças do form
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      if (!hydratedRef.current) return;
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      setSaveStatus("saving");
+      autosaveTimer.current = setTimeout(() => { performAutosave(); }, 1500);
+    });
+    return () => {
+      subscription.unsubscribe();
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  }, [form, performAutosave]);
+
+  // Marca form como hidratado depois do reset inicial (edição) ou imediatamente (criação)
+  useEffect(() => {
+    if (routeId && !existingJob) return; // aguarda load
+    const t = setTimeout(() => { hydratedRef.current = true; }, 300);
+    return () => clearTimeout(t);
+  }, [routeId, existingJob]);
+
+  // Flush ao desmontar
+  useEffect(() => () => {
+    if (autosaveTimer.current) { clearTimeout(autosaveTimer.current); performAutosave(); }
+  }, [performAutosave]);
+
+  const submitJob = async (values: JobFormData, status: "draft" | "active") => {
+    const jobData = buildPayload(values, status);
+    try {
+      if (jobIdRef.current) await updateJob.mutateAsync({ id: jobIdRef.current, ...jobData });
       else await createJob.mutateAsync(jobData);
       navigate("/rh/vacancies");
     } catch (e) { console.error(e); }
@@ -116,11 +218,12 @@ export default function RHJobForm() {
       case 2: return <JobStepRequirements form={form} />;
       case 3: return <JobStepCompensation form={form} />;
       case 4: return <JobStepDescription form={form} />;
-      case 5: return <JobStepProcess form={form} jobId={id} />;
+      case 5: return <JobStepProcess form={form} jobId={jobId} />;
       case 6: return <JobStepReview form={form} />;
       default: return null;
     }
   };
+
 
   const isPending = createJob.isPending || updateJob.isPending;
 
@@ -136,7 +239,11 @@ export default function RHJobForm() {
             <p className="text-muted-foreground">{JOB_WIZARD_STEPS[currentStep - 1]?.description}</p>
           </div>
         </div>
-        <span className="text-sm text-muted-foreground">Passo {currentStep} de {totalSteps}</span>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+          <span>Passo {currentStep} de {totalSteps}</span>
+        </div>
+
       </div>
 
       <JobWizardSteps currentStep={currentStep} onStepClick={s => { if (s <= currentStep) setCurrentStep(s); }}
@@ -164,3 +271,11 @@ export default function RHJobForm() {
     </div>
   );
 }
+
+function AutosaveIndicator({ status, lastSavedAt }: { status: "idle" | "saving" | "saved" | "error"; lastSavedAt: Date | null }) {
+  if (status === "saving") return <span className="inline-flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" />Salvando…</span>;
+  if (status === "error") return <span className="inline-flex items-center gap-1.5 text-red-600"><AlertCircle className="h-3.5 w-3.5" />Erro ao salvar</span>;
+  if (status === "saved" && lastSavedAt) return <span className="inline-flex items-center gap-1.5 text-emerald-600"><Check className="h-3.5 w-3.5" />Salvo {formatDistanceToNow(lastSavedAt, { locale: ptBR, addSuffix: true })}</span>;
+  return null;
+}
+
