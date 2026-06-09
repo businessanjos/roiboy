@@ -237,6 +237,26 @@ export default function HRServiceProviders() {
           </DialogHeader>
           <div className="grid gap-4 mt-2">
             <div>
+              <Label>Tipo de PJ *</Label>
+              <Select value={form.provider_kind} onValueChange={(v: any) => setForm(f => ({ ...f, provider_kind: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="director">
+                    <div className="flex flex-col items-start">
+                      <span className="flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-amber-600" /> Diretor / Cargo de confiança</span>
+                      <span className="text-[11px] text-muted-foreground">Sócios e diretores PJ da Eternum (Arthur, Jonathan, Jéssica, Maikol...)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="on_demand">
+                    <div className="flex flex-col items-start">
+                      <span className="flex items-center gap-1.5"><Handshake className="h-3.5 w-3.5 text-amber-600" /> Prestador sob demanda</span>
+                      <span className="text-[11px] text-muted-foreground">Consultorias, contábil, medicina ocupacional, etc.</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>Nome completo *</Label>
               <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Nome do prestador" />
             </div>
