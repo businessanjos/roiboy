@@ -61,19 +61,22 @@ export function MonthlyCalendarView({
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   }, [currentMonth]);
 
-  // Group events by date
+  // Group events by date (expanding multi-day events across their range)
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, MarketingEvent[]> = {};
-    
+
     events.forEach(event => {
-      const dateKey = format(new Date(event.scheduled_at), 'yyyy-MM-dd');
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey].push(event);
+      const start = new Date(event.scheduled_at);
+      const end = event.ends_at ? new Date(event.ends_at) : start;
+      const safeEnd = end < start ? start : end;
+      const days = eachDayOfInterval({ start, end: safeEnd });
+      days.forEach(day => {
+        const dateKey = format(day, 'yyyy-MM-dd');
+        if (!grouped[dateKey]) grouped[dateKey] = [];
+        grouped[dateKey].push(event);
+      });
     });
 
-    // Sort events by time within each day
     Object.keys(grouped).forEach(key => {
       grouped[key].sort((a, b) => {
         if (a.start_time && b.start_time) {
