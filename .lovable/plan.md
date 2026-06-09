@@ -105,8 +105,8 @@ UI:
 
 ## Ordem de entrega
 
-1. **Fase 1 agora** (camadas + filtros no calendário) — entrega valor imediato.
-2. **Fase 2** (checklist + tabela + aba "Conteúdo" no sheet).
+1. ✅ **Fase 1** (camadas + filtros no calendário) — entregue.
+2. ✅ **Fase 2** (checklist + tabela `event_content_deliverables` + seção "Conteúdo" no sheet) — entregue.
 3. **Fase 3** (botão IA + edge function).
 4. **Fase 4** (auto-criação + integração com Meta + indicadores).
 

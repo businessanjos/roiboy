@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { EventContentDeliverablesSection } from './EventContentDeliverablesSection';
 
 const iconMap: Record<string, React.ElementType> = {
   rocket: Rocket,
@@ -279,6 +280,14 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
               </div>
             </div>
           )}
+
+          <Separator />
+
+          {/* Conteúdo do evento (Fase 2) */}
+          <EventContentDeliverablesSection
+            eventId={event.id}
+            eventDate={event.scheduled_at?.slice(0, 10) ?? null}
+          />
 
           <Separator />
 
