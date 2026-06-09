@@ -151,16 +151,20 @@ export function JobStepBasicInfo({ form }: Props) {
                 <FormMessage />
               </FormItem>
             )} />
-            <FormField control={form.control} name="recruiter_id" render={({ field }) => (
+            <FormField control={form.control} name="recruiter_id" render={() => (
               <FormItem>
-                <FormLabel>Recrutador (RH)</FormLabel>
-                <Select value={field.value || "_none"} onValueChange={(v) => field.onChange(v === "_none" ? null : v)}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Quem toca o processo" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    <SelectItem value="_none">Nenhum</SelectItem>
-                    {(users || []).map(u => <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <FormLabel>Recrutador (RH ou parceiro)</FormLabel>
+                <FormControl>
+                  <PersonSelector
+                    userId={form.watch("recruiter_id")}
+                    providerId={form.watch("recruiter_provider_id")}
+                    onChange={({ userId, providerId }) => {
+                      form.setValue("recruiter_id", userId, { shouldDirty: true });
+                      form.setValue("recruiter_provider_id", providerId, { shouldDirty: true });
+                    }}
+                    placeholder="Quem toca o processo"
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )} />
