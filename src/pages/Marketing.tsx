@@ -199,6 +199,10 @@ export default function Marketing() {
               onEventClick={handleEventClick}
               onAddEvent={handleAddEvent}
               currentCategory="marketing"
+              showEvents={layers.event}
+              extraLayers={layerData}
+              onLayerItemClick={(item) => { if (item.href) navigate(item.href); }}
+              toolbarExtra={<CalendarLayersToolbar layers={layers} onToggle={toggleLayer} />}
             />
           ) : (
             <YearlyCalendarView
