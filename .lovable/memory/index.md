@@ -112,6 +112,7 @@
 - [HR Recruitment Portals](mem://features/rh/recruitment-vacancies) — Kanban application tracking
 - [HubDev CPF Integration](mem://features/rh/hubdev-integration) — Edge function population of Name, DOB, Status
 - [HR Service Providers (PJ)](mem://features/rh/service-providers-management-pt) — Separation from employees
+- [Service Provider Kinds](mem://features/rh/service-provider-kinds-pt) — `provider_kind` director (sócios/diretores PJ) vs on_demand (terceirizados); R&S só p/ on_demand
 - [Payroll Inactive Exclusion](mem://features/rh/payroll-inactive-exclusion-pt) — Status `inactive` sempre excluído
 - [Job Offers (Cartas-Proposta)](mem://features/rh/job-offers-pt) — Wizard /rh/offers + link público iamroy.app/oferta/:token com aceite/recusa
 - [Offboarding Suite](mem://features/rh/offboarding-suite-pt) — /rh/offboarding com rescisão CLT, checklist, corte de acesso e exit interview
