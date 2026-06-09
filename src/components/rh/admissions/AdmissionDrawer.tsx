@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, FileCheck2, Check, X, Loader2, Mail, Phone,
   Calendar, Stethoscope, FileSignature, GraduationCap, Trash2, ExternalLink,
-  Copy, Link as LinkIcon, Sparkles, MessageSquareWarning, Eye, EyeOff, FileText,
+  Copy, Link as LinkIcon, Sparkles, MessageSquareWarning, Eye, EyeOff, FileText, Landmark, AlertTriangle,
 } from "lucide-react";
 import ExamReferralDialog from "./ExamReferralDialog";
 import {
@@ -288,7 +288,123 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
             </div>
           </div>
 
+          {/* eSocial / Contabilidade */}
+          {(() => {
+            const startDate = admission.start_date ? new Date(admission.start_date + "T00:00:00") : null;
+            const daysToStart = startDate ? Math.ceil((startDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+            const confirmed = !!admission.esocial_confirmed_at;
+            const sent = !!admission.esocial_sent_to_accountant_at;
+            const overdue = !confirmed && daysToStart !== null && daysToStart <= 2;
+            return (
+              <div className={`rounded-lg border p-4 space-y-3 ${overdue ? "border-rose-500/40 bg-rose-500/5" : "bg-teal-500/5"}`}>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 font-semibold text-sm">
+                    <Landmark className="h-4 w-4 text-teal-600" />
+                    eSocial / Envio para Contabilidade
+                    {confirmed && <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 text-[10px]" variant="outline">Confirmado</Badge>}
+                    {!confirmed && sent && <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 text-[10px]" variant="outline">Aguardando protocolo</Badge>}
+                    {overdue && (
+                      <Badge className="bg-rose-500/15 text-rose-700 border-rose-500/30 text-[10px]" variant="outline">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        {daysToStart! < 0 ? "Atrasado" : `Faltam ${daysToStart}d`}
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7"
+                    onClick={async () => {
+                      const email = admission.esocial_accountant_email?.trim();
+                      if (!email) {
+                        toast.error("Cadastre o e-mail do contador primeiro.");
+                        return;
+                      }
+                      const subject = encodeURIComponent(`Admissão CLT - ${admission.candidate_name}`);
+                      const bodyLines = [
+                        `Olá,`,
+                        ``,
+                        `Segue dados para envio do evento S-2200 (Admissão) no eSocial:`,
+                        ``,
+                        `Nome: ${admission.candidate_name}`,
+                        `Cargo: ${admission.position_title || "—"}`,
+                        `Departamento: ${admission.department || "—"}`,
+                        `Tipo: ${admission.contract_type?.toUpperCase()}`,
+                        `Data de início: ${admission.start_date || "—"}`,
+                        admission.candidate_email ? `E-mail: ${admission.candidate_email}` : "",
+                        admission.candidate_phone ? `Telefone: ${admission.candidate_phone}` : "",
+                        ``,
+                        `Documentos e contrato estão disponíveis nesta plataforma. Posso enviar em anexo se preferir.`,
+                        ``,
+                        `Por favor, retorne com o número do protocolo S-2200 assim que enviado.`,
+                        ``,
+                        `Obrigado!`,
+                      ].filter(Boolean).join("%0D%0A");
+                      window.open(`mailto:${email}?subject=${subject}&body=${bodyLines}`, "_blank");
+                      if (!sent) {
+                        await updateAdmission.mutateAsync({ id: admission.id, esocial_sent_to_accountant_at: new Date().toISOString() });
+                        toast.success("E-mail aberto e data de envio registrada.");
+                      }
+                    }}
+                  >
+                    <Mail className="h-3.5 w-3.5 mr-1" /> Enviar para contador
+                  </Button>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  O contador precisa enviar o evento <strong>S-2200</strong> no eSocial até <strong>1 dia antes</strong> do início das atividades.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs">E-mail do contador</Label>
+                    <Input
+                      type="email"
+                      defaultValue={admission.esocial_accountant_email || ""}
+                      placeholder="contador@escritorio.com.br"
+                      onBlur={(e) => e.target.value !== (admission.esocial_accountant_email || "") && updateAdmission.mutate({ id: admission.id, esocial_accountant_email: e.target.value || null })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Enviado em</Label>
+                    <Input
+                      type="datetime-local"
+                      defaultValue={admission.esocial_sent_to_accountant_at ? admission.esocial_sent_to_accountant_at.slice(0, 16) : ""}
+                      onBlur={(e) => updateAdmission.mutate({ id: admission.id, esocial_sent_to_accountant_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Confirmado em</Label>
+                    <Input
+                      type="datetime-local"
+                      defaultValue={admission.esocial_confirmed_at ? admission.esocial_confirmed_at.slice(0, 16) : ""}
+                      onBlur={(e) => updateAdmission.mutate({ id: admission.id, esocial_confirmed_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs">Protocolo S-2200</Label>
+                    <Input
+                      defaultValue={admission.esocial_event_protocol || ""}
+                      placeholder="Ex.: 1.2.0-2026.06.09.12.34.56-000000001"
+                      onBlur={(e) => e.target.value !== (admission.esocial_event_protocol || "") && updateAdmission.mutate({ id: admission.id, esocial_event_protocol: e.target.value || null })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs">Observações</Label>
+                    <Textarea
+                      rows={2}
+                      defaultValue={admission.esocial_notes || ""}
+                      placeholder="Notas, pendências, dependentes, etc."
+                      onBlur={(e) => e.target.value !== (admission.esocial_notes || "") && updateAdmission.mutate({ id: admission.id, esocial_notes: e.target.value || null })}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           <Separator />
+
 
           {/* Public candidate link */}
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">

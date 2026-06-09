@@ -8,6 +8,7 @@ export type AdmissionStage =
   | "documents"
   | "medical_exam"
   | "contract"
+  | "esocial"
   | "onboarding"
   | "admitted";
 
@@ -16,6 +17,7 @@ export const ADMISSION_STAGES: AdmissionStage[] = [
   "documents",
   "medical_exam",
   "contract",
+  "esocial",
   "onboarding",
   "admitted",
 ];
@@ -25,6 +27,7 @@ export const ADMISSION_STAGE_LABELS: Record<AdmissionStage, string> = {
   documents: "Documentos Solicitados",
   medical_exam: "Exame Admissional",
   contract: "Contrato Assinado",
+  esocial: "eSocial / Contabilidade",
   onboarding: "Integração Agendada",
   admitted: "Admitido",
 };
@@ -34,9 +37,11 @@ export const ADMISSION_STAGE_COLORS: Record<AdmissionStage, string> = {
   documents: "bg-amber-500/10 text-amber-700 border-amber-200",
   medical_exam: "bg-rose-500/10 text-rose-700 border-rose-200",
   contract: "bg-blue-500/10 text-blue-700 border-blue-200",
+  esocial: "bg-teal-500/10 text-teal-700 border-teal-200",
   onboarding: "bg-violet-500/10 text-violet-700 border-violet-200",
   admitted: "bg-emerald-500/10 text-emerald-700 border-emerald-200",
 };
+
 
 export interface HRAdmission {
   id: string;
@@ -59,7 +64,13 @@ export interface HRAdmission {
   contract_signed_at: string | null;
   onboarding_scheduled_at: string | null;
   admitted_at: string | null;
+  esocial_sent_to_accountant_at: string | null;
+  esocial_accountant_email: string | null;
+  esocial_event_protocol: string | null;
+  esocial_confirmed_at: string | null;
+  esocial_notes: string | null;
   notes: string | null;
+
   responsible_user_id: string | null;
   public_token: string | null;
   token_expires_at: string | null;

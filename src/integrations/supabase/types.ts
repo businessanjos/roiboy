@@ -10284,6 +10284,11 @@ export type Database = {
           created_at: string
           created_by: string | null
           department: string | null
+          esocial_accountant_email: string | null
+          esocial_confirmed_at: string | null
+          esocial_event_protocol: string | null
+          esocial_notes: string | null
+          esocial_sent_to_accountant_at: string | null
           exam_clinic: string | null
           exam_done_at: string | null
           exam_result: string | null
@@ -10314,6 +10319,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           department?: string | null
+          esocial_accountant_email?: string | null
+          esocial_confirmed_at?: string | null
+          esocial_event_protocol?: string | null
+          esocial_notes?: string | null
+          esocial_sent_to_accountant_at?: string | null
           exam_clinic?: string | null
           exam_done_at?: string | null
           exam_result?: string | null
@@ -10344,6 +10354,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           department?: string | null
+          esocial_accountant_email?: string | null
+          esocial_confirmed_at?: string | null
+          esocial_event_protocol?: string | null
+          esocial_notes?: string | null
+          esocial_sent_to_accountant_at?: string | null
           exam_clinic?: string | null
           exam_done_at?: string | null
           exam_result?: string | null

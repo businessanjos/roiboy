@@ -83,7 +83,7 @@ export default function RHAdmissions() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor));
 
   const byStage = useMemo(() => {
-    const r: Record<AdmissionStage, HRAdmission[]> = { accepted: [], documents: [], medical_exam: [], contract: [], onboarding: [], admitted: [] };
+    const r: Record<AdmissionStage, HRAdmission[]> = { accepted: [], documents: [], medical_exam: [], contract: [], esocial: [], onboarding: [], admitted: [] };
     (admissions || []).forEach((a) => { if (r[a.stage]) r[a.stage].push(a); });
     return r;
   }, [admissions]);
