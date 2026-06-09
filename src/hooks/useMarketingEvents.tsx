@@ -162,6 +162,7 @@ export function useMarketingEvents(year?: number, category?: 'marketing' | 'oper
         notes: event.notes,
         start_time: event.start_time,
         end_time: event.end_time,
+        ...(event.auto_generate_content !== undefined ? { auto_generate_content: event.auto_generate_content } as any : {}),
       };
 
       const { data, error } = await supabase
