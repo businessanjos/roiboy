@@ -105,12 +105,14 @@ function JobStagesPanel({ jobId }: { jobId: string }) {
                   {s.sla_days && <span>{s.sla_days}d SLA</span>}
                 </div>
               </div>
+              {s.owner_name && <p className="text-xs text-muted-foreground mb-1"><strong>Conduz:</strong> {s.owner_name}</p>}
+              {s.what_to_do && <p className="text-xs mb-1">{s.what_to_do}</p>}
+              {s.test_or_material && <p className="text-xs mb-2"><Badge variant="outline" className="text-[10px] mr-1">Teste/Material</Badge>{s.test_or_material}</p>}
               {s.evaluation_criteria?.length > 0 && (
                 <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
                   {s.evaluation_criteria.map((c, j) => <li key={j}>{c}</li>)}
                 </ul>
               )}
-              {s.ai_focus && <p className="text-xs mt-2 italic text-violet-600 dark:text-violet-400">IA observa: {s.ai_focus}</p>}
             </div>
           ))}
         </div>
