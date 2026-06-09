@@ -12,8 +12,11 @@ import { useHRJobs, useDeleteHRJob, useUpdateHRJob, useHRJobStats } from "@/hook
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { HRJob, JobStatus } from "@/types/job";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/types/job";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAccountUsersForJobs } from "@/hooks/useHRJobStages";
+import { OPENING_REASON_LABELS } from "@/types/job";
+import { Clock, User as UserIcon, AlertTriangle } from "lucide-react";
 
 export default function RHVagas() {
   const navigate = useNavigate();
@@ -99,9 +102,9 @@ export default function RHVagas() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                {job.department && <p className="text-sm text-muted-foreground mb-1">Departamento: {job.department}</p>}
-                <p className="text-xs text-muted-foreground">Criada em {format(new Date(job.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+              <CardContent className="space-y-1.5">
+                {job.department && <p className="text-sm text-muted-foreground">Departamento: {job.department}</p>}
+                <JobMetaRow job={job} />
               </CardContent>
             </Card>
           ))}
