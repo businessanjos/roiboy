@@ -275,7 +275,8 @@ export function MarketingEventDialog({
         notes: notesPacked || null,
         category: 'marketing',
         visible_sectors: null,
-      },
+        auto_generate_content: formData.auto_generate_content,
+      } as any,
       {
         createProject: formData.create_project && !event,
         projectName: formData.project_name || formData.title,
