@@ -12,6 +12,7 @@ import { X, Plus, ArrowUp, ArrowDown, Sparkles, Trash2 } from "lucide-react";
 import { JOB_URGENCY_LABELS, JOB_TAGS } from "@/constants/jobOptions";
 import type { JobFormData, JobUrgency } from "@/types/job";
 import { suggestStagesAI, type JobStageDraft, useHRJobStages, useReplaceHRJobStages } from "@/hooks/useHRJobStages";
+import { PersonSelector } from "@/components/rh/jobs/PersonSelector";
 import { toast } from "sonner";
 
 interface Props { form: UseFormReturn<JobFormData>; jobId?: string; }
@@ -181,7 +182,20 @@ export function JobStepProcess({ form, jobId }: Props) {
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground">Quem conduz</label>
-                      <Input value={s.owner_name || ""} onChange={e => updateStage(i, { owner_name: e.target.value })} placeholder="Ex: Everton e Maikol" />
+                      <PersonSelector
+                        userId={null}
+                        providerId={s.owner_provider_id}
+                        onChange={({ userId, providerId }) => {
+                          if (providerId) updateStage(i, { owner_provider_id: providerId, owner_name: null });
+                          else if (userId) updateStage(i, { owner_provider_id: null, owner_name: null });
+                          else updateStage(i, { owner_provider_id: null });
+                        }}
+                        placeholder="Time interno ou parceiro"
+                        noneLabel="Texto livre (abaixo)"
+                      />
+                      {!s.owner_provider_id && (
+                        <Input className="mt-2" value={s.owner_name || ""} onChange={e => updateStage(i, { owner_name: e.target.value })} placeholder="Ex: Everton e Maikol" />
+                      )}
                     </div>
                   </div>
                   <div>

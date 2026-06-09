@@ -44,6 +44,7 @@ const formSchema = z.object({
   status: z.enum(["active", "closed", "draft", "on_hold"]),
   hiring_manager_id: z.string().nullable(),
   recruiter_id: z.string().nullable(),
+  recruiter_provider_id: z.string().nullable(),
   target_fill_date: z.date().nullable(),
   opening_reason: z.string(),
 });
@@ -94,6 +95,7 @@ export default function RHJobForm() {
       tags: existingJob.tags || [], status: existingJob.status || "draft",
       hiring_manager_id: (existingJob as any).hiring_manager_id || null,
       recruiter_id: (existingJob as any).recruiter_id || null,
+      recruiter_provider_id: (existingJob as any).recruiter_provider_id || null,
       target_fill_date: (existingJob as any).target_fill_date ? new Date((existingJob as any).target_fill_date) : null,
       opening_reason: (existingJob as any).opening_reason || "",
     });
@@ -139,6 +141,7 @@ export default function RHJobForm() {
     tags: values.tags,
     hiring_manager_id: values.hiring_manager_id,
     recruiter_id: values.recruiter_id,
+    recruiter_provider_id: values.recruiter_provider_id,
     target_fill_date: values.target_fill_date?.toISOString().split("T")[0] || null,
     opening_reason: values.opening_reason || null,
   }), []);
