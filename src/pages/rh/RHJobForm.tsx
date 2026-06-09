@@ -66,34 +66,39 @@ export default function RHJobForm() {
   const isAutosavingRef = useRef(false);
   const jobIdRef = useRef<string | undefined>(routeId);
   const hydratedRef = useRef(false);
+  const resetForJobIdRef = useRef<string | null>(null);
   useEffect(() => { jobIdRef.current = jobId; }, [jobId]);
 
   const form = useForm<JobFormData>({ resolver: zodResolver(formSchema), defaultValues: DEFAULT_JOB_FORM_DATA });
 
   useEffect(() => {
-    if (existingJob && routeId) {
+    if (!existingJob || !jobId) return;
+    // Reset somente UMA vez por jobId carregado — refetches subsequentes (causados pelo
+    // próprio autosave) não devem sobrescrever o que o usuário está digitando.
+    if (resetForJobIdRef.current === jobId) return;
+    resetForJobIdRef.current = jobId;
 
-      form.reset({
-        title: existingJob.title || "", department: existingJob.department || "", unit: existingJob.unit || "",
-        work_model: (existingJob.work_model as any) || "onsite", contract_type: (existingJob.contract_type as any) || "clt",
-        seniority: (existingJob.seniority as JobSeniority) || "", openings_count: existingJob.openings_count || 1, position: existingJob.position || "",
-        description_tone: (existingJob.description_tone as any) || "", description_context: existingJob.description_context || "",
-        description: existingJob.description || "", required_skills: existingJob.required_skills || [],
-        desired_skills: existingJob.desired_skills || [], experience_years: existingJob.experience_years,
-        education_level: (existingJob.education_level as EducationLevel) || "", languages: existingJob.languages || [],
-        requirements: existingJob.requirements || "", salary_type: (existingJob.salary_type as any) || "not_disclosed",
-        salary_min: existingJob.salary_min, salary_max: existingJob.salary_max, benefits: existingJob.benefits || [],
-        application_deadline: existingJob.application_deadline ? new Date(existingJob.application_deadline) : null,
-        expected_start_date: existingJob.expected_start_date ? new Date(existingJob.expected_start_date) : null,
-        urgency: (existingJob.urgency as any) || "medium", require_cover_letter: existingJob.require_cover_letter || false,
-        tags: existingJob.tags || [], status: existingJob.status || "draft",
-        hiring_manager_id: (existingJob as any).hiring_manager_id || null,
-        recruiter_id: (existingJob as any).recruiter_id || null,
-        target_fill_date: (existingJob as any).target_fill_date ? new Date((existingJob as any).target_fill_date) : null,
-        opening_reason: (existingJob as any).opening_reason || "",
-      });
-    }
-  }, [existingJob, isEditing, form]);
+    form.reset({
+      title: existingJob.title || "", department: existingJob.department || "", unit: existingJob.unit || "",
+      work_model: (existingJob.work_model as any) || "onsite", contract_type: (existingJob.contract_type as any) || "clt",
+      seniority: (existingJob.seniority as JobSeniority) || "", openings_count: existingJob.openings_count || 1, position: existingJob.position || "",
+      description_tone: (existingJob.description_tone as any) || "", description_context: existingJob.description_context || "",
+      description: existingJob.description || "", required_skills: existingJob.required_skills || [],
+      desired_skills: existingJob.desired_skills || [], experience_years: existingJob.experience_years,
+      education_level: (existingJob.education_level as EducationLevel) || "", languages: existingJob.languages || [],
+      requirements: existingJob.requirements || "", salary_type: (existingJob.salary_type as any) || "not_disclosed",
+      salary_min: existingJob.salary_min, salary_max: existingJob.salary_max, benefits: existingJob.benefits || [],
+      application_deadline: existingJob.application_deadline ? new Date(existingJob.application_deadline) : null,
+      expected_start_date: existingJob.expected_start_date ? new Date(existingJob.expected_start_date) : null,
+      urgency: (existingJob.urgency as any) || "medium", require_cover_letter: existingJob.require_cover_letter || false,
+      tags: existingJob.tags || [], status: existingJob.status || "draft",
+      hiring_manager_id: (existingJob as any).hiring_manager_id || null,
+      recruiter_id: (existingJob as any).recruiter_id || null,
+      target_fill_date: (existingJob as any).target_fill_date ? new Date((existingJob as any).target_fill_date) : null,
+      opening_reason: (existingJob as any).opening_reason || "",
+    });
+    hydratedRef.current = true;
+  }, [existingJob, jobId, form]);
 
   const totalSteps = JOB_WIZARD_STEPS.length;
 
