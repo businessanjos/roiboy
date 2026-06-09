@@ -391,7 +391,10 @@ export function MarketingEventDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="travel_impact">Posicionamento / impacto esperado</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="travel_impact">Posicionamento / impacto esperado</Label>
+                  <AiAssistButton field="travel_impact" />
+                </div>
                 <Textarea
                   id="travel_impact"
                   value={formData.travel_impact}
