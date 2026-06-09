@@ -62,6 +62,7 @@ function mapEventRowToMarketingEvent(row: EventRow): MarketingEvent {
     notes: row.notes,
     category: row.category as 'marketing' | 'operation',
     visible_sectors: row.visible_sectors as string[] | null,
+    auto_generate_content: (row as any).auto_generate_content ?? false,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
