@@ -53,8 +53,12 @@ export function DestinationAutocomplete({ value, onChange, placeholder, id }: Pr
   const [highlight, setHighlight] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const userTypingRef = useRef(false);
 
-  useEffect(() => { setQuery(value); }, [value]);
+  useEffect(() => {
+    setQuery(value);
+    userTypingRef.current = false;
+  }, [value]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -67,14 +71,11 @@ export function DestinationAutocomplete({ value, onChange, placeholder, id }: Pr
   }, []);
 
   useEffect(() => {
-    // Strip leading flag emoji before comparing to value
+    if (!userTypingRef.current) return; // skip search when value came from props/select
     const stripped = query.replace(/^\p{Extended_Pictographic}\s*/u, '').trim();
     if (!stripped || stripped.length < 2) {
       setResults([]);
       return;
-    }
-    if (stripped === value.replace(/^\p{Extended_Pictographic}\s*/u, '').trim()) {
-      // already matches selected value, no need to search
     }
     const t = setTimeout(async () => {
       abortRef.current?.abort();
@@ -121,6 +122,7 @@ export function DestinationAutocomplete({ value, onChange, placeholder, id }: Pr
 
   const pick = (s: Suggestion) => {
     const final = s.flag ? `${s.flag} ${s.label}` : s.label;
+    userTypingRef.current = false;
     setQuery(final);
     onChange(final);
     setOpen(false);
@@ -148,6 +150,7 @@ export function DestinationAutocomplete({ value, onChange, placeholder, id }: Pr
         id={id}
         value={query}
         onChange={(e) => {
+          userTypingRef.current = true;
           setQuery(e.target.value);
           onChange(e.target.value);
         }}
