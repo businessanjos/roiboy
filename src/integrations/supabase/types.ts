@@ -6860,6 +6860,78 @@ export type Database = {
           },
         ]
       }
+      event_content_deliverables: {
+        Row: {
+          account_id: string
+          assigned_to: string | null
+          content_piece_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          due_offset_days: number | null
+          event_id: string
+          id: string
+          kind: string
+          marketing_task_id: string | null
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          assigned_to?: string | null
+          content_piece_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          due_offset_days?: number | null
+          event_id: string
+          id?: string
+          kind?: string
+          marketing_task_id?: string | null
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          assigned_to?: string | null
+          content_piece_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          due_offset_days?: number | null
+          event_id?: string
+          id?: string
+          kind?: string
+          marketing_task_id?: string | null
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_content_deliverables_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_content_deliverables_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_costs: {
         Row: {
           account_id: string
