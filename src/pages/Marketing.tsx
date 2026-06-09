@@ -12,6 +12,7 @@ import MarketingRemindersTab from '@/components/marketing/MarketingRemindersTab'
 import AttendanceReport from '@/components/events/AttendanceReport';
 import { useMarketingCalendarLayers } from '@/hooks/useMarketingCalendarLayers';
 import { CalendarLayersToolbar, useLayerToggles } from '@/components/marketing/CalendarLayersToolbar';
+import { useEventContentHealth } from '@/hooks/useEventContentHealth';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
