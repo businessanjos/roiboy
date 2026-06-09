@@ -44,6 +44,7 @@ export default function Marketing() {
     month: viewMode === 'month' ? currentMonth.getMonth() : undefined,
     enabledLayers: { pauta: layers.pauta, task: layers.task, milestone: layers.milestone },
   });
+  const { data: eventHealth } = useEventContentHealth(events.map((e) => e.id));
 
   const handleAddEvent = (dateOrMonth?: Date | number) => {
     setSelectedEvent(null);
