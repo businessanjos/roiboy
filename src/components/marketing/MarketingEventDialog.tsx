@@ -104,6 +104,7 @@ export function MarketingEventDialog({
     // Project upgrade
     create_project: false,
     project_name: '',
+    auto_generate_content: false,
   });
 
   // Only re-initialize when the dialog opens or the event ID changes — not on every
