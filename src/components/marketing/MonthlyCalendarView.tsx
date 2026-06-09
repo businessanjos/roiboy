@@ -160,11 +160,16 @@ export function MonthlyCalendarView({
           {/* Days grid */}
           <div className="flex-1 grid grid-cols-7 auto-rows-fr">
             {calendarDays.map((day, index) => {
-              const dayEvents = getEventsForDay(day);
+              const dayEvents = showEvents ? getEventsForDay(day) : [];
+              const dayKey = format(day, 'yyyy-MM-dd');
+              const dayLayerItems = extraLayers?.[dayKey] || [];
               const isInMonth = isSameMonth(day, currentMonth);
               const isDayToday = isToday(day);
-              const maxVisibleEvents = 3;
-              const hiddenCount = Math.max(0, dayEvents.length - maxVisibleEvents);
+              const maxVisibleEvents = 2;
+              const maxVisibleLayers = 2;
+              const hiddenEvents = Math.max(0, dayEvents.length - maxVisibleEvents);
+              const hiddenLayers = Math.max(0, dayLayerItems.length - maxVisibleLayers);
+              const hiddenCount = hiddenEvents + hiddenLayers;
 
               return (
                 <div
