@@ -239,7 +239,11 @@ export default function RHJobForm() {
             <p className="text-muted-foreground">{JOB_WIZARD_STEPS[currentStep - 1]?.description}</p>
           </div>
         </div>
-        <span className="text-sm text-muted-foreground">Passo {currentStep} de {totalSteps}</span>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+          <span>Passo {currentStep} de {totalSteps}</span>
+        </div>
+
       </div>
 
       <JobWizardSteps currentStep={currentStep} onStepClick={s => { if (s <= currentStep) setCurrentStep(s); }}
