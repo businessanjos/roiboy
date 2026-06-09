@@ -88,16 +88,18 @@ export function useMarketingEvents(year?: number, category?: 'marketing' | 'oper
 
         // Apply date filter based on mode (monthly or annual)
         if (year && month !== undefined) {
-          // Filter by specific month (monthly view)
+          // Filter by specific month (monthly view) — use first day of next month as exclusive upper bound
           const monthStr = String(month + 1).padStart(2, '0');
+          const nextYear = month === 11 ? year + 1 : year;
+          const nextMonthStr = String(((month + 1) % 12) + 1).padStart(2, '0');
           queryBuilder = queryBuilder
             .gte('scheduled_at', `${year}-${monthStr}-01`)
-            .lte('scheduled_at', `${year}-${monthStr}-31`);
+            .lt('scheduled_at', `${nextYear}-${nextMonthStr}-01`);
         } else if (year) {
           // Filter by entire year (annual view)
           queryBuilder = queryBuilder
             .gte('scheduled_at', `${year}-01-01`)
-            .lte('scheduled_at', `${year}-12-31`);
+            .lt('scheduled_at', `${year + 1}-01-01`);
         }
 
         const { data, error } = await queryBuilder.order('scheduled_at', { ascending: true });
@@ -118,15 +120,17 @@ export function useMarketingEvents(year?: number, category?: 'marketing' | 'oper
       }
 
       if (year && month !== undefined) {
-        // Filter by specific month
+        // Filter by specific month — exclusive upper bound = first day of next month
         const monthStr = String(month + 1).padStart(2, '0');
+        const nextYear = month === 11 ? year + 1 : year;
+        const nextMonthStr = String(((month + 1) % 12) + 1).padStart(2, '0');
         queryBuilder = queryBuilder
           .gte('scheduled_at', `${year}-${monthStr}-01`)
-          .lte('scheduled_at', `${year}-${monthStr}-31`);
+          .lt('scheduled_at', `${nextYear}-${nextMonthStr}-01`);
       } else if (year) {
         queryBuilder = queryBuilder
           .gte('scheduled_at', `${year}-01-01`)
-          .lte('scheduled_at', `${year}-12-31`);
+          .lt('scheduled_at', `${year + 1}-01-01`);
       }
 
       const { data, error } = await queryBuilder;
