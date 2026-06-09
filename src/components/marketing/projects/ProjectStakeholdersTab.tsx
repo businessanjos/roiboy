@@ -150,7 +150,7 @@ export function ProjectStakeholdersTab({ projectId }: { projectId: string }) {
                   </div>
 
                   {s.ai_summary ? (
-                    <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{s.ai_summary}</p>
+                    <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{cleanAiText(s.ai_summary)}</p>
                   ) : s.bio ? (
                     <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{s.bio}</p>
                   ) : (
@@ -164,9 +164,10 @@ export function ProjectStakeholdersTab({ projectId }: { projectId: string }) {
                       <div className="text-[10px] uppercase tracking-wide font-semibold text-violet-600 dark:text-violet-400 mb-0.5 flex items-center gap-1">
                         <Sparkles className="h-2.5 w-2.5" /> Como usar
                       </div>
-                      <p className="text-[11px] text-foreground/80 line-clamp-3 whitespace-pre-wrap">{s.ai_recommendations}</p>
+                      <p className="text-[11px] text-foreground/80 line-clamp-3 whitespace-pre-wrap">{cleanAiText(s.ai_recommendations)}</p>
                     </div>
                   )}
+
                 </div>
               </div>
 
