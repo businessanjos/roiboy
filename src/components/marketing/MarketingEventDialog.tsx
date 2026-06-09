@@ -285,10 +285,10 @@ export function MarketingEventDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="travel_destination">Destino *</Label>
-                <Input
+                <DestinationAutocomplete
                   id="travel_destination"
                   value={formData.travel_destination}
-                  onChange={(e) => setFormData(prev => ({ ...prev, travel_destination: e.target.value }))}
+                  onChange={(v) => setFormData(prev => ({ ...prev, travel_destination: v }))}
                   placeholder="Ex: Dubai, Paris, Bahia..."
                 />
               </div>
