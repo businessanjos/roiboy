@@ -64,6 +64,8 @@ export default function HRServiceProviders() {
 
   const filtered = useMemo(() => {
     return providers.filter(p => {
+      const kind = (p as any).provider_kind === "director" ? "director" : "on_demand";
+      if (kind !== tab) return false;
       const matchSearch =
         !search ||
         p.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -73,7 +75,10 @@ export default function HRServiceProviders() {
       const matchStatus = statusFilter === "all" || p.status === statusFilter;
       return matchSearch && matchStatus;
     });
-  }, [providers, search, statusFilter]);
+  }, [providers, search, statusFilter, tab]);
+
+  const countDirector = providers.filter(p => (p as any).provider_kind === "director").length;
+  const countOnDemand = providers.length - countDirector;
 
   const handleCreate = async () => {
     if (!form.full_name.trim()) return;
