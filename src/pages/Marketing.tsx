@@ -12,6 +12,7 @@ import MarketingRemindersTab from '@/components/marketing/MarketingRemindersTab'
 import AttendanceReport from '@/components/events/AttendanceReport';
 import { useMarketingCalendarLayers } from '@/hooks/useMarketingCalendarLayers';
 import { CalendarLayersToolbar, useLayerToggles } from '@/components/marketing/CalendarLayersToolbar';
+import { useEventContentHealth } from '@/hooks/useEventContentHealth';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
@@ -43,6 +44,7 @@ export default function Marketing() {
     month: viewMode === 'month' ? currentMonth.getMonth() : undefined,
     enabledLayers: { pauta: layers.pauta, task: layers.task, milestone: layers.milestone },
   });
+  const { data: eventHealth } = useEventContentHealth(events.map((e) => e.id));
 
   const handleAddEvent = (dateOrMonth?: Date | number) => {
     setSelectedEvent(null);
@@ -203,6 +205,7 @@ export default function Marketing() {
               extraLayers={layerData}
               onLayerItemClick={(item) => { if (item.href) navigate(item.href); }}
               toolbarExtra={<CalendarLayersToolbar layers={layers} onToggle={toggleLayer} />}
+              eventHealth={eventHealth}
             />
           ) : (
             <YearlyCalendarView

@@ -8309,6 +8309,7 @@ export type Database = {
           account_id: string
           address: string | null
           allow_external_guests: boolean
+          auto_generate_content: boolean
           budget: number | null
           category: Database["public"]["Enums"]["event_category"]
           checkin_code: string | null
@@ -8353,6 +8354,7 @@ export type Database = {
           account_id: string
           address?: string | null
           allow_external_guests?: boolean
+          auto_generate_content?: boolean
           budget?: number | null
           category?: Database["public"]["Enums"]["event_category"]
           checkin_code?: string | null
@@ -8397,6 +8399,7 @@ export type Database = {
           account_id?: string
           address?: string | null
           allow_external_guests?: boolean
+          auto_generate_content?: boolean
           budget?: number | null
           category?: Database["public"]["Enums"]["event_category"]
           checkin_code?: string | null

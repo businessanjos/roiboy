@@ -104,6 +104,7 @@ export function MarketingEventDialog({
     // Project upgrade
     create_project: false,
     project_name: '',
+    auto_generate_content: false,
   });
 
   // Only re-initialize when the dialog opens or the event ID changes — not on every
@@ -132,6 +133,7 @@ export function MarketingEventDialog({
         travel_impact: meta?.travel?.impact || '',
         create_project: false, // can't undo project link from here
         project_name: '',
+        auto_generate_content: (event as any).auto_generate_content ?? false,
       });
     } else {
       let dateToUse: Date;
@@ -162,6 +164,7 @@ export function MarketingEventDialog({
         travel_impact: '',
         create_project: false,
         project_name: '',
+        auto_generate_content: false,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -272,7 +275,8 @@ export function MarketingEventDialog({
         notes: notesPacked || null,
         category: 'marketing',
         visible_sectors: null,
-      },
+        auto_generate_content: formData.auto_generate_content,
+      } as any,
       {
         createProject: formData.create_project && !event,
         projectName: formData.project_name || formData.title,
@@ -602,6 +606,29 @@ export function MarketingEventDialog({
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {!event && (
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="h-4 w-4 mt-0.5 text-cyan-500" />
+                  <div>
+                    <Label htmlFor="auto_generate_content" className="cursor-pointer">
+                      Gerar checklist de conteúdo automático
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Cria pautas padrão (save the date, teaser, reels, stories, cobertura, pós-evento) já com datas calculadas.
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="auto_generate_content"
+                  checked={formData.auto_generate_content}
+                  onCheckedChange={(c) => setFormData(prev => ({ ...prev, auto_generate_content: c }))}
+                />
+              </div>
             </div>
           )}
 

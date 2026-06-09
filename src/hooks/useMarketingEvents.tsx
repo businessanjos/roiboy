@@ -28,6 +28,7 @@ export interface MarketingEvent {
   notes: string | null;
   category: 'marketing' | 'operation';
   visible_sectors: string[] | null;
+  auto_generate_content?: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +62,7 @@ function mapEventRowToMarketingEvent(row: EventRow): MarketingEvent {
     notes: row.notes,
     category: row.category as 'marketing' | 'operation',
     visible_sectors: row.visible_sectors as string[] | null,
+    auto_generate_content: (row as any).auto_generate_content ?? false,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -160,6 +162,7 @@ export function useMarketingEvents(year?: number, category?: 'marketing' | 'oper
         notes: event.notes,
         start_time: event.start_time,
         end_time: event.end_time,
+        ...(event.auto_generate_content !== undefined ? { auto_generate_content: event.auto_generate_content } as any : {}),
       };
 
       const { data, error } = await supabase
@@ -197,6 +200,7 @@ export function useMarketingEvents(year?: number, category?: 'marketing' | 'oper
       if (updates.notes !== undefined) updateData.notes = updates.notes;
       if (updates.start_time !== undefined) updateData.start_time = updates.start_time;
       if (updates.end_time !== undefined) updateData.end_time = updates.end_time;
+      if (updates.auto_generate_content !== undefined) (updateData as any).auto_generate_content = updates.auto_generate_content;
 
       const { data, error } = await supabase
         .from('events')
