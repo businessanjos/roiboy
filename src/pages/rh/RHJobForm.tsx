@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronLeft, ChevronRight, Save, Send, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, Send, ArrowLeft, Check, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
@@ -17,6 +17,12 @@ import { JobStepReview } from "@/components/rh/jobs/JobStepReview";
 import { useCreateHRJob, useUpdateHRJob, useHRJobById } from "@/hooks/useHRJobs";
 import { JOB_WIZARD_STEPS } from "@/constants/jobOptions";
 import { DEFAULT_JOB_FORM_DATA, type JobFormData, type JobSeniority, type EducationLevel } from "@/types/job";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
 
 const formSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
