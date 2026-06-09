@@ -22,7 +22,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  Search, Plus, Handshake, Building2, Phone, Mail, UserSearch,
+  Search, Plus, Handshake, Building2, Phone, Mail, UserSearch, Crown,
 } from "lucide-react";
 
 const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br"];
@@ -55,6 +55,7 @@ export default function HRServiceProviders() {
     company_name: "",
     service_type: "",
     position: "",
+    provider_kind: "on_demand" as "on_demand" | "director",
     is_recruitment_partner: false,
     recruitment_commission_pct: "",
   });
@@ -83,12 +84,13 @@ export default function HRServiceProviders() {
       company_name: form.company_name || null,
       service_type: form.is_recruitment_partner ? (form.service_type || "Recrutamento & Seleção") : (form.service_type || null),
       position: form.position || null,
+      provider_kind: form.provider_kind,
       is_recruitment_partner: form.is_recruitment_partner,
       recruitment_commission_pct: form.recruitment_commission_pct ? Number(form.recruitment_commission_pct) : null,
     } as any);
     if (result) {
       setDialogOpen(false);
-      setForm({ full_name: "", email: "", phone: "", cpf: "", cnpj: "", company_name: "", service_type: "", position: "", is_recruitment_partner: false, recruitment_commission_pct: "" });
+      setForm({ full_name: "", email: "", phone: "", cpf: "", cnpj: "", company_name: "", service_type: "", position: "", provider_kind: "on_demand", is_recruitment_partner: false, recruitment_commission_pct: "" });
     }
   };
 
@@ -193,6 +195,11 @@ export default function HRServiceProviders() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-foreground truncate">{provider.full_name}</p>
+                    {(provider as any).provider_kind === "director" && (
+                      <Badge variant="outline" className="text-[10px] gap-1 border-amber-300 text-amber-700 bg-amber-50">
+                        <Crown className="h-3 w-3" /> Diretor PJ
+                      </Badge>
+                    )}
                     <Badge variant={statusInfo.variant} className="text-[10px]">
                       {statusInfo.label}
                     </Badge>
@@ -235,6 +242,26 @@ export default function HRServiceProviders() {
           </DialogHeader>
           <div className="grid gap-4 mt-2">
             <div>
+              <Label>Tipo de PJ *</Label>
+              <Select value={form.provider_kind} onValueChange={(v: any) => setForm(f => ({ ...f, provider_kind: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="director">
+                    <div className="flex flex-col items-start">
+                      <span className="flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-amber-600" /> Diretor / Cargo de confiança</span>
+                      <span className="text-[11px] text-muted-foreground">Sócios e diretores PJ da Eternum (Arthur, Jonathan, Jéssica, Maikol...)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="on_demand">
+                    <div className="flex flex-col items-start">
+                      <span className="flex items-center gap-1.5"><Handshake className="h-3.5 w-3.5 text-amber-600" /> Prestador sob demanda</span>
+                      <span className="text-[11px] text-muted-foreground">Consultorias, contábil, medicina ocupacional, etc.</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>Nome completo *</Label>
               <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Nome do prestador" />
             </div>
@@ -272,21 +299,23 @@ export default function HRServiceProviders() {
                 <Input value={form.position} onChange={e => setForm(f => ({ ...f, position: e.target.value }))} placeholder="Ex: Consultor, Designer..." />
               </div>
             </div>
-            <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <Label className="flex items-center gap-1.5 text-sm"><UserSearch className="h-4 w-4 text-violet-600" /> Parceiro de Recrutamento & Seleção</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Marque se este prestador é uma consultoria que capta candidatos para suas vagas.</p>
+            {form.provider_kind === "on_demand" && (
+              <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <Label className="flex items-center gap-1.5 text-sm"><UserSearch className="h-4 w-4 text-violet-600" /> Parceiro de Recrutamento & Seleção</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Marque se este prestador é uma consultoria que capta candidatos para suas vagas.</p>
+                  </div>
+                  <Switch checked={form.is_recruitment_partner} onCheckedChange={(v) => setForm(f => ({ ...f, is_recruitment_partner: v }))} />
                 </div>
-                <Switch checked={form.is_recruitment_partner} onCheckedChange={(v) => setForm(f => ({ ...f, is_recruitment_partner: v }))} />
+                {form.is_recruitment_partner && (
+                  <div>
+                    <Label className="text-xs">Comissão por contratação (%)</Label>
+                    <Input type="number" step="0.1" value={form.recruitment_commission_pct} onChange={e => setForm(f => ({ ...f, recruitment_commission_pct: e.target.value }))} placeholder="Ex: 15" />
+                  </div>
+                )}
               </div>
-              {form.is_recruitment_partner && (
-                <div>
-                  <Label className="text-xs">Comissão por contratação (%)</Label>
-                  <Input type="number" step="0.1" value={form.recruitment_commission_pct} onChange={e => setForm(f => ({ ...f, recruitment_commission_pct: e.target.value }))} placeholder="Ex: 15" />
-                </div>
-              )}
-            </div>
+            )}
             <Button onClick={handleCreate} disabled={!form.full_name.trim()} className="w-full">
               Cadastrar Prestador
             </Button>

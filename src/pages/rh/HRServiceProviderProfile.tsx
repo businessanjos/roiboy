@@ -12,10 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft, Save, User, Briefcase, Phone, MapPin, AlertTriangle,
   FileText, Trash2, Handshake, CheckCircle2, Loader2, Search,
-  Landmark, Building2,
+  Landmark, Building2, Crown, UserSearch,
 } from "lucide-react";
 import { BankCombobox } from "@/components/rh/BankCombobox";
 import { toast } from "sonner";
@@ -356,6 +357,71 @@ export default function HRServiceProviderProfile() {
             </div>
             <div><Label>Razão Social</Label><Input value={form.company_name || ""} onChange={e => setField("company_name", e.target.value)} /></div>
             <div><Label>Nome Fantasia</Label><Input value={form.trade_name || ""} onChange={e => setField("trade_name", e.target.value)} /></div>
+          </CardContent>
+        </Card>
+
+        {/* Classificação PJ + R&S */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><Handshake className="h-4 w-4" /> Classificação</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Tipo de PJ</Label>
+              <Select value={(form as any).provider_kind || "on_demand"} onValueChange={(v) => setField("provider_kind", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="director">
+                    <span className="flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-amber-600" /> Diretor / Cargo de confiança</span>
+                  </SelectItem>
+                  <SelectItem value="on_demand">
+                    <span className="flex items-center gap-1.5"><Handshake className="h-3.5 w-3.5 text-amber-600" /> Prestador sob demanda</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {((form as any).provider_kind || "on_demand") === "director"
+                  ? "Sócios e diretores PJ da Eternum (Arthur, Jonathan, Jéssica, Maikol...)."
+                  : "Consultorias, contábil, medicina ocupacional e demais terceirizados."}
+              </p>
+            </div>
+
+            {((form as any).provider_kind || "on_demand") === "on_demand" && (
+              <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <Label className="flex items-center gap-1.5 text-sm"><UserSearch className="h-4 w-4 text-violet-600" /> Parceiro de Recrutamento & Seleção</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Marque se este prestador capta candidatos para suas vagas.</p>
+                  </div>
+                  <Switch
+                    checked={!!(form as any).is_recruitment_partner}
+                    onCheckedChange={(v) => setField("is_recruitment_partner", v)}
+                  />
+                </div>
+                {(form as any).is_recruitment_partner && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Comissão por contratação (%)</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={(form as any).recruitment_commission_pct ?? ""}
+                        onChange={e => setField("recruitment_commission_pct", e.target.value ? Number(e.target.value) : null)}
+                        placeholder="Ex: 15"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Observações de R&S</Label>
+                      <Input
+                        value={(form as any).recruitment_notes || ""}
+                        onChange={e => setField("recruitment_notes", e.target.value)}
+                        placeholder="Áreas que atende, contato dedicado..."
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
