@@ -18,6 +18,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import ReactMarkdown from "react-markdown";
+
+function cleanAiText(t?: string | null) {
+  if (!t) return "";
+  return t
+    .replace(/\[\d+(?:,\s*\d+)*\]/g, "") // [1], [1, 2]
+    .replace(/\s+\./g, ".")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 
 function initialsOf(name?: string | null) {
   if (!name) return "?";
