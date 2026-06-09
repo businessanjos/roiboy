@@ -173,6 +173,7 @@ export function ProjectStakeholdersTab({ projectId }: { projectId: string }) {
       </div>
 
       <StakeholderFormDialog
+        key={editing?.id || "new"}
         open={formOpen}
         onOpenChange={(o) => { setFormOpen(o); if (!o) setEditing(null); }}
         editing={editing}
