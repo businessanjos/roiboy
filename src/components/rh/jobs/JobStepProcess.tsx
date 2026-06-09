@@ -163,13 +163,13 @@ export function JobStepProcess({ form, jobId }: Props) {
                     <Button type="button" variant="ghost" size="icon" onClick={() => moveStage(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
                     <Button type="button" variant="ghost" size="icon" onClick={() => removeStage(i)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                       <label className="text-xs text-muted-foreground">SLA (dias)</label>
                       <Input type="number" min={1} value={s.sla_days ?? ""} onChange={e => updateStage(i, { sla_days: e.target.value ? parseInt(e.target.value) : null })} />
                     </div>
                     <div>
-                      <label className="text-xs text-muted-foreground">Responsável</label>
+                      <label className="text-xs text-muted-foreground">Papel</label>
                       <Select value={s.owner_role || "RH"} onValueChange={v => updateStage(i, { owner_role: v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -177,14 +177,22 @@ export function JobStepProcess({ form, jobId }: Props) {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Quem conduz</label>
+                      <Input value={s.owner_name || ""} onChange={e => updateStage(i, { owner_name: e.target.value })} placeholder="Ex: Everton e Maikol" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">O que fazer nesta etapa</label>
+                    <Textarea rows={2} value={s.what_to_do || ""} onChange={e => updateStage(i, { what_to_do: e.target.value })} placeholder="Ex: Entrevista por vídeo de 45min explorando histórico comercial e fit cultural" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Teste / material aplicado</label>
+                    <Input value={s.test_or_material || ""} onChange={e => updateStage(i, { test_or_material: e.target.value })} placeholder="Ex: Role-play de cold call, Case de churn, Teste de Excel" />
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground">Critérios de avaliação (um por linha)</label>
                     <Textarea rows={3} value={(s.evaluation_criteria || []).join("\n")} onChange={e => updateStage(i, { evaluation_criteria: e.target.value.split("\n").map(l => l.trim()).filter(Boolean) })} placeholder="Ex: Experiência com SaaS B2B" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">O que a IA deve observar nesta etapa</label>
-                    <Textarea rows={2} value={s.ai_focus || ""} onChange={e => updateStage(i, { ai_focus: e.target.value })} placeholder="Ex: Validar histórico de fechamento de tickets > R$ 30k" />
                   </div>
                 </CardContent>
               </Card>
