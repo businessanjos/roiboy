@@ -13,6 +13,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { MarketingEvent, MarketingEventType, MarketingEventStatus, eventTypeConfig, statusConfig } from '@/hooks/useMarketingEvents';
+import { DestinationAutocomplete } from './DestinationAutocomplete';
 
 export interface MarketingEventExtras {
   createProject?: boolean;
