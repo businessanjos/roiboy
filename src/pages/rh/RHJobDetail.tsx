@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail, Clock, User as UserIcon, Calendar as CalIcon, AlertTriangle } from "lucide-react";
 import { useHRJobById } from "@/hooks/useHRJobs";
 import { useHRJobStages, useAccountUsersForJobs } from "@/hooks/useHRJobStages";
+import { useRecruitmentPartners } from "@/hooks/useRecruitmentPartners";
 import CandidateKanbanBoard from "@/components/rh/jobs/CandidateKanbanBoard";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, OPENING_REASON_LABELS } from "@/types/job";
 import { format, differenceInCalendarDays } from "date-fns";
