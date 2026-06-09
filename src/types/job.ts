@@ -47,6 +47,11 @@ export interface HRJob {
   closed_at: string | null;
   created_at: string;
   updated_at: string;
+  hiring_manager_id?: string | null;
+  recruiter_id?: string | null;
+  target_fill_date?: string | null;
+  opening_reason?: string | null;
+  opened_at?: string | null;
 }
 
 export interface HRJobApplication {
