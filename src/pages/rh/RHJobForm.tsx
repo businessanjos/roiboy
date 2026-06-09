@@ -173,7 +173,7 @@ export default function RHJobForm() {
       setLastSavedAt(new Date());
       setSaveStatus("saved");
       queryClient.invalidateQueries({ queryKey: ["hr-jobs"] });
-      if (jobIdRef.current) queryClient.invalidateQueries({ queryKey: ["hr-job", jobIdRef.current] });
+      // NÃO invalidar ["hr-job", id] aqui — isso dispara refetch e form.reset, apagando o que o usuário está digitando.
     } catch (e) {
       console.error("[autosave]", e);
       setSaveStatus("error");
@@ -196,12 +196,10 @@ export default function RHJobForm() {
     };
   }, [form, performAutosave]);
 
-  // Marca form como hidratado depois do reset inicial (edição) ou imediatamente (criação)
+  // Em modo CRIAÇÃO (sem routeId) o form já está pronto desde o início.
   useEffect(() => {
-    if (routeId && !existingJob) return; // aguarda load
-    const t = setTimeout(() => { hydratedRef.current = true; }, 300);
-    return () => clearTimeout(t);
-  }, [routeId, existingJob]);
+    if (!routeId) hydratedRef.current = true;
+  }, [routeId]);
 
   // Flush ao desmontar
   useEffect(() => () => {
