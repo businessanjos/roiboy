@@ -133,7 +133,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         </TabsList>
 
         <TabsContent value="copilot"><ProjectCopilotPanel projectId={project.id} /></TabsContent>
-        <TabsContent value="stakeholders"><StakeholdersTab projectId={project.id} /></TabsContent>
+        <TabsContent value="stakeholders"><ProjectStakeholdersTab projectId={project.id} /></TabsContent>
         <TabsContent value="milestones"><MilestonesTab projectId={project.id} /></TabsContent>
         <TabsContent value="docs"><DocsTab projectId={project.id} /></TabsContent>
         <TabsContent value="events"><EventsTab projectId={project.id} /></TabsContent>
