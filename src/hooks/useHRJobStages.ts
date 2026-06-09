@@ -95,6 +95,7 @@ export async function suggestStagesAI(input: {
     sla_days: typeof s.sla_days === "number" ? s.sla_days : null,
     owner_role: s.owner_role || null,
     owner_name: s.owner_name || null,
+    owner_provider_id: null,
     evaluation_criteria: Array.isArray(s.evaluation_criteria) ? s.evaluation_criteria.map(String) : [],
     what_to_do: s.what_to_do || null,
     test_or_material: s.test_or_material || null,
