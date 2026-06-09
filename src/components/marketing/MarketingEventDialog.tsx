@@ -164,7 +164,8 @@ export function MarketingEventDialog({
         project_name: '',
       });
     }
-  }, [event, defaultMonth, defaultYear, defaultDate, open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, event?.id]);
 
   const isTravel = formData.event_type === 'viagem';
   const { currentUser } = useCurrentUser();
