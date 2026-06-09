@@ -7,11 +7,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { CalendarIcon, Plane, Sparkles } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { MarketingEvent, MarketingEventType, MarketingEventStatus, eventTypeConfig, statusConfig } from '@/hooks/useMarketingEvents';
+
+export interface MarketingEventExtras {
+  createProject?: boolean;
+  projectName?: string;
+  travel?: {
+    destination?: string;
+    reason?: string;
+    audience?: string;
+    impact?: string;
+    companions?: string;
+  };
+}
 
 interface MarketingEventDialogProps {
   open: boolean;
@@ -20,8 +33,38 @@ interface MarketingEventDialogProps {
   defaultMonth?: number;
   defaultYear?: number;
   defaultDate?: Date;
-  onSave: (data: Omit<MarketingEvent, 'id' | 'account_id' | 'created_at' | 'updated_at'>) => void;
+  onSave: (
+    data: Omit<MarketingEvent, 'id' | 'account_id' | 'created_at' | 'updated_at'>,
+    extras?: MarketingEventExtras,
+  ) => void;
   isSaving?: boolean;
+}
+
+// Marker block used to persist travel + project metadata inside `notes`
+// without requiring a schema migration. Round-trips through edit/load.
+const META_START = '<!--ROY_META';
+const META_END = 'ROY_META-->';
+
+function extractMeta(notes: string | null | undefined): { meta: any; clean: string } {
+  if (!notes) return { meta: {}, clean: '' };
+  const start = notes.indexOf(META_START);
+  const end = notes.indexOf(META_END);
+  if (start === -1 || end === -1 || end < start) return { meta: {}, clean: notes };
+  try {
+    const json = notes.slice(start + META_START.length, end).trim();
+    const meta = JSON.parse(json);
+    const clean = (notes.slice(0, start) + notes.slice(end + META_END.length)).trim();
+    return { meta, clean };
+  } catch {
+    return { meta: {}, clean: notes };
+  }
+}
+
+function packMeta(clean: string, meta: any): string {
+  const hasMeta = meta && Object.keys(meta).length > 0;
+  const cleaned = (clean || '').trim();
+  if (!hasMeta) return cleaned;
+  return `${cleaned}\n\n${META_START}${JSON.stringify(meta)}${META_END}`.trim();
 }
 
 export function MarketingEventDialog({
@@ -47,10 +90,20 @@ export function MarketingEventDialog({
     color: '#6366f1',
     goals: '',
     notes: '',
+    // Travel-specific fields
+    travel_destination: '',
+    travel_reason: '',
+    travel_companions: '',
+    travel_audience: '',
+    travel_impact: '',
+    // Project upgrade
+    create_project: false,
+    project_name: '',
   });
 
   useEffect(() => {
     if (event) {
+      const { meta, clean } = extractMeta(event.notes);
       setFormData({
         title: event.title,
         description: event.description || '',
@@ -63,10 +116,16 @@ export function MarketingEventDialog({
         status: event.status,
         color: event.color || '#6366f1',
         goals: event.goals || '',
-        notes: event.notes || '',
+        notes: clean,
+        travel_destination: meta?.travel?.destination || '',
+        travel_reason: meta?.travel?.reason || '',
+        travel_companions: meta?.travel?.companions || '',
+        travel_audience: meta?.travel?.audience || '',
+        travel_impact: meta?.travel?.impact || '',
+        create_project: false, // can't undo project link from here
+        project_name: '',
       });
     } else {
-      // Use defaultDate if provided, otherwise calculate from year/month
       let dateToUse: Date;
       if (defaultDate) {
         dateToUse = defaultDate;
@@ -75,7 +134,6 @@ export function MarketingEventDialog({
         const month = defaultMonth !== undefined ? defaultMonth : new Date().getMonth();
         dateToUse = new Date(year, month, 15);
       }
-      
       setFormData({
         title: '',
         description: '',
@@ -89,38 +147,68 @@ export function MarketingEventDialog({
         color: eventTypeConfig.campaign.defaultColor,
         goals: '',
         notes: '',
+        travel_destination: '',
+        travel_reason: '',
+        travel_companions: '',
+        travel_audience: '',
+        travel_impact: '',
+        create_project: false,
+        project_name: '',
       });
     }
   }, [event, defaultMonth, defaultYear, defaultDate, open]);
 
+  const isTravel = formData.event_type === 'viagem';
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Convert date string to ISO timestamp
-    const scheduledAt = formData.scheduled_at 
+
+    const scheduledAt = formData.scheduled_at
       ? new Date(formData.scheduled_at + 'T00:00:00').toISOString()
       : new Date().toISOString();
-    
-    const endsAt = formData.ends_at 
+
+    const endsAt = formData.ends_at
       ? new Date(formData.ends_at + 'T23:59:59').toISOString()
       : null;
 
-    onSave({
-      title: formData.title,
-      description: formData.description || null,
-      event_type: formData.event_type,
-      scheduled_at: scheduledAt,
-      ends_at: endsAt,
-      start_time: formData.start_time || null,
-      end_time: formData.end_time || null,
-      budget: formData.budget ? parseFloat(formData.budget) : null,
-      status: formData.status,
-      color: formData.color,
-      goals: formData.goals || null,
-      notes: formData.notes || null,
-      category: 'marketing',
-      visible_sectors: null,
-    });
+    const travelMeta = isTravel
+      ? {
+          destination: formData.travel_destination || undefined,
+          reason: formData.travel_reason || undefined,
+          companions: formData.travel_companions || undefined,
+          audience: formData.travel_audience || undefined,
+          impact: formData.travel_impact || undefined,
+        }
+      : null;
+
+    const meta: any = {};
+    if (travelMeta && Object.values(travelMeta).some(Boolean)) meta.travel = travelMeta;
+
+    const notesPacked = packMeta(formData.notes, meta);
+
+    onSave(
+      {
+        title: formData.title,
+        description: formData.description || null,
+        event_type: formData.event_type,
+        scheduled_at: scheduledAt,
+        ends_at: endsAt,
+        start_time: formData.start_time || null,
+        end_time: formData.end_time || null,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
+        status: formData.status,
+        color: formData.color,
+        goals: formData.goals || null,
+        notes: notesPacked || null,
+        category: 'marketing',
+        visible_sectors: null,
+      },
+      {
+        createProject: formData.create_project && !event,
+        projectName: formData.project_name || formData.title,
+        travel: travelMeta || undefined,
+      },
+    );
   };
 
   const handleTypeChange = (type: MarketingEventType) => {
@@ -184,6 +272,72 @@ export function MarketingEventDialog({
             </div>
           </div>
 
+          {/* TRAVEL FIELDS — Viagem é ação de marketing de posicionamento */}
+          {isTravel && (
+            <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+                <Plane className="h-4 w-4" />
+                Detalhes da Viagem
+                <span className="text-[10px] font-normal text-muted-foreground">
+                  (também é ação de posicionamento)
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="travel_destination">Destino *</Label>
+                <Input
+                  id="travel_destination"
+                  value={formData.travel_destination}
+                  onChange={(e) => setFormData(prev => ({ ...prev, travel_destination: e.target.value }))}
+                  placeholder="Ex: Dubai, Paris, Bahia..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="travel_reason">Motivo da viagem</Label>
+                <Textarea
+                  id="travel_reason"
+                  value={formData.travel_reason}
+                  onChange={(e) => setFormData(prev => ({ ...prev, travel_reason: e.target.value }))}
+                  placeholder="Por que está indo? (reunião, congresso, descanso premium, gravação...)"
+                  rows={2}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="travel_companions">Quem vai</Label>
+                  <Input
+                    id="travel_companions"
+                    value={formData.travel_companions}
+                    onChange={(e) => setFormData(prev => ({ ...prev, travel_companions: e.target.value }))}
+                    placeholder="Ever, Bru..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="travel_audience">Para qual público</Label>
+                  <Input
+                    id="travel_audience"
+                    value={formData.travel_audience}
+                    onChange={(e) => setFormData(prev => ({ ...prev, travel_audience: e.target.value }))}
+                    placeholder="Mentoradas, Vida Ryka..."
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="travel_impact">Posicionamento / impacto esperado</Label>
+                <Textarea
+                  id="travel_impact"
+                  value={formData.travel_impact}
+                  onChange={(e) => setFormData(prev => ({ ...prev, travel_impact: e.target.value }))}
+                  placeholder="Que narrativa essa viagem reforça? Conteúdo a produzir, lives, stories, gatilhos..."
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Data Início *</Label>
@@ -197,7 +351,7 @@ export function MarketingEventDialog({
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.scheduled_at 
+                    {formData.scheduled_at
                       ? format(parseISO(formData.scheduled_at), "dd/MM/yyyy", { locale: ptBR })
                       : "Selecione"}
                   </Button>
@@ -206,9 +360,9 @@ export function MarketingEventDialog({
                   <Calendar
                     mode="single"
                     selected={formData.scheduled_at ? parseISO(formData.scheduled_at) : undefined}
-                    onSelect={(date) => setFormData(prev => ({ 
-                      ...prev, 
-                      scheduled_at: date ? format(date, 'yyyy-MM-dd') : '' 
+                    onSelect={(date) => setFormData(prev => ({
+                      ...prev,
+                      scheduled_at: date ? format(date, 'yyyy-MM-dd') : ''
                     }))}
                     locale={ptBR}
                     className="pointer-events-auto"
@@ -229,7 +383,7 @@ export function MarketingEventDialog({
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.ends_at 
+                    {formData.ends_at
                       ? format(parseISO(formData.ends_at), "dd/MM/yyyy", { locale: ptBR })
                       : "Opcional"}
                   </Button>
@@ -238,9 +392,9 @@ export function MarketingEventDialog({
                   <Calendar
                     mode="single"
                     selected={formData.ends_at ? parseISO(formData.ends_at) : undefined}
-                    onSelect={(date) => setFormData(prev => ({ 
-                      ...prev, 
-                      ends_at: date ? format(date, 'yyyy-MM-dd') : '' 
+                    onSelect={(date) => setFormData(prev => ({
+                      ...prev,
+                      ends_at: date ? format(date, 'yyyy-MM-dd') : ''
                     }))}
                     locale={ptBR}
                     className="pointer-events-auto"
@@ -337,6 +491,41 @@ export function MarketingEventDialog({
               rows={2}
             />
           </div>
+
+          {/* TRANSFORMAR EM PROJETO — só ao criar */}
+          {!event && (
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="h-4 w-4 mt-0.5 text-violet-500" />
+                  <div>
+                    <Label htmlFor="create_project" className="cursor-pointer">
+                      Transformar em Projeto
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Cria um projeto vinculado com marcos, tarefas, stakeholders e copiloto IA.
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="create_project"
+                  checked={formData.create_project}
+                  onCheckedChange={(c) => setFormData(prev => ({ ...prev, create_project: c }))}
+                />
+              </div>
+              {formData.create_project && (
+                <div className="space-y-2">
+                  <Label htmlFor="project_name">Nome do projeto</Label>
+                  <Input
+                    id="project_name"
+                    value={formData.project_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, project_name: e.target.value }))}
+                    placeholder={formData.title || 'Ex: Viagem Dubai — Posicionamento Vida Ryka'}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
