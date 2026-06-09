@@ -149,7 +149,7 @@ Responda APENAS com este JSON:
     const cleaned = deliverables
       .filter((d: any) => d && typeof d.title === "string" && d.title.trim().length > 0)
       .map((d: any) => ({
-        kind: ALLOWED_KINDS.includes(d.kind) ? d.kind : "custom",
+        kind: (ALLOWED_KINDS as readonly string[]).includes(d.kind) ? d.kind : "custom",
         title: String(d.title).slice(0, 200),
         hook: typeof d.hook === "string" ? d.hook.slice(0, 300) : null,
         big_idea: typeof d.big_idea === "string" ? d.big_idea.slice(0, 600) : null,
