@@ -45,6 +45,17 @@ export interface ProjectStakeholder {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  company: string | null;
+  title: string | null;
+  website: string | null;
+  logo_url: string | null;
+  linkedin_url: string | null;
+  instagram_url: string | null;
+  bio: string | null;
+  ai_summary: string | null;
+  ai_recommendations: string | null;
+  ai_sources: Array<{ title?: string; url: string }> | null;
+  ai_researched_at: string | null;
 }
 
 export type MilestonePhase =
