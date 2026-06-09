@@ -228,12 +228,20 @@ export function MonthlyCalendarView({
                                   {badge.label}
                                 </span>
                               )}
-                              <span className="truncate">
+                              <span className="truncate flex-1">
                                 {event.start_time && (
                                   <span className="opacity-80">{event.start_time.slice(0, 5)} </span>
                                 )}
                                 {event.title}
                               </span>
+                              {eventHealth?.[event.id] && eventHealth[event.id].total > 0 && (
+                                <span
+                                  className="text-[9px] font-semibold px-1 rounded bg-white/25"
+                                  title={`${eventHealth[event.id].done}/${eventHealth[event.id].total} entregáveis prontos`}
+                                >
+                                  {eventHealth[event.id].done}/{eventHealth[event.id].total}
+                                </span>
+                              )}
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-[250px]">
