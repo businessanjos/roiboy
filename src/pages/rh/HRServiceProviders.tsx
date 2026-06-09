@@ -299,21 +299,23 @@ export default function HRServiceProviders() {
                 <Input value={form.position} onChange={e => setForm(f => ({ ...f, position: e.target.value }))} placeholder="Ex: Consultor, Designer..." />
               </div>
             </div>
-            <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <Label className="flex items-center gap-1.5 text-sm"><UserSearch className="h-4 w-4 text-violet-600" /> Parceiro de Recrutamento & Seleção</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Marque se este prestador é uma consultoria que capta candidatos para suas vagas.</p>
+            {form.provider_kind === "on_demand" && (
+              <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <Label className="flex items-center gap-1.5 text-sm"><UserSearch className="h-4 w-4 text-violet-600" /> Parceiro de Recrutamento & Seleção</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Marque se este prestador é uma consultoria que capta candidatos para suas vagas.</p>
+                  </div>
+                  <Switch checked={form.is_recruitment_partner} onCheckedChange={(v) => setForm(f => ({ ...f, is_recruitment_partner: v }))} />
                 </div>
-                <Switch checked={form.is_recruitment_partner} onCheckedChange={(v) => setForm(f => ({ ...f, is_recruitment_partner: v }))} />
+                {form.is_recruitment_partner && (
+                  <div>
+                    <Label className="text-xs">Comissão por contratação (%)</Label>
+                    <Input type="number" step="0.1" value={form.recruitment_commission_pct} onChange={e => setForm(f => ({ ...f, recruitment_commission_pct: e.target.value }))} placeholder="Ex: 15" />
+                  </div>
+                )}
               </div>
-              {form.is_recruitment_partner && (
-                <div>
-                  <Label className="text-xs">Comissão por contratação (%)</Label>
-                  <Input type="number" step="0.1" value={form.recruitment_commission_pct} onChange={e => setForm(f => ({ ...f, recruitment_commission_pct: e.target.value }))} placeholder="Ex: 15" />
-                </div>
-              )}
-            </div>
+            )}
             <Button onClick={handleCreate} disabled={!form.full_name.trim()} className="w-full">
               Cadastrar Prestador
             </Button>
