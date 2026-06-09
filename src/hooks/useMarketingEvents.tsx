@@ -200,6 +200,7 @@ export function useMarketingEvents(year?: number, category?: 'marketing' | 'oper
       if (updates.notes !== undefined) updateData.notes = updates.notes;
       if (updates.start_time !== undefined) updateData.start_time = updates.start_time;
       if (updates.end_time !== undefined) updateData.end_time = updates.end_time;
+      if (updates.auto_generate_content !== undefined) (updateData as any).auto_generate_content = updates.auto_generate_content;
 
       const { data, error } = await supabase
         .from('events')
