@@ -164,6 +164,7 @@ export function MarketingEventDialog({
         travel_impact: '',
         create_project: false,
         project_name: '',
+        auto_generate_content: false,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
