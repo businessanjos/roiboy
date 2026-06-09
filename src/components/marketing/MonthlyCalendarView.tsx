@@ -134,10 +134,13 @@ export function MonthlyCalendarView({
               {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
             </h2>
           </div>
-          <Button onClick={() => onAddEvent()}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Evento
-          </Button>
+          <div className="flex items-center gap-2">
+            {toolbarExtra}
+            <Button onClick={() => onAddEvent()}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Evento
+            </Button>
+          </div>
         </div>
 
         {/* Calendar Grid */}
