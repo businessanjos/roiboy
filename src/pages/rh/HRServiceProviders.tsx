@@ -20,8 +20,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
-  Search, Plus, Handshake, Building2, Phone, Mail,
+  Search, Plus, Handshake, Building2, Phone, Mail, UserSearch,
 } from "lucide-react";
 
 const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br"];
@@ -54,6 +55,8 @@ export default function HRServiceProviders() {
     company_name: "",
     service_type: "",
     position: "",
+    is_recruitment_partner: false,
+    recruitment_commission_pct: "",
   });
 
   const filtered = useMemo(() => {
@@ -78,12 +81,14 @@ export default function HRServiceProviders() {
       cpf: form.cpf || null,
       cnpj: form.cnpj || null,
       company_name: form.company_name || null,
-      service_type: form.service_type || null,
+      service_type: form.is_recruitment_partner ? (form.service_type || "Recrutamento & Seleção") : (form.service_type || null),
       position: form.position || null,
-    });
+      is_recruitment_partner: form.is_recruitment_partner,
+      recruitment_commission_pct: form.recruitment_commission_pct ? Number(form.recruitment_commission_pct) : null,
+    } as any);
     if (result) {
       setDialogOpen(false);
-      setForm({ full_name: "", email: "", phone: "", cpf: "", cnpj: "", company_name: "", service_type: "", position: "" });
+      setForm({ full_name: "", email: "", phone: "", cpf: "", cnpj: "", company_name: "", service_type: "", position: "", is_recruitment_partner: false, recruitment_commission_pct: "" });
     }
   };
 
