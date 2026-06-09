@@ -128,13 +128,13 @@ export default function HRServiceProviders() {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="on_demand" className="gap-2">
-            <Handshake className="h-4 w-4" /> Prestadores
-            <span className="ml-1 text-xs text-muted-foreground">({countOnDemand})</span>
-          </TabsTrigger>
           <TabsTrigger value="director" className="gap-2">
             <Crown className="h-4 w-4" /> Cargo de Confiança
             <span className="ml-1 text-xs text-muted-foreground">({countDirector})</span>
+          </TabsTrigger>
+          <TabsTrigger value="on_demand" className="gap-2">
+            <Handshake className="h-4 w-4" /> Prestadores
+            <span className="ml-1 text-xs text-muted-foreground">({countOnDemand})</span>
           </TabsTrigger>
         </TabsList>
 
