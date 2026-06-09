@@ -609,6 +609,29 @@ export function MarketingEventDialog({
             </div>
           )}
 
+          {!event && (
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="h-4 w-4 mt-0.5 text-cyan-500" />
+                  <div>
+                    <Label htmlFor="auto_generate_content" className="cursor-pointer">
+                      Gerar checklist de conteúdo automático
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Cria pautas padrão (save the date, teaser, reels, stories, cobertura, pós-evento) já com datas calculadas.
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="auto_generate_content"
+                  checked={formData.auto_generate_content}
+                  onCheckedChange={(c) => setFormData(prev => ({ ...prev, auto_generate_content: c }))}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
