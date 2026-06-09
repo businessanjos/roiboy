@@ -51,9 +51,10 @@ serve(async (req) => {
       supabase.from("content_pillars").select("name,description").eq("account_id", accountId).limit(10),
       supabase
         .from("content_strategies")
-        .select("title,summary")
+        .select("year,quarter,positioning,audience,tone")
         .eq("account_id", accountId)
-        .order("created_at", { ascending: false })
+        .order("year", { ascending: false })
+        .order("quarter", { ascending: false })
         .limit(3),
     ]);
 
@@ -75,7 +76,15 @@ serve(async (req) => {
 
     const strategiesBlock = (strategies || []).length
       ? `\n=== ESTRATÉGIAS RECENTES ===\n${(strategies || [])
-          .map((s: any) => `- ${s.title}${s.summary ? `: ${s.summary}` : ""}`)
+          .map((s: any) => {
+            const head = `${s.year ?? ""}${s.quarter ? `/Q${s.quarter}` : ""}`.trim();
+            const parts = [
+              s.positioning && `posicionamento: ${s.positioning}`,
+              s.audience && `audiência: ${s.audience}`,
+              s.tone && `tom: ${s.tone}`,
+            ].filter(Boolean).join(" | ");
+            return `- ${head ? `[${head}] ` : ""}${parts}`;
+          })
           .join("\n")}`
       : "";
 
@@ -140,7 +149,7 @@ Responda APENAS com este JSON:
     const cleaned = deliverables
       .filter((d: any) => d && typeof d.title === "string" && d.title.trim().length > 0)
       .map((d: any) => ({
-        kind: ALLOWED_KINDS.includes(d.kind) ? d.kind : "custom",
+        kind: (ALLOWED_KINDS as readonly string[]).includes(d.kind) ? d.kind : "custom",
         title: String(d.title).slice(0, 200),
         hook: typeof d.hook === "string" ? d.hook.slice(0, 300) : null,
         big_idea: typeof d.big_idea === "string" ? d.big_idea.slice(0, 600) : null,
