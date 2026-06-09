@@ -45,6 +45,17 @@ export interface ProjectStakeholder {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  company: string | null;
+  title: string | null;
+  website: string | null;
+  logo_url: string | null;
+  linkedin_url: string | null;
+  instagram_url: string | null;
+  bio: string | null;
+  ai_summary: string | null;
+  ai_recommendations: string | null;
+  ai_sources: Array<{ title?: string; url: string }> | null;
+  ai_researched_at: string | null;
 }
 
 export type MilestonePhase =
@@ -283,6 +294,14 @@ export function useProjectStakeholders(projectId: string | undefined) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["project-stakeholders", projectId] }),
     onError: (e: any) => toast.error(e.message),
   });
+  const update = useMutation({
+    mutationFn: async ({ id, ...patch }: Partial<ProjectStakeholder> & { id: string }) => {
+      const { error } = await supabase.from("marketing_project_stakeholders" as any).update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["project-stakeholders", projectId] }),
+    onError: (e: any) => toast.error(e.message),
+  });
   const remove = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("marketing_project_stakeholders" as any).delete().eq("id", id);
@@ -290,7 +309,7 @@ export function useProjectStakeholders(projectId: string | undefined) {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["project-stakeholders", projectId] }),
   });
-  return { items: query.data || [], isLoading: query.isLoading, add, remove };
+  return { items: query.data || [], isLoading: query.isLoading, add, update, remove };
 }
 
 // --- Milestones ---

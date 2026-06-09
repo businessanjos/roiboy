@@ -15198,42 +15198,75 @@ export type Database = {
       marketing_project_stakeholders: {
         Row: {
           account_id: string
+          ai_recommendations: string | null
+          ai_researched_at: string | null
+          ai_sources: Json | null
+          ai_summary: string | null
+          bio: string | null
+          company: string | null
           created_at: string
           email: string | null
           id: string
+          instagram_url: string | null
+          linkedin_url: string | null
+          logo_url: string | null
           name: string | null
           notes: string | null
           phone: string | null
           project_id: string
           role: string
+          title: string | null
           type: string
           user_id: string | null
+          website: string | null
         }
         Insert: {
           account_id: string
+          ai_recommendations?: string | null
+          ai_researched_at?: string | null
+          ai_sources?: Json | null
+          ai_summary?: string | null
+          bio?: string | null
+          company?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          logo_url?: string | null
           name?: string | null
           notes?: string | null
           phone?: string | null
           project_id: string
           role: string
+          title?: string | null
           type?: string
           user_id?: string | null
+          website?: string | null
         }
         Update: {
           account_id?: string
+          ai_recommendations?: string | null
+          ai_researched_at?: string | null
+          ai_sources?: Json | null
+          ai_summary?: string | null
+          bio?: string | null
+          company?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          logo_url?: string | null
           name?: string | null
           notes?: string | null
           phone?: string | null
           project_id?: string
           role?: string
+          title?: string | null
           type?: string
           user_id?: string | null
+          website?: string | null
         }
         Relationships: [
           {

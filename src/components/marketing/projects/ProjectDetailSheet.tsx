@@ -56,6 +56,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ProjectCopilotPanel } from "./ProjectCopilotPanel";
+import { ProjectStakeholdersTab } from "./ProjectStakeholdersTab";
 
 export function ProjectDetailView({ projectId }: { projectId: string }) {
   const navigate = useNavigate();
@@ -133,7 +134,7 @@ export function ProjectDetailView({ projectId }: { projectId: string }) {
         </TabsList>
 
         <TabsContent value="copilot"><ProjectCopilotPanel projectId={project.id} /></TabsContent>
-        <TabsContent value="stakeholders"><StakeholdersTab projectId={project.id} /></TabsContent>
+        <TabsContent value="stakeholders"><ProjectStakeholdersTab projectId={project.id} /></TabsContent>
         <TabsContent value="milestones"><MilestonesTab projectId={project.id} /></TabsContent>
         <TabsContent value="docs"><DocsTab projectId={project.id} /></TabsContent>
         <TabsContent value="events"><EventsTab projectId={project.id} /></TabsContent>
@@ -149,108 +150,7 @@ export default function MarketingProjectDetailPage() {
   return <ProjectDetailView projectId={id} />;
 }
 
-// ===== Stakeholders =====
-function StakeholdersTab({ projectId }: { projectId: string }) {
-  const { items, add, remove } = useProjectStakeholders(projectId);
-  const { data: users = [] } = useTeamUsers();
-  const [show, setShow] = useState(false);
-  const [type, setType] = useState<"internal" | "external">("internal");
-  const [userId, setUserId] = useState<string>("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-
-  const reset = () => { setUserId(""); setName(""); setRole(""); setEmail(""); setPhone(""); setShow(false); };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">{items.length} envolvidos</p>
-        <Button size="sm" variant="outline" onClick={() => setShow(s => !s)}>
-          <Plus className="h-4 w-4 mr-1" /> Adicionar
-        </Button>
-      </div>
-
-      {show && (
-        <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
-          <div className="flex gap-2">
-            <Button size="sm" variant={type === "internal" ? "default" : "outline"} onClick={() => setType("internal")}>Interno</Button>
-            <Button size="sm" variant={type === "external" ? "default" : "outline"} onClick={() => setType("external")}>Externo</Button>
-          </div>
-          {type === "internal" ? (
-            <div>
-              <Label>Pessoa</Label>
-              <Select value={userId} onValueChange={setUserId}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <>
-              <div><Label>Nome</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex.: Agência X, Editora Y" /></div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label>Email</Label><Input value={email} onChange={e => setEmail(e.target.value)} /></div>
-                <div><Label>Telefone</Label><Input value={phone} onChange={e => setPhone(e.target.value)} /></div>
-              </div>
-            </>
-          )}
-          <div><Label>Papel *</Label><Input value={role} onChange={e => setRole(e.target.value)} placeholder="Ex.: Sponsor, Designer, Editor, Produtor..." /></div>
-          <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" onClick={reset}>Cancelar</Button>
-            <Button
-              size="sm"
-              disabled={!role.trim() || (type === "internal" ? !userId : !name.trim())}
-              onClick={() => {
-                add.mutate({
-                  type,
-                  role,
-                  user_id: type === "internal" ? userId : null,
-                  name: type === "external" ? name : null,
-                  email: type === "external" ? email : null,
-                  phone: type === "external" ? phone : null,
-                }, { onSuccess: reset });
-              }}
-            >
-              Adicionar
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {items.map(s => {
-          const displayName = s.type === "internal"
-            ? users.find(u => u.id === s.user_id)?.name || "Usuário"
-            : s.name;
-          return (
-            <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg group hover:bg-muted/30">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{displayName}</span>
-                  <Badge variant="outline" className="text-xs">{s.type === "internal" ? "Interno" : "Externo"}</Badge>
-                </div>
-                <div className="text-sm text-muted-foreground">{s.role}</div>
-                {(s.email || s.phone) && (
-                  <div className="flex gap-3 text-xs text-muted-foreground mt-1">
-                    {s.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{s.email}</span>}
-                    {s.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{s.phone}</span>}
-                  </div>
-                )}
-              </div>
-              <Button size="icon" variant="ghost" onClick={() => remove.mutate(s.id)} className="opacity-0 group-hover:opacity-100">
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          );
-        })}
-        {items.length === 0 && <EmptyState text="Nenhum stakeholder ainda." />}
-      </div>
-    </div>
-  );
-}
+// Stakeholders moved to ./ProjectStakeholdersTab
 
 // ===== Milestones =====
 function MilestonesTab({ projectId }: { projectId: string }) {
