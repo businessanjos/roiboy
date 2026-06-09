@@ -80,14 +80,53 @@ export default function Marketing() {
     }
   };
 
-  const handleSave = (data: Omit<MarketingEvent, 'id' | 'account_id' | 'created_at' | 'updated_at'>) => {
+  const handleSave = (
+    data: Omit<MarketingEvent, 'id' | 'account_id' | 'created_at' | 'updated_at'>,
+    extras?: import('@/components/marketing/MarketingEventDialog').MarketingEventExtras,
+  ) => {
     if (selectedEvent && !isDuplicating) {
       updateEvent({ id: selectedEvent.id, ...data }, {
         onSuccess: () => setDialogOpen(false)
       });
     } else {
       createEvent(data, {
-        onSuccess: () => {
+        onSuccess: async (created: any) => {
+          // Optionally create a Marketing Project and link this event
+          if (extras?.createProject && created?.id && currentUser?.account_id) {
+            try {
+              const { supabase } = await import('@/integrations/supabase/client');
+              const projectName = (extras.projectName || data.title || 'Novo projeto').trim();
+              const { data: project, error: projErr } = await (supabase as any)
+                .from('marketing_projects')
+                .insert({
+                  account_id: currentUser.account_id,
+                  created_by: currentUser.id,
+                  name: projectName,
+                  description: data.description ?? null,
+                  status: 'planning',
+                  cover_color: data.color || '#8b5cf6',
+                  start_date: data.scheduled_at?.slice(0, 10) ?? null,
+                  target_date: data.ends_at?.slice(0, 10) ?? null,
+                  budget_planned: data.budget ?? null,
+                })
+                .select()
+                .single();
+              if (projErr) throw projErr;
+              if (project?.id) {
+                await (supabase as any).from('marketing_project_events').insert({
+                  project_id: project.id,
+                  event_id: created.id,
+                  account_id: currentUser.account_id,
+                });
+                const { toast } = await import('sonner');
+                toast.success('Projeto criado e vinculado ao evento');
+                navigate(`/marketing/projetos/${project.id}`);
+              }
+            } catch (err: any) {
+              const { toast } = await import('sonner');
+              toast.error('Evento criado, mas falhou ao criar projeto: ' + (err?.message || ''));
+            }
+          }
           setDialogOpen(false);
           setIsDuplicating(false);
         }
