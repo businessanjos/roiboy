@@ -50,17 +50,29 @@ const formSchema = z.object({
 
 export default function RHJobForm() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditing = !!id;
+  const { id: routeId } = useParams<{ id: string }>();
+  const [jobId, setJobId] = useState<string | undefined>(routeId);
+  const isEditing = !!jobId;
   const [currentStep, setCurrentStep] = useState(1);
-  const { data: existingJob, isLoading } = useHRJobById(id);
+  const { data: existingJob, isLoading } = useHRJobById(jobId);
   const createJob = useCreateHRJob();
   const updateJob = useUpdateHRJob();
+  const { currentUser } = useCurrentUser();
+  const queryClient = useQueryClient();
+
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isAutosavingRef = useRef(false);
+  const jobIdRef = useRef<string | undefined>(routeId);
+  const hydratedRef = useRef(false);
+  useEffect(() => { jobIdRef.current = jobId; }, [jobId]);
 
   const form = useForm<JobFormData>({ resolver: zodResolver(formSchema), defaultValues: DEFAULT_JOB_FORM_DATA });
 
   useEffect(() => {
-    if (existingJob && isEditing) {
+    if (existingJob && routeId) {
+
       form.reset({
         title: existingJob.title || "", department: existingJob.department || "", unit: existingJob.unit || "",
         work_model: (existingJob.work_model as any) || "onsite", contract_type: (existingJob.contract_type as any) || "clt",
