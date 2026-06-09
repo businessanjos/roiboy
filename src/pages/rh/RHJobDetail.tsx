@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail } from "lucide-react";
+import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail, Clock, User as UserIcon, Calendar as CalIcon, AlertTriangle } from "lucide-react";
 import { useHRJobById } from "@/hooks/useHRJobs";
+import { useHRJobStages, useAccountUsersForJobs } from "@/hooks/useHRJobStages";
 import CandidateKanbanBoard from "@/components/rh/jobs/CandidateKanbanBoard";
-import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/types/job";
-import { format } from "date-fns";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, OPENING_REASON_LABELS } from "@/types/job";
+import { format, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -105,6 +106,8 @@ export default function RHJobDetail() {
           <Button variant="outline" onClick={handleCopyLink}>{copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}{copied ? "Copiado!" : "Copiar Link"}</Button>
         </div>
       </div>
+      <JobManagementPanel jobId={job.id} job={job as any} />
+      <JobStagesPanel jobId={job.id} />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-lg flex items-center gap-2">
