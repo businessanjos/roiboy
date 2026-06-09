@@ -198,4 +198,8 @@ export const DEFAULT_JOB_FORM_DATA: JobFormData = {
   require_cover_letter: false,
   tags: [],
   status: "draft",
+  hiring_manager_id: null,
+  recruiter_id: null,
+  target_fill_date: null,
+  opening_reason: "",
 };
