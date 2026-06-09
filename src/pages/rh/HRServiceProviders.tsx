@@ -191,11 +191,20 @@ export default function HRServiceProviders() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-foreground truncate">{provider.full_name}</p>
                     <Badge variant={statusInfo.variant} className="text-[10px]">
                       {statusInfo.label}
                     </Badge>
+                    {(provider as any).is_recruitment_partner && (
+                      <Badge variant="outline" className="text-[10px] gap-1 border-violet-400 text-violet-700 bg-violet-50">
+                        <UserSearch className="h-3 w-3" />
+                        Parceiro R&S
+                        {(provider as any).recruitment_commission_pct != null && (
+                          <span className="font-semibold">· {(provider as any).recruitment_commission_pct}%</span>
+                        )}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                     {provider.company_name && (
@@ -271,6 +280,21 @@ export default function HRServiceProviders() {
                 <Label>Função</Label>
                 <Input value={form.position} onChange={e => setForm(f => ({ ...f, position: e.target.value }))} placeholder="Ex: Consultor, Designer..." />
               </div>
+            </div>
+            <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <Label className="flex items-center gap-1.5 text-sm"><UserSearch className="h-4 w-4 text-violet-600" /> Parceiro de Recrutamento & Seleção</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Marque se este prestador é uma consultoria que capta candidatos para suas vagas.</p>
+                </div>
+                <Switch checked={form.is_recruitment_partner} onCheckedChange={(v) => setForm(f => ({ ...f, is_recruitment_partner: v }))} />
+              </div>
+              {form.is_recruitment_partner && (
+                <div>
+                  <Label className="text-xs">Comissão por contratação (%)</Label>
+                  <Input type="number" step="0.1" value={form.recruitment_commission_pct} onChange={e => setForm(f => ({ ...f, recruitment_commission_pct: e.target.value }))} placeholder="Ex: 15" />
+                </div>
+              )}
             </div>
             <Button onClick={handleCreate} disabled={!form.full_name.trim()} className="w-full">
               Cadastrar Prestador
