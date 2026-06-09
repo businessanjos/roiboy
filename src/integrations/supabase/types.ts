@@ -12089,6 +12089,7 @@ export type Database = {
           portal_token: string | null
           position: string | null
           preferred_payment_day: number | null
+          provider_kind: string
           recruitment_commission_pct: number | null
           recruitment_notes: string | null
           rg: string | null
@@ -12142,6 +12143,7 @@ export type Database = {
           portal_token?: string | null
           position?: string | null
           preferred_payment_day?: number | null
+          provider_kind?: string
           recruitment_commission_pct?: number | null
           recruitment_notes?: string | null
           rg?: string | null
@@ -12195,6 +12197,7 @@ export type Database = {
           portal_token?: string | null
           position?: string | null
           preferred_payment_day?: number | null
+          provider_kind?: string
           recruitment_commission_pct?: number | null
           recruitment_notes?: string | null
           rg?: string | null
