@@ -49,6 +49,7 @@ export interface HRJob {
   updated_at: string;
   hiring_manager_id?: string | null;
   recruiter_id?: string | null;
+  recruiter_provider_id?: string | null;
   target_fill_date?: string | null;
   opening_reason?: string | null;
   opened_at?: string | null;
@@ -116,6 +117,7 @@ export interface JobFormData {
   status: JobStatus;
   hiring_manager_id: string | null;
   recruiter_id: string | null;
+  recruiter_provider_id: string | null;
   target_fill_date: Date | null;
   opening_reason: string;
 }
@@ -200,6 +202,7 @@ export const DEFAULT_JOB_FORM_DATA: JobFormData = {
   status: "draft",
   hiring_manager_id: null,
   recruiter_id: null,
+  recruiter_provider_id: null,
   target_fill_date: null,
   opening_reason: "",
 };
