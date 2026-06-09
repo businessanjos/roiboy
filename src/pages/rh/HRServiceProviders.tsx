@@ -267,6 +267,9 @@ export default function HRServiceProviders() {
           })}
         </div>
       )}
+      </Tabs>
+
+
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
