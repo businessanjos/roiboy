@@ -294,6 +294,14 @@ export function useProjectStakeholders(projectId: string | undefined) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["project-stakeholders", projectId] }),
     onError: (e: any) => toast.error(e.message),
   });
+  const update = useMutation({
+    mutationFn: async ({ id, ...patch }: Partial<ProjectStakeholder> & { id: string }) => {
+      const { error } = await supabase.from("marketing_project_stakeholders" as any).update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["project-stakeholders", projectId] }),
+    onError: (e: any) => toast.error(e.message),
+  });
   const remove = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("marketing_project_stakeholders" as any).delete().eq("id", id);
@@ -301,7 +309,7 @@ export function useProjectStakeholders(projectId: string | undefined) {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["project-stakeholders", projectId] }),
   });
-  return { items: query.data || [], isLoading: query.isLoading, add, remove };
+  return { items: query.data || [], isLoading: query.isLoading, add, update, remove };
 }
 
 // --- Milestones ---
