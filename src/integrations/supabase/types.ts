@@ -11276,9 +11276,12 @@ export type Database = {
           job_id: string
           name: string
           order_index: number
+          owner_name: string | null
           owner_role: string | null
           sla_days: number | null
+          test_or_material: string | null
           updated_at: string
+          what_to_do: string | null
         }
         Insert: {
           account_id: string
@@ -11289,9 +11292,12 @@ export type Database = {
           job_id: string
           name: string
           order_index?: number
+          owner_name?: string | null
           owner_role?: string | null
           sla_days?: number | null
+          test_or_material?: string | null
           updated_at?: string
+          what_to_do?: string | null
         }
         Update: {
           account_id?: string
@@ -11302,9 +11308,12 @@ export type Database = {
           job_id?: string
           name?: string
           order_index?: number
+          owner_name?: string | null
           owner_role?: string | null
           sla_days?: number | null
+          test_or_material?: string | null
           updated_at?: string
+          what_to_do?: string | null
         }
         Relationships: [
           {
