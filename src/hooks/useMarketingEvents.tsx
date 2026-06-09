@@ -28,6 +28,7 @@ export interface MarketingEvent {
   notes: string | null;
   category: 'marketing' | 'operation';
   visible_sectors: string[] | null;
+  auto_generate_content?: boolean | null;
   created_at: string;
   updated_at: string;
 }
