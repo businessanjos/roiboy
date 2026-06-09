@@ -553,7 +553,10 @@ export function MarketingEventDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notas Internas</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="notes">Notas Internas</Label>
+              <AiAssistButton field="notes" />
+            </div>
             <Textarea
               id="notes"
               value={formData.notes}
