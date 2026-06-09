@@ -271,3 +271,11 @@ export default function RHJobForm() {
     </div>
   );
 }
+
+function AutosaveIndicator({ status, lastSavedAt }: { status: "idle" | "saving" | "saved" | "error"; lastSavedAt: Date | null }) {
+  if (status === "saving") return <span className="inline-flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" />Salvando…</span>;
+  if (status === "error") return <span className="inline-flex items-center gap-1.5 text-red-600"><AlertCircle className="h-3.5 w-3.5" />Erro ao salvar</span>;
+  if (status === "saved" && lastSavedAt) return <span className="inline-flex items-center gap-1.5 text-emerald-600"><Check className="h-3.5 w-3.5" />Salvo {formatDistanceToNow(lastSavedAt, { locale: ptBR, addSuffix: true })}</span>;
+  return null;
+}
+
