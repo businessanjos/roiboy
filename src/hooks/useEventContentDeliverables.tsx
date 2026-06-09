@@ -192,9 +192,9 @@ export function useEventContentDeliverables(eventId: string | null | undefined, 
           title: deliverable.title,
           description: deliverable.description,
           due_date: deliverable.due_date,
-          status: 'todo',
+          status: 'pending',
           created_by: currentUser?.id ?? null,
-          assigned_to: deliverable.assigned_to,
+          assignee_id: deliverable.assigned_to,
         })
         .select()
         .single();
@@ -214,18 +214,43 @@ export function useEventContentDeliverables(eventId: string | null | undefined, 
     onError: (e: any) => toast.error(e?.message || 'Erro ao criar task'),
   });
 
+  // Map deliverable kind to a content platform/format guess
+  const kindToPlatform: Record<DeliverableKind, string> = {
+    save_the_date: 'instagram',
+    teaser: 'instagram',
+    reels: 'instagram',
+    carrossel: 'instagram',
+    stories: 'instagram',
+    email: 'email',
+    cobertura_ao_vivo: 'instagram',
+    pos_evento: 'instagram',
+    custom: 'instagram',
+  };
+
   // Convert deliverable into a content_piece (pauta) linked back
   const createPautaFromDeliverable = useMutation({
     mutationFn: async (deliverable: EventContentDeliverable) => {
       if (!accountId) throw new Error('Sem conta');
+      // content_pieces requires a talent_id — pick first available for the account
+      const { data: talents, error: tErr } = await (supabase as any)
+        .from('content_talents')
+        .select('id')
+        .eq('account_id', accountId)
+        .limit(1);
+      if (tErr) throw tErr;
+      const talentId = talents?.[0]?.id;
+      if (!talentId) throw new Error('Cadastre um talento em Conteúdo HQ antes de criar pautas.');
+
       const { data: piece, error } = await (supabase as any)
         .from('content_pieces')
         .insert({
           account_id: accountId,
+          talent_id: talentId,
           title: deliverable.title,
-          status: 'idea',
+          platform: kindToPlatform[deliverable.kind],
+          format: deliverable.kind,
+          status: 'backlog',
           scheduled_date: deliverable.due_date,
-          created_by: currentUser?.id ?? null,
         })
         .select()
         .single();
