@@ -34,6 +34,8 @@ const categoryBadges: Record<string, { label: string; color: string }> = {
   sales: { label: 'VE', color: 'bg-blue-500' },
 };
 
+import { CalendarLayerItem } from '@/hooks/useMarketingCalendarLayers';
+
 interface MonthlyCalendarViewProps {
   currentMonth: Date;
   events: MarketingEvent[];
@@ -41,6 +43,10 @@ interface MonthlyCalendarViewProps {
   onEventClick: (event: MarketingEvent) => void;
   onAddEvent: (date?: Date) => void;
   currentCategory?: 'marketing' | 'operation';
+  showEvents?: boolean;
+  extraLayers?: Record<string, CalendarLayerItem[]>;
+  onLayerItemClick?: (item: CalendarLayerItem) => void;
+  toolbarExtra?: React.ReactNode;
 }
 
 export function MonthlyCalendarView({ 
@@ -49,7 +55,11 @@ export function MonthlyCalendarView({
   onMonthChange, 
   onEventClick, 
   onAddEvent,
-  currentCategory = 'marketing'
+  currentCategory = 'marketing',
+  showEvents = true,
+  extraLayers,
+  onLayerItemClick,
+  toolbarExtra,
 }: MonthlyCalendarViewProps) {
   // Calculate calendar days
   const calendarDays = useMemo(() => {
