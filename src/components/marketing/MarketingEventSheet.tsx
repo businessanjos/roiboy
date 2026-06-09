@@ -283,6 +283,14 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
 
           <Separator />
 
+          {/* Conteúdo do evento (Fase 2) */}
+          <EventContentDeliverablesSection
+            eventId={event.id}
+            eventDate={event.scheduled_at?.slice(0, 10) ?? null}
+          />
+
+          <Separator />
+
           {/* Actions */}
           <div className="flex gap-2">
             <Button onClick={onEdit} className="flex-1">
