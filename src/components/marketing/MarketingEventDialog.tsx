@@ -8,13 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
-import { CalendarIcon, Plane, Sparkles } from 'lucide-react';
+import { CalendarIcon, Plane, Sparkles, Wand2, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { MarketingEvent, MarketingEventType, MarketingEventStatus, eventTypeConfig, statusConfig } from '@/hooks/useMarketingEvents';
 import { DestinationAutocomplete } from './DestinationAutocomplete';
 import { PeopleMultiSelect } from './PeopleMultiSelect';
+import { supabase } from '@/integrations/supabase/client';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { toast } from 'sonner';
 
 export interface MarketingEventExtras {
   createProject?: boolean;
