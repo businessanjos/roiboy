@@ -22,7 +22,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  Search, Plus, Handshake, Building2, Phone, Mail, UserSearch,
+  Search, Plus, Handshake, Building2, Phone, Mail, UserSearch, Crown,
 } from "lucide-react";
 
 const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br"];
