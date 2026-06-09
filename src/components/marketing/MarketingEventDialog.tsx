@@ -14,6 +14,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { MarketingEvent, MarketingEventType, MarketingEventStatus, eventTypeConfig, statusConfig } from '@/hooks/useMarketingEvents';
 import { DestinationAutocomplete } from './DestinationAutocomplete';
+import { PeopleMultiSelect } from './PeopleMultiSelect';
 
 export interface MarketingEventExtras {
   createProject?: boolean;
@@ -307,12 +308,11 @@ export function MarketingEventDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="travel_companions">Quem vai</Label>
-                  <Input
-                    id="travel_companions"
+                  <Label>Quem vai</Label>
+                  <PeopleMultiSelect
                     value={formData.travel_companions}
-                    onChange={(e) => setFormData(prev => ({ ...prev, travel_companions: e.target.value }))}
-                    placeholder="Ever, Bru..."
+                    onChange={(v) => setFormData(prev => ({ ...prev, travel_companions: v }))}
+                    placeholder="Selecione quem vai..."
                   />
                 </div>
                 <div className="space-y-2">
