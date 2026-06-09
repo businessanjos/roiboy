@@ -8,13 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
-import { CalendarIcon, Plane, Sparkles } from 'lucide-react';
+import { CalendarIcon, Plane, Sparkles, Wand2, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { MarketingEvent, MarketingEventType, MarketingEventStatus, eventTypeConfig, statusConfig } from '@/hooks/useMarketingEvents';
 import { DestinationAutocomplete } from './DestinationAutocomplete';
 import { PeopleMultiSelect } from './PeopleMultiSelect';
+import { supabase } from '@/integrations/supabase/client';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { toast } from 'sonner';
 
 export interface MarketingEventExtras {
   createProject?: boolean;
@@ -161,6 +164,67 @@ export function MarketingEventDialog({
   }, [event, defaultMonth, defaultYear, defaultDate, open]);
 
   const isTravel = formData.event_type === 'viagem';
+  const { currentUser } = useCurrentUser();
+  const [aiLoadingField, setAiLoadingField] = useState<null | 'goals' | 'notes' | 'travel_impact'>(null);
+
+  const handleAiAssist = async (field: 'goals' | 'notes' | 'travel_impact') => {
+    if (!currentUser?.account_id) {
+      toast.error('Não foi possível identificar sua conta.');
+      return;
+    }
+    setAiLoadingField(field);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-marketing-event-field', {
+        body: {
+          accountId: currentUser.account_id,
+          field,
+          context: {
+            title: formData.title,
+            event_type: formData.event_type,
+            scheduled_at: formData.scheduled_at,
+            ends_at: formData.ends_at,
+            description: formData.description,
+            goals: formData.goals,
+            notes: formData.notes,
+            travel_destination: formData.travel_destination,
+            travel_reason: formData.travel_reason,
+            travel_audience: formData.travel_audience,
+            travel_companions: formData.travel_companions,
+            travel_impact: formData.travel_impact,
+            current: formData[field],
+          },
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const text = (data?.text || '').trim();
+      if (!text) throw new Error('IA não retornou texto.');
+      setFormData((prev) => ({ ...prev, [field]: text }));
+      toast.success('Sugestão da IA aplicada.');
+    } catch (e: any) {
+      toast.error(e.message || 'Falha ao gerar sugestão.');
+    } finally {
+      setAiLoadingField(null);
+    }
+  };
+
+  const AiAssistButton = ({ field }: { field: 'goals' | 'notes' | 'travel_impact' }) => (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-7 px-2 text-violet-600 hover:text-violet-700 hover:bg-violet-500/10"
+      onClick={() => handleAiAssist(field)}
+      disabled={aiLoadingField === field}
+    >
+      {aiLoadingField === field ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Wand2 className="h-3.5 w-3.5" />
+      )}
+      <span className="ml-1 text-xs">IA</span>
+    </Button>
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,7 +391,10 @@ export function MarketingEventDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="travel_impact">Posicionamento / impacto esperado</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="travel_impact">Posicionamento / impacto esperado</Label>
+                  <AiAssistButton field="travel_impact" />
+                </div>
                 <Textarea
                   id="travel_impact"
                   value={formData.travel_impact}
@@ -472,7 +539,10 @@ export function MarketingEventDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="goals">Objetivos</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="goals">Objetivos</Label>
+              <AiAssistButton field="goals" />
+            </div>
             <Textarea
               id="goals"
               value={formData.goals}
@@ -483,7 +553,10 @@ export function MarketingEventDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notas Internas</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="notes">Notas Internas</Label>
+              <AiAssistButton field="notes" />
+            </div>
             <Textarea
               id="notes"
               value={formData.notes}
