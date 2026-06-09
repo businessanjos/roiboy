@@ -81,7 +81,14 @@ export function ProjectStakeholdersTab({ projectId }: { projectId: string }) {
           const subtitle = [s.title, s.company].filter(Boolean).join(" · ");
           const isResearching = researching === s.id;
           return (
-            <div key={s.id} className="border rounded-xl p-3 hover:shadow-sm transition-all bg-card group">
+            <div
+              key={s.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setViewing(s)}
+              onKeyDown={(e) => { if (e.key === "Enter") setViewing(s); }}
+              className="border rounded-xl p-3 hover:shadow-md hover:border-primary/40 transition-all bg-card group cursor-pointer text-left"
+            >
               <div className="flex items-start gap-3">
                 <Avatar className="h-12 w-12 rounded-lg">
                   {s.logo_url && <AvatarImage src={s.logo_url} alt={displayName} className="object-contain" />}
@@ -103,7 +110,7 @@ export function ProjectStakeholdersTab({ projectId }: { projectId: string }) {
                   </div>
                   <div className="text-xs text-muted-foreground truncate">{s.role}{subtitle ? ` — ${subtitle}` : ""}</div>
 
-                  <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                  <div className="flex items-center gap-1.5 flex-wrap mt-2" onClick={(e) => e.stopPropagation()}>
                     {s.website && (
                       <a href={normalizeUrl(s.website)!} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border hover:bg-muted">
                         <Globe className="h-3 w-3" /> Site
@@ -131,13 +138,28 @@ export function ProjectStakeholdersTab({ projectId }: { projectId: string }) {
                     )}
                   </div>
 
-                  {s.ai_summary && (
-                    <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{s.ai_summary}</p>
+                  {s.ai_summary ? (
+                    <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{s.ai_summary}</p>
+                  ) : s.bio ? (
+                    <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{s.bio}</p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground/70 mt-2 italic">
+                      Sem inteligência ainda — clique em "Pesquisar com IA".
+                    </p>
+                  )}
+
+                  {s.ai_recommendations && (
+                    <div className="mt-2 rounded-md bg-violet-500/5 border border-violet-500/20 p-2">
+                      <div className="text-[10px] uppercase tracking-wide font-semibold text-violet-600 dark:text-violet-400 mb-0.5 flex items-center gap-1">
+                        <Sparkles className="h-2.5 w-2.5" /> Como usar
+                      </div>
+                      <p className="text-[11px] text-foreground/80 line-clamp-3 whitespace-pre-wrap">{s.ai_recommendations}</p>
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mt-3 pt-3 border-t">
+              <div className="flex items-center justify-between mt-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -154,15 +176,13 @@ export function ProjectStakeholdersTab({ projectId }: { projectId: string }) {
                   )}
                 </Button>
                 <div className="flex gap-1">
-                  {(s.ai_summary || s.ai_recommendations || s.bio) && (
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setViewing(s)}>
-                      <BookOpen className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditing(s); setFormOpen(true); }}>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Ver detalhes" onClick={() => setViewing(s)}>
+                    <BookOpen className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar" onClick={() => { setEditing(s); setFormOpen(true); }}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { if (confirm("Remover stakeholder?")) remove.mutate(s.id); }}>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Remover" onClick={() => { if (confirm("Remover stakeholder?")) remove.mutate(s.id); }}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>
