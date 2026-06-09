@@ -64,7 +64,13 @@ export interface HRAdmission {
   contract_signed_at: string | null;
   onboarding_scheduled_at: string | null;
   admitted_at: string | null;
+  esocial_sent_to_accountant_at: string | null;
+  esocial_accountant_email: string | null;
+  esocial_event_protocol: string | null;
+  esocial_confirmed_at: string | null;
+  esocial_notes: string | null;
   notes: string | null;
+
   responsible_user_id: string | null;
   public_token: string | null;
   token_expires_at: string | null;
