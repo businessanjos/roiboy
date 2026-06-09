@@ -11,7 +11,10 @@ export interface JobStage {
   order_index: number;
   sla_days: number | null;
   owner_role: string | null;
+  owner_name: string | null;
   evaluation_criteria: string[];
+  what_to_do: string | null;
+  test_or_material: string | null;
   ai_focus: string | null;
   created_at: string;
   updated_at: string;
@@ -56,8 +59,11 @@ export function useReplaceHRJobStages() {
         order_index: i,
         sla_days: s.sla_days ?? null,
         owner_role: s.owner_role ?? null,
+        owner_name: s.owner_name ?? null,
         evaluation_criteria: s.evaluation_criteria || [],
-        ai_focus: s.ai_focus ?? null,
+        what_to_do: s.what_to_do ?? null,
+        test_or_material: s.test_or_material ?? null,
+        ai_focus: null,
       }));
       const { data, error } = await supabase.from("hr_job_stages" as any).insert(rows).select();
       if (error) throw error;
@@ -86,8 +92,11 @@ export async function suggestStagesAI(input: {
     order_index: i,
     sla_days: typeof s.sla_days === "number" ? s.sla_days : null,
     owner_role: s.owner_role || null,
+    owner_name: s.owner_name || null,
     evaluation_criteria: Array.isArray(s.evaluation_criteria) ? s.evaluation_criteria.map(String) : [],
-    ai_focus: s.ai_focus || null,
+    what_to_do: s.what_to_do || null,
+    test_or_material: s.test_or_material || null,
+    ai_focus: null,
   }));
 }
 
