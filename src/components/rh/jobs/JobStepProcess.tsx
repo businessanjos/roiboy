@@ -32,12 +32,17 @@ export function JobStepProcess({ form, jobId }: Props) {
     if (savedStages && savedStages.length > 0 && stages.length === 0) {
       setStages(savedStages.map(s => ({
         id: s.id, name: s.name, order_index: s.order_index, sla_days: s.sla_days,
-        owner_role: s.owner_role, evaluation_criteria: s.evaluation_criteria || [], ai_focus: s.ai_focus,
+        owner_role: s.owner_role, owner_name: s.owner_name,
+        evaluation_criteria: s.evaluation_criteria || [],
+        what_to_do: s.what_to_do, test_or_material: s.test_or_material, ai_focus: null,
       })));
     }
   }, [savedStages]);
 
-  const addStage = () => setStages(prev => [...prev, { name: "", order_index: prev.length, sla_days: 5, owner_role: "RH", evaluation_criteria: [], ai_focus: null }]);
+  const addStage = () => setStages(prev => [...prev, {
+    name: "", order_index: prev.length, sla_days: 5, owner_role: "RH",
+    owner_name: null, evaluation_criteria: [], what_to_do: null, test_or_material: null, ai_focus: null,
+  }]);
   const removeStage = (i: number) => setStages(prev => prev.filter((_, idx) => idx !== i));
   const moveStage = (i: number, dir: -1 | 1) => {
     setStages(prev => {
