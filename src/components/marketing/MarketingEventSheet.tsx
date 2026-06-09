@@ -287,6 +287,7 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
           <EventContentDeliverablesSection
             eventId={event.id}
             eventDate={event.scheduled_at?.slice(0, 10) ?? null}
+            event={event}
           />
 
           <Separator />
