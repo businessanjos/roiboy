@@ -114,9 +114,15 @@ export default function HRServiceProviders() {
             Gerencie seus prestadores de serviço e parceiros PJ
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} className="gap-2">
+        <Button
+          onClick={() => {
+            setForm(f => ({ ...f, provider_kind: tab }));
+            setDialogOpen(true);
+          }}
+          className="gap-2"
+        >
           <Plus className="h-4 w-4" />
-          Novo Prestador
+          {tab === "director" ? "Novo Cargo de Confiança" : "Novo Prestador"}
         </Button>
       </div>
 
