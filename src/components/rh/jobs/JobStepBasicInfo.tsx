@@ -7,6 +7,7 @@ import type { JobFormData, WorkModel, JobContractType, JobSeniority } from "@/ty
 import { OPENING_REASON_LABELS } from "@/types/job";
 import { useHRCollaborators } from "@/hooks/useHRCollaborators";
 import { useAccountUsersForJobs } from "@/hooks/useHRJobStages";
+import { PersonSelector } from "@/components/rh/jobs/PersonSelector";
 import { useMemo } from "react";
 
 interface Props { form: UseFormReturn<JobFormData>; }
