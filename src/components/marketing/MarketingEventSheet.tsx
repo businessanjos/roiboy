@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { EventContentDeliverablesSection } from './EventContentDeliverablesSection';
 
 const iconMap: Record<string, React.ElementType> = {
   rocket: Rocket,
