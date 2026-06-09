@@ -58,6 +58,22 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
   const status = statusConfig[event.status];
   const Icon = iconMap[typeConfig?.icon] || Circle;
 
+  // Strip ROY_META block from notes (used to persist travel/project metadata)
+  const META_START = '<!--ROY_META';
+  const META_END = 'ROY_META-->';
+  let cleanNotes = event.notes || '';
+  let travelMeta: any = null;
+  if (cleanNotes) {
+    const s = cleanNotes.indexOf(META_START);
+    const e = cleanNotes.indexOf(META_END);
+    if (s !== -1 && e !== -1 && e > s) {
+      try {
+        travelMeta = JSON.parse(cleanNotes.slice(s + META_START.length, e).trim())?.travel ?? null;
+      } catch { /* ignore */ }
+      cleanNotes = (cleanNotes.slice(0, s) + cleanNotes.slice(e + META_END.length)).trim();
+    }
+  }
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
