@@ -36,6 +36,10 @@ const formSchema = z.object({
   urgency: z.enum(["low", "medium", "high", "urgent"]),
   require_cover_letter: z.boolean(), tags: z.array(z.string()),
   status: z.enum(["active", "closed", "draft", "on_hold"]),
+  hiring_manager_id: z.string().nullable(),
+  recruiter_id: z.string().nullable(),
+  target_fill_date: z.date().nullable(),
+  opening_reason: z.string(),
 });
 
 export default function RHJobForm() {
@@ -65,6 +69,10 @@ export default function RHJobForm() {
         expected_start_date: existingJob.expected_start_date ? new Date(existingJob.expected_start_date) : null,
         urgency: (existingJob.urgency as any) || "medium", require_cover_letter: existingJob.require_cover_letter || false,
         tags: existingJob.tags || [], status: existingJob.status || "draft",
+        hiring_manager_id: (existingJob as any).hiring_manager_id || null,
+        recruiter_id: (existingJob as any).recruiter_id || null,
+        target_fill_date: (existingJob as any).target_fill_date ? new Date((existingJob as any).target_fill_date) : null,
+        opening_reason: (existingJob as any).opening_reason || "",
       });
     }
   }, [existingJob, isEditing, form]);
@@ -90,6 +98,10 @@ export default function RHJobForm() {
       application_deadline: values.application_deadline?.toISOString().split("T")[0] || null,
       expected_start_date: values.expected_start_date?.toISOString().split("T")[0] || null,
       urgency: values.urgency, require_cover_letter: values.require_cover_letter, tags: values.tags,
+      hiring_manager_id: values.hiring_manager_id,
+      recruiter_id: values.recruiter_id,
+      target_fill_date: values.target_fill_date?.toISOString().split("T")[0] || null,
+      opening_reason: values.opening_reason || null,
     };
     try {
       if (isEditing && id) await updateJob.mutateAsync({ id, ...jobData });
@@ -104,7 +116,7 @@ export default function RHJobForm() {
       case 2: return <JobStepRequirements form={form} />;
       case 3: return <JobStepCompensation form={form} />;
       case 4: return <JobStepDescription form={form} />;
-      case 5: return <JobStepProcess form={form} />;
+      case 5: return <JobStepProcess form={form} jobId={id} />;
       case 6: return <JobStepReview form={form} />;
       default: return null;
     }
