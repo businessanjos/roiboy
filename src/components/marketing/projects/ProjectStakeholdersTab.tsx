@@ -243,30 +243,52 @@ export function ProjectStakeholdersTab({ projectId }: { projectId: string }) {
                   <TabsTrigger value="notes">Notas</TabsTrigger>
                 </TabsList>
                 <TabsContent value="ai" className="space-y-4 mt-3">
+                  {(viewing.website || viewing.linkedin_url || viewing.instagram_url || viewing.email || viewing.phone) && (
+                    <div className="rounded-lg border bg-muted/30 p-3">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Contatos</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {viewing.website && (
+                          <a href={normalizeUrl(viewing.website)!} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-background hover:bg-muted">
+                            <Globe className="h-3 w-3" /> {viewing.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                          </a>
+                        )}
+                        {viewing.linkedin_url && (
+                          <a href={normalizeUrl(viewing.linkedin_url)!} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-background hover:bg-muted">
+                            <Linkedin className="h-3 w-3" /> LinkedIn
+                          </a>
+                        )}
+                        {viewing.instagram_url && (
+                          <a href={normalizeUrl(viewing.instagram_url)!} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-background hover:bg-muted">
+                            <Instagram className="h-3 w-3" /> Instagram
+                          </a>
+                        )}
+                        {viewing.email && (
+                          <a href={`mailto:${viewing.email}`} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-background hover:bg-muted">
+                            <Mail className="h-3 w-3" /> {viewing.email}
+                          </a>
+                        )}
+                        {viewing.phone && (
+                          <a href={`tel:${viewing.phone}`} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-background hover:bg-muted">
+                            <Phone className="h-3 w-3" /> {viewing.phone}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {viewing.ai_summary && (
                     <div>
                       <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Resumo</div>
-                      <p className="text-sm whitespace-pre-wrap">{viewing.ai_summary}</p>
+                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&_p]:my-1">
+                        <ReactMarkdown>{cleanAiText(viewing.ai_summary)}</ReactMarkdown>
+                      </div>
                     </div>
                   )}
                   {viewing.ai_recommendations && (
                     <div>
                       <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Como usar neste projeto</div>
-                      <p className="text-sm whitespace-pre-wrap">{viewing.ai_recommendations}</p>
-                    </div>
-                  )}
-                  {Array.isArray(viewing.ai_sources) && viewing.ai_sources.length > 0 && (
-                    <div>
-                      <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Fontes</div>
-                      <ul className="text-xs space-y-1">
-                        {viewing.ai_sources.map((src, i) => (
-                          <li key={i}>
-                            <a href={src.url} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                              <ExternalLink className="h-3 w-3" /> {src.title || src.url}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&_ul]:my-1 [&_li]:my-0.5 [&_p]:my-1">
+                        <ReactMarkdown>{cleanAiText(viewing.ai_recommendations)}</ReactMarkdown>
+                      </div>
                     </div>
                   )}
                   {viewing.ai_researched_at && (
@@ -274,6 +296,7 @@ export function ProjectStakeholdersTab({ projectId }: { projectId: string }) {
                       Pesquisado em {format(parseISO(viewing.ai_researched_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                     </div>
                   )}
+
                   {!viewing.ai_summary && !viewing.ai_recommendations && (
                     <div className="text-sm text-muted-foreground text-center py-6">
                       Nenhuma pesquisa de IA ainda. Use o botão "Pesquisar com IA" no card.
