@@ -55,6 +55,7 @@ export default function HRServiceProviders() {
     company_name: "",
     service_type: "",
     position: "",
+    provider_kind: "on_demand" as "on_demand" | "director",
     is_recruitment_partner: false,
     recruitment_commission_pct: "",
   });
