@@ -48,17 +48,18 @@ ${roleHint}
 
 Responda em JSON estrito (sem markdown, sem comentários) com este schema:
 {
-  "summary": "2-4 frases em PT-BR sobre quem é, o que faz, posicionamento e diferenciais relevantes",
+  "summary": "2-4 frases em PT-BR sobre quem é, o que faz, posicionamento e diferenciais relevantes. TEXTO LIMPO: sem markdown (nada de **negrito**, nada de ## títulos), sem marcadores de citação como [1] ou [2,3]",
   "company": "nome da empresa/marca principal (se aplicável)",
   "title": "cargo atual mais relevante (se pessoa)",
   "website": "URL oficial",
   "linkedin_url": "URL completa do LinkedIn (ou null)",
   "instagram_url": "URL completa do Instagram (ou null)",
   "logo_url": "URL pública do logo (ou null)",
-  "recommendations": "3-5 bullets em PT-BR (separados por \\n- ) sobre COMO usar este stakeholder neste projeto específico: que tipo de entrega pedir, quando envolvê-lo, riscos, pontos fortes"
+  "recommendations": "3-5 recomendações em PT-BR, uma por linha começando com '- '. TEXTO LIMPO: sem markdown (nada de **negrito**), sem [1]/[2,3]. Foque em COMO usar este stakeholder neste projeto específico: que tipo de entrega pedir, quando envolvê-lo, riscos e pontos fortes."
 }
 
-Use null para campos desconhecidos. Não invente.`;
+Use null para campos desconhecidos. Não invente. NUNCA inclua marcadores numéricos de citação no texto.`;
+
 
   const res = await fetch("https://api.perplexity.ai/chat/completions", {
     method: "POST",
