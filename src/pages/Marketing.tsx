@@ -37,6 +37,13 @@ export default function Marketing() {
     true // includeSharedEvents
   );
 
+  const [layers, toggleLayer] = useLayerToggles();
+  const { data: layerData } = useMarketingCalendarLayers({
+    year: currentMonth.getFullYear(),
+    month: viewMode === 'month' ? currentMonth.getMonth() : undefined,
+    enabledLayers: { pauta: layers.pauta, task: layers.task, milestone: layers.milestone },
+  });
+
   const handleAddEvent = (dateOrMonth?: Date | number) => {
     setSelectedEvent(null);
     setIsDuplicating(false);
