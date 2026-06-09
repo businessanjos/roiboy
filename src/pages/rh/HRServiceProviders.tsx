@@ -195,6 +195,11 @@ export default function HRServiceProviders() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-foreground truncate">{provider.full_name}</p>
+                    {(provider as any).provider_kind === "director" && (
+                      <Badge variant="outline" className="text-[10px] gap-1 border-amber-300 text-amber-700 bg-amber-50">
+                        <Crown className="h-3 w-3" /> Diretor PJ
+                      </Badge>
+                    )}
                     <Badge variant={statusInfo.variant} className="text-[10px]">
                       {statusInfo.label}
                     </Badge>
