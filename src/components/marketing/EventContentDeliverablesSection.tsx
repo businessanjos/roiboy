@@ -71,17 +71,28 @@ export function EventContentDeliverablesSection({ eventId, eventDate, event }: P
             </Badge>
           )}
         </div>
-        {total === 0 && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!eventDate || applyTemplate.isPending}
-            onClick={() => applyTemplate.mutate()}
-          >
-            Aplicar template padrão
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {event && (
+            <Button size="sm" variant="outline" onClick={() => setAiOpen(true)}>
+              <Sparkles className="h-3.5 w-3.5 mr-1" /> Gerar com IA
+            </Button>
+          )}
+          {total === 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!eventDate || applyTemplate.isPending}
+              onClick={() => applyTemplate.mutate()}
+            >
+              Aplicar template padrão
+            </Button>
+          )}
+        </div>
       </div>
+
+      {event && (
+        <AiSuggestEventContentDialog open={aiOpen} onOpenChange={setAiOpen} event={event} />
+      )}
 
       {isLoading && <p className="text-xs text-muted-foreground">Carregando…</p>}
 
