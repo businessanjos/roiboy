@@ -10,6 +10,8 @@ import { MarketingEventDialog, MarketingEventSheet } from '@/components/marketin
 import MarketingEventsTab from '@/components/marketing/MarketingEventsTab';
 import MarketingRemindersTab from '@/components/marketing/MarketingRemindersTab';
 import AttendanceReport from '@/components/events/AttendanceReport';
+import { useMarketingCalendarLayers } from '@/hooks/useMarketingCalendarLayers';
+import { CalendarLayersToolbar, useLayerToggles } from '@/components/marketing/CalendarLayersToolbar';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
@@ -34,6 +36,13 @@ export default function Marketing() {
     viewMode === 'month' ? currentMonth.getMonth() : undefined,
     true // includeSharedEvents
   );
+
+  const [layers, toggleLayer] = useLayerToggles();
+  const { data: layerData } = useMarketingCalendarLayers({
+    year: currentMonth.getFullYear(),
+    month: viewMode === 'month' ? currentMonth.getMonth() : undefined,
+    enabledLayers: { pauta: layers.pauta, task: layers.task, milestone: layers.milestone },
+  });
 
   const handleAddEvent = (dateOrMonth?: Date | number) => {
     setSelectedEvent(null);
@@ -190,6 +199,10 @@ export default function Marketing() {
               onEventClick={handleEventClick}
               onAddEvent={handleAddEvent}
               currentCategory="marketing"
+              showEvents={layers.event}
+              extraLayers={layerData}
+              onLayerItemClick={(item) => { if (item.href) navigate(item.href); }}
+              toolbarExtra={<CalendarLayersToolbar layers={layers} onToggle={toggleLayer} />}
             />
           ) : (
             <YearlyCalendarView
