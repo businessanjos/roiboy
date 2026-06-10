@@ -49,6 +49,84 @@ const BRAZILIAN_STATES = [
   "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
 ];
 
+type ScreeningQuestion = {
+  id: string;
+  label: string;
+  helper?: string;
+  type?: "textarea" | "text";
+  required?: boolean;
+  minLength?: number;
+};
+
+// Perguntas-padrão (usadas quando a vaga não define `screening_questions` próprias).
+// Servem pra filtrar (só quem quer mesmo responde) e já traçar perfil.
+const DEFAULT_SCREENING_QUESTIONS: ScreeningQuestion[] = [
+  {
+    id: "why_you",
+    label: "Por que VOCÊ, especificamente, deveria ocupar essa cadeira?",
+    helper: "Sem clichês. Queremos entender o que te torna diferente — não o que você acha que queremos ouvir.",
+    type: "textarea",
+    required: true,
+    minLength: 200,
+  },
+  {
+    id: "owned_problem",
+    label: "Conte uma situação real em que você assumiu um problema que não era seu e resolveu. O que aconteceu?",
+    helper: "Contexto, sua ação concreta e o resultado mensurável (números, prazo, impacto).",
+    type: "textarea",
+    required: true,
+    minLength: 200,
+  },
+  {
+    id: "proudest_win",
+    label: "Qual o maior orgulho profissional da sua carreira até hoje — e o que isso diz sobre você?",
+    type: "textarea",
+    required: true,
+    minLength: 150,
+  },
+  {
+    id: "why_eternum",
+    label: "Por que a Eternum, e por que agora?",
+    helper: "O que você já pesquisou sobre a gente? O que te conecta?",
+    type: "textarea",
+    required: true,
+    minLength: 150,
+  },
+  {
+    id: "deal_breaker",
+    label: "O que faria você recusar essa vaga, mesmo gostando do desafio?",
+    type: "textarea",
+    required: true,
+    minLength: 80,
+  },
+  {
+    id: "salary",
+    label: "Pretensão salarial (CLT, valor bruto mensal em R$)",
+    type: "text",
+    required: true,
+  },
+  {
+    id: "start_date",
+    label: "Em quanto tempo você consegue começar?",
+    type: "text",
+    required: true,
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn",
+    helper: "URL completa do seu perfil.",
+    type: "text",
+    required: true,
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    helper: "Quem você é fora do trabalho importa pra gente.",
+    type: "text",
+    required: false,
+  },
+];
+
 // Paleta Eternum (mesma da carta-proposta)
 const BG = "#2a1b0f";
 const BG_DEEP = "#1d1208";
@@ -117,8 +195,15 @@ export default function PublicJobApplication() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState<ApplicationFormData>(INITIAL_FORM);
+  const [screeningAnswers, setScreeningAnswers] = useState<Record<string, string>>({});
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const screeningQuestions: ScreeningQuestion[] = (() => {
+    const custom = (job as any)?.screening_questions;
+    if (Array.isArray(custom) && custom.length > 0) return custom as ScreeningQuestion[];
+    return DEFAULT_SCREENING_QUESTIONS;
+  })();
 
   useEffect(() => {
     if (!id) return;
@@ -155,6 +240,23 @@ export default function PublicJobApplication() {
       return;
     }
 
+    // Validação das perguntas de triagem
+    for (const q of screeningQuestions) {
+      const v = (screeningAnswers[q.id] || "").trim();
+      if (q.required && !v) {
+        toast({ title: "Responda com calma", description: `Falta responder: "${q.label}"`, variant: "destructive" });
+        return;
+      }
+      if (q.minLength && v.length < q.minLength) {
+        toast({
+          title: "Resposta muito curta",
+          description: `"${q.label}" precisa de pelo menos ${q.minLength} caracteres. Você escreveu ${v.length}.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       let resume_url: string | null = null;
@@ -187,6 +289,7 @@ export default function PublicJobApplication() {
           candidate_pcd: formData.candidate_pcd,
           candidate_pcd_type: formData.candidate_pcd ? formData.candidate_pcd_type : null,
           resume_url,
+          screening_answers: screeningAnswers as any,
           stage: "applied",
           status: "active",
         });
@@ -486,14 +589,19 @@ export default function PublicJobApplication() {
           >
             <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
 
-            <div className="text-center mb-8">
+            <div className="text-center mb-8 max-w-2xl mx-auto">
               <p className="text-[10px] uppercase tracking-[0.35em] mb-3" style={{ color: GOLD, fontWeight: 600 }}>
-                Sua história começa aqui
+                Não é só um formulário
               </p>
-              <h3 className="text-2xl sm:text-3xl" style={{ fontFamily: SERIF, color: TEXT_DARK, fontWeight: 400 }}>
-                Preencha com calma. A gente lê tudo.
+              <h3 className="text-2xl sm:text-3xl mb-4" style={{ fontFamily: SERIF, color: TEXT_DARK, fontWeight: 400 }}>
+                Aqui começa o filtro.
               </h3>
+              <p className="text-[14px] sm:text-[15px] leading-relaxed" style={{ color: TEXT_DARK, opacity: 0.75, fontFamily: SERIF, fontStyle: "italic" }}>
+                Pedimos algumas respostas que exigem tempo e honestidade. Se você quer mesmo essa cadeira,
+                isso vai ser fácil. Se não quer tanto assim — tudo bem, esse não é o seu lugar.
+              </p>
             </div>
+
 
             <form onSubmit={handleSubmit} className="space-y-8" style={{ color: TEXT_DARK }}>
               {/* Dados Pessoais */}
@@ -606,8 +714,71 @@ export default function PublicJobApplication() {
                 </label>
               </div>
 
+              {/* Perguntas de triagem */}
+              {screeningQuestions.length > 0 && (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                    <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: GOLD, fontWeight: 700, fontFamily: SANS }}>Sobre você & a vaga</span>
+                    <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                  </div>
+                  <p className="text-[13px] text-center -mt-2" style={{ color: TEXT_DARK, opacity: 0.7, fontFamily: SERIF, fontStyle: "italic" }}>
+                    Responda com calma e na sua voz. Respostas genéricas (ou de IA) ficam evidentes.
+                  </p>
+                  {screeningQuestions.map((q, idx) => {
+                    const value = screeningAnswers[q.id] || "";
+                    const showCounter = q.type === "textarea" && q.minLength;
+                    return (
+                      <div key={q.id} className="space-y-2">
+                        <Label
+                          className="text-[13px] leading-snug block"
+                          style={{ color: TEXT_DARK, fontFamily: SERIF, fontWeight: 600 }}
+                        >
+                          <span style={{ color: GOLD, fontFamily: SANS, fontWeight: 700, marginRight: 8 }}>
+                            {String(idx + 1).padStart(2, "0")}
+                          </span>
+                          {q.label}
+                          {q.required && <span style={{ color: GOLD }}> *</span>}
+                        </Label>
+                        {q.helper && (
+                          <p className="text-[12px]" style={{ color: TEXT_DARK, opacity: 0.6, fontFamily: SANS }}>
+                            {q.helper}
+                          </p>
+                        )}
+                        {q.type === "text" ? (
+                          <Input
+                            value={value}
+                            onChange={e => setScreeningAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                            className="bg-white/70 border-[1.5px]"
+                            style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }}
+                          />
+                        ) : (
+                          <Textarea
+                            value={value}
+                            onChange={e => setScreeningAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                            rows={5}
+                            className="bg-white/70 border-[1.5px] resize-none"
+                            style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SERIF }}
+                          />
+                        )}
+                        {showCounter && (
+                          <p className="text-[11px] text-right" style={{
+                            color: value.length >= (q.minLength || 0) ? GOLD : TEXT_DARK,
+                            opacity: value.length >= (q.minLength || 0) ? 1 : 0.55,
+                            fontFamily: SANS,
+                          }}>
+                            {value.length} / mín. {q.minLength}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Carta */}
               {job.require_cover_letter && (
+
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />

@@ -11015,6 +11015,7 @@ export type Database = {
           profiler_result_code: string | null
           profiler_result_detail: Json | null
           resume_url: string | null
+          screening_answers: Json
           stage: Database["public"]["Enums"]["hr_candidate_stage"]
           stage_entered_at: string | null
           status: string
@@ -11053,6 +11054,7 @@ export type Database = {
           profiler_result_code?: string | null
           profiler_result_detail?: Json | null
           resume_url?: string | null
+          screening_answers?: Json
           stage?: Database["public"]["Enums"]["hr_candidate_stage"]
           stage_entered_at?: string | null
           status?: string
@@ -11091,6 +11093,7 @@ export type Database = {
           profiler_result_code?: string | null
           profiler_result_detail?: Json | null
           resume_url?: string | null
+          screening_answers?: Json
           stage?: Database["public"]["Enums"]["hr_candidate_stage"]
           stage_entered_at?: string | null
           status?: string
@@ -11384,6 +11387,7 @@ export type Database = {
           salary_max: number | null
           salary_min: number | null
           salary_type: string | null
+          screening_questions: Json
           seniority: string | null
           status: Database["public"]["Enums"]["hr_job_status"]
           tags: string[] | null
@@ -11425,6 +11429,7 @@ export type Database = {
           salary_max?: number | null
           salary_min?: number | null
           salary_type?: string | null
+          screening_questions?: Json
           seniority?: string | null
           status?: Database["public"]["Enums"]["hr_job_status"]
           tags?: string[] | null
@@ -11466,6 +11471,7 @@ export type Database = {
           salary_max?: number | null
           salary_min?: number | null
           salary_type?: string | null
+          screening_questions?: Json
           seniority?: string | null
           status?: Database["public"]["Enums"]["hr_job_status"]
           tags?: string[] | null
