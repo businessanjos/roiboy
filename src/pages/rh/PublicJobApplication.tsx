@@ -589,14 +589,19 @@ export default function PublicJobApplication() {
           >
             <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
 
-            <div className="text-center mb-8">
+            <div className="text-center mb-8 max-w-2xl mx-auto">
               <p className="text-[10px] uppercase tracking-[0.35em] mb-3" style={{ color: GOLD, fontWeight: 600 }}>
-                Sua história começa aqui
+                Não é só um formulário
               </p>
-              <h3 className="text-2xl sm:text-3xl" style={{ fontFamily: SERIF, color: TEXT_DARK, fontWeight: 400 }}>
-                Preencha com calma. A gente lê tudo.
+              <h3 className="text-2xl sm:text-3xl mb-4" style={{ fontFamily: SERIF, color: TEXT_DARK, fontWeight: 400 }}>
+                Aqui começa o filtro.
               </h3>
+              <p className="text-[14px] sm:text-[15px] leading-relaxed" style={{ color: TEXT_DARK, opacity: 0.75, fontFamily: SERIF, fontStyle: "italic" }}>
+                Pedimos algumas respostas que exigem tempo e honestidade. Se você quer mesmo essa cadeira,
+                isso vai ser fácil. Se não quer tanto assim — tudo bem, esse não é o seu lugar.
+              </p>
             </div>
+
 
             <form onSubmit={handleSubmit} className="space-y-8" style={{ color: TEXT_DARK }}>
               {/* Dados Pessoais */}
