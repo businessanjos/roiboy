@@ -467,15 +467,48 @@ export default function PublicJobApplication() {
             <SectionLabel>Sobre a vaga</SectionLabel>
             <div className="grid md:grid-cols-5 gap-8 items-start">
               <div className="md:col-span-3 space-y-4">
-                {job.description.split("\n").filter(Boolean).map((p, i) => (
-                  <p
-                    key={i}
-                    className="text-[15px] md:text-base leading-relaxed"
-                    style={{ fontFamily: SERIF, color: "#e8dcc0", fontWeight: 300 }}
-                  >
-                    {p}
-                  </p>
-                ))}
+                {job.description.split("\n").filter(Boolean).map((p, i) => {
+                  const trimmed = p.trim();
+                  const headingMatch = trimmed.match(/^\*\*(.+?)\*\*$/);
+                  if (headingMatch) {
+                    return (
+                      <h3
+                        key={i}
+                        className="text-lg md:text-xl pt-4 first:pt-0"
+                        style={{ fontFamily: SERIF, color: GOLD, fontWeight: 500, letterSpacing: "0.02em" }}
+                      >
+                        {headingMatch[1]}
+                      </h3>
+                    );
+                  }
+                  const renderInline = (text: string) => {
+                    const parts: (string | JSX.Element)[] = [];
+                    const regex = /\*\*(.+?)\*\*|_(.+?)_/g;
+                    let lastIndex = 0;
+                    let m: RegExpExecArray | null;
+                    let key = 0;
+                    while ((m = regex.exec(text)) !== null) {
+                      if (m.index > lastIndex) parts.push(text.slice(lastIndex, m.index));
+                      if (m[1] !== undefined) {
+                        parts.push(<strong key={key++} style={{ color: GOLD, fontWeight: 600 }}>{m[1]}</strong>);
+                      } else if (m[2] !== undefined) {
+                        parts.push(<em key={key++}>{m[2]}</em>);
+                      }
+                      lastIndex = m.index + m[0].length;
+                    }
+                    if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+                    return parts;
+                  };
+                  return (
+                    <p
+                      key={i}
+                      className="text-[15px] md:text-base leading-relaxed"
+                      style={{ fontFamily: SERIF, color: "#e8dcc0", fontWeight: 300 }}
+                    >
+                      {renderInline(trimmed)}
+                    </p>
+                  );
+                })}
               </div>
               <div className="md:col-span-2">
                 <div
