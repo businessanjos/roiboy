@@ -6,18 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Briefcase, MapPin, Clock, Building, Users, GraduationCap,
-  Upload, CheckCircle2, Loader2, FileText, AlertCircle
+  Briefcase, MapPin, Building, Users, GraduationCap,
+  Upload, CheckCircle2, Loader2, FileText, AlertCircle, Calendar,
 } from "lucide-react";
 import { WORK_MODEL_LABELS, CONTRACT_TYPE_LABELS, JOB_SENIORITY_LABELS } from "@/constants/jobOptions";
 import type { HRJob, WorkModel, JobContractType, JobSeniority } from "@/types/job";
 import { motion, AnimatePresence } from "framer-motion";
+import letreiro from "@/assets/eternum/letreiro.png.asset.json";
+import everBru from "@/assets/eternum/ever-bru.png.asset.json";
 
 interface ApplicationFormData {
   candidate_name: string;
@@ -49,6 +48,66 @@ const BRAZILIAN_STATES = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
   "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
 ];
+
+// Paleta Eternum (mesma da carta-proposta)
+const BG = "#2a1b0f";
+const BG_DEEP = "#1d1208";
+const CARD = "#ede6cb";
+const CARD_SOFT = "#f4eed5";
+const TEXT_DARK = "#3b2510";
+const GOLD = "#c9a86a";
+
+const SANS = "'Montserrat', system-ui, sans-serif";
+const SERIF = "'Merriweather', Georgia, serif";
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+      <span className="h-px w-8 sm:w-12" style={{ background: GOLD }} />
+      <span
+        className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-light text-center"
+        style={{ color: GOLD, fontFamily: SANS }}
+      >
+        {children}
+      </span>
+      <span className="h-px w-8 sm:w-12" style={{ background: GOLD }} />
+    </div>
+  );
+}
+
+function DetailCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div
+      className="rounded-sm p-4 flex items-start gap-3"
+      style={{ background: `${BG_DEEP}66`, border: `1px solid ${GOLD}33` }}
+    >
+      <div className="mt-0.5" style={{ color: GOLD }}>{icon}</div>
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-[0.25em] mb-1" style={{ color: GOLD, fontFamily: SANS }}>{label}</p>
+        <p className="text-sm leading-snug" style={{ color: CARD, fontFamily: SERIF }}>{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function FieldLabel({ htmlFor, children, required }: { htmlFor?: string; children: React.ReactNode; required?: boolean }) {
+  return (
+    <Label
+      htmlFor={htmlFor}
+      className="text-[11px] uppercase tracking-[0.25em]"
+      style={{ color: GOLD, fontFamily: SANS, fontWeight: 600 }}
+    >
+      {children} {required && <span style={{ color: GOLD }}>*</span>}
+    </Label>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  background: `${BG_DEEP}aa`,
+  border: `1px solid ${GOLD}40`,
+  color: CARD,
+  fontFamily: SANS,
+};
 
 export default function PublicJobApplication() {
   const { id } = useParams<{ id: string }>();
@@ -109,8 +168,6 @@ export default function PublicJobApplication() {
           .upload(path, resumeFile);
 
         if (uploadError) throw uploadError;
-
-        // Bucket is private — store the storage path; viewer generates signed URL on demand.
         resume_url = path;
       }
 
@@ -137,6 +194,7 @@ export default function PublicJobApplication() {
       if (insertError) throw insertError;
 
       setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
       toast({ title: "Erro ao enviar candidatura", description: err.message, variant: "destructive" });
     } finally {
@@ -146,290 +204,489 @@ export default function PublicJobApplication() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: BG }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: GOLD }} />
       </div>
     );
   }
 
   if (error || !job) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="pt-8 pb-8 space-y-4">
-            <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground" />
-            <h2 className="text-xl font-semibold">{error || "Vaga não encontrada"}</h2>
-            <p className="text-muted-foreground">Esta vaga pode ter sido encerrada ou o link está incorreto.</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: BG, fontFamily: SANS }}>
+        <div className="text-center max-w-md space-y-3" style={{ color: CARD }}>
+          <AlertCircle className="h-12 w-12 mx-auto opacity-60" style={{ color: GOLD }} />
+          <h1 className="text-xl" style={{ fontFamily: SERIF, fontWeight: 400 }}>{error || "Vaga não encontrada"}</h1>
+          <p className="text-sm opacity-70">Esta vaga pode ter sido encerrada ou o link está incorreto.</p>
+        </div>
       </div>
     );
   }
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.4 }}>
-          <Card className="max-w-md w-full text-center">
-            <CardContent className="pt-8 pb-8 space-y-4">
-              <CheckCircle2 className="h-16 w-16 mx-auto text-green-500" />
-              <h2 className="text-2xl font-bold">Candidatura Enviada!</h2>
-              <p className="text-muted-foreground">
-                Obrigado pelo seu interesse na vaga <strong>{job.title}</strong>. 
-                Analisaremos seu perfil e entraremos em contato em breve.
-              </p>
-            </CardContent>
-          </Card>
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{
+          background: BG,
+          backgroundImage: `radial-gradient(circle at 20% 0%, ${GOLD}18, transparent 50%), radial-gradient(circle at 80% 100%, ${GOLD}12, transparent 50%)`,
+          fontFamily: SANS,
+        }}
+      >
+        <motion.div
+          initial={{ scale: 0.92, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-xl w-full text-center"
+        >
+          <div className="flex justify-center mb-8">
+            <img src={letreiro.url} alt="Eternum" className="h-7 sm:h-9 object-contain opacity-95" />
+          </div>
+          <div
+            className="rounded-sm p-8 sm:p-12 relative"
+            style={{
+              background: `linear-gradient(135deg, ${CARD} 0%, ${CARD_SOFT} 100%)`,
+              boxShadow: `0 30px 80px -30px rgba(0,0,0,0.5), inset 0 0 0 1px ${GOLD}40`,
+            }}
+          >
+            <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
+            <CheckCircle2 className="h-14 w-14 mx-auto mb-5" style={{ color: GOLD }} />
+            <p className="text-[10px] uppercase tracking-[0.4em] mb-3" style={{ color: GOLD, fontWeight: 600 }}>
+              Candidatura recebida
+            </p>
+            <h2 className="text-2xl sm:text-3xl mb-4" style={{ fontFamily: SERIF, color: TEXT_DARK, fontWeight: 400 }}>
+              Obrigado, {formData.candidate_name.split(" ")[0]}.
+            </h2>
+            <p className="text-[15px] leading-relaxed" style={{ color: TEXT_DARK, fontFamily: SERIF, opacity: 0.85 }}>
+              Recebemos seu interesse pela vaga de <strong>{job.title}</strong>. Cada candidatura é lida com atenção pelo nosso time.
+              Em breve entraremos em contato pelos canais informados.
+            </p>
+          </div>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        {/* Job Header */}
-        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          <Card>
-            <CardHeader>
-              <div className="space-y-3">
-                <CardTitle className="text-2xl md:text-3xl">{job.title}</CardTitle>
-                <div className="flex flex-wrap gap-2">
-                  {job.work_model && (
-                    <Badge variant="secondary" className="gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {WORK_MODEL_LABELS[job.work_model as WorkModel] || job.work_model}
-                    </Badge>
-                  )}
-                  {job.contract_type && (
-                    <Badge variant="secondary" className="gap-1">
-                      <FileText className="h-3 w-3" />
-                      {CONTRACT_TYPE_LABELS[job.contract_type as JobContractType] || job.contract_type}
-                    </Badge>
-                  )}
-                  {job.seniority && (
-                    <Badge variant="secondary" className="gap-1">
-                      <GraduationCap className="h-3 w-3" />
-                      {JOB_SENIORITY_LABELS[job.seniority as JobSeniority] || job.seniority}
-                    </Badge>
-                  )}
-                  {job.unit && (
-                    <Badge variant="outline" className="gap-1">
-                      <Building className="h-3 w-3" />
-                      {job.unit}
-                    </Badge>
-                  )}
-                  {job.department && (
-                    <Badge variant="outline" className="gap-1">
-                      <Briefcase className="h-3 w-3" />
-                      {job.department}
-                    </Badge>
-                  )}
-                  {job.openings_count && job.openings_count > 1 && (
-                    <Badge variant="outline" className="gap-1">
-                      <Users className="h-3 w-3" />
-                      {job.openings_count} vagas
-                    </Badge>
-                  )}
+    <div
+      className="min-h-screen overflow-x-hidden"
+      style={{
+        background: BG,
+        color: CARD,
+        fontFamily: SANS,
+        backgroundImage: `radial-gradient(circle at 20% 0%, ${GOLD}15, transparent 50%), radial-gradient(circle at 80% 100%, ${GOLD}10, transparent 50%)`,
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
+      {/* HERO */}
+      <header className="relative overflow-hidden" style={{ background: `linear-gradient(180deg, ${BG_DEEP} 0%, ${BG} 100%)` }}>
+        <div
+          className="absolute inset-0 opacity-[0.08] pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(${GOLD} 1px, transparent 1px)`,
+            backgroundSize: "32px 32px",
+          }}
+        />
+        <div className="relative max-w-5xl mx-auto px-5 sm:px-6 pt-10 pb-12 sm:pt-12 sm:pb-16 md:pt-16 md:pb-20">
+          <div className="flex justify-center mb-8 sm:mb-10">
+            <img src={letreiro.url} alt="Eternum" className="h-6 sm:h-7 md:h-9 object-contain opacity-95" />
+          </div>
+
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-5 sm:mb-6">
+            <span className="h-px w-10 sm:w-12" style={{ background: GOLD }} />
+            <span
+              className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-light"
+              style={{ color: GOLD, fontFamily: SANS }}
+            >
+              Vaga aberta · {job.department || "Eternum"}
+            </span>
+            <span className="h-px w-10 sm:w-12" style={{ background: GOLD }} />
+          </div>
+
+          <h1
+            className="text-center text-[30px] leading-[1.15] sm:text-4xl md:text-5xl lg:text-6xl max-w-3xl mx-auto pb-3"
+            style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
+          >
+            {job.title}
+          </h1>
+          <p
+            className="text-center text-[15px] sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed mt-4"
+            style={{ color: "#e8dcc0", fontFamily: SERIF, fontWeight: 300, fontStyle: "italic", opacity: 0.85 }}
+          >
+            Esta pode ser a sua cadeira. Conte-nos quem você é.
+          </p>
+
+          {/* Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-8 sm:mt-10">
+            {job.work_model && (
+              <span className="text-[11px] uppercase tracking-[0.2em] px-3 py-1.5 rounded-sm flex items-center gap-1.5"
+                style={{ background: `${BG_DEEP}aa`, border: `1px solid ${GOLD}55`, color: CARD }}>
+                <MapPin className="h-3 w-3" style={{ color: GOLD }} />
+                {WORK_MODEL_LABELS[job.work_model as WorkModel] || job.work_model}
+              </span>
+            )}
+            {job.contract_type && (
+              <span className="text-[11px] uppercase tracking-[0.2em] px-3 py-1.5 rounded-sm flex items-center gap-1.5"
+                style={{ background: `${BG_DEEP}aa`, border: `1px solid ${GOLD}55`, color: CARD }}>
+                <FileText className="h-3 w-3" style={{ color: GOLD }} />
+                {CONTRACT_TYPE_LABELS[job.contract_type as JobContractType] || job.contract_type}
+              </span>
+            )}
+            {job.seniority && (
+              <span className="text-[11px] uppercase tracking-[0.2em] px-3 py-1.5 rounded-sm flex items-center gap-1.5"
+                style={{ background: `${BG_DEEP}aa`, border: `1px solid ${GOLD}55`, color: CARD }}>
+                <GraduationCap className="h-3 w-3" style={{ color: GOLD }} />
+                {JOB_SENIORITY_LABELS[job.seniority as JobSeniority] || job.seniority}
+              </span>
+            )}
+            {job.unit && (
+              <span className="text-[11px] uppercase tracking-[0.2em] px-3 py-1.5 rounded-sm flex items-center gap-1.5"
+                style={{ background: `${BG_DEEP}aa`, border: `1px solid ${GOLD}55`, color: CARD }}>
+                <Building className="h-3 w-3" style={{ color: GOLD }} />
+                {job.unit}
+              </span>
+            )}
+            {job.openings_count && job.openings_count > 1 && (
+              <span className="text-[11px] uppercase tracking-[0.2em] px-3 py-1.5 rounded-sm flex items-center gap-1.5"
+                style={{ background: `${BG_DEEP}aa`, border: `1px solid ${GOLD}55`, color: CARD }}>
+                <Users className="h-3 w-3" style={{ color: GOLD }} />
+                {job.openings_count} vagas
+              </span>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* CORPO */}
+      <main className="max-w-4xl mx-auto px-5 sm:px-6 py-12 sm:py-16 md:py-20 space-y-14 sm:space-y-20">
+        {/* SOBRE A VAGA */}
+        {job.description && (
+          <motion.section initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
+            <SectionLabel>Sobre a vaga</SectionLabel>
+            <div className="grid md:grid-cols-5 gap-8 items-start">
+              <div className="md:col-span-3 space-y-4">
+                {job.description.split("\n").filter(Boolean).map((p, i) => (
+                  <p
+                    key={i}
+                    className="text-[15px] md:text-base leading-relaxed"
+                    style={{ fontFamily: SERIF, color: "#e8dcc0", fontWeight: 300 }}
+                  >
+                    {p}
+                  </p>
+                ))}
+              </div>
+              <div className="md:col-span-2">
+                <div
+                  className="relative rounded-sm overflow-hidden"
+                  style={{ boxShadow: `0 20px 60px -20px rgba(0,0,0,0.6), 0 0 0 1px ${GOLD}30` }}
+                >
+                  <img src={everBru.url} alt="Fundadores da Eternum" className="w-full h-auto block" />
+                  <div className="absolute inset-0 pointer-events-none" style={{ background: `linear-gradient(180deg, transparent 60%, ${BG_DEEP}cc)` }} />
+                  <div className="absolute bottom-3 left-4 right-4" style={{ color: CARD }}>
+                    <p className="text-[10px] uppercase tracking-[0.3em]" style={{ color: GOLD }}>Fundadores</p>
+                    <p className="text-sm mt-1" style={{ fontFamily: SERIF }}>Ever & Bruna</p>
+                  </div>
                 </div>
               </div>
-            </CardHeader>
-          </Card>
-        </motion.div>
-
-        {/* Job Description */}
-        {job.description && (
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Sobre a Vaga</CardTitle></CardHeader>
-              <CardContent>
-                <div className="prose prose-sm max-w-none whitespace-pre-wrap">{job.description}</div>
-              </CardContent>
-            </Card>
-          </motion.div>
+            </div>
+          </motion.section>
         )}
 
-        {/* Requirements & Skills */}
+        {/* DETALHES */}
+        <motion.section initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
+          <SectionLabel>Detalhes da posição</SectionLabel>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {job.work_model && <DetailCard icon={<Briefcase className="h-4 w-4" />} label="Modelo de trabalho" value={WORK_MODEL_LABELS[job.work_model as WorkModel] || job.work_model} />}
+            {job.contract_type && <DetailCard icon={<FileText className="h-4 w-4" />} label="Contratação" value={CONTRACT_TYPE_LABELS[job.contract_type as JobContractType] || job.contract_type} />}
+            {job.seniority && <DetailCard icon={<GraduationCap className="h-4 w-4" />} label="Senioridade" value={JOB_SENIORITY_LABELS[job.seniority as JobSeniority] || job.seniority} />}
+            {job.unit && <DetailCard icon={<MapPin className="h-4 w-4" />} label="Local" value={job.unit} />}
+            {job.department && <DetailCard icon={<Building className="h-4 w-4" />} label="Área" value={job.department} />}
+            {job.openings_count && job.openings_count > 1 && <DetailCard icon={<Users className="h-4 w-4" />} label="Vagas abertas" value={`${job.openings_count} posições`} />}
+          </div>
+        </motion.section>
+
+        {/* REQUISITOS */}
         {(job.required_skills?.length > 0 || job.desired_skills?.length > 0 || job.requirements) && (
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Requisitos</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                {job.requirements && <div className="prose prose-sm max-w-none whitespace-pre-wrap">{job.requirements}</div>}
-                {job.required_skills?.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">Habilidades obrigatórias:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {job.required_skills.map(s => <Badge key={s} variant="default">{s}</Badge>)}
-                    </div>
+          <motion.section initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
+            <SectionLabel>O que buscamos</SectionLabel>
+            <div
+              className="rounded-sm p-6 sm:p-8 space-y-5"
+              style={{ background: `${BG_DEEP}66`, border: `1px solid ${GOLD}33` }}
+            >
+              {job.requirements && (
+                <div className="space-y-3">
+                  {job.requirements.split("\n").filter(Boolean).map((p, i) => (
+                    <p key={i} className="text-[15px] leading-relaxed" style={{ fontFamily: SERIF, color: "#e8dcc0", fontWeight: 300 }}>
+                      {p}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {job.required_skills?.length > 0 && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] mb-3" style={{ color: GOLD, fontWeight: 600 }}>Indispensáveis</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {job.required_skills.map(s => (
+                      <span key={s} className="text-xs px-2.5 py-1 rounded-sm"
+                        style={{ background: GOLD, color: TEXT_DARK, fontWeight: 600, fontFamily: SANS }}>
+                        {s}
+                      </span>
+                    ))}
                   </div>
-                )}
-                {job.desired_skills?.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">Habilidades desejáveis:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {job.desired_skills.map(s => <Badge key={s} variant="outline">{s}</Badge>)}
-                    </div>
+                </div>
+              )}
+              {job.desired_skills?.length > 0 && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] mb-3" style={{ color: GOLD, fontWeight: 600 }}>Diferenciais</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {job.desired_skills.map(s => (
+                      <span key={s} className="text-xs px-2.5 py-1 rounded-sm"
+                        style={{ background: "transparent", border: `1px solid ${GOLD}66`, color: CARD, fontFamily: SANS }}>
+                        {s}
+                      </span>
+                    ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+                </div>
+              )}
+            </div>
+          </motion.section>
         )}
 
-        {/* Benefits */}
+        {/* BENEFÍCIOS */}
         {job.benefits?.length > 0 && (
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Benefícios</CardTitle></CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-1.5">
-                  {job.benefits.map(b => <Badge key={b} variant="secondary">{b}</Badge>)}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <motion.section initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 }}>
+            <SectionLabel>O que oferecemos</SectionLabel>
+            <div className="flex flex-wrap justify-center gap-2">
+              {job.benefits.map(b => (
+                <span
+                  key={b}
+                  className="text-sm px-4 py-2 rounded-sm"
+                  style={{
+                    background: `linear-gradient(135deg, ${CARD} 0%, ${CARD_SOFT} 100%)`,
+                    color: TEXT_DARK,
+                    fontFamily: SERIF,
+                    boxShadow: `0 4px 14px -6px rgba(0,0,0,0.4), inset 0 0 0 1px ${GOLD}40`,
+                  }}
+                >
+                  {b}
+                </span>
+              ))}
+            </div>
+          </motion.section>
         )}
 
-        <Separator />
+        {/* FORMULÁRIO */}
+        <motion.section initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
+          <SectionLabel>Candidate-se</SectionLabel>
+          <div
+            className="rounded-sm p-6 sm:p-10 md:p-12 relative"
+            style={{
+              background: `linear-gradient(135deg, ${CARD} 0%, ${CARD_SOFT} 100%)`,
+              boxShadow: `0 30px 80px -30px rgba(0,0,0,0.5), inset 0 0 0 1px ${GOLD}40`,
+            }}
+          >
+            <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
 
-        {/* Application Form */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 }}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Candidatar-se</CardTitle>
-              <p className="text-sm text-muted-foreground">Preencha seus dados para se candidatar a esta vaga</p>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Personal Info */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Dados Pessoais</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nome Completo *</Label>
-                      <Input id="name" value={formData.candidate_name} onChange={e => updateField("candidate_name", e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">E-mail *</Label>
-                      <Input id="email" type="email" value={formData.candidate_email} onChange={e => updateField("candidate_email", e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Telefone</Label>
-                      <Input id="phone" value={formData.candidate_phone} onChange={e => updateField("candidate_phone", e.target.value)} placeholder="(00) 00000-0000" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-2 space-y-2">
-                        <Label htmlFor="city">Cidade</Label>
-                        <Input id="city" value={formData.candidate_city} onChange={e => updateField("candidate_city", e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="state">UF</Label>
-                        <Select value={formData.candidate_state} onValueChange={v => updateField("candidate_state", v)}>
-                          <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
-                          <SelectContent>
-                            {BRAZILIAN_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
+            <div className="text-center mb-8">
+              <p className="text-[10px] uppercase tracking-[0.35em] mb-3" style={{ color: GOLD, fontWeight: 600 }}>
+                Sua história começa aqui
+              </p>
+              <h3 className="text-2xl sm:text-3xl" style={{ fontFamily: SERIF, color: TEXT_DARK, fontWeight: 400 }}>
+                Preencha com calma. A gente lê tudo.
+              </h3>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-8" style={{ color: TEXT_DARK }}>
+              {/* Dados Pessoais */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                  <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: GOLD, fontWeight: 700, fontFamily: SANS }}>Dados pessoais</span>
+                  <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
                 </div>
-
-                {/* Professional Info */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Informações Profissionais</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="position">Cargo Desejado</Label>
-                      <Input id="position" value={formData.desired_position} onChange={e => updateField("desired_position", e.target.value)} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name" className="text-[11px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, fontFamily: SANS, fontWeight: 600 }}>Nome completo *</Label>
+                    <Input id="name" value={formData.candidate_name} onChange={e => updateField("candidate_name", e.target.value)} required
+                      className="bg-white/70 border-[1.5px]"
+                      style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-[11px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, fontFamily: SANS, fontWeight: 600 }}>E-mail *</Label>
+                    <Input id="email" type="email" value={formData.candidate_email} onChange={e => updateField("candidate_email", e.target.value)} required
+                      className="bg-white/70 border-[1.5px]"
+                      style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone" className="text-[11px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, fontFamily: SANS, fontWeight: 600 }}>WhatsApp</Label>
+                    <Input id="phone" value={formData.candidate_phone} onChange={e => updateField("candidate_phone", e.target.value)} placeholder="(00) 00000-0000"
+                      className="bg-white/70 border-[1.5px]"
+                      style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2 space-y-1.5">
+                      <Label htmlFor="city" className="text-[11px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, fontFamily: SANS, fontWeight: 600 }}>Cidade</Label>
+                      <Input id="city" value={formData.candidate_city} onChange={e => updateField("candidate_city", e.target.value)}
+                        className="bg-white/70 border-[1.5px]"
+                        style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }} />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="seniority">Senioridade</Label>
-                      <Select value={formData.desired_seniority} onValueChange={v => updateField("desired_seniority", v)}>
-                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="state" className="text-[11px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, fontFamily: SANS, fontWeight: 600 }}>UF</Label>
+                      <Select value={formData.candidate_state} onValueChange={v => updateField("candidate_state", v)}>
+                        <SelectTrigger className="bg-white/70 border-[1.5px]" style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }}>
+                          <SelectValue placeholder="UF" />
+                        </SelectTrigger>
                         <SelectContent>
-                          {Object.entries(JOB_SENIORITY_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                          {BRAZILIAN_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Resume Upload */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Currículo</h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="resume">Anexar Currículo (PDF, DOC, DOCX - máx. 10MB)</Label>
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
-                      <input
-                        id="resume"
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        className="hidden"
-                        onChange={e => setResumeFile(e.target.files?.[0] || null)}
+              {/* Profissionais */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                  <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: GOLD, fontWeight: 700, fontFamily: SANS }}>Trajetória</span>
+                  <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="position" className="text-[11px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, fontFamily: SANS, fontWeight: 600 }}>Cargo atual ou desejado</Label>
+                    <Input id="position" value={formData.desired_position} onChange={e => updateField("desired_position", e.target.value)}
+                      className="bg-white/70 border-[1.5px]"
+                      style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="seniority" className="text-[11px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, fontFamily: SANS, fontWeight: 600 }}>Senioridade</Label>
+                    <Select value={formData.desired_seniority} onValueChange={v => updateField("desired_seniority", v)}>
+                      <SelectTrigger className="bg-white/70 border-[1.5px]" style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }}>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(JOB_SENIORITY_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Currículo */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                  <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: GOLD, fontWeight: 700, fontFamily: SANS }}>Currículo</span>
+                  <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                </div>
+                <input
+                  id="resume"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="hidden"
+                  onChange={e => setResumeFile(e.target.files?.[0] || null)}
+                />
+                <label
+                  htmlFor="resume"
+                  className="cursor-pointer block rounded-sm p-8 text-center transition-all hover:scale-[1.01]"
+                  style={{
+                    background: "rgba(255,255,255,0.45)",
+                    border: `1.5px dashed ${GOLD}99`,
+                  }}
+                >
+                  <Upload className="h-7 w-7 mx-auto mb-3" style={{ color: GOLD }} />
+                  {resumeFile ? (
+                    <p className="text-sm font-medium" style={{ color: TEXT_DARK, fontFamily: SANS }}>{resumeFile.name}</p>
+                  ) : (
+                    <>
+                      <p className="text-sm" style={{ color: TEXT_DARK, fontFamily: SANS, fontWeight: 500 }}>Anexar currículo</p>
+                      <p className="text-xs mt-1" style={{ color: TEXT_DARK, opacity: 0.6, fontFamily: SANS }}>PDF, DOC ou DOCX · até 10MB</p>
+                    </>
+                  )}
+                </label>
+              </div>
+
+              {/* Carta */}
+              {job.require_cover_letter && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                    <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: GOLD, fontWeight: 700, fontFamily: SANS }}>Carta de apresentação</span>
+                    <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                  </div>
+                  <Textarea
+                    value={formData.cover_letter}
+                    onChange={e => updateField("cover_letter", e.target.value)}
+                    placeholder="Conte sua história. O que te move, o que você busca, por que essa vaga..."
+                    rows={6}
+                    className="bg-white/70 border-[1.5px] resize-none"
+                    style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SERIF, fontStyle: "italic" }}
+                  />
+                </div>
+              )}
+
+              {/* PCD */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="pcd"
+                    checked={formData.candidate_pcd}
+                    onCheckedChange={v => updateField("candidate_pcd", !!v)}
+                    style={{ borderColor: GOLD }}
+                  />
+                  <Label htmlFor="pcd" className="cursor-pointer text-sm" style={{ color: TEXT_DARK, fontFamily: SANS }}>
+                    Sou pessoa com deficiência (PCD)
+                  </Label>
+                </div>
+                <AnimatePresence>
+                  {formData.candidate_pcd && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                      <Input
+                        placeholder="Tipo de deficiência"
+                        value={formData.candidate_pcd_type}
+                        onChange={e => updateField("candidate_pcd_type", e.target.value)}
+                        className="bg-white/70 border-[1.5px]"
+                        style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }}
                       />
-                      <label htmlFor="resume" className="cursor-pointer space-y-2 block">
-                        <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
-                        {resumeFile ? (
-                          <p className="text-sm font-medium text-primary">{resumeFile.name}</p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Clique para selecionar ou arraste seu currículo</p>
-                        )}
-                      </label>
-                    </div>
-                  </div>
-                </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
-                {/* Cover Letter */}
-                {job.require_cover_letter && (
-                  <div className="space-y-4">
-                    <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Carta de Apresentação</h3>
-                    <Textarea
-                      value={formData.cover_letter}
-                      onChange={e => updateField("cover_letter", e.target.value)}
-                      placeholder="Conte-nos por que você é o candidato ideal para esta vaga..."
-                      rows={5}
-                    />
-                  </div>
-                )}
-
-                {/* PCD */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Diversidade</h3>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="pcd"
-                      checked={formData.candidate_pcd}
-                      onCheckedChange={v => updateField("candidate_pcd", !!v)}
-                    />
-                    <Label htmlFor="pcd" className="cursor-pointer">Pessoa com deficiência (PCD)</Label>
-                  </div>
-                  <AnimatePresence>
-                    {formData.candidate_pcd && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
-                        <Input
-                          placeholder="Tipo de deficiência"
-                          value={formData.candidate_pcd_type}
-                          onChange={e => updateField("candidate_pcd_type", e.target.value)}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                <Button type="submit" className="w-full" size="lg" disabled={submitting}>
-                  {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</> : "Enviar Candidatura"}
+              <div className="pt-4">
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={submitting}
+                  className="w-full text-sm uppercase tracking-[0.3em] h-14 rounded-sm border-0 hover:opacity-90 transition-opacity"
+                  style={{
+                    background: `linear-gradient(135deg, ${TEXT_DARK} 0%, ${BG} 100%)`,
+                    color: CARD,
+                    fontFamily: SANS,
+                    fontWeight: 600,
+                    boxShadow: `0 10px 30px -10px rgba(0,0,0,0.5), inset 0 0 0 1px ${GOLD}`,
+                  }}
+                >
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando…</>
+                  ) : (
+                    "Enviar candidatura"
+                  )}
                 </Button>
-
-                <p className="text-xs text-center text-muted-foreground">
-                  Ao enviar sua candidatura, você concorda com o tratamento dos seus dados conforme a LGPD.
+                <p className="text-[11px] text-center mt-4" style={{ color: TEXT_DARK, opacity: 0.6, fontFamily: SANS }}>
+                  Ao enviar, você concorda com o tratamento dos seus dados conforme a LGPD.
                 </p>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+              </div>
+            </form>
+          </div>
+        </motion.section>
+
+        <div className="pt-4 pb-2 text-center">
+          <span className="text-[10px] uppercase tracking-[0.4em]" style={{ color: GOLD, fontFamily: SANS }}>
+            Eternum · Cada cadeira tem um nome
+          </span>
+        </div>
+      </main>
     </div>
   );
 }
