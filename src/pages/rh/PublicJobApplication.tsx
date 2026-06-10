@@ -195,8 +195,15 @@ export default function PublicJobApplication() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState<ApplicationFormData>(INITIAL_FORM);
+  const [screeningAnswers, setScreeningAnswers] = useState<Record<string, string>>({});
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const screeningQuestions: ScreeningQuestion[] = (() => {
+    const custom = (job as any)?.screening_questions;
+    if (Array.isArray(custom) && custom.length > 0) return custom as ScreeningQuestion[];
+    return DEFAULT_SCREENING_QUESTIONS;
+  })();
 
   useEffect(() => {
     if (!id) return;
