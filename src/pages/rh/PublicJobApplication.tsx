@@ -714,8 +714,71 @@ export default function PublicJobApplication() {
                 </label>
               </div>
 
+              {/* Perguntas de triagem */}
+              {screeningQuestions.length > 0 && (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                    <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: GOLD, fontWeight: 700, fontFamily: SANS }}>Sobre você & a vaga</span>
+                    <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
+                  </div>
+                  <p className="text-[13px] text-center -mt-2" style={{ color: TEXT_DARK, opacity: 0.7, fontFamily: SERIF, fontStyle: "italic" }}>
+                    Responda com calma e na sua voz. Respostas genéricas (ou de IA) ficam evidentes.
+                  </p>
+                  {screeningQuestions.map((q, idx) => {
+                    const value = screeningAnswers[q.id] || "";
+                    const showCounter = q.type === "textarea" && q.minLength;
+                    return (
+                      <div key={q.id} className="space-y-2">
+                        <Label
+                          className="text-[13px] leading-snug block"
+                          style={{ color: TEXT_DARK, fontFamily: SERIF, fontWeight: 600 }}
+                        >
+                          <span style={{ color: GOLD, fontFamily: SANS, fontWeight: 700, marginRight: 8 }}>
+                            {String(idx + 1).padStart(2, "0")}
+                          </span>
+                          {q.label}
+                          {q.required && <span style={{ color: GOLD }}> *</span>}
+                        </Label>
+                        {q.helper && (
+                          <p className="text-[12px]" style={{ color: TEXT_DARK, opacity: 0.6, fontFamily: SANS }}>
+                            {q.helper}
+                          </p>
+                        )}
+                        {q.type === "text" ? (
+                          <Input
+                            value={value}
+                            onChange={e => setScreeningAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                            className="bg-white/70 border-[1.5px]"
+                            style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }}
+                          />
+                        ) : (
+                          <Textarea
+                            value={value}
+                            onChange={e => setScreeningAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                            rows={5}
+                            className="bg-white/70 border-[1.5px] resize-none"
+                            style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SERIF }}
+                          />
+                        )}
+                        {showCounter && (
+                          <p className="text-[11px] text-right" style={{
+                            color: value.length >= (q.minLength || 0) ? GOLD : TEXT_DARK,
+                            opacity: value.length >= (q.minLength || 0) ? 1 : 0.55,
+                            fontFamily: SANS,
+                          }}>
+                            {value.length} / mín. {q.minLength}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Carta */}
               {job.require_cover_letter && (
+
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="h-px flex-1" style={{ background: `${GOLD}55` }} />
