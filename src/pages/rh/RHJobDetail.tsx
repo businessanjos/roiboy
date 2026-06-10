@@ -145,7 +145,7 @@ export default function RHJobDetail() {
   const { data: job, isLoading } = useHRJobById(id);
   const [copied, setCopied] = useState(false);
   const [offers, setOffers] = useState<JobOfferRow[]>([]);
-  const applicationUrl = `${window.location.origin}/rh/vacancies/${id}/aplicar`;
+  const applicationUrl = `${getPublicOrigin()}/rh/vacancies/${id}/aplicar`;
 
   useEffect(() => {
     if (!id) return;
