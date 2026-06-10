@@ -6,9 +6,10 @@ interface JobWizardStepsProps {
   currentStep: number;
   onStepClick?: (step: number) => void;
   completedSteps?: number[];
+  allowAllSteps?: boolean;
 }
 
-export function JobWizardSteps({ currentStep, onStepClick, completedSteps = [] }: JobWizardStepsProps) {
+export function JobWizardSteps({ currentStep, onStepClick, completedSteps = [], allowAllSteps = false }: JobWizardStepsProps) {
   const progress = ((currentStep - 1) / (JOB_WIZARD_STEPS.length - 1)) * 100;
 
   return (
@@ -21,7 +22,7 @@ export function JobWizardSteps({ currentStep, onStepClick, completedSteps = [] }
             const isCompleted = completedSteps.includes(step.id);
             const isCurrent = currentStep === step.id;
             const isPast = step.id < currentStep;
-            const isClickable = onStepClick && (isCompleted || isPast || isCurrent);
+            const isClickable = onStepClick && (allowAllSteps || isCompleted || isPast || isCurrent);
 
             return (
               <button
