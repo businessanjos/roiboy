@@ -240,6 +240,23 @@ export default function PublicJobApplication() {
       return;
     }
 
+    // Validação das perguntas de triagem
+    for (const q of screeningQuestions) {
+      const v = (screeningAnswers[q.id] || "").trim();
+      if (q.required && !v) {
+        toast({ title: "Responda com calma", description: `Falta responder: "${q.label}"`, variant: "destructive" });
+        return;
+      }
+      if (q.minLength && v.length < q.minLength) {
+        toast({
+          title: "Resposta muito curta",
+          description: `"${q.label}" precisa de pelo menos ${q.minLength} caracteres. Você escreveu ${v.length}.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       let resume_url: string | null = null;
