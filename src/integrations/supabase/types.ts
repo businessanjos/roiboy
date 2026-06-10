@@ -11124,6 +11124,7 @@ export type Database = {
         Row: {
           accent_color: string
           account_id: string
+          application_id: string | null
           benefits: string[]
           candidate_email: string | null
           candidate_name: string
@@ -11169,6 +11170,7 @@ export type Database = {
         Insert: {
           accent_color?: string
           account_id: string
+          application_id?: string | null
           benefits?: string[]
           candidate_email?: string | null
           candidate_name: string
@@ -11214,6 +11216,7 @@ export type Database = {
         Update: {
           accent_color?: string
           account_id?: string
+          application_id?: string | null
           benefits?: string[]
           candidate_email?: string | null
           candidate_name?: string
@@ -11257,6 +11260,13 @@ export type Database = {
           work_model?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "hr_job_offers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "hr_job_applications"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "hr_job_offers_job_id_fkey"
             columns: ["job_id"]
