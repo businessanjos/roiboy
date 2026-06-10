@@ -11359,7 +11359,6 @@ export type Database = {
           education_level: string | null
           expected_start_date: string | null
           experience_years: number | null
-          headcount: number
           hiring_manager_id: string | null
           id: string
           languages: Json | null
@@ -11401,7 +11400,6 @@ export type Database = {
           education_level?: string | null
           expected_start_date?: string | null
           experience_years?: number | null
-          headcount?: number
           hiring_manager_id?: string | null
           id?: string
           languages?: Json | null
@@ -11443,7 +11441,6 @@ export type Database = {
           education_level?: string | null
           expected_start_date?: string | null
           experience_years?: number | null
-          headcount?: number
           hiring_manager_id?: string | null
           id?: string
           languages?: Json | null
