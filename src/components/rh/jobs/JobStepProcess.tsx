@@ -208,7 +208,7 @@ export function JobStepProcess({ form, jobId }: Props) {
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground">Critérios de avaliação (um por linha)</label>
-                    <Textarea rows={3} value={(s.evaluation_criteria || []).join("\n")} onChange={e => updateStage(i, { evaluation_criteria: e.target.value.split("\n").map(l => l.trim()).filter(Boolean) })} placeholder="Ex: Experiência com SaaS B2B" />
+                    <Textarea rows={3} value={(s.evaluation_criteria || []).join("\n")} onChange={e => updateStage(i, { evaluation_criteria: e.target.value.split("\n") })} onBlur={e => updateStage(i, { evaluation_criteria: e.target.value.split("\n").map(l => l.trim()).filter(Boolean) })} placeholder="Ex: Experiência com SaaS B2B" />
                   </div>
                 </CardContent>
               </Card>
