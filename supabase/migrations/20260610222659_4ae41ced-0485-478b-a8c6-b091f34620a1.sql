@@ -1,0 +1,1 @@
+ALTER TABLE public.hr_jobs ADD COLUMN IF NOT EXISTS headcount integer NOT NULL DEFAULT 1 CHECK (headcount >= 1);

@@ -84,7 +84,12 @@ export default function RHVagas() {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">{job.title}</CardTitle>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <CardTitle className="text-lg truncate">{job.title}</CardTitle>
+                      {(job.openings_count ?? 1) > 1 && (
+                        <Badge variant="secondary" className="text-[10px] py-0">{job.openings_count} posições</Badge>
+                      )}
+                    </div>
                     {job.position && <p className="text-sm text-muted-foreground">{job.position}</p>}
                   </div>
                   <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>

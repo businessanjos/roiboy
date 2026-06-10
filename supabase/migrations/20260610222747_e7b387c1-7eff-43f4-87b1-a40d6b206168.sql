@@ -1,0 +1,1 @@
+ALTER TABLE public.hr_jobs DROP COLUMN IF EXISTS headcount;
