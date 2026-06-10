@@ -111,6 +111,8 @@ export default function RHJobForm() {
     if (isValid && currentStep < totalSteps) setCurrentStep(s => s + 1);
   };
 
+  const nullableUuid = (value?: string | null) => value && value.trim() ? value : null;
+
   const buildPayload = useCallback((values: JobFormData, status?: "draft" | "active") => ({
     title: values.title || "Sem título",
     description: values.description || null,
@@ -139,9 +141,9 @@ export default function RHJobForm() {
     urgency: values.urgency,
     require_cover_letter: values.require_cover_letter,
     tags: values.tags,
-    hiring_manager_id: values.hiring_manager_id,
-    recruiter_id: values.recruiter_id,
-    recruiter_provider_id: values.recruiter_provider_id,
+    hiring_manager_id: nullableUuid(values.hiring_manager_id),
+    recruiter_id: nullableUuid(values.recruiter_id),
+    recruiter_provider_id: nullableUuid(values.recruiter_provider_id),
     target_fill_date: values.target_fill_date?.toISOString().split("T")[0] || null,
     opening_reason: values.opening_reason || null,
   }), []);
