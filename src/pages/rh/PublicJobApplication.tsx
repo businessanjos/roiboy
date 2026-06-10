@@ -44,6 +44,21 @@ const INITIAL_FORM: ApplicationFormData = {
   candidate_pcd_type: "",
 };
 
+const DRAFT_STORAGE_PREFIX = "eternum:job-application-draft";
+const DRAFT_RETENTION_MS = 1000 * 60 * 60 * 24 * 14;
+
+function getDraftKey(jobId?: string) {
+  return jobId ? `${DRAFT_STORAGE_PREFIX}:${jobId}` : null;
+}
+
+function hasDraftContent(formData: ApplicationFormData, screeningAnswers: Record<string, string>) {
+  const hasFormContent = Object.values(formData).some(value =>
+    typeof value === "boolean" ? value : String(value || "").trim().length > 0
+  );
+  const hasScreeningContent = Object.values(screeningAnswers).some(value => String(value || "").trim().length > 0);
+  return hasFormContent || hasScreeningContent;
+}
+
 const BRAZILIAN_STATES = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
   "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
@@ -198,6 +213,7 @@ export default function PublicJobApplication() {
   const [screeningAnswers, setScreeningAnswers] = useState<Record<string, string>>({});
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
 
   const screeningQuestions: ScreeningQuestion[] = (() => {
     const custom = (job as any)?.screening_questions;
@@ -209,6 +225,44 @@ export default function PublicJobApplication() {
     if (!id) return;
     loadJob();
   }, [id]);
+
+  useEffect(() => {
+    const draftKey = getDraftKey(id);
+    if (!draftKey) return;
+
+    try {
+      const rawDraft = window.localStorage.getItem(draftKey);
+      if (!rawDraft) return;
+      const draft = JSON.parse(rawDraft) as {
+        formData?: Partial<ApplicationFormData>;
+        screeningAnswers?: Record<string, string>;
+        savedAt?: number;
+      };
+
+      if (!draft.savedAt || Date.now() - draft.savedAt > DRAFT_RETENTION_MS) {
+        window.localStorage.removeItem(draftKey);
+        return;
+      }
+
+      setFormData(prev => ({ ...prev, ...(draft.formData || {}) }));
+      setScreeningAnswers(draft.screeningAnswers || {});
+      setDraftRestored(true);
+    } catch {
+      window.localStorage.removeItem(draftKey);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    const draftKey = getDraftKey(id);
+    if (!draftKey || submitted) return;
+
+    if (!hasDraftContent(formData, screeningAnswers)) return;
+    const timer = window.setTimeout(() => {
+      window.localStorage.setItem(draftKey, JSON.stringify({ formData, screeningAnswers, savedAt: Date.now() }));
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [formData, id, screeningAnswers, submitted]);
 
   async function loadJob() {
     setLoading(true);
