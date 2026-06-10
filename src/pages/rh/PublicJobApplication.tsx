@@ -350,6 +350,8 @@ export default function PublicJobApplication() {
 
       if (insertError) throw insertError;
 
+      const draftKey = getDraftKey(id);
+      if (draftKey) window.localStorage.removeItem(draftKey);
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
@@ -688,6 +690,15 @@ export default function PublicJobApplication() {
                 isso vai ser fácil. Se não quer tanto assim — tudo bem, esse não é o seu lugar.
               </p>
             </div>
+
+            {draftRestored && (
+              <div
+                className="mb-6 rounded-sm px-4 py-3 text-center text-xs"
+                style={{ background: `${GOLD}22`, border: `1px solid ${GOLD}55`, color: TEXT_DARK, fontFamily: SANS }}
+              >
+                Rascunho recuperado automaticamente neste dispositivo.
+              </div>
+            )}
 
 
             <form onSubmit={handleSubmit} className="space-y-8" style={{ color: TEXT_DARK }}>
