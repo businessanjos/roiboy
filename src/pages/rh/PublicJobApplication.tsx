@@ -289,6 +289,7 @@ export default function PublicJobApplication() {
           candidate_pcd: formData.candidate_pcd,
           candidate_pcd_type: formData.candidate_pcd ? formData.candidate_pcd_type : null,
           resume_url,
+          screening_answers: screeningAnswers as any,
           stage: "applied",
           status: "active",
         });
