@@ -254,8 +254,9 @@ export default function RHJobForm() {
 
       </div>
 
-      <JobWizardSteps currentStep={currentStep} onStepClick={s => { if (s <= currentStep) setCurrentStep(s); }}
-        completedSteps={Array.from({ length: currentStep - 1 }, (_, i) => i + 1)} />
+      <JobWizardSteps currentStep={currentStep} onStepClick={setCurrentStep}
+        allowAllSteps={isEditing}
+        completedSteps={isEditing ? Array.from({ length: totalSteps }, (_, i) => i + 1) : Array.from({ length: currentStep - 1 }, (_, i) => i + 1)} />
 
       <Form {...form}>
         <form onSubmit={e => e.preventDefault()}>
