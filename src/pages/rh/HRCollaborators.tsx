@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
 import { exportPayrollCSV, exportPayrollXLSX } from "./components/payrollExport";
 
-const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br"];
+const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com"];
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   active: { label: "Ativo", variant: "default" },
