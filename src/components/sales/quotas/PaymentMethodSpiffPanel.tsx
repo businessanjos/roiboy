@@ -187,7 +187,7 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
     );
   }
 
-  const periodLabel = `${new Date(spiff.start_date).toLocaleDateString("pt-BR")} → ${new Date(spiff.end_date).toLocaleDateString("pt-BR")}`;
+  const periodLabel = `${monthLabel} (zera todo mês)`;
 
   return (
     <div className="rounded-lg border-2 border-purple-500/30 bg-purple-500/5 p-3 space-y-3">
