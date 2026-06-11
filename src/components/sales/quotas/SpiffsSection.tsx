@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1066,7 +1067,9 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
       if (error) throw error;
       let deals = (data ?? []) as Array<{ id: string; responsible_user_id: string | null; won_at: string | null }>;
 
-      // Filtro por produto-alvo da campanha (via custom field "Item da Venda")
+      // Filtro por produto-alvo da campanha (via custom field "Item da Venda").
+      // Valores legacy podem vir como slug (ex.: "rykas_mentoring") em vez de UUID,
+      // então resolvemos slug→UUID antes de comparar.
       if (targetProductId && deals.length > 0) {
         const dealIds = deals.map((d) => d.id);
         const { data: fvs } = await supabase
@@ -1074,7 +1077,11 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
           .select("deal_id, value_text")
           .eq("field_id", ITEM_DA_VENDA_FIELD_ID)
           .in("deal_id", dealIds);
-        const matchingIds = new Set((fvs ?? []).filter((f: any) => f.value_text === targetProductId).map((f: any) => f.deal_id));
+        const matchingIds = new Set(
+          (fvs ?? [])
+            .filter((f: any) => resolveItemVendaToProductId(f.value_text) === targetProductId)
+            .map((f: any) => f.deal_id)
+        );
         deals = deals.filter((d) => matchingIds.has(d.id));
       }
       return deals;

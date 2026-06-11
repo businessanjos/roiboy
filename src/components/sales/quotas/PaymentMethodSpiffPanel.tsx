@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { CreditCard } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
 
 // Custom field IDs (account 796e7970-...)
 const FORMA_PAGAMENTO_FIELD_ID = "b2cd2366-b990-43d9-a0b7-1b567fbed729";
@@ -97,7 +98,7 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
           .select("deal_id, value_text")
           .eq("field_id", ITEM_DA_VENDA_FIELD_ID)
           .in("deal_id", dealIds);
-        const matchingIds = new Set((fvs ?? []).filter((f: any) => f.value_text === spiff.product_id).map((f: any) => f.deal_id));
+        const matchingIds = new Set((fvs ?? []).filter((f: any) => resolveItemVendaToProductId(f.value_text) === spiff.product_id).map((f: any) => f.deal_id));
         deals = deals.filter((d: any) => matchingIds.has(d.id));
       }
       return deals;
