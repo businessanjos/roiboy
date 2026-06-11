@@ -8054,6 +8054,84 @@ export type Database = {
           },
         ]
       }
+      event_summaries: {
+        Row: {
+          account_id: string
+          ai_model: string | null
+          ai_tokens_input: number | null
+          ai_tokens_output: number | null
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          day_number: number
+          event_date: string | null
+          event_id: string
+          generated_content: Json
+          id: string
+          pdf_url: string | null
+          status: string
+          title: string | null
+          transcript_file_url: string | null
+          transcript_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          ai_model?: string | null
+          ai_tokens_input?: number | null
+          ai_tokens_output?: number | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          day_number?: number
+          event_date?: string | null
+          event_id: string
+          generated_content?: Json
+          id?: string
+          pdf_url?: string | null
+          status?: string
+          title?: string | null
+          transcript_file_url?: string | null
+          transcript_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          ai_model?: string | null
+          ai_tokens_input?: number | null
+          ai_tokens_output?: number | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          day_number?: number
+          event_date?: string | null
+          event_id?: string
+          generated_content?: Json
+          id?: string
+          pdf_url?: string | null
+          status?: string
+          title?: string | null
+          transcript_file_url?: string | null
+          transcript_text?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_summaries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_summaries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_supplier_quotes: {
         Row: {
           account_id: string
