@@ -16,7 +16,7 @@ import { TERMINATION_TYPE_LABELS } from "@/lib/rescissionCalc";
 import OffboardingDrawer from "@/components/rh/offboarding/OffboardingDrawer";
 import NewOffboardingDialog from "@/components/rh/offboarding/NewOffboardingDialog";
 
-const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br"];
+const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com"];
 
 export default function RHOffboarding() {
   const navigate = useNavigate();
