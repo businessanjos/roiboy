@@ -74,9 +74,19 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
     ? spiff.participant_user_ids
     : allCloserIds;
 
-  // Vendas ganhas no período
+  // Janela: mês corrente (SPIFFs zeram a cada mês), respeitando os limites da campanha.
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const campaignStart = new Date(spiff.start_date);
+  const campaignEnd = new Date(`${spiff.end_date}T23:59:59`);
+  const effectiveStart = monthStart > campaignStart ? monthStart : campaignStart;
+  const effectiveEnd = monthEnd < campaignEnd ? monthEnd : campaignEnd;
+  const monthLabel = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+  // Vendas ganhas no mês corrente
   const dealsQuery = useQuery({
-    queryKey: ["payment-spiff-deals", accountId, spiff.id, spiff.start_date, spiff.end_date, participantIds.join(",")],
+    queryKey: ["payment-spiff-deals", accountId, spiff.id, effectiveStart.toISOString(), effectiveEnd.toISOString(), participantIds.join(",")],
     queryFn: async () => {
       if (participantIds.length === 0) return [];
       const { data, error } = await supabase
@@ -85,12 +95,12 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
         .eq("account_id", accountId!)
         .eq("status", "won")
         .in("responsible_user_id", participantIds)
-        .gte("won_at", spiff.start_date)
-        .lte("won_at", `${spiff.end_date}T23:59:59`);
+        .gte("won_at", effectiveStart.toISOString())
+        .lte("won_at", effectiveEnd.toISOString());
       if (error) throw error;
       let deals = data ?? [];
 
-      // Filtro por produto-alvo via custom field "Item da Venda"
+      // Filtro por produto-alvo via custom field "Item da Venda" (resolve slug→UUID)
       if (spiff.product_id && deals.length > 0) {
         const dealIds = deals.map((d: any) => d.id);
         const { data: fvs } = await supabase
