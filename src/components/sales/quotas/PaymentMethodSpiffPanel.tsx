@@ -98,7 +98,7 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
           .select("deal_id, value_text")
           .eq("field_id", ITEM_DA_VENDA_FIELD_ID)
           .in("deal_id", dealIds);
-        const matchingIds = new Set((fvs ?? []).filter((f: any) => f.value_text === spiff.product_id).map((f: any) => f.deal_id));
+        const matchingIds = new Set((fvs ?? []).filter((f: any) => resolveItemVendaToProductId(f.value_text) === spiff.product_id).map((f: any) => f.deal_id));
         deals = deals.filter((d: any) => matchingIds.has(d.id));
       }
       return deals;
