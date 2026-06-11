@@ -1,79 +1,84 @@
-# Evolução da área de Vagas (RH)
+## O que será construído
 
-Hoje a vaga tem descrição, requisitos, salário e tags — mas falta clareza sobre **quem é o dono**, **quando precisa fechar**, **como é o processo** e **o que avaliar em cada candidato**. Vamos resolver isso em 4 frentes.
+Uma área nova dentro de **Eventos** para subir a transcrição de cada dia do evento, gerar o resumo via IA e exportar um PDF no padrão visual do "Resumo - Dia 1 - EC 15/03/2026" (capa com foto + DIA X + data, páginas creme com títulos dourados, citações em itálico com nome em negrito, blocos de destaque, rodapé "ETERNUM∞CLUB").
 
-## 1. Gestão da vaga (dono + prazo)
+## Fluxo de uso
 
-Adicionar no wizard (passo "Básico" e "Processo"):
-- **Gestor responsável (Hiring Manager)** — usuário do sistema que aprova candidatos.
-- **Recrutador responsável** — quem toca o processo (RH).
-- **Prazo ideal para fechar a vaga** (`target_fill_date`) — diferente de "prazo para candidatura".
-- **Data de abertura** automática + **dias em aberto** visível no card.
-- **Motivo da abertura**: nova posição / reposição / expansão.
-- Badge de **SLA** no card: verde (no prazo), amarelo (próximo do prazo), vermelho (atrasada).
+1. Em `Eventos → [evento] → aba "Resumos IA"` (ou nova rota `/events/:id/resumos`)
+2. Botão **"Novo resumo"** → escolhe Dia (1, 2, 3…), data, e cola a transcrição (textarea grande) **ou** faz upload de `.txt`/`.pdf`/`.docx`
+3. Clica em **"Gerar resumo com IA"** → edge function chama Gemini (Lovable AI Gateway) com um prompt estruturado que devolve JSON com seções (título da seção, parágrafos, citações com autor, destaques marcados, listas/cards)
+4. Tela de **preview editável** — pode ajustar textos, adicionar/remover seções, marcar citações
+5. Botão **"Exportar PDF"** → gera PDF client-side com `@react-pdf/renderer` no layout exato da referência
+6. Lista de resumos do evento com status (rascunho / gerado / publicado) e download rápido do PDF
 
-## 2. Etapas do processo (pipeline customizável por vaga)
+## Saída JSON da IA (formato)
 
-Hoje as etapas são fixas (`applied → screening → interview → technical_test → offer → hired`). Vamos permitir **etapas customizadas por vaga**, mantendo as default:
+```text
+{
+  "title": "DIA 1",
+  "date": "15/03/2026",
+  "sections": [
+    {
+      "heading": "Alinhamento de cultura e visão",
+      "blocks": [
+        { "type": "paragraph", "text": "..." },
+        { "type": "quote", "author": "Bruna Pieri", "text": "..." },
+        { "type": "highlight", "text": "Sem sacrifício, não há vitória." },
+        { "type": "list", "title": "6 canais clássicos", "items": ["...", "..."] }
+      ]
+    }
+  ]
+}
+```
 
-- Nova tabela `hr_job_stages` (job_id, name, order, type, sla_days, ai_focus).
-- Cada etapa tem:
-  - **Nome** (ex: "Entrevista com gestor", "Case prático", "Cultural fit")
-  - **SLA em dias** (quanto tempo o candidato pode ficar parado)
-  - **Responsável** (RH, gestor, técnico)
-  - **O que avaliar** (campo livre + sugerido pela IA)
-- Wizard ganha passo **"Processo Seletivo"** onde IA sugere etapas com base no cargo/senioridade.
+## Banco de dados
 
-## 3. IA: matching candidato ↔ vaga
+Tabela `event_summaries`:
+- `event_id` (FK events)
+- `day_number`, `event_date`
+- `transcript_text` (texto colado)
+- `transcript_file_url` (storage opcional)
+- `generated_content` (jsonb com a estrutura acima — editável)
+- `status` (draft / generated / published)
+- `pdf_url` (cache do último PDF, opcional)
+- `created_by`, `created_at`, `updated_at`
 
-Nova edge function `analyze-candidate-match` (Lovable AI, `google/gemini-3-flash-preview`):
+RLS: mesmas regras dos outros recursos de evento (acesso a quem tem acesso ao setor Eventos).
 
-**Input:** vaga (descrição, requisitos, etapas, o-que-avaliar) + currículo/resposta do candidato.
+## Edge function `generate-event-summary`
 
-**Output estruturado:**
-- `match_score` (0-100)
-- `strengths[]` — pontos fortes alinhados à vaga
-- `gaps[]` — lacunas vs requisitos
-- `red_flags[]` — alertas
-- `stage_focus[]` — por etapa: "o que investigar neste candidato"
-- `recommended_questions[]` — perguntas sugeridas para a entrevista
-- `verdict` — `strong_match` | `possible` | `weak` | `reject`
+- Recebe `summary_id` + `transcript_text`
+- Usa Lovable AI Gateway (`google/gemini-2.5-flash`) com prompt em PT-BR pedindo:
+  - Identificar blocos temáticos do dia
+  - Extrair citações literais de quem falou (Everton, Bruna, convidados)
+  - Marcar 3-6 frases-chave como `highlight`
+  - Listas e tabelas quando aparecerem
+  - Manter o tom editorial e direto da referência
+- Atualiza `generated_content` e marca `status = 'generated'`
 
-Exibido no detalhe do candidato (`RHJobDetail`) em um painel "Análise IA" + na coluna do Kanban como badge de score.
+## PDF (client-side com @react-pdf/renderer)
 
-## 4. IA: sugestão de etapas e critérios
+- Página A4 retrato, fundo creme `#FAF6EC`, cor de destaque dourada `#C9A86A`
+- Capa: imagem de fundo do evento (puxa de `events.cover_url` se existir, fallback gradiente escuro) + "DIA X" branco gigante + data dourada
+- Páginas internas: heading dourado bold, parágrafo serif/sans, citações em itálico com nome em bold, destaque em fundo amarelo-claro com `<mark>`, rodapé com logo "ETERNUM∞CLUB"
+- Fonte: Inter para corpo + uma display tipo "Poppins"/"DM Sans" para títulos (já que vai pro PDF, embedar via @react-pdf)
 
-Botão **"Sugerir etapas com IA"** no wizard, na etapa "Processo":
-- IA lê título + descrição + senioridade + contract_type.
-- Devolve 3-6 etapas com nome, SLA sugerido e bullets de "o que observar".
-- Usuário aceita / edita / remove.
+## Arquivos a criar/editar
 
----
+- `supabase/migrations/<ts>_event_summaries.sql` — tabela + RLS + grants
+- `supabase/functions/generate-event-summary/index.ts` — chama Gemini
+- `src/pages/events/EventSummariesList.tsx` — lista por evento
+- `src/pages/events/EventSummaryEditor.tsx` — editor + preview
+- `src/components/events/summary/SummaryPDF.tsx` — documento react-pdf
+- `src/components/events/summary/SummaryPreview.tsx` — preview HTML editável
+- `src/components/events/summary/SummaryBlockEditor.tsx` — adicionar/remover/editar blocos
+- Rota nova em `src/App.tsx` + entrada no menu lateral de Eventos
 
-## Detalhes técnicos
+## Confirmação necessária
 
-**Migrações:**
-1. `hr_jobs`: adicionar `hiring_manager_id uuid`, `recruiter_id uuid`, `target_fill_date date`, `opening_reason text`, `opened_at timestamptz default now()`.
-2. Nova tabela `hr_job_stages` (id, job_id, name, order_index, sla_days, owner_role, evaluation_criteria text[], ai_focus text). GRANTs + RLS por account.
-3. `hr_job_applications`: adicionar `current_stage_id uuid` (substitui gradualmente `stage` enum), `ai_match_score int`, `ai_match_report jsonb`, `stage_entered_at timestamptz`.
+Antes de partir pra implementação, só preciso confirmar **2 pontos**:
 
-**Edge functions novas:**
-- `suggest-job-stages` — gera etapas sugeridas.
-- `analyze-candidate-match` — análise candidato↔vaga.
+1. **Escopo do resumo**: por dia de evento (Dia 1, Dia 2…) — confirmando?
+2. **Imagem da capa**: usar a `cover_url` do evento + texto "DIA X" sobreposto, ou prefere fazer upload de uma foto específica pra capa de cada resumo (como foi feito no PDF de referência com a foto do hall)?
 
-**Frontend:**
-- `JobStepBasicInfo`: campos de gestor/recrutador/prazo.
-- Novo `JobStepProcess` (substitui o atual) com editor de etapas + botão IA.
-- `RHVagas` (lista): badge de SLA, contagem de dias em aberto, gestor visível.
-- `RHJobDetail`: painel "Análise IA" por candidato + foco por etapa.
-- Kanban: colunas dinâmicas (etapas da vaga) + badge de score IA.
-
----
-
-## Posso fazer tudo de uma vez, mas sugiro entregar em 2 PRs:
-
-**PR1 (rápido):** gestor + recrutador + prazo + opening_reason + SLA visual na lista. Sem mudar etapas.
-
-**PR2 (maior):** etapas customizadas + IA de sugestão + IA de match no candidato.
-
-Confirma se topa o plano e por qual PR começo (ou faço os dois seguidos)?
+Se confirmar, eu já implemento tudo de uma vez.
