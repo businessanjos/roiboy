@@ -33,7 +33,8 @@ import {
   MessageSquare,
   CheckCircle2,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Sparkles
 } from "lucide-react";
 import {
   AlertDialog,
@@ -59,6 +60,7 @@ import EventFeedbackTab from "@/components/events/EventFeedbackTab";
 import EventDesignTab from "@/components/events/EventDesignTab";
 import EventBriefingTab from "@/components/events/EventBriefingTab";
 import EventGalleryShareBar from "@/components/events/EventGalleryShareBar";
+import EventSummariesTab from "@/components/events/summary/EventSummariesTab";
 
 
 interface Event {
@@ -525,6 +527,10 @@ export default function EventDetail() {
               <MessageSquare className="h-4 w-4" />
               Feedback
             </TabsTrigger>
+            <TabsTrigger value="summaries" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <Sparkles className="h-4 w-4" />
+              Resumos IA
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -603,6 +609,15 @@ export default function EventDetail() {
 
         <TabsContent value="feedback">
           <EventFeedbackTab eventId={event.id} accountId={accountId} />
+        </TabsContent>
+
+        <TabsContent value="summaries">
+          <EventSummariesTab
+            eventId={event.id}
+            accountId={accountId}
+            eventCoverUrl={event.cover_image_url}
+            eventTitle={event.title}
+          />
         </TabsContent>
       </Tabs>
 
