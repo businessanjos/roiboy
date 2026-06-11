@@ -175,7 +175,7 @@ Deno.serve(async (req: Request) => {
         account_id: requestingProfile.account_id,
         name,
         email: email.toLowerCase(),
-        role: "mentor", // Default role for team members
+        role: "member", // Default role for team members (accepted: admin, gestor, member, viewer)
         team_role_id: team_role_id || null,
         is_also_admin: is_also_admin || false,
       })
