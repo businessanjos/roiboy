@@ -42,7 +42,7 @@ const STATUS_LABEL: Record<string, { label: string; variant: any }> = {
 };
 
 export default function EventSummariesTab({ eventId, accountId, eventCoverUrl, eventTitle }: Props) {
-  const { user } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [rows, setRows] = useState<SummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +100,7 @@ export default function EventSummariesTab({ eventId, accountId, eventCoverUrl, e
           transcript_text: form.transcript,
           title: `DIA ${form.day_number}`,
           cover_image_url: eventCoverUrl || null,
-          created_by: user?.id || null,
+          created_by: currentUser?.id || null,
           status: "draft",
         })
         .select()
@@ -156,7 +156,7 @@ export default function EventSummariesTab({ eventId, accountId, eventCoverUrl, e
     const { error } = await supabase
       .from("event_summaries")
       .update({
-        generated_content: editorDoc,
+        generated_content: editorDoc as any,
         title: editorDoc.title,
         cover_image_url: editorDoc.coverImageUrl || null,
       })
