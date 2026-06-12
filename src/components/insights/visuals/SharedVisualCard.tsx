@@ -1,11 +1,12 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, AlertTriangle } from "lucide-react";
+import { BarChart3, AlertTriangle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { ConfigurableChart } from "./ConfigurableChart";
 import { VisualConfig, ChartType } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
 import { getColumnsForDataSource, getDefaultColumns, type TableColumnDef } from "./ConfigurableTable";
 import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AggregatedDataPoint {
   name: string;
