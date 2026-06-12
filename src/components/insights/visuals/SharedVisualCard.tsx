@@ -247,7 +247,7 @@ export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys,
           <CardHeader className="pb-1 pt-3 px-3 flex-shrink-0">
             <CardTitle className="text-sm font-semibold truncate">{title}</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 min-h-0 overflow-auto p-0 px-2 pb-2">
+          <CardContent className="flex-1 min-h-0 overflow-hidden p-0 px-2 pb-2">
             <SharedDataTable config={config} records={drilldownData || []} />
           </CardContent>
         </Card>
