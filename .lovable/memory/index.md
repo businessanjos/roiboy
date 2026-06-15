@@ -17,6 +17,7 @@
 ## Memories
 
 ### Architecture & Auth
+- [Gestão Tech](mem://features/gestao-tech/core-pt) — Substitui Ever IA; sincroniza projetos via `roy-metrics` endpoint OU Stripe fallback; cron diário
 - [Global Header UI](mem://architecture/global-header-and-identity-pt) — Fixed header, simple user avatar, settings gear, clearSector on logo
 - [User Data Fetching](mem://architecture/user-data-fetching-pattern-pt) — `useCurrentUser` for safe auth context and `auth_user_id` for audits
 - [Client DB Schema Details](mem://architecture/database/client-data-structure-pt) — `emails` is array, `logo_url` for images, user `name` parsing quirks
