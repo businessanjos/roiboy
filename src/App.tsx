@@ -128,6 +128,7 @@ const SalesContractTemplates = lazyRetry(() => import("./pages/SalesContractTemp
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
 const RoyZappAttendanceMetrics = lazyRetry(() => import("./pages/RoyZappAttendanceMetrics"));
 const EverIA = lazyRetry(() => import("./pages/EverIA"));
+const GestaoTech = lazyRetry(() => import("./pages/GestaoTech"));
 
 const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
 const Contracts = lazyRetry(() => import("./pages/Contracts"));
