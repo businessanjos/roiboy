@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -26,7 +26,7 @@ import {
 } from "recharts";
 import {
   Activity, DollarSign, Users, Plus, RefreshCw, TrendingUp, Wallet,
-  ExternalLink, Pencil, Trash2, Loader2,
+  ExternalLink, Pencil, Trash2, Loader2, AlertTriangle,
 } from "lucide-react";
 
 const fmtBRL = (cents: number, currency = "BRL") =>
@@ -340,6 +340,11 @@ export default function GestaoTech() {
                   const arpu = snap && snap.active_subscriptions > 0
                     ? snap.mrr_cents / snap.active_subscriptions
                     : 0;
+                  // Endpoint antigo = não envia nenhum dos novos campos
+                  const isOutdated = !!snap && !snap.last_month_label
+                    && !snap.revenue_last_month_cents
+                    && !snap.revenue_current_month_cents
+                    && !snap.ai_messages_30d;
                   return (
                     <TableRow key={p.id}>
                       <TableCell>
@@ -350,6 +355,11 @@ export default function GestaoTech() {
                             <a href={p.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary">
                               <ExternalLink className="h-3 w-3" />
                             </a>
+                          )}
+                          {isOutdated && (
+                            <span title="Endpoint roy-metrics está rodando versão antiga. Faça o redeploy do template para liberar MRR/Faturamento/Mensagens IA." className="inline-flex items-center gap-1 text-amber-600 text-[10px] font-medium border border-amber-500/30 bg-amber-500/10 rounded px-1.5 py-0.5">
+                              <AlertTriangle className="h-3 w-3" /> endpoint v1
+                            </span>
                           )}
                         </div>
                         {p.plan && <p className="text-xs text-muted-foreground mt-0.5">{p.plan}</p>}
@@ -453,7 +463,7 @@ function ProjectDialog({
   const [form, setForm] = useState<Partial<TechProject>>({});
   const [saving, setSaving] = useState(false);
 
-  useMemo(() => {
+  useEffect(() => {
     if (open) {
       setForm(
         editing || {
