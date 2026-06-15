@@ -25,6 +25,7 @@ import { EditYouTubeVideoDialog } from './EditYouTubeVideoDialog';
 import { DeleteYouTubeVideoDialog } from './DeleteYouTubeVideoDialog';
 import { DeleteSocialProfileDialog } from './DeleteSocialProfileDialog';
 import { cn } from '@/lib/utils';
+import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAccessAlert';
 
 interface YouTubeTabProps {
   initialPostId?: string | null;
