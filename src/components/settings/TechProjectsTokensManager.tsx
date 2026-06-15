@@ -204,10 +204,28 @@ export function TechProjectsTokensManager() {
                       style={{ background: p.color || "#6366f1" }}
                     />
                     <div className="font-semibold">{p.name}</div>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className="h-3 w-3 rounded-full"
+                      style={{ background: p.color || "#6366f1" }}
+                    />
+                    <div className="font-semibold">{p.name}</div>
                     {hasToken ? (
                       <Badge variant="secondary">configurado · …{p.metrics_token_last4}</Badge>
                     ) : (
                       <Badge variant="outline">sem token</Badge>
+                    )}
+                    {validation[p.id] && (
+                      validation[p.id].ok ? (
+                        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> token válido
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="gap-1" title={validation[p.id].error}>
+                          <XCircle className="h-3 w-3" /> {validation[p.id].status || "erro"}
+                        </Badge>
+                      )
                     )}
                   </div>
                   {p.metrics_token_rotated_at && (
