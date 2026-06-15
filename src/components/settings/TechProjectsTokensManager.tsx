@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Eye, EyeOff, RefreshCw, Trash2, KeyRound, Loader2, Shuffle } from "lucide-react";
+import { Copy, Eye, EyeOff, RefreshCw, Trash2, KeyRound, Loader2, Shuffle, ShieldCheck, CheckCircle2, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -34,6 +34,30 @@ export function TechProjectsTokensManager() {
   const [loading, setLoading] = useState(true);
   const [revealed, setRevealed] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [validation, setValidation] = useState<Record<string, { ok: boolean; status?: number; message?: string; error?: string }>>({});
+
+  const validateTokens = async (projectId?: string) => {
+    setValidating(true);
+    const { data, error } = await (supabase as any).functions.invoke("tech-projects-sync", {
+      body: projectId ? { project_id: projectId, validate_only: true } : { sync_all: true, validate_only: true },
+    });
+    setValidating(false);
+    if (error) {
+      toast({ title: "Erro ao validar", description: error.message, variant: "destructive" });
+      return;
+    }
+    const next: Record<string, any> = { ...validation };
+    for (const r of (data?.results || [])) next[r.id] = r;
+    setValidation(next);
+    const okCount = (data?.results || []).filter((r: any) => r.ok).length;
+    const total = (data?.results || []).length;
+    toast({
+      title: `Validação concluída: ${okCount}/${total} OK`,
+      description: okCount < total ? "Veja os badges em cada projeto pra detalhes." : "Todos os tokens estão corretos.",
+      variant: okCount === total ? "default" : "destructive",
+    });
+  };
 
   const load = async () => {
     setLoading(true);
@@ -140,13 +164,21 @@ export function TechProjectsTokensManager() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <KeyRound className="h-5 w-5" /> Tokens Gestão Tech
-        </CardTitle>
-        <CardDescription>
-          Token usado pelo ROY pra puxar métricas de cada projeto. Criptografado em repouso (AES via pgcrypto).
-          Apenas administradores da conta podem ver, gerar ou rotacionar.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" /> Tokens Gestão Tech
+            </CardTitle>
+            <CardDescription>
+              Token usado pelo ROY pra puxar métricas de cada projeto. Criptografado em repouso (AES via pgcrypto).
+              Apenas administradores da conta podem ver, gerar ou rotacionar.
+            </CardDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => validateTokens()} disabled={validating || loading}>
+            {validating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1" />}
+            Validar todos
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {loading ? (
@@ -166,7 +198,8 @@ export function TechProjectsTokensManager() {
                 className="rounded-lg border border-border p-4 flex flex-col gap-3"
               >
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span
                       className="h-3 w-3 rounded-full"
                       style={{ background: p.color || "#6366f1" }}
@@ -176,6 +209,17 @@ export function TechProjectsTokensManager() {
                       <Badge variant="secondary">configurado · …{p.metrics_token_last4}</Badge>
                     ) : (
                       <Badge variant="outline">sem token</Badge>
+                    )}
+                    {validation[p.id] && (
+                      validation[p.id].ok ? (
+                        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> token válido
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="gap-1" title={validation[p.id].error}>
+                          <XCircle className="h-3 w-3" /> {validation[p.id].status || "erro"}
+                        </Badge>
+                      )
                     )}
                   </div>
                   {p.metrics_token_rotated_at && (
@@ -222,6 +266,12 @@ export function TechProjectsTokensManager() {
                     <RefreshCw className="h-4 w-4 mr-1" />
                     Definir manualmente
                   </Button>
+                  {hasToken && p.metrics_endpoint && (
+                    <Button size="sm" variant="outline" onClick={() => validateTokens(p.id)} disabled={validating || busy}>
+                      {validating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1" />}
+                      Validar
+                    </Button>
+                  )}
                   {hasToken && (
                     <Button
                       size="sm"
