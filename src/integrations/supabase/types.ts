@@ -20990,6 +20990,8 @@ export type Database = {
         Row: {
           account_id: string
           active_subscriptions: number
+          ai_cost_cents_30d: number
+          ai_tokens_30d: number
           arr_cents: number
           churned_subscriptions: number
           created_at: string
@@ -21006,6 +21008,8 @@ export type Database = {
         Insert: {
           account_id: string
           active_subscriptions?: number
+          ai_cost_cents_30d?: number
+          ai_tokens_30d?: number
           arr_cents?: number
           churned_subscriptions?: number
           created_at?: string
@@ -21022,6 +21026,8 @@ export type Database = {
         Update: {
           account_id?: string
           active_subscriptions?: number
+          ai_cost_cents_30d?: number
+          ai_tokens_30d?: number
           arr_cents?: number
           churned_subscriptions?: number
           created_at?: string
@@ -21053,6 +21059,8 @@ export type Database = {
           created_by: string | null
           currency: string
           id: string
+          metrics_endpoint: string | null
+          metrics_token_secret_name: string | null
           monthly_cost_cents: number
           name: string
           notes: string | null
@@ -21072,6 +21080,8 @@ export type Database = {
           created_by?: string | null
           currency?: string
           id?: string
+          metrics_endpoint?: string | null
+          metrics_token_secret_name?: string | null
           monthly_cost_cents?: number
           name: string
           notes?: string | null
@@ -21091,6 +21101,8 @@ export type Database = {
           created_by?: string | null
           currency?: string
           id?: string
+          metrics_endpoint?: string | null
+          metrics_token_secret_name?: string | null
           monthly_cost_cents?: number
           name?: string
           notes?: string | null

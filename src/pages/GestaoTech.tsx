@@ -57,6 +57,8 @@ interface TechProject {
   currency: string;
   stripe_secret_name: string | null;
   stripe_account_id: string | null;
+  metrics_endpoint: string | null;
+  metrics_token_secret_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -71,6 +73,8 @@ interface Snapshot {
   new_subscriptions: number;
   churned_subscriptions: number;
   revenue_last_30d_cents: number;
+  ai_tokens_30d: number;
+  ai_cost_cents_30d: number;
   currency: string;
   source: string;
 }
@@ -175,14 +179,17 @@ export default function GestaoTech() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const syncStripe = async (project: TechProject) => {
+  const syncProject = async (project: TechProject) => {
     setSyncing(project.id);
     try {
-      const { data, error } = await supabase.functions.invoke("tech-stripe-sync", {
+      const fn = project.metrics_endpoint ? "tech-projects-sync" : "tech-stripe-sync";
+      const { data, error } = await supabase.functions.invoke(fn, {
         body: { project_id: project.id },
       });
       if (error) throw error;
-      if (!(data as any)?.ok) throw new Error((data as any)?.error || "Falha ao sincronizar");
+      if (!(data as { ok?: boolean })?.ok) {
+        throw new Error((data as { error?: string })?.error || "Falha ao sincronizar");
+      }
       toast.success(`Sincronizado: ${project.name}`);
       qc.invalidateQueries({ queryKey: ["tech-snapshots"] });
     } catch (e) {
@@ -285,6 +292,7 @@ export default function GestaoTech() {
                   <TableHead className="text-right">MRR</TableHead>
                   <TableHead className="text-right">Assinantes</TableHead>
                   <TableHead className="text-right">Receita 30d</TableHead>
+                  <TableHead className="text-right">Tokens 30d</TableHead>
                   <TableHead className="text-right">Custo</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -316,10 +324,13 @@ export default function GestaoTech() {
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.mrr_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? snap.active_subscriptions : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.revenue_last_30d_cents, snap.currency) : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {snap?.ai_tokens_30d ? (snap.ai_tokens_30d / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + "k" : "—"}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{fmtBRL(p.monthly_cost_cents, p.currency)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => syncStripe(p)} disabled={syncing === p.id} title="Sincronizar Stripe">
+                          <Button size="sm" variant="ghost" onClick={() => syncProject(p)} disabled={syncing === p.id} title="Sincronizar">
                             {syncing === p.id
                               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               : <RefreshCw className="h-3.5 w-3.5" />}
@@ -422,7 +433,7 @@ function ProjectDialog({
     }
     setSaving(true);
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         account_id: accountId,
         name: form.name,
         slug: form.slug,
@@ -435,14 +446,16 @@ function ProjectDialog({
         monthly_cost_cents: Math.round(Number(form.monthly_cost_cents) || 0),
         currency: form.currency || "BRL",
         stripe_secret_name: form.stripe_secret_name || null,
+        metrics_endpoint: form.metrics_endpoint || null,
+        metrics_token_secret_name: form.metrics_token_secret_name || null,
       };
       if (editing) {
-        const { error } = await supabase.from("tech_projects").update(payload).eq("id", editing.id);
+        const { error } = await supabase.from("tech_projects").update(payload as never).eq("id", editing.id);
         if (error) throw error;
         toast.success("Projeto atualizado");
       } else {
         payload.created_by = userId;
-        const { error } = await supabase.from("tech_projects").insert(payload);
+        const { error } = await supabase.from("tech_projects").insert(payload as never);
         if (error) throw error;
         toast.success("Projeto criado");
       }
@@ -510,17 +523,32 @@ function ProjectDialog({
             <Label>Cor</Label>
             <Input type="color" value={form.color || "#6366f1"} onChange={(e) => setForm({ ...form, color: e.target.value })} />
           </div>
+          <div className="col-span-2">
+            <Label>Metrics endpoint (edge function roy-metrics do projeto)</Label>
+            <Input
+              value={form.metrics_endpoint || ""}
+              onChange={(e) => setForm({ ...form, metrics_endpoint: e.target.value })}
+              placeholder="https://<ref>.supabase.co/functions/v1/roy-metrics"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Quando preenchido, ROY puxa métricas direto do projeto em vez do Stripe.
+            </p>
+          </div>
           <div>
-            <Label>Stripe secret name</Label>
+            <Label>Token secret name (ROY)</Label>
+            <Input
+              value={form.metrics_token_secret_name || ""}
+              onChange={(e) => setForm({ ...form, metrics_token_secret_name: e.target.value })}
+              placeholder="ROY_METRICS_TOKEN"
+            />
+          </div>
+          <div>
+            <Label>Stripe secret name (fallback)</Label>
             <Input
               value={form.stripe_secret_name || ""}
               onChange={(e) => setForm({ ...form, stripe_secret_name: e.target.value })}
-              placeholder="STRIPE_SECRET_KEY ou STRIPE_KEY_PROJETO_X"
+              placeholder="STRIPE_SECRET_KEY"
             />
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Nome do secret cadastrado no projeto que contém a chave Stripe deste projeto.
-              Deixe em branco para usar a STRIPE_SECRET_KEY padrão.
-            </p>
           </div>
           <div className="col-span-2">
             <Label>Observações</Label>
