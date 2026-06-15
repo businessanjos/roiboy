@@ -34,6 +34,30 @@ export function TechProjectsTokensManager() {
   const [loading, setLoading] = useState(true);
   const [revealed, setRevealed] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [validation, setValidation] = useState<Record<string, { ok: boolean; status?: number; message?: string; error?: string }>>({});
+
+  const validateTokens = async (projectId?: string) => {
+    setValidating(true);
+    const { data, error } = await (supabase as any).functions.invoke("tech-projects-sync", {
+      body: projectId ? { project_id: projectId, validate_only: true } : { sync_all: true, validate_only: true },
+    });
+    setValidating(false);
+    if (error) {
+      toast({ title: "Erro ao validar", description: error.message, variant: "destructive" });
+      return;
+    }
+    const next: Record<string, any> = { ...validation };
+    for (const r of (data?.results || [])) next[r.id] = r;
+    setValidation(next);
+    const okCount = (data?.results || []).filter((r: any) => r.ok).length;
+    const total = (data?.results || []).length;
+    toast({
+      title: `Validação concluída: ${okCount}/${total} OK`,
+      description: okCount < total ? "Veja os badges em cada projeto pra detalhes." : "Todos os tokens estão corretos.",
+      variant: okCount === total ? "default" : "destructive",
+    });
+  };
 
   const load = async () => {
     setLoading(true);
