@@ -23826,6 +23826,7 @@ export type Database = {
         Args: { p_session_issued_at: string }
         Returns: boolean
       }
+      check_integration_access: { Args: never; Returns: Json }
       check_rate_limit: {
         Args: {
           p_action: string
@@ -24191,6 +24192,10 @@ export type Database = {
           p_new_installments: Json
           p_reason: string
         }
+        Returns: Json
+      }
+      request_integration_access: {
+        Args: { _platform: string; _reason?: string }
         Returns: Json
       }
       seed_clt_admission_docs: {
