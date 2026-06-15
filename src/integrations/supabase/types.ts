@@ -24428,6 +24428,10 @@ export type Database = {
         Args: { _project_id: string; _token: string }
         Returns: undefined
       }
+      tech_projects_set_token_internal: {
+        Args: { _project_id: string; _token: string }
+        Returns: undefined
+      }
       unaccent: { Args: { "": string }; Returns: string }
       unaccent_immutable: { Args: { p_text: string }; Returns: string }
       use_coupon: {
