@@ -46,6 +46,7 @@ export function ZappWhatsAppAdminPanel({ sectorId }: Props) {
           Gerencie todas as conexões UAZAPI e Meta Cloud API por setor.
         </p>
       </div>
+      <IntegrationAccessAlert platform="whatsapp" visibleCount={integrations.length} onReload={fetchIntegrations} />
       <WhatsAppSectorManager
         integrations={integrations}
         accountId={currentUser?.account_id || null}
