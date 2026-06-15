@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -64,6 +64,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { clearLocalAutosaveDraft, readLocalAutosaveDraft, writeLocalAutosaveDraft } from "@/hooks/useLocalAutosaveDraft";
 
 const dealSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -120,6 +121,12 @@ interface Product {
   price: number;
 }
 
+type DealDialogDraft = {
+  values: Partial<DealFormValues>;
+  selectedProductId?: string;
+  sendNotification?: boolean;
+};
+
 export function DealDialog({
   open,
   onOpenChange,
@@ -141,6 +148,9 @@ export function DealDialog({
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [newTag, setNewTag] = useState("");
   const [sendNotification, setSendNotification] = useState(false);
+  const initializedKeyRef = useRef<string | null>(null);
+  const wasOpenRef = useRef(false);
+  const skipAutosaveRef = useRef(false);
 
   const isEditing = !!deal;
   // Quando criando um novo deal, `deal` é undefined — não deve ser tratado como "fechado"
@@ -174,6 +184,10 @@ export function DealDialog({
       tags: [],
     },
   });
+
+  const draftKey = open && currentUser?.account_id
+    ? `roy:sales:deal-dialog-draft:${currentUser.account_id}:${deal?.id ?? `new:${currentUser?.id ?? "unknown"}`}`
+    : null;
 
   // Load clients, team members, and products with sector access
   useEffect(() => {
@@ -256,6 +270,12 @@ export function DealDialog({
       return;
     }
     const loadDealProduct = async () => {
+      const draft = readLocalAutosaveDraft<DealDialogDraft>(draftKey);
+      if (draft?.selectedProductId !== undefined) {
+        setSelectedProductId(draft.selectedProductId || "");
+        return;
+      }
+
       const { data } = await supabase
         .from('deal_field_values')
         .select('value_text')
@@ -281,10 +301,24 @@ export function DealDialog({
       }
     };
     loadDealProduct();
-  }, [deal?.id, currentUser?.account_id]);
+  }, [deal?.id, currentUser?.account_id, draftKey]);
 
-  // Reset form when deal changes
+  // Reset form only when opening/changing deal. Do not wipe active typing on background refetches.
   useEffect(() => {
+    if (!open) {
+      wasOpenRef.current = false;
+      initializedKeyRef.current = null;
+      return;
+    }
+
+    const initKey = deal?.id ?? `new:${currentUser?.id ?? "unknown"}`;
+    if (wasOpenRef.current && initializedKeyRef.current === initKey) return;
+    wasOpenRef.current = true;
+    initializedKeyRef.current = initKey;
+
+    const draft = readLocalAutosaveDraft<DealDialogDraft>(draftKey);
+    skipAutosaveRef.current = true;
+
     if (deal) {
       form.reset({
         title: deal.title,
@@ -300,6 +334,7 @@ export function DealDialog({
         responsible_user_id: deal.responsible_user_id || "",
         notes: deal.notes || "",
         tags: deal.tags || [],
+        ...(draft?.values || {}),
       });
     } else {
       form.reset({
@@ -316,11 +351,40 @@ export function DealDialog({
         responsible_user_id: currentUser?.id || "",
         notes: "",
         tags: [],
+        ...(draft?.values || {}),
       });
-      setSendNotification(false);
-      setSelectedProductId("");
+      setSendNotification(draft?.sendNotification ?? false);
+      setSelectedProductId(draft?.selectedProductId || "");
     }
-  }, [deal, stages, form, currentUser?.id]);
+
+    window.setTimeout(() => {
+      skipAutosaveRef.current = false;
+    }, 0);
+  }, [open, deal, stages, form, currentUser?.id, draftKey]);
+
+  useEffect(() => {
+    if (!open || !draftKey) return;
+
+    const subscription = form.watch((values) => {
+      if (skipAutosaveRef.current) return;
+      writeLocalAutosaveDraft<DealDialogDraft>(draftKey, {
+        values,
+        selectedProductId,
+        sendNotification,
+      });
+    });
+
+    return () => subscription.unsubscribe();
+  }, [open, draftKey, form, selectedProductId, sendNotification]);
+
+  useEffect(() => {
+    if (!open || !draftKey || skipAutosaveRef.current) return;
+    writeLocalAutosaveDraft<DealDialogDraft>(draftKey, {
+      values: form.getValues(),
+      selectedProductId,
+      sendNotification,
+    });
+  }, [open, draftKey, form, selectedProductId, sendNotification]);
 
   // Auto-assign current user as responsible when creating new deal
   useEffect(() => {
@@ -346,6 +410,7 @@ export function DealDialog({
         product_id: productId,
       };
       await onSave(finalData, !isEditing && sendNotification);
+      clearLocalAutosaveDraft(draftKey);
     } finally {
       setSaving(false);
     }
