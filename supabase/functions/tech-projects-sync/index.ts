@@ -68,12 +68,25 @@ serve(async (req) => {
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
         };
-        if (project.metrics_token_secret_name) {
-          const token = Deno.env.get(project.metrics_token_secret_name);
-          if (token) headers["x-roy-token"] = token;
-        }
 
-        const r = await fetch(project.metrics_endpoint, { headers });
+        // 1) Token criptografado no DB (preferencial)
+        const { data: tokenData } = await supabase.rpc(
+          "tech_projects_get_token_internal",
+          { _project_id: project.id },
+        );
+        let token: string | null = (tokenData as string | null) ?? null;
+
+        // 2) Fallback: secret de ambiente (legado)
+        if (!token && project.metrics_token_secret_name) {
+          token = Deno.env.get(project.metrics_token_secret_name) ?? null;
+        }
+        if (token) headers["x-roy-token"] = token;
+
+        const r = await fetch(project.metrics_endpoint, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ source: "roy", project_id: project.id }),
+        });
         if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
         const m = (await r.json()) as MetricsPayload;
 
