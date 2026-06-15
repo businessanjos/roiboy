@@ -287,19 +287,25 @@ export default function GestaoTech() {
                 <TableRow>
                   <TableHead>Projeto</TableHead>
                   <TableHead>Plataforma</TableHead>
-                  <TableHead>Plano</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">MRR</TableHead>
-                  <TableHead className="text-right">Assinantes</TableHead>
+                  <TableHead className="text-right">Ativos</TableHead>
+                  <TableHead className="text-right">Novos 30d</TableHead>
+                  <TableHead className="text-right">Churn 30d</TableHead>
+                  <TableHead className="text-right">ARPU</TableHead>
                   <TableHead className="text-right">Receita 30d</TableHead>
                   <TableHead className="text-right">Tokens 30d</TableHead>
-                  <TableHead className="text-right">Custo</TableHead>
+                  <TableHead className="text-right">Custo IA 30d</TableHead>
+                  <TableHead className="text-right">Custo fixo</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProjects.map((p) => {
                   const snap = latestByProject.get(p.id);
+                  const arpu = snap && snap.active_subscriptions > 0
+                    ? snap.mrr_cents / snap.active_subscriptions
+                    : 0;
                   return (
                     <TableRow key={p.id}>
                       <TableCell>
@@ -312,10 +318,9 @@ export default function GestaoTech() {
                             </a>
                           )}
                         </div>
-                        {p.notes && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{p.notes}</p>}
+                        {p.plan && <p className="text-xs text-muted-foreground mt-0.5">{p.plan}</p>}
                       </TableCell>
                       <TableCell><Badge variant="outline">{p.platform}</Badge></TableCell>
-                      <TableCell className="text-sm">{p.plan || "—"}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={STATUS_COLORS[p.status] || ""}>
                           {p.status}
@@ -323,10 +328,14 @@ export default function GestaoTech() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.mrr_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? snap.active_subscriptions : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums text-emerald-600">{snap ? `+${snap.new_subscriptions}` : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums text-red-600">{snap ? `-${snap.churned_subscriptions}` : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">{snap && arpu > 0 ? fmtBRL(arpu, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.revenue_last_30d_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {snap?.ai_tokens_30d ? (snap.ai_tokens_30d / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + "k" : "—"}
                       </TableCell>
+                      <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.ai_cost_cents_30d, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{fmtBRL(p.monthly_cost_cents, p.currency)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -354,6 +363,7 @@ export default function GestaoTech() {
                 })}
               </TableBody>
             </Table>
+
           )}
         </CardContent>
       </Card>

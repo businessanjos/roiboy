@@ -122,11 +122,15 @@ serve(async (req) => {
           continue;
         }
 
-        const mrr = m.mrr_cents ?? 0;
         const activeSubscriptions = m.active_subscriptions ?? m.active_subscribers ?? 0;
         const newSubscriptions = m.new_subscriptions ?? m.new_subscribers_30d ?? 0;
         const churnedSubscriptions = m.churned_subscriptions ?? m.churned_subscribers_30d ?? 0;
         const revenueLast30d = m.revenue_last_30d_cents ?? m.revenue_30d_cents ?? 0;
+        // Fallback: se o endpoint não calcular MRR mas houver receita 30d, usar receita como proxy de MRR
+        const reportedMrr = m.mrr_cents ?? 0;
+        const mrr = reportedMrr > 0 ? reportedMrr : revenueLast30d;
+        const reportedArr = m.arr_cents ?? 0;
+        const arr = reportedArr > 0 ? reportedArr : mrr * 12;
         const { error: upErr } = await supabase
           .from("tech_project_snapshots")
           .upsert(
@@ -135,7 +139,7 @@ serve(async (req) => {
               account_id: project.account_id,
               snapshot_date: today,
               mrr_cents: mrr,
-              arr_cents: m.arr_cents ?? mrr * 12,
+              arr_cents: arr,
               active_subscriptions: activeSubscriptions,
               new_subscriptions: newSubscriptions,
               churned_subscriptions: churnedSubscriptions,
