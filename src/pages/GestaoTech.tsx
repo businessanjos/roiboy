@@ -70,10 +70,17 @@ interface Snapshot {
   mrr_cents: number;
   arr_cents: number;
   active_subscriptions: number;
+  trialing_subscriptions: number;
+  past_due_subscriptions: number;
   new_subscriptions: number;
   churned_subscriptions: number;
+  net_new_subscriptions: number;
   revenue_last_30d_cents: number;
+  revenue_last_month_cents: number;
+  revenue_current_month_cents: number;
+  last_month_label: string | null;
   ai_tokens_30d: number;
+  ai_messages_30d: number;
   ai_cost_cents_30d: number;
   currency: string;
   source: string;
@@ -133,23 +140,31 @@ export default function GestaoTech() {
   }, [snapshots]);
 
   const kpis = useMemo(() => {
-    let mrr = 0, subs = 0, revenue = 0, cost = 0;
+    let mrr = 0, subs = 0, trial = 0, pastDue = 0;
+    let revenue30 = 0, revenueLastMonth = 0, revenueCurrentMonth = 0;
+    let cost = 0, newSubs = 0, churned = 0;
+    let lastMonthLabel: string | null = null;
     for (const p of filteredProjects) {
       cost += p.monthly_cost_cents || 0;
       const snap = latestByProject.get(p.id);
       if (snap) {
         mrr += snap.mrr_cents;
         subs += snap.active_subscriptions;
-        revenue += snap.revenue_last_30d_cents;
+        trial += snap.trialing_subscriptions || 0;
+        pastDue += snap.past_due_subscriptions || 0;
+        revenue30 += snap.revenue_last_30d_cents;
+        revenueLastMonth += snap.revenue_last_month_cents || 0;
+        revenueCurrentMonth += snap.revenue_current_month_cents || 0;
+        newSubs += snap.new_subscriptions || 0;
+        churned += snap.churned_subscriptions || 0;
+        if (snap.last_month_label) lastMonthLabel = snap.last_month_label;
       }
     }
     return {
-      mrr,
-      arr: mrr * 12,
-      subs,
-      revenue,
-      cost,
-      margin: mrr - cost,
+      mrr, arr: mrr * 12, subs, trial, pastDue,
+      revenue30, revenueLastMonth, revenueCurrentMonth,
+      cost, margin: mrr - cost, newSubs, churned,
+      netNew: newSubs - churned, lastMonthLabel,
     };
   }, [filteredProjects, latestByProject]);
 
@@ -233,14 +248,29 @@ export default function GestaoTech() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs principais — finanças */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Kpi label="MRR" value={fmtBRL(kpis.mrr)} icon={<DollarSign className="h-4 w-4" />} />
         <Kpi label="ARR" value={fmtBRL(kpis.arr)} icon={<TrendingUp className="h-4 w-4" />} />
-        <Kpi label="Assinantes ativos" value={kpis.subs.toLocaleString("pt-BR")} icon={<Users className="h-4 w-4" />} />
-        <Kpi label="Receita 30d" value={fmtBRL(kpis.revenue)} icon={<DollarSign className="h-4 w-4" />} />
+        <Kpi
+          label={`Faturado em ${kpis.lastMonthLabel ?? "mês passado"}`}
+          value={fmtBRL(kpis.revenueLastMonth)}
+          icon={<DollarSign className="h-4 w-4" />}
+          tone="success"
+        />
+        <Kpi label="Mês atual (parcial)" value={fmtBRL(kpis.revenueCurrentMonth)} icon={<DollarSign className="h-4 w-4" />} />
         <Kpi label="Custo fixo / mês" value={fmtBRL(kpis.cost)} icon={<Wallet className="h-4 w-4" />} tone="warning" />
         <Kpi label="Margem (MRR − custo)" value={fmtBRL(kpis.margin)} tone={kpis.margin >= 0 ? "success" : "danger"} />
+      </div>
+
+      {/* KPIs operacionais — base */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Kpi label="Assinantes ativos" value={kpis.subs.toLocaleString("pt-BR")} icon={<Users className="h-4 w-4" />} />
+        <Kpi label="Em trial" value={kpis.trial.toLocaleString("pt-BR")} />
+        <Kpi label="Inadimplentes" value={kpis.pastDue.toLocaleString("pt-BR")} tone={kpis.pastDue > 0 ? "warning" : undefined} />
+        <Kpi label="Novos 30d" value={`+${kpis.newSubs}`} tone="success" />
+        <Kpi label="Churn 30d" value={`-${kpis.churned}`} tone={kpis.churned > 0 ? "danger" : undefined} />
+        <Kpi label="Net new 30d" value={`${kpis.netNew >= 0 ? "+" : ""}${kpis.netNew}`} tone={kpis.netNew >= 0 ? "success" : "danger"} />
       </div>
 
       {/* MRR Chart */}
@@ -290,11 +320,15 @@ export default function GestaoTech() {
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">MRR</TableHead>
                   <TableHead className="text-right">Ativos</TableHead>
+                  <TableHead className="text-right" title="Em período de trial">Trial</TableHead>
+                  <TableHead className="text-right" title="Faturas em atraso">Inadimpl.</TableHead>
                   <TableHead className="text-right">Novos 30d</TableHead>
                   <TableHead className="text-right">Churn 30d</TableHead>
                   <TableHead className="text-right">ARPU</TableHead>
+                  <TableHead className="text-right">Mês passado</TableHead>
+                  <TableHead className="text-right">Mês atual</TableHead>
                   <TableHead className="text-right">Receita 30d</TableHead>
-                  <TableHead className="text-right">Tokens 30d</TableHead>
+                  <TableHead className="text-right">Msgs IA 30d</TableHead>
                   <TableHead className="text-right">Custo IA 30d</TableHead>
                   <TableHead className="text-right">Custo fixo</TableHead>
                   <TableHead></TableHead>
@@ -328,12 +362,16 @@ export default function GestaoTech() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.mrr_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? snap.active_subscriptions : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">{snap ? snap.trialing_subscriptions : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">{snap && snap.past_due_subscriptions > 0 ? <span className="text-amber-600 font-medium">{snap.past_due_subscriptions}</span> : (snap ? "0" : "—")}</TableCell>
                       <TableCell className="text-right tabular-nums text-emerald-600">{snap ? `+${snap.new_subscriptions}` : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums text-red-600">{snap ? `-${snap.churned_subscriptions}` : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap && arpu > 0 ? fmtBRL(arpu, snap.currency) : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{snap ? fmtBRL(snap.revenue_last_month_cents, snap.currency) : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">{snap ? fmtBRL(snap.revenue_current_month_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.revenue_last_30d_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {snap?.ai_tokens_30d ? (snap.ai_tokens_30d / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + "k" : "—"}
+                        {snap?.ai_messages_30d ? snap.ai_messages_30d.toLocaleString("pt-BR") : (snap?.ai_tokens_30d ? (snap.ai_tokens_30d / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + "k tk" : "—")}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.ai_cost_cents_30d, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{fmtBRL(p.monthly_cost_cents, p.currency)}</TableCell>
