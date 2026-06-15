@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { CountryStateCity, type LocationFields } from "./CountryStateCity";
 import { getCountry } from "@/lib/countries";
 import { useExchangeRate, formatBRL, formatCurrency } from "@/hooks/useExchangeRate";
+import { clearLocalAutosaveDraft, readLocalAutosaveDraft, writeLocalAutosaveDraft } from "@/hooks/useLocalAutosaveDraft";
 
 type Periodo = "mensal" | "trimestral" | "semestral" | "anual";
 
@@ -177,6 +178,9 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<OperationBriefingData>(EMPTY);
   const [originalId, setOriginalId] = useState<string | null>(null);
+  const draftKey = !readOnly && (dealId || clientId)
+    ? `roy:sales:operation-briefing-draft:${dealId ? `deal:${dealId}` : `client:${clientId}`}`
+    : null;
 
   // Cotação para a moeda atual (puxa apenas se ≠ BRL)
   const { data: fx } = useExchangeRate(data.moeda_codigo);
@@ -202,7 +206,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     if (row) {
       setOriginalId(row.id);
       const r: any = row;
-      setData({
+      const loadedData = {
         ...EMPTY,
         pais: toStr(r.pais),
         pais_codigo: toStr(r.pais_codigo) || (r.cidade ? "BR" : ""),
@@ -238,17 +242,23 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         equipamentos: toStr(r.equipamentos),
         observacoes: toStr(r.observacoes),
         is_complete: !!r.is_complete,
-      });
+      };
+      setData({ ...loadedData, ...(readLocalAutosaveDraft<Partial<OperationBriefingData>>(draftKey) || {}) });
     } else {
       setOriginalId(null);
-      setData(EMPTY);
+      setData({ ...EMPTY, ...(readLocalAutosaveDraft<Partial<OperationBriefingData>>(draftKey) || {}) });
     }
     setLoading(false);
-  }, [dealId, clientId]);
+  }, [dealId, clientId, draftKey]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (readOnly || loading || !draftKey) return;
+    writeLocalAutosaveDraft(draftKey, data);
+  }, [readOnly, loading, draftKey, data]);
 
   const update = <K extends keyof OperationBriefingData>(key: K, value: OperationBriefingData[K]) => {
     setData((prev) => ({ ...prev, [key]: value }));
@@ -377,6 +387,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       return;
     }
     toast.success(complete ? "Briefing salvo e completo" : "Briefing salvo (campos pendentes)");
+    clearLocalAutosaveDraft(draftKey);
     onSaved?.({ ...data, is_complete: complete });
   };
 
