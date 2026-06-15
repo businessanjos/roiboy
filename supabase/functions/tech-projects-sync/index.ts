@@ -29,6 +29,7 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const project_id: string | undefined = body.project_id;
     const sync_all: boolean = !!body.sync_all;
+    const validate_only: boolean = !!body.validate_only;
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
