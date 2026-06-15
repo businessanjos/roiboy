@@ -453,7 +453,7 @@ function ProjectDialog({
   const [form, setForm] = useState<Partial<TechProject>>({});
   const [saving, setSaving] = useState(false);
 
-  useMemo(() => {
+  useEffect(() => {
     if (open) {
       setForm(
         editing || {
