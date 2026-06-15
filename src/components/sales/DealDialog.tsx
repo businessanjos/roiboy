@@ -368,7 +368,7 @@ export function DealDialog({
     const subscription = form.watch((values) => {
       if (skipAutosaveRef.current) return;
       writeLocalAutosaveDraft<DealDialogDraft>(draftKey, {
-        values,
+        values: values as Partial<DealFormValues>,
         selectedProductId,
         sendNotification,
       });
