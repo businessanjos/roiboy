@@ -473,7 +473,7 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
   if (dataSource === 'deals') {
     let query = supabase
       .from('deals')
-      .select(`id, title, value, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id,
+      .select(`id, title, lead_id, value, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id, stage_id,
         deal_stages!deals_stage_id_fkey(name),
         users!deals_responsible_user_id_fkey(name)`)
       .eq('account_id', accountId);
@@ -486,19 +486,30 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
 
     let allDeals = await paginateQuery(query);
 
-    // Apply filters
-    allDeals = applyDateFilter(allDeals, filters, 'created_at');
+    // Apply filters with the same date basis as scorecards/charts.
+    // Won deals must be filtered by won_at; otherwise the table can show fewer
+    // rows than the revenue card for the same period.
+    const dateField = getDealsDateField(config);
+    allDeals = applyDateFilter(allDeals, filters, dateField);
     allDeals = applyUserFilter(allDeals, filters);
+    if (filters?.stageId && filters.stageId !== 'all') {
+      allDeals = allDeals.filter((d: any) => d.stage_id === filters.stageId);
+    }
 
     // Apply custom field filters
-    const filteredDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
+    let filteredDeals = allDeals;
+    const leadFilters = getLeadFilters(config);
+    if (leadFilters.length > 0) {
+      filteredDeals = await applyLeadFieldFilters(supabase, filteredDeals, leadFilters);
+    }
+    filteredDeals = await applyDealFieldFilters(supabase, filteredDeals, dealFieldFilters);
 
     return filteredDeals.map((d: any) => ({
       id: d.id,
       name: d.title || 'Sem título',
       value: d.value || 0,
       status: d.status,
-      date: d.created_at,
+      date: d[dateField] || d.created_at,
       extra: {
         won_at: d.won_at,
         lost_at: d.lost_at,
