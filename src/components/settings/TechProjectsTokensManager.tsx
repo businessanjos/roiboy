@@ -266,6 +266,12 @@ export function TechProjectsTokensManager() {
                     <RefreshCw className="h-4 w-4 mr-1" />
                     Definir manualmente
                   </Button>
+                  {hasToken && p.metrics_endpoint && (
+                    <Button size="sm" variant="outline" onClick={() => validateTokens(p.id)} disabled={validating || busy}>
+                      {validating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1" />}
+                      Validar
+                    </Button>
+                  )}
                   {hasToken && (
                     <Button
                       size="sm"
