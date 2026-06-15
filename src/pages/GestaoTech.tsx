@@ -320,11 +320,15 @@ export default function GestaoTech() {
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">MRR</TableHead>
                   <TableHead className="text-right">Ativos</TableHead>
+                  <TableHead className="text-right" title="Em período de trial">Trial</TableHead>
+                  <TableHead className="text-right" title="Faturas em atraso">Inadimpl.</TableHead>
                   <TableHead className="text-right">Novos 30d</TableHead>
                   <TableHead className="text-right">Churn 30d</TableHead>
                   <TableHead className="text-right">ARPU</TableHead>
+                  <TableHead className="text-right">Mês passado</TableHead>
+                  <TableHead className="text-right">Mês atual</TableHead>
                   <TableHead className="text-right">Receita 30d</TableHead>
-                  <TableHead className="text-right">Tokens 30d</TableHead>
+                  <TableHead className="text-right">Msgs IA 30d</TableHead>
                   <TableHead className="text-right">Custo IA 30d</TableHead>
                   <TableHead className="text-right">Custo fixo</TableHead>
                   <TableHead></TableHead>
