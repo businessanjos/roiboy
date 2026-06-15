@@ -140,23 +140,31 @@ export default function GestaoTech() {
   }, [snapshots]);
 
   const kpis = useMemo(() => {
-    let mrr = 0, subs = 0, revenue = 0, cost = 0;
+    let mrr = 0, subs = 0, trial = 0, pastDue = 0;
+    let revenue30 = 0, revenueLastMonth = 0, revenueCurrentMonth = 0;
+    let cost = 0, newSubs = 0, churned = 0;
+    let lastMonthLabel: string | null = null;
     for (const p of filteredProjects) {
       cost += p.monthly_cost_cents || 0;
       const snap = latestByProject.get(p.id);
       if (snap) {
         mrr += snap.mrr_cents;
         subs += snap.active_subscriptions;
-        revenue += snap.revenue_last_30d_cents;
+        trial += snap.trialing_subscriptions || 0;
+        pastDue += snap.past_due_subscriptions || 0;
+        revenue30 += snap.revenue_last_30d_cents;
+        revenueLastMonth += snap.revenue_last_month_cents || 0;
+        revenueCurrentMonth += snap.revenue_current_month_cents || 0;
+        newSubs += snap.new_subscriptions || 0;
+        churned += snap.churned_subscriptions || 0;
+        if (snap.last_month_label) lastMonthLabel = snap.last_month_label;
       }
     }
     return {
-      mrr,
-      arr: mrr * 12,
-      subs,
-      revenue,
-      cost,
-      margin: mrr - cost,
+      mrr, arr: mrr * 12, subs, trial, pastDue,
+      revenue30, revenueLastMonth, revenueCurrentMonth,
+      cost, margin: mrr - cost, newSubs, churned,
+      netNew: newSubs - churned, lastMonthLabel,
     };
   }, [filteredProjects, latestByProject]);
 
