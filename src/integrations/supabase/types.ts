@@ -21009,55 +21009,76 @@ export type Database = {
           account_id: string
           active_subscriptions: number
           ai_cost_cents_30d: number
+          ai_messages_30d: number
           ai_tokens_30d: number
           arr_cents: number
           churned_subscriptions: number
           created_at: string
           currency: string
           id: string
+          last_month_label: string | null
           mrr_cents: number
+          net_new_subscriptions: number
           new_subscriptions: number
+          past_due_subscriptions: number
           project_id: string
           raw: Json | null
+          revenue_current_month_cents: number
           revenue_last_30d_cents: number
+          revenue_last_month_cents: number
           snapshot_date: string
           source: string
+          trialing_subscriptions: number
         }
         Insert: {
           account_id: string
           active_subscriptions?: number
           ai_cost_cents_30d?: number
+          ai_messages_30d?: number
           ai_tokens_30d?: number
           arr_cents?: number
           churned_subscriptions?: number
           created_at?: string
           currency?: string
           id?: string
+          last_month_label?: string | null
           mrr_cents?: number
+          net_new_subscriptions?: number
           new_subscriptions?: number
+          past_due_subscriptions?: number
           project_id: string
           raw?: Json | null
+          revenue_current_month_cents?: number
           revenue_last_30d_cents?: number
+          revenue_last_month_cents?: number
           snapshot_date?: string
           source?: string
+          trialing_subscriptions?: number
         }
         Update: {
           account_id?: string
           active_subscriptions?: number
           ai_cost_cents_30d?: number
+          ai_messages_30d?: number
           ai_tokens_30d?: number
           arr_cents?: number
           churned_subscriptions?: number
           created_at?: string
           currency?: string
           id?: string
+          last_month_label?: string | null
           mrr_cents?: number
+          net_new_subscriptions?: number
           new_subscriptions?: number
+          past_due_subscriptions?: number
           project_id?: string
           raw?: Json | null
+          revenue_current_month_cents?: number
           revenue_last_30d_cents?: number
+          revenue_last_month_cents?: number
           snapshot_date?: string
           source?: string
+          trialing_subscriptions?: number
         }
         Relationships: [
           {
