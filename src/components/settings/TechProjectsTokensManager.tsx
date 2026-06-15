@@ -60,7 +60,7 @@ export function TechProjectsTokensManager() {
       return;
     }
     setBusyId(p.id);
-    const { data, error } = await supabase.rpc("tech_projects_reveal_token", { _project_id: p.id });
+    const { data, error } = await (supabase as any).rpc("tech_projects_reveal_token", { _project_id: p.id });
     setBusyId(null);
     if (error) {
       toast({ title: "Erro ao revelar", description: error.message, variant: "destructive" });
@@ -76,7 +76,7 @@ export function TechProjectsTokensManager() {
   const copy = async (p: TechProject) => {
     let token = revealed[p.id];
     if (!token) {
-      const { data, error } = await supabase.rpc("tech_projects_reveal_token", { _project_id: p.id });
+      const { data, error } = await (supabase as any).rpc("tech_projects_reveal_token", { _project_id: p.id });
       if (error || !data) {
         toast({ title: "Sem token para copiar", variant: "destructive" });
         return;
@@ -89,7 +89,7 @@ export function TechProjectsTokensManager() {
 
   const setToken = async (p: TechProject, token: string) => {
     setBusyId(p.id);
-    const { error } = await supabase.rpc("tech_projects_set_token", {
+    const { error } = await (supabase as any).rpc("tech_projects_set_token", {
       _project_id: p.id,
       _token: token,
     });
@@ -122,7 +122,7 @@ export function TechProjectsTokensManager() {
   const clearToken = async (p: TechProject) => {
     if (!window.confirm(`Remover o token de ${p.name}?`)) return;
     setBusyId(p.id);
-    const { error } = await supabase.rpc("tech_projects_clear_token", { _project_id: p.id });
+    const { error } = await (supabase as any).rpc("tech_projects_clear_token", { _project_id: p.id });
     setBusyId(null);
     if (error) {
       toast({ title: "Erro ao remover", description: error.message, variant: "destructive" });
