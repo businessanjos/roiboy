@@ -362,12 +362,16 @@ export default function GestaoTech() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.mrr_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? snap.active_subscriptions : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">{snap ? snap.trialing_subscriptions : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">{snap && snap.past_due_subscriptions > 0 ? <span className="text-amber-600 font-medium">{snap.past_due_subscriptions}</span> : (snap ? "0" : "—")}</TableCell>
                       <TableCell className="text-right tabular-nums text-emerald-600">{snap ? `+${snap.new_subscriptions}` : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums text-red-600">{snap ? `-${snap.churned_subscriptions}` : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap && arpu > 0 ? fmtBRL(arpu, snap.currency) : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{snap ? fmtBRL(snap.revenue_last_month_cents, snap.currency) : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">{snap ? fmtBRL(snap.revenue_current_month_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.revenue_last_30d_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {snap?.ai_tokens_30d ? (snap.ai_tokens_30d / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + "k" : "—"}
+                        {snap?.ai_messages_30d ? snap.ai_messages_30d.toLocaleString("pt-BR") : (snap?.ai_tokens_30d ? (snap.ai_tokens_30d / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + "k tk" : "—")}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.ai_cost_cents_30d, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{fmtBRL(p.monthly_cost_cents, p.currency)}</TableCell>
