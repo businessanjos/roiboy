@@ -15,13 +15,20 @@ interface MetricsPayload {
   arr_cents?: number;
   active_subscriptions?: number;
   active_subscribers?: number;
+  trialing_subscriptions?: number;
+  past_due_subscriptions?: number;
   new_subscriptions?: number;
   new_subscribers_30d?: number;
   churned_subscriptions?: number;
   churned_subscribers_30d?: number;
+  net_new_subscriptions?: number;
   revenue_last_30d_cents?: number;
   revenue_30d_cents?: number;
+  revenue_last_month_cents?: number;
+  revenue_current_month_cents?: number;
+  last_month_label?: string;
   ai_tokens_30d?: number;
+  ai_messages_30d?: number;
   ai_cost_cents_30d?: number;
   currency?: string;
 }
