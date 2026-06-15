@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorManager";
 import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
 import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
+import { IntegrationAccessAlert } from "@/components/integrations/IntegrationAccessAlert";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Integration = Tables<"integrations">;
