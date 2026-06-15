@@ -20986,6 +20986,125 @@ export type Database = {
           },
         ]
       }
+      tech_project_snapshots: {
+        Row: {
+          account_id: string
+          active_subscriptions: number
+          arr_cents: number
+          churned_subscriptions: number
+          created_at: string
+          currency: string
+          id: string
+          mrr_cents: number
+          new_subscriptions: number
+          project_id: string
+          raw: Json | null
+          revenue_last_30d_cents: number
+          snapshot_date: string
+          source: string
+        }
+        Insert: {
+          account_id: string
+          active_subscriptions?: number
+          arr_cents?: number
+          churned_subscriptions?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          mrr_cents?: number
+          new_subscriptions?: number
+          project_id: string
+          raw?: Json | null
+          revenue_last_30d_cents?: number
+          snapshot_date?: string
+          source?: string
+        }
+        Update: {
+          account_id?: string
+          active_subscriptions?: number
+          arr_cents?: number
+          churned_subscriptions?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          mrr_cents?: number
+          new_subscriptions?: number
+          project_id?: string
+          raw?: Json | null
+          revenue_last_30d_cents?: number
+          snapshot_date?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tech_project_snapshots_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "tech_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tech_projects: {
+        Row: {
+          account_id: string
+          color: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          monthly_cost_cents: number
+          name: string
+          notes: string | null
+          plan: string | null
+          platform: string
+          slug: string
+          status: string
+          stripe_account_id: string | null
+          stripe_secret_name: string | null
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          account_id: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          monthly_cost_cents?: number
+          name: string
+          notes?: string | null
+          plan?: string | null
+          platform?: string
+          slug: string
+          status?: string
+          stripe_account_id?: string | null
+          stripe_secret_name?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          account_id?: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          monthly_cost_cents?: number
+          name?: string
+          notes?: string | null
+          plan?: string | null
+          platform?: string
+          slug?: string
+          status?: string
+          stripe_account_id?: string | null
+          stripe_secret_name?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       threecplus_agent_sessions: {
         Row: {
           account_id: string

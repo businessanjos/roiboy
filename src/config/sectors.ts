@@ -37,6 +37,7 @@ import {
   Percent,
   DollarSign,
   Bot,
+  Activity,
   Briefcase,
   UsersRound,
   GraduationCap,
@@ -68,7 +69,7 @@ import {
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "rh" | "eventos" | "configuracoes";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "gestao-tech" | "rh" | "eventos" | "configuracoes";
 
 export interface NavItem {
   to: string;
@@ -192,15 +193,15 @@ export const sectors: Sector[] = [
     ],
   },
   {
-    id: "everia",
-    name: "Ever IA",
-    description: "Inteligência artificial para atendimento automatizado",
-    icon: Bot,
+    id: "gestao-tech",
+    name: "Gestão Tech",
+    description: "Painel centralizado de faturamento, custos e métricas dos projetos",
+    icon: Activity,
     color: "text-violet-600",
     bgColor: "bg-violet-500/10",
-    defaultRoute: "/ever-ia",
+    defaultRoute: "/gestao-tech",
     navItems: [
-      { to: "/ever-ia", icon: Bot, label: "Ever IA" },
+      { to: "/gestao-tech", icon: Activity, label: "Visão geral" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
