@@ -500,7 +500,7 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
     let filteredDeals = allDeals;
     const leadFilters = getLeadFilters(config);
     if (leadFilters.length > 0) {
-      filteredDeals = await applyLeadFieldFilters(supabase, filteredDeals, leadFilters);
+      filteredDeals = await applyLeadFieldFiltersToDeals(supabase, filteredDeals, leadFilters);
     }
     filteredDeals = await applyDealFieldFilters(supabase, filteredDeals, dealFieldFilters);
 
@@ -1261,6 +1261,20 @@ async function applyLeadFieldFilters(
   }
 
   return result;
+}
+
+async function applyLeadFieldFiltersToDeals(
+  supabase: any,
+  deals: any[],
+  leadFieldFilters?: VisualConfig['leadFieldFilters']
+): Promise<any[]> {
+  if (!leadFieldFilters || leadFieldFilters.length === 0) return deals;
+  const leadRows = deals
+    .filter((deal: any) => !!deal.lead_id)
+    .map((deal: any) => ({ id: deal.lead_id }));
+  const matchingLeads = await applyLeadFieldFilters(supabase, leadRows, leadFieldFilters);
+  const matchingLeadIds = new Set(matchingLeads.map((lead: any) => lead.id));
+  return deals.filter((deal: any) => deal.lead_id && matchingLeadIds.has(deal.lead_id));
 }
 
 // ─── Lead Enrichment ─────────────────────────────────────────────────────────
