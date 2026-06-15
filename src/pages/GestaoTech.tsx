@@ -433,7 +433,7 @@ function ProjectDialog({
     }
     setSaving(true);
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         account_id: accountId,
         name: form.name,
         slug: form.slug,
@@ -446,6 +446,8 @@ function ProjectDialog({
         monthly_cost_cents: Math.round(Number(form.monthly_cost_cents) || 0),
         currency: form.currency || "BRL",
         stripe_secret_name: form.stripe_secret_name || null,
+        metrics_endpoint: form.metrics_endpoint || null,
+        metrics_token_secret_name: form.metrics_token_secret_name || null,
       };
       if (editing) {
         const { error } = await supabase.from("tech_projects").update(payload).eq("id", editing.id);
