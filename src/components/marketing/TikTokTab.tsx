@@ -60,6 +60,7 @@ import { EditTikTokPostDialog } from './EditTikTokPostDialog';
 import { DeleteTikTokPostDialog } from './DeleteTikTokPostDialog';
 import { DeleteSocialProfileDialog } from './DeleteSocialProfileDialog';
 import { cn } from '@/lib/utils';
+import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAccessAlert';
 
 interface TikTokTabProps {
   initialPostId?: string | null;
@@ -223,6 +224,8 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
 
   return (
     <div className="space-y-6 p-1">
+      <IntegrationAccessAlert platform="tiktok" visibleCount={profiles.length} onReload={refetchData} />
+
       {/* TikTok Profile Header */}
       <TikTokProfileHeader
         profile={currentProfile}

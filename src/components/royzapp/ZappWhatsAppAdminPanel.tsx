@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorManager";
 import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
 import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
+import { IntegrationAccessAlert } from "@/components/integrations/IntegrationAccessAlert";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Integration = Tables<"integrations">;
@@ -45,6 +46,7 @@ export function ZappWhatsAppAdminPanel({ sectorId }: Props) {
           Gerencie todas as conexões UAZAPI e Meta Cloud API por setor.
         </p>
       </div>
+      <IntegrationAccessAlert platform="whatsapp" visibleCount={integrations.length} onReload={fetchIntegrations} />
       <WhatsAppSectorManager
         integrations={integrations}
         accountId={currentUser?.account_id || null}

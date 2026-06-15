@@ -78,6 +78,7 @@ import { ProfileInsightsDashboard } from './ProfileInsightsDashboard';
 import { PostComparisonDialog } from './PostComparisonDialog';
 import { WeeklyAnalysisDashboard } from './WeeklyAnalysisDashboard';
 import { cn } from '@/lib/utils';
+import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAccessAlert';
 
 interface SocialMediaTabProps {
   initialPostId?: string | null;
@@ -285,6 +286,8 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
 
   return (
     <div className="space-y-6 p-1">
+      <IntegrationAccessAlert platform="instagram" visibleCount={profiles.length} onReload={refetchData} />
+
       {/* Instagram Profile Header */}
       <InstagramProfileHeader 
         profile={currentProfile} 
