@@ -2,7 +2,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Shield, Book, Plug, Users, UserCircle, Target, User,
-  CreditCard, Video, Key, ArrowLeft,
+  CreditCard, Video, Key, ArrowLeft, Activity,
 } from "lucide-react";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { PERMISSIONS, usePermissions } from "@/hooks/usePermissions";
@@ -72,6 +72,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
     }
     if (isAdmin) {
       systemItems.push({ id: "api-key", label: "API Key", icon: Key });
+      systemItems.push({ id: "tech-tokens", label: "Tokens Gestão Tech", icon: Activity });
     }
     if (systemItems.length > 0) {
       groups.push({ title: "Sistema", items: systemItems });

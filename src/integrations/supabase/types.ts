@@ -17449,6 +17449,24 @@ export type Database = {
           },
         ]
       }
+      private_tech_projects_key: {
+        Row: {
+          created_at: string
+          id: number
+          master_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          master_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          master_key?: string
+        }
+        Relationships: []
+      }
       product_bonuses: {
         Row: {
           account_id: string
@@ -21060,6 +21078,10 @@ export type Database = {
           currency: string
           id: string
           metrics_endpoint: string | null
+          metrics_token_ciphertext: string | null
+          metrics_token_last4: string | null
+          metrics_token_rotated_at: string | null
+          metrics_token_rotated_by: string | null
           metrics_token_secret_name: string | null
           monthly_cost_cents: number
           name: string
@@ -21081,6 +21103,10 @@ export type Database = {
           currency?: string
           id?: string
           metrics_endpoint?: string | null
+          metrics_token_ciphertext?: string | null
+          metrics_token_last4?: string | null
+          metrics_token_rotated_at?: string | null
+          metrics_token_rotated_by?: string | null
           metrics_token_secret_name?: string | null
           monthly_cost_cents?: number
           name: string
@@ -21102,6 +21128,10 @@ export type Database = {
           currency?: string
           id?: string
           metrics_endpoint?: string | null
+          metrics_token_ciphertext?: string | null
+          metrics_token_last4?: string | null
+          metrics_token_rotated_at?: string | null
+          metrics_token_rotated_by?: string | null
           metrics_token_secret_name?: string | null
           monthly_cost_cents?: number
           name?: string
@@ -23922,6 +23952,10 @@ export type Database = {
       }
     }
     Functions: {
+      _tech_project_owner_check: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
       activate_scheduled_contracts: { Args: never; Returns: number }
       admin_link_user_to_account: {
         Args: {
@@ -24284,6 +24318,7 @@ export type Database = {
         Returns: string
       }
       normalize_stage_name: { Args: { p_name: string }; Returns: string }
+      private_get_tech_projects_key: { Args: never; Returns: string }
       process_recurring_entries: { Args: never; Returns: number }
       recalculate_consultant_bonus_payouts: {
         Args: { p_year?: number }
@@ -24376,6 +24411,18 @@ export type Database = {
       submit_rsvp_response: {
         Args: { p_status: string; p_token: string }
         Returns: Json
+      }
+      tech_projects_clear_token: {
+        Args: { _project_id: string }
+        Returns: undefined
+      }
+      tech_projects_reveal_token: {
+        Args: { _project_id: string }
+        Returns: string
+      }
+      tech_projects_set_token: {
+        Args: { _project_id: string; _token: string }
+        Returns: undefined
       }
       unaccent: { Args: { "": string }; Returns: string }
       unaccent_immutable: { Args: { p_text: string }; Returns: string }

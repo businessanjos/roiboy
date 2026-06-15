@@ -17,6 +17,7 @@ import { MeetingPreferencesCard } from "@/components/settings/MeetingPreferences
 import { PlanUsageCard } from "@/components/plan";
 
 import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
+import { TechProjectsTokensManager } from "@/components/settings/TechProjectsTokensManager";
 
 export default function Settings() {
   const [searchParams] = useSearchParams();
@@ -71,6 +72,8 @@ export default function Settings() {
         return isAdmin && currentUser ? (
           <ApiKeyTab userId={currentUser.id} accountId={currentUser.account_id} />
         ) : null;
+      case "tech-tokens":
+        return isAdmin ? <TechProjectsTokensManager /> : null;
       default:
         return <ProfileContent />;
     }
