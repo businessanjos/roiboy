@@ -9,7 +9,7 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SectorsHealthBanner } from "@/components/sectors/SectorsHealthBanner";
-import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase, CalendarDays, AlertTriangle, RefreshCw } from "lucide-react";
+import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase, CalendarDays, AlertTriangle, RefreshCw, Activity } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
 
@@ -70,6 +70,14 @@ const SECTOR_IDENTITY: Record<string, {
     patternClass: "sector-pattern-everia",
     overrideIcon: Bot,
   },
+  "gestao-tech": {
+    accent: "border-l-violet-500",
+    hoverBorder: "hover:border-violet-500/30",
+    hoverIconBg: "group-hover:bg-violet-500/10",
+    hoverIconColor: "group-hover:text-violet-600",
+    patternClass: "sector-pattern-everia",
+    overrideIcon: Activity,
+  },
   rh: {
     accent: "border-l-rose-500",
     hoverBorder: "hover:border-rose-500/30",
@@ -128,6 +136,12 @@ function SectorPattern({ sectorId }: { sectorId: string }) {
         <path d="M20 58 Q30 48 40 48 Q50 48 60 58" stroke="currentColor" strokeWidth="2" fill="none" />
         <circle cx="34" cy="30" r="2" fill="currentColor" />
         <circle cx="46" cy="30" r="2" fill="currentColor" />
+      </svg>
+    ),
+    "gestao-tech": (
+      <svg className="absolute right-3 bottom-3 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500" width="80" height="80" viewBox="0 0 80 80">
+        <polyline points="6,55 22,40 34,48 50,25 64,32 74,18" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="74" cy="18" r="3" fill="currentColor" />
       </svg>
     ),
     rh: (
@@ -246,7 +260,7 @@ export default function Sectors() {
     return filtered;
   }, [hasSectorAccess, sectorAccessLoading, sectorAccess, currentUser, isSuperAdmin, isAdmin]);
 
-  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "eventos", "royzapp", "everia", "rh"];
+  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "eventos", "royzapp", "gestao-tech", "rh"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
 
   // Timed-out fallback: replaces the full page (not just the banner) so the
