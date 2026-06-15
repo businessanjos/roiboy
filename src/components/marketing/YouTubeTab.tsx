@@ -105,6 +105,8 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
 
   return (
     <div className="space-y-6 p-1">
+      <IntegrationAccessAlert platform="youtube" visibleCount={channels.length} />
+
       <YouTubeChannelHeader channel={currentChannel} isLoading={isLoading} />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
