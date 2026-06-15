@@ -37,6 +37,7 @@ import {
   Percent,
   DollarSign,
   Bot,
+  Activity,
   Briefcase,
   UsersRound,
   GraduationCap,
