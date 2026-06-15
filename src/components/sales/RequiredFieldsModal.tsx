@@ -47,6 +47,16 @@ const BONUS_FIELD_NAMES = ["Ganhou Bônus?", "Bônus"];
 
 const isBonusField = (name: string) => BONUS_FIELD_NAMES.includes(name);
 
+const EMPTY_BILLING_VALUES: BillingMentoreeValues = {
+  tipo_pessoa: "",
+  doc: "",
+  razao_social: "",
+  email_nf: "",
+  ment_nome: "",
+  ment_telefone: "",
+  ment_email: "",
+};
+
 type RequiredFieldsDraft = {
   values: Record<string, any>;
   breakdown: PaymentBreakdownItem[];
@@ -69,15 +79,7 @@ export function RequiredFieldsModal({
   const [breakdown, setBreakdown] = useState<PaymentBreakdownItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [briefingComplete, setBriefingComplete] = useState(false);
-  const [billingValues, setBillingValues] = useState<BillingMentoreeValues>({
-    tipo_pessoa: "",
-    doc: "",
-    razao_social: "",
-    email_nf: "",
-    ment_nome: "",
-    ment_telefone: "",
-    ment_email: "",
-  });
+  const [billingValues, setBillingValues] = useState<BillingMentoreeValues>(EMPTY_BILLING_VALUES);
   const [dealContact, setDealContact] = useState<{ name?: string | null; phone?: string | null; email?: string | null } | undefined>(undefined);
 
   const showBriefing = outcomeType === "won";
@@ -94,7 +96,7 @@ export function RequiredFieldsModal({
       const draft = readLocalAutosaveDraft<RequiredFieldsDraft>(draftKey);
       setValues(draft?.values ?? {});
       setBreakdown(draft?.breakdown ?? []);
-      if (draft?.billingValues) setBillingValues(draft.billingValues);
+      setBillingValues(draft?.billingValues ?? EMPTY_BILLING_VALUES);
       setBriefingComplete(false);
       setDealContact(undefined);
 
