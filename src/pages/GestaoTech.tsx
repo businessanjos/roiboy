@@ -450,12 +450,12 @@ function ProjectDialog({
         metrics_token_secret_name: form.metrics_token_secret_name || null,
       };
       if (editing) {
-        const { error } = await supabase.from("tech_projects").update(payload).eq("id", editing.id);
+        const { error } = await supabase.from("tech_projects").update(payload as never).eq("id", editing.id);
         if (error) throw error;
         toast.success("Projeto atualizado");
       } else {
         payload.created_by = userId;
-        const { error } = await supabase.from("tech_projects").insert(payload);
+        const { error } = await supabase.from("tech_projects").insert(payload as never);
         if (error) throw error;
         toast.success("Projeto criado");
       }
