@@ -26,7 +26,7 @@ import {
 } from "recharts";
 import {
   Activity, DollarSign, Users, Plus, RefreshCw, TrendingUp, Wallet,
-  ExternalLink, Pencil, Trash2, Loader2,
+  ExternalLink, Pencil, Trash2, Loader2, AlertTriangle,
 } from "lucide-react";
 
 const fmtBRL = (cents: number, currency = "BRL") =>
