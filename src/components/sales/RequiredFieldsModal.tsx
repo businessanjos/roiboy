@@ -24,6 +24,7 @@ import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from
 import { BonusSelector } from "@/components/sales/BonusSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BillingMentoreeSection, BillingMentoreeValues, isBillingMentoreeComplete } from "@/components/sales/BillingMentoreeSection";
+import { clearLocalAutosaveDraft, readLocalAutosaveDraft, writeLocalAutosaveDraft } from "@/hooks/useLocalAutosaveDraft";
 
 interface RequiredFieldsModalProps {
   open: boolean;
@@ -45,6 +46,12 @@ const PAYMENT_BREAKDOWN_FIELD_NAME = "Detalhamento de Pagamento";
 const BONUS_FIELD_NAMES = ["Ganhou Bônus?", "Bônus"];
 
 const isBonusField = (name: string) => BONUS_FIELD_NAMES.includes(name);
+
+type RequiredFieldsDraft = {
+  values: Record<string, any>;
+  breakdown: PaymentBreakdownItem[];
+  billingValues: BillingMentoreeValues;
+};
 
 export function RequiredFieldsModal({
   open,
@@ -77,12 +84,17 @@ export function RequiredFieldsModal({
   // Dados de faturamento / emissão de NF só fazem sentido quando a venda é dada como ganha.
   // NÃO pedir em movimentos intermediários de etapa.
   const showBilling = outcomeType === "won";
+  const draftKey = open
+    ? `roy:sales:required-fields-draft:${accountId}:${dealId}:${outcomeType ?? targetStageName}`
+    : null;
 
   // Reset values when modal opens; pre-check briefing status; load deal contact for mentorado defaults
   useEffect(() => {
     if (open) {
-      setValues({});
-      setBreakdown([]);
+      const draft = readLocalAutosaveDraft<RequiredFieldsDraft>(draftKey);
+      setValues(draft?.values ?? {});
+      setBreakdown(draft?.breakdown ?? []);
+      if (draft?.billingValues) setBillingValues(draft.billingValues);
       setBriefingComplete(false);
       setDealContact(undefined);
 
@@ -114,7 +126,16 @@ export function RequiredFieldsModal({
           });
       }
     }
-  }, [open, dealId, showBriefing, showBilling]);
+  }, [open, dealId, showBriefing, showBilling, draftKey]);
+
+  useEffect(() => {
+    if (!open || !draftKey) return;
+    writeLocalAutosaveDraft<RequiredFieldsDraft>(draftKey, {
+      values,
+      breakdown,
+      billingValues,
+    });
+  }, [open, draftKey, values, breakdown, billingValues]);
 
   const paymentMethodField = missingFields.find((f) => f.name === PAYMENT_METHOD_FIELD_NAME);
   const paymentMethodValue = paymentMethodField ? values[paymentMethodField.id] : undefined;
@@ -312,6 +333,7 @@ export function RequiredFieldsModal({
         }
       }
 
+      clearLocalAutosaveDraft(draftKey);
       toast.success("Campos preenchidos!");
       onComplete();
       onOpenChange(false);
