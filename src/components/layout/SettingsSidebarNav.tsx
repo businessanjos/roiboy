@@ -72,6 +72,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
     }
     if (isAdmin) {
       systemItems.push({ id: "api-key", label: "API Key", icon: Key });
+      systemItems.push({ id: "tech-tokens", label: "Tokens Gestão Tech", icon: Activity });
     }
     if (systemItems.length > 0) {
       groups.push({ title: "Sistema", items: systemItems });
