@@ -206,7 +206,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     if (row) {
       setOriginalId(row.id);
       const r: any = row;
-      const loadedData = {
+      const loadedData: OperationBriefingData = {
         ...EMPTY,
         pais: toStr(r.pais),
         pais_codigo: toStr(r.pais_codigo) || (r.cidade ? "BR" : ""),
