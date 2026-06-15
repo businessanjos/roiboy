@@ -78,6 +78,7 @@ import { ProfileInsightsDashboard } from './ProfileInsightsDashboard';
 import { PostComparisonDialog } from './PostComparisonDialog';
 import { WeeklyAnalysisDashboard } from './WeeklyAnalysisDashboard';
 import { cn } from '@/lib/utils';
+import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAccessAlert';
 
 interface SocialMediaTabProps {
   initialPostId?: string | null;
