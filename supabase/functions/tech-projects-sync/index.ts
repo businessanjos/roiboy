@@ -86,10 +86,37 @@ serve(async (req) => {
         const r = await fetch(project.metrics_endpoint, {
           method: "POST",
           headers,
-          body: JSON.stringify({ source: "roy", project_id: project.id }),
+          body: JSON.stringify({ source: "roy", project_id: project.id, validate_only }),
         });
-        if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+        if (!r.ok) {
+          const text = await r.text();
+          if (validate_only) {
+            results.push({
+              id: project.id,
+              name: project.name,
+              ok: false,
+              status: r.status,
+              error:
+                r.status === 401 || r.status === 403
+                  ? "Token inválido (ROY_METRICS_TOKEN diferente no projeto)"
+                  : `HTTP ${r.status}: ${text.slice(0, 200)}`,
+            });
+            continue;
+          }
+          throw new Error(`HTTP ${r.status}: ${text}`);
+        }
         const m = (await r.json()) as MetricsPayload;
+
+        if (validate_only) {
+          results.push({
+            id: project.id,
+            name: project.name,
+            ok: true,
+            status: 200,
+            message: "Token válido e endpoint respondeu",
+          });
+          continue;
+        }
 
         const mrr = m.mrr_cents ?? 0;
         const { error: upErr } = await supabase
