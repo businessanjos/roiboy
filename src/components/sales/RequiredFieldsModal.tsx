@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,7 @@ import { OperationBriefingForm, isBriefingComplete, OperationBriefingData } from
 import { BonusSelector } from "@/components/sales/BonusSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BillingMentoreeSection, BillingMentoreeValues, isBillingMentoreeComplete } from "@/components/sales/BillingMentoreeSection";
+import { clearLocalAutosaveDraft, readLocalAutosaveDraft, writeLocalAutosaveDraft } from "@/hooks/useLocalAutosaveDraft";
 
 interface RequiredFieldsModalProps {
   open: boolean;
@@ -46,6 +47,22 @@ const BONUS_FIELD_NAMES = ["Ganhou Bônus?", "Bônus"];
 
 const isBonusField = (name: string) => BONUS_FIELD_NAMES.includes(name);
 
+const EMPTY_BILLING_VALUES: BillingMentoreeValues = {
+  tipo_pessoa: "",
+  doc: "",
+  razao_social: "",
+  email_nf: "",
+  ment_nome: "",
+  ment_telefone: "",
+  ment_email: "",
+};
+
+type RequiredFieldsDraft = {
+  values: Record<string, any>;
+  breakdown: PaymentBreakdownItem[];
+  billingValues: BillingMentoreeValues;
+};
+
 export function RequiredFieldsModal({
   open,
   onOpenChange,
@@ -62,27 +79,28 @@ export function RequiredFieldsModal({
   const [breakdown, setBreakdown] = useState<PaymentBreakdownItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [briefingComplete, setBriefingComplete] = useState(false);
-  const [billingValues, setBillingValues] = useState<BillingMentoreeValues>({
-    tipo_pessoa: "",
-    doc: "",
-    razao_social: "",
-    email_nf: "",
-    ment_nome: "",
-    ment_telefone: "",
-    ment_email: "",
-  });
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [billingValues, setBillingValues] = useState<BillingMentoreeValues>(EMPTY_BILLING_VALUES);
   const [dealContact, setDealContact] = useState<{ name?: string | null; phone?: string | null; email?: string | null } | undefined>(undefined);
+  const skipAutosaveRef = useRef(false);
 
   const showBriefing = outcomeType === "won";
   // Dados de faturamento / emissão de NF só fazem sentido quando a venda é dada como ganha.
   // NÃO pedir em movimentos intermediários de etapa.
   const showBilling = outcomeType === "won";
+  const draftKey = open
+    ? `roy:sales:required-fields-draft:${accountId}:${dealId}:${outcomeType ?? targetStageName}`
+    : null;
 
   // Reset values when modal opens; pre-check briefing status; load deal contact for mentorado defaults
   useEffect(() => {
     if (open) {
-      setValues({});
-      setBreakdown([]);
+      const draft = readLocalAutosaveDraft<RequiredFieldsDraft>(draftKey);
+      skipAutosaveRef.current = true;
+      setDraftHydrated(false);
+      setValues(draft?.values ?? {});
+      setBreakdown(draft?.breakdown ?? []);
+      setBillingValues(draft?.billingValues ?? EMPTY_BILLING_VALUES);
       setBriefingComplete(false);
       setDealContact(undefined);
 
@@ -113,8 +131,22 @@ export function RequiredFieldsModal({
             }
           });
       }
+
+      window.setTimeout(() => {
+        skipAutosaveRef.current = false;
+        setDraftHydrated(true);
+      }, 0);
     }
-  }, [open, dealId, showBriefing, showBilling]);
+  }, [open, dealId, showBriefing, showBilling, draftKey]);
+
+  useEffect(() => {
+    if (!open || !draftKey || skipAutosaveRef.current) return;
+    writeLocalAutosaveDraft<RequiredFieldsDraft>(draftKey, {
+      values,
+      breakdown,
+      billingValues,
+    });
+  }, [open, draftKey, values, breakdown, billingValues]);
 
   const paymentMethodField = missingFields.find((f) => f.name === PAYMENT_METHOD_FIELD_NAME);
   const paymentMethodValue = paymentMethodField ? values[paymentMethodField.id] : undefined;
@@ -312,6 +344,7 @@ export function RequiredFieldsModal({
         }
       }
 
+      clearLocalAutosaveDraft(draftKey);
       toast.success("Campos preenchidos!");
       onComplete();
       onOpenChange(false);
@@ -406,7 +439,7 @@ export function RequiredFieldsModal({
                   </div>
                 )}
 
-                {showBilling && (
+                {showBilling && draftHydrated && (
                   <BillingMentoreeSection
                     dealId={dealId}
                     accountId={accountId}
@@ -435,7 +468,7 @@ export function RequiredFieldsModal({
                   {displayedFields.map((field) => renderField(field))}
                 </div>
               )}
-              {showBilling && (
+              {showBilling && draftHydrated && (
                 <BillingMentoreeSection
                   dealId={dealId}
                   accountId={accountId}

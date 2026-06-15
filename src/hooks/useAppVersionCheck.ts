@@ -7,14 +7,13 @@ import { toast } from "sonner";
  * live and the assets the browser cached are stale.
  *
  * On change we surface a non-dismissable toast giving the user the option to
- * reload immediately. Auto-reload kicks in after 30s if they don't act.
+ * reload manually, so we never interrupt form entry or discard unsaved work.
  *
  * Dev mode is a no-op — Vite's HMR already handles freshness.
  */
 
 const VERSION_URL = "/version.json";
 const POLL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
-const AUTO_RELOAD_DELAY_MS = 30 * 1000;
 const TOAST_ID = "app-version-update";
 const STORAGE_KEY = "app:initial-version";
 
@@ -94,14 +93,12 @@ export function useAppVersionCheck() {
         toast("Nova versão disponível", {
           id: TOAST_ID,
           description: "Recarregue para aplicar as últimas atualizações.",
-          duration: AUTO_RELOAD_DELAY_MS,
+          duration: Infinity,
           action: {
             label: "Recarregar agora",
             onClick: () => hardReloadApp(),
           },
         });
-        // Auto-reload as a safety net so users never stay on a stale build.
-        window.setTimeout(() => hardReloadApp(), AUTO_RELOAD_DELAY_MS);
       }
     };
 

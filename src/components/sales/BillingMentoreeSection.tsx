@@ -108,13 +108,13 @@ export function BillingMentoreeSection({ dealId, accountId, contactDefaults, val
       setFieldIds(ids);
 
       const next: BillingMentoreeValues = {
-        tipo_pessoa: (existing[ids.tipo_pessoa] as any) || "",
-        doc: existing[ids.doc] || "",
-        razao_social: existing[ids.razao_social] || "",
-        email_nf: existing[ids.email_nf] || "",
-        ment_nome: existing[ids.ment_nome] || contactDefaults?.name || "",
-        ment_telefone: existing[ids.ment_telefone] || contactDefaults?.phone || "",
-        ment_email: existing[ids.ment_email] || contactDefaults?.email || "",
+        tipo_pessoa: values.tipo_pessoa || (existing[ids.tipo_pessoa] as any) || "",
+        doc: values.doc || existing[ids.doc] || "",
+        razao_social: values.razao_social || existing[ids.razao_social] || "",
+        email_nf: values.email_nf || existing[ids.email_nf] || "",
+        ment_nome: values.ment_nome || existing[ids.ment_nome] || contactDefaults?.name || "",
+        ment_telefone: values.ment_telefone || existing[ids.ment_telefone] || contactDefaults?.phone || "",
+        ment_email: values.ment_email || existing[ids.ment_email] || contactDefaults?.email || "",
       };
       onChange(next);
       setLoading(false);
