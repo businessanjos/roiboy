@@ -340,6 +340,11 @@ export default function GestaoTech() {
                   const arpu = snap && snap.active_subscriptions > 0
                     ? snap.mrr_cents / snap.active_subscriptions
                     : 0;
+                  // Endpoint antigo = não envia nenhum dos novos campos
+                  const isOutdated = !!snap && !snap.last_month_label
+                    && !snap.revenue_last_month_cents
+                    && !snap.revenue_current_month_cents
+                    && !snap.ai_messages_30d;
                   return (
                     <TableRow key={p.id}>
                       <TableCell>
@@ -350,6 +355,11 @@ export default function GestaoTech() {
                             <a href={p.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary">
                               <ExternalLink className="h-3 w-3" />
                             </a>
+                          )}
+                          {isOutdated && (
+                            <span title="Endpoint roy-metrics está rodando versão antiga. Faça o redeploy do template para liberar MRR/Faturamento/Mensagens IA." className="inline-flex items-center gap-1 text-amber-600 text-[10px] font-medium border border-amber-500/30 bg-amber-500/10 rounded px-1.5 py-0.5">
+                              <AlertTriangle className="h-3 w-3" /> endpoint v1
+                            </span>
                           )}
                         </div>
                         {p.plan && <p className="text-xs text-muted-foreground mt-0.5">{p.plan}</p>}
