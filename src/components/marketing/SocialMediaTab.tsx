@@ -286,6 +286,8 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
 
   return (
     <div className="space-y-6 p-1">
+      <IntegrationAccessAlert platform="instagram" visibleCount={profiles.length} onReload={refetchData} />
+
       {/* Instagram Profile Header */}
       <InstagramProfileHeader 
         profile={currentProfile} 
