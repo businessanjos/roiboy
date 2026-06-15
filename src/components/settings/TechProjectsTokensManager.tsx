@@ -164,13 +164,21 @@ export function TechProjectsTokensManager() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <KeyRound className="h-5 w-5" /> Tokens Gestão Tech
-        </CardTitle>
-        <CardDescription>
-          Token usado pelo ROY pra puxar métricas de cada projeto. Criptografado em repouso (AES via pgcrypto).
-          Apenas administradores da conta podem ver, gerar ou rotacionar.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" /> Tokens Gestão Tech
+            </CardTitle>
+            <CardDescription>
+              Token usado pelo ROY pra puxar métricas de cada projeto. Criptografado em repouso (AES via pgcrypto).
+              Apenas administradores da conta podem ver, gerar ou rotacionar.
+            </CardDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => validateTokens()} disabled={validating || loading}>
+            {validating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-1" />}
+            Validar todos
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {loading ? (
