@@ -14,9 +14,13 @@ interface MetricsPayload {
   mrr_cents?: number;
   arr_cents?: number;
   active_subscriptions?: number;
+  active_subscribers?: number;
   new_subscriptions?: number;
+  new_subscribers_30d?: number;
   churned_subscriptions?: number;
+  churned_subscribers_30d?: number;
   revenue_last_30d_cents?: number;
+  revenue_30d_cents?: number;
   ai_tokens_30d?: number;
   ai_cost_cents_30d?: number;
   currency?: string;
@@ -119,6 +123,10 @@ serve(async (req) => {
         }
 
         const mrr = m.mrr_cents ?? 0;
+        const activeSubscriptions = m.active_subscriptions ?? m.active_subscribers ?? 0;
+        const newSubscriptions = m.new_subscriptions ?? m.new_subscribers_30d ?? 0;
+        const churnedSubscriptions = m.churned_subscriptions ?? m.churned_subscribers_30d ?? 0;
+        const revenueLast30d = m.revenue_last_30d_cents ?? m.revenue_30d_cents ?? 0;
         const { error: upErr } = await supabase
           .from("tech_project_snapshots")
           .upsert(
@@ -128,10 +136,10 @@ serve(async (req) => {
               snapshot_date: today,
               mrr_cents: mrr,
               arr_cents: m.arr_cents ?? mrr * 12,
-              active_subscriptions: m.active_subscriptions ?? 0,
-              new_subscriptions: m.new_subscriptions ?? 0,
-              churned_subscriptions: m.churned_subscriptions ?? 0,
-              revenue_last_30d_cents: m.revenue_last_30d_cents ?? 0,
+              active_subscriptions: activeSubscriptions,
+              new_subscriptions: newSubscriptions,
+              churned_subscriptions: churnedSubscriptions,
+              revenue_last_30d_cents: revenueLast30d,
               ai_tokens_30d: m.ai_tokens_30d ?? 0,
               ai_cost_cents_30d: m.ai_cost_cents_30d ?? 0,
               currency: (m.currency || project.currency || "BRL").toUpperCase(),
