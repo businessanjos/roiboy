@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -81,6 +81,7 @@ export function RequiredFieldsModal({
   const [briefingComplete, setBriefingComplete] = useState(false);
   const [billingValues, setBillingValues] = useState<BillingMentoreeValues>(EMPTY_BILLING_VALUES);
   const [dealContact, setDealContact] = useState<{ name?: string | null; phone?: string | null; email?: string | null } | undefined>(undefined);
+  const skipAutosaveRef = useRef(false);
 
   const showBriefing = outcomeType === "won";
   // Dados de faturamento / emissão de NF só fazem sentido quando a venda é dada como ganha.
@@ -94,6 +95,7 @@ export function RequiredFieldsModal({
   useEffect(() => {
     if (open) {
       const draft = readLocalAutosaveDraft<RequiredFieldsDraft>(draftKey);
+      skipAutosaveRef.current = true;
       setValues(draft?.values ?? {});
       setBreakdown(draft?.breakdown ?? []);
       setBillingValues(draft?.billingValues ?? EMPTY_BILLING_VALUES);
@@ -127,11 +129,15 @@ export function RequiredFieldsModal({
             }
           });
       }
+
+      window.setTimeout(() => {
+        skipAutosaveRef.current = false;
+      }, 0);
     }
   }, [open, dealId, showBriefing, showBilling, draftKey]);
 
   useEffect(() => {
-    if (!open || !draftKey) return;
+    if (!open || !draftKey || skipAutosaveRef.current) return;
     writeLocalAutosaveDraft<RequiredFieldsDraft>(draftKey, {
       values,
       breakdown,
