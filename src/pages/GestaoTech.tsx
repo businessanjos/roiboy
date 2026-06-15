@@ -248,14 +248,29 @@ export default function GestaoTech() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs principais — finanças */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Kpi label="MRR" value={fmtBRL(kpis.mrr)} icon={<DollarSign className="h-4 w-4" />} />
         <Kpi label="ARR" value={fmtBRL(kpis.arr)} icon={<TrendingUp className="h-4 w-4" />} />
-        <Kpi label="Assinantes ativos" value={kpis.subs.toLocaleString("pt-BR")} icon={<Users className="h-4 w-4" />} />
-        <Kpi label="Receita 30d" value={fmtBRL(kpis.revenue)} icon={<DollarSign className="h-4 w-4" />} />
+        <Kpi
+          label={`Faturado em ${kpis.lastMonthLabel ?? "mês passado"}`}
+          value={fmtBRL(kpis.revenueLastMonth)}
+          icon={<DollarSign className="h-4 w-4" />}
+          tone="success"
+        />
+        <Kpi label="Mês atual (parcial)" value={fmtBRL(kpis.revenueCurrentMonth)} icon={<DollarSign className="h-4 w-4" />} />
         <Kpi label="Custo fixo / mês" value={fmtBRL(kpis.cost)} icon={<Wallet className="h-4 w-4" />} tone="warning" />
         <Kpi label="Margem (MRR − custo)" value={fmtBRL(kpis.margin)} tone={kpis.margin >= 0 ? "success" : "danger"} />
+      </div>
+
+      {/* KPIs operacionais — base */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Kpi label="Assinantes ativos" value={kpis.subs.toLocaleString("pt-BR")} icon={<Users className="h-4 w-4" />} />
+        <Kpi label="Em trial" value={kpis.trial.toLocaleString("pt-BR")} />
+        <Kpi label="Inadimplentes" value={kpis.pastDue.toLocaleString("pt-BR")} tone={kpis.pastDue > 0 ? "warning" : undefined} />
+        <Kpi label="Novos 30d" value={`+${kpis.newSubs}`} tone="success" />
+        <Kpi label="Churn 30d" value={`-${kpis.churned}`} tone={kpis.churned > 0 ? "danger" : undefined} />
+        <Kpi label="Net new 30d" value={`${kpis.netNew >= 0 ? "+" : ""}${kpis.netNew}`} tone={kpis.netNew >= 0 ? "success" : "danger"} />
       </div>
 
       {/* MRR Chart */}
