@@ -198,13 +198,7 @@ export function TechProjectsTokensManager() {
                 className="rounded-lg border border-border p-4 flex flex-col gap-3"
               >
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="h-3 w-3 rounded-full"
-                      style={{ background: p.color || "#6366f1" }}
-                    />
-                    <div className="font-semibold">{p.name}</div>
-                <div className="flex items-center justify-between flex-wrap gap-2">
+
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
                       className="h-3 w-3 rounded-full"
