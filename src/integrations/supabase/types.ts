@@ -24416,6 +24416,10 @@ export type Database = {
         Args: { _project_id: string }
         Returns: undefined
       }
+      tech_projects_get_token_internal: {
+        Args: { _project_id: string }
+        Returns: string
+      }
       tech_projects_reveal_token: {
         Args: { _project_id: string }
         Returns: string
