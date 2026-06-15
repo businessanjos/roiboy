@@ -60,6 +60,7 @@ import { EditTikTokPostDialog } from './EditTikTokPostDialog';
 import { DeleteTikTokPostDialog } from './DeleteTikTokPostDialog';
 import { DeleteSocialProfileDialog } from './DeleteSocialProfileDialog';
 import { cn } from '@/lib/utils';
+import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAccessAlert';
 
 interface TikTokTabProps {
   initialPostId?: string | null;
