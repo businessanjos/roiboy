@@ -1,4 +1,4 @@
-// Edge function: roy-metrics (Ever AI)
+// Edge function: roy-metrics (Ever AI) — v2 com MRR real, faturamento mês fechado e mensagens IA
 // Cole em: supabase/functions/roy-metrics/index.ts
 // Requer secret: ROY_METRICS_TOKEN
 
@@ -14,8 +14,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const expected = Deno.env.get("ROY_METRICS_TOKEN");
-  const provided = req.headers.get("x-roy-token");
-  if (!expected || provided !== expected) {
+  if (!expected || req.headers.get("x-roy-token") !== expected) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -27,47 +26,92 @@ serve(async (req) => {
     { auth: { persistSession: false } },
   );
 
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const now = new Date();
+  const since30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  // mês ATUAL (1º dia 00:00 UTC)
+  const currentMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  // mês FECHADO anterior
+  const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString();
+  const lastMonthEnd = currentMonthStart;
+  const lastMonthLabel = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1))
+    .toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-  // Subscriptions (Stripe-mirrored)
+  // === Assinaturas (espelho do Stripe na tabela `subscriptions`)
+  // Ajuste os nomes de tabela/colunas se diferentes no seu schema.
   const { data: subs } = await supabase
     .from("subscriptions")
-    .select("status, current_period_end, amount_cents, created_at, canceled_at");
+    .select("status, amount_cents, created_at, canceled_at, current_period_end");
 
-  let active = 0, mrr_cents = 0, new_subs = 0, churned = 0, revenue_last_30d_cents = 0;
+  let active = 0, trialing = 0, past_due = 0;
+  let mrr_cents = 0;
+  let new_subs = 0, churned = 0;
+
   for (const s of subs ?? []) {
-    if (s.status === "active" || s.status === "trialing") {
-      active++;
-      mrr_cents += s.amount_cents ?? 0;
-    }
-    if (s.created_at && s.created_at >= since) new_subs++;
-    if (s.canceled_at && s.canceled_at >= since) churned++;
+    if (s.status === "active") { active++; mrr_cents += s.amount_cents ?? 0; }
+    else if (s.status === "trialing") { trialing++; }
+    else if (s.status === "past_due") { past_due++; mrr_cents += s.amount_cents ?? 0; }
+    if (s.created_at && s.created_at >= since30d) new_subs++;
+    if (s.canceled_at && s.canceled_at >= since30d) churned++;
   }
 
-  // Revenue 30d — adapte ao seu schema (invoices, payments, etc.)
-  const { data: payments } = await supabase
+  // === Faturamento últimos 30d (rolling)
+  const { data: pay30 } = await supabase
     .from("payments")
     .select("amount_cents, status, paid_at")
-    .gte("paid_at", since)
-    .eq("status", "paid");
-  for (const p of payments ?? []) revenue_last_30d_cents += p.amount_cents ?? 0;
+    .eq("status", "paid")
+    .gte("paid_at", since30d);
+  const revenue_last_30d_cents = (pay30 ?? []).reduce((s, p) => s + (p.amount_cents ?? 0), 0);
 
-  // AI usage 30d
-  const { data: aiUsage } = await supabase.rpc("get_platform_ai_usage", {
-    p_start: since,
-    p_end: new Date().toISOString(),
-  });
-  const ai_tokens_30d = aiUsage?.total_tokens ?? 0;
-  const ai_cost_cents_30d = Math.round((aiUsage?.total_cost_usd ?? 0) * 500); // USD→BRL approx
+  // === Faturamento MÊS FECHADO (mês passado)
+  const { data: payLastMonth } = await supabase
+    .from("payments")
+    .select("amount_cents, status, paid_at")
+    .eq("status", "paid")
+    .gte("paid_at", lastMonthStart)
+    .lt("paid_at", lastMonthEnd);
+  const revenue_last_month_cents = (payLastMonth ?? []).reduce((s, p) => s + (p.amount_cents ?? 0), 0);
+
+  // === Faturamento MÊS ATUAL (parcial, do dia 1 até agora)
+  const { data: payCurrent } = await supabase
+    .from("payments")
+    .select("amount_cents, status, paid_at")
+    .eq("status", "paid")
+    .gte("paid_at", currentMonthStart);
+  const revenue_current_month_cents = (payCurrent ?? []).reduce((s, p) => s + (p.amount_cents ?? 0), 0);
+
+  // === Uso de IA (mensagens + custo)
+  // Ajuste para sua tabela real. Se tiver RPC `get_platform_ai_usage`, use-a.
+  let ai_tokens_30d = 0, ai_cost_cents_30d = 0, ai_messages_30d = 0;
+  try {
+    const { data: aiRpc } = await supabase.rpc("get_platform_ai_usage", {
+      p_start: since30d, p_end: now.toISOString(),
+    });
+    ai_tokens_30d = aiRpc?.total_tokens ?? 0;
+    ai_cost_cents_30d = Math.round((aiRpc?.total_cost_usd ?? 0) * 500); // USD→BRL aprox
+    ai_messages_30d = aiRpc?.total_messages ?? 0;
+  } catch (_e) {
+    // fallback: contar diretamente tabela ai_usage_logs
+    const { count: msgCount } = await supabase
+      .from("ai_usage_logs").select("id", { count: "exact", head: true })
+      .gte("created_at", since30d);
+    ai_messages_30d = msgCount ?? 0;
+  }
 
   return new Response(JSON.stringify({
     mrr_cents,
     arr_cents: mrr_cents * 12,
     active_subscriptions: active,
+    trialing_subscriptions: trialing,
+    past_due_subscriptions: past_due,
     new_subscriptions: new_subs,
     churned_subscriptions: churned,
+    net_new_subscriptions: new_subs - churned,
     revenue_last_30d_cents,
+    revenue_last_month_cents,
+    revenue_current_month_cents,
+    last_month_label: lastMonthLabel,
     ai_tokens_30d,
+    ai_messages_30d,
     ai_cost_cents_30d,
     currency: "BRL",
   }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
