@@ -224,6 +224,8 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
 
   return (
     <div className="space-y-6 p-1">
+      <IntegrationAccessAlert platform="tiktok" visibleCount={profiles.length} onReload={refetchData} />
+
       {/* TikTok Profile Header */}
       <TikTokProfileHeader
         profile={currentProfile}
