@@ -132,10 +132,13 @@ serve(async (req) => {
         const activeSubscriptions = m.active_subscriptions ?? m.active_subscribers ?? 0;
         const newSubscriptions = m.new_subscriptions ?? m.new_subscribers_30d ?? 0;
         const churnedSubscriptions = m.churned_subscriptions ?? m.churned_subscribers_30d ?? 0;
+        const netNewSubscriptions = m.net_new_subscriptions ?? (newSubscriptions - churnedSubscriptions);
         const revenueLast30d = m.revenue_last_30d_cents ?? m.revenue_30d_cents ?? 0;
+        const revenueLastMonth = m.revenue_last_month_cents ?? 0;
+        const revenueCurrentMonth = m.revenue_current_month_cents ?? 0;
         // Fallback: se o endpoint não calcular MRR mas houver receita 30d, usar receita como proxy de MRR
         const reportedMrr = m.mrr_cents ?? 0;
-        const mrr = reportedMrr > 0 ? reportedMrr : revenueLast30d;
+        const mrr = reportedMrr > 0 ? reportedMrr : (revenueLastMonth > 0 ? revenueLastMonth : revenueLast30d);
         const reportedArr = m.arr_cents ?? 0;
         const arr = reportedArr > 0 ? reportedArr : mrr * 12;
         const { error: upErr } = await supabase
@@ -148,10 +151,17 @@ serve(async (req) => {
               mrr_cents: mrr,
               arr_cents: arr,
               active_subscriptions: activeSubscriptions,
+              trialing_subscriptions: m.trialing_subscriptions ?? 0,
+              past_due_subscriptions: m.past_due_subscriptions ?? 0,
               new_subscriptions: newSubscriptions,
               churned_subscriptions: churnedSubscriptions,
+              net_new_subscriptions: netNewSubscriptions,
               revenue_last_30d_cents: revenueLast30d,
+              revenue_last_month_cents: revenueLastMonth,
+              revenue_current_month_cents: revenueCurrentMonth,
+              last_month_label: m.last_month_label ?? null,
               ai_tokens_30d: m.ai_tokens_30d ?? 0,
+              ai_messages_30d: m.ai_messages_30d ?? 0,
               ai_cost_cents_30d: m.ai_cost_cents_30d ?? 0,
               currency: (m.currency || project.currency || "BRL").toUpperCase(),
               source: "endpoint",
