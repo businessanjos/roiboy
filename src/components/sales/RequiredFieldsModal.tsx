@@ -79,6 +79,7 @@ export function RequiredFieldsModal({
   const [breakdown, setBreakdown] = useState<PaymentBreakdownItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [briefingComplete, setBriefingComplete] = useState(false);
+  const [draftHydrated, setDraftHydrated] = useState(false);
   const [billingValues, setBillingValues] = useState<BillingMentoreeValues>(EMPTY_BILLING_VALUES);
   const [dealContact, setDealContact] = useState<{ name?: string | null; phone?: string | null; email?: string | null } | undefined>(undefined);
   const skipAutosaveRef = useRef(false);
@@ -96,6 +97,7 @@ export function RequiredFieldsModal({
     if (open) {
       const draft = readLocalAutosaveDraft<RequiredFieldsDraft>(draftKey);
       skipAutosaveRef.current = true;
+      setDraftHydrated(false);
       setValues(draft?.values ?? {});
       setBreakdown(draft?.breakdown ?? []);
       setBillingValues(draft?.billingValues ?? EMPTY_BILLING_VALUES);
@@ -132,6 +134,7 @@ export function RequiredFieldsModal({
 
       window.setTimeout(() => {
         skipAutosaveRef.current = false;
+        setDraftHydrated(true);
       }, 0);
     }
   }, [open, dealId, showBriefing, showBilling, draftKey]);
@@ -436,7 +439,7 @@ export function RequiredFieldsModal({
                   </div>
                 )}
 
-                {showBilling && (
+                {showBilling && draftHydrated && (
                   <BillingMentoreeSection
                     dealId={dealId}
                     accountId={accountId}
@@ -465,7 +468,7 @@ export function RequiredFieldsModal({
                   {displayedFields.map((field) => renderField(field))}
                 </div>
               )}
-              {showBilling && (
+              {showBilling && draftHydrated && (
                 <BillingMentoreeSection
                   dealId={dealId}
                   accountId={accountId}
