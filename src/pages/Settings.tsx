@@ -72,6 +72,8 @@ export default function Settings() {
         return isAdmin && currentUser ? (
           <ApiKeyTab userId={currentUser.id} accountId={currentUser.account_id} />
         ) : null;
+      case "tech-tokens":
+        return isAdmin ? <TechProjectsTokensManager /> : null;
       default:
         return <ProfileContent />;
     }
