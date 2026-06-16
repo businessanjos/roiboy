@@ -764,11 +764,8 @@ async function fetchDealsData(
 
   // Apply status filter if specified (e.g., only 'won' deals for revenue)
   // dealStatusFilter (multi-value) takes priority over statusFilter (single)
-  if (dealStatusFilter && dealStatusFilter.length > 0) {
-    query = query.in('status', dealStatusFilter);
-  } else if (statusFilter) {
-    query = query.eq('status', statusFilter);
-  }
+  // Also handles the special 'deleted' pseudo-status (soft-deleted deals).
+  query = applyDeletedFilter(query, dealStatusFilter, statusFilter ?? null);
 
   // Determine which date field to use for filters based on dimension and status
   // Status filter takes priority for date filtering
