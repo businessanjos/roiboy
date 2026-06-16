@@ -8,6 +8,7 @@ import { ptBR } from "date-fns/locale";
 import { filterByLeadField, filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealField, filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { buildFunnelStageData, detectDuplicateStagesInPipeline } from "@/hooks/funnelData";
+import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 
 export interface AggregatedDataPoint {
   name: string;
