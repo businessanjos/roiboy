@@ -1394,6 +1394,18 @@ export default function SalesPipeline() {
                         className="pl-9 h-8 w-[200px] bg-background border-border text-sm"
                       />
                     </div>
+                    {canSeeDeleted && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => setIsDeletedDrawerOpen(true)}
+                        title="Ver negócios excluídos"
+                      >
+                        <Trash2Icon className="h-3.5 w-3.5 mr-1" />
+                        Excluídos
+                      </Button>
+                    )}
                   </div>
                 </div>
 
