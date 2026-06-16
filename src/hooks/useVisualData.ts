@@ -1111,9 +1111,7 @@ async function getLeadIdsByDealConstraints(
       .select('id, lead_id')
       .eq('account_id', accountId);
 
-    if (dealStatusFilter && dealStatusFilter.length > 0) {
-      query = query.in('status', dealStatusFilter);
-    }
+    query = applyDeletedFilter(query, dealStatusFilter, null);
 
     const { data, error } = await query.range(from, from + pageSize - 1);
     if (error) {
