@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { isManagementUser } from "@/lib/access/managementRoles";
 import { Input } from "@/components/ui/input";
 import { FieldFilter, DEAL_CREATED_AT_FIELD_ID } from "@/components/insights/visual-builder/types";
 
@@ -28,6 +30,8 @@ const DEAL_STATUS_OPTIONS = [
   { value: 'open', label: 'Em Aberto' },
   { value: 'lost', label: 'Perdido' },
 ];
+
+const DELETED_OPTION = { value: 'deleted', label: 'Excluído' };
 
 interface DealFieldFilterSectionProps {
   filters: FieldFilter[];
