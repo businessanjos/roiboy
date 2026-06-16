@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   Dialog,
   DialogContent,
