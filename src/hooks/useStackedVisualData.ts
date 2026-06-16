@@ -208,11 +208,7 @@ async function fetchStackedDealsData(
     `)
     .eq('account_id', accountId);
 
-  if (config.dealStatusFilter && config.dealStatusFilter.length > 0) {
-    query = query.in('status', config.dealStatusFilter);
-  } else if (statusFilter) {
-    query = query.eq('status', statusFilter);
-  }
+  query = applyDeletedFilter(query, config.dealStatusFilter, statusFilter ?? null);
 
   // Determine date field for temporal filtering (NOT the dimension field when categorical)
   let dateField: string;
