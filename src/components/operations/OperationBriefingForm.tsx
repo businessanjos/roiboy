@@ -404,16 +404,9 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   const fxRate = fx?.rate ?? 0;
   const showConversion = !isBRL && fxRate > 0;
 
-  // Componente local que injeta a moeda corrente
-  const Money = (props: Omit<MoneyFieldProps, "currencySymbol" | "currencyCode" | "fxRate" | "showConversion">) => (
-    <MoneyField
-      {...props}
-      currencySymbol={symbol}
-      currencyCode={currencyCode}
-      fxRate={fxRate}
-      showConversion={showConversion}
-    />
-  );
+  // Props comuns de moeda — espalhadas em cada MoneyField para manter a
+  // identidade do componente estável entre renders (evita perda de foco).
+  const moneyProps = { currencySymbol: symbol, currencyCode, fxRate, showConversion };
 
   return (
     <Card className="shadow-card">
