@@ -588,6 +588,7 @@ async function fetchDealSourceForLeads(
       .from('deals')
       .select('id, lead_id, created_at, status')
       .eq('account_id', accountId)
+      .is('deleted_at', null)
       .in('lead_id', batch)
       .order('created_at', { ascending: false });
     if (data) allDeals = allDeals.concat(data);
