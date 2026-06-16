@@ -315,7 +315,9 @@ export function MergeDealDialog({
             )}
 
             {searchQuery && filteredDeals.length === 0 && (
-              <p className="text-center text-muted-foreground py-4">Nenhum negócio encontrado</p>
+              <p className="text-center text-muted-foreground py-4">
+                {searching ? "Buscando..." : "Nenhum negócio encontrado"}
+              </p>
             )}
           </div>
         )}
