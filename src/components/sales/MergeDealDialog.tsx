@@ -70,12 +70,15 @@ export function MergeDealDialog({
   deals,
   onMerge,
 }: MergeDealDialogProps) {
+  const { currentUser } = useCurrentUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetDeal, setTargetDeal] = useState<Deal | null>(null);
   const [merging, setMerging] = useState(false);
   const [activitiesCount, setActivitiesCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
   const [loadingCounts, setLoadingCounts] = useState(false);
+  const [remoteDeals, setRemoteDeals] = useState<Deal[]>([]);
+  const [searching, setSearching] = useState(false);
   const [choices, setChoices] = useState<FieldChoice>({
     title: "target",
     value: "target",
@@ -84,6 +87,51 @@ export function MergeDealDialog({
     source: "target",
     responsible_user_id: "target",
   });
+
+  // Remote search across ALL pipelines (not just the currently loaded funnel).
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q || !currentUser?.account_id) {
+      setRemoteDeals([]);
+      return;
+    }
+    let cancelled = false;
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const like = `%${q}%`;
+        const { data, error } = await supabase
+          .from("deals")
+          .select(`
+            id, account_id, title, value, currency, probability, expected_close_date,
+            source, responsible_user_id, notes, tags, status, contact_name,
+            stage_id, pipeline_id, client_id, lead_id, created_at, updated_at,
+            client:clients(id, full_name, phone_e164, avatar_url),
+            lead:leads(id, full_name, phone, email, avatar_url),
+            responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url)
+          `)
+          .eq("account_id", currentUser.account_id)
+          .is("deleted_at", null)
+          .neq("id", sourceDeal.id)
+          .or(`title.ilike.${like},contact_name.ilike.${like}`)
+          .limit(20);
+        if (cancelled) return;
+        if (error) {
+          console.error("merge search error:", error);
+          setRemoteDeals([]);
+        } else {
+          setRemoteDeals((data || []) as unknown as Deal[]);
+        }
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, currentUser?.account_id, sourceDeal.id]);
+
 
   const fetchMergeCounts = async (sourceId: string) => {
     setLoadingCounts(true);
