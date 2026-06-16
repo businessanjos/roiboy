@@ -718,9 +718,14 @@ export function useDeals(pipelineId?: string | null) {
     if (!currentUser?.account_id) return false;
 
     try {
+      // Soft-delete: marca deleted_at em vez de remover do banco.
+      // Permite restaurar e filtrar "Excluído" nos Insights.
       const { error } = await supabase
         .from('deals')
-        .delete()
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: currentUser.auth_user_id ?? null,
+        })
         .eq('id', dealId)
         .eq('account_id', currentUser.account_id);
 
@@ -730,7 +735,7 @@ export function useDeals(pipelineId?: string | null) {
 
       toast({
         title: "Negociação excluída",
-        description: "A negociação foi removida do pipeline",
+        description: "A negociação foi removida do pipeline (pode ser restaurada por um admin).",
       });
 
       return true;
@@ -738,6 +743,36 @@ export function useDeals(pipelineId?: string | null) {
       console.error('Error deleting deal:', error);
       toast({
         title: "Erro ao excluir negociação",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const restoreDeal = async (dealId: string): Promise<boolean> => {
+    if (!currentUser?.account_id) return false;
+    try {
+      const { error } = await supabase
+        .from('deals')
+        .update({ deleted_at: null, deleted_by: null })
+        .eq('id', dealId)
+        .eq('account_id', currentUser.account_id);
+
+      if (error) throw error;
+
+      await fetchDeals();
+
+      toast({
+        title: "Negociação restaurada",
+        description: "A negociação voltou para o pipeline.",
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error('Error restoring deal:', error);
+      toast({
+        title: "Erro ao restaurar negociação",
         description: error.message,
         variant: "destructive",
       });
