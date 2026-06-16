@@ -98,11 +98,7 @@ async function fetchDealsRecords(
   // Infer status filter if not explicitly set (matches useVisualData logic)
   const effectiveStatusFilter = config.statusFilter ?? inferStatusFilter(config.measure, config.dimension);
 
-  if (config.dealStatusFilter?.length) {
-    query = query.in('status', config.dealStatusFilter);
-  } else if (effectiveStatusFilter) {
-    query = query.eq('status', effectiveStatusFilter);
-  }
+  query = applyDeletedFilter(query, config.dealStatusFilter, effectiveStatusFilter ?? null);
 
   // Determine which date field to use for filters
   // dealStatusFilter takes priority for date field selection
