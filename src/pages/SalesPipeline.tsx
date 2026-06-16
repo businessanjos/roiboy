@@ -145,7 +145,7 @@ export default function SalesPipeline() {
   const [isFieldsDialogOpen, setIsFieldsDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isDeletedDrawerOpen, setIsDeletedDrawerOpen] = useState(false);
-  const { data: isSuperAdmin } = useSuperAdmin();
+  const { isSuperAdmin } = useSuperAdmin();
   const canSeeDeleted = isManagementUser(currentUser as any, !!isSuperAdmin);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
