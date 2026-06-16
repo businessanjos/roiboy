@@ -8,6 +8,7 @@ import { ptBR } from "date-fns/locale";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { enrichDealsWithProduct } from "@/hooks/useVisualData";
+import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 
 export interface DrilldownRecord {
   id: string;
