@@ -7,6 +7,7 @@ import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInt
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
+import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 
 export interface StackedDataPoint {
   name: string;
