@@ -156,20 +156,25 @@ export function MergeDealDialog({
     }
   };
 
-  // Filter deals for search (exclude source deal)
+  // Combine local (current pipeline) and remote (all pipelines) search results.
   const filteredDeals = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
-    return deals
+    const local = deals
       .filter(d => d.id !== sourceDeal.id)
-      .filter(d => 
+      .filter(d =>
         d.title.toLowerCase().includes(query) ||
         d.contact_name?.toLowerCase().includes(query) ||
         d.client?.full_name?.toLowerCase().includes(query) ||
         d.lead?.full_name?.toLowerCase().includes(query)
-      )
-      .slice(0, 10);
-  }, [deals, searchQuery, sourceDeal.id]);
+      );
+    const merged = [...local];
+    for (const r of remoteDeals) {
+      if (!merged.find(m => m.id === r.id)) merged.push(r);
+    }
+    return merged.slice(0, 20);
+  }, [deals, remoteDeals, searchQuery, sourceDeal.id]);
+
 
   const handleSelectTarget = (deal: Deal) => {
     setTargetDeal(deal);
