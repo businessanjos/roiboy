@@ -214,7 +214,15 @@ function SingleDealFilter({
 
 export function DealFieldFilterSection({ filters, onFiltersChange, dealStatusFilter = [], onDealStatusFilterChange }: DealFieldFilterSectionProps) {
   const { currentUser } = useCurrentUser();
+  const { isSuperAdmin } = useSuperAdmin();
   const [dealFields, setDealFields] = useState<DealField[]>([]);
+
+  // Restrito a admins / gestão (conforme decisão do produto).
+  // Mantém a opção visível também se já estiver marcada, para não "sumir" valor selecionado.
+  const canSeeDeleted =
+    isManagementUser(currentUser as any, isSuperAdmin) || dealStatusFilter.includes('deleted');
+
+  const statusOptions = canSeeDeleted ? [...DEAL_STATUS_OPTIONS, DELETED_OPTION] : DEAL_STATUS_OPTIONS;
 
   useEffect(() => {
     if (!currentUser?.account_id) return;
