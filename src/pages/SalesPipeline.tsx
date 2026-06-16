@@ -84,6 +84,10 @@ import {
 } from "@/components/ui/popover";
 import LeadsTab from "@/components/sales/LeadsTab";
 import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingScheduleDialog";
+import { DeletedDealsDrawer } from "@/components/sales/DeletedDealsDrawer";
+import { isManagementUser } from "@/lib/access/managementRoles";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { Trash2 } from "lucide-react";
 
 
 export default function SalesPipeline() {
