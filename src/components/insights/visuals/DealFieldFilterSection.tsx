@@ -285,7 +285,7 @@ export function DealFieldFilterSection({ filters, onFiltersChange, dealStatusFil
         <div className="space-y-2 p-3 border rounded-lg">
           <Label className="text-sm font-medium">Status do Negócio</Label>
           <div className="space-y-1">
-            {DEAL_STATUS_OPTIONS.map(opt => (
+            {statusOptions.map(opt => (
               <div key={opt.value} className="flex items-center gap-2">
                 <Checkbox
                   id={`deal-status-${opt.value}`}
