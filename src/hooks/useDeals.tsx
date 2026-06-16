@@ -1065,6 +1065,7 @@ export function useDeals(pipelineId?: string | null) {
     updateDeal,
     moveDeal,
     deleteDeal,
+    restoreDeal,
     markAsWon,
     markAsLost,
     reopenDeal,
