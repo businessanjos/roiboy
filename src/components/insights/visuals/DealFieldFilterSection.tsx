@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { isManagementUser } from "@/lib/access/managementRoles";
 import { Input } from "@/components/ui/input";
 import { FieldFilter, DEAL_CREATED_AT_FIELD_ID } from "@/components/insights/visual-builder/types";
 
@@ -28,6 +30,8 @@ const DEAL_STATUS_OPTIONS = [
   { value: 'open', label: 'Em Aberto' },
   { value: 'lost', label: 'Perdido' },
 ];
+
+const DELETED_OPTION = { value: 'deleted', label: 'Excluído' };
 
 interface DealFieldFilterSectionProps {
   filters: FieldFilter[];
@@ -210,7 +214,15 @@ function SingleDealFilter({
 
 export function DealFieldFilterSection({ filters, onFiltersChange, dealStatusFilter = [], onDealStatusFilterChange }: DealFieldFilterSectionProps) {
   const { currentUser } = useCurrentUser();
+  const { isSuperAdmin } = useSuperAdmin();
   const [dealFields, setDealFields] = useState<DealField[]>([]);
+
+  // Restrito a admins / gestão (conforme decisão do produto).
+  // Mantém a opção visível também se já estiver marcada, para não "sumir" valor selecionado.
+  const canSeeDeleted =
+    isManagementUser(currentUser as any, isSuperAdmin) || dealStatusFilter.includes('deleted');
+
+  const statusOptions = canSeeDeleted ? [...DEAL_STATUS_OPTIONS, DELETED_OPTION] : DEAL_STATUS_OPTIONS;
 
   useEffect(() => {
     if (!currentUser?.account_id) return;
@@ -273,7 +285,7 @@ export function DealFieldFilterSection({ filters, onFiltersChange, dealStatusFil
         <div className="space-y-2 p-3 border rounded-lg">
           <Label className="text-sm font-medium">Status do Negócio</Label>
           <div className="space-y-1">
-            {DEAL_STATUS_OPTIONS.map(opt => (
+            {statusOptions.map(opt => (
               <div key={opt.value} className="flex items-center gap-2">
                 <Checkbox
                   id={`deal-status-${opt.value}`}

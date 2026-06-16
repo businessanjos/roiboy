@@ -84,6 +84,10 @@ import {
 } from "@/components/ui/popover";
 import LeadsTab from "@/components/sales/LeadsTab";
 import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingScheduleDialog";
+import { DeletedDealsDrawer } from "@/components/sales/DeletedDealsDrawer";
+import { isManagementUser } from "@/lib/access/managementRoles";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { Trash2 as Trash2Icon } from "lucide-react";
 
 
 export default function SalesPipeline() {
@@ -140,6 +144,9 @@ export default function SalesPipeline() {
   const [isStagesManagerOpen, setIsStagesManagerOpen] = useState(false);
   const [isFieldsDialogOpen, setIsFieldsDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isDeletedDrawerOpen, setIsDeletedDrawerOpen] = useState(false);
+  const { isSuperAdmin } = useSuperAdmin();
+  const canSeeDeleted = isManagementUser(currentUser as any, !!isSuperAdmin);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
@@ -1387,6 +1394,18 @@ export default function SalesPipeline() {
                         className="pl-9 h-8 w-[200px] bg-background border-border text-sm"
                       />
                     </div>
+                    {canSeeDeleted && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => setIsDeletedDrawerOpen(true)}
+                        title="Ver negócios excluídos"
+                      >
+                        <Trash2Icon className="h-3.5 w-3.5 mr-1" />
+                        Excluídos
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -1751,6 +1770,15 @@ export default function SalesPipeline() {
         stages={stages}
         salesUsers={salesUsers}
       />
+
+      {/* Deleted Deals Drawer (admin/gestão) */}
+      {canSeeDeleted && (
+        <DeletedDealsDrawer
+          open={isDeletedDrawerOpen}
+          onOpenChange={setIsDeletedDrawerOpen}
+          onRestored={() => fetchDeals()}
+        />
+      )}
 
       {/* Required Fields Modal for Won/Lost outcomes */}
       <RequiredFieldsModal

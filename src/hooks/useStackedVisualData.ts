@@ -7,6 +7,7 @@ import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInt
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
+import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 
 export interface StackedDataPoint {
   name: string;
@@ -208,11 +209,7 @@ async function fetchStackedDealsData(
     `)
     .eq('account_id', accountId);
 
-  if (config.dealStatusFilter && config.dealStatusFilter.length > 0) {
-    query = query.in('status', config.dealStatusFilter);
-  } else if (statusFilter) {
-    query = query.eq('status', statusFilter);
-  }
+  query = applyDeletedFilter(query, config.dealStatusFilter, statusFilter ?? null);
 
   // Determine date field for temporal filtering (NOT the dimension field when categorical)
   let dateField: string;

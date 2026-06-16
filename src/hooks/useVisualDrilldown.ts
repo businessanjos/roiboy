@@ -8,6 +8,7 @@ import { ptBR } from "date-fns/locale";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { enrichDealsWithProduct } from "@/hooks/useVisualData";
+import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 
 export interface DrilldownRecord {
   id: string;
@@ -98,11 +99,7 @@ async function fetchDealsRecords(
   // Infer status filter if not explicitly set (matches useVisualData logic)
   const effectiveStatusFilter = config.statusFilter ?? inferStatusFilter(config.measure, config.dimension);
 
-  if (config.dealStatusFilter?.length) {
-    query = query.in('status', config.dealStatusFilter);
-  } else if (effectiveStatusFilter) {
-    query = query.eq('status', effectiveStatusFilter);
-  }
+  query = applyDeletedFilter(query, config.dealStatusFilter, effectiveStatusFilter ?? null);
 
   // Determine which date field to use for filters
   // dealStatusFilter takes priority for date field selection
@@ -591,6 +588,7 @@ async function fetchDealSourceForLeads(
       .from('deals')
       .select('id, lead_id, created_at, status')
       .eq('account_id', accountId)
+      .is('deleted_at', null)
       .in('lead_id', batch)
       .order('created_at', { ascending: false });
     if (data) allDeals = allDeals.concat(data);

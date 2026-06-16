@@ -30,6 +30,7 @@ export function useMapVisualData({ enabled = true }: { enabled?: boolean } = {})
         .select('id, value, won_at')
         .eq('account_id', accountId)
         .eq('status', 'won')
+        .is('deleted_at', null)
         .not('won_at', 'is', null);
 
       if (filters.startDate) dealsQuery = dealsQuery.gte('won_at', filters.startDate);

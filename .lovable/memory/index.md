@@ -39,6 +39,7 @@
 - [Multi-Pipeline Validation](mem://features/sales/multi-pipeline-system-pt) — Ensures every deal has a `pipeline_id` explicitly selected or auto-filled
 - [Pipeline Persisted UI Filters](mem://features/sales/pipeline-ui-and-bi-logic-pt) — LocalStorage persistence for filters and explicit Deal ID resolution on webhook
 - [Repescagem Funnel Ban](mem://features/sales/repescagem-removal-pt) — Complete permanent removal of Repescagem routing logic and pipelines
+- [Deal Soft Delete](mem://features/sales/deal-soft-delete-pt) — `deals.deleted_at/deleted_by`, filtro "Excluído" em Insights e drawer admin com Restaurar/Purgar
 - [Dual Responsibles](mem://features/sales/dual-responsible-system-sales-and-operations) — `sales_user_id` for conversion vs `responsible_user_id` for ops triage
 - [Won Deal Mapping](mem://features/sales/won-deal-mapping-and-lifecycle) — Maps won deals to client contracts, removes from Kanban view
 - [Upsell Deal Workflow](mem://features/sales/upsell-registration-workflow-pt) — Immediate registration of upsells to 'won' status in Closer pipeline
