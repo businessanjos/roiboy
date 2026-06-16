@@ -215,6 +215,7 @@ export function useDeals(pipelineId?: string | null) {
             .from('deals')
             .select(selectQuery)
             .eq('account_id', currentUser.account_id)
+            .is('deleted_at', null)
             .order('created_at', { ascending: false })
             .range(from, from + PAGE_SIZE - 1);
 
