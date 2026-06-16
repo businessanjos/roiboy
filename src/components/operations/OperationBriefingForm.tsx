@@ -404,16 +404,9 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   const fxRate = fx?.rate ?? 0;
   const showConversion = !isBRL && fxRate > 0;
 
-  // Componente local que injeta a moeda corrente
-  const Money = (props: Omit<MoneyFieldProps, "currencySymbol" | "currencyCode" | "fxRate" | "showConversion">) => (
-    <MoneyField
-      {...props}
-      currencySymbol={symbol}
-      currencyCode={currencyCode}
-      fxRate={fxRate}
-      showConversion={showConversion}
-    />
-  );
+  // Props comuns de moeda — espalhadas em cada MoneyField para manter a
+  // identidade do componente estável entre renders (evita perda de foco).
+  const moneyProps = { currencySymbol: symbol, currencyCode, fxRate, showConversion };
 
   return (
     <Card className="shadow-card">
@@ -494,18 +487,18 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
           <div className="sm:col-span-2 space-y-2 rounded-md border p-3">
             <Label className="text-xs font-semibold">Últimos 3 faturamentos ({currencyCode}) *</Label>
             <div className="grid grid-cols-3 gap-2">
-              <Money label="Mês -3" value={data.faturamento_mes_3} onChange={(v) => update("faturamento_mes_3", v)} placeholder="60000" readOnly={readOnly} compact />
-              <Money label="Mês -2" value={data.faturamento_mes_2} onChange={(v) => update("faturamento_mes_2", v)} placeholder="55000" readOnly={readOnly} compact />
-              <Money label="Mês -1" value={data.faturamento_mes_1} onChange={(v) => update("faturamento_mes_1", v)} placeholder="70000" readOnly={readOnly} compact />
+              <MoneyField {...moneyProps} label="Mês -3" value={data.faturamento_mes_3} onChange={(v) => update("faturamento_mes_3", v)} placeholder="60000" readOnly={readOnly} compact />
+              <MoneyField {...moneyProps} label="Mês -2" value={data.faturamento_mes_2} onChange={(v) => update("faturamento_mes_2", v)} placeholder="55000" readOnly={readOnly} compact />
+              <MoneyField {...moneyProps} label="Mês -1" value={data.faturamento_mes_1} onChange={(v) => update("faturamento_mes_1", v)} placeholder="70000" readOnly={readOnly} compact />
             </div>
             <p className="text-[11px] text-muted-foreground">
               Digite só o número, sem &quot;mil&quot;. Ex.: 60000 (não &quot;60 mil&quot;).
             </p>
           </div>
 
-          <Money label="Ticket médio *" value={data.ticket_medio} onChange={(v) => update("ticket_medio", v)} placeholder="4000" readOnly={readOnly} />
+          <MoneyField {...moneyProps} label="Ticket médio *" value={data.ticket_medio} onChange={(v) => update("ticket_medio", v)} placeholder="4000" readOnly={readOnly} />
           <NumberField label="Margem de lucro *" value={data.margem_lucro_percent} onChange={(v) => update("margem_lucro_percent", v)} placeholder="50" suffix="%" readOnly={readOnly} max={100} />
-          <Money label="Meta de faturamento *" value={data.meta_faturamento} onChange={(v) => update("meta_faturamento", v)} placeholder="100000" readOnly={readOnly} />
+          <MoneyField {...moneyProps} label="Meta de faturamento *" value={data.meta_faturamento} onChange={(v) => update("meta_faturamento", v)} placeholder="100000" readOnly={readOnly} />
 
           <div className="space-y-1.5">
             <Label className="text-xs">Tem caixa?</Label>
@@ -525,7 +518,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
                 </SelectContent>
               </Select>
               {data.tem_caixa_bool === true && (
-                <Money label="" value={data.caixa_valor} onChange={(v) => update("caixa_valor", v)} placeholder="Valor" readOnly={readOnly} compact className="flex-1" />
+                <MoneyField {...moneyProps} label="" value={data.caixa_valor} onChange={(v) => update("caixa_valor", v)} placeholder="Valor" readOnly={readOnly} compact className="flex-1" />
               )}
             </div>
           </div>
@@ -533,7 +526,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
           <div className="space-y-1.5">
             <Label className="text-xs">Tráfego / Investimento</Label>
             <div className="flex gap-2">
-              <Money label="" value={data.trafego_investimento_valor} onChange={(v) => update("trafego_investimento_valor", v)} placeholder="2200" readOnly={readOnly} compact className="flex-1" />
+              <MoneyField {...moneyProps} label="" value={data.trafego_investimento_valor} onChange={(v) => update("trafego_investimento_valor", v)} placeholder="2200" readOnly={readOnly} compact className="flex-1" />
               <Select
                 value={data.trafego_investimento_periodo}
                 onValueChange={(v) => update("trafego_investimento_periodo", v as Periodo)}
