@@ -1771,6 +1771,15 @@ export default function SalesPipeline() {
         salesUsers={salesUsers}
       />
 
+      {/* Deleted Deals Drawer (admin/gestão) */}
+      {canSeeDeleted && (
+        <DeletedDealsDrawer
+          open={isDeletedDrawerOpen}
+          onOpenChange={setIsDeletedDrawerOpen}
+          onRestored={() => fetchDeals()}
+        />
+      )}
+
       {/* Required Fields Modal for Won/Lost outcomes */}
       <RequiredFieldsModal
         open={outcomeRequiredFieldsModal.open}
