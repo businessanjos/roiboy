@@ -6090,6 +6090,8 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           currency: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           entry_value: number | null
           expected_close_date: string | null
           has_second_seat: boolean
@@ -6127,6 +6129,8 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           currency?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           entry_value?: number | null
           expected_close_date?: string | null
           has_second_seat?: boolean
@@ -6164,6 +6168,8 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           currency?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           entry_value?: number | null
           expected_close_date?: string | null
           has_second_seat?: boolean
