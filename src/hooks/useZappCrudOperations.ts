@@ -234,6 +234,23 @@ export function useZappCrudOperations({
     }
   }, [fetchData]);
 
+  const toggleAgentGlobalAccess = useCallback(async (agent: Agent) => {
+    try {
+      const next = !agent.has_global_access;
+      const { error } = await supabase
+        .from("zapp_agents")
+        .update({ has_global_access: next } as any)
+        .eq("id", agent.id);
+
+      if (error) throw error;
+      toast.success(next ? "Acesso global ativado" : "Acesso global removido");
+      fetchData();
+    } catch (error: any) {
+      console.error("Error toggling agent global access:", error);
+      toast.error("Erro ao alterar acesso global");
+    }
+  }, [fetchData]);
+
   // Tag functions
   const openTagDialog = useCallback((tag?: ZappTag) => {
     if (tag) {
