@@ -1,31 +1,21 @@
+# Corrigir visibilidade global no RoyZapp para Admin/Gestor
+
 ## Problema
+Andréia tem `role = "gestor"` (DB), `is_also_admin = false` e team roles `["Admin", "Consultor"]`. No filtro de abas do RoyZapp, a condição que libera "ver tudo" é a prop `isAdmin` vinda de `usePermissions`, que só considera `role in ("admin","super_admin")` ou `is_also_admin`. Resultado: na aba "Minhas", ela só vê conversas onde `agent_id = currentAgent.id`, mesmo sendo Admin pelo papel de time.
 
-Na modal "Campos Obrigatórios → Briefing para Operação" (acionada ao dar Ganho), todos os campos monetários (faturamentos, ticket médio, meta, caixa, tráfego) perdem o foco após cada tecla — é preciso clicar de novo a cada dígito.
+Existe inclusive um `hasGlobalVisibility` já calculado corretamente em `useZappData.tsx` (linhas 65-73) que reconhece `team_role_names.includes("Admin")`, mas ele nunca chega ao `ZappConversationList`.
 
-## Causa raiz
+## Solução
+Unificar a checagem de visibilidade global usando o `hasGlobalVisibility` já existente e propagá-lo até o filtro de abas.
 
-Em `src/components/operations/OperationBriefingForm.tsx` (linha ~408), o componente auxiliar `Money` é declarado **dentro** do corpo do componente `OperationBriefingForm`:
+### Mudanças
+1. **`src/hooks/useZappData.tsx`** — expor `hasGlobalVisibility` no retorno do hook (hoje fica interno).
+2. **`src/pages/RoyZapp.tsx`** — consumir `hasGlobalVisibility` de `useZappData` e usar `isAdmin || hasGlobalVisibility` como prop `isAdmin` passada ao `ZappConversationList` (linha ~1148). Mantém compat: super_admin / admin / is_also_admin continuam funcionando, e agora team_role "Admin"/"Gestor" também.
+3. **`src/hooks/useZappConversations.ts`** — remover `hasGlobalVisibility` da dependency array do `useMemo` em filteredAssignments (dead var), para evitar confusão futura. Sem mudança de comportamento.
 
-```tsx
-const Money = (props) => <MoneyField {...props} currencySymbol={symbol} ... />;
-```
+Não mexer em `usePermissions.isAdmin` global (impacto além do RoyZapp) — o ajuste fica escopado ao RoyZapp, que é onde o usuário relatou o problema e onde a semântica de "ver tudo" é claramente desejada para Admin/Gestor.
 
-Cada digitação chama `setData` → re-renderiza `OperationBriefingForm` → cria uma nova referência de função para `Money`. React vê um "tipo de componente novo", desmonta o `<input>` antigo e monta um novo no lugar — o foco vai junto. Esse é um anti-pattern clássico do React (definir componentes dentro de outros componentes).
-
-Os campos `NumberField` puros (tempo de atuação, nº funcionários, etc.) não sofrem disso por serem módulo-level — mas a maioria visível dos campos numéricos passa por `Money`.
-
-## Correção
-
-Remover o wrapper `Money` definido inline e usar `MoneyField` diretamente, passando as props de moeda (`currencySymbol`, `currencyCode`, `fxRate`, `showConversion`) em cada chamada. Como `MoneyField` já está em escopo de módulo, sua identidade fica estável entre renders e o `<input>` mantém o foco.
-
-Alterações em `src/components/operations/OperationBriefingForm.tsx`:
-
-1. Deletar o bloco que define `const Money = (props) => <MoneyField ... />` (linhas ~408-416).
-2. Substituir cada uso de `<Money ... />` por `<MoneyField ... currencySymbol={symbol} currencyCode={currencyCode} fxRate={fxRate} showConversion={showConversion} />` nas seções de Faturamento, Caixa e Tráfego (6 ocorrências).
-
-Sem mudanças de UI, lógica de salvamento, validação ou tokens de design — apenas estabilização da identidade do componente.
-
-## Verificação
-
-- Abrir um deal no /pipeline, clicar em "Ganha", ir na aba "Briefing para Operação".
-- Digitar uma sequência de dígitos em "Mês -1", "Ticket médio", "Meta de faturamento", "Caixa", "Tráfego" sem precisar reclicar — o foco deve permanecer.
+### Validação
+- Após o fix, Andréia (team_role Admin) verá todas as conversas independente da aba.
+- Usuários sem papel Admin/Gestor continuam restritos a `agent_id = currentAgent.id` na aba "Minhas".
+- Sem migration; apenas frontend.
