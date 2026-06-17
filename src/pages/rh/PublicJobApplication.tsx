@@ -538,7 +538,23 @@ export default function PublicJobApplication() {
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
+      <style>{`
+        .eternum-apply input:-webkit-autofill,
+        .eternum-apply input:-webkit-autofill:hover,
+        .eternum-apply input:-webkit-autofill:focus,
+        .eternum-apply input:-webkit-autofill:active,
+        .eternum-apply textarea:-webkit-autofill,
+        .eternum-apply textarea:-webkit-autofill:hover,
+        .eternum-apply textarea:-webkit-autofill:focus {
+          -webkit-text-fill-color: ${CARD} !important;
+          -webkit-box-shadow: 0 0 0px 1000px ${BG_DEEP} inset !important;
+          box-shadow: 0 0 0px 1000px ${BG_DEEP} inset !important;
+          caret-color: ${CARD} !important;
+          transition: background-color 9999s ease-in-out 0s;
+        }
+      `}</style>
       {/* HERO */}
+
       <header className="relative overflow-hidden" style={{ background: `linear-gradient(180deg, ${BG_DEEP} 0%, ${BG} 100%)` }}>
         <div
           className="absolute inset-0 opacity-[0.08] pointer-events-none"
