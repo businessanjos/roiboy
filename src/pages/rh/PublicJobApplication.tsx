@@ -285,12 +285,87 @@ export default function PublicJobApplication() {
     setFormData(prev => ({ ...prev, [key]: value }));
   }
 
+  const MAX_RESUME_BYTES = 10 * 1024 * 1024; // 10 MB
+  const ALLOWED_RESUME_EXTS = ["pdf", "doc", "docx"];
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  function handleResumeChange(file: File | null) {
+    if (!file) {
+      setResumeFile(null);
+      return;
+    }
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!ALLOWED_RESUME_EXTS.includes(ext)) {
+      toast({
+        title: "Formato não suportado",
+        description: "Envie o currículo em PDF, DOC ou DOCX.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > MAX_RESUME_BYTES) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      toast({
+        title: "Arquivo muito grande",
+        description: `O currículo tem ${sizeMB}MB. O limite é 10MB. Tente compactar o PDF.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setResumeFile(file);
+  }
+
+  function focusField(id: string) {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        try { (el as HTMLInputElement).focus({ preventScroll: true }); } catch {}
+      }
+    }, 50);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!job) return;
+    if (!job || submitting) return;
 
-    if (!formData.candidate_name || !formData.candidate_email) {
-      toast({ title: "Preencha os campos obrigatórios", description: "Nome e e-mail são obrigatórios.", variant: "destructive" });
+    const name = formData.candidate_name.trim();
+    const email = formData.candidate_email.trim();
+    const phone = formData.candidate_phone.trim();
+    const city = formData.candidate_city.trim();
+    const state = formData.candidate_state.trim();
+    const position = formData.desired_position.trim();
+    const seniority = formData.desired_seniority.trim();
+    const coverLetter = formData.cover_letter.trim();
+    const pcdType = formData.candidate_pcd_type.trim();
+
+    // Validação núcleo
+    if (!name) {
+      toast({ title: "Falta seu nome completo", description: "Esse campo é obrigatório.", variant: "destructive" });
+      focusField("name");
+      return;
+    }
+    if (name.length < 3) {
+      toast({ title: "Nome muito curto", description: "Digite seu nome completo.", variant: "destructive" });
+      focusField("name");
+      return;
+    }
+    if (!email) {
+      toast({ title: "Falta seu e-mail", description: "Esse campo é obrigatório.", variant: "destructive" });
+      focusField("email");
+      return;
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      toast({ title: "E-mail inválido", description: "Confira se digitou corretamente.", variant: "destructive" });
+      focusField("email");
+      return;
+    }
+    if (formData.candidate_pcd && !pcdType) {
+      toast({ title: "Informe o tipo de deficiência", description: "Esse campo é obrigatório quando PCD está marcado.", variant: "destructive" });
+      return;
+    }
+    if (job.require_cover_letter && !coverLetter) {
+      toast({ title: "Falta a carta de apresentação", description: "Essa vaga exige carta.", variant: "destructive" });
       return;
     }
 
@@ -316,46 +391,73 @@ export default function PublicJobApplication() {
       let resume_url: string | null = null;
 
       if (resumeFile) {
-        const ext = resumeFile.name.split(".").pop();
-        const safeName = formData.candidate_name.replace(/[^a-zA-Z0-9_-]+/g, "_");
+        // Revalida antes do upload (defesa em profundidade)
+        if (resumeFile.size > MAX_RESUME_BYTES) {
+          throw new Error("Currículo acima de 10MB. Compacte o arquivo e tente novamente.");
+        }
+        const ext = (resumeFile.name.split(".").pop() || "pdf").toLowerCase();
+        if (!ALLOWED_RESUME_EXTS.includes(ext)) {
+          throw new Error("Formato de currículo não suportado. Use PDF, DOC ou DOCX.");
+        }
+        const safeName = (name || "candidato").replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 60);
         const path = `${job.id}/${Date.now()}_${safeName}.${ext}`;
         const { error: uploadError } = await supabase.storage
           .from("hr-resumes")
-          .upload(path, resumeFile);
+          .upload(path, resumeFile, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: resumeFile.type || undefined,
+          });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error("[PublicJobApplication] resume upload failed", uploadError);
+          throw new Error(
+            "Não conseguimos enviar seu currículo agora. Tente outro arquivo (PDF até 10MB) ou prossiga sem anexo."
+          );
+        }
         resume_url = path;
       }
 
+      const payload = {
+        job_id: job.id,
+        account_id: job.account_id,
+        candidate_name: name.slice(0, 200),
+        candidate_email: email.slice(0, 200).toLowerCase(),
+        candidate_phone: phone ? phone.slice(0, 40) : null,
+        candidate_city: city ? city.slice(0, 100) : null,
+        candidate_state: state || null,
+        desired_position: position ? position.slice(0, 200) : null,
+        desired_seniority: seniority || null,
+        cover_letter: coverLetter ? coverLetter.slice(0, 5000) : null,
+        candidate_pcd: formData.candidate_pcd,
+        candidate_pcd_type: formData.candidate_pcd ? pcdType.slice(0, 200) : null,
+        resume_url,
+        screening_answers: screeningAnswers as any,
+        stage: "applied" as const,
+        status: "active",
+      };
+
       const { error: insertError } = await supabase
         .from("hr_job_applications")
-        .insert({
-          job_id: job.id,
-          account_id: job.account_id,
-          candidate_name: formData.candidate_name,
-          candidate_email: formData.candidate_email,
-          candidate_phone: formData.candidate_phone || null,
-          candidate_city: formData.candidate_city || null,
-          candidate_state: formData.candidate_state || null,
-          desired_position: formData.desired_position || null,
-          desired_seniority: formData.desired_seniority || null,
-          cover_letter: formData.cover_letter || null,
-          candidate_pcd: formData.candidate_pcd,
-          candidate_pcd_type: formData.candidate_pcd ? formData.candidate_pcd_type : null,
-          resume_url,
-          screening_answers: screeningAnswers as any,
-          stage: "applied",
-          status: "active",
-        });
+        .insert(payload);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("[PublicJobApplication] insert failed", insertError);
+        throw new Error(
+          "Não conseguimos registrar sua candidatura agora. Verifique sua conexão e tente novamente em alguns segundos."
+        );
+      }
 
       const draftKey = getDraftKey(id);
       if (draftKey) window.localStorage.removeItem(draftKey);
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
-      toast({ title: "Erro ao enviar candidatura", description: err.message, variant: "destructive" });
+      toast({
+        title: "Erro ao enviar candidatura",
+        description: err?.message || "Tente novamente em instantes.",
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
