@@ -127,6 +127,8 @@ interface ZappConversationPanelProps {
   onOpenNewConversationDialog: () => void;
   onOpenAgentDialog: (agent?: Agent) => void;
   onToggleAgentOnline: (agent: Agent) => void;
+  onToggleAgentGlobalAccess?: (agent: Agent) => void;
+  canManageGlobalAccess?: boolean;
   onDeleteAgent: (agentId: string) => void;
   onOpenDepartmentDialog: (department: Department | null) => void;
   onDeleteDepartment: (departmentId: string) => void;
@@ -217,6 +219,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onOpenNewConversationDialog,
   onOpenAgentDialog,
   onToggleAgentOnline,
+  onToggleAgentGlobalAccess,
+  canManageGlobalAccess = false,
   onDeleteAgent,
   onOpenDepartmentDialog,
   onDeleteDepartment,
@@ -828,6 +832,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             availableUsersCount={availableUsersCount}
             onOpenAgentDialog={onOpenAgentDialog}
             onToggleAgentOnline={onToggleAgentOnline}
+            onToggleAgentGlobalAccess={onToggleAgentGlobalAccess}
+            canManageGlobalAccess={canManageGlobalAccess}
             onDeleteAgent={onDeleteAgent}
           />
         )}

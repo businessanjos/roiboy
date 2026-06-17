@@ -23016,6 +23016,7 @@ export type Database = {
           created_at: string
           current_chats: number
           department_id: string | null
+          has_global_access: boolean
           id: string
           is_active: boolean
           is_online: boolean
@@ -23029,6 +23030,7 @@ export type Database = {
           created_at?: string
           current_chats?: number
           department_id?: string | null
+          has_global_access?: boolean
           id?: string
           is_active?: boolean
           is_online?: boolean
@@ -23042,6 +23044,7 @@ export type Database = {
           created_at?: string
           current_chats?: number
           department_id?: string | null
+          has_global_access?: boolean
           id?: string
           is_active?: boolean
           is_online?: boolean

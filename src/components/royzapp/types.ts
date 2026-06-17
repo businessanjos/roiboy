@@ -31,6 +31,7 @@ export interface Agent {
   department_id: string | null;
   is_active: boolean;
   is_online: boolean;
+  has_global_access?: boolean;
   max_concurrent_chats: number;
   current_chats: number;
   last_activity_at: string | null;
