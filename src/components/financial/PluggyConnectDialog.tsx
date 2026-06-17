@@ -63,6 +63,12 @@ interface PluggyAccount {
   item_id: string;
 }
 
+interface PluggyConnectorDiagnostics {
+  total: number;
+  realBankTotal: number;
+  sample?: string[];
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -141,10 +147,16 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       const { data, error: fnErr } = await supabase.functions.invoke<{
         success: boolean;
         accessToken?: string;
+        connectorDiagnostics?: PluggyConnectorDiagnostics;
         error?: string;
       }>("pluggy-create-connect-token", { body: { clientUserId: bankAccountId } });
       if (fnErr) throw fnErr;
       if (!data?.success || !data.accessToken) throw new Error(data?.error || "Sem token");
+      if ((data.connectorDiagnostics?.realBankTotal ?? 0) === 0) {
+        throw new Error(
+          "A credencial Pluggy configurada está limitada ao app demo Meu Pluggy. Por isso não aparecem bancos reais. É preciso trocar PLUGGY_CLIENT_ID e PLUGGY_CLIENT_SECRET pelas credenciais de produção da Pluggy."
+        );
+      }
 
       if (!window.PluggyConnect) throw new Error("Widget Pluggy não carregou");
 

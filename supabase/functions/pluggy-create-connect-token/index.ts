@@ -5,6 +5,38 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type PluggyConnector = {
+  name?: string;
+  isSandbox?: boolean;
+};
+
+async function getProductionConnectorDiagnostics() {
+  const query = new URLSearchParams({
+    countries: "BR",
+    sandbox: "false",
+    isOpenFinance: "true",
+  });
+  query.append("types", "PERSONAL_BANK");
+  query.append("types", "BUSINESS_BANK");
+
+  const response = await pluggyFetch(`/connectors?${query.toString()}`, { method: "GET" });
+  const connectors = Array.isArray(response?.results)
+    ? response.results
+    : Array.isArray(response)
+      ? response
+      : [] as PluggyConnector[];
+  const realBankConnectors = connectors.filter((connector: PluggyConnector) => {
+    const name = String(connector?.name ?? "").toLowerCase();
+    return connector?.isSandbox !== true && !name.includes("meu pluggy");
+  });
+
+  return {
+    total: connectors.length,
+    realBankTotal: realBankConnectors.length,
+    sample: realBankConnectors.slice(0, 5).map((connector: PluggyConnector) => connector?.name).filter(Boolean),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -29,14 +61,17 @@ Deno.serve(async (req) => {
       body: JSON.stringify(payload),
     });
 
+    const connectorDiagnostics = await getProductionConnectorDiagnostics();
+
     return new Response(
-      JSON.stringify({ success: true, accessToken: r.accessToken }),
+      JSON.stringify({ success: true, accessToken: r.accessToken, connectorDiagnostics }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro desconhecido";
     console.error("pluggy-create-connect-token:", err);
     return new Response(
-      JSON.stringify({ success: false, error: err.message }),
+      JSON.stringify({ success: false, error: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
