@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Users, Plus, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Users, Plus, MoreVertical, Pencil, Trash2, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Agent, TeamUser, getInitials } from "./types";
 
@@ -20,6 +26,8 @@ interface ZappTeamListProps {
   availableUsersCount: number;
   onOpenAgentDialog: (agent?: Agent) => void;
   onToggleAgentOnline: (agent: Agent) => void;
+  onToggleAgentGlobalAccess?: (agent: Agent) => void;
+  canManageGlobalAccess?: boolean;
   onDeleteAgent: (agentId: string) => void;
 }
 
@@ -29,6 +37,8 @@ export const ZappTeamList = memo(function ZappTeamList({
   availableUsersCount,
   onOpenAgentDialog,
   onToggleAgentOnline,
+  onToggleAgentGlobalAccess,
+  canManageGlobalAccess = false,
   onDeleteAgent,
 }: ZappTeamListProps) {
   return (
