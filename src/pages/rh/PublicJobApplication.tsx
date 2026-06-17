@@ -523,48 +523,88 @@ export default function PublicJobApplication() {
             <SectionLabel>Sobre a vaga</SectionLabel>
             <div className="grid md:grid-cols-5 gap-8 items-start">
               <div className="md:col-span-3 space-y-4">
-                {job.description.split("\n").filter(Boolean).map((p, i) => {
-                  const trimmed = p.trim();
-                  const headingMatch = trimmed.match(/^\*\*(.+?)\*\*$/);
-                  if (headingMatch) {
-                    return (
-                      <h3
-                        key={i}
-                        className="text-lg md:text-xl pt-4 first:pt-0"
-                        style={{ fontFamily: SERIF, color: GOLD, fontWeight: 500, letterSpacing: "0.02em" }}
-                      >
-                        {headingMatch[1]}
-                      </h3>
-                    );
-                  }
+                {(() => {
                   const renderInline = (text: string) => {
                     const parts: (string | JSX.Element)[] = [];
-                    const regex = /\*\*(.+?)\*\*|_(.+?)_/g;
+                    const regex = /\*\*(.+?)\*\*|__(.+?)__|\*(.+?)\*|_(.+?)_|`(.+?)`|\[(.+?)\]\((.+?)\)/g;
                     let lastIndex = 0;
                     let m: RegExpExecArray | null;
                     let key = 0;
                     while ((m = regex.exec(text)) !== null) {
                       if (m.index > lastIndex) parts.push(text.slice(lastIndex, m.index));
-                      if (m[1] !== undefined) {
-                        parts.push(<strong key={key++} style={{ color: GOLD, fontWeight: 600 }}>{m[1]}</strong>);
-                      } else if (m[2] !== undefined) {
-                        parts.push(<em key={key++}>{m[2]}</em>);
+                      if (m[1] !== undefined || m[2] !== undefined) {
+                        parts.push(<strong key={key++} style={{ color: GOLD, fontWeight: 600 }}>{m[1] ?? m[2]}</strong>);
+                      } else if (m[3] !== undefined || m[4] !== undefined) {
+                        parts.push(<em key={key++}>{m[3] ?? m[4]}</em>);
+                      } else if (m[5] !== undefined) {
+                        parts.push(<code key={key++} style={{ fontFamily: "monospace", fontSize: "0.9em" }}>{m[5]}</code>);
+                      } else if (m[6] !== undefined && m[7] !== undefined) {
+                        parts.push(<a key={key++} href={m[7]} target="_blank" rel="noopener noreferrer" style={{ color: GOLD, textDecoration: "underline" }}>{m[6]}</a>);
                       }
                       lastIndex = m.index + m[0].length;
                     }
                     if (lastIndex < text.length) parts.push(text.slice(lastIndex));
                     return parts;
                   };
-                  return (
-                    <p
-                      key={i}
-                      className="text-[15px] md:text-base leading-relaxed"
-                      style={{ fontFamily: SERIF, color: "#e8dcc0", fontWeight: 300 }}
-                    >
-                      {renderInline(trimmed)}
-                    </p>
-                  );
-                })}
+
+                  const lines = job.description.split("\n");
+                  const blocks: JSX.Element[] = [];
+                  let listBuffer: string[] = [];
+                  let key = 0;
+
+                  const flushList = () => {
+                    if (listBuffer.length === 0) return;
+                    const items = [...listBuffer];
+                    listBuffer = [];
+                    blocks.push(
+                      <ul key={`ul-${key++}`} className="list-disc pl-5 space-y-2 text-[15px] md:text-base leading-relaxed" style={{ fontFamily: SERIF, color: "#e8dcc0", fontWeight: 300 }}>
+                        {items.map((it, idx) => (
+                          <li key={idx}>{renderInline(it)}</li>
+                        ))}
+                      </ul>
+                    );
+                  };
+
+                  for (const raw of lines) {
+                    const trimmed = raw.trim();
+                    if (!trimmed) { flushList(); continue; }
+
+                    const listMatch = trimmed.match(/^[-*]\s+(.+)$/);
+                    if (listMatch) { listBuffer.push(listMatch[1]); continue; }
+                    flushList();
+
+                    const hMatch = trimmed.match(/^(#{1,6})\s+(.+?)\s*#*$/);
+                    const boldHeadingMatch = !hMatch && trimmed.match(/^\*\*(.+?)\*\*$/);
+
+                    if (hMatch || boldHeadingMatch) {
+                      const text = hMatch ? hMatch[2] : boldHeadingMatch![1];
+                      const level = hMatch ? hMatch[1].length : 2;
+                      const size = level <= 2 ? "text-xl md:text-2xl" : "text-lg md:text-xl";
+                      blocks.push(
+                        <h3
+                          key={`h-${key++}`}
+                          className={`${size} pt-4 first:pt-0`}
+                          style={{ fontFamily: SERIF, color: GOLD, fontWeight: 500, letterSpacing: "0.02em" }}
+                        >
+                          {renderInline(text)}
+                        </h3>
+                      );
+                      continue;
+                    }
+
+                    blocks.push(
+                      <p
+                        key={`p-${key++}`}
+                        className="text-[15px] md:text-base leading-relaxed"
+                        style={{ fontFamily: SERIF, color: "#e8dcc0", fontWeight: 300 }}
+                      >
+                        {renderInline(trimmed)}
+                      </p>
+                    );
+                  }
+                  flushList();
+                  return blocks;
+                })()}
               </div>
               <div className="md:col-span-2">
                 <div
