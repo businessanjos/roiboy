@@ -117,6 +117,7 @@
 - [Service Provider Kinds](mem://features/rh/service-provider-kinds-pt) — `provider_kind` director (sócios/diretores PJ) vs on_demand (terceirizados); R&S só p/ on_demand
 - [Payroll Inactive Exclusion](mem://features/rh/payroll-inactive-exclusion-pt) — Status `inactive` sempre excluído
 - [Job Offers (Cartas-Proposta)](mem://features/rh/job-offers-pt) — Wizard /rh/offers + link público iamroy.app/oferta/:token com aceite/recusa
+- [No Em-Dashes Candidatura](mem://features/rh/no-em-dashes-pt) — Páginas públicas de candidatura nunca usam — ou –; renderer já remove
 - [Offboarding Suite](mem://features/rh/offboarding-suite-pt) — /rh/offboarding com rescisão CLT, checklist, corte de acesso e exit interview
 
 ### UI, Forms & General Architecture
