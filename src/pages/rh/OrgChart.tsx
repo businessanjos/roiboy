@@ -107,13 +107,36 @@ export default function OrgChart() {
   }, []);
 
   async function loadData() {
-    const { data } = await supabase
-      .from("hr_collaborators")
-      .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, employment_type")
-      .eq("status", "active")
-      .order("full_name");
+    const [{ data: collabs }, { data: directors }] = await Promise.all([
+      supabase
+        .from("hr_collaborators")
+        .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, employment_type")
+        .eq("status", "active")
+        .order("full_name"),
+      supabase
+        .from("hr_service_providers")
+        .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, provider_kind")
+        .eq("provider_kind", "director")
+        .eq("status", "active")
+        .order("full_name"),
+    ]);
 
-    if (!data) { setLoading(false); return; }
+    const data: Collaborator[] = [
+      ...((collabs || []) as Collaborator[]),
+      ...((directors || []).map((d: any) => ({
+        id: `provider:${d.id}`,
+        full_name: d.full_name,
+        department: d.department,
+        position: d.position,
+        avatar_url: d.avatar_url,
+        hire_date: d.hire_date,
+        birth_date: d.birth_date,
+        status: d.status,
+        employment_type: "PJ Diretor",
+      }))),
+    ];
+
+    if (data.length === 0) { setLoading(false); return; }
 
     const grouped = new Map<string, Collaborator[]>();
     for (const c of data) {
