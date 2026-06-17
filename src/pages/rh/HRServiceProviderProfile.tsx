@@ -3,6 +3,7 @@ import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHRServiceProviders, HRServiceProvider } from "@/hooks/useHRServiceProviders";
+import { useHRDepartments } from "@/hooks/useHRDepartments";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -61,6 +62,7 @@ export default function HRServiceProviderProfile() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const { updateProvider, deleteProvider } = useHRServiceProviders();
+  const { departments } = useHRDepartments();
   const [provider, setProvider] = useState<HRServiceProvider | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -385,6 +387,41 @@ export default function HRServiceProviderProfile() {
                   : "Consultorias, contábil, medicina ocupacional e demais terceirizados."}
               </p>
             </div>
+
+            {((form as any).provider_kind || "on_demand") === "director" && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-3">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-amber-800">
+                  <Crown className="h-4 w-4 text-amber-600" /> Posicionamento no Organograma
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Diretores PJ aparecem no organograma da empresa. Defina o setor e o cargo para posicioná-lo corretamente.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Setor / Departamento</Label>
+                    <Select
+                      value={(form as any).department || ""}
+                      onValueChange={(v) => setField("department", v)}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Selecione o setor" /></SelectTrigger>
+                      <SelectContent>
+                        {departments.map(d => (
+                          <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Cargo</Label>
+                    <Input
+                      value={form.position || ""}
+                      onChange={e => setField("position", e.target.value)}
+                      placeholder="Ex: CEO, Diretor, Head de Operações..."
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {((form as any).provider_kind || "on_demand") === "on_demand" && (
               <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-3">

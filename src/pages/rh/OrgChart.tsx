@@ -107,13 +107,36 @@ export default function OrgChart() {
   }, []);
 
   async function loadData() {
-    const { data } = await supabase
-      .from("hr_collaborators")
-      .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, employment_type")
-      .eq("status", "active")
-      .order("full_name");
+    const [{ data: collabs }, { data: directors }] = await Promise.all([
+      supabase
+        .from("hr_collaborators")
+        .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, employment_type")
+        .eq("status", "active")
+        .order("full_name"),
+      supabase
+        .from("hr_service_providers")
+        .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, provider_kind")
+        .eq("provider_kind", "director")
+        .eq("status", "active")
+        .order("full_name"),
+    ]);
 
-    if (!data) { setLoading(false); return; }
+    const data: Collaborator[] = [
+      ...((collabs || []) as Collaborator[]),
+      ...((directors || []).map((d: any) => ({
+        id: `provider:${d.id}`,
+        full_name: d.full_name,
+        department: d.department,
+        position: d.position,
+        avatar_url: d.avatar_url,
+        hire_date: d.hire_date,
+        birth_date: d.birth_date,
+        status: d.status,
+        employment_type: "PJ Diretor",
+      }))),
+    ];
+
+    if (data.length === 0) { setLoading(false); return; }
 
     const grouped = new Map<string, Collaborator[]>();
     for (const c of data) {
@@ -378,7 +401,7 @@ export default function OrgChart() {
                   {/* Head highlight */}
                   {!isCollapsed && head && viewMode === "expanded" && (
                     <button
-                      onClick={() => navigate(`/rh/collaborators/${head.id}`)}
+                      onClick={() => navigate(head.id.startsWith("provider:") ? `/rh/service-providers/${head.id.slice(9)}` : `/rh/collaborators/${head.id}`)}
                       className="mx-3 mt-3 p-3 rounded-xl bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 flex items-center gap-3 text-left hover:from-primary/10 hover:to-primary/15 transition-colors"
                     >
                       <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-offset-background ring-primary/40">
@@ -425,7 +448,7 @@ export default function OrgChart() {
                             return (
                               <button
                                 key={c.id}
-                                onClick={() => navigate(`/rh/collaborators/${c.id}`)}
+                                onClick={() => navigate(c.id.startsWith("provider:") ? `/rh/service-providers/${c.id.slice(9)}` : `/rh/collaborators/${c.id}`)}
                                 className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/80 text-left"
                               >
                                 <Avatar className="h-6 w-6">
@@ -446,7 +469,7 @@ export default function OrgChart() {
                           return (
                             <button
                               key={c.id}
-                              onClick={() => navigate(`/rh/collaborators/${c.id}`)}
+                              onClick={() => navigate(c.id.startsWith("provider:") ? `/rh/service-providers/${c.id.slice(9)}` : `/rh/collaborators/${c.id}`)}
                               className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/80 text-left ${isHead ? "bg-muted/40" : ""}`}
                             >
                               <Avatar className={isHead ? "h-10 w-10 ring-2 ring-offset-2 ring-offset-background ring-primary/30" : "h-9 w-9"}>
