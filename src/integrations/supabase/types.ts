@@ -24498,6 +24498,10 @@ export type Database = {
         }
         Returns: Json
       }
+      release_zapp_assignments_for_user: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       renegotiate_installment: {
         Args: {
           p_installment_id: string
