@@ -25,7 +25,7 @@ declare global {
   }
 }
 
-const PLUGGY_CDN = "https://cdn.pluggy.ai/web-connect/v2.13.1/pluggy-connect.js";
+const PLUGGY_CDN = "https://cdn.pluggy.ai/pluggy-connect/latest/pluggy-connect.js";
 const PLUGGY_SCRIPT_ID = "pluggy-connect-script";
 const PLUGGY_TIMEOUT_MS = 15000;
 
