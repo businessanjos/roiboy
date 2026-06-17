@@ -1,0 +1,1 @@
+ALTER TABLE public.zapp_agents ADD COLUMN IF NOT EXISTS has_global_access boolean NOT NULL DEFAULT false;
