@@ -5,6 +5,33 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function getProductionConnectorDiagnostics() {
+  const query = new URLSearchParams({
+    countries: "BR",
+    sandbox: "false",
+    isOpenFinance: "true",
+  });
+  query.append("types", "PERSONAL_BANK");
+  query.append("types", "BUSINESS_BANK");
+
+  const response = await pluggyFetch(`/connectors?${query.toString()}`, { method: "GET" });
+  const connectors = Array.isArray(response?.results)
+    ? response.results
+    : Array.isArray(response)
+      ? response
+      : [];
+  const realBankConnectors = connectors.filter((connector: any) => {
+    const name = String(connector?.name ?? "").toLowerCase();
+    return connector?.isSandbox !== true && !name.includes("meu pluggy");
+  });
+
+  return {
+    total: connectors.length,
+    realBankTotal: realBankConnectors.length,
+    sample: realBankConnectors.slice(0, 5).map((connector: any) => connector?.name).filter(Boolean),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -29,8 +56,10 @@ Deno.serve(async (req) => {
       body: JSON.stringify(payload),
     });
 
+    const connectorDiagnostics = await getProductionConnectorDiagnostics();
+
     return new Response(
-      JSON.stringify({ success: true, accessToken: r.accessToken }),
+      JSON.stringify({ success: true, accessToken: r.accessToken, connectorDiagnostics }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
