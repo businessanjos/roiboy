@@ -832,6 +832,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             availableUsersCount={availableUsersCount}
             onOpenAgentDialog={onOpenAgentDialog}
             onToggleAgentOnline={onToggleAgentOnline}
+            onToggleAgentGlobalAccess={onToggleAgentGlobalAccess}
+            canManageGlobalAccess={canManageGlobalAccess}
             onDeleteAgent={onDeleteAgent}
           />
         )}
