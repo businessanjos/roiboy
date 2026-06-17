@@ -1207,6 +1207,8 @@ export default function RoyZapp() {
           onOpenNewConversationDialog={contactOps.openNewConversationDialog}
           onOpenAgentDialog={crud.openAgentDialog}
           onToggleAgentOnline={crud.toggleAgentOnline}
+          onToggleAgentGlobalAccess={crud.toggleAgentGlobalAccess}
+          canManageGlobalAccess={hasGlobalVisibility}
           onDeleteAgent={crud.setDeletingAgentId}
           onOpenDepartmentDialog={crud.openDepartmentDialog}
           onDeleteDepartment={crud.setDeletingDepartmentId}
