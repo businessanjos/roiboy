@@ -79,7 +79,7 @@ const DEFAULT_SCREENING_QUESTIONS: ScreeningQuestion[] = [
   {
     id: "why_you",
     label: "Por que VOCÊ, especificamente, deveria ocupar essa cadeira?",
-    helper: "Sem clichês. Queremos entender o que te torna diferente — não o que você acha que queremos ouvir.",
+    helper: "Sem clichês. Queremos entender o que te torna diferente, não o que você acha que queremos ouvir.",
     type: "textarea",
     required: true,
     minLength: 200,
@@ -94,7 +94,7 @@ const DEFAULT_SCREENING_QUESTIONS: ScreeningQuestion[] = [
   },
   {
     id: "proudest_win",
-    label: "Qual o maior orgulho profissional da sua carreira até hoje — e o que isso diz sobre você?",
+    label: "Qual o maior orgulho profissional da sua carreira até hoje, e o que isso diz sobre você?",
     type: "textarea",
     required: true,
     minLength: 150,
@@ -732,7 +732,7 @@ export default function PublicJobApplication() {
               </h3>
               <p className="text-[14px] sm:text-[15px] leading-relaxed" style={{ color: TEXT_DARK, opacity: 0.75, fontFamily: SERIF, fontStyle: "italic" }}>
                 Pedimos algumas respostas que exigem tempo e honestidade. Se você quer mesmo essa cadeira,
-                isso vai ser fácil. Se não quer tanto assim — tudo bem, esse não é o seu lugar.
+                isso vai ser fácil. Se não quer tanto assim, tudo bem, esse não é o seu lugar.
               </p>
             </div>
 
