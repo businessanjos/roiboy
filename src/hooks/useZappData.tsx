@@ -70,6 +70,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     currentUser?.team_role_name === "Gestor" ||
     currentUser?.team_role_names?.includes("Admin") ||
     currentUser?.team_role_names?.includes("Gestor") ||
+    dialogs.currentAgent?.has_global_access === true ||
     false;
 
   const conversations = useZappConversations({
