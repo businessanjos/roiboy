@@ -70,7 +70,7 @@ export default function RHVagas() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Select value={statusFilter} onValueChange={v => setStatusFilter(v as JobStatus | "all")}>
           <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filtrar por status" /></SelectTrigger>
           <SelectContent>
@@ -78,6 +78,17 @@ export default function RHVagas() {
             {Object.entries(JOB_STATUS_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
           </SelectContent>
         </Select>
+        {selectMode && (
+          <>
+            <Button variant="outline" size="sm" onClick={toggleAll}>
+              {allSelected ? "Limpar seleção" : "Selecionar todas"}
+            </Button>
+            <span className="text-sm text-muted-foreground">{selectedIds.length} selecionada(s)</span>
+            <Button size="sm" disabled={selectedIds.length === 0} onClick={() => setBulkOpen(true)}>
+              <Settings2 className="h-4 w-4 mr-2" />Aplicar alterações
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Jobs list */}
