@@ -529,7 +529,7 @@ export default function PublicJobApplication() {
 
   return (
     <div
-      className="min-h-screen overflow-x-hidden"
+      className="min-h-screen overflow-x-hidden eternum-apply"
       style={{
         background: BG,
         color: CARD,
