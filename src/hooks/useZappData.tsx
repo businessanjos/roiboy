@@ -130,6 +130,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     allClients: filters.allClients,
     currentAgent: dialogs.currentAgent,
     sectorId,
+    hasGlobalVisibility,
 
     // Conversation data
     assignments: conversations.assignments,

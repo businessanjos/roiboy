@@ -232,6 +232,7 @@ export default function RoyZapp() {
     clientProducts,
     leadDealStages,
     currentAgent,
+    hasGlobalVisibility,
     whatsappConnected,
     whatsappConnecting,
     whatsappInstanceName,
