@@ -548,10 +548,13 @@ export default function PublicJobApplication() {
                   };
 
                   // Remove seção "O que oferecemos" da descrição (já renderizada como badges abaixo)
-                  const cleanedDescription = job.description.replace(
-                    /(^|\n)\s*#{1,6}\s*O que oferec[^\n]*\n[\s\S]*?(?=\n\s*#{1,6}\s|\s*$)/gi,
-                    "$1"
-                  );
+                  // e remove travessões (em-dash / en-dash) por regra do projeto.
+                  const cleanedDescription = job.description
+                    .replace(
+                      /(^|\n)\s*#{1,6}\s*O que oferec[^\n]*\n[\s\S]*?(?=\n\s*#{1,6}\s|\s*$)/gi,
+                      "$1"
+                    )
+                    .replace(/\s*[—–]\s*/g, ", ");
                   const lines = cleanedDescription.split("\n");
                   const blocks: JSX.Element[] = [];
                   let listBuffer: string[] = [];
