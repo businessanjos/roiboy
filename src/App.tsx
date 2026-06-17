@@ -178,6 +178,7 @@ const RHAdmissions = lazyRetry(() => import("./pages/rh/RHAdmissions"));
 const RHOffboarding = lazyRetry(() => import("./pages/rh/RHOffboarding"));
 const RHTalentPool = lazyRetry(() => import("./pages/rh/RHTalentPool"));
 const PublicJobOffer = lazyRetry(() => import("./pages/public/PublicJobOffer"));
+const PublicExitInterview = lazyRetry(() => import("./pages/public/PublicExitInterview"));
 const SharedInsights = lazyRetry(() => import("./pages/SharedInsights"));
 const ExternalDashboard = lazyRetry(() => import("./pages/ExternalDashboard"));
 const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
@@ -270,6 +271,7 @@ const App = () => (
 
                           <Route path="/external/incentive-plan/:token" element={<PublicIncentivePresentation />} />
                           <Route path="/oferta/:token" element={<PublicJobOffer />} />
+                          <Route path="/desligamento/saida/:token" element={<PublicExitInterview />} />
                           
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/terms-of-service" element={<TermsOfService />} />
