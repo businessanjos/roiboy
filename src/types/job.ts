@@ -193,7 +193,11 @@ export const DEFAULT_JOB_FORM_DATA: JobFormData = {
   salary_type: "not_disclosed",
   salary_min: null,
   salary_max: null,
-  benefits: [],
+  benefits: [
+    "Salário compatível com o mercado",
+    "Bônus de Incentivo por atingimento de resultados",
+    "Benefícios",
+  ],
   application_deadline: null,
   expected_start_date: null,
   urgency: "medium",
