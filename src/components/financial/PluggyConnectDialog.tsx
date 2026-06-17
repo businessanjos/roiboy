@@ -150,7 +150,7 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
 
       const widget = new window.PluggyConnect({
         connectToken: data.accessToken,
-        includeSandbox: true,
+        includeSandbox: false,
         onSuccess: async (payload: PluggySuccessPayload) => {
           const newItemId = payload?.item?.id;
           if (!newItemId) {
