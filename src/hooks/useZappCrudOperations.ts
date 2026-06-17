@@ -418,6 +418,7 @@ export function useZappCrudOperations({
     saveAgent,
     deleteAgent,
     toggleAgentOnline,
+    toggleAgentGlobalAccess,
 
     // Tag
     tagDialogOpen,
