@@ -863,12 +863,14 @@ export default function PublicJobApplication() {
                   <div className="space-y-1.5">
                     <Label htmlFor="name" className="text-[11px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, fontFamily: SANS, fontWeight: 600 }}>Nome completo *</Label>
                     <Input id="name" value={formData.candidate_name} onChange={e => updateField("candidate_name", e.target.value)} required
+                      autoComplete="name" maxLength={200}
                       className="bg-white/70 border-[1.5px]"
                       style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="email" className="text-[11px] uppercase tracking-[0.2em]" style={{ color: TEXT_DARK, fontFamily: SANS, fontWeight: 600 }}>E-mail *</Label>
                     <Input id="email" type="email" value={formData.candidate_email} onChange={e => updateField("candidate_email", e.target.value)} required
+                      autoComplete="email" inputMode="email" maxLength={200}
                       className="bg-white/70 border-[1.5px]"
                       style={{ borderColor: `${GOLD}66`, color: TEXT_DARK, fontFamily: SANS }} />
                   </div>
@@ -938,10 +940,11 @@ export default function PublicJobApplication() {
                 <input
                   id="resume"
                   type="file"
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   className="hidden"
-                  onChange={e => setResumeFile(e.target.files?.[0] || null)}
+                  onChange={e => handleResumeChange(e.target.files?.[0] || null)}
                 />
+
                 <label
                   htmlFor="resume"
                   className="cursor-pointer block rounded-sm p-8 text-center transition-all hover:scale-[1.01]"
