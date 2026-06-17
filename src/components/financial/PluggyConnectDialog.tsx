@@ -151,6 +151,10 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
       const widget = new window.PluggyConnect({
         connectToken: data.accessToken,
         includeSandbox: false,
+        countries: ["BR"],
+        connectorTypes: ["PERSONAL_BANK", "BUSINESS_BANK"],
+        products: ["ACCOUNTS", "TRANSACTIONS"],
+        language: "pt",
         onSuccess: async (payload: PluggySuccessPayload) => {
           const newItemId = payload?.item?.id;
           if (!newItemId) {
