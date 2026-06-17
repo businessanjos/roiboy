@@ -10,12 +10,18 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    // itemId opcional: passar quando for "atualizar" credenciais de um item existente
+    // itemId opcional: passar quando for "atualizar" credenciais de um item existente.
+    // A Pluggy espera clientUserId/avoidDuplicates dentro de `options`; fora disso o token
+    // pode abrir uma experiência genérica em vez do Connect direto para instituições.
     const itemId: string | undefined = body.itemId;
     const clientUserId: string | undefined = body.clientUserId;
 
-    const payload: Record<string, unknown> = {};
-    if (clientUserId) payload.clientUserId = clientUserId;
+    const payload: Record<string, unknown> = {
+      options: {
+        ...(clientUserId ? { clientUserId } : {}),
+        avoidDuplicates: true,
+      },
+    };
     if (itemId) payload.itemId = itemId;
 
     const r = await pluggyFetch("/connect_token", {
