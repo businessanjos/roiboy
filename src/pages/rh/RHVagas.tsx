@@ -28,6 +28,14 @@ export default function RHVagas() {
   const deleteJob = useDeleteHRJob();
   const updateJob = useUpdateHRJob();
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; job: HRJob | null }>({ open: false, job: null });
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const allSelected = jobs && jobs.length > 0 && selectedIds.length === jobs.length;
+  const toggleAll = () => setSelectedIds(allSelected ? [] : (jobs || []).map(j => j.id));
 
   const confirmDelete = async () => {
     if (deleteDialog.job) { await deleteJob.mutateAsync(deleteDialog.job.id); setDeleteDialog({ open: false, job: null }); }
