@@ -375,7 +375,7 @@ export default function OrgChart() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-white/80" />
-                        <h2 className="text-base font-semibold text-white">{dept.name}</h2>
+                        <h2 className="text-base font-semibold text-white">{dept.name === "Operações" ? "Customer Success" : dept.name}</h2>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
