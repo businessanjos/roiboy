@@ -176,6 +176,7 @@ const RHOffers = lazyRetry(() => import("./pages/rh/RHOffers"));
 const RHOfferWizard = lazyRetry(() => import("./pages/rh/RHOfferWizard"));
 const RHAdmissions = lazyRetry(() => import("./pages/rh/RHAdmissions"));
 const RHOffboarding = lazyRetry(() => import("./pages/rh/RHOffboarding"));
+const RHTalentPool = lazyRetry(() => import("./pages/rh/RHTalentPool"));
 const PublicJobOffer = lazyRetry(() => import("./pages/public/PublicJobOffer"));
 const SharedInsights = lazyRetry(() => import("./pages/SharedInsights"));
 const ExternalDashboard = lazyRetry(() => import("./pages/ExternalDashboard"));
@@ -407,6 +408,7 @@ const App = () => (
                             <Route path="/rh/offers/:id/edit" element={<RHOfferWizard />} />
                             <Route path="/rh/admissions" element={<RHAdmissions />} />
                             <Route path="/rh/offboarding" element={<RHOffboarding />} />
+                            <Route path="/rh/resumes" element={<RHTalentPool />} />
                             
                             
                           </Route>
