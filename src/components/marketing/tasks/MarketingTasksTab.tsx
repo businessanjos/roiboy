@@ -109,12 +109,10 @@ export function MarketingTasksTab() {
             <Plus className="h-4 w-4" />
             Add task
           </Button>
-          {viewMode === "board" && (
-            <Button variant="outline" onClick={() => setIsColumnsManagerOpen(true)} className="gap-2">
-              <Settings2 className="h-4 w-4" />
-              Etapas
-            </Button>
-          )}
+          <Button variant="outline" onClick={() => setIsColumnsManagerOpen(true)} className="gap-2">
+            <Settings2 className="h-4 w-4" />
+            Etapas
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
