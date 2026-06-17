@@ -5,6 +5,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type PluggyConnector = {
+  name?: string;
+  isSandbox?: boolean;
+};
+
 async function getProductionConnectorDiagnostics() {
   const query = new URLSearchParams({
     countries: "BR",
@@ -19,8 +24,8 @@ async function getProductionConnectorDiagnostics() {
     ? response.results
     : Array.isArray(response)
       ? response
-      : [];
-  const realBankConnectors = connectors.filter((connector: any) => {
+      : [] as PluggyConnector[];
+  const realBankConnectors = connectors.filter((connector: PluggyConnector) => {
     const name = String(connector?.name ?? "").toLowerCase();
     return connector?.isSandbox !== true && !name.includes("meu pluggy");
   });
@@ -28,7 +33,7 @@ async function getProductionConnectorDiagnostics() {
   return {
     total: connectors.length,
     realBankTotal: realBankConnectors.length,
-    sample: realBankConnectors.slice(0, 5).map((connector: any) => connector?.name).filter(Boolean),
+    sample: realBankConnectors.slice(0, 5).map((connector: PluggyConnector) => connector?.name).filter(Boolean),
   };
 }
 
@@ -62,10 +67,11 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true, accessToken: r.accessToken, connectorDiagnostics }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro desconhecido";
     console.error("pluggy-create-connect-token:", err);
     return new Response(
-      JSON.stringify({ success: false, error: err.message }),
+      JSON.stringify({ success: false, error: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
