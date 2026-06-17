@@ -342,7 +342,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     }
 
     return filtered;
-  }, [assignments, departments, sectorId, integrationId, hasGlobalVisibility]);
+  }, [assignments, departments, sectorId, integrationId]);
 
   const filteredAssignmentsRef = useRef(filteredAssignments);
   filteredAssignmentsRef.current = filteredAssignments;

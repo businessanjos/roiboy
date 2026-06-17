@@ -232,6 +232,7 @@ export default function RoyZapp() {
     clientProducts,
     leadDealStages,
     currentAgent,
+    hasGlobalVisibility,
     whatsappConnected,
     whatsappConnecting,
     whatsappInstanceName,
@@ -1145,7 +1146,7 @@ export default function RoyZapp() {
       >
         <ZappConversationPanel
           currentUser={currentUser}
-          isAdmin={isAdmin}
+          isAdmin={isAdmin || hasGlobalVisibility}
           activeView={activeView}
           setActiveView={setActiveView}
           inboxTab={inboxTab}
