@@ -1,21 +1,21 @@
-# Corrigir visibilidade global no RoyZapp para Admin/Gestor
+# Liberar conversas de Dayara e Michele
 
-## Problema
-Andréia tem `role = "gestor"` (DB), `is_also_admin = false` e team roles `["Admin", "Consultor"]`. No filtro de abas do RoyZapp, a condição que libera "ver tudo" é a prop `isAdmin` vinda de `usePermissions`, que só considera `role in ("admin","super_admin")` ou `is_also_admin`. Resultado: na aba "Minhas", ela só vê conversas onde `agent_id = currentAgent.id`, mesmo sendo Admin pelo papel de time.
+## Situação
+- **Dayara Grecco** (inativa): 10 conversas abertas (8 active + 2 waiting)
+- **Michele Santos** (inativa): 15 conversas abertas (9 active + 6 waiting)
+- As 33 já fechadas serão ignoradas (não precisam liberar).
 
-Existe inclusive um `hasGlobalVisibility` já calculado corretamente em `useZappData.tsx` (linhas 65-73) que reconhece `team_role_names.includes("Admin")`, mas ele nunca chega ao `ZappConversationList`.
+## Ação
+Migration única em `zapp_conversation_assignments` que, para todas as conversas das duas usuárias com status diferente de `closed`:
+- Limpa `agent_id` (volta para a fila)
+- Muda `status` para `triage` (estado padrão da fila)
+- Atualiza `updated_at`
 
-## Solução
-Unificar a checagem de visibilidade global usando o `hasGlobalVisibility` já existente e propagá-lo até o filtro de abas.
+Isso reproduz exatamente o que o botão "Liberar para fila" do RoyZapp faz (`releaseToQueue` em `useZappConversationActions.ts:149`), só que em lote.
 
-### Mudanças
-1. **`src/hooks/useZappData.tsx`** — expor `hasGlobalVisibility` no retorno do hook (hoje fica interno).
-2. **`src/pages/RoyZapp.tsx`** — consumir `hasGlobalVisibility` de `useZappData` e usar `isAdmin || hasGlobalVisibility` como prop `isAdmin` passada ao `ZappConversationList` (linha ~1148). Mantém compat: super_admin / admin / is_also_admin continuam funcionando, e agora team_role "Admin"/"Gestor" também.
-3. **`src/hooks/useZappConversations.ts`** — remover `hasGlobalVisibility` da dependency array do `useMemo` em filteredAssignments (dead var), para evitar confusão futura. Sem mudança de comportamento.
+Após o lote, qualquer atendente do setor vai ver essas conversas na fila e poderá puxá-las normalmente.
 
-Não mexer em `usePermissions.isAdmin` global (impacto além do RoyZapp) — o ajuste fica escopado ao RoyZapp, que é onde o usuário relatou o problema e onde a semântica de "ver tudo" é claramente desejada para Admin/Gestor.
-
-### Validação
-- Após o fix, Andréia (team_role Admin) verá todas as conversas independente da aba.
-- Usuários sem papel Admin/Gestor continuam restritos a `agent_id = currentAgent.id` na aba "Minhas".
-- Sem migration; apenas frontend.
+## Observações
+- Os assignments `closed` não são alterados (são histórico).
+- Não mexo no registro `zapp_agents` delas — fica como histórico para auditoria/relatórios passados.
+- Se quiser também desativar o agente no RoyZapp (`zapp_agents.is_active = false`) para impedir transferências futuras manuais para elas, posso incluir — me avise.
