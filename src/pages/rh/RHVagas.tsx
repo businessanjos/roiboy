@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Briefcase, Plus, MoreVertical, Pencil, Trash2, Users, Send, XCircle, ArrowLeft } from "lucide-react";
+import { Briefcase, Plus, MoreVertical, Pencil, Trash2, Users, Send, XCircle, ArrowLeft, CheckSquare, Settings2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useHRJobs, useDeleteHRJob, useUpdateHRJob, useHRJobStats } from "@/hooks/useHRJobs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { HRJob, JobStatus } from "@/types/job";
@@ -17,6 +18,7 @@ import { ptBR } from "date-fns/locale";
 import { useAccountUsersForJobs } from "@/hooks/useHRJobStages";
 import { OPENING_REASON_LABELS } from "@/types/job";
 import { Clock, User as UserIcon, AlertTriangle } from "lucide-react";
+import { JobsBulkEditDialog } from "@/components/rh/jobs/JobsBulkEditDialog";
 
 export default function RHVagas() {
   const navigate = useNavigate();
