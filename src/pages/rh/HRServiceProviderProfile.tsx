@@ -62,6 +62,7 @@ export default function HRServiceProviderProfile() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const { updateProvider, deleteProvider } = useHRServiceProviders();
+  const { departments } = useHRDepartments();
   const [provider, setProvider] = useState<HRServiceProvider | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
