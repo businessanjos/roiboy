@@ -62,6 +62,12 @@ export interface HROffboarding {
   notes: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
+  exit_interview_token: string | null;
+  exit_interview_submitted_at: string | null;
+  subject_type: string;
+  service_provider_id: string | null;
+  financial_entry_id: string | null;
+  reassignments: any;
   created_at: string;
   updated_at: string;
   collaborator?: { id: string; full_name: string; position: string | null; department: string | null; avatar_url: string | null; email: string | null; hire_date: string | null; base_salary: number | null; salary: number | null };

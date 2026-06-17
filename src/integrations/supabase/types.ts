@@ -11660,18 +11660,115 @@ export type Database = {
           },
         ]
       }
+      hr_offboarding_documents: {
+        Row: {
+          account_id: string
+          category: string
+          created_at: string
+          file_name: string
+          file_path: string | null
+          file_url: string
+          id: string
+          mime_type: string | null
+          notes: string | null
+          offboarding_id: string
+          size_bytes: number | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          account_id: string
+          category?: string
+          created_at?: string
+          file_name: string
+          file_path?: string | null
+          file_url: string
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          offboarding_id: string
+          size_bytes?: number | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          category?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string | null
+          file_url?: string
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          offboarding_id?: string
+          size_bytes?: number | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_offboarding_documents_offboarding_id_fkey"
+            columns: ["offboarding_id"]
+            isOneToOne: false
+            referencedRelation: "hr_offboardings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_offboarding_timeline: {
+        Row: {
+          account_id: string
+          actor_user_id: string | null
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          offboarding_id: string
+        }
+        Insert: {
+          account_id: string
+          actor_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          offboarding_id: string
+        }
+        Update: {
+          account_id?: string
+          actor_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          offboarding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_offboarding_timeline_offboarding_id_fkey"
+            columns: ["offboarding_id"]
+            isOneToOne: false
+            referencedRelation: "hr_offboardings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_offboardings: {
         Row: {
           access_cutoff_at: string | null
           access_cutoff_done: boolean
           account_id: string
           cancelled_at: string | null
-          collaborator_id: string
+          collaborator_id: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
           exit_interview: Json
+          exit_interview_submitted_at: string | null
+          exit_interview_token: string | null
           exit_nps: number | null
+          financial_entry_id: string | null
           id: string
           initiated_by: string
           last_day_worked: string | null
@@ -11681,10 +11778,13 @@ export type Database = {
           notice_type: Database["public"]["Enums"]["hr_notice_type"]
           reason: string | null
           reason_details: string | null
+          reassignments: Json
           replacement_job_id: string | null
           rescission_calc: Json
           responsible_user_id: string | null
+          service_provider_id: string | null
           stage: Database["public"]["Enums"]["hr_offboarding_stage"]
+          subject_type: string
           termination_date: string | null
           termination_type: Database["public"]["Enums"]["hr_offboarding_type"]
           updated_at: string
@@ -11695,12 +11795,15 @@ export type Database = {
           access_cutoff_done?: boolean
           account_id: string
           cancelled_at?: string | null
-          collaborator_id: string
+          collaborator_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           exit_interview?: Json
+          exit_interview_submitted_at?: string | null
+          exit_interview_token?: string | null
           exit_nps?: number | null
+          financial_entry_id?: string | null
           id?: string
           initiated_by?: string
           last_day_worked?: string | null
@@ -11710,10 +11813,13 @@ export type Database = {
           notice_type?: Database["public"]["Enums"]["hr_notice_type"]
           reason?: string | null
           reason_details?: string | null
+          reassignments?: Json
           replacement_job_id?: string | null
           rescission_calc?: Json
           responsible_user_id?: string | null
+          service_provider_id?: string | null
           stage?: Database["public"]["Enums"]["hr_offboarding_stage"]
+          subject_type?: string
           termination_date?: string | null
           termination_type?: Database["public"]["Enums"]["hr_offboarding_type"]
           updated_at?: string
@@ -11724,12 +11830,15 @@ export type Database = {
           access_cutoff_done?: boolean
           account_id?: string
           cancelled_at?: string | null
-          collaborator_id?: string
+          collaborator_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           exit_interview?: Json
+          exit_interview_submitted_at?: string | null
+          exit_interview_token?: string | null
           exit_nps?: number | null
+          financial_entry_id?: string | null
           id?: string
           initiated_by?: string
           last_day_worked?: string | null
@@ -11739,10 +11848,13 @@ export type Database = {
           notice_type?: Database["public"]["Enums"]["hr_notice_type"]
           reason?: string | null
           reason_details?: string | null
+          reassignments?: Json
           replacement_job_id?: string | null
           rescission_calc?: Json
           responsible_user_id?: string | null
+          service_provider_id?: string | null
           stage?: Database["public"]["Enums"]["hr_offboarding_stage"]
+          subject_type?: string
           termination_date?: string | null
           termination_type?: Database["public"]["Enums"]["hr_offboarding_type"]
           updated_at?: string
@@ -11761,6 +11873,13 @@ export type Database = {
             columns: ["replacement_job_id"]
             isOneToOne: false
             referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_offboardings_service_provider_id_fkey"
+            columns: ["service_provider_id"]
+            isOneToOne: false
+            referencedRelation: "hr_service_providers"
             referencedColumns: ["id"]
           },
         ]

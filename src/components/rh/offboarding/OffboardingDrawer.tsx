@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +13,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { CheckCircle2, ExternalLink, AlertTriangle, Calculator, Trash2, Plus, ShieldOff, Briefcase } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  CheckCircle2, ExternalLink, AlertTriangle, Calculator, Trash2, Plus, ShieldOff, Briefcase,
+  Upload, FileText, Link2, Copy, Clock, History, DollarSign, UserX, Sparkles, Download, AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -23,9 +27,19 @@ import {
   type HROffboarding, type OffboardingStage,
 } from "@/hooks/useHROffboardings";
 import {
+  useOffboardingTimeline, useOffboardingDocuments, useCollaboratorPendencies,
+  reassignCollaboratorResources, ensureExitInterviewToken, buildExitInterviewLink,
+  DOCUMENT_CATEGORIES, EXTERNAL_ACCESS_SYSTEMS,
+} from "@/hooks/useHROffboardingExtras";
+import {
   computeRescission, TERMINATION_TYPE_LABELS, NOTICE_TYPE_LABELS,
   type TerminationType, type NoticeType,
 } from "@/lib/rescissionCalc";
+import { computeLegalDeadlines } from "@/lib/offboardingDeadlines";
+import { exportOffboardingDossier } from "@/lib/exportOffboardingPDF";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useTeamUsers } from "@/hooks/useTeamUsers";
+import { supabase } from "@/integrations/supabase/client";
 
 const fmtBRL = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
@@ -33,11 +47,20 @@ export default function OffboardingDrawer({
   offboarding, open, onClose,
 }: { offboarding: HROffboarding; open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
   const { update, remove } = useHROffboardings();
   const { items, toggle, add, remove: removeItem } = useHROffboardingChecklist(offboarding.id);
+  const { data: timeline = [] } = useOffboardingTimeline(offboarding.id);
+  const { documents, upload, remove: removeDoc } = useOffboardingDocuments(offboarding.id);
+  const { data: pendencies } = useCollaboratorPendencies(offboarding.collaborator_id);
+  const { users: teamUsers = [] } = useTeamUsers() as any;
 
   const [tab, setTab] = useState("resumo");
   const [form, setForm] = useState<Partial<HROffboarding>>({});
+  const [reassignOpen, setReassignOpen] = useState(false);
+  const [publicToken, setPublicToken] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [docCategory, setDocCategory] = useState("trct");
 
   useEffect(() => {
     setForm({
@@ -56,10 +79,13 @@ export default function OffboardingDrawer({
       exit_nps: offboarding.exit_nps,
       exit_interview: offboarding.exit_interview || {},
       rescission_calc: offboarding.rescission_calc || {},
+      access_cutoff_done: offboarding.access_cutoff_done,
     });
+    setPublicToken(offboarding.exit_interview_token || null);
   }, [offboarding.id]);
 
   const collab = offboarding.collaborator;
+  const deadlines = useMemo(() => computeLegalDeadlines(form.termination_date || offboarding.termination_date), [form.termination_date, offboarding.termination_date]);
 
   // Rescissão calc inputs
   const [calcInput, setCalcInput] = useState(() => ({
@@ -75,27 +101,14 @@ export default function OffboardingDrawer({
     dependents: 0,
     fgtsBalance: 0,
   }));
-
   const rescission = useMemo(() => computeRescission(calcInput), [calcInput]);
 
   async function save(patch: Partial<HROffboarding>) {
     await update({ id: offboarding.id, patch });
     toast.success("Atualizado");
   }
-
   async function saveCalc() {
     await save({ rescission_calc: { inputs: calcInput, result: rescission, savedAt: new Date().toISOString() } as any });
-  }
-
-  async function moveStage(stage: OffboardingStage) {
-    await save({ stage });
-  }
-
-  async function completeOffboarding() {
-    if (!confirm("Confirmar conclusão? Isso vai inativar o colaborador e cortar seu acesso à plataforma.")) return;
-    await save({ stage: "completed", access_cutoff_done: true, access_cutoff_at: new Date().toISOString(), termination_date: form.termination_date || new Date().toISOString().slice(0, 10) });
-    toast.success("Desligamento concluído — colaborador inativado");
-    onClose();
   }
 
   const checklistByCat = useMemo(() => {
@@ -103,8 +116,65 @@ export default function OffboardingDrawer({
     items.forEach((i) => { (groups[i.category] = groups[i.category] || []).push(i); });
     return groups;
   }, [items]);
-
   const checklistProgress = items.length ? Math.round((items.filter(i => i.done).length / items.length) * 100) : 0;
+
+  const totalPend = (pendencies?.openTasks || 0) + (pendencies?.openDeals || 0) + (pendencies?.assignedClients || 0);
+  const hasOverdueDeadline = deadlines.some(d => d.severity === "overdue" || d.severity === "urgent");
+
+  async function completeOffboarding() {
+    if (totalPend > 0 && !confirm(`Colaborador ainda tem ${totalPend} pendências (tarefas/deals/clientes). Concluir mesmo assim?`)) return;
+    if (!confirm("Confirmar conclusão? Isso vai inativar o colaborador e cortar seu acesso à plataforma.")) return;
+    await save({
+      stage: "completed",
+      access_cutoff_done: true,
+      access_cutoff_at: new Date().toISOString(),
+      termination_date: form.termination_date || new Date().toISOString().slice(0, 10),
+    });
+    toast.success("Desligamento concluído — colaborador inativado");
+    onClose();
+  }
+
+  async function generatePublicLink() {
+    const token = await ensureExitInterviewToken(offboarding.id, publicToken);
+    setPublicToken(token);
+    const link = buildExitInterviewLink(token);
+    await navigator.clipboard.writeText(link);
+    toast.success("Link copiado: " + link);
+  }
+
+  async function createFinancialEntry() {
+    if (!rescission.net || !currentUser?.account_id) return toast.error("Calcule a rescisão primeiro");
+    const desc = `Rescisão — ${collab?.full_name}`;
+    const { data, error } = await (supabase.from("financial_entries") as any).insert({
+      account_id: currentUser.account_id,
+      type: "expense",
+      status: "pending",
+      description: desc,
+      amount: rescission.net,
+      due_date: form.termination_date ? new Date(form.termination_date).toISOString() : new Date().toISOString(),
+      created_by: currentUser.id,
+      notes: `Líquido a pagar de rescisão. Bruto ${fmtBRL(rescission.gross)} | Descontos ${fmtBRL(rescission.deductions)} | FGTS depósito ${fmtBRL(rescission.fgtsDeposit)} | Multa ${fmtBRL(rescission.fgtsPenalty)}`,
+    }).select().single();
+    if (error) return toast.error("Falha: " + error.message);
+    await save({ financial_entry_id: data.id });
+    toast.success("Lançamento financeiro criado");
+  }
+
+  async function handleUpload(file: File) {
+    await upload({ file, category: docCategory });
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function exportPDF() {
+    exportOffboardingDossier(offboarding, {
+      checklist: items.map(i => ({ label: i.label, category: i.category, done: i.done })),
+      documents: documents.map(d => ({ file_name: d.file_name, category: d.category, created_at: d.created_at })),
+      timeline: timeline.map(t => ({ event_type: t.event_type, description: t.description, created_at: t.created_at })),
+    });
+  }
+
+  // ============ Stepper ============
+  const stageIndex = OFFBOARDING_STAGES.indexOf(offboarding.stage as any);
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -129,22 +199,91 @@ export default function OffboardingDrawer({
                     <Briefcase className="h-3 w-3 mr-1" /> Ver vaga aberta <ExternalLink className="h-3 w-3 ml-1" />
                   </Button>
                 )}
+                <Button size="sm" variant="outline" className="h-6 text-xs ml-auto" onClick={exportPDF}>
+                  <Download className="h-3 w-3 mr-1" /> Dossiê PDF
+                </Button>
               </div>
             </div>
           </div>
+
+          {/* ====== Stepper ====== */}
+          <div className="mt-4 flex items-center gap-1 overflow-x-auto pb-1">
+            {OFFBOARDING_STAGES.map((s, i) => {
+              const active = i === stageIndex;
+              const done = i < stageIndex || offboarding.stage === "completed";
+              return (
+                <button key={s} onClick={() => save({ stage: s as OffboardingStage })}
+                  className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-full whitespace-nowrap transition ${
+                    active ? "bg-rose-500/15 text-rose-700 font-semibold ring-1 ring-rose-500/30"
+                    : done ? "bg-emerald-500/10 text-emerald-700"
+                    : "bg-muted text-muted-foreground hover:bg-muted/70"
+                  }`}>
+                  {done && <CheckCircle2 className="h-3 w-3" />}
+                  <span>{i + 1}. {OFFBOARDING_STAGE_LABELS[s]}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ====== Alertas globais ====== */}
+          {hasOverdueDeadline && (
+            <div className="mt-3 flex items-start gap-2 p-2 rounded bg-rose-500/10 border border-rose-500/30 text-xs text-rose-800">
+              <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <span>Há prazos legais vencidos ou urgentes. Verifique a aba "Rescisão" / "Resumo".</span>
+            </div>
+          )}
+          {totalPend > 0 && offboarding.stage !== "completed" && (
+            <div className="mt-2 flex items-start gap-2 p-2 rounded bg-amber-500/10 border border-amber-500/30 text-xs text-amber-800">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <span><strong>{totalPend} pendências</strong> precisam ser reatribuídas antes de cortar acesso. Veja aba "Pendências".</span>
+            </div>
+          )}
         </SheetHeader>
 
         <Tabs value={tab} onValueChange={setTab} className="mt-4">
-          <TabsList className="grid grid-cols-5 w-full">
-            <TabsTrigger value="resumo">Resumo</TabsTrigger>
-            <TabsTrigger value="checklist">Checklist {checklistProgress > 0 && <Badge variant="secondary" className="ml-1 h-4 text-[10px]">{checklistProgress}%</Badge>}</TabsTrigger>
-            <TabsTrigger value="rescisao">Rescisão</TabsTrigger>
-            <TabsTrigger value="acessos">Acessos</TabsTrigger>
-            <TabsTrigger value="saida">Entrevista</TabsTrigger>
+          <TabsList className="grid grid-cols-7 w-full h-auto">
+            <TabsTrigger value="resumo" className="text-xs">Resumo</TabsTrigger>
+            <TabsTrigger value="pendencias" className="text-xs">
+              Pendências {totalPend > 0 && <Badge variant="destructive" className="ml-1 h-4 text-[9px] px-1">{totalPend}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="checklist" className="text-xs">
+              Checklist {checklistProgress > 0 && <span className="ml-1 text-[9px]">{checklistProgress}%</span>}
+            </TabsTrigger>
+            <TabsTrigger value="rescisao" className="text-xs">Rescisão</TabsTrigger>
+            <TabsTrigger value="documentos" className="text-xs">
+              Docs {documents.length > 0 && <span className="ml-1 text-[9px]">{documents.length}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="saida" className="text-xs">Saída</TabsTrigger>
+            <TabsTrigger value="timeline" className="text-xs">Timeline</TabsTrigger>
           </TabsList>
 
           {/* ====== RESUMO ====== */}
           <TabsContent value="resumo" className="space-y-4 mt-4">
+            {/* Prazos legais */}
+            {deadlines.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Clock className="h-4 w-4" /> Prazos legais</CardTitle></CardHeader>
+                <CardContent className="space-y-1.5">
+                  {deadlines.map(d => (
+                    <div key={d.key} className="flex items-center justify-between text-xs">
+                      <div>
+                        <p className="font-medium">{d.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{d.description}</p>
+                      </div>
+                      <Badge variant="outline" className={
+                        d.severity === "overdue" ? "bg-rose-500/15 text-rose-700 border-rose-300"
+                        : d.severity === "urgent" ? "bg-orange-500/15 text-orange-700 border-orange-300"
+                        : d.severity === "warning" ? "bg-amber-500/15 text-amber-700 border-amber-300"
+                        : "bg-emerald-500/10 text-emerald-700 border-emerald-300"
+                      }>
+                        {format(d.dueDate, "dd/MM")} · {d.daysRemaining >= 0 ? `${d.daysRemaining}d` : `${Math.abs(d.daysRemaining)}d atraso`}
+                      </Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Tipo</Label>
@@ -175,7 +314,7 @@ export default function OffboardingDrawer({
                 <Input type="date" value={form.last_day_worked || ""} onChange={(e) => { setForm({ ...form, last_day_worked: e.target.value }); setCalcInput({ ...calcInput, lastDayWorked: e.target.value }); }} />
               </div>
               <div>
-                <Label>Data efetiva do desligamento</Label>
+                <Label>Data efetiva</Label>
                 <Input type="date" value={form.termination_date || ""} onChange={(e) => setForm({ ...form, termination_date: e.target.value })} />
               </div>
               <div>
@@ -190,16 +329,6 @@ export default function OffboardingDrawer({
               <div>
                 <Label>Dias de aviso</Label>
                 <Input type="number" value={form.notice_days || 30} onChange={(e) => { const n = Number(e.target.value); setForm({ ...form, notice_days: n }); setCalcInput({ ...calcInput, noticeDays: n }); }} />
-              </div>
-              <div>
-                <Label>Etapa</Label>
-                <Select value={form.stage} onValueChange={(v) => setForm({ ...form, stage: v as OffboardingStage })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {OFFBOARDING_STAGES.map((s) => <SelectItem key={s} value={s}>{OFFBOARDING_STAGE_LABELS[s]}</SelectItem>)}
-                    <SelectItem value="cancelled">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 
@@ -232,10 +361,43 @@ export default function OffboardingDrawer({
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => save(form)}>Salvar</Button>
                 {offboarding.stage !== "completed" && (
-                  <Button onClick={completeOffboarding}><CheckCircle2 className="h-4 w-4" /> Concluir desligamento</Button>
+                  <Button onClick={completeOffboarding}><CheckCircle2 className="h-4 w-4" /> Concluir</Button>
                 )}
               </div>
             </div>
+          </TabsContent>
+
+          {/* ====== PENDÊNCIAS ====== */}
+          <TabsContent value="pendencias" className="space-y-4 mt-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><UserX className="h-4 w-4" /> Recursos atribuídos ao colaborador</CardTitle></CardHeader>
+              <CardContent>
+                {!pendencies?.userId ? (
+                  <p className="text-sm text-muted-foreground">Colaborador sem usuário vinculado à plataforma — nada a reatribuir.</p>
+                ) : totalPend === 0 ? (
+                  <p className="text-sm text-emerald-700">✓ Sem pendências. Pode concluir o desligamento.</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <Stat label="Tarefas abertas" value={pendencies.openTasks} />
+                      <Stat label="Deals em aberto" value={pendencies.openDeals} />
+                      <Stat label="Clientes na carteira" value={pendencies.assignedClients} />
+                    </div>
+                    <Button onClick={() => setReassignOpen(true)} className="w-full">
+                      <Sparkles className="h-4 w-4 mr-2" /> Reatribuir tudo para outro responsável
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <ReassignDialog
+              open={reassignOpen} onOpenChange={setReassignOpen}
+              fromUserId={pendencies?.userId || null}
+              users={teamUsers}
+              pendencies={pendencies as any}
+              onDone={() => { setReassignOpen(false); }}
+            />
           </TabsContent>
 
           {/* ====== CHECKLIST ====== */}
@@ -244,6 +406,20 @@ export default function OffboardingDrawer({
               <p className="text-sm text-muted-foreground">{items.filter(i=>i.done).length} de {items.length} concluídos ({checklistProgress}%)</p>
               <AddChecklistItem onAdd={(label, category) => add({ label, category })} />
             </div>
+
+            {/* Quick seed: granular access items */}
+            {!(checklistByCat["acessos"] || []).some(i => i.label.includes("Google")) && (
+              <Card className="bg-violet-500/5 border-violet-500/20">
+                <CardContent className="pt-4 pb-4 flex items-center justify-between">
+                  <p className="text-xs"><strong>Sugestão:</strong> adicionar lista granular de acessos externos ({EXTERNAL_ACCESS_SYSTEMS.length} sistemas).</p>
+                  <Button size="sm" variant="outline" onClick={async () => {
+                    for (const s of EXTERNAL_ACCESS_SYSTEMS) await add({ label: `Revogar acesso: ${s.label}`, category: "acessos" });
+                    toast.success("Itens adicionados ao checklist");
+                  }}>Adicionar todos</Button>
+                </CardContent>
+              </Card>
+            )}
+
             {["geral","documentos","financeiro","acessos","equipamentos"].map((cat) => {
               const its = checklistByCat[cat] || [];
               if (!its.length) return null;
@@ -303,43 +479,106 @@ export default function OffboardingDrawer({
 
                 <div className="flex items-start gap-2 p-2 rounded bg-amber-500/5 border border-amber-500/20 text-xs text-amber-800">
                   <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                  Cálculo estimado para previsão. Valores oficiais devem ser apurados pela contabilidade (eSocial / TRCT).
+                  Cálculo estimado. Valores oficiais via contabilidade/eSocial.
                 </div>
 
-                <Button onClick={saveCalc} variant="outline" className="w-full">Salvar cálculo no desligamento</Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={saveCalc} variant="outline">Salvar cálculo</Button>
+                  <Button onClick={createFinancialEntry} disabled={!!offboarding.financial_entry_id}>
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    {offboarding.financial_entry_id ? "Lançamento criado" : "Criar lançamento financeiro"}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* ====== ACESSOS ====== */}
-          <TabsContent value="acessos" className="space-y-4 mt-4">
-            <Card><CardContent className="pt-6 space-y-3">
-              <div className="flex items-center gap-2">
-                <ShieldOff className="h-5 w-5 text-rose-600" />
-                <p className="font-medium">Corte de Acessos</p>
-              </div>
-              <p className="text-sm text-muted-foreground">Ao concluir o desligamento, o colaborador será automaticamente <strong>inativado na plataforma</strong> (status = inactive e login bloqueado).</p>
-
-              <div className="flex items-center gap-2 p-3 rounded border">
-                <Checkbox
-                  checked={form.access_cutoff_done ?? offboarding.access_cutoff_done}
-                  onCheckedChange={(v) => setForm({ ...form, access_cutoff_done: !!v, access_cutoff_at: v ? new Date().toISOString() : null })}
-                />
+          {/* ====== DOCUMENTOS ====== */}
+          <TabsContent value="documentos" className="space-y-4 mt-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Upload className="h-4 w-4" /> Anexar documento</CardTitle></CardHeader>
+              <CardContent className="flex items-end gap-2">
                 <div className="flex-1">
-                  <Label>Acessos cortados</Label>
-                  {offboarding.access_cutoff_at && (
-                    <p className="text-xs text-muted-foreground">Em {format(new Date(offboarding.access_cutoff_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
-                  )}
+                  <Label>Categoria</Label>
+                  <Select value={docCategory} onValueChange={setDocCategory}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENT_CATEGORIES.map(c => <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => save({ access_cutoff_done: form.access_cutoff_done, access_cutoff_at: form.access_cutoff_done ? new Date().toISOString() : null })}>Salvar</Button>
-              </div>
+                <input ref={fileRef} type="file" hidden onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} />
+                <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4 mr-1" /> Enviar</Button>
+              </CardContent>
+            </Card>
 
-              <p className="text-xs text-muted-foreground">Os demais sistemas externos (Google Workspace, RoyZapp, Omie, etc.) devem ser revogados manualmente — marque os itens correspondentes no checklist.</p>
-            </CardContent></Card>
+            {documents.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhum documento anexado.</p>
+            ) : (
+              <div className="space-y-2">
+                {documents.map(d => (
+                  <Card key={d.id}>
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{d.file_name}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {DOCUMENT_CATEGORIES.find(c => c.key === d.category)?.label || d.category}
+                          {" · "}{format(new Date(d.created_at), "dd/MM/yyyy HH:mm")}
+                          {d.size_bytes && ` · ${Math.round(d.size_bytes/1024)} KB`}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="ghost" asChild><a href={d.file_url} target="_blank" rel="noreferrer"><ExternalLink className="h-3 w-3" /></a></Button>
+                      <Button size="sm" variant="ghost" onClick={() => removeDoc(d)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
-          {/* ====== ENTREVISTA SAÍDA ====== */}
+          {/* ====== SAÍDA (Entrevista + Acessos) ====== */}
           <TabsContent value="saida" className="space-y-4 mt-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Link2 className="h-4 w-4" /> Link para o colaborador responder</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-xs text-muted-foreground">Gere um link público para o ex-colaborador preencher a entrevista de saída sem viés (sem o RH no meio).</p>
+                {publicToken && offboarding.exit_interview_submitted_at && (
+                  <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-300">
+                    Respondida em {format(new Date(offboarding.exit_interview_submitted_at), "dd/MM/yyyy HH:mm")}
+                  </Badge>
+                )}
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={generatePublicLink}>
+                    <Copy className="h-3 w-3 mr-1" /> {publicToken ? "Copiar link" : "Gerar link"}
+                  </Button>
+                  {publicToken && (
+                    <Input readOnly value={buildExitInterviewLink(publicToken)} className="text-xs" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><ShieldOff className="h-4 w-4 text-rose-600" /> Corte de Acessos da plataforma</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">Ao concluir o desligamento, o colaborador é <strong>inativado na plataforma</strong> (login bloqueado). Sistemas externos devem ser revogados via checklist.</p>
+                <div className="flex items-center gap-2 p-3 rounded border">
+                  <Checkbox
+                    checked={form.access_cutoff_done ?? offboarding.access_cutoff_done}
+                    onCheckedChange={(v) => setForm({ ...form, access_cutoff_done: !!v })}
+                  />
+                  <div className="flex-1">
+                    <Label>Acessos da plataforma cortados</Label>
+                    {offboarding.access_cutoff_at && (
+                      <p className="text-xs text-muted-foreground">Em {format(new Date(offboarding.access_cutoff_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                    )}
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => save({ access_cutoff_done: form.access_cutoff_done, access_cutoff_at: form.access_cutoff_done ? new Date().toISOString() : null })}>Salvar</Button>
+                </div>
+              </CardContent>
+            </Card>
+
             <ExitInterview
               value={form.exit_interview || {}}
               nps={form.exit_nps}
@@ -347,9 +586,45 @@ export default function OffboardingDrawer({
               onSave={() => save({ exit_interview: form.exit_interview, exit_nps: form.exit_nps })}
             />
           </TabsContent>
+
+          {/* ====== TIMELINE ====== */}
+          <TabsContent value="timeline" className="space-y-2 mt-4">
+            <p className="text-xs text-muted-foreground flex items-center gap-1"><History className="h-3 w-3" /> Auditoria completa</p>
+            {timeline.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhum evento registrado ainda.</p>
+            ) : (
+              <div className="space-y-2">
+                {timeline.map(e => (
+                  <div key={e.id} className="flex gap-3 p-2 rounded border-l-2 border-rose-500/30 bg-muted/30">
+                    <div className="flex-1">
+                      <p className="text-sm">{e.description || e.event_type}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {format(new Date(e.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        {e.actor?.name && ` · ${e.actor.name}`}
+                      </p>
+                      {e.metadata && Object.keys(e.metadata).length > 0 && (
+                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                          {JSON.stringify(e.metadata)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="p-3 rounded border text-center">
+      <p className="text-2xl font-semibold">{value}</p>
+      <p className="text-[10px] text-muted-foreground">{label}</p>
+    </div>
   );
 }
 
@@ -407,5 +682,54 @@ function ExitInterview({ value, nps, onChange, onSave }: {
       ))}
       <Button onClick={onSave} className="w-full">Salvar entrevista</Button>
     </CardContent></Card>
+  );
+}
+
+function ReassignDialog({ open, onOpenChange, fromUserId, users, pendencies, onDone }: {
+  open: boolean; onOpenChange: (v: boolean) => void; fromUserId: string | null;
+  users: Array<{ id: string; name: string | null }>; pendencies: any; onDone: () => void;
+}) {
+  const [toUser, setToUser] = useState("");
+  const [scope, setScope] = useState({ tasks: true, deals: true, clients: true });
+  const [loading, setLoading] = useState(false);
+
+  async function run() {
+    if (!fromUserId || !toUser) return;
+    setLoading(true);
+    try {
+      const r = await reassignCollaboratorResources(fromUserId, toUser, scope);
+      toast.success(`Reatribuído: ${r.tasks || 0} tarefas, ${r.deals || 0} deals, ${r.clients || 0} clientes`);
+      onDone();
+    } catch (e: any) {
+      toast.error("Falha: " + e.message);
+    } finally { setLoading(false); }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Reatribuir recursos</DialogTitle></DialogHeader>
+        <div className="space-y-3 py-2">
+          <div>
+            <Label>Novo responsável</Label>
+            <Select value={toUser} onValueChange={setToUser}>
+              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectContent>
+                {users.filter(u => u.id !== fromUserId).map(u => <SelectItem key={u.id} value={u.id}>{u.name || u.id}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2"><Checkbox checked={scope.tasks} onCheckedChange={(v) => setScope({ ...scope, tasks: !!v })} /><Label>Tarefas abertas ({pendencies?.openTasks || 0})</Label></div>
+            <div className="flex items-center gap-2"><Checkbox checked={scope.deals} onCheckedChange={(v) => setScope({ ...scope, deals: !!v })} /><Label>Deals em aberto ({pendencies?.openDeals || 0})</Label></div>
+            <div className="flex items-center gap-2"><Checkbox checked={scope.clients} onCheckedChange={(v) => setScope({ ...scope, clients: !!v })} /><Label>Clientes da carteira ({pendencies?.assignedClients || 0})</Label></div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={run} disabled={!toUser || loading}>Reatribuir</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
