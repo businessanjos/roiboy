@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Briefcase, Plus, MoreVertical, Pencil, Trash2, Users, Send, XCircle, ArrowLeft } from "lucide-react";
+import { Briefcase, Plus, MoreVertical, Pencil, Trash2, Users, Send, XCircle, ArrowLeft, CheckSquare, Settings2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useHRJobs, useDeleteHRJob, useUpdateHRJob, useHRJobStats } from "@/hooks/useHRJobs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { HRJob, JobStatus } from "@/types/job";
@@ -17,6 +18,7 @@ import { ptBR } from "date-fns/locale";
 import { useAccountUsersForJobs } from "@/hooks/useHRJobStages";
 import { OPENING_REASON_LABELS } from "@/types/job";
 import { Clock, User as UserIcon, AlertTriangle } from "lucide-react";
+import { JobsBulkEditDialog } from "@/components/rh/jobs/JobsBulkEditDialog";
 
 export default function RHVagas() {
   const navigate = useNavigate();
@@ -26,6 +28,14 @@ export default function RHVagas() {
   const deleteJob = useDeleteHRJob();
   const updateJob = useUpdateHRJob();
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; job: HRJob | null }>({ open: false, job: null });
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const allSelected = jobs && jobs.length > 0 && selectedIds.length === jobs.length;
+  const toggleAll = () => setSelectedIds(allSelected ? [] : (jobs || []).map(j => j.id));
 
   const confirmDelete = async () => {
     if (deleteDialog.job) { await deleteJob.mutateAsync(deleteDialog.job.id); setDeleteDialog({ open: false, job: null }); }
@@ -44,7 +54,12 @@ export default function RHVagas() {
             <p className="text-sm text-muted-foreground">Gerencie vagas e candidaturas</p>
           </div>
         </div>
-        <Button onClick={() => navigate("/rh/vacancies/new")}><Plus className="h-4 w-4 mr-2" />Nova Vaga</Button>
+        <div className="flex items-center gap-2">
+          <Button variant={selectMode ? "default" : "outline"} onClick={() => { setSelectMode(s => !s); setSelectedIds([]); }}>
+            <CheckSquare className="h-4 w-4 mr-2" />{selectMode ? "Sair da seleção" : "Editar em lote"}
+          </Button>
+          <Button onClick={() => navigate("/rh/vacancies/new")}><Plus className="h-4 w-4 mr-2" />Nova Vaga</Button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -55,7 +70,7 @@ export default function RHVagas() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Select value={statusFilter} onValueChange={v => setStatusFilter(v as JobStatus | "all")}>
           <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filtrar por status" /></SelectTrigger>
           <SelectContent>
@@ -63,6 +78,17 @@ export default function RHVagas() {
             {Object.entries(JOB_STATUS_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
           </SelectContent>
         </Select>
+        {selectMode && (
+          <>
+            <Button variant="outline" size="sm" onClick={toggleAll}>
+              {allSelected ? "Limpar seleção" : "Selecionar todas"}
+            </Button>
+            <span className="text-sm text-muted-foreground">{selectedIds.length} selecionada(s)</span>
+            <Button size="sm" disabled={selectedIds.length === 0} onClick={() => setBulkOpen(true)}>
+              <Settings2 className="h-4 w-4 mr-2" />Aplicar alterações
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Jobs list */}
@@ -80,8 +106,13 @@ export default function RHVagas() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {jobs.map(job => (
-            <Card key={job.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/rh/vacancies/${job.id}`)}>
+            <Card key={job.id} className={`hover:shadow-md transition-shadow cursor-pointer ${selectMode && selectedIds.includes(job.id) ? "ring-2 ring-primary" : ""}`} onClick={() => selectMode ? toggleSelect(job.id) : navigate(`/rh/vacancies/${job.id}`)}>
               <CardHeader className="pb-2">
+                {selectMode && (
+                  <div className="mb-2" onClick={e => e.stopPropagation()}>
+                    <Checkbox checked={selectedIds.includes(job.id)} onCheckedChange={() => toggleSelect(job.id)} />
+                  </div>
+                )}
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -127,6 +158,13 @@ export default function RHVagas() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <JobsBulkEditDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        jobs={jobs || []}
+        selectedIds={selectedIds}
+      />
     </div>
   );
 }
