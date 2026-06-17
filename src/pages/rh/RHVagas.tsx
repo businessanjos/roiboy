@@ -54,7 +54,12 @@ export default function RHVagas() {
             <p className="text-sm text-muted-foreground">Gerencie vagas e candidaturas</p>
           </div>
         </div>
-        <Button onClick={() => navigate("/rh/vacancies/new")}><Plus className="h-4 w-4 mr-2" />Nova Vaga</Button>
+        <div className="flex items-center gap-2">
+          <Button variant={selectMode ? "default" : "outline"} onClick={() => { setSelectMode(s => !s); setSelectedIds([]); }}>
+            <CheckSquare className="h-4 w-4 mr-2" />{selectMode ? "Sair da seleção" : "Editar em lote"}
+          </Button>
+          <Button onClick={() => navigate("/rh/vacancies/new")}><Plus className="h-4 w-4 mr-2" />Nova Vaga</Button>
+        </div>
       </div>
 
       {/* KPIs */}
