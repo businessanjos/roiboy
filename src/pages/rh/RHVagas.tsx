@@ -106,8 +106,13 @@ export default function RHVagas() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {jobs.map(job => (
-            <Card key={job.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/rh/vacancies/${job.id}`)}>
+            <Card key={job.id} className={`hover:shadow-md transition-shadow cursor-pointer ${selectMode && selectedIds.includes(job.id) ? "ring-2 ring-primary" : ""}`} onClick={() => selectMode ? toggleSelect(job.id) : navigate(`/rh/vacancies/${job.id}`)}>
               <CardHeader className="pb-2">
+                {selectMode && (
+                  <div className="mb-2" onClick={e => e.stopPropagation()}>
+                    <Checkbox checked={selectedIds.includes(job.id)} onCheckedChange={() => toggleSelect(job.id)} />
+                  </div>
+                )}
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
