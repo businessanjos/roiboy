@@ -408,6 +408,7 @@ const App = () => (
                             <Route path="/rh/offers/:id/edit" element={<RHOfferWizard />} />
                             <Route path="/rh/admissions" element={<RHAdmissions />} />
                             <Route path="/rh/offboarding" element={<RHOffboarding />} />
+                            <Route path="/rh/resumes" element={<RHTalentPool />} />
                             
                             
                           </Route>
