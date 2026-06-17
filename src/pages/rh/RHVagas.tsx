@@ -158,6 +158,13 @@ export default function RHVagas() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <JobsBulkEditDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        jobs={jobs || []}
+        selectedIds={selectedIds}
+      />
     </div>
   );
 }
