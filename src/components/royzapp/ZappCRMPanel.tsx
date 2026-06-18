@@ -505,7 +505,7 @@ export function ZappCRMPanel({
             size="sm" 
             variant="outline" 
             className="h-7 text-xs"
-            onClick={() => navigate("/sales")}
+            onClick={() => navigate(activeDeal?.id ? `/pipeline?deal=${activeDeal.id}` : "/pipeline")}
           >
             <ExternalLink className="h-3 w-3 mr-1" />
             Pipeline
