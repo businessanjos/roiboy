@@ -343,21 +343,39 @@ export default function SalesPipeline() {
   });
 
 
-  // Handle URL query param to open deal detail automatically
+  // Handle URL query param to open deal detail automatically.
+  // If the deal belongs to a different pipeline, switch to it first.
   useEffect(() => {
     const dealIdFromUrl = searchParams.get('deal');
-    
-    if (dealIdFromUrl && deals.length > 0 && !loading) {
+    if (!dealIdFromUrl) return;
+
+    if (deals.length > 0 && !loading) {
       const deal = deals.find(d => d.id === dealIdFromUrl);
       if (deal) {
         setSelectedDeal(deal);
         setIsDetailOpen(true);
-        // Clear the query param after opening
         searchParams.delete('deal');
         setSearchParams(searchParams, { replace: true });
+        return;
       }
     }
-  }, [searchParams, deals, loading, setSearchParams]);
+
+    // Deal not in current pipeline — look up its pipeline_id and switch
+    let cancelled = false;
+    supabase
+      .from('deals')
+      .select('pipeline_id')
+      .eq('id', dealIdFromUrl)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data?.pipeline_id) return;
+        if (data.pipeline_id !== activePipelineId) {
+          setActivePipelineId(data.pipeline_id);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [searchParams, deals, loading, setSearchParams, activePipelineId, setActivePipelineId]);
+
 
   useEffect(() => {
     if (!selectedDeal) return;
