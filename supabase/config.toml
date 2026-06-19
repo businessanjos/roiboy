@@ -50,3 +50,5 @@ verify_jwt = false
 [functions.nfse-webhook]
 verify_jwt = false
 
+
+
