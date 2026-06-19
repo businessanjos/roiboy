@@ -50,3 +50,7 @@ verify_jwt = false
 [functions.nfse-webhook]
 verify_jwt = false
 
+[functions.admin-reset-rh-password]
+verify_jwt = false
+
+
