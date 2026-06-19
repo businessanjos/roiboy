@@ -1,31 +1,46 @@
-# Acesso global por atendente (RoyZapp)
+## Objetivo
+Quando `create-lead` recusar um lead por duplicidade (HTTP 409), gravar o payload recebido + qual lead já existia, pra você auditar de onde vêm as duplicatas (qual webhook/integração está reenviando os mesmos contatos).
 
-Adicionar um toggle por atendente na lista da Equipe que concede ao usuário a **mesma visibilidade que Admin/Gestor** dentro do RoyZapp — ver e puxar conversas atribuídas a qualquer outro atendente. Pode ser ligado/desligado a qualquer momento, e somente Admin/Gestor pode alterar.
+## Diagnóstico atual
+Os 3 eventos de 16/06 vieram com user-agent `Deno/SupabaseEdgeRuntime` — ou seja, outra Edge Function nossa chamou `create-lead`. Os logs do Edge Runtime já expiraram, então hoje não dá pra reconstruir o payload. Precisamos persistir.
 
-## Mudanças
+## Implementação
 
-### Banco
-- Adicionar coluna `has_global_access boolean NOT NULL DEFAULT false` em `zapp_agents`.
-- Atualizar `release_zapp_assignments_for_user` (sem mudança funcional — apenas garantir que a coluna existe).
+### 1. Nova tabela `lead_duplicate_attempts`
+Migration com:
+- `id uuid pk`
+- `account_id uuid` (FK accounts)
+- `existing_lead_id uuid` (FK leads, nullable se já tiver sido apagado)
+- `existing_lead_name text`
+- `matched_field text` (`phone` | `email` futuramente)
+- `matched_value text` (telefone/email normalizado que bateu)
+- `payload jsonb` (corpo cru recebido)
+- `auth_method text` (`api_key` | `jwt` | `legacy`)
+- `api_key_id uuid` (nullable)
+- `ip_address text`
+- `user_agent text`
+- `created_at timestamptz default now()`
+- Index em `account_id, created_at desc` e `existing_lead_id`
+- RLS: SELECT para `authenticated` da própria `account_id` (via `get_user_account_id`); INSERT/ALL para `service_role`
+- GRANT `SELECT, INSERT, UPDATE, DELETE` para `authenticated`, `ALL` para `service_role`
 
-### Backend / lógica de visibilidade
-- Em `useZappData.tsx`, expandir o cálculo de `hasGlobalVisibility` para também ser `true` quando o `zapp_agent` do usuário atual tiver `has_global_access = true`.
-- Como `currentAgent` já é carregado em `useZappDialogs`, basta ler `dialogs.currentAgent?.has_global_access`.
+### 2. Atualizar `supabase/functions/create-lead/index.ts`
+No bloco que retorna 409 (após o `if (existing)`), antes do `return`:
+- Inserir registro em `lead_duplicate_attempts` com:
+  - `payload` = corpo recebido
+  - `matched_field: 'phone'`, `matched_value: normalizedPhone`
+  - `existing_lead_id`, `existing_lead_name` = `existing`
+  - `ip_address` = `req.headers.get('x-forwarded-for')`
+  - `user_agent` = `req.headers.get('user-agent')`
+  - `auth_method`, `api_key_id` do `auth`
+- Falha de log não bloqueia a resposta (try/catch).
 
-### UI — `ZappTeamList.tsx`
-- Ao lado do switch de online, adicionar um segundo switch pequeno rotulado **"Acesso global"** (com tooltip: "Vê e pode puxar conversas de qualquer atendente").
-- Visível para todos, mas **somente habilitado** quando o usuário logado for Admin/Gestor (`hasGlobalVisibility === true`). Para os demais, fica `disabled` e apenas indica o estado atual.
-- Indicador visual quando ativo: pequeno badge "Global" na linha do atendente.
+### 3. (Opcional, mesma estrutura) Cobrir também duplicidade por email
+Hoje o 409 só dispara por telefone. Não vou ampliar o critério agora — só registro o que já existe. Se quiser, abro outra task pra checar duplicidade por email também.
 
-### Handler
-- Em `RoyZapp.tsx`, adicionar `onToggleAgentGlobalAccess(agent)` análogo a `onToggleAgentOnline`, que faz `update zapp_agents set has_global_access = !current where id = agent.id` e recarrega via `fetchData`.
-- Passar a prop nova ao `ZappTeamList`.
+## Como você vai usar
+Por ora, consulta direta via SQL (`select * from lead_duplicate_attempts order by created_at desc`). Se quiser uma tela em `/settings` ou em Leads listando isso, me diga depois — fica fora desse plano.
 
-### Tipos
-- Estender `Agent` em `src/components/royzapp/types.ts` com `has_global_access: boolean`.
-- Tipos do Supabase regeneram após a migration.
-
-## Fora do escopo
-- Não cria nova role nem mexe em RBAC global — é uma flag local do RoyZapp.
-- Não altera o trigger de bloqueio de atribuição a inativos.
-- Sem mudanças no `ZappAgentDialog` (toggle vive só na lista, conforme escolhido).
+## Arquivos afetados
+- `supabase/migrations/<timestamp>_lead_duplicate_attempts.sql` (novo)
+- `supabase/functions/create-lead/index.ts` (edit no bloco do 409)
