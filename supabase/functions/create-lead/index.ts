@@ -136,11 +136,33 @@ Deno.serve(async (req) => {
         if (auth.method === "api_key" && auth.apiKeyId) {
           await logApiKeyUsage(supabase, auth.apiKeyId, req, 409);
         }
+        // Audit trail: record duplicate attempt with full payload so we can
+        // trace which integration/webhook keeps re-sending the same lead.
+        try {
+          await supabase.from("lead_duplicate_attempts").insert({
+            account_id: accountId,
+            existing_lead_id: existing.id,
+            existing_lead_name: existing.full_name,
+            matched_field: "phone",
+            matched_value: normalizedPhone,
+            payload: payload as any,
+            auth_method: auth.method ?? null,
+            api_key_id: auth.apiKeyId ?? null,
+            ip_address:
+              req.headers.get("x-forwarded-for") ??
+              req.headers.get("cf-connecting-ip") ??
+              null,
+            user_agent: req.headers.get("user-agent") ?? null,
+          });
+        } catch (logErr) {
+          console.error("[create-lead] failed to log duplicate attempt", logErr);
+        }
         return new Response(
           JSON.stringify({ error: "Lead already exists", existing_lead: existing }),
           { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
     }
 
     // Build tags array filtering empty strings

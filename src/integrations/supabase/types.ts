@@ -13842,6 +13842,66 @@ export type Database = {
           },
         ]
       }
+      lead_duplicate_attempts: {
+        Row: {
+          account_id: string
+          api_key_id: string | null
+          auth_method: string | null
+          created_at: string
+          existing_lead_id: string | null
+          existing_lead_name: string | null
+          id: string
+          ip_address: string | null
+          matched_field: string
+          matched_value: string | null
+          payload: Json | null
+          user_agent: string | null
+        }
+        Insert: {
+          account_id: string
+          api_key_id?: string | null
+          auth_method?: string | null
+          created_at?: string
+          existing_lead_id?: string | null
+          existing_lead_name?: string | null
+          id?: string
+          ip_address?: string | null
+          matched_field: string
+          matched_value?: string | null
+          payload?: Json | null
+          user_agent?: string | null
+        }
+        Update: {
+          account_id?: string
+          api_key_id?: string | null
+          auth_method?: string | null
+          created_at?: string
+          existing_lead_id?: string | null
+          existing_lead_name?: string | null
+          id?: string
+          ip_address?: string | null
+          matched_field?: string
+          matched_value?: string | null
+          payload?: Json | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_duplicate_attempts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_duplicate_attempts_existing_lead_id_fkey"
+            columns: ["existing_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_field_values: {
         Row: {
           account_id: string
