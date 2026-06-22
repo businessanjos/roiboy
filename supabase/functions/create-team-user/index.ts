@@ -67,19 +67,82 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Check if user has admin privileges (either role=admin OR is_also_admin=true)
-    const hasAdminPrivileges = requestingProfile.role === "admin" || requestingProfile.is_also_admin === true;
-    
-    if (!hasAdminPrivileges) {
+    // Check admin privileges OR Supervisor CX permission (team.edit_cx).
+    const isAdmin = requestingProfile.role === "admin" || requestingProfile.is_also_admin === true;
+    let hasCxScope = false;
+    if (!isAdmin) {
+      const { data: requesterRoles } = await supabaseAdmin
+        .from("user_team_roles")
+        .select("team_role_id")
+        .eq("user_id", requestingProfile.id ?? "");
+      // requesterRoles join requires user id; fetch it
+      const { data: requesterProfile2 } = await supabaseAdmin
+        .from("users")
+        .select("id")
+        .eq("auth_user_id", requestingUser.id)
+        .single();
+      const userId = requesterProfile2?.id;
+      if (userId) {
+        const { data: roleRows } = await supabaseAdmin
+          .from("user_team_roles")
+          .select("team_role_id")
+          .eq("user_id", userId);
+        const roleIds = (roleRows || []).map((r: any) => r.team_role_id).filter(Boolean);
+        if (requestingProfile.team_role_id) roleIds.push(requestingProfile.team_role_id);
+        if (roleIds.length > 0) {
+          const { data: perms } = await supabaseAdmin
+            .from("role_permissions")
+            .select("permission")
+            .in("role_id", roleIds)
+            .eq("permission", "team.edit_cx");
+          hasCxScope = !!perms && perms.length > 0;
+        }
+      }
+    }
+
+    if (!isAdmin && !hasCxScope) {
       console.log("User lacks admin privileges:", requestingProfile);
       return new Response(
-        JSON.stringify({ error: "Apenas administradores podem criar usuários" }),
+        JSON.stringify({ error: "Apenas administradores ou Supervisor CX podem criar usuários" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const body: CreateTeamUserRequest = await req.json();
     const { name, email, password, team_role_id, team_role_ids, is_also_admin } = body;
+
+    // CX supervisor: only allow assigning CX-scoped roles and never grant admin.
+    if (!isAdmin && hasCxScope) {
+      if (is_also_admin) {
+        return new Response(
+          JSON.stringify({ error: "Supervisor CX não pode cadastrar administradores" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const requestedRoleIds = team_role_ids || (team_role_id ? [team_role_id] : []);
+      if (requestedRoleIds.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "Selecione ao menos uma função CX" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: roleRows2 } = await supabaseAdmin
+        .from("team_roles")
+        .select("id, name, area")
+        .in("id", requestedRoleIds)
+        .eq("account_id", requestingProfile.account_id);
+      const cxOk = (roleRows2 || []).every((r: any) => {
+        const name = (r.name || "").toUpperCase();
+        const area = (r.area || "").toLowerCase();
+        return area.includes("customer") || /^CX(\b|\s|$)|^CS(\b|\s|$)|SUPERVISOR\s+CX|CUSTOMER/.test(name);
+      });
+      if (!cxOk || (roleRows2 || []).length !== requestedRoleIds.length) {
+        return new Response(
+          JSON.stringify({ error: "Supervisor CX só pode atribuir funções da área CX/CS" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     if (!name || !email || !password) {
       return new Response(
