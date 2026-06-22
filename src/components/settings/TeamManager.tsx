@@ -31,6 +31,19 @@ import {
   Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock, Sparkles
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
+
+/**
+ * Roles considered "CX scope". A Supervisor CX (team.edit_cx without admin)
+ * can only see and assign these roles. Match by area or by name prefix to
+ * cover the legacy CX/CS roles that don't have area populated yet.
+ */
+function isCxScopedRole(role: { name?: string | null; area?: string | null }): boolean {
+  const name = (role?.name || "").trim().toUpperCase();
+  const area = (role?.area || "").toLowerCase();
+  if (area.includes("customer")) return true;
+  return /^CX(\b|\s|$)|^CS(\b|\s|$)|SUPERVISOR\s+CX|CUSTOMER/.test(name);
+}
 
 // Password input component with toggle visibility
 function PasswordInput({ 
