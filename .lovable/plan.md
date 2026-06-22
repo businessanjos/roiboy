@@ -1,27 +1,69 @@
 ## Diagnóstico
 
-A Andreia tem hoje no banco 3 roles via `user_team_roles`: **Admin**, **Consultor**, **Supervisor CX**. Tanto a role *Admin* (com `team.view`/`team.edit`) quanto a *Supervisor CX* (com `team.edit_cx`) deveriam liberar o grupo "Gestão → Equipe" no sidebar de Configurações. Os dados estão corretos, RLS deixa ler `role_permissions`, e `SettingsSidebarNav` confere `isAdmin || hasPermission(TEAM_EDIT_CX)`.
+Com o print ficou claro o que aconteceu:
 
-A causa da Equipe não aparecer é cache da sessão dela no navegador:
+- Andreia abriu **Adicionar Membro** e preencheu os dados da **Camila Menaldo** (`camilaconsultora@anjosbusiness.com.br`).
+- Esse email **já existe na mesma conta** (Camila é admin desde antes).
+- A edge function `create-team-user` retornou corretamente **HTTP 400** com `{ error: "Este usuário já faz parte da sua equipe" }`.
+- O frontend, porém, exibiu apenas o toast genérico **"Erro ao criar usuário"** — escondendo a causa real e fazendo parecer que o sistema "não deixou" sem explicar o motivo.
 
-- `useCurrentUser` carrega `team_role_ids` uma vez no login e mantém no `useState`.
-- `usePermissions` deriva tudo a partir desse `currentUser` — se a lista de roles mudou no banco *depois* dela já estar logada, ela continua com a lista antiga até dar logout/login.
-- O `useReloadPermissions` existe, mas só invalida React Query e chama `refetchPermissions()`. Ele **não** chama `refetchUser()` do `useCurrentUser` (que é `useState`, não query), então `team_role_ids` nunca atualiza.
+## Causa raiz no código
 
-## O que vou fazer
+Em `src/components/settings/TeamManager.tsx` (`handleAddUser`, linhas 355-373):
 
-1. **Corrigir `useReloadPermissions`** para também chamar `refetchUser()` do `useCurrentUser` antes do `refetchPermissions()`, garantindo que a lista de roles seja recarregada do banco.
-2. **Disparar reload automático quando um admin altera roles**: no `TeamManager`, após atribuir/remover roles de um usuário, fazer broadcast via Supabase Realtime (canal `user-roles-${userId}`) ou um `postgres_changes` em `user_team_roles` filtrado por `user_id=eq.<self>`. No `CurrentUserProvider`, escutar esse canal e chamar `fetchUser()` quando houver mudança nas próprias roles — assim a Andreia recebe a role nova em segundos, sem refresh.
-3. **Ação imediata para a Andreia**: pedir que ela faça hard refresh (Ctrl+Shift+R) ou logout/login uma vez para destravar a sessão atual. Depois do item 2, isso não será mais necessário em casos futuros.
+```ts
+if (response.error.context?.body) {
+  const bodyError = JSON.parse(response.error.context.body);
+  ...
+}
+```
 
-## Arquivos afetados
+No SDK atual do supabase-js, `FunctionsHttpError.context` é um **`Response` object**, não um objeto com `.body` string. Por isso o `if` falha, cai no fallback e mostra `"Erro ao criar usuário"`.
 
-- `src/hooks/useReloadPermissions.tsx` — encadear `refetchUser` antes de `refetchPermissions`.
-- `src/hooks/useCurrentUser.tsx` — adicionar subscription Realtime em `user_team_roles` filtrada por `user_id=eq.${currentUser.id}` que dispara `fetchUser()`.
-- (Opcional) `src/components/settings/TeamManager.tsx` — sem mudança necessária se usarmos `postgres_changes`, já que o INSERT/DELETE em `user_team_roles` propaga sozinho.
+Resultado: toda mensagem de validação da edge function (email duplicado, role inválido, "supervisor CX não pode criar admin", etc.) some.
 
-## Como validar
+## O que vamos corrigir
 
-- Logar como Andreia, abrir `/settings`, confirmar que aparece o grupo **Gestão → Equipe**.
-- Como admin, remover a role *Supervisor CX* dela em outra aba e ver o item sumir em poucos segundos sem refresh.
-- Reatribuir e ver o item voltar.
+**1. Extrair a mensagem real do `FunctionsHttpError`** em `TeamManager.tsx`:
+
+```ts
+if (response.error) {
+  let errorMessage = "Erro ao criar usuário";
+  const ctx: any = (response.error as any).context;
+  try {
+    if (ctx && typeof ctx.json === "function") {
+      const body = await ctx.clone().json();
+      if (body?.error) errorMessage = body.error;
+    } else if (ctx && typeof ctx.text === "function") {
+      const txt = await ctx.clone().text();
+      const body = JSON.parse(txt);
+      if (body?.error) errorMessage = body.error;
+    } else if (typeof ctx?.body === "string") {
+      const body = JSON.parse(ctx.body);
+      if (body?.error) errorMessage = body.error;
+    }
+  } catch {/* mantém fallback */}
+  throw new Error(errorMessage);
+}
+```
+
+Aplicar o mesmo tratamento no `handleEditUser` (linha ~395) e onde mais a tela invoque edge functions e mostre toast.
+
+**2. Pequena melhoria de UX no dialog "Adicionar Membro"**
+
+Quando o email já existe na conta, sugerir explicitamente:
+> "Já existe um membro com este email (Camila Menaldo). Use 'Editar' no card dele para alterar funções."
+
+Isso pode ser feito ampliando a mensagem da edge function: incluir o `name` do usuário existente no retorno (já temos `globalUser.name` em mãos na função).
+
+## Confirmação para a Andreia
+
+- O cadastro **não foi duplicado** — nada foi criado.
+- A intenção dela era provavelmente **adicionar a função "Supervisor CX" para a Camila** (ou editar o cadastro dela), não criar um novo. Camila já existe como admin.
+
+## Arquivos a tocar
+
+- `src/components/settings/TeamManager.tsx` — corrigir parsing do erro em `handleAddUser` e `handleEditUser`.
+- `supabase/functions/create-team-user/index.ts` — incluir `name` do usuário existente na mensagem de erro de email duplicado (mesma conta).
+
+Sem migrations, sem mudança de RLS, sem mudança de permissão.
