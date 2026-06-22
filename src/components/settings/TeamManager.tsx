@@ -762,10 +762,12 @@ export function TeamManager() {
             <Users className="h-4 w-4" />
             Membros
           </TabsTrigger>
-          <TabsTrigger value="roles" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Shield className="h-4 w-4" />
-            Funções
-          </TabsTrigger>
+          {!cxScopeOnly && (
+            <TabsTrigger value="roles" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Shield className="h-4 w-4" />
+              Funções
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Members Tab */}
