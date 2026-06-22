@@ -266,6 +266,19 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Auto-grant CX-scope sectors (operacoes + royzapp) when the creator is a
+    // Supervisor CX, so the new user can actually access the app on first login.
+    if (!isAdmin && hasCxScope && newUser) {
+      const { error: sectorErr } = await supabaseAdmin
+        .from("user_sector_access")
+        .insert([
+          { account_id: requestingProfile.account_id, user_id: newUser.id, sector_id: "operacoes", role_in_sector: "member", is_active: true },
+          { account_id: requestingProfile.account_id, user_id: newUser.id, sector_id: "royzapp", role_in_sector: "member", is_active: true },
+        ]);
+      if (sectorErr) console.error("Error granting default CX sectors:", sectorErr);
+    }
+
+
     return new Response(
       JSON.stringify({ 
         success: true, 
