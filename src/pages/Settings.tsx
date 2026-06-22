@@ -43,7 +43,7 @@ export default function Settings() {
           </div>
         ) : null;
       case "team":
-        return isAdmin ? <TeamManager /> : null;
+        return canManageTeam ? <TeamManager /> : null;
       case "sectors":
         return isAdmin ? (
           <div className="space-y-4">
