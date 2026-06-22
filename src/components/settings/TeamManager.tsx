@@ -31,6 +31,19 @@ import {
   Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock, Sparkles
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
+
+/**
+ * Roles considered "CX scope". A Supervisor CX (team.edit_cx without admin)
+ * can only see and assign these roles. Match by area or by name prefix to
+ * cover the legacy CX/CS roles that don't have area populated yet.
+ */
+function isCxScopedRole(role: { name?: string | null; area?: string | null }): boolean {
+  const name = (role?.name || "").trim().toUpperCase();
+  const area = (role?.area || "").toLowerCase();
+  if (area.includes("customer")) return true;
+  return /^CX(\b|\s|$)|^CS(\b|\s|$)|SUPERVISOR\s+CX|CUSTOMER/.test(name);
+}
 
 // Password input component with toggle visibility
 function PasswordInput({ 
@@ -153,6 +166,10 @@ const DEFAULT_ROLE_COLORS = [
 ];
 
 export function TeamManager() {
+  const { isAdmin, hasPermission } = usePermissions();
+  // Supervisor CX (non-admin with team.edit_cx) is scoped: sees only CX
+  // members and assigns only CX roles. Hides admin toggle and Funções tab.
+  const cxScopeOnly = !isAdmin && hasPermission(PERMISSIONS.TEAM_EDIT_CX);
   const [users, setUsers] = useState<TeamUser[]>([]);
   const [roles, setRoles] = useState<TeamRole[]>([]);
   const [loading, setLoading] = useState(true);
@@ -719,12 +736,19 @@ export function TeamManager() {
       .slice(0, 2);
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
+  const visibleRoles = cxScopeOnly ? roles.filter(isCxScopedRole) : roles;
+  const filteredUsers = users.filter((user) => {
+    if (cxScopeOnly) {
+      const userRoles = user.team_roles || (user.team_role ? [user.team_role] : []);
+      if (userRoles.length === 0) return false;
+      if (!userRoles.some(isCxScopedRole)) return false;
+    }
+    return (
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.team_role?.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    );
+  });
 
   if (loading) {
     return <LoadingScreen message="Carregando equipe..." fullScreen={false} />;
@@ -738,10 +762,12 @@ export function TeamManager() {
             <Users className="h-4 w-4" />
             Membros
           </TabsTrigger>
-          <TabsTrigger value="roles" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Shield className="h-4 w-4" />
-            Funções
-          </TabsTrigger>
+          {!cxScopeOnly && (
+            <TabsTrigger value="roles" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Shield className="h-4 w-4" />
+              Funções
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Members Tab */}
@@ -1273,9 +1299,9 @@ export function TeamManager() {
             <div className="space-y-2">
               <Label>Funções</Label>
               <div className="rounded-lg border bg-card p-3 space-y-2 max-h-40 overflow-y-auto">
-                {roles.length === 0 ? (
+                {visibleRoles.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Nenhuma função cadastrada</p>
-                ) : roles.map((role) => (
+                ) : visibleRoles.map((role) => (
                   <div key={role.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`add-role-${role.id}`}
@@ -1297,21 +1323,23 @@ export function TeamManager() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
-              <Checkbox
-                id="is-also-admin"
-                checked={formIsAlsoAdmin}
-                onCheckedChange={(checked) => setFormIsAlsoAdmin(checked === true)}
-              />
-              <div className="space-y-0.5">
-                <Label htmlFor="is-also-admin" className="font-medium cursor-pointer">
-                  Também é Admin
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Pode visualizar e editar tudo no sistema
-                </p>
+            {!cxScopeOnly && (
+              <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
+                <Checkbox
+                  id="is-also-admin"
+                  checked={formIsAlsoAdmin}
+                  onCheckedChange={(checked) => setFormIsAlsoAdmin(checked === true)}
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="is-also-admin" className="font-medium cursor-pointer">
+                    Também é Admin
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Pode visualizar e editar tudo no sistema
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
@@ -1421,9 +1449,9 @@ export function TeamManager() {
             <div className="space-y-2">
               <Label>Funções</Label>
               <div className="rounded-lg border bg-card p-3 space-y-2 max-h-40 overflow-y-auto">
-                {roles.length === 0 ? (
+                {visibleRoles.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Nenhuma função cadastrada</p>
-                ) : roles.map((role) => (
+                ) : visibleRoles.map((role) => (
                   <div key={role.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`edit-role-${role.id}`}
@@ -1445,21 +1473,23 @@ export function TeamManager() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
-              <Checkbox
-                id="edit-is-also-admin"
-                checked={formIsAlsoAdmin}
-                onCheckedChange={(checked) => setFormIsAlsoAdmin(checked === true)}
-              />
-              <div className="space-y-0.5">
-                <Label htmlFor="edit-is-also-admin" className="font-medium cursor-pointer">
-                  Também é Admin
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Pode visualizar e editar tudo no sistema
-                </p>
+            {!cxScopeOnly && (
+              <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
+                <Checkbox
+                  id="edit-is-also-admin"
+                  checked={formIsAlsoAdmin}
+                  onCheckedChange={(checked) => setFormIsAlsoAdmin(checked === true)}
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="edit-is-also-admin" className="font-medium cursor-pointer">
+                    Também é Admin
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Pode visualizar e editar tudo no sistema
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>

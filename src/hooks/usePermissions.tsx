@@ -88,6 +88,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       const MANAGEMENT_PERMISSIONS = new Set<string>([
         PERMISSIONS.TEAM_VIEW,
         PERMISSIONS.TEAM_EDIT,
+        PERMISSIONS.TEAM_EDIT_CX,
         PERMISSIONS.SETTINGS_EDIT,
       ]);
       const fromSectors: string[] = [];

@@ -49,11 +49,14 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
       });
     }
 
-    if (isAdmin) {
+    const canManageTeam = isAdmin || hasPermission(PERMISSIONS.TEAM_EDIT_CX);
+    if (canManageTeam) {
       const adminItems: NavItem[] = [
         { id: "team", label: "Equipe", icon: UserCircle },
-        { id: "sectors", label: "Setores", icon: Users },
       ];
+      if (isAdmin) {
+        adminItems.push({ id: "sectors", label: "Setores", icon: Users });
+      }
       if (hasVendasAccess && canEditSettings) {
         adminItems.push({ id: "sales", label: "Vendas", icon: Target });
       }
@@ -79,7 +82,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
     }
 
     return groups;
-  }, [hasVendasAccess, isAdmin, canViewSettings, canEditSettings]);
+  }, [hasVendasAccess, isAdmin, canViewSettings, canEditSettings, hasPermission]);
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });

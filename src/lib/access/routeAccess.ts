@@ -98,7 +98,7 @@ export function decideRouteAccess(
   };
 }
 
-const MANAGEMENT_PERMISSIONS = new Set(["team.view", "team.edit", "settings.edit"]);
+const MANAGEMENT_PERMISSIONS = new Set(["team.view", "team.edit", "team.edit_cx", "settings.edit"]);
 
 /**
  * Mirrors usePermissions: union of role-derived perms and safe perms implied

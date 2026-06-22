@@ -1,46 +1,55 @@
+# Plano: Papel "Supervisor CX"
+
 ## Objetivo
-Quando `create-lead` recusar um lead por duplicidade (HTTP 409), gravar o payload recebido + qual lead já existia, pra você auditar de onde vêm as duplicatas (qual webhook/integração está reenviando os mesmos contatos).
+Criar um novo papel `Supervisor CX` que possa gerenciar a equipe de Customer Success (incluindo cadastrar novos membros), ter acesso completo à área de Operações e ao ROY zAPP (inclusive conectar instâncias), mas **sem** acesso a Financeiro, Gestão Tech, RH, Vendas, Marketing, etc.
 
-## Diagnóstico atual
-Os 3 eventos de 16/06 vieram com user-agent `Deno/SupabaseEdgeRuntime` — ou seja, outra Edge Function nossa chamou `create-lead`. Os logs do Edge Runtime já expiraram, então hoje não dá pra reconstruir o payload. Precisamos persistir.
+## Acessos concedidos
+- **Setores ativos por padrão**: `operacoes`, `royzapp`
+- **Permissões granulares**:
+  - `clients.view`, `clients.edit` (operação completa)
+  - `reports.view` (dashboard CX)
+  - `products.view`, `forms.view`
+  - `royzapp.access` + acesso a `?view=settings`, `?view=whatsapp-admin`, `?view=team`, `?view=departments` (conectar e administrar zAPP)
+  - `team.view` + nova permissão `team.edit_cx` (ver lista da equipe e cadastrar/editar somente membros do escopo CX)
+  - `settings.view` (acesso a `/settings?tab=team` filtrado)
+- **Bloqueado**: Financeiro, Gestão Tech, RH, Vendas, Marketing, Eventos, Configurações sensíveis (integrations, api-key, tech-tokens, sectors admin).
 
-## Implementação
+## Mudanças
 
-### 1. Nova tabela `lead_duplicate_attempts`
-Migration com:
-- `id uuid pk`
-- `account_id uuid` (FK accounts)
-- `existing_lead_id uuid` (FK leads, nullable se já tiver sido apagado)
-- `existing_lead_name text`
-- `matched_field text` (`phone` | `email` futuramente)
-- `matched_value text` (telefone/email normalizado que bateu)
-- `payload jsonb` (corpo cru recebido)
-- `auth_method text` (`api_key` | `jwt` | `legacy`)
-- `api_key_id uuid` (nullable)
-- `ip_address text`
-- `user_agent text`
-- `created_at timestamptz default now()`
-- Index em `account_id, created_at desc` e `existing_lead_id`
-- RLS: SELECT para `authenticated` da própria `account_id` (via `get_user_account_id`); INSERT/ALL para `service_role`
-- GRANT `SELECT, INSERT, UPDATE, DELETE` para `authenticated`, `ALL` para `service_role`
+### 1. Banco (migration)
+- Criar `team_role` "Supervisor CX" (area=CX, job=Supervisor, seniority=Pleno) — inserido via insert tool, não migration.
+- Adicionar a constante de permissão `team.edit_cx` em `role_permissions` para esse papel.
+- Conceder em `role_permissions` as permissões listadas acima para o `team_role_id` recém-criado.
 
-### 2. Atualizar `supabase/functions/create-lead/index.ts`
-No bloco que retorna 409 (após o `if (existing)`), antes do `return`:
-- Inserir registro em `lead_duplicate_attempts` com:
-  - `payload` = corpo recebido
-  - `matched_field: 'phone'`, `matched_value: normalizedPhone`
-  - `existing_lead_id`, `existing_lead_name` = `existing`
-  - `ip_address` = `req.headers.get('x-forwarded-for')`
-  - `user_agent` = `req.headers.get('user-agent')`
-  - `auth_method`, `api_key_id` do `auth`
-- Falha de log não bloqueia a resposta (try/catch).
+### 2. Frontend — permissões
+- `src/lib/access/permissions.ts`: adicionar `TEAM_EDIT_CX = "team.edit_cx"`.
+- `src/hooks/usePermissions.tsx`: incluir `TEAM_EDIT_CX` no set de `MANAGEMENT_PERMISSIONS` (impedir que venha implícito via sector access).
+- `src/lib/access/routeAccess.ts`: idem.
 
-### 3. (Opcional, mesma estrutura) Cobrir também duplicidade por email
-Hoje o 409 só dispara por telefone. Não vou ampliar o critério agora — só registro o que já existe. Se quiser, abro outra task pra checar duplicidade por email também.
+### 3. Settings → aba Team
+- `src/pages/Settings.tsx`: trocar o gate `isAdmin` da aba `team` por `isAdmin || hasPermission(TEAM_EDIT_CX)`.
+- `src/components/settings/TeamManager.tsx`: quando o usuário tiver apenas `TEAM_EDIT_CX` (e não for admin):
+  - filtrar a lista para mostrar somente membros cujo `team_role` esteja na área CX;
+  - ao criar/editar, restringir o seletor de papéis àqueles da área CX;
+  - esconder o toggle `is_also_admin`.
 
-## Como você vai usar
-Por ora, consulta direta via SQL (`select * from lead_duplicate_attempts order by created_at desc`). Se quiser uma tela em `/settings` ou em Leads listando isso, me diga depois — fica fora desse plano.
+### 4. Edge function `create-team-user`
+- Substituir o gate "apenas admin" por: admin **ou** usuário com permissão `team.edit_cx`.
+- Quando for `team.edit_cx` (não admin):
+  - exigir que `team_role_ids` recebidos pertençam à área CX (validar via `team_roles.area`);
+  - rejeitar `is_also_admin = true`;
+  - manter mesma `account_id` do solicitante.
+- Verificação de permissão consulta `role_permissions` via service role.
 
-## Arquivos afetados
-- `supabase/migrations/<timestamp>_lead_duplicate_attempts.sql` (novo)
-- `supabase/functions/create-lead/index.ts` (edit no bloco do 409)
+### 5. Sidebar / navegação
+- Garantir que `useSectorAccess` libere `operacoes` + `royzapp` para o usuário com base no `user_sector_access` (cadastro padrão ao criar o usuário). Nada novo no código aqui, só dado.
+
+## Detalhes técnicos
+
+- O `usePermissions` já une perms de role + sector. Como `team.edit_cx` é management-like, deve ser concedido **somente** via `role_permissions` (não via sector), por isso entra na lista `MANAGEMENT_PERMISSIONS`.
+- A filtragem por área CX no TeamManager usa `team_roles.area = 'CX'` (taxonomia já existente).
+- O `create-team-user` valida a área dos papéis solicitados com um `select id, area from team_roles where id = any($1)` e bloqueia se algum não for CX.
+- Nenhum impacto no allowlist `RH_ALLOWED_EMAILS` (CX é independente).
+
+## Como atribuir depois
+Admin abre Configurações → Equipe → edita o usuário desejado e marca o papel "Supervisor CX". O sistema concede automaticamente as permissões e os setores correspondentes.
