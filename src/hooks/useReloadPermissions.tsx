@@ -1,6 +1,7 @@
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePermissionsContextSafe } from "@/hooks/usePermissions";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 
 /**
@@ -11,6 +12,7 @@ export function useReloadPermissions() {
   const queryClient = useQueryClient();
   const permissionsCtx = usePermissionsContextSafe();
   const refetchPermissions = permissionsCtx?.refetchPermissions;
+  const { refetchUser } = useCurrentUser();
   const [reloading, setReloading] = useState(false);
 
   const reload = useCallback(async () => {
@@ -25,6 +27,9 @@ export function useReloadPermissions() {
         queryClient.invalidateQueries({ queryKey: ["external-access-check"] }),
         queryClient.invalidateQueries({ queryKey: ["subscription-status"] }),
       ]);
+      // Refetch the currentUser (useState-based, not React Query) so the
+      // freshly-assigned team_role_ids reach the permissions resolver.
+      await refetchUser?.();
       // Re-run the permissions resolver (team_roles + sector access merge).
       await refetchPermissions?.();
       toast.success("Permissões atualizadas", {
@@ -38,7 +43,7 @@ export function useReloadPermissions() {
     } finally {
       setReloading(false);
     }
-  }, [queryClient, refetchPermissions]);
+  }, [queryClient, refetchPermissions, refetchUser]);
 
   return { reload, reloading };
 }
