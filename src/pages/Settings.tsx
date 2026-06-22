@@ -26,6 +26,7 @@ export default function Settings() {
   const { isAdmin, hasPermission } = usePermissions();
   const canViewSettings = isAdmin || hasPermission(PERMISSIONS.SETTINGS_VIEW);
   const canEditSettings = isAdmin || hasPermission(PERMISSIONS.SETTINGS_EDIT);
+  const canManageTeam = isAdmin || hasPermission(PERMISSIONS.TEAM_EDIT_CX);
 
   const activeTab = searchParams.get("tab") || "profile";
 
