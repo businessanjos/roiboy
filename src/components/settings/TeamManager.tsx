@@ -1299,9 +1299,9 @@ export function TeamManager() {
             <div className="space-y-2">
               <Label>Funções</Label>
               <div className="rounded-lg border bg-card p-3 space-y-2 max-h-40 overflow-y-auto">
-                {roles.length === 0 ? (
+                {visibleRoles.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Nenhuma função cadastrada</p>
-                ) : roles.map((role) => (
+                ) : visibleRoles.map((role) => (
                   <div key={role.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`add-role-${role.id}`}
