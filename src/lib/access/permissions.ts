@@ -5,6 +5,7 @@ export const PERMISSIONS = {
   CLIENTS_DELETE: "clients.delete",
   TEAM_VIEW: "team.view",
   TEAM_EDIT: "team.edit",
+  TEAM_EDIT_CX: "team.edit_cx",
   SETTINGS_VIEW: "settings.view",
   SETTINGS_EDIT: "settings.edit",
   REPORTS_VIEW: "reports.view",
