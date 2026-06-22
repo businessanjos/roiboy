@@ -71,14 +71,9 @@ Deno.serve(async (req: Request) => {
     const isAdmin = requestingProfile.role === "admin" || requestingProfile.is_also_admin === true;
     let hasCxScope = false;
     if (!isAdmin) {
-      const { data: requesterRoles } = await supabaseAdmin
-        .from("user_team_roles")
-        .select("team_role_id")
-        .eq("user_id", requestingProfile.id ?? "");
-      // requesterRoles join requires user id; fetch it
       const { data: requesterProfile2 } = await supabaseAdmin
         .from("users")
-        .select("id")
+        .select("id, team_role_id")
         .eq("auth_user_id", requestingUser.id)
         .single();
       const userId = requesterProfile2?.id;
@@ -88,7 +83,7 @@ Deno.serve(async (req: Request) => {
           .select("team_role_id")
           .eq("user_id", userId);
         const roleIds = (roleRows || []).map((r: any) => r.team_role_id).filter(Boolean);
-        if (requestingProfile.team_role_id) roleIds.push(requestingProfile.team_role_id);
+        if (requesterProfile2?.team_role_id) roleIds.push(requesterProfile2.team_role_id);
         if (roleIds.length > 0) {
           const { data: perms } = await supabaseAdmin
             .from("role_permissions")
