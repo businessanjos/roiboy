@@ -353,23 +353,7 @@ export function TeamManager() {
 
       // Handle SDK error, but try to extract the real message
       if (response.error) {
-        let errorMessage = "Erro ao criar usuário";
-        
-        // Try to parse the error from context body (raw response)
-        if (response.error.context?.body) {
-          try {
-            const bodyError = JSON.parse(response.error.context.body);
-            if (bodyError.error) {
-              errorMessage = bodyError.error;
-            }
-          } catch {
-            // If parsing fails, continue with fallback
-          }
-        } else if (response.error.message && !response.error.message.includes("non-2xx")) {
-          // Use error message only if it's not the generic one
-          errorMessage = response.error.message;
-        }
-        
+        const errorMessage = await extractEdgeFunctionError(response.error, "Erro ao criar usuário");
         throw new Error(errorMessage);
       }
 
@@ -430,22 +414,7 @@ export function TeamManager() {
         });
 
         if (response.error) {
-          let errorMessage = "Erro ao atualizar senha";
-          
-          // Try to parse the real error from the response body
-          if (response.error.context?.body) {
-            try {
-              const bodyError = JSON.parse(response.error.context.body);
-              if (bodyError.error) {
-                errorMessage = bodyError.error;
-              }
-            } catch {
-              // If parsing fails, use fallback
-            }
-          } else if (response.error.message && !response.error.message.includes("non-2xx")) {
-            errorMessage = response.error.message;
-          }
-          
+          const errorMessage = await extractEdgeFunctionError(response.error, "Erro ao atualizar senha");
           throw new Error(errorMessage);
         }
 

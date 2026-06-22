@@ -163,8 +163,9 @@ Deno.serve(async (req: Request) => {
     if (globalUser) {
       if (globalUser.account_id === requestingProfile.account_id) {
         // Email already exists in the SAME account
+        const existingName = globalUser.name ? ` (${globalUser.name})` : "";
         return new Response(
-          JSON.stringify({ error: "Este usuário já faz parte da sua equipe" }),
+          JSON.stringify({ error: `Já existe um membro com este email${existingName} na sua equipe. Use "Editar" no card dele para alterar funções ou senha.` }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else {
