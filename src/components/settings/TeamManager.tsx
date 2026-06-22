@@ -166,6 +166,10 @@ const DEFAULT_ROLE_COLORS = [
 ];
 
 export function TeamManager() {
+  const { isAdmin, hasPermission } = usePermissions();
+  // Supervisor CX (non-admin with team.edit_cx) is scoped: sees only CX
+  // members and assigns only CX roles. Hides admin toggle and Funções tab.
+  const cxScopeOnly = !isAdmin && hasPermission(PERMISSIONS.TEAM_EDIT_CX);
   const [users, setUsers] = useState<TeamUser[]>([]);
   const [roles, setRoles] = useState<TeamRole[]>([]);
   const [loading, setLoading] = useState(true);
