@@ -177,6 +177,21 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     };
   }, [currentUser?.id]);
 
+  // Realtime: when an admin assigns/removes team roles for this user,
+  // refetch immediately so team_role_ids stays in sync without a logout.
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const channel = supabase
+      .channel(`user-team-roles-${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_team_roles", filter: `user_id=eq.${currentUser.id}` },
+        () => { fetchUser(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [currentUser?.id, fetchUser]);
+
   return (
     <CurrentUserContext.Provider value={{ currentUser, loading, refetchUser, updateUser }}>
       {children}
