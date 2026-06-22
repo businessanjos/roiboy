@@ -1323,21 +1323,23 @@ export function TeamManager() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
-              <Checkbox
-                id="is-also-admin"
-                checked={formIsAlsoAdmin}
-                onCheckedChange={(checked) => setFormIsAlsoAdmin(checked === true)}
-              />
-              <div className="space-y-0.5">
-                <Label htmlFor="is-also-admin" className="font-medium cursor-pointer">
-                  Também é Admin
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Pode visualizar e editar tudo no sistema
-                </p>
+            {!cxScopeOnly && (
+              <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
+                <Checkbox
+                  id="is-also-admin"
+                  checked={formIsAlsoAdmin}
+                  onCheckedChange={(checked) => setFormIsAlsoAdmin(checked === true)}
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="is-also-admin" className="font-medium cursor-pointer">
+                    Também é Admin
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Pode visualizar e editar tudo no sistema
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
