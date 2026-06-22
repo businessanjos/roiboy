@@ -736,12 +736,19 @@ export function TeamManager() {
       .slice(0, 2);
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
+  const visibleRoles = cxScopeOnly ? roles.filter(isCxScopedRole) : roles;
+  const filteredUsers = users.filter((user) => {
+    if (cxScopeOnly) {
+      const userRoles = user.team_roles || (user.team_role ? [user.team_role] : []);
+      if (userRoles.length === 0) return false;
+      if (!userRoles.some(isCxScopedRole)) return false;
+    }
+    return (
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.team_role?.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    );
+  });
 
   if (loading) {
     return <LoadingScreen message="Carregando equipe..." fullScreen={false} />;
