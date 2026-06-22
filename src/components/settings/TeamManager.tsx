@@ -1449,9 +1449,9 @@ export function TeamManager() {
             <div className="space-y-2">
               <Label>Funções</Label>
               <div className="rounded-lg border bg-card p-3 space-y-2 max-h-40 overflow-y-auto">
-                {roles.length === 0 ? (
+                {visibleRoles.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Nenhuma função cadastrada</p>
-                ) : roles.map((role) => (
+                ) : visibleRoles.map((role) => (
                   <div key={role.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`edit-role-${role.id}`}
@@ -1473,21 +1473,23 @@ export function TeamManager() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
-              <Checkbox
-                id="edit-is-also-admin"
-                checked={formIsAlsoAdmin}
-                onCheckedChange={(checked) => setFormIsAlsoAdmin(checked === true)}
-              />
-              <div className="space-y-0.5">
-                <Label htmlFor="edit-is-also-admin" className="font-medium cursor-pointer">
-                  Também é Admin
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Pode visualizar e editar tudo no sistema
-                </p>
+            {!cxScopeOnly && (
+              <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
+                <Checkbox
+                  id="edit-is-also-admin"
+                  checked={formIsAlsoAdmin}
+                  onCheckedChange={(checked) => setFormIsAlsoAdmin(checked === true)}
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="edit-is-also-admin" className="font-medium cursor-pointer">
+                    Também é Admin
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Pode visualizar e editar tudo no sistema
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
