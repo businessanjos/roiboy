@@ -25,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
