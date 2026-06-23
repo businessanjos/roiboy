@@ -1126,8 +1126,11 @@ export default function RoyZapp() {
     return <ZappWhatsAppAdminPanel />;
   }
 
-  // If no sector selected, show selector
-  if (!selectedSectorId) {
+  // Views administrativas que não dependem de um setor — podem abrir direto.
+  const SECTORLESS_VIEWS: ZappView[] = ["team", "departments", "tags", "settings", "playbook"];
+
+  // If no sector selected and view requires sector, show selector
+  if (!selectedSectorId && !SECTORLESS_VIEWS.includes(activeView)) {
     return <ZappSectorSelector onSelectSector={(sectorId, integrationId) => {
       setSelectedSectorId(sectorId);
       setSelectedIntegrationId(integrationId);
