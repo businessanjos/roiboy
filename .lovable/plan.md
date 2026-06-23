@@ -1,23 +1,26 @@
-## Conclusão da investigação — Camila Menaldo
+## Mover Camila para a conta da equipe
 
-A Camila **existe** no banco. A confusão foi entre dois IDs distintos:
+A Camila Menaldo está cadastrada em uma conta diferente (`d606856a-...`) da equipe da Andreia (`796e7970-...`). Por isso ela não aparece na lista de membros e a criação dela pela Andreia foi bloqueada pelo check global de email duplicado.
 
-- `users.id` = `95828516-4536-45ab-93a2-4aa278081d33` (FK interna do app)
-- `users.auth_user_id` = `6f72e53c-e71d-49f4-87ed-c8217cf356de` (Supabase Auth — o ID que você pesquisou)
+### Ação (1 update de dados, sem schema)
 
-Dados do registro:
-- Nome: Camila Menaldo
-- Email: camilaconsultora@anjosbusiness.com.br
-- Conta: `d606856a-697a-45be-9e98-7405994b74a9` (mesma da Andreia)
-- Role: admin
-- Criada em: 22/06/2026
+Atualizar `users.account_id` da Camila para a conta da equipe:
 
-## Por que a Andreia recebeu erro
+```sql
+UPDATE public.users
+SET account_id = '796e7970-fd93-4574-a871-6090624cace6',
+    updated_at = now()
+WHERE id = '95828516-4536-45ab-93a2-4aa278081d33';
+```
 
-A edge function `create-team-user` bloqueou corretamente: a Camila já é membro da conta. Com a correção que aplicamos no `TeamManager.tsx` + `extractEdgeFunctionError`, próximas tentativas mostrarão a mensagem clara:
+### Pós-ação
 
-> "Já existe um membro com este email (Camila Menaldo) na sua equipe. Use 'Editar' no card dele para alterar funções ou senha."
+- A Camila passa a aparecer no card "Adicionar Membro" → lista de membros da Andreia, entre Bruna e Darlan.
+- Login (`camilaconsultora@anjosbusiness.com.br`) e auth_user_id continuam os mesmos — ela não precisa redefinir senha.
+- Como não existem linhas em `user_team_roles` para ela, ela aparece sem funções atribuídas. A Andreia pode editar o card e adicionar as funções desejadas (ex.: Supervisor CX, Consultor) depois.
+- Conta órfã `d606856a-...`: deixar como está por enquanto. Se quiser limpar depois, posso checar se há dados ligados a esse account_id em outras tabelas e propor remoção numa próxima etapa.
 
-## Ação
+### Não vou mexer agora
 
-Nenhuma. Apenas confirmação. Nenhuma mudança de código, schema, RLS ou dados é necessária.
+- Nem na edge function `create-team-user` (o comportamento de bloquear emails duplicados globalmente continua válido — só faz sentido revisar se isso voltar a acontecer com outros casos).
+- Nem em `user_team_roles` (atribuir função é decisão da Andreia pela UI).
