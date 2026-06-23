@@ -863,10 +863,29 @@ Deno.serve(async (req) => {
         uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
       );
       // 🚨 Diagnóstico: detectar respostas sem id (falha silenciosa)
-      const r: any = result;
-      const hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
+      let r: any = result;
+      let hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
+      // 🔁 Retry automático para PTT (áudio) — uazapi às vezes devolve resposta vazia
+      // enquanto faz conversão do webm/opus do navegador. Tentamos mais 2x antes de
+      // marcar como falha definitiva.
+      if (!hasId && payload.media_type === "ptt") {
+        for (let attempt = 1; attempt <= 2 && !hasId; attempt++) {
+          const waitMs = 800 * attempt;
+          console.warn(`[uazapi-manager] ⏳ PTT sem messageid, retry ${attempt}/2 em ${waitMs}ms...`);
+          await new Promise((res) => setTimeout(res, waitMs));
+          try {
+            result = await enqueueSend(token!, `send_media retry${attempt} user=${userData.name} type=ptt`, () =>
+              uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
+            );
+            r = result;
+            hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
+          } catch (retryErr) {
+            console.error(`[uazapi-manager] retry ${attempt} falhou:`, retryErr);
+          }
+        }
+      }
       if (!hasId) {
-        console.error(`[uazapi-manager] ⚠️ /send/media sem messageid! type=${payload.media_type} server=${sectorServer.source} response=${JSON.stringify(result).substring(0, 400)}`);
+        console.error(`[uazapi-manager] ⚠️ /send/media sem messageid após retries! type=${payload.media_type} server=${sectorServer.source} response=${JSON.stringify(result).substring(0, 400)}`);
       }
     
     } else if (action === "send_to_group") {
