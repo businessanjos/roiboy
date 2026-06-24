@@ -406,6 +406,36 @@ export default function Sectors() {
           })}
         </div>
 
+        {/* Liderança Eternum — visível apenas para gestão (heads/diretores/sócios/admins) */}
+        {isManagementUser(currentUser, isSuperAdmin) && (
+          <div className="mt-6">
+            <div
+              onClick={() => navigate("/reuniao-lideres")}
+              className="group relative p-5 rounded-xl border border-l-[3px] border-l-amber-500 bg-card overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-black/5 hover:-translate-y-0.5 hover:border-amber-500/30"
+            >
+              <div className="relative z-10 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 transition-colors duration-300 group-hover:bg-amber-500/10">
+                  <Users className="h-6 w-6 text-foreground/70 transition-colors duration-300 group-hover:text-amber-600" strokeWidth={1.5} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-foreground tracking-tight">
+                      Reunião de Líderes
+                    </h3>
+                    <span className="text-[10px] text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider font-medium">
+                      Gestão
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                    Pauta semanal de números, gargalos e impeditivos por área
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+
         {/* Explicit empty state — surfaces when loading is done, no errors,
             but the user has no sectors assigned. Used by E2E tests as a
             stable, non-text-based signal. */}
