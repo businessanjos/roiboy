@@ -14057,6 +14057,139 @@ export type Database = {
         }
         Relationships: []
       }
+      leader_meeting_actions: {
+        Row: {
+          area: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          meeting_id: string
+          owner_user_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          area?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          meeting_id: string
+          owner_user_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          meeting_id?: string
+          owner_user_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_meeting_actions_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "leader_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leader_meeting_sections: {
+        Row: {
+          area: string
+          blockers: string | null
+          bottlenecks: string | null
+          created_at: string
+          id: string
+          meeting_id: string
+          next_steps: string | null
+          numbers: string | null
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          blockers?: string | null
+          bottlenecks?: string | null
+          created_at?: string
+          id?: string
+          meeting_id: string
+          next_steps?: string | null
+          numbers?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          blockers?: string | null
+          bottlenecks?: string | null
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          next_steps?: string | null
+          numbers?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_meeting_sections_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "leader_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leader_meetings: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          general_notes: string | null
+          id: string
+          meeting_date: string
+          status: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          general_notes?: string | null
+          id?: string
+          meeting_date?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          general_notes?: string | null
+          id?: string
+          meeting_date?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           account_id: string
