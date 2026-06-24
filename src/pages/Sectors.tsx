@@ -9,7 +9,8 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SectorsHealthBanner } from "@/components/sectors/SectorsHealthBanner";
-import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase, CalendarDays, AlertTriangle, RefreshCw, Activity } from "lucide-react";
+import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase, CalendarDays, AlertTriangle, RefreshCw, Activity, Users } from "lucide-react";
+import { isManagementUser } from "@/lib/access/managementRoles";
 import { useQueryClient } from "@tanstack/react-query";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
 
