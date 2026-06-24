@@ -129,6 +129,7 @@ const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
 const RoyZappAttendanceMetrics = lazyRetry(() => import("./pages/RoyZappAttendanceMetrics"));
 const EverIA = lazyRetry(() => import("./pages/EverIA"));
 const GestaoTech = lazyRetry(() => import("./pages/GestaoTech"));
+const LeaderMeetings = lazyRetry(() => import("./pages/LeaderMeetings"));
 
 const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
 const Contracts = lazyRetry(() => import("./pages/Contracts"));
@@ -365,6 +366,7 @@ const App = () => (
                             <Route path="/roy-zapp/atendimentos" element={<RoyZappAttendanceMetrics />} />
                             <Route path="/ever-ia" element={<EverIA />} />
                             <Route path="/gestao-tech" element={<GestaoTech />} />
+                            <Route path="/reuniao-lideres" element={<LeaderMeetings />} />
                             
                             <Route path="/billing" element={<BillingPortal />} />
                             
