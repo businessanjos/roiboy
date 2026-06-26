@@ -337,7 +337,8 @@ function MeetingDetail({ meetingId, onBack }: { meetingId: string; onBack: () =>
         </TabsList>
 
         {AREAS.map((a) => (
-          <TabsContent key={a.id} value={a.id} className="mt-6">
+          <TabsContent key={a.id} value={a.id} className="mt-6 space-y-4">
+            <AreaKpiSnapshot area={a.id} meetingDate={m.meeting_date} />
             <AreaSection
               meetingId={meetingId}
               area={a.id}
