@@ -21,6 +21,7 @@ import {
   Users, Plus, ChevronLeft, Calendar, CheckCircle2, Circle,
   Megaphone, Target, Heart, Wallet, ListChecks, FileText, Loader2, Trash2,
 } from "lucide-react";
+import { AreaKpiSnapshot } from "@/components/leader-meetings/AreaKpiSnapshot";
 
 const AREAS = [
   { id: "marketing", label: "Marketing", icon: Megaphone, color: "text-purple-600 bg-purple-500/10" },
@@ -337,7 +338,8 @@ function MeetingDetail({ meetingId, onBack }: { meetingId: string; onBack: () =>
         </TabsList>
 
         {AREAS.map((a) => (
-          <TabsContent key={a.id} value={a.id} className="mt-6">
+          <TabsContent key={a.id} value={a.id} className="mt-6 space-y-4">
+            <AreaKpiSnapshot area={a.id} meetingDate={m.meeting_date} />
             <AreaSection
               meetingId={meetingId}
               area={a.id}
