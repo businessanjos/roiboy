@@ -21,6 +21,7 @@ import {
   Users, Plus, ChevronLeft, Calendar, CheckCircle2, Circle,
   Megaphone, Target, Heart, Wallet, ListChecks, FileText, Loader2, Trash2,
 } from "lucide-react";
+import { AreaKpiSnapshot } from "@/components/leader-meetings/AreaKpiSnapshot";
 
 const AREAS = [
   { id: "marketing", label: "Marketing", icon: Megaphone, color: "text-purple-600 bg-purple-500/10" },
