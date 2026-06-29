@@ -76,42 +76,73 @@ export function useZappContactOperations({
     return assignmentData;
   }, [setSelectedConversation, setAssignments, fetchData]);
 
-  // Find existing conversation by phone + integration (with legacy fallback)
+  // Find existing conversation by phone + integration (with variants + legacy fallback)
   const findConversationByPhone = useCallback(async (normalizedPhone: string) => {
-    let convByPhone = await supabase
+    const variants = phoneVariants(normalizedPhone);
+    if (variants.length === 0) variants.push(normalizedPhone);
+
+    // 1) Match within current integration, across all phone variants
+    let { data: convs } = await supabase
       .from("zapp_conversations")
-      .select("id, lead_id, client_id, integration_id")
+      .select("id, lead_id, client_id, integration_id, phone_e164, last_message_at")
       .eq("account_id", currentUser.account_id)
-      .eq("phone_e164", normalizedPhone)
       .eq("integration_id", selectedIntegrationId)
       .eq("is_group", false)
-      .maybeSingle();
+      .in("phone_e164", variants)
+      .order("last_message_at", { ascending: false, nullsFirst: false })
+      .limit(1);
 
-    // Legacy fallback
-    if (!convByPhone?.data && selectedSectorId) {
-      const { data: legacyConv } = await supabase
+    let match = convs?.[0];
+
+    // 2) Legacy: same sector, no integration_id
+    if (!match && selectedSectorId) {
+      const { data: legacyConvs } = await supabase
         .from("zapp_conversations")
-        .select("id, lead_id, client_id, integration_id")
+        .select("id, lead_id, client_id, integration_id, phone_e164, last_message_at")
         .eq("account_id", currentUser.account_id)
-        .eq("phone_e164", normalizedPhone)
         .eq("sector_id", selectedSectorId)
         .is("integration_id", null)
         .eq("is_group", false)
-        .order("last_message_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .in("phone_e164", variants)
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .limit(1);
 
+      const legacyConv = legacyConvs?.[0];
       if (legacyConv) {
         console.log("[ContactOps] Conversa legada encontrada e migrada:", legacyConv.id);
         await supabase
           .from("zapp_conversations")
           .update({ integration_id: selectedIntegrationId })
           .eq("id", legacyConv.id);
-        convByPhone = { data: legacyConv, error: null, count: null, status: 200, statusText: "OK" };
+        match = { ...legacyConv, integration_id: selectedIntegrationId };
       }
     }
 
-    return convByPhone;
+    // 3) Last resort: any conversation in the account with this phone (preserves history
+    //    even when stored under a different integration_id). Migrates it to current integration.
+    if (!match && selectedIntegrationId) {
+      const { data: anyConvs } = await supabase
+        .from("zapp_conversations")
+        .select("id, lead_id, client_id, integration_id, phone_e164, last_message_at")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_group", false)
+        .in("phone_e164", variants)
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .limit(1);
+
+      const anyConv = anyConvs?.[0];
+      if (anyConv) {
+        console.log("[ContactOps] Conversa em outra integração reaproveitada:", anyConv.id);
+        const canonical = canonicalE164(normalizedPhone) || normalizedPhone;
+        await supabase
+          .from("zapp_conversations")
+          .update({ integration_id: selectedIntegrationId, phone_e164: canonical })
+          .eq("id", anyConv.id);
+        match = { ...anyConv, integration_id: selectedIntegrationId, phone_e164: canonical };
+      }
+    }
+
+    return match ? { data: match } : { data: null };
   }, [currentUser?.account_id, selectedIntegrationId, selectedSectorId]);
 
   // Handle existing assignment (active or closed) - returns true if handled
