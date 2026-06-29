@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ConversationAssignment, Agent } from "@/components/royzapp/types";
 import { SectorId } from "@/config/sectors";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { phoneVariants, canonicalE164 } from "@/lib/phoneNormalize";
 
 interface UseZappContactOperationsParams {
   currentUser: any;
