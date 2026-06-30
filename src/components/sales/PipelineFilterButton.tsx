@@ -25,9 +25,10 @@ import {
   Package,
 } from "lucide-react";
 import { usePipelineFilters, RECOMMENDED_FILTERS, ActiveFilter, PipelineFilter } from "@/hooks/usePipelineFilters";
-import { PipelineFilterDialog } from "./PipelineFilterDialog";
+import { PipelineFilterDialog, CustomFieldOption } from "./PipelineFilterDialog";
 import { DealStage } from "@/hooks/useDeals";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SalesUser {
   id: string;
