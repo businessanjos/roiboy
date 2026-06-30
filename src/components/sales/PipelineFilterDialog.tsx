@@ -116,6 +116,12 @@ const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
     { value: 'is_empty', label: 'está vazio' },
     { value: 'is_not_empty', label: 'não está vazio' },
   ],
+  custom_multi_select: [
+    { value: 'contains', label: 'contém' },
+    { value: 'not_contains', label: 'não contém' },
+    { value: 'is_empty', label: 'está vazio' },
+    { value: 'is_not_empty', label: 'não está vazio' },
+  ],
 };
 
 const VALUE_NOT_NEEDED = ['is_empty', 'is_not_empty', 'this_week', 'this_month'];
