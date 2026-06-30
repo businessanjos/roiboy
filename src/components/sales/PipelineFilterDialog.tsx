@@ -381,7 +381,7 @@ export function PipelineFilterDialog({
                     value={condition.field}
                     onValueChange={(v) => updateCondition(index, { field: v })}
                   >
-                    <SelectTrigger className="w-[140px]">
+                    <SelectTrigger className="w-[180px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
