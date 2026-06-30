@@ -490,3 +490,74 @@ export function PipelineFilterDialog({
     </Dialog>
   );
 }
+
+interface FieldComboboxProps {
+  value: string;
+  label: string;
+  isCustom: boolean;
+  standardFields: typeof FILTER_FIELDS;
+  customFields: CustomFieldOption[];
+  onChange: (value: string) => void;
+}
+
+function FieldCombobox({ value, label, isCustom, standardFields, customFields, onChange }: FieldComboboxProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-[200px] justify-between font-normal"
+        >
+          <span className="flex items-center gap-1.5 truncate">
+            {isCustom && <Sparkles className="h-3 w-3 text-primary shrink-0" />}
+            <span className="truncate">{label}</span>
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[260px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar campo..." />
+          <CommandList className="max-h-[300px]">
+            <CommandEmpty>Nenhum campo encontrado.</CommandEmpty>
+            <CommandGroup heading="Campos padrão">
+              {standardFields.map((f) => (
+                <CommandItem
+                  key={f.value}
+                  value={f.label}
+                  onSelect={() => { onChange(f.value); setOpen(false); }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", value === f.value ? "opacity-100" : "opacity-0")} />
+                  {f.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            {customFields.length > 0 && (
+              <CommandGroup heading="Campos personalizados">
+                {customFields.map((cf) => {
+                  const key = `custom:${cf.id}`;
+                  return (
+                    <CommandItem
+                      key={cf.id}
+                      value={cf.name}
+                      onSelect={() => { onChange(key); setOpen(false); }}
+                    >
+                      <Check className={cn("mr-2 h-4 w-4", value === key ? "opacity-100" : "opacity-0")} />
+                      <Sparkles className="mr-1.5 h-3 w-3 text-primary" />
+                      {cf.name}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
