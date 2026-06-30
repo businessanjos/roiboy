@@ -366,7 +366,7 @@ export function PipelineFilterDialog({
           </div>
 
           {/* Conditions */}
-          <ScrollArea className="max-h-[250px]">
+          <div>
             <div className="space-y-2">
               {conditions.map((condition, index) => {
                 const isCustom = condition.field.startsWith('custom:');
