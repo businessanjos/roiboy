@@ -390,6 +390,7 @@ export default function SalesPipeline() {
   // Fetch products list and open deal→product mapping
   const [pipelineProducts, setPipelineProducts] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [openDealProductMap, setOpenDealProductMap] = useState<Record<string, string>>({});
+  const [dealCustomFieldValues, setDealCustomFieldValues] = useState<Record<string, Record<string, string>>>({});
 
   const allDealIds = useMemo(() => deals.map(d => d.id).join(','), [deals]);
 
