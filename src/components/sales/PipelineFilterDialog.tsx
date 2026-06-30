@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, Info } from "lucide-react";
 import { PipelineFilter, FilterCondition } from "@/hooks/usePipelineFilters";
+import { MultiCheckCombobox } from "./MultiCheckCombobox";
 import { DealStage } from "@/hooks/useDeals";
 import {
   Tooltip,
