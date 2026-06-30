@@ -489,9 +489,9 @@ export default function SalesPipeline() {
   }, [deals]);
 
   // Apply unified filter to deals
-  const filteredOpenDeals = useMemo(() => 
-    applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap), 
-    [openDeals, activeFilter, searchTerm, openDealProductMap]
+  const filteredOpenDeals = useMemo(() =>
+    applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues),
+    [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues]
   );
   const filteredWonDeals = useMemo(() => 
     applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap), 
