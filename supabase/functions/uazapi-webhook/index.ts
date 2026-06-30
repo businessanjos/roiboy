@@ -1517,7 +1517,7 @@ Deno.serve(async (req) => {
             
             const { data: candidates } = await supabase
               .from("zapp_messages")
-              .select("id, external_message_id, content, is_deleted, is_edited, message_type, media_url, media_filename")
+              .select("id, external_message_id, content, is_deleted, is_edited, message_type, media_url, media_filename, sender_user_id, created_at")
               .eq("zapp_conversation_id", zappConversationId)
               .eq("direction", "outbound")
               .gte("created_at", fifteenMinutesAgo)
