@@ -122,6 +122,7 @@ export function PipelineFilterDialog({
   stages,
   salesUsers,
   availableTags,
+  customFields = [],
 }: PipelineFilterDialogProps) {
   const [name, setName] = useState("");
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
