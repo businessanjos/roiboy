@@ -162,18 +162,29 @@ export function PipelineFilterDialog({
     
     // Reset operator if field type changes
     if (updates.field) {
-      const fieldDef = FILTER_FIELDS.find(f => f.value === updates.field);
-      if (fieldDef) {
-        const operators = OPERATORS_BY_TYPE[fieldDef.type] || [];
-        newConditions[index].operator = operators[0]?.value || 'equals';
-        newConditions[index].value = '';
-      }
+      const fieldType = getFieldType(updates.field);
+      const operators = OPERATORS_BY_TYPE[fieldType] || OPERATORS_BY_TYPE.text;
+      newConditions[index].operator = operators[0]?.value || 'equals';
+      newConditions[index].value = '';
     }
-    
+
     setConditions(newConditions);
   };
 
+  const getCustomField = (fieldValue: string): CustomFieldOption | undefined => {
+    if (!fieldValue.startsWith('custom:')) return undefined;
+    const id = fieldValue.slice('custom:'.length);
+    return customFields.find(f => f.id === id);
+  };
+
   const getFieldType = (fieldValue: string): string => {
+    const cf = getCustomField(fieldValue);
+    if (cf) {
+      if (cf.field_type === 'number') return 'number';
+      if (cf.field_type === 'date') return 'date';
+      if (cf.field_type === 'select' || cf.field_type === 'multi_select') return 'custom_select';
+      return 'text';
+    }
     return FILTER_FIELDS.find(f => f.value === fieldValue)?.type || 'text';
   };
 
