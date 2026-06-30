@@ -329,14 +329,14 @@ export function PipelineFilterDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6">
           <DialogTitle>
             {editingFilter ? `Editar filtro "${editingFilter.name}"` : 'Criar novo filtro'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 px-6 overflow-y-auto flex-1 min-h-0">
           {/* Match Type */}
           <div className="flex items-center gap-2">
             <span className="text-sm">Atender a</span>
