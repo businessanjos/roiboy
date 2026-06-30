@@ -438,6 +438,45 @@ export default function SalesPipeline() {
     fetchDealProducts();
   }, [currentUser?.account_id, allDealIds]);
 
+  // Fetch custom field values for fields referenced by the active filter
+  const customFieldIdsInFilter = useMemo(() => {
+    const ids = new Set<string>();
+    (activeFilter?.conditions || []).forEach(c => {
+      if (typeof c.field === 'string' && c.field.startsWith('custom:')) {
+        ids.add(c.field.slice('custom:'.length));
+      }
+    });
+    return Array.from(ids).sort().join(',');
+  }, [activeFilter]);
+
+  useEffect(() => {
+    if (!customFieldIdsInFilter || deals.length === 0) {
+      setDealCustomFieldValues({});
+      return;
+    }
+    const fieldIds = customFieldIdsInFilter.split(',').filter(Boolean);
+    const dealIds = deals.map(d => d.id);
+    const batchSize = 200;
+    const result: Record<string, Record<string, string>> = {};
+    (async () => {
+      for (let i = 0; i < dealIds.length; i += batchSize) {
+        const batch = dealIds.slice(i, i + batchSize);
+        const { data } = await supabase
+          .from('deal_field_values')
+          .select('deal_id, field_id, value_text')
+          .in('field_id', fieldIds)
+          .in('deal_id', batch);
+        (data || []).forEach((row: any) => {
+          if (!row.deal_id || !row.field_id) return;
+          if (!result[row.deal_id]) result[row.deal_id] = {};
+          result[row.deal_id][row.field_id] = row.value_text ?? '';
+        });
+      }
+      setDealCustomFieldValues(result);
+    })();
+  }, [customFieldIdsInFilter, allDealIds]);
+
+
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>();
