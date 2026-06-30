@@ -107,13 +107,6 @@ const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
     { value: 'next_days', label: 'nos próximos X dias' },
     { value: 'before', label: 'antes de' },
     { value: 'after', label: 'depois de' },
-  date: [
-    { value: 'this_week', label: 'esta semana' },
-    { value: 'this_month', label: 'este mês' },
-    { value: 'older_than_days', label: 'há mais de X dias' },
-    { value: 'next_days', label: 'nos próximos X dias' },
-    { value: 'before', label: 'antes de' },
-    { value: 'after', label: 'depois de' },
     { value: 'is_empty', label: 'está vazio' },
     { value: 'is_not_empty', label: 'não está vazio' },
   ],
