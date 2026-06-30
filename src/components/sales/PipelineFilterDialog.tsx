@@ -478,7 +478,7 @@ export function PipelineFilterDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 pb-6">
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
