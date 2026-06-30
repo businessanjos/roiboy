@@ -258,12 +258,26 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
   // Custom field lookup: field key is `custom:<field_id>`
   if (field.startsWith('custom:')) {
     const fieldId = field.slice('custom:'.length);
-    const raw = dealCustomFieldValues?.[deal.id]?.[fieldId] ?? null;
+    const raw = dealCustomFieldValues?.[deal.id]?.[fieldId] ?? '';
     if (operator === 'is_empty') return !raw;
     if (operator === 'is_not_empty') return !!raw;
-    // Numeric ops fall back to text when value isn't numeric
+    // multi_select values are stored as `|val1|val2|`
+    const isMulti = typeof raw === 'string' && raw.startsWith('|') && raw.endsWith('|');
+    if (isMulti) {
+      const needle = `|${String(value ?? '')}|`;
+      if (operator === 'contains' || operator === 'equals') return raw.includes(needle);
+      if (operator === 'not_contains' || operator === 'not_equals') return !raw.includes(needle);
+      return false;
+    }
+    // Date custom fields use date comparators
+    if (['this_week', 'this_month', 'older_than_days', 'next_days', 'before', 'after'].includes(operator)) {
+      return evaluateDateCondition(raw, operator, value, today);
+    }
+    // Numeric ops
     if (['greater_than', 'less_than', 'greater_or_equal', 'less_or_equal'].includes(operator)) {
-      return evaluateNumberCondition(Number(raw) || 0, operator, value);
+      const n = Number(raw);
+      if (Number.isNaN(n)) return false;
+      return evaluateNumberCondition(n, operator, value);
     }
     return evaluateTextCondition(raw, operator, value);
   }

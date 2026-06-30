@@ -116,6 +116,12 @@ const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
     { value: 'is_empty', label: 'está vazio' },
     { value: 'is_not_empty', label: 'não está vazio' },
   ],
+  custom_multi_select: [
+    { value: 'contains', label: 'contém' },
+    { value: 'not_contains', label: 'não contém' },
+    { value: 'is_empty', label: 'está vazio' },
+    { value: 'is_not_empty', label: 'não está vazio' },
+  ],
 };
 
 const VALUE_NOT_NEEDED = ['is_empty', 'is_not_empty', 'this_week', 'this_month'];
@@ -186,9 +192,10 @@ export function PipelineFilterDialog({
   const getFieldType = (fieldValue: string): string => {
     const cf = getCustomField(fieldValue);
     if (cf) {
-      if (cf.field_type === 'number') return 'number';
+      if (cf.field_type === 'number' || cf.field_type === 'currency') return 'number';
       if (cf.field_type === 'date') return 'date';
-      if (cf.field_type === 'select' || cf.field_type === 'multi_select') return 'custom_select';
+      if (cf.field_type === 'select') return 'custom_select';
+      if (cf.field_type === 'multi_select') return 'custom_multi_select';
       return 'text';
     }
     return FILTER_FIELDS.find(f => f.value === fieldValue)?.type || 'text';
@@ -269,8 +276,8 @@ export function PipelineFilterDialog({
       );
     }
 
-    // Custom field select (from select/multi_select custom_fields)
-    if (fieldType === 'custom_select') {
+    // Custom field select / multi_select (from custom_fields options)
+    if (fieldType === 'custom_select' || fieldType === 'custom_multi_select') {
       const cf = getCustomField(condition.field);
       const opts = cf?.options || [];
       return (
@@ -291,6 +298,7 @@ export function PipelineFilterDialog({
         </Select>
       );
     }
+
 
 
     // Number input
