@@ -267,7 +267,29 @@ export function PipelineFilterDialog({
           </SelectContent>
         </Select>
       );
+    // Custom field select (from select/multi_select custom_fields)
+    if (fieldType === 'custom_select') {
+      const cf = getCustomField(condition.field);
+      const opts = cf?.options || [];
+      return (
+        <Select
+          value={condition.value || ''}
+          onValueChange={(v) => updateCondition(index, { value: v })}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Selecione..." />
+          </SelectTrigger>
+          <SelectContent>
+            {opts.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
     }
+
 
     // Number input
     if (fieldType === 'number' || ['older_than_days', 'next_days'].includes(condition.operator)) {
