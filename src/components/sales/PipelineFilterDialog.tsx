@@ -34,6 +34,13 @@ interface SalesUser {
   avatar_url: string | null;
 }
 
+export interface CustomFieldOption {
+  id: string;
+  name: string;
+  field_type: string;
+  options: Array<{ value: string; label: string }> | null;
+}
+
 interface PipelineFilterDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,6 +49,7 @@ interface PipelineFilterDialogProps {
   stages: DealStage[];
   salesUsers: SalesUser[];
   availableTags: string[];
+  customFields?: CustomFieldOption[];
 }
 
 // Field definitions with their available operators
