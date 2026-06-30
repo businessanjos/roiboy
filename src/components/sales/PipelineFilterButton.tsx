@@ -496,6 +496,7 @@ export function PipelineFilterButton({
         stages={stages}
         salesUsers={salesUsers}
         availableTags={availableTags}
+        customFields={customFields}
       />
     </>
   );
