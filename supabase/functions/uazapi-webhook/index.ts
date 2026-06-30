@@ -1324,13 +1324,15 @@ Deno.serve(async (req) => {
           
           // Update last message info
           // Only increment unread count for inbound messages
+          const mediaEmoji = mediaType === "audio" ? "🎤 Áudio" : mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : mediaType === "document" ? "📄 Documento" : mediaType ? "📎 Mídia" : "";
+          const previewBody = mediaEmoji ? `${mediaEmoji}${content ? ": " + content.substring(0, 80) : ""}` : content.substring(0, 100);
           const updateData: Record<string, unknown> = {
             last_message_at: timestamp,
             last_message_preview: direction === "outbound"
-              ? `Você: ${content.substring(0, 80)}`
+              ? `Você: ${previewBody.substring(0, 80)}`
               : (isGroupMessage 
-                  ? `${contactName}: ${content.substring(0, 80)}`
-                  : content.substring(0, 100)),
+                  ? `${contactName}: ${previewBody.substring(0, 80)}`
+                  : previewBody.substring(0, 100)),
           };
           
           // Only update unread_count and avatar for inbound messages
@@ -1440,7 +1442,7 @@ Deno.serve(async (req) => {
               integration_id: integrationId || null,
               last_message_at: timestamp,
               last_message_preview: direction === "outbound"
-                ? `Você: ${content.substring(0, 80)}`
+                ? `Você: ${(mediaType === "audio" ? "🎤 Áudio" : mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : mediaType === "document" ? "📄 Documento" : mediaType ? "📎 Mídia" : "") + (content ? (mediaType ? ": " : "") + content.substring(0, 80) : "")}`
                 : (isGroupMessage 
                     ? `${contactName}: ${content.substring(0, 80)}`
                     : content.substring(0, 100)),
@@ -1517,7 +1519,7 @@ Deno.serve(async (req) => {
             
             const { data: candidates } = await supabase
               .from("zapp_messages")
-              .select("id, external_message_id, content, is_deleted, is_edited, message_type, media_url, media_filename")
+              .select("id, external_message_id, content, is_deleted, is_edited, message_type, media_url, media_filename, sender_user_id, created_at")
               .eq("zapp_conversation_id", zappConversationId)
               .eq("direction", "outbound")
               .gte("created_at", fifteenMinutesAgo)
@@ -1576,9 +1578,19 @@ Deno.serve(async (req) => {
               let recentDupe: typeof msgs[0] | null = null;
 
               if (mediaType === "audio") {
-                recentDupe = msgs.find(m => 
-                  m.message_type === "audio" && !m.external_message_id
+                // Only match audio echoes from UI sends: must have sender_user_id (UI-originated)
+                // and be very recent (last 120s). This prevents "stealing" prior audios when an
+                // audio is sent from the operator's mobile phone (which has no sender_user_id).
+                const cutoff = Date.now() - 120 * 1000;
+                recentDupe = msgs.find(m =>
+                  m.message_type === "audio" &&
+                  !m.external_message_id &&
+                  m.sender_user_id &&
+                  new Date(m.created_at as string).getTime() >= cutoff
                 ) || null;
+                if (!recentDupe) {
+                  console.log(`[DEDUPE-AUDIO] No UI echo to attach; will insert new audio row (msgId=${messageId})`);
+                }
               } else if (mediaType === "document") {
                 recentDupe = msgs.find(m => 
                   m.message_type === "document" && !m.external_message_id && m.media_filename === mediaFilename
