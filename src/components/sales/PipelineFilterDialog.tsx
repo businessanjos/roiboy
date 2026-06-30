@@ -438,7 +438,7 @@ export function PipelineFilterDialog({
               );})}
 
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Add Condition */}
           <Button variant="ghost" size="sm" onClick={addCondition} className="gap-2">
