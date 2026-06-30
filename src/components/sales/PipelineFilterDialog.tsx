@@ -18,9 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Info } from "lucide-react";
+import { Plus, Trash2, Info, Sparkles, ChevronsUpDown, Check } from "lucide-react";
 import { PipelineFilter, FilterCondition } from "@/hooks/usePipelineFilters";
 import { MultiCheckCombobox } from "./MultiCheckCombobox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
+
 import { DealStage } from "@/hooks/useDeals";
 import {
   Tooltip,
@@ -363,72 +368,75 @@ export function PipelineFilterDialog({
           {/* Conditions */}
           <ScrollArea className="max-h-[250px]">
             <div className="space-y-2">
-              {conditions.map((condition, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                  <span className="text-sm text-muted-foreground shrink-0">
-                    {index === 0 ? 'EM QUE' : matchType === 'all' ? 'E' : 'OU'}
-                  </span>
-                  
-                  {/* Field */}
-                  <Select
-                    value={condition.field}
-                    onValueChange={(v) => updateCondition(index, { field: v })}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {FILTER_FIELDS.map(field => (
-                        <SelectItem key={field.value} value={field.value}>
-                          {field.label}
-                        </SelectItem>
-                      ))}
-                      {customFields.length > 0 && (
-                        <div className="px-2 py-1.5 mt-1 text-[10px] uppercase tracking-wide text-muted-foreground border-t">
-                          Campos personalizados
-                        </div>
-                      )}
-                      {customFields.map(cf => (
-                        <SelectItem key={cf.id} value={`custom:${cf.id}`}>
-                          {cf.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {conditions.map((condition, index) => {
+                const isCustom = condition.field.startsWith('custom:');
+                const fieldType = getFieldType(condition.field);
+                const supportsIncludeEmpty = isCustom && !['is_empty', 'is_not_empty'].includes(condition.operator);
+                const currentFieldLabel = isCustom
+                  ? (getCustomField(condition.field)?.name ?? 'Campo personalizado')
+                  : (FILTER_FIELDS.find(f => f.value === condition.field)?.label ?? 'Selecionar...');
+                return (
+                <div key={index} className="flex flex-col gap-2 p-2 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-muted-foreground shrink-0">
+                      {index === 0 ? 'EM QUE' : matchType === 'all' ? 'E' : 'OU'}
+                    </span>
 
-                  {/* Operator */}
-                  <Select
-                    value={condition.operator}
-                    onValueChange={(v) => updateCondition(index, { operator: v })}
-                  >
-                    <SelectTrigger className="w-[160px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(OPERATORS_BY_TYPE[getFieldType(condition.field)] || []).map(op => (
-                        <SelectItem key={op.value} value={op.value}>
-                          {op.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {/* Field — searchable + grouped */}
+                    <FieldCombobox
+                      value={condition.field}
+                      label={currentFieldLabel}
+                      isCustom={isCustom}
+                      standardFields={FILTER_FIELDS}
+                      customFields={customFields}
+                      onChange={(v) => updateCondition(index, { field: v })}
+                    />
 
-                  {/* Value */}
-                  {renderValueInput(condition, index)}
-
-                  {/* Delete */}
-                  {conditions.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={() => removeCondition(index)}
+                    {/* Operator */}
+                    <Select
+                      value={condition.operator}
+                      onValueChange={(v) => updateCondition(index, { operator: v })}
                     >
-                      <Trash2 className="h-4 w-4 text-muted-foreground" />
-                    </Button>
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(OPERATORS_BY_TYPE[fieldType] || []).map(op => (
+                          <SelectItem key={op.value} value={op.value}>
+                            {op.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Value */}
+                    {renderValueInput(condition, index)}
+
+                    {/* Delete */}
+                    {conditions.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 ml-auto"
+                        onClick={() => removeCondition(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {supportsIncludeEmpty && (
+                    <label className="flex items-center gap-2 pl-[60px] text-xs text-muted-foreground cursor-pointer select-none">
+                      <Checkbox
+                        checked={!!condition.include_empty}
+                        onCheckedChange={(checked) => updateCondition(index, { include_empty: checked === true })}
+                      />
+                      Incluir negócios sem este campo preenchido
+                    </label>
                   )}
                 </div>
-              ))}
+              );})}
+
             </div>
           </ScrollArea>
 
@@ -482,3 +490,74 @@ export function PipelineFilterDialog({
     </Dialog>
   );
 }
+
+interface FieldComboboxProps {
+  value: string;
+  label: string;
+  isCustom: boolean;
+  standardFields: typeof FILTER_FIELDS;
+  customFields: CustomFieldOption[];
+  onChange: (value: string) => void;
+}
+
+function FieldCombobox({ value, label, isCustom, standardFields, customFields, onChange }: FieldComboboxProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-[200px] justify-between font-normal"
+        >
+          <span className="flex items-center gap-1.5 truncate">
+            {isCustom && <Sparkles className="h-3 w-3 text-primary shrink-0" />}
+            <span className="truncate">{label}</span>
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[260px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar campo..." />
+          <CommandList className="max-h-[300px]">
+            <CommandEmpty>Nenhum campo encontrado.</CommandEmpty>
+            <CommandGroup heading="Campos padrão">
+              {standardFields.map((f) => (
+                <CommandItem
+                  key={f.value}
+                  value={f.label}
+                  onSelect={() => { onChange(f.value); setOpen(false); }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", value === f.value ? "opacity-100" : "opacity-0")} />
+                  {f.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            {customFields.length > 0 && (
+              <CommandGroup heading="Campos personalizados">
+                {customFields.map((cf) => {
+                  const key = `custom:${cf.id}`;
+                  return (
+                    <CommandItem
+                      key={cf.id}
+                      value={cf.name}
+                      onSelect={() => { onChange(key); setOpen(false); }}
+                    >
+                      <Check className={cn("mr-2 h-4 w-4", value === key ? "opacity-100" : "opacity-0")} />
+                      <Sparkles className="mr-1.5 h-3 w-3 text-primary" />
+                      {cf.name}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+

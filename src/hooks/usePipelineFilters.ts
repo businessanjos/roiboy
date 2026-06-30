@@ -8,7 +8,9 @@ export interface FilterCondition {
   field: string;
   operator: string;
   value: any;
+  include_empty?: boolean;
 }
+
 
 export interface PipelineFilter {
   id: string;
@@ -257,7 +259,7 @@ function toArray(value: any): any[] {
 }
 
 function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>): boolean {
-  const { field, operator, value } = condition;
+  const { field, operator, value, include_empty } = condition;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -267,6 +269,8 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
     const raw = dealCustomFieldValues?.[deal.id]?.[fieldId] ?? '';
     if (operator === 'is_empty') return !raw;
     if (operator === 'is_not_empty') return !!raw;
+    // "Include empty" escape hatch — empty values pass the filter
+    if (include_empty && !raw) return true;
     const values = toArray(value);
     // multi_select values are stored as `|val1|val2|`
     const isMulti = typeof raw === 'string' && raw.startsWith('|') && raw.endsWith('|');
@@ -291,6 +295,7 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
     if (operator === 'not_contains' || operator === 'not_equals') return matches.every(Boolean);
     return matches.some(Boolean);
   }
+
 
   switch (field) {
     case 'title':
