@@ -384,10 +384,20 @@ export function PipelineFilterDialog({
                     <SelectTrigger className="w-[140px]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[300px]">
                       {FILTER_FIELDS.map(field => (
                         <SelectItem key={field.value} value={field.value}>
                           {field.label}
+                        </SelectItem>
+                      ))}
+                      {customFields.length > 0 && (
+                        <div className="px-2 py-1.5 mt-1 text-[10px] uppercase tracking-wide text-muted-foreground border-t">
+                          Campos personalizados
+                        </div>
+                      )}
+                      {customFields.map(cf => (
+                        <SelectItem key={cf.id} value={`custom:${cf.id}`}>
+                          {cf.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
