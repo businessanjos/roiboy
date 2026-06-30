@@ -1442,7 +1442,7 @@ Deno.serve(async (req) => {
               integration_id: integrationId || null,
               last_message_at: timestamp,
               last_message_preview: direction === "outbound"
-                ? `Você: ${content.substring(0, 80)}`
+                ? `Você: ${(mediaType === "audio" ? "🎤 Áudio" : mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : mediaType === "document" ? "📄 Documento" : mediaType ? "📎 Mídia" : "") + (content ? (mediaType ? ": " : "") + content.substring(0, 80) : "")}`
                 : (isGroupMessage 
                     ? `${contactName}: ${content.substring(0, 80)}`
                     : content.substring(0, 100)),
