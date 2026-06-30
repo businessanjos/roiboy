@@ -1324,13 +1324,15 @@ Deno.serve(async (req) => {
           
           // Update last message info
           // Only increment unread count for inbound messages
+          const mediaEmoji = mediaType === "audio" ? "🎤 Áudio" : mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : mediaType === "document" ? "📄 Documento" : mediaType ? "📎 Mídia" : "";
+          const previewBody = mediaEmoji ? `${mediaEmoji}${content ? ": " + content.substring(0, 80) : ""}` : content.substring(0, 100);
           const updateData: Record<string, unknown> = {
             last_message_at: timestamp,
             last_message_preview: direction === "outbound"
-              ? `Você: ${content.substring(0, 80)}`
+              ? `Você: ${previewBody.substring(0, 80)}`
               : (isGroupMessage 
-                  ? `${contactName}: ${content.substring(0, 80)}`
-                  : content.substring(0, 100)),
+                  ? `${contactName}: ${previewBody.substring(0, 80)}`
+                  : previewBody.substring(0, 100)),
           };
           
           // Only update unread_count and avatar for inbound messages
