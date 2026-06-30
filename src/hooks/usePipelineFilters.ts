@@ -250,10 +250,23 @@ export function applyFilterToDeals(
   });
 }
 
-function evaluateCondition(deal: Deal, condition: FilterCondition): boolean {
+function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>): boolean {
   const { field, operator, value } = condition;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Custom field lookup: field key is `custom:<field_id>`
+  if (field.startsWith('custom:')) {
+    const fieldId = field.slice('custom:'.length);
+    const raw = dealCustomFieldValues?.[deal.id]?.[fieldId] ?? null;
+    if (operator === 'is_empty') return !raw;
+    if (operator === 'is_not_empty') return !!raw;
+    // Numeric ops fall back to text when value isn't numeric
+    if (['greater_than', 'less_than', 'greater_or_equal', 'less_or_equal'].includes(operator)) {
+      return evaluateNumberCondition(Number(raw) || 0, operator, value);
+    }
+    return evaluateTextCondition(raw, operator, value);
+  }
 
   switch (field) {
     case 'title':
