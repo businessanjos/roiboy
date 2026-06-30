@@ -463,13 +463,28 @@ export default function SalesPipeline() {
         const batch = dealIds.slice(i, i + batchSize);
         const { data } = await supabase
           .from('deal_field_values')
-          .select('deal_id, field_id, value_text')
+          .select('deal_id, field_id, value_text, value_number, value_date, value_json, value_boolean')
           .in('field_id', fieldIds)
           .in('deal_id', batch);
         (data || []).forEach((row: any) => {
           if (!row.deal_id || !row.field_id) return;
           if (!result[row.deal_id]) result[row.deal_id] = {};
-          result[row.deal_id][row.field_id] = row.value_text ?? '';
+          let normalized = '';
+          if (row.value_text != null && row.value_text !== '') {
+            normalized = String(row.value_text);
+          } else if (row.value_number != null) {
+            normalized = String(row.value_number);
+          } else if (row.value_date != null) {
+            normalized = String(row.value_date);
+          } else if (row.value_boolean != null) {
+            normalized = row.value_boolean ? 'true' : 'false';
+          } else if (Array.isArray(row.value_json)) {
+            // multi_select: wrap with pipes for unambiguous "contains" lookup
+            normalized = '|' + row.value_json.map(String).join('|') + '|';
+          } else if (row.value_json != null) {
+            normalized = JSON.stringify(row.value_json);
+          }
+          result[row.deal_id][row.field_id] = normalized;
         });
       }
       setDealCustomFieldValues(result);
