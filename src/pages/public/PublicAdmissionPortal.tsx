@@ -445,7 +445,7 @@ export default function PublicAdmissionPortal() {
             className="text-center text-[28px] leading-[1.15] sm:text-4xl md:text-5xl max-w-2xl mx-auto"
             style={{ fontFamily: SERIF, color: CARD, fontWeight: 300, letterSpacing: "-0.01em" }}
           >
-            Bem-vindo, {firstName}.
+            Boas-vindas, {firstName}.
           </h1>
           <p
             className="mt-5 sm:mt-6 text-center text-[15px] sm:text-base md:text-lg max-w-xl mx-auto leading-relaxed"
