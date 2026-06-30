@@ -66,10 +66,35 @@ export function PipelineFilterButton({
   const [activeTab, setActiveTab] = useState("vendedores");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFilter, setEditingFilter] = useState<PipelineFilter | null>(null);
+  const [customFields, setCustomFields] = useState<CustomFieldOption[]>([]);
 
   useEffect(() => {
     fetchFilters();
   }, [fetchFilters]);
+
+  useEffect(() => {
+    if (!currentUser?.account_id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("custom_fields")
+        .select("id, name, field_type, options")
+        .eq("account_id", currentUser.account_id)
+        .eq("show_in_deals", true)
+        .eq("is_active", true)
+        .order("name");
+      if (cancelled) return;
+      setCustomFields(
+        (data || []).map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          field_type: f.field_type,
+          options: Array.isArray(f.options) ? f.options : null,
+        }))
+      );
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.account_id]);
 
   const filteredSalesUsers = useMemo(() => {
     if (!searchQuery.trim()) return salesUsers;
