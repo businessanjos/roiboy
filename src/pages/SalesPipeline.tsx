@@ -1507,6 +1507,20 @@ export default function SalesPipeline() {
                   </div>
                 </div>
 
+                {/* Active filter chips (only for open pipeline view) */}
+                {activeTab === 'open' && (
+                  <ActiveFilterChips
+                    activeFilter={activeFilter}
+                    searchTerm={searchTerm}
+                    onSearchClear={() => setSearchTerm("")}
+                    onFilterChange={setActiveFilter}
+                    salesUsers={salesUsers}
+                    stages={stages}
+                    customFields={filterCustomFields}
+                  />
+                )}
+
+
                 {/* Contextual filters for won/lost tabs */}
                 {activeTab === 'won' && (
                   <div className="flex flex-wrap items-center gap-2">
