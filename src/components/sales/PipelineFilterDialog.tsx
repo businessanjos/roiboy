@@ -267,6 +267,8 @@ export function PipelineFilterDialog({
           </SelectContent>
         </Select>
       );
+    }
+
     // Custom field select (from select/multi_select custom_fields)
     if (fieldType === 'custom_select') {
       const cf = getCustomField(condition.field);
