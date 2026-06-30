@@ -329,14 +329,14 @@ export function PipelineFilterDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6">
           <DialogTitle>
             {editingFilter ? `Editar filtro "${editingFilter.name}"` : 'Criar novo filtro'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 px-6 overflow-y-auto flex-1 min-h-0">
           {/* Match Type */}
           <div className="flex items-center gap-2">
             <span className="text-sm">Atender a</span>
@@ -366,7 +366,7 @@ export function PipelineFilterDialog({
           </div>
 
           {/* Conditions */}
-          <ScrollArea className="max-h-[250px]">
+          <div>
             <div className="space-y-2">
               {conditions.map((condition, index) => {
                 const isCustom = condition.field.startsWith('custom:');
@@ -438,7 +438,7 @@ export function PipelineFilterDialog({
               );})}
 
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Add Condition */}
           <Button variant="ghost" size="sm" onClick={addCondition} className="gap-2">
@@ -478,7 +478,7 @@ export function PipelineFilterDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 pb-6">
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
