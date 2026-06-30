@@ -186,9 +186,10 @@ export function PipelineFilterDialog({
   const getFieldType = (fieldValue: string): string => {
     const cf = getCustomField(fieldValue);
     if (cf) {
-      if (cf.field_type === 'number') return 'number';
+      if (cf.field_type === 'number' || cf.field_type === 'currency') return 'number';
       if (cf.field_type === 'date') return 'date';
-      if (cf.field_type === 'select' || cf.field_type === 'multi_select') return 'custom_select';
+      if (cf.field_type === 'select') return 'custom_select';
+      if (cf.field_type === 'multi_select') return 'custom_multi_select';
       return 'text';
     }
     return FILTER_FIELDS.find(f => f.value === fieldValue)?.type || 'text';
