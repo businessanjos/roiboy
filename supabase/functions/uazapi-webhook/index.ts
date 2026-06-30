@@ -1576,9 +1576,19 @@ Deno.serve(async (req) => {
               let recentDupe: typeof msgs[0] | null = null;
 
               if (mediaType === "audio") {
-                recentDupe = msgs.find(m => 
-                  m.message_type === "audio" && !m.external_message_id
+                // Only match audio echoes from UI sends: must have sender_user_id (UI-originated)
+                // and be very recent (last 120s). This prevents "stealing" prior audios when an
+                // audio is sent from the operator's mobile phone (which has no sender_user_id).
+                const cutoff = Date.now() - 120 * 1000;
+                recentDupe = msgs.find(m =>
+                  m.message_type === "audio" &&
+                  !m.external_message_id &&
+                  m.sender_user_id &&
+                  new Date(m.created_at as string).getTime() >= cutoff
                 ) || null;
+                if (!recentDupe) {
+                  console.log(`[DEDUPE-AUDIO] No UI echo to attach; will insert new audio row (msgId=${messageId})`);
+                }
               } else if (mediaType === "document") {
                 recentDupe = msgs.find(m => 
                   m.message_type === "document" && !m.external_message_id && m.media_filename === mediaFilename
