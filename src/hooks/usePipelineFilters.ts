@@ -209,13 +209,13 @@ export function applyFilterToDeals(
   deals: Deal[],
   activeFilter: ActiveFilter | null,
   searchTerm?: string,
-  dealProductMap?: Record<string, string>
+  dealProductMap?: Record<string, string>,
+  dealCustomFieldValues?: Record<string, Record<string, string>>
 ): Deal[] {
   if (!activeFilter && !searchTerm?.trim()) return deals;
 
   let filtered = [...deals];
 
-  // Apply search term first
   if (searchTerm?.trim()) {
     const term = searchTerm.toLowerCase().trim();
     filtered = filtered.filter(deal =>
@@ -229,31 +229,24 @@ export function applyFilterToDeals(
 
   if (!activeFilter) return filtered;
 
-  // Salesperson filter
   if (activeFilter.type === 'salesperson') {
     return filtered.filter(deal => deal.responsible_user_id === activeFilter.id);
   }
 
-  // Product filter
   if (activeFilter.type === 'product') {
     if (!dealProductMap) return filtered;
     return filtered.filter(deal => dealProductMap[deal.id] === activeFilter.id);
   }
 
-  // Recommended or Custom filters
   const conditions = activeFilter.conditions || [];
   const matchType = activeFilter.match_type || 'all';
 
   if (conditions.length === 0) return filtered;
 
   return filtered.filter(deal => {
-    const results = conditions.map(condition => evaluateCondition(deal, condition));
-    
-    if (matchType === 'all') {
-      return results.every(Boolean);
-    } else {
-      return results.some(Boolean);
-    }
+    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues));
+    if (matchType === 'all') return results.every(Boolean);
+    return results.some(Boolean);
   });
 }
 
