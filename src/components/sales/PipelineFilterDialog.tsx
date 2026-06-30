@@ -256,47 +256,31 @@ export function PipelineFilterDialog({
       );
     }
 
-    // Tags select
+    // Tags multi-select with checkboxes
     if (fieldType === 'tags') {
       return (
-        <Select
-          value={condition.value || ''}
-          onValueChange={(v) => updateCondition(index, { value: v })}
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Selecione..." />
-          </SelectTrigger>
-          <SelectContent>
-            {availableTags.map(tag => (
-              <SelectItem key={tag} value={tag}>
-                {tag}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiCheckCombobox
+          options={availableTags.map(t => ({ value: t, label: t }))}
+          value={condition.value}
+          onChange={(vals) => updateCondition(index, { value: vals })}
+          placeholder="Selecione tags..."
+          className="w-[200px]"
+        />
       );
     }
 
-    // Custom field select / multi_select (from custom_fields options)
+    // Custom field select / multi_select with checkboxes + search
     if (fieldType === 'custom_select' || fieldType === 'custom_multi_select') {
       const cf = getCustomField(condition.field);
-      const opts = cf?.options || [];
+      const opts = (cf?.options || []).map(o => ({ value: o.value, label: o.label }));
       return (
-        <Select
-          value={condition.value || ''}
-          onValueChange={(v) => updateCondition(index, { value: v })}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione..." />
-          </SelectTrigger>
-          <SelectContent>
-            {opts.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiCheckCombobox
+          options={opts}
+          value={condition.value}
+          onChange={(vals) => updateCondition(index, { value: vals })}
+          placeholder="Selecione..."
+          className="w-[200px]"
+        />
       );
     }
 
