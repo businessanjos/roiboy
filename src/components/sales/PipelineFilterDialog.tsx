@@ -276,8 +276,8 @@ export function PipelineFilterDialog({
       );
     }
 
-    // Custom field select (from select/multi_select custom_fields)
-    if (fieldType === 'custom_select') {
+    // Custom field select / multi_select (from custom_fields options)
+    if (fieldType === 'custom_select' || fieldType === 'custom_multi_select') {
       const cf = getCustomField(condition.field);
       const opts = cf?.options || [];
       return (
@@ -298,6 +298,7 @@ export function PipelineFilterDialog({
         </Select>
       );
     }
+
 
 
     // Number input
