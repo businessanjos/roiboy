@@ -34,6 +34,13 @@ interface SalesUser {
   avatar_url: string | null;
 }
 
+export interface CustomFieldOption {
+  id: string;
+  name: string;
+  field_type: string;
+  options: Array<{ value: string; label: string }> | null;
+}
+
 interface PipelineFilterDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,6 +49,7 @@ interface PipelineFilterDialogProps {
   stages: DealStage[];
   salesUsers: SalesUser[];
   availableTags: string[];
+  customFields?: CustomFieldOption[];
 }
 
 // Field definitions with their available operators
@@ -102,6 +110,12 @@ const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
     { value: 'is_empty', label: 'está vazio' },
     { value: 'is_not_empty', label: 'não está vazio' },
   ],
+  custom_select: [
+    { value: 'equals', label: 'é' },
+    { value: 'not_equals', label: 'não é' },
+    { value: 'is_empty', label: 'está vazio' },
+    { value: 'is_not_empty', label: 'não está vazio' },
+  ],
 };
 
 const VALUE_NOT_NEEDED = ['is_empty', 'is_not_empty', 'this_week', 'this_month'];
@@ -114,6 +128,7 @@ export function PipelineFilterDialog({
   stages,
   salesUsers,
   availableTags,
+  customFields = [],
 }: PipelineFilterDialogProps) {
   const [name, setName] = useState("");
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
@@ -153,18 +168,29 @@ export function PipelineFilterDialog({
     
     // Reset operator if field type changes
     if (updates.field) {
-      const fieldDef = FILTER_FIELDS.find(f => f.value === updates.field);
-      if (fieldDef) {
-        const operators = OPERATORS_BY_TYPE[fieldDef.type] || [];
-        newConditions[index].operator = operators[0]?.value || 'equals';
-        newConditions[index].value = '';
-      }
+      const fieldType = getFieldType(updates.field);
+      const operators = OPERATORS_BY_TYPE[fieldType] || OPERATORS_BY_TYPE.text;
+      newConditions[index].operator = operators[0]?.value || 'equals';
+      newConditions[index].value = '';
     }
-    
+
     setConditions(newConditions);
   };
 
+  const getCustomField = (fieldValue: string): CustomFieldOption | undefined => {
+    if (!fieldValue.startsWith('custom:')) return undefined;
+    const id = fieldValue.slice('custom:'.length);
+    return customFields.find(f => f.id === id);
+  };
+
   const getFieldType = (fieldValue: string): string => {
+    const cf = getCustomField(fieldValue);
+    if (cf) {
+      if (cf.field_type === 'number') return 'number';
+      if (cf.field_type === 'date') return 'date';
+      if (cf.field_type === 'select' || cf.field_type === 'multi_select') return 'custom_select';
+      return 'text';
+    }
     return FILTER_FIELDS.find(f => f.value === fieldValue)?.type || 'text';
   };
 
@@ -242,6 +268,30 @@ export function PipelineFilterDialog({
         </Select>
       );
     }
+
+    // Custom field select (from select/multi_select custom_fields)
+    if (fieldType === 'custom_select') {
+      const cf = getCustomField(condition.field);
+      const opts = cf?.options || [];
+      return (
+        <Select
+          value={condition.value || ''}
+          onValueChange={(v) => updateCondition(index, { value: v })}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Selecione..." />
+          </SelectTrigger>
+          <SelectContent>
+            {opts.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
 
     // Number input
     if (fieldType === 'number' || ['older_than_days', 'next_days'].includes(condition.operator)) {
@@ -331,13 +381,23 @@ export function PipelineFilterDialog({
                     value={condition.field}
                     onValueChange={(v) => updateCondition(index, { field: v })}
                   >
-                    <SelectTrigger className="w-[140px]">
+                    <SelectTrigger className="w-[180px]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[300px]">
                       {FILTER_FIELDS.map(field => (
                         <SelectItem key={field.value} value={field.value}>
                           {field.label}
+                        </SelectItem>
+                      ))}
+                      {customFields.length > 0 && (
+                        <div className="px-2 py-1.5 mt-1 text-[10px] uppercase tracking-wide text-muted-foreground border-t">
+                          Campos personalizados
+                        </div>
+                      )}
+                      {customFields.map(cf => (
+                        <SelectItem key={cf.id} value={`custom:${cf.id}`}>
+                          {cf.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
