@@ -26,6 +26,8 @@ import { DealStagesManager } from "@/components/sales/DealStagesManager";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { PipelineFilterButton } from "@/components/sales/PipelineFilterButton";
+import { ActiveFilterChips } from "@/components/sales/ActiveFilterChips";
+import type { CustomFieldOption } from "@/components/sales/PipelineFilterDialog";
 import { PipelineSelector } from "@/components/sales/PipelineSelector";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { PipelineExportDialog } from "@/components/sales/PipelineExportDialog";
@@ -173,6 +175,29 @@ export default function SalesPipeline() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
+  const [filterCustomFields, setFilterCustomFields] = useState<CustomFieldOption[]>([]);
+  useEffect(() => {
+    if (!currentUser?.account_id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("custom_fields")
+        .select("id, name, field_type, options")
+        .eq("account_id", currentUser.account_id)
+        .eq("show_in_deals", true)
+        .eq("is_active", true);
+      if (cancelled) return;
+      setFilterCustomFields(
+        (data || []).map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          field_type: f.field_type,
+          options: Array.isArray(f.options) ? f.options : null,
+        }))
+      );
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.account_id]);
   const [wonDateEnd, setWonDateEnd] = usePersistedFilter<string>("salesPipeline", "wonDateEnd", "");
   const [wonDatePopoverOpen, setWonDatePopoverOpen] = useState(false);
   const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string[]>("salesPipeline", "wonSellerFilterMulti", []);
@@ -1481,6 +1506,20 @@ export default function SalesPipeline() {
                     )}
                   </div>
                 </div>
+
+                {/* Active filter chips (only for open pipeline view) */}
+                {activeTab === 'open' && (
+                  <ActiveFilterChips
+                    activeFilter={activeFilter}
+                    searchTerm={searchTerm}
+                    onSearchClear={() => setSearchTerm("")}
+                    onFilterChange={setActiveFilter}
+                    salesUsers={salesUsers}
+                    stages={stages}
+                    customFields={filterCustomFields}
+                  />
+                )}
+
 
                 {/* Contextual filters for won/lost tabs */}
                 {activeTab === 'won' && (

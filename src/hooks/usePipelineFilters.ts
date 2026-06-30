@@ -250,6 +250,12 @@ export function applyFilterToDeals(
   });
 }
 
+function toArray(value: any): any[] {
+  if (Array.isArray(value)) return value.filter((v) => v !== null && v !== undefined && v !== "");
+  if (value === null || value === undefined || value === "") return [];
+  return [value];
+}
+
 function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>): boolean {
   const { field, operator, value } = condition;
   const now = new Date();
@@ -261,66 +267,91 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
     const raw = dealCustomFieldValues?.[deal.id]?.[fieldId] ?? '';
     if (operator === 'is_empty') return !raw;
     if (operator === 'is_not_empty') return !!raw;
+    const values = toArray(value);
     // multi_select values are stored as `|val1|val2|`
     const isMulti = typeof raw === 'string' && raw.startsWith('|') && raw.endsWith('|');
     if (isMulti) {
-      const needle = `|${String(value ?? '')}|`;
-      if (operator === 'contains' || operator === 'equals') return raw.includes(needle);
-      if (operator === 'not_contains' || operator === 'not_equals') return !raw.includes(needle);
+      if (values.length === 0) return false;
+      const hits = values.map((v) => raw.includes(`|${String(v)}|`));
+      if (operator === 'contains' || operator === 'equals') return hits.some(Boolean);
+      if (operator === 'not_contains' || operator === 'not_equals') return hits.every((h) => !h);
       return false;
     }
-    // Date custom fields use date comparators
     if (['this_week', 'this_month', 'older_than_days', 'next_days', 'before', 'after'].includes(operator)) {
-      return evaluateDateCondition(raw, operator, value, today);
+      return evaluateDateCondition(raw, operator, values[0] ?? value, today);
     }
-    // Numeric ops
     if (['greater_than', 'less_than', 'greater_or_equal', 'less_or_equal'].includes(operator)) {
       const n = Number(raw);
       if (Number.isNaN(n)) return false;
-      return evaluateNumberCondition(n, operator, value);
+      return evaluateNumberCondition(n, operator, values[0] ?? value);
     }
-    return evaluateTextCondition(raw, operator, value);
+    // text / select: OR across values
+    if (values.length === 0) return evaluateTextCondition(raw, operator, value);
+    const matches = values.map((v) => evaluateTextCondition(raw, operator, v));
+    if (operator === 'not_contains' || operator === 'not_equals') return matches.every(Boolean);
+    return matches.some(Boolean);
   }
 
   switch (field) {
     case 'title':
       return evaluateTextCondition(deal.title, operator, value);
-    
+
     case 'value':
       return evaluateNumberCondition(deal.value || 0, operator, value);
-    
-    case 'responsible_user_id':
+
+    case 'responsible_user_id': {
       if (operator === 'is_empty') return !deal.responsible_user_id;
       if (operator === 'is_not_empty') return !!deal.responsible_user_id;
-      return deal.responsible_user_id === value;
-    
-    case 'stage_id':
-      return deal.stage_id === value;
-    
-    case 'tags':
+      const values = toArray(value);
+      if (values.length === 0) return deal.responsible_user_id === value;
+      const matches = values.includes(deal.responsible_user_id);
+      return operator === 'not_equals' ? !matches : matches;
+    }
+
+    case 'stage_id': {
+      const values = toArray(value);
+      if (values.length === 0) return deal.stage_id === value;
+      const matches = values.includes(deal.stage_id);
+      return operator === 'not_equals' ? !matches : matches;
+    }
+
+    case 'tags': {
       if (operator === 'is_empty') return !deal.tags || deal.tags.length === 0;
-      if (operator === 'is_not_empty') return deal.tags && deal.tags.length > 0;
-      if (operator === 'contains') return deal.tags?.includes(value) || false;
-      if (operator === 'not_contains') return !deal.tags?.includes(value);
+      if (operator === 'is_not_empty') return !!(deal.tags && deal.tags.length > 0);
+      const values = toArray(value);
+      const dealTags = deal.tags || [];
+      if (values.length === 0) {
+        if (operator === 'contains') return dealTags.includes(value);
+        if (operator === 'not_contains') return !dealTags.includes(value);
+        return false;
+      }
+      const anyHit = values.some((v) => dealTags.includes(v));
+      if (operator === 'contains') return anyHit;
+      if (operator === 'not_contains') return !anyHit;
       return false;
-    
-    case 'source':
+    }
+
+    case 'source': {
       if (operator === 'is_empty') return !deal.source;
       if (operator === 'is_not_empty') return !!deal.source;
-      return deal.source === value;
-    
+      const values = toArray(value);
+      if (values.length === 0) return deal.source === value;
+      const matches = values.includes(deal.source);
+      return operator === 'not_equals' ? !matches : matches;
+    }
+
     case 'created_at':
       return evaluateDateCondition(deal.created_at, operator, value, today);
-    
+
     case 'updated_at':
       return evaluateDateCondition(deal.updated_at, operator, value, today);
-    
+
     case 'expected_close_date':
       if (!deal.expected_close_date) {
         return operator === 'is_empty';
       }
       return evaluateDateCondition(deal.expected_close_date, operator, value, today);
-    
+
     default:
       return true;
   }
