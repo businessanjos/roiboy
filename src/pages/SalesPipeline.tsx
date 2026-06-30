@@ -175,6 +175,29 @@ export default function SalesPipeline() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
+  const [filterCustomFields, setFilterCustomFields] = useState<CustomFieldOption[]>([]);
+  useEffect(() => {
+    if (!currentUser?.account_id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("custom_fields")
+        .select("id, name, field_type, options")
+        .eq("account_id", currentUser.account_id)
+        .eq("show_in_deals", true)
+        .eq("is_active", true);
+      if (cancelled) return;
+      setFilterCustomFields(
+        (data || []).map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          field_type: f.field_type,
+          options: Array.isArray(f.options) ? f.options : null,
+        }))
+      );
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.account_id]);
   const [wonDateEnd, setWonDateEnd] = usePersistedFilter<string>("salesPipeline", "wonDateEnd", "");
   const [wonDatePopoverOpen, setWonDatePopoverOpen] = useState(false);
   const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string[]>("salesPipeline", "wonSellerFilterMulti", []);
