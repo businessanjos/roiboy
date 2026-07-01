@@ -1,0 +1,295 @@
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw } from "lucide-react";
+
+type Evidence = { source: string; field?: string; text: string };
+type MedicalClient = {
+  id: string;
+  full_name: string;
+  logo_url: string | null;
+  education: string | null;
+  education_specialty: string | null;
+  products: string[];
+  productColors: Record<string, string>;
+  evidence: Evidence[];
+};
+
+export default function MedicalClients() {
+  const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState<MedicalClient[]>([]);
+  const [search, setSearch] = useState("");
+  const [productFilter, setProductFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+
+  const load = async () => {
+    setLoading(true);
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+    if (!token) {
+      setClients([]);
+      setLoading(false);
+      return;
+    }
+    const { data, error } = await supabase.functions.invoke("list-medical-clients", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (error) {
+      console.error(error);
+      setClients([]);
+    } else {
+      setClients(data?.clients ?? []);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const products = useMemo(() => {
+    const s = new Set<string>();
+    clients.forEach((c) => c.products.forEach((p) => s.add(p)));
+    return Array.from(s).sort();
+  }, [clients]);
+
+  const sources = useMemo(() => {
+    const s = new Set<string>();
+    clients.forEach((c) => c.evidence.forEach((e) => s.add(e.source)));
+    return Array.from(s).sort();
+  }, [clients]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return clients.filter((c) => {
+      if (productFilter !== "all" && !c.products.includes(productFilter)) return false;
+      if (sourceFilter !== "all" && !c.evidence.some((e) => e.source === sourceFilter)) return false;
+      if (!q) return true;
+      const hay = [
+        c.full_name,
+        c.education ?? "",
+        c.education_specialty ?? "",
+        ...c.products,
+        ...c.evidence.map((e) => `${e.field ?? ""} ${e.text}`),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [clients, search, productFilter, sourceFilter]);
+
+  const exportCsv = () => {
+    const rows = [
+      ["Nome", "Produtos", "Formação", "Especialidade", "Evidências"],
+      ...filtered.map((c) => [
+        c.full_name,
+        c.products.join(" | "),
+        c.education ?? "",
+        c.education_specialty ?? "",
+        c.evidence.map((e) => `[${e.source}${e.field ? ` · ${e.field}` : ""}] ${e.text}`).join(" || "),
+      ]),
+    ];
+    const csv = rows
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `medicos-mentoria-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const sourceLabel = (s: string) =>
+    s === "onboarding" ? "Onboarding" : s === "cadastro" ? "Cadastro" : s;
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Stethoscope className="h-6 w-6 text-primary" />
+            Médicos na Mentoria
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Clientes ativos das mentorias identificados como médicos via onboarding ou cadastro.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!filtered.length}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">Total identificados</div>
+            <div className="text-3xl font-bold mt-1">
+              {loading ? <Skeleton className="h-8 w-16" /> : clients.length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">Exibidos com filtro</div>
+            <div className="text-3xl font-bold mt-1">
+              {loading ? <Skeleton className="h-8 w-16" /> : filtered.length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">Produtos distintos</div>
+            <div className="text-3xl font-bold mt-1">
+              {loading ? <Skeleton className="h-8 w-16" /> : products.length}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardContent className="p-4 flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Buscar por nome, produto, especialidade ou evidência..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Select value={productFilter} onValueChange={setProductFilter}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Produto" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os produtos</SelectItem>
+              {products.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Fonte da evidência" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as fontes</SelectItem>
+              {sources.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {sourceLabel(s)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-12 text-center">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground text-sm">
+              Nenhum médico encontrado com os filtros atuais.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Produtos</TableHead>
+                  <TableHead>Formação</TableHead>
+                  <TableHead>Evidências</TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.full_name}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {c.products.map((p) => (
+                          <Badge
+                            key={p}
+                            style={{
+                              backgroundColor: `${c.productColors[p] ?? "#6b7280"}20`,
+                              color: c.productColors[p] ?? "#6b7280",
+                              borderColor: `${c.productColors[p] ?? "#6b7280"}60`,
+                            }}
+                            variant="outline"
+                          >
+                            {p}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {c.education ? (
+                        <div>
+                          <div>{c.education}</div>
+                          {c.education_specialty && (
+                            <div className="text-xs text-muted-foreground">
+                              {c.education_specialty}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-md">
+                      <div className="space-y-1">
+                        {c.evidence.slice(0, 3).map((e, i) => (
+                          <div key={i} className="text-xs">
+                            <Badge variant="secondary" className="mr-2">
+                              {sourceLabel(e.source)}
+                            </Badge>
+                            {e.field && <span className="text-muted-foreground">{e.field}: </span>}
+                            <span>{e.text}</span>
+                          </div>
+                        ))}
+                        {c.evidence.length > 3 && (
+                          <div className="text-xs text-muted-foreground">
+                            +{c.evidence.length - 3} evidências
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Link to={`/clients/${c.id}`}>
+                        <Button variant="ghost" size="sm">
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
