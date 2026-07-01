@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw } from "lucide-react";
+import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw, Check } from "lucide-react";
+import { toast } from "sonner";
 
 type Evidence = { source: string; field?: string; text: string };
 type MedicalClient = {
