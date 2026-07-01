@@ -810,6 +810,7 @@ export default function Clients() {
       else p.set("contract_filter", contract);
       if (filterLinks === "with") p.set("with_links", "true");
       if (filterCountry !== "all") p.set("country", filterCountry);
+      if (filterEducation !== "all") p.set("education", filterEducation);
       return p;
     };
     try {
