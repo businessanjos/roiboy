@@ -918,6 +918,31 @@ Deno.serve(async (req) => {
       result = await enqueueSend(token!, `send_media_to_group user=${userData.name}`, () =>
         uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
       );
+      // 🔁 Retry PTT em grupos (mesma lógica de send_media): uazapi às vezes
+      // devolve resposta sem messageid enquanto converte webm/opus.
+      {
+        let r: any = result;
+        let hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
+        if (!hasId && payload.media_type === "ptt") {
+          for (let attempt = 1; attempt <= 2 && !hasId; attempt++) {
+            const waitMs = 800 * attempt;
+            console.warn(`[uazapi-manager] ⏳ PTT (grupo) sem messageid, retry ${attempt}/2 em ${waitMs}ms...`);
+            await new Promise((res) => setTimeout(res, waitMs));
+            try {
+              result = await enqueueSend(token!, `send_media_to_group retry${attempt} user=${userData.name} type=ptt`, () =>
+                uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
+              );
+              r = result;
+              hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
+            } catch (retryErr) {
+              console.error(`[uazapi-manager] retry grupo ${attempt} falhou:`, retryErr);
+            }
+          }
+        }
+        if (!hasId) {
+          console.error(`[uazapi-manager] ⚠️ /send/media (grupo) sem messageid após retries! type=${payload.media_type} server=${sectorServer.source} response=${JSON.stringify(result).substring(0, 400)}`);
+        }
+      }
     
     } else if (action === "list_groups") {
       const r = await uazapiInstance("/group/fetchAllGroups", "GET", token!, undefined, sectorServer);
