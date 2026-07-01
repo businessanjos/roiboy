@@ -2237,6 +2237,35 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* Formação Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Formação</Label>
+                <Select value={filterEducation} onValueChange={setFilterEducation}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todas as formações</SelectItem>
+                    <SelectItem value="Médico">Médico</SelectItem>
+                    <SelectItem value="Dentista">Dentista</SelectItem>
+                    <SelectItem value="Nutricionista">Nutricionista</SelectItem>
+                    <SelectItem value="Fisioterapeuta">Fisioterapeuta</SelectItem>
+                    <SelectItem value="Psicólogo">Psicólogo</SelectItem>
+                    <SelectItem value="Veterinário">Veterinário</SelectItem>
+                    <SelectItem value="Biomédico">Biomédico</SelectItem>
+                    <SelectItem value="Enfermeiro">Enfermeiro</SelectItem>
+                    <SelectItem value="Farmacêutico">Farmacêutico</SelectItem>
+                    <SelectItem value="Fonoaudiólogo">Fonoaudiólogo</SelectItem>
+                    <SelectItem value="Terapeuta Ocupacional">Terapeuta Ocupacional</SelectItem>
+                    <SelectItem value="Educador Físico">Educador Físico</SelectItem>
+                    <SelectItem value="Esteticista">Esteticista</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                    <SelectItem value="none">Sem formação</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+
               {/* Clear Filters Button */}
               {activeFilterCount > 0 && (
                 <div className="flex items-end">
