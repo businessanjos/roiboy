@@ -1,0 +1,1 @@
+UPDATE public.deals SET received_value = 60000, entry_value = COALESCE(NULLIF(entry_value,0), 60000) WHERE id = '35db6924-b54a-4a38-b6d7-05fe240f08f7';
