@@ -1358,6 +1358,7 @@ export default function Clients() {
     filterResponsible !== "all",
     filterLinks !== "all",
     filterCountry !== "all",
+    filterEducation !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
