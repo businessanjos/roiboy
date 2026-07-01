@@ -369,6 +369,8 @@ Deno.serve(async (req) => {
         instagram,
         notes,
         stage_id,
+        education,
+        education_specialty,
         client_products (
           product_id,
           products:product_id (
