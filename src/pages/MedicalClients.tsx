@@ -117,10 +117,10 @@ export default function MedicalClients() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Stethoscope className="h-6 w-6 text-primary" />
-            Médicos na Mentoria
+            Área da saúde na Mentoria
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Clientes ativos das mentorias identificados como médicos via onboarding ou cadastro.
+            Clientes ativos das mentorias identificados na área da saúde via onboarding ou cadastro.
           </p>
         </div>
         <div className="flex gap-2">
@@ -210,7 +210,7 @@ export default function MedicalClients() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground text-sm">
-              Nenhum médico encontrado com os filtros atuais.
+              Nenhum profissional da área da saúde encontrado com os filtros atuais.
             </div>
           ) : (
             <Table>
