@@ -1152,8 +1152,58 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   className="h-9"
                 />
                 <p className="text-[11px] text-muted-foreground">Especialidade dentro do segmento</p>
+            </div>
+          </div>
+
+          {/* Formação Profissional (CS/CX) */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <Building2 className="h-3.5 w-3.5" />
+              Formação Profissional
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Formação</Label>
+                <Select
+                  value={data.education || "none"}
+                  onValueChange={(v) => updateField("education", v === "none" ? "" : v)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não informado</SelectItem>
+                    <SelectItem value="Médico">Médico</SelectItem>
+                    <SelectItem value="Dentista">Dentista</SelectItem>
+                    <SelectItem value="Nutricionista">Nutricionista</SelectItem>
+                    <SelectItem value="Fisioterapeuta">Fisioterapeuta</SelectItem>
+                    <SelectItem value="Psicólogo">Psicólogo</SelectItem>
+                    <SelectItem value="Veterinário">Veterinário</SelectItem>
+                    <SelectItem value="Biomédico">Biomédico</SelectItem>
+                    <SelectItem value="Enfermeiro">Enfermeiro</SelectItem>
+                    <SelectItem value="Farmacêutico">Farmacêutico</SelectItem>
+                    <SelectItem value="Fonoaudiólogo">Fonoaudiólogo</SelectItem>
+                    <SelectItem value="Terapeuta Ocupacional">Terapeuta Ocupacional</SelectItem>
+                    <SelectItem value="Educador Físico">Educador Físico</SelectItem>
+                    <SelectItem value="Esteticista">Esteticista</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Área de formação do cliente</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Especialidade</Label>
+                <Input
+                  value={data.education_specialty}
+                  onChange={(e) => updateField("education_specialty", e.target.value)}
+                  placeholder="Ex: Cardiologista, Ortodontista"
+                  className="h-9"
+                />
+                <p className="text-[11px] text-muted-foreground">Especialidade dentro da formação</p>
               </div>
             </div>
+          </div>
+
           </div>
 
           <div className="h-px bg-border/50" />
