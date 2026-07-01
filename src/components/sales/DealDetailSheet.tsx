@@ -1230,7 +1230,35 @@ export function DealDetailSheet({
                       </span>
                     </div>
                   </div>
-                  <Popover open={receivedEditOpen} onOpenChange={setReceivedEditOpen}>
+                  <Popover
+                    open={receivedEditOpen}
+                    onOpenChange={async (openNow) => {
+                      if (!openNow && receivedEditOpen) {
+                        const v = fromReceivedDraft(receivedDraft);
+                        const prev = localReceivedValue;
+                        const changed = (v ?? null) !== (prev ?? null);
+                        if (changed) {
+                          if (v !== null && (isNaN(v) || v < 0)) {
+                            toast.error("Valor inválido");
+                            return;
+                          }
+                          const { error } = await supabase
+                            .from("deals")
+                            .update({ received_value: v } as any)
+                            .eq("id", deal.id);
+                          if (error) {
+                            toast.error("Erro ao atualizar");
+                            return;
+                          }
+                          toast.success("Valor recebido atualizado");
+                          setLocalReceivedValue(v);
+                          (deal as any).received_value = v;
+                          onDealUpdated?.();
+                        }
+                      }
+                      setReceivedEditOpen(openNow);
+                    }}
+                  >
                     <PopoverTrigger asChild>
                       <button
                         type="button"
@@ -1253,13 +1281,22 @@ export function DealDetailSheet({
                           inputMode="decimal"
                           value={formatReceivedDraft(receivedDraft)}
                           onChange={(e) => setReceivedDraft(parseReceivedInput(e.target.value))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              setReceivedEditOpen(false);
+                            }
+                          }}
                           placeholder="0,00"
                           className="h-9 pl-9"
                           autoFocus
                         />
                       </div>
                       <div className="flex justify-end gap-2 mt-2">
-                        <Button size="sm" variant="ghost" onClick={() => setReceivedEditOpen(false)}>
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          setReceivedDraft(toReceivedDraft(localReceivedValue));
+                          setReceivedEditOpen(false);
+                        }}>
                           Cancelar
                         </Button>
                         <Button
