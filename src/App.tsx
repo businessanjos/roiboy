@@ -79,6 +79,7 @@ const ZappErrorBoundary = lazyRetry(() => import("@/components/royzapp/ZappError
 // Lazy loaded pages
 const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
 const Clients = lazyRetry(() => import("./pages/Clients"));
+const MedicalClients = lazyRetry(() => import("./pages/MedicalClients"));
 const DoubleChairList = lazyRetry(() => import("./pages/DoubleChairList"));
 const VipClients = lazyRetry(() => import("./pages/VipClients"));
 const Renewals = lazyRetry(() => import("./pages/Renewals"));
@@ -285,6 +286,7 @@ const App = () => (
                             <Route path="/dashboard" element={<Dashboard />} />
                             <Route path="/dashboard/cadeira-dupla" element={<DoubleChairList />} />
                             <Route path="/clients" element={<Clients />} />
+                            <Route path="/clients/medicos" element={<MedicalClients />} />
                             <Route path="/vips" element={<VipClients />} />
                             <Route path="/clients/new" element={<Clients />} />
                             <Route path="/clients/:id" element={<ClientDetail />} />
