@@ -66,6 +66,7 @@ import {
   Boxes,
   
   type LucideIcon,
+  Stethoscope,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
 
