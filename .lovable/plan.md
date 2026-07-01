@@ -1,33 +1,34 @@
-## Problema
+## Comparação de permissões — Camila Menaldo × Maria
 
-Quando você clica em **Equipe** (ou Departamentos, Tags, Configurações, Playbook) na sidebar do ROY zAPP **sem ter um setor selecionado**, a URL muda para `/roy-zapp?view=team` mas a tela continua mostrando o seletor de setor — porque o `RoyZapp.tsx` força o `ZappSectorSelector` sempre que `selectedSectorId` está vazio, ignorando o `view` da URL.
+Verifiquei nas quatro camadas que definem acesso no sistema. **Não estão iguais** — há duas diferenças reais e uma cosmética.
 
-Por isso "nada acontece": o clique navega, mas o seletor de setor permanece renderizado por cima.
+### Resumo
 
-## Solução
+| Camada | Maria | Camila | Igual? |
+|---|---|---|---|
+| `role` global | member | member | Sim |
+| `is_also_admin` | false | false | Sim |
+| Papéis de equipe (`user_team_roles`) | **CX** | **CX + CS** | Não |
+| Setores ativos (`user_sector_access`) | operacoes, royzapp | operacoes, royzapp | Sim |
+| Agente RoyZapp (`zapp_agents`) | 1 linha ativa, sem global | **2 linhas** ativas (duplicado), sem global | Não |
 
-Em `src/pages/RoyZapp.tsx`, antes do bloco que renderiza o `ZappSectorSelector` (linha ~1130), liberar a renderização do layout normal para as views administrativas que **não dependem de um setor**: `team`, `departments`, `tags`, `settings`, `playbook`.
+Observação: Maria também tem um registro em `eventos`, mas está `is_active=false`, então não conta como permissão efetiva.
 
-- Se `selectedSectorId` for nulo **e** `activeView` for uma dessas views administrativas → renderizar o painel normal (ZappConversationPanel + área de conteúdo) com `sectorId = null`. O `ZappTeamList` já funciona sem setor (usa `account_id` do `useZappData`).
-- Se `activeView` for `inbox`, `meetings` ou `sector` → manter o comportamento atual (mostrar seletor de setor).
-- O lado direito (chat) fica em estado vazio, já que o foco é o painel administrativo da esquerda.
+### O que isso significa na prática
 
-## Detalhes técnicos
+1. **Camila enxerga mais que Maria por causa do papel "CS"**
+   Ter os dois papéis (CX + CS) faz `usePermissions` unir as permissões dos dois. Dependendo do que estiver configurado em `role_permissions` para "CS", Camila pode ver telas/ações que Maria não vê (por ex. áreas específicas do Customer Success). Maria só herda o conjunto de "CX".
 
-Arquivo único: `src/pages/RoyZapp.tsx`
+2. **Camila tem um `zapp_agents` duplicado**
+   Duas linhas ativas para o mesmo usuário podem inflar `current_chats`, causar dupla atribuição em roteamento round-robin e aparecer duplicada em listas de agentes. É bug de dados, não de permissão, mas convém limpar.
 
-```ts
-const SECTORLESS_VIEWS = new Set<ZappView>([
-  "team", "departments", "tags", "settings", "playbook"
-]);
+### Plano de ajuste (para deixar 100% iguais à Maria)
 
-if (!selectedSectorId && !SECTORLESS_VIEWS.has(activeView) && activeView !== "whatsapp-admin") {
-  return <ZappSectorSelector ... />;
-}
-```
+1. **Remover o papel "CS" de Camila** em `user_team_roles` (mantendo apenas "CX"), OU adicionar "CS" também à Maria — precisa da sua decisão.
+2. **Deduplicar `zapp_agents` da Camila**: manter 1 linha ativa e desativar/apagar a outra.
+3. Reconfirmar via nova consulta que as duas usuárias retornam exatamente o mesmo conjunto de papéis, setores ativos e 1 linha de agente.
 
-Nenhuma alteração em hooks, RLS ou outros componentes — `useZappData({ sectorId: undefined })` já é suportado e retorna agents/teamUsers do account inteiro, que é exatamente o que o `ZappTeamList` precisa para listar (e adicionar) a Camila.
+### Perguntas antes de aplicar
 
-## Resultado
-
-Clicar em **Equipe** abre direto a lista de atendentes, onde você pode usar o botão **Adicionar** para cadastrar a Camila como `zapp_agent`, sem precisar selecionar um setor primeiro.
+- Quer **igualar Camila à Maria** (remover CS de Camila) ou **igualar Maria à Camila** (adicionar CS à Maria)?
+- Posso deduplicar o `zapp_agents` da Camila mantendo a linha mais recente?
