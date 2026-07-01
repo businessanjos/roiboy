@@ -428,8 +428,16 @@ Deno.serve(async (req) => {
           }
         }
       }
+      if (educationFilter && educationFilter !== "all") {
+        if (educationFilter === "none") {
+          q = q.or("education.is.null,education.eq.");
+        } else {
+          q = q.eq("education", educationFilter);
+        }
+      }
       return q;
     };
+
 
     let clients: any[] = [];
     let count: number | null = 0;
