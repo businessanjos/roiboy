@@ -194,7 +194,7 @@ export function useDeals(pipelineId?: string | null) {
     try {
       const selectQuery = `
           id, account_id, title, client_id, lead_id, pipeline_id, contact_name, contact_phone, contact_email,
-          stage_id, value, currency, expected_close_date, probability, source,
+          stage_id, value, entry_value, received_value, currency, expected_close_date, probability, source,
           responsible_user_id, sdr_user_id, notes, status, won_at, lost_at, lost_reason,
           loss_reason_id, loss_sub_reason_id, loss_notes, tags, created_at, updated_at,
           client:clients(id, full_name, phone_e164, avatar_url),
