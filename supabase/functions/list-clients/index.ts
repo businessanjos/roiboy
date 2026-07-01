@@ -88,6 +88,7 @@ Deno.serve(async (req) => {
     const clientStatus = url.searchParams.get("client_status") || "";
     const withLinks = url.searchParams.get("with_links") === "true";
     const countryCode = (url.searchParams.get("country") || "").toUpperCase();
+    const educationFilter = url.searchParams.get("education") || "";
     const sortParam = url.searchParams.get("sort") || "recent";
 
     // Map ISO country code -> list of DDI prefixes (digits only).
@@ -368,6 +369,8 @@ Deno.serve(async (req) => {
         instagram,
         notes,
         stage_id,
+        education,
+        education_specialty,
         client_products (
           product_id,
           products:product_id (
@@ -425,8 +428,16 @@ Deno.serve(async (req) => {
           }
         }
       }
+      if (educationFilter && educationFilter !== "all") {
+        if (educationFilter === "none") {
+          q = q.or("education.is.null,education.eq.");
+        } else {
+          q = q.eq("education", educationFilter);
+        }
+      }
       return q;
     };
+
 
     let clients: any[] = [];
     let count: number | null = 0;

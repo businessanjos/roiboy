@@ -280,6 +280,7 @@ export default function Clients() {
   const [filterLinks, setFilterLinks] = usePersistedFilter<string>("clients", "links", "all");
   const [filterCountry, setFilterCountry] = usePersistedFilter<string>("clients", "country", "all");
   const [filterRisk, setFilterRisk] = usePersistedFilter<string>("clients", "risk", "all");
+  const [filterEducation, setFilterEducation] = usePersistedFilter<string>("clients", "education", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
 
@@ -391,6 +392,7 @@ export default function Clients() {
       if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
       if (filterLinks === "with") baseParams["with_links"] = "true";
       if (filterCountry !== "all") baseParams["country"] = filterCountry;
+      if (filterEducation !== "all") baseParams["education"] = filterEducation;
       baseParams["sort"] = sortOrder;
 
       const pageSize = 200;
@@ -542,6 +544,7 @@ export default function Clients() {
       if (filterClientStatus !== "all" && activeTab === "all") params.set("client_status", filterClientStatus);
       if (filterLinks === "with") params.set("with_links", "true");
       if (filterCountry !== "all") params.set("country", filterCountry);
+      if (filterEducation !== "all") params.set("education", filterEducation);
       params.set("sort", sortOrder);
       
       const response = await fetch(
@@ -807,6 +810,7 @@ export default function Clients() {
       else p.set("contract_filter", contract);
       if (filterLinks === "with") p.set("with_links", "true");
       if (filterCountry !== "all") p.set("country", filterCountry);
+      if (filterEducation !== "all") p.set("education", filterEducation);
       return p;
     };
     try {
@@ -839,7 +843,7 @@ export default function Clients() {
       fetchTabCounts();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, sortOrder, activeTab]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, sortOrder, activeTab]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -966,6 +970,8 @@ export default function Clients() {
         mls_level: newClientData.is_mls ? (newClientData.mls_level || null) : null,
         responsible_user_id: newClientData.responsible_user_id || null,
         timezone: newClientData.timezone || null,
+        education: newClientData.education || null,
+        education_specialty: newClientData.education_specialty || null,
       } as any).select().single();
 
       if (error) throw error;
@@ -1352,6 +1358,7 @@ export default function Clients() {
     filterResponsible !== "all",
     filterLinks !== "all",
     filterCountry !== "all",
+    filterEducation !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -1361,6 +1368,7 @@ export default function Clients() {
     setFilterResponsible("all");
     setFilterLinks("all");
     setFilterCountry("all");
+    setFilterEducation("all");
   };
 
   // Country options for the filter dropdown.
@@ -2229,6 +2237,35 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* Formação Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Formação</Label>
+                <Select value={filterEducation} onValueChange={setFilterEducation}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todas as formações</SelectItem>
+                    <SelectItem value="Médico">Médico</SelectItem>
+                    <SelectItem value="Dentista">Dentista</SelectItem>
+                    <SelectItem value="Nutricionista">Nutricionista</SelectItem>
+                    <SelectItem value="Fisioterapeuta">Fisioterapeuta</SelectItem>
+                    <SelectItem value="Psicólogo">Psicólogo</SelectItem>
+                    <SelectItem value="Veterinário">Veterinário</SelectItem>
+                    <SelectItem value="Biomédico">Biomédico</SelectItem>
+                    <SelectItem value="Enfermeiro">Enfermeiro</SelectItem>
+                    <SelectItem value="Farmacêutico">Farmacêutico</SelectItem>
+                    <SelectItem value="Fonoaudiólogo">Fonoaudiólogo</SelectItem>
+                    <SelectItem value="Terapeuta Ocupacional">Terapeuta Ocupacional</SelectItem>
+                    <SelectItem value="Educador Físico">Educador Físico</SelectItem>
+                    <SelectItem value="Esteticista">Esteticista</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                    <SelectItem value="none">Sem formação</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+
               {/* Clear Filters Button */}
               {activeFilterCount > 0 && (
                 <div className="flex items-end">
@@ -2293,6 +2330,14 @@ export default function Clients() {
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
                     País: {countryOptions.find(o => o.code === filterCountry)?.flag} {countryOptions.find(o => o.code === filterCountry)?.name || filterCountry}
                     <button onClick={() => setFilterCountry("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filterEducation !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Formação: {filterEducation === "none" ? "Sem formação" : filterEducation}
+                    <button onClick={() => setFilterEducation("all")} className="hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>

@@ -3105,6 +3105,8 @@ export type Database = {
           country: string | null
           cpf: string | null
           created_at: string
+          education: string | null
+          education_specialty: string | null
           emails: Json | null
           full_name: string
           full_name_normalized: string | null
@@ -3169,6 +3171,8 @@ export type Database = {
           country?: string | null
           cpf?: string | null
           created_at?: string
+          education?: string | null
+          education_specialty?: string | null
           emails?: Json | null
           full_name: string
           full_name_normalized?: string | null
@@ -3233,6 +3237,8 @@ export type Database = {
           country?: string | null
           cpf?: string | null
           created_at?: string
+          education?: string | null
+          education_specialty?: string | null
           emails?: Json | null
           full_name?: string
           full_name_normalized?: string | null
