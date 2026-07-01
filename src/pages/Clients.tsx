@@ -543,6 +543,7 @@ export default function Clients() {
       if (filterClientStatus !== "all" && activeTab === "all") params.set("client_status", filterClientStatus);
       if (filterLinks === "with") params.set("with_links", "true");
       if (filterCountry !== "all") params.set("country", filterCountry);
+      if (filterEducation !== "all") params.set("education", filterEducation);
       params.set("sort", sortOrder);
       
       const response = await fetch(
