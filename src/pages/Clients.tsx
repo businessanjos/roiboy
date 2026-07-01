@@ -2334,6 +2334,14 @@ export default function Clients() {
                     </button>
                   </Badge>
                 )}
+                {filterEducation !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Formação: {filterEducation === "none" ? "Sem formação" : filterEducation}
+                    <button onClick={() => setFilterEducation("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
               </div>
             )}
           </Card>
