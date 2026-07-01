@@ -101,6 +101,9 @@ export interface ClientFormData {
   // Business info
   business_segment: string;
   business_niche: string;
+  // Formação profissional (CS/CX)
+  education: string;
+  education_specialty: string;
   // Timezone (IANA). Vazio = detectar automaticamente pelo DDI/telefone.
   timezone: string;
   // Additional companies
