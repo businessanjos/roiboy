@@ -29,6 +29,25 @@ export default function MedicalClients() {
   const [search, setSearch] = useState("");
   const [productFilter, setProductFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const EDUCATION_OPTIONS = [
+    "Médico","Dentista","Nutricionista","Fisioterapeuta","Psicólogo","Veterinário",
+    "Biomédico","Enfermeiro","Farmacêutico","Fonoaudiólogo","Terapeuta Ocupacional",
+    "Educador Físico","Esteticista","Outro",
+  ];
+
+  const updateClientField = async (id: string, patch: { education?: string | null; education_specialty?: string | null }) => {
+    setSavingId(id);
+    const { error } = await supabase.from("clients").update(patch).eq("id", id);
+    if (error) {
+      toast.error("Erro ao salvar: " + error.message);
+    } else {
+      setClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } as MedicalClient : c)));
+      toast.success("Salvo");
+    }
+    setSavingId(null);
+  };
 
   const load = async () => {
     setLoading(true);
