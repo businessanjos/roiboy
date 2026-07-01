@@ -280,6 +280,7 @@ export default function Clients() {
   const [filterLinks, setFilterLinks] = usePersistedFilter<string>("clients", "links", "all");
   const [filterCountry, setFilterCountry] = usePersistedFilter<string>("clients", "country", "all");
   const [filterRisk, setFilterRisk] = usePersistedFilter<string>("clients", "risk", "all");
+  const [filterEducation, setFilterEducation] = usePersistedFilter<string>("clients", "education", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
 
