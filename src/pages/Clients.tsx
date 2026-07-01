@@ -1368,6 +1368,7 @@ export default function Clients() {
     setFilterResponsible("all");
     setFilterLinks("all");
     setFilterCountry("all");
+    setFilterEducation("all");
   };
 
   // Country options for the filter dropdown.
