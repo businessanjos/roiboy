@@ -88,6 +88,7 @@ Deno.serve(async (req) => {
     const clientStatus = url.searchParams.get("client_status") || "";
     const withLinks = url.searchParams.get("with_links") === "true";
     const countryCode = (url.searchParams.get("country") || "").toUpperCase();
+    const educationFilter = url.searchParams.get("education") || "";
     const sortParam = url.searchParams.get("sort") || "recent";
 
     // Map ISO country code -> list of DDI prefixes (digits only).
