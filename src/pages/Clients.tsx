@@ -966,6 +966,8 @@ export default function Clients() {
         mls_level: newClientData.is_mls ? (newClientData.mls_level || null) : null,
         responsible_user_id: newClientData.responsible_user_id || null,
         timezone: newClientData.timezone || null,
+        education: newClientData.education || null,
+        education_specialty: newClientData.education_specialty || null,
       } as any).select().single();
 
       if (error) throw error;
