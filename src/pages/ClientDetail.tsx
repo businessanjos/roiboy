@@ -555,6 +555,8 @@ export default function ClientDetail() {
           responsible_user_id: editFormData.responsible_user_id || null,
           companies: JSON.parse(JSON.stringify(editFormData.companies || [])),
           timezone: editFormData.timezone || null,
+          education: editFormData.education || null,
+          education_specialty: editFormData.education_specialty || null,
         } as any)
         .eq("id", id);
 
