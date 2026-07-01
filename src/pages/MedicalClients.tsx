@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw } from "lucide-react";
+import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw, Check } from "lucide-react";
+import { toast } from "sonner";
 
 type Evidence = { source: string; field?: string; text: string };
 type MedicalClient = {
@@ -28,6 +29,25 @@ export default function MedicalClients() {
   const [search, setSearch] = useState("");
   const [productFilter, setProductFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const EDUCATION_OPTIONS = [
+    "Médico","Dentista","Nutricionista","Fisioterapeuta","Psicólogo","Veterinário",
+    "Biomédico","Enfermeiro","Farmacêutico","Fonoaudiólogo","Terapeuta Ocupacional",
+    "Educador Físico","Esteticista","Outro",
+  ];
+
+  const updateClientField = async (id: string, patch: { education?: string | null; education_specialty?: string | null }) => {
+    setSavingId(id);
+    const { error } = await supabase.from("clients").update(patch).eq("id", id);
+    if (error) {
+      toast.error("Erro ao salvar: " + error.message);
+    } else {
+      setClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } as MedicalClient : c)));
+      toast.success("Salvo");
+    }
+    setSavingId(null);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -244,19 +264,41 @@ export default function MedicalClients() {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {c.education ? (
-                        <div>
-                          <div>{c.education}</div>
-                          {c.education_specialty && (
-                            <div className="text-xs text-muted-foreground">
-                              {c.education_specialty}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                    <TableCell className="text-sm min-w-[240px]">
+                      <div className="space-y-1.5">
+                        <Select
+                          value={c.education || "none"}
+                          disabled={savingId === c.id}
+                          onValueChange={(v) =>
+                            updateClientField(c.id, { education: v === "none" ? null : v })
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Não informado</SelectItem>
+                            {EDUCATION_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          className="h-8 text-xs"
+                          placeholder="Especialidade"
+                          defaultValue={c.education_specialty ?? ""}
+                          disabled={savingId === c.id}
+                          onBlur={(e) => {
+                            const val = e.target.value.trim();
+                            if ((c.education_specialty ?? "") !== val) {
+                              updateClientField(c.id, { education_specialty: val || null });
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                          }}
+                        />
+                      </div>
                     </TableCell>
                     <TableCell className="max-w-md">
                       <div className="space-y-1">
