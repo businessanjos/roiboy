@@ -1721,6 +1721,8 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   business_zip_code: "",
   business_segment: "",
   business_niche: "",
+  education: "",
+  education_specialty: "",
   timezone: "",
   companies: [],
   contract_start_date: "",
