@@ -32,6 +32,8 @@ import { PipelineSelector } from "@/components/sales/PipelineSelector";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { PipelineExportDialog } from "@/components/sales/PipelineExportDialog";
 import { ActiveFilter, applyFilterToDeals } from "@/hooks/usePipelineFilters";
+import { useBatchDealActivityStatus } from "@/hooks/useBatchDealActivityStatus";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
