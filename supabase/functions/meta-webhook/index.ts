@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
                 read_at: ack >= 4 ? new Date().toISOString() : undefined,
               })
               .eq("account_id", accountId)
-              .or(`external_id.eq.${externalId},external_message_id.eq.${externalId}`);
+              .eq("external_message_id", externalId);
 
             if (error) {
               console.error(`[meta-webhook] ACK update error for ${externalId}:`, error.message);
@@ -380,7 +380,6 @@ Deno.serve(async (req) => {
               media_download_status: mediaUrl ? "pending" : null,
               sent_at: timestamp,
               external_message_id: externalMessageId,
-              external_id: externalMessageId,
               sender_phone: senderPhone,
               sender_name: value.contacts?.[0]?.profile?.name || null,
               is_from_client: true,
