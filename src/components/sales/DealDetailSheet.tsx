@@ -1267,16 +1267,15 @@ export function DealDetailSheet({
                       >
                         {localReceivedValue != null
                           ? formatCurrency(localReceivedValue)
-                          : (deal.value && Number(deal.value) > 0
-                            ? (
-                              <span className="flex flex-col items-start">
-                                <span className="text-emerald-600/70">{formatCurrency(Number(deal.value))}</span>
-                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-normal not-italic mt-0.5">
-                                  Estimado (valor do negócio) · clique para confirmar
-                                </span>
+                          : (
+                            <span className="flex flex-col items-start">
+                              <span>{formatCurrency(0)}</span>
+                              <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-normal not-italic mt-0.5">
+                                Clique para informar o valor recebido
                               </span>
-                            )
-                            : <span className="text-muted-foreground text-sm font-normal italic">Clique para informar o valor recebido</span>)}
+                            </span>
+                          )}
+
                       </button>
                     </PopoverTrigger>
 
