@@ -267,7 +267,7 @@ function toArray(value: any): any[] {
   return [value];
 }
 
-function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>): boolean {
+function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>, dealNextActivityMap?: Record<string, string | null>): boolean {
   const { field, operator, value, include_empty } = condition;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
