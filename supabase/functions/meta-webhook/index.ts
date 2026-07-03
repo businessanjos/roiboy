@@ -191,11 +191,7 @@ Deno.serve(async (req) => {
             const statusMap: Record<number, string> = { 2: "sent", 3: "delivered", 4: "read" };
             const { error } = await supabase
               .from("zapp_messages")
-              .update({
-                delivery_status: statusMap[ack] || "sent",
-                delivered_at: ack >= 3 ? new Date().toISOString() : undefined,
-                read_at: ack >= 4 ? new Date().toISOString() : undefined,
-              })
+              .update({ delivery_status: statusMap[ack] || "sent" })
               .eq("account_id", accountId)
               .eq("external_message_id", externalId);
 
