@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { canonicalE164, phoneVariants } from "../_shared/phone-normalize.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -182,7 +183,8 @@ Deno.serve(async (req) => {
     // SEND TEMPLATE
     // ============================================
     } else if (action === "send_template") {
-      const cleanPhone = phone?.replace(/\D/g, "");
+      const phoneE164 = canonicalE164(phone);
+      const cleanPhone = phoneE164?.replace(/\D/g, "") || phone?.replace(/\D/g, "");
       if (!cleanPhone || cleanPhone.length < 10) {
         return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -227,25 +229,38 @@ Deno.serve(async (req) => {
           .from("zapp_conversations")
           .select("id")
           .eq("account_id", accountId)
-          .eq("phone_jid", chatJid)
+          .eq("external_thread_id", chatJid)
           .eq("integration_id", intData.id)
           .limit(1)
           .maybeSingle();
+
+        if (!conv && phoneE164) {
+          const { data: convByPhone } = await supabase
+            .from("zapp_conversations")
+            .select("id")
+            .eq("account_id", accountId)
+            .eq("integration_id", intData.id)
+            .in("phone_e164", phoneVariants(phoneE164))
+            .order("last_message_at", { ascending: false, nullsFirst: false })
+            .limit(1)
+            .maybeSingle();
+          conv = convByPhone;
+        }
 
         if (!conv && intData.id) {
           // Try to match client/lead by phone
           let clientId: string | null = null;
           let leadId: string | null = null;
-          const phoneVariants = [cleanPhone, cleanPhone.replace(/^55/, "")];
-          for (const pv of phoneVariants) {
+          const variants = phoneVariants(phoneE164 || cleanPhone);
+          for (const pv of variants) {
             const { data: c } = await supabase.from("clients").select("id")
-              .eq("account_id", accountId).or(`phone.eq.${pv},phone.eq.+${pv}`).limit(1).maybeSingle();
+              .eq("account_id", accountId).eq("phone_e164", pv).limit(1).maybeSingle();
             if (c) { clientId = c.id; break; }
           }
           if (!clientId) {
-            for (const pv of phoneVariants) {
+            for (const pv of variants) {
               const { data: l } = await supabase.from("leads").select("id")
-                .eq("account_id", accountId).or(`phone.eq.${pv},phone.eq.+${pv}`).limit(1).maybeSingle();
+                .eq("account_id", accountId).eq("phone", pv).limit(1).maybeSingle();
               if (l) { leadId = l.id; break; }
             }
           }
@@ -254,10 +269,12 @@ Deno.serve(async (req) => {
             .from("zapp_conversations")
             .insert({
               account_id: accountId,
-              phone_jid: chatJid,
-              phone_e164: cleanPhone,
+              channel: "whatsapp",
+              external_thread_id: chatJid,
+              phone_e164: phoneE164 || `+${cleanPhone}`,
               contact_name: cleanPhone,
               integration_id: intData.id,
+              sector_id: sector_id || null,
               client_id: clientId,
               lead_id: leadId,
               last_message_at: new Date().toISOString(),
@@ -268,6 +285,50 @@ Deno.serve(async (req) => {
             .select("id")
             .single();
           conv = newConv;
+        }
+
+        if (conv && intData.id) {
+          const { data: integrationRow } = await supabase
+            .from("integrations")
+            .select("sector_id")
+            .eq("id", intData.id)
+            .eq("account_id", accountId)
+            .maybeSingle();
+          const targetSectorId = sector_id || integrationRow?.sector_id || null;
+          if (targetSectorId) {
+            const { data: dept } = await supabase
+              .from("zapp_departments")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("sector_id", targetSectorId)
+              .limit(1)
+              .maybeSingle();
+
+            if (dept?.id) {
+              const { data: assignment } = await supabase
+                .from("zapp_conversation_assignments")
+                .select("id, status")
+                .eq("account_id", accountId)
+                .eq("zapp_conversation_id", conv.id)
+                .eq("department_id", dept.id)
+                .limit(1)
+                .maybeSingle();
+
+              if (!assignment) {
+                await supabase.from("zapp_conversation_assignments").insert({
+                  account_id: accountId,
+                  zapp_conversation_id: conv.id,
+                  department_id: dept.id,
+                  status: "triage",
+                });
+              } else if (assignment.status === "closed") {
+                await supabase
+                  .from("zapp_conversation_assignments")
+                  .update({ status: "triage", closed_at: null, closed_by: null })
+                  .eq("id", assignment.id);
+              }
+            }
+          }
         }
 
         if (conv) {
