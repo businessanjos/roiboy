@@ -366,6 +366,15 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
       }
       return evaluateDateCondition(deal.expected_close_date, operator, value, today);
 
+    case 'next_activity_date': {
+      const nextDue = dealNextActivityMap?.[deal.id] ?? null;
+      if (!nextDue) return operator === 'is_empty';
+      if (operator === 'is_empty') return false;
+      if (operator === 'is_not_empty') return true;
+      return evaluateDateCondition(nextDue, operator, value, today);
+    }
+
+
     default:
       return true;
   }
