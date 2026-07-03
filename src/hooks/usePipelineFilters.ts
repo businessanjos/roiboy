@@ -82,7 +82,14 @@ export const RECOMMENDED_FILTERS = [
     conditions: [{ field: 'responsible_user_id', operator: 'is_empty', value: null }],
     match_type: 'all' as const
   },
+  {
+    id: 'no_next_activity',
+    name: 'Sem atividade agendada',
+    conditions: [{ field: 'next_activity_date', operator: 'is_empty', value: null }],
+    match_type: 'all' as const
+  },
 ];
+
 
 export function usePipelineFilters() {
   const { currentUser } = useCurrentUser();
