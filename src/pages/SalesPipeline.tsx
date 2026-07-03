@@ -531,7 +531,9 @@ export default function SalesPipeline() {
   }, [deals]);
 
   // Batch activity statuses to support "Próxima atividade em" filter
-  const { statusMap: activityStatusMap } = useBatchDealActivityStatus(allDealIds);
+  const dealIdsArray = useMemo(() => deals.map(d => d.id), [deals]);
+  const { statusMap: activityStatusMap } = useBatchDealActivityStatus(dealIdsArray);
+
   const dealNextActivityMap = useMemo(() => {
     const m: Record<string, string | null> = {};
     Object.entries(activityStatusMap).forEach(([id, s]) => {
