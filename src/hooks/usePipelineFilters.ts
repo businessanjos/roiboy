@@ -219,7 +219,8 @@ export function applyFilterToDeals(
   activeFilter: ActiveFilter | null,
   searchTerm?: string,
   dealProductMap?: Record<string, string>,
-  dealCustomFieldValues?: Record<string, Record<string, string>>
+  dealCustomFieldValues?: Record<string, Record<string, string>>,
+  dealNextActivityMap?: Record<string, string | null>
 ): Deal[] {
   if (!activeFilter && !searchTerm?.trim()) return deals;
 
@@ -253,11 +254,12 @@ export function applyFilterToDeals(
   if (conditions.length === 0) return filtered;
 
   return filtered.filter(deal => {
-    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues));
+    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues, dealNextActivityMap));
     if (matchType === 'all') return results.every(Boolean);
     return results.some(Boolean);
   });
 }
+
 
 function toArray(value: any): any[] {
   if (Array.isArray(value)) return value.filter((v) => v !== null && v !== undefined && v !== "");
