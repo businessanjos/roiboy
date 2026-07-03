@@ -53,7 +53,7 @@ async function fetchBatchActivityStatuses(dealIds: string[]): Promise<Record<str
     if (!dealId) continue;
 
     if (!map[dealId]) {
-      map[dealId] = { pendingCount: 0, hasOverdue: false, totalActivities: 0 };
+      map[dealId] = { pendingCount: 0, hasOverdue: false, totalActivities: 0, nextDueDate: null };
     }
 
     map[dealId].totalActivities++;
@@ -67,8 +67,14 @@ async function fetchBatchActivityStatuses(dealIds: string[]): Promise<Record<str
         if (dueDate && isBefore(dueDate, today)) {
           map[dealId].hasOverdue = true;
         }
+        // Track earliest pending due date (string compare works for YYYY-MM-DD)
+        const current = map[dealId].nextDueDate;
+        if (!current || task.due_date < current) {
+          map[dealId].nextDueDate = task.due_date;
+        }
       }
     }
+
   }
 
   return map;
