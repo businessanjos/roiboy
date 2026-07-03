@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { canonicalE164, phoneVariants } from "../_shared/phone-normalize.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,10 +30,12 @@ function setCache(key: string, data: any) {
 
 // Normalize Brazilian phone: remove +, ensure country code
 function normalizePhone(phone: string): string {
+  const canonical = canonicalE164(phone);
+  if (canonical) return canonical;
   let clean = phone.replace(/\D/g, "");
   if (clean.startsWith("0")) clean = clean.slice(1);
   if (!clean.startsWith("55") && clean.length <= 11) clean = "55" + clean;
-  return clean;
+  return clean ? `+${clean}` : "";
 }
 
 // Extract text content from Meta message object
@@ -231,18 +234,32 @@ Deno.serve(async (req) => {
             }
 
             // Find or create conversation
-            const chatJid = `${senderPhone}@s.whatsapp.net`;
+            const chatJid = `${senderPhone.replace(/\D/g, "")}@s.whatsapp.net`;
             let conversation = null;
 
             // Try to find existing conversation
-            const { data: existingConv } = await supabase
+            let { data: existingConv } = await supabase
               .from("zapp_conversations")
               .select("id, unread_count, integration_id, contact_name, client_id, lead_id")
               .eq("account_id", accountId)
-              .eq("phone_jid", chatJid)
+              .eq("external_thread_id", chatJid)
               .eq("integration_id", integrationId)
               .limit(1)
               .maybeSingle();
+
+            if (!existingConv) {
+              const variants = phoneVariants(senderPhone);
+              const { data: convByPhone } = await supabase
+                .from("zapp_conversations")
+                .select("id, unread_count, integration_id, contact_name, client_id, lead_id")
+                .eq("account_id", accountId)
+                .eq("integration_id", integrationId)
+                .in("phone_e164", variants)
+                .order("last_message_at", { ascending: false, nullsFirst: false })
+                .limit(1)
+                .maybeSingle();
+              existingConv = convByPhone;
+            }
 
             if (existingConv) {
               conversation = existingConv;
@@ -254,13 +271,13 @@ Deno.serve(async (req) => {
               let clientId: string | null = null;
               let leadId: string | null = null;
 
-              const phoneVariants = [senderPhone, senderPhone.replace(/^55/, "")];
-              for (const pv of phoneVariants) {
+              const variants = phoneVariants(senderPhone);
+              for (const pv of variants) {
                 const { data: clientMatch } = await supabase
                   .from("clients")
                   .select("id")
                   .eq("account_id", accountId)
-                  .or(`phone.eq.${pv},phone.eq.+${pv}`)
+                  .eq("phone_e164", pv)
                   .limit(1)
                   .maybeSingle();
                 if (clientMatch) {
@@ -270,12 +287,12 @@ Deno.serve(async (req) => {
               }
 
               if (!clientId) {
-                for (const pv of phoneVariants) {
+                for (const pv of variants) {
                   const { data: leadMatch } = await supabase
                     .from("leads")
                     .select("id")
                     .eq("account_id", accountId)
-                    .or(`phone.eq.${pv},phone.eq.+${pv}`)
+                    .eq("phone", pv)
                     .limit(1)
                     .maybeSingle();
                   if (leadMatch) {
@@ -290,9 +307,11 @@ Deno.serve(async (req) => {
                 .from("zapp_conversations")
                 .insert({
                   account_id: accountId,
-                  phone_jid: chatJid,
+                  channel: "whatsapp",
+                  external_thread_id: chatJid,
                   phone_e164: senderPhone,
                   contact_name: contactName,
+                  sector_id: sectorId,
                   integration_id: integrationId,
                   client_id: clientId,
                   lead_id: leadId,
@@ -310,18 +329,36 @@ Deno.serve(async (req) => {
               }
               conversation = newConv;
 
-              // Create assignment
-              if (conversation && departmentId) {
-                await supabase.from("zapp_conversation_assignments").upsert({
+            }
+
+            if (!conversation) continue;
+
+            // Ensure every Meta conversation appears in the RoyZapp sector queue.
+            // Existing conversations created before this fix may have messages but no assignment.
+            if (departmentId) {
+              const { data: assignment } = await supabase
+                .from("zapp_conversation_assignments")
+                .select("id, status")
+                .eq("account_id", accountId)
+                .eq("zapp_conversation_id", conversation.id)
+                .eq("department_id", departmentId)
+                .limit(1)
+                .maybeSingle();
+
+              if (!assignment) {
+                await supabase.from("zapp_conversation_assignments").insert({
                   account_id: accountId,
                   zapp_conversation_id: conversation.id,
                   department_id: departmentId,
                   status: "open",
-                }, { onConflict: "account_id,zapp_conversation_id,department_id" });
+                });
+              } else if (assignment.status === "closed") {
+                await supabase
+                  .from("zapp_conversation_assignments")
+                  .update({ status: "open", closed_at: null, closed_by: null })
+                  .eq("id", assignment.id);
               }
             }
-
-            if (!conversation) continue;
 
             // Download media if present (media_id needs to be resolved via Meta API)
             let resolvedMediaUrl: string | null = null;
