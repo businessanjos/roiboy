@@ -69,7 +69,9 @@ const FILTER_FIELDS = [
   { value: 'created_at', label: 'Data de criação', type: 'date' },
   { value: 'updated_at', label: 'Última atualização', type: 'date' },
   { value: 'expected_close_date', label: 'Data prevista fechamento', type: 'date' },
+  { value: 'next_activity_date', label: 'Próxima atividade em', type: 'date' },
 ];
+
 
 const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
   text: [
