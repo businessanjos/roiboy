@@ -530,11 +530,22 @@ export default function SalesPipeline() {
     return Array.from(tagSet).sort();
   }, [deals]);
 
+  // Batch activity statuses to support "Próxima atividade em" filter
+  const { statusMap: activityStatusMap } = useBatchDealActivityStatus(allDealIds);
+  const dealNextActivityMap = useMemo(() => {
+    const m: Record<string, string | null> = {};
+    Object.entries(activityStatusMap).forEach(([id, s]) => {
+      m[id] = s?.nextDueDate ?? null;
+    });
+    return m;
+  }, [activityStatusMap]);
+
   // Apply unified filter to deals
   const filteredOpenDeals = useMemo(() =>
-    applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues),
-    [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues]
+    applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap),
+    [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap]
   );
+
   const filteredWonDeals = useMemo(() => 
     applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap), 
     [wonDeals, searchTerm, openDealProductMap]
