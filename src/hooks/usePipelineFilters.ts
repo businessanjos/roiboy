@@ -82,7 +82,14 @@ export const RECOMMENDED_FILTERS = [
     conditions: [{ field: 'responsible_user_id', operator: 'is_empty', value: null }],
     match_type: 'all' as const
   },
+  {
+    id: 'no_next_activity',
+    name: 'Sem atividade agendada',
+    conditions: [{ field: 'next_activity_date', operator: 'is_empty', value: null }],
+    match_type: 'all' as const
+  },
 ];
+
 
 export function usePipelineFilters() {
   const { currentUser } = useCurrentUser();
@@ -212,7 +219,8 @@ export function applyFilterToDeals(
   activeFilter: ActiveFilter | null,
   searchTerm?: string,
   dealProductMap?: Record<string, string>,
-  dealCustomFieldValues?: Record<string, Record<string, string>>
+  dealCustomFieldValues?: Record<string, Record<string, string>>,
+  dealNextActivityMap?: Record<string, string | null>
 ): Deal[] {
   if (!activeFilter && !searchTerm?.trim()) return deals;
 
@@ -246,11 +254,12 @@ export function applyFilterToDeals(
   if (conditions.length === 0) return filtered;
 
   return filtered.filter(deal => {
-    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues));
+    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues, dealNextActivityMap));
     if (matchType === 'all') return results.every(Boolean);
     return results.some(Boolean);
   });
 }
+
 
 function toArray(value: any): any[] {
   if (Array.isArray(value)) return value.filter((v) => v !== null && v !== undefined && v !== "");
@@ -258,7 +267,7 @@ function toArray(value: any): any[] {
   return [value];
 }
 
-function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>): boolean {
+function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>, dealNextActivityMap?: Record<string, string | null>): boolean {
   const { field, operator, value, include_empty } = condition;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -356,6 +365,15 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
         return operator === 'is_empty';
       }
       return evaluateDateCondition(deal.expected_close_date, operator, value, today);
+
+    case 'next_activity_date': {
+      const nextDue = dealNextActivityMap?.[deal.id] ?? null;
+      if (!nextDue) return operator === 'is_empty';
+      if (operator === 'is_empty') return false;
+      if (operator === 'is_not_empty') return true;
+      return evaluateDateCondition(nextDue, operator, value, today);
+    }
+
 
     default:
       return true;
