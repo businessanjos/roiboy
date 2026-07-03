@@ -324,7 +324,7 @@ Deno.serve(async (req) => {
               } else if (assignment.status === "closed") {
                 await supabase
                   .from("zapp_conversation_assignments")
-                  .update({ status: "open", closed_at: null, closed_by: null })
+                  .update({ status: "triage", closed_at: null, closed_by: null })
                   .eq("id", assignment.id);
               }
             }
