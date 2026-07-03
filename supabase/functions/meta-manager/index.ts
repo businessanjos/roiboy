@@ -319,7 +319,7 @@ Deno.serve(async (req) => {
                   account_id: accountId,
                   zapp_conversation_id: conv.id,
                   department_id: dept.id,
-                  status: "open",
+                  status: "triage",
                 });
               } else if (assignment.status === "closed") {
                 await supabase
