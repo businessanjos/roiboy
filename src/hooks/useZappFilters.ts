@@ -71,27 +71,23 @@ export function useZappFilters(options: UseZappFiltersOptions) {
   const toggleWhatsAppConnection = useCallback(async (sectorId?: string) => {
     setWhatsappConnecting(true);
     try {
+      const { toast } = await import("sonner");
       if (whatsappConnected) {
-        const response = await supabase.functions.invoke("uazapi-manager", {
-          body: { action: "disconnect", sector_id: sectorId },
-        });
-        if (response.error) throw new Error(response.error.message);
+        // "Minha conexão" é um toggle LOCAL de recebimento em tempo real —
+        // não deve fazer /logout na instância compartilhada do setor.
         setWhatsappConnected(false);
-        setWhatsappInstanceName(null);
-        const { toast } = await import("sonner");
-        toast.success("WhatsApp desconectado do zAPP");
+        toast.success("Recebimento em tempo real pausado para você");
       } else {
         const statusResponse = await supabase.functions.invoke("uazapi-manager", {
           body: { action: "status", sector_id: sectorId },
         });
         const state = statusResponse.data?.state || statusResponse.data?.data?.state;
         const connected = state === "open" || statusResponse.data?.connected || statusResponse.data?.data?.connected;
-        const { toast } = await import("sonner");
         if (connected) {
           setWhatsappConnected(true);
-          toast.success("WhatsApp conectado ao zAPP!");
+          toast.success("Recebendo mensagens em tempo real");
         } else {
-          toast.warning("WhatsApp desconectado. Abra 'Conexões WhatsApp' na barra lateral e clique em 'Reconectar via QR Code'.");
+          toast.warning("WhatsApp do setor desconectado. Use 'Reconectar via QR Code' na seção 'Conexões WhatsApp' acima.");
         }
       }
     } catch (error: any) {
