@@ -144,32 +144,52 @@ Deno.serve(async (req) => {
           .in("field_id", RELEVANT_FIELD_IDS)
       : { data: [] };
 
-    const evidenceByClient = new Map<string, { source: string; field?: string; text: string }[]>();
+    type Ev = { source: string; field?: string; text: string; kind: "doctor" | "dentist" };
+    const evidenceByClient = new Map<string, Ev[]>();
+    const excludedByClient = new Set<string>();
 
     for (const fv of fieldValues ?? []) {
       const text = (fv as any).value_text as string | null;
-      if (!isMedical(text)) continue;
+      if (!text) continue;
+      const lower = text.toLowerCase();
+      // Se qualquer campo indica profissão excluída, cliente é descartado.
+      if (EXCLUDE_TERMS.some((t) => lower.includes(t))) {
+        excludedByClient.add((fv as any).client_id);
+      }
+      const kind = classify(text);
+      if (!kind) continue;
       const fieldName = (fv as any).custom_fields?.name ?? "Campo";
       const list = evidenceByClient.get((fv as any).client_id) ?? [];
-      list.push({ source: "onboarding", field: fieldName, text: text! });
+      list.push({ source: "onboarding", field: fieldName, text, kind });
       evidenceByClient.set((fv as any).client_id, list);
     }
 
-    // 3) Compile final list: ALL mentorship clients, with any evidence attached.
-    // This way the user can classify clients that don't have education/specialty
-    // filled yet (they will appear without evidence).
+    // 3) Compile final list: apenas médicos e dentistas com evidência positiva.
     const result = clientList
       .filter((c) => c.isMentorship)
       .map((c) => {
-        const evidence = evidenceByClient.get(c.id) ?? [];
-        if (c.education && /m[eé]dic/i.test(c.education)) {
-          evidence.push({ source: "cadastro", field: "Formação", text: c.education });
+        const evidence: Ev[] = evidenceByClient.get(c.id) ?? [];
+        const eduKind = classify(c.education);
+        if (eduKind) {
+          evidence.push({ source: "cadastro", field: "Formação", text: c.education!, kind: eduKind });
         }
-        if (c.education_specialty) {
-          evidence.push({ source: "cadastro", field: "Especialidade", text: c.education_specialty });
+        const specKind = classify(c.education_specialty);
+        if (specKind) {
+          evidence.push({ source: "cadastro", field: "Especialidade", text: c.education_specialty!, kind: specKind });
         }
-        return { ...c, evidence };
+        // Também descarta se cadastro traz profissão excluída.
+        const eduLower = (c.education ?? "").toLowerCase();
+        const specLower = (c.education_specialty ?? "").toLowerCase();
+        if (EXCLUDE_TERMS.some((t) => eduLower.includes(t) || specLower.includes(t))) {
+          excludedByClient.add(c.id);
+        }
+        const kind: "doctor" | "dentist" | null =
+          evidence.some((e) => e.kind === "doctor") ? "doctor"
+          : evidence.some((e) => e.kind === "dentist") ? "dentist"
+          : null;
+        return { ...c, evidence, kind };
       })
+      .filter((c) => c.kind !== null && !excludedByClient.has(c.id))
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
 
     return new Response(
