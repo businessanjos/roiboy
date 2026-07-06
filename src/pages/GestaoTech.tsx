@@ -28,6 +28,7 @@ import {
   Activity, DollarSign, Users, Plus, RefreshCw, TrendingUp, Wallet,
   ExternalLink, Pencil, Trash2, Loader2, AlertTriangle,
 } from "lucide-react";
+import { LovableCostsSection } from "@/components/gestao-tech/LovableCostsSection";
 
 const fmtBRL = (cents: number, currency = "BRL") =>
   ((cents || 0) / 100).toLocaleString("pt-BR", {
@@ -415,6 +416,8 @@ export default function GestaoTech() {
           )}
         </CardContent>
       </Card>
+
+      <LovableCostsSection />
 
       <ProjectDialog
         open={dialogOpen}

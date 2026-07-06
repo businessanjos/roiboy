@@ -14526,6 +14526,45 @@ export type Database = {
         }
         Relationships: []
       }
+      lovable_costs: {
+        Row: {
+          account_id: string
+          amount_cents: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          kind: string
+          notes: string | null
+          occurred_on: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          amount_cents: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          kind: string
+          notes?: string | null
+          occurred_on: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          kind?: string
+          notes?: string | null
+          occurred_on?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       marketing_ad_sets: {
         Row: {
           account_id: string | null
