@@ -1109,11 +1109,12 @@ Deno.serve(async (req) => {
       const pendingStatusUpdates = integrations
         .map((integration) => {
           const config = asRecord(integration.config) || {};
+          const provider = getString(config.provider) || "uazapi";
+          if (provider === "meta_official") return null; // no live probe for meta
           const currentInstanceName = getString(config.instance_name);
           const liveStatus = currentInstanceName ? liveStatuses.get(currentInstanceName) : undefined;
-          if (!liveStatus || liveStatus.state === "unknown") return null;
-
-          const nextStatus = liveStatus.connected ? "connected" : "disconnected";
+          // For UAZAPI: unknown => disconnected (token invalid). Always sync DB to reality.
+          const nextStatus = liveStatus?.connected === true ? "connected" : "disconnected";
           if (integration.status === nextStatus) return null;
 
           return supabase.from("integrations").update({ status: nextStatus }).eq("id", integration.id);
