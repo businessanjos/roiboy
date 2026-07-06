@@ -92,6 +92,9 @@ export default function MedicalClients() {
     return clients.filter((c) => {
       if (productFilter !== "all" && !c.products.includes(productFilter)) return false;
       if (sourceFilter !== "all" && !c.evidence.some((e) => e.source === sourceFilter)) return false;
+      if (classificationFilter === "unclassified" && (c.education || c.education_specialty)) return false;
+      if (classificationFilter === "classified" && !c.education && !c.education_specialty) return false;
+      if (classificationFilter === "medico" && !(c.education && /m[eé]dic/i.test(c.education))) return false;
       if (!q) return true;
       const hay = [
         c.full_name,
@@ -104,7 +107,7 @@ export default function MedicalClients() {
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [clients, search, productFilter, sourceFilter]);
+  }, [clients, search, productFilter, sourceFilter, classificationFilter]);
 
   const exportCsv = () => {
     const rows = [
