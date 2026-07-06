@@ -5,13 +5,41 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MEDICAL_TERMS = [
+// Somente Médicos e Dentistas. Excluir explicitamente outras profissões da saúde.
+const DOCTOR_TERMS = [
   "médico", "medico", "médica", "medica", "medicina",
   "cirurgi", "dermato", "cardio", "pediatr", "ginecolog", "ortoped",
-  "neurocir", "psiquiatr", "urolog", "oftalmo", "otorrino", "anestesi",
+  "neurocir", "neurolog", "psiquiatr", "urolog", "oftalmo", "otorrino", "anestesi",
   "radiolog", "endocrino", "nutrolog", "hemato", "nefro", "reumato",
-  "gastro", "infecto", "oncolog", "pneumolog", "geriatr", "patolog",
+  "gastroenter", "infecto", "oncolog", "pneumolog", "geriatr", "patolog",
   "mastolog", "angiolog", "homeopat", "hebiatr", "clínica médica", "clinica medica",
+  "hepatolog",
+];
+
+const DENTIST_TERMS = [
+  "dentista", "odontolog", "odontólog", "odonto", "odontopediatr",
+  "endodont", "periodont", "implantodont", "ortodont", "protesist",
+  "harmonizaç", "harmoniz", "cirurgião-dentista", "cirurgiao-dentista", "cirurgiã-dentista", "cirurgia dentista",
+];
+
+// Se o texto contiver qualquer um destes, NÃO é médico nem dentista.
+const EXCLUDE_TERMS = [
+  "biomédic", "biomedic",
+  "fisioterap",
+  "enfermeir", "enfermag",
+  "farmacêut", "farmaceut",
+  "nutricion",
+  "psicólog", "psicolog", "psicanal",
+  "veterinár", "veterinar",
+  "esteticist", "estética facial", "estetica facial", "estética avançada", "estetica avancada",
+  "fonoaudi",
+  "terapeuta ocupacional",
+  "educador físic", "educador fisic", "educadora físic", "educadora fisic",
+  "personal trainer",
+  "quiroprax",
+  "podólog", "podolog",
+  "técnic", "tecnic",
+  "administrad", "empresár", "empresari", "advogad", "engenh", "arquitet",
 ];
 
 const RELEVANT_FIELD_IDS = [
@@ -25,10 +53,16 @@ const RELEVANT_FIELD_IDS = [
 
 const MENTORSHIP_PRODUCT_PATTERNS = ["ryka", "eternum", "mvp", "private"];
 
-function isMedical(text: string | null | undefined): boolean {
-  if (!text) return false;
+type Classification = "doctor" | "dentist" | null;
+
+function classify(text: string | null | undefined): Classification {
+  if (!text) return null;
   const lower = text.toLowerCase();
-  return MEDICAL_TERMS.some((t) => lower.includes(t));
+  // Exclusão tem prioridade — se aparece profissão bloqueada, ignora.
+  if (EXCLUDE_TERMS.some((t) => lower.includes(t))) return null;
+  if (DENTIST_TERMS.some((t) => lower.includes(t))) return "dentist";
+  if (DOCTOR_TERMS.some((t) => lower.includes(t))) return "doctor";
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -110,32 +144,52 @@ Deno.serve(async (req) => {
           .in("field_id", RELEVANT_FIELD_IDS)
       : { data: [] };
 
-    const evidenceByClient = new Map<string, { source: string; field?: string; text: string }[]>();
+    type Ev = { source: string; field?: string; text: string; kind: "doctor" | "dentist" };
+    const evidenceByClient = new Map<string, Ev[]>();
+    const excludedByClient = new Set<string>();
 
     for (const fv of fieldValues ?? []) {
       const text = (fv as any).value_text as string | null;
-      if (!isMedical(text)) continue;
+      if (!text) continue;
+      const lower = text.toLowerCase();
+      // Se qualquer campo indica profissão excluída, cliente é descartado.
+      if (EXCLUDE_TERMS.some((t) => lower.includes(t))) {
+        excludedByClient.add((fv as any).client_id);
+      }
+      const kind = classify(text);
+      if (!kind) continue;
       const fieldName = (fv as any).custom_fields?.name ?? "Campo";
       const list = evidenceByClient.get((fv as any).client_id) ?? [];
-      list.push({ source: "onboarding", field: fieldName, text: text! });
+      list.push({ source: "onboarding", field: fieldName, text, kind });
       evidenceByClient.set((fv as any).client_id, list);
     }
 
-    // 3) Compile final list: ALL mentorship clients, with any evidence attached.
-    // This way the user can classify clients that don't have education/specialty
-    // filled yet (they will appear without evidence).
+    // 3) Compile final list: apenas médicos e dentistas com evidência positiva.
     const result = clientList
       .filter((c) => c.isMentorship)
       .map((c) => {
-        const evidence = evidenceByClient.get(c.id) ?? [];
-        if (c.education && /m[eé]dic/i.test(c.education)) {
-          evidence.push({ source: "cadastro", field: "Formação", text: c.education });
+        const evidence: Ev[] = evidenceByClient.get(c.id) ?? [];
+        const eduKind = classify(c.education);
+        if (eduKind) {
+          evidence.push({ source: "cadastro", field: "Formação", text: c.education!, kind: eduKind });
         }
-        if (c.education_specialty) {
-          evidence.push({ source: "cadastro", field: "Especialidade", text: c.education_specialty });
+        const specKind = classify(c.education_specialty);
+        if (specKind) {
+          evidence.push({ source: "cadastro", field: "Especialidade", text: c.education_specialty!, kind: specKind });
         }
-        return { ...c, evidence };
+        // Também descarta se cadastro traz profissão excluída.
+        const eduLower = (c.education ?? "").toLowerCase();
+        const specLower = (c.education_specialty ?? "").toLowerCase();
+        if (EXCLUDE_TERMS.some((t) => eduLower.includes(t) || specLower.includes(t))) {
+          excludedByClient.add(c.id);
+        }
+        const kind: "doctor" | "dentist" | null =
+          evidence.some((e) => e.kind === "doctor") ? "doctor"
+          : evidence.some((e) => e.kind === "dentist") ? "dentist"
+          : null;
+        return { ...c, evidence, kind };
       })
+      .filter((c) => c.kind !== null && !excludedByClient.has(c.id))
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
 
     return new Response(
