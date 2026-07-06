@@ -121,8 +121,9 @@ Deno.serve(async (req) => {
       evidenceByClient.set((fv as any).client_id, list);
     }
 
-    // 3) Compile final list: mentorship clients that either match evidence
-    // OR have education marked as Médico(a) OR a medical specialty.
+    // 3) Compile final list: ALL mentorship clients, with any evidence attached.
+    // This way the user can classify clients that don't have education/specialty
+    // filled yet (they will appear without evidence).
     const result = clientList
       .filter((c) => c.isMentorship)
       .map((c) => {
@@ -135,7 +136,6 @@ Deno.serve(async (req) => {
         }
         return { ...c, evidence };
       })
-      .filter((c) => c.evidence.length > 0)
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
 
     return new Response(
