@@ -223,6 +223,17 @@ export default function MedicalClients() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={classificationFilter} onValueChange={setClassificationFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Classificação" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="unclassified">Sem classificação</SelectItem>
+              <SelectItem value="classified">Já classificados</SelectItem>
+              <SelectItem value="medico">Apenas médicos</SelectItem>
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
