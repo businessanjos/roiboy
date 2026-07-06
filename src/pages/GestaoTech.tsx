@@ -417,6 +417,8 @@ export default function GestaoTech() {
         </CardContent>
       </Card>
 
+      <LovableCostsSection />
+
       <ProjectDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
