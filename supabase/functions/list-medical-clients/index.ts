@@ -5,13 +5,41 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MEDICAL_TERMS = [
+// Somente Médicos e Dentistas. Excluir explicitamente outras profissões da saúde.
+const DOCTOR_TERMS = [
   "médico", "medico", "médica", "medica", "medicina",
   "cirurgi", "dermato", "cardio", "pediatr", "ginecolog", "ortoped",
-  "neurocir", "psiquiatr", "urolog", "oftalmo", "otorrino", "anestesi",
+  "neurocir", "neurolog", "psiquiatr", "urolog", "oftalmo", "otorrino", "anestesi",
   "radiolog", "endocrino", "nutrolog", "hemato", "nefro", "reumato",
-  "gastro", "infecto", "oncolog", "pneumolog", "geriatr", "patolog",
+  "gastroenter", "infecto", "oncolog", "pneumolog", "geriatr", "patolog",
   "mastolog", "angiolog", "homeopat", "hebiatr", "clínica médica", "clinica medica",
+  "hepatolog",
+];
+
+const DENTIST_TERMS = [
+  "dentista", "odontolog", "odontólog", "odonto", "odontopediatr",
+  "endodont", "periodont", "implantodont", "ortodont", "protesist",
+  "harmonizaç", "harmoniz", "cirurgião-dentista", "cirurgiao-dentista", "cirurgiã-dentista", "cirurgia dentista",
+];
+
+// Se o texto contiver qualquer um destes, NÃO é médico nem dentista.
+const EXCLUDE_TERMS = [
+  "biomédic", "biomedic",
+  "fisioterap",
+  "enfermeir", "enfermag",
+  "farmacêut", "farmaceut",
+  "nutricion",
+  "psicólog", "psicolog", "psicanal",
+  "veterinár", "veterinar",
+  "esteticist", "estética facial", "estetica facial", "estética avançada", "estetica avancada",
+  "fonoaudi",
+  "terapeuta ocupacional",
+  "educador físic", "educador fisic", "educadora físic", "educadora fisic",
+  "personal trainer",
+  "quiroprax",
+  "podólog", "podolog",
+  "técnic", "tecnic",
+  "administrad", "empresár", "empresari", "advogad", "engenh", "arquitet",
 ];
 
 const RELEVANT_FIELD_IDS = [
@@ -25,10 +53,16 @@ const RELEVANT_FIELD_IDS = [
 
 const MENTORSHIP_PRODUCT_PATTERNS = ["ryka", "eternum", "mvp", "private"];
 
-function isMedical(text: string | null | undefined): boolean {
-  if (!text) return false;
+type Classification = "doctor" | "dentist" | null;
+
+function classify(text: string | null | undefined): Classification {
+  if (!text) return null;
   const lower = text.toLowerCase();
-  return MEDICAL_TERMS.some((t) => lower.includes(t));
+  // Exclusão tem prioridade — se aparece profissão bloqueada, ignora.
+  if (EXCLUDE_TERMS.some((t) => lower.includes(t))) return null;
+  if (DENTIST_TERMS.some((t) => lower.includes(t))) return "dentist";
+  if (DOCTOR_TERMS.some((t) => lower.includes(t))) return "doctor";
+  return null;
 }
 
 Deno.serve(async (req) => {
