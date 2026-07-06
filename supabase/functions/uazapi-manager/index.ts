@@ -309,28 +309,54 @@ function resolveStatusSnapshot(payload: unknown): StatusSnapshot {
   return { state, connected: state === "connected", owner };
 }
 
+function detectLoggedOut(payload: unknown): boolean {
+  const rec = asRecord(payload);
+  if (!rec) return false;
+  const msg = (getString(rec.message) || getString(rec.error) || "").toLowerCase();
+  const code = typeof rec.code === "number" ? rec.code : undefined;
+  if (code === 401) return true;
+  if (/logged out from another device|loggedoutfromanotherdevice|logged out|session (?:closed|ended|expired)/i.test(msg)) return true;
+  return false;
+}
+
 async function resolveStatusFromToken(token: string, server?: ServerConfig): Promise<StatusSnapshot> {
   try {
     const instanceInfo = await uazapiInstance("/status", "GET", token, undefined, server);
     console.log(`[uazapi-manager] Instance status fallback response:`, JSON.stringify(instanceInfo).substring(0, 300));
+
+    if (detectLoggedOut(instanceInfo)) {
+      console.warn(`[uazapi-manager] ⚠️ Instance logged out from another device (detected via /status)`);
+      return { state: "logged_out", connected: false, loggedOut: true };
+    }
 
     const snapshot = resolveStatusSnapshot(instanceInfo);
     if (snapshot.state !== "unknown") {
       return snapshot;
     }
   } catch (instErr) {
+    const msg = String((instErr as Error)?.message || "");
     console.warn(`[uazapi-manager] Instance-level status check failed:`, instErr);
+    if (/logged out|401|invalid token/i.test(msg)) {
+      return { state: "logged_out", connected: false, loggedOut: true };
+    }
   }
 
   try {
     const meInfo = await uazapiInstance("/me", "GET", token, undefined, server);
+    if (detectLoggedOut(meInfo)) {
+      return { state: "logged_out", connected: false, loggedOut: true };
+    }
     if (meInfo && (meInfo.id || meInfo.wid || meInfo.phone || meInfo.number)) {
       const owner = meInfo.phone || meInfo.number || meInfo.id;
       console.log(`[uazapi-manager] /me endpoint confirmed connected:`, owner);
       return { state: "connected", connected: true, owner };
     }
-  } catch {
-    console.log(`[uazapi-manager] /me endpoint also failed`);
+  } catch (e) {
+    const msg = String((e as Error)?.message || "");
+    console.log(`[uazapi-manager] /me endpoint also failed:`, msg);
+    if (/logged out|401|invalid token/i.test(msg)) {
+      return { state: "logged_out", connected: false, loggedOut: true };
+    }
   }
 
   return { state: "unknown", connected: false };
