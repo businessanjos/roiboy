@@ -91,7 +91,7 @@ export function useZappFilters(options: UseZappFiltersOptions) {
           setWhatsappConnected(true);
           toast.success("WhatsApp conectado ao zAPP!");
         } else {
-          toast.warning("Configure a conexão WhatsApp primeiro em Integrações");
+          toast.warning("WhatsApp desconectado. Abra 'Conexões WhatsApp' na barra lateral e clique em 'Reconectar via QR Code'.");
         }
       }
     } catch (error: any) {
