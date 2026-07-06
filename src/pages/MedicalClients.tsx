@@ -29,6 +29,7 @@ export default function MedicalClients() {
   const [search, setSearch] = useState("");
   const [productFilter, setProductFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [classificationFilter, setClassificationFilter] = useState<string>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const EDUCATION_OPTIONS = [
@@ -91,6 +92,9 @@ export default function MedicalClients() {
     return clients.filter((c) => {
       if (productFilter !== "all" && !c.products.includes(productFilter)) return false;
       if (sourceFilter !== "all" && !c.evidence.some((e) => e.source === sourceFilter)) return false;
+      if (classificationFilter === "unclassified" && (c.education || c.education_specialty)) return false;
+      if (classificationFilter === "classified" && !c.education && !c.education_specialty) return false;
+      if (classificationFilter === "medico" && !(c.education && /m[eé]dic/i.test(c.education))) return false;
       if (!q) return true;
       const hay = [
         c.full_name,
@@ -103,7 +107,7 @@ export default function MedicalClients() {
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [clients, search, productFilter, sourceFilter]);
+  }, [clients, search, productFilter, sourceFilter, classificationFilter]);
 
   const exportCsv = () => {
     const rows = [
@@ -217,6 +221,17 @@ export default function MedicalClients() {
                   {sourceLabel(s)}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={classificationFilter} onValueChange={setClassificationFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Classificação" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="unclassified">Sem classificação</SelectItem>
+              <SelectItem value="classified">Já classificados</SelectItem>
+              <SelectItem value="medico">Apenas médicos</SelectItem>
             </SelectContent>
           </Select>
         </CardContent>
