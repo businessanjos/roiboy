@@ -1109,11 +1109,12 @@ Deno.serve(async (req) => {
       const pendingStatusUpdates = integrations
         .map((integration) => {
           const config = asRecord(integration.config) || {};
+          const provider = getString(config.provider) || "uazapi";
+          if (provider === "meta_official") return null; // no live probe for meta
           const currentInstanceName = getString(config.instance_name);
           const liveStatus = currentInstanceName ? liveStatuses.get(currentInstanceName) : undefined;
-          if (!liveStatus || liveStatus.state === "unknown") return null;
-
-          const nextStatus = liveStatus.connected ? "connected" : "disconnected";
+          // For UAZAPI: unknown => disconnected (token invalid). Always sync DB to reality.
+          const nextStatus = liveStatus?.connected === true ? "connected" : "disconnected";
           if (integration.status === nextStatus) return null;
 
           return supabase.from("integrations").update({ status: nextStatus }).eq("id", integration.id);
@@ -1129,16 +1130,20 @@ Deno.serve(async (req) => {
           const config = asRecord(integration.config) || {};
           const currentInstanceName = getString(config.instance_name) || "";
           const liveStatus = currentInstanceName ? liveStatuses.get(currentInstanceName) : undefined;
-          const effectiveConnected = !liveStatus || liveStatus.state === "unknown"
+          const provider = getString(config.provider) || "uazapi";
+          // For UAZAPI: trust ONLY live status. If live is unknown (token invalid/expired), treat as disconnected —
+          // never fall back to stale DB `status`, since that hides real disconnections.
+          // For meta_official: no live check available, use DB status.
+          const effectiveConnected = provider === "meta_official"
             ? integration.status === "connected"
-            : liveStatus.connected;
+            : (liveStatus?.connected === true);
 
           return {
             id: integration.id,
             sector_id: integration.sector_id,
             instance_name: currentInstanceName,
             status: effectiveConnected ? "connected" : "disconnected",
-            raw_state: liveStatus?.state || integration.status || "unknown",
+            raw_state: liveStatus?.state || (provider === "meta_official" ? integration.status : "unknown") || "unknown",
             display_name: integration.display_name,
             has_pin: !!integration.pin_hash,
             provider: getString(config.provider) || "uazapi",
