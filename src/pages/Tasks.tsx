@@ -647,12 +647,17 @@ export default function Tasks() {
     const inProgressStatus = customStatuses.find(s => s.name.toLowerCase().includes('andamento'));
     const doneStatus = customStatuses.find(s => s.is_completed_status || s.name.toLowerCase().includes('conclu'));
     
-    const pendingCount = baseFilteredTasks.filter(t => 
-      t.custom_status_id === pendingStatus?.id || 
-      (!t.custom_status_id && pendingStatus?.is_default)
+    // Espelha a lógica das abas: tarefa com completed_at nunca conta como pendente/em andamento
+    const pendingCount = baseFilteredTasks.filter(t =>
+      !t.completed_at && (
+        t.custom_status_id === pendingStatus?.id ||
+        (!t.custom_status_id && pendingStatus?.is_default)
+      )
     ).length;
-    
-    const inProgressCount = baseFilteredTasks.filter(t => t.custom_status_id === inProgressStatus?.id).length;
+
+    const inProgressCount = baseFilteredTasks.filter(t =>
+      !t.completed_at && t.custom_status_id === inProgressStatus?.id
+    ).length;
     const doneCount = baseFilteredTasks.filter(t => t.custom_status_id === doneStatus?.id || t.completed_at !== null).length;
     
     // Overdue: tasks past due_date that are not completed
