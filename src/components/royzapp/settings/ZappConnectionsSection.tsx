@@ -216,17 +216,6 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
-                    {!isMeta && !connected && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setQrInstance(c)}
-                        className="h-7 px-2 text-zapp-accent hover:bg-zapp-accent/10"
-                        title="Conectar via QR"
-                      >
-                        <QrCode className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
                     {isAdmin && (
                       <Button
                         size="sm"
@@ -241,6 +230,17 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                     )}
                   </div>
                 </div>
+
+                {!isMeta && !connected && (
+                  <Button
+                    size="sm"
+                    onClick={() => setQrInstance(c)}
+                    className="w-full mt-3 bg-zapp-accent hover:bg-zapp-accent-hover text-white gap-2"
+                  >
+                    <QrCode className="h-4 w-4" />
+                    Reconectar via QR Code
+                  </Button>
+                )}
               </div>
             );
           })}
