@@ -96,6 +96,7 @@ type StatusSnapshot = {
   state: string;
   connected: boolean;
   owner?: string;
+  loggedOut?: boolean;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -308,28 +309,54 @@ function resolveStatusSnapshot(payload: unknown): StatusSnapshot {
   return { state, connected: state === "connected", owner };
 }
 
+function detectLoggedOut(payload: unknown): boolean {
+  const rec = asRecord(payload);
+  if (!rec) return false;
+  const msg = (getString(rec.message) || getString(rec.error) || "").toLowerCase();
+  const code = typeof rec.code === "number" ? rec.code : undefined;
+  if (code === 401) return true;
+  if (/logged out from another device|loggedoutfromanotherdevice|logged out|session (?:closed|ended|expired)/i.test(msg)) return true;
+  return false;
+}
+
 async function resolveStatusFromToken(token: string, server?: ServerConfig): Promise<StatusSnapshot> {
   try {
     const instanceInfo = await uazapiInstance("/status", "GET", token, undefined, server);
     console.log(`[uazapi-manager] Instance status fallback response:`, JSON.stringify(instanceInfo).substring(0, 300));
+
+    if (detectLoggedOut(instanceInfo)) {
+      console.warn(`[uazapi-manager] ⚠️ Instance logged out from another device (detected via /status)`);
+      return { state: "logged_out", connected: false, loggedOut: true };
+    }
 
     const snapshot = resolveStatusSnapshot(instanceInfo);
     if (snapshot.state !== "unknown") {
       return snapshot;
     }
   } catch (instErr) {
+    const msg = String((instErr as Error)?.message || "");
     console.warn(`[uazapi-manager] Instance-level status check failed:`, instErr);
+    if (/logged out|401|invalid token/i.test(msg)) {
+      return { state: "logged_out", connected: false, loggedOut: true };
+    }
   }
 
   try {
     const meInfo = await uazapiInstance("/me", "GET", token, undefined, server);
+    if (detectLoggedOut(meInfo)) {
+      return { state: "logged_out", connected: false, loggedOut: true };
+    }
     if (meInfo && (meInfo.id || meInfo.wid || meInfo.phone || meInfo.number)) {
       const owner = meInfo.phone || meInfo.number || meInfo.id;
       console.log(`[uazapi-manager] /me endpoint confirmed connected:`, owner);
       return { state: "connected", connected: true, owner };
     }
-  } catch {
-    console.log(`[uazapi-manager] /me endpoint also failed`);
+  } catch (e) {
+    const msg = String((e as Error)?.message || "");
+    console.log(`[uazapi-manager] /me endpoint also failed:`, msg);
+    if (/logged out|401|invalid token/i.test(msg)) {
+      return { state: "logged_out", connected: false, loggedOut: true };
+    }
   }
 
   return { state: "unknown", connected: false };
@@ -742,18 +769,89 @@ Deno.serve(async (req) => {
       const effectiveConnected = statusSnapshot.state === "unknown" ? storedConnected : statusSnapshot.connected;
       const effectiveState = statusSnapshot.state === "unknown" && storedConnected ? "connected" : statusSnapshot.state;
 
+      // ==== AUTO-RECONNECT: detect "logged out from another device" ====
+      let autoReconnect: { attempted: boolean; qr_code?: string; token?: string; error?: string } | undefined;
+      if (statusSnapshot.loggedOut && intData?.id) {
+        console.warn(`[uazapi-manager] 🔄 Auto-reconnect triggered for instance "${instanceName}" (logged out from another device)`);
+        try {
+          // Re-init instance on sector server to get a fresh token/session
+          const initRes = await uazapiAdmin("/instance/init", "POST", { name: instanceName }, sectorServer);
+          const newToken = initRes?.token || initRes?.instance?.token;
+          if (!newToken) throw new Error("init returned no token");
+
+          // Trigger /instance/connect to generate QR
+          const connectRes: any = await uazapiInstance("/instance/connect", "POST", newToken, {}, sectorServer);
+          const qrCode = connectRes?.qrcode || connectRes?.instance?.qrcode || connectRes?.data?.qrcode || connectRes?.qr;
+
+          const mergedConfig = {
+            ...(intData.config || {}),
+            provider: "uazapi",
+            instance_name: instanceName,
+            instance_token: newToken,
+            qr_code: qrCode || null,
+            last_auto_reconnect_at: new Date().toISOString(),
+          };
+          await supabase.from("integrations")
+            .update({ config: mergedConfig, status: "pending" })
+            .eq("id", intData.id);
+
+          // Throttled notification (once per 1h) to account admins + sector members
+          const lastAlert = (intData.config as any)?.last_reconnect_alert_at as string | undefined;
+          const shouldNotify = !lastAlert || (Date.now() - new Date(lastAlert).getTime()) > 60 * 60 * 1000;
+          if (shouldNotify) {
+            try {
+              const { data: admins } = await supabase
+                .from("users")
+                .select("id")
+                .eq("account_id", accountId)
+                .eq("role", "admin");
+              const rows = (admins || []).map((u: any) => ({
+                account_id: accountId,
+                user_id: u.id,
+                type: "system",
+                title: "WhatsApp desconectado",
+                content: `A instância "${intData.config?.instance_name || instanceName}" foi desconectada (logout de outro aparelho). Um novo QR Code foi gerado — escaneie para reconectar.`,
+                link: "/integrations/whatsapp",
+                source_type: "integration",
+                source_id: intData.id,
+              }));
+              if (rows.length) await supabase.from("notifications").insert(rows);
+              await supabase.from("integrations")
+                .update({ config: { ...mergedConfig, last_reconnect_alert_at: new Date().toISOString() } })
+                .eq("id", intData.id);
+            } catch (notifErr) {
+              console.warn(`[uazapi-manager] failed to notify admins:`, notifErr);
+            }
+          }
+
+          autoReconnect = { attempted: true, qr_code: qrCode, token: newToken };
+        } catch (recErr) {
+          console.error(`[uazapi-manager] auto-reconnect failed:`, recErr);
+          autoReconnect = { attempted: true, error: (recErr as Error).message };
+        }
+      }
+
       result = {
         state: effectiveState,
         connected: effectiveConnected,
         owner: statusSnapshot.owner,
+        logged_out: statusSnapshot.loggedOut === true,
+        needs_reconnect: statusSnapshot.loggedOut === true,
+        auto_reconnect: autoReconnect,
       };
 
-      if (intData?.id && statusSnapshot.state !== "unknown") {
+      if (intData?.id && statusSnapshot.state !== "unknown" && !statusSnapshot.loggedOut) {
         await supabase
           .from("integrations")
           .update({ status: statusSnapshot.connected ? "connected" : "disconnected" })
           .eq("id", intData.id);
+      } else if (intData?.id && statusSnapshot.loggedOut && !autoReconnect?.qr_code) {
+        await supabase
+          .from("integrations")
+          .update({ status: "disconnected" })
+          .eq("id", intData.id);
       }
+    
     
     } else if (action === "create") {
       const r = await uazapiAdmin("/instance/init", "POST", { name: instanceName }, sectorServer);
