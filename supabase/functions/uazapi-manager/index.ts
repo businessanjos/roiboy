@@ -96,6 +96,7 @@ type StatusSnapshot = {
   state: string;
   connected: boolean;
   owner?: string;
+  loggedOut?: boolean;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
