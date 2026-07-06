@@ -804,7 +804,7 @@ Deno.serve(async (req) => {
                 .from("users")
                 .select("id")
                 .eq("account_id", accountId)
-                .in("role", ["admin", "owner"]);
+                .eq("role", "admin");
               const rows = (admins || []).map((u: any) => ({
                 account_id: accountId,
                 user_id: u.id,
