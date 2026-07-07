@@ -1533,7 +1533,17 @@ export default function SalesPipeline() {
             <div className="space-y-3">
               {/* Pipeline selector row + unified filters */}
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                  <PipelineSelector
+                    pipelines={pipelines}
+                    activePipelineId={activePipelineId}
+                    onSelect={setActivePipelineId}
+                    onCreate={createPipeline}
+                    onUpdate={updatePipeline}
+                    onDelete={deletePipeline}
+                  />
+                  </div>
                   <PipelineSelector
                     pipelines={pipelines}
                     activePipelineId={activePipelineId}
