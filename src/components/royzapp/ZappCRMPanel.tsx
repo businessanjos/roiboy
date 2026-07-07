@@ -214,7 +214,7 @@ export function ZappCRMPanel({
       if (conversationLeadId || conversationClientId) {
         let query = supabase
           .from("deals")
-          .select("id, title, value, stage_id, status, created_at")
+          .select("id, title, value, stage_id, pipeline_id, status, created_at")
           .neq("status", "lost")
           .order("created_at", { ascending: false });
 
@@ -246,7 +246,7 @@ export function ZappCRMPanel({
           const leadIds = similarLeads.map(l => l.id);
           const { data: dealsByPhone, error: dealsError } = await supabase
             .from("deals")
-            .select("id, title, value, stage_id, status, created_at")
+            .select("id, title, value, stage_id, pipeline_id, status, created_at")
             .in("lead_id", leadIds)
             .neq("status", "lost")
             .order("created_at", { ascending: false });
@@ -268,7 +268,7 @@ export function ZappCRMPanel({
           const clientIds = similarClients.map(c => c.id);
           const { data: dealsByClient, error: dealsError } = await supabase
             .from("deals")
-            .select("id, title, value, stage_id, status, created_at")
+            .select("id, title, value, stage_id, pipeline_id, status, created_at")
             .in("client_id", clientIds)
             .neq("status", "lost")
             .order("created_at", { ascending: false });
