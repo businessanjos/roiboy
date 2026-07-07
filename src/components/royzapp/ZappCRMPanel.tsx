@@ -127,13 +127,14 @@ export function ZappCRMPanel({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deal_stages")
-        .select("id, name, color, display_order")
+        .select("id, name, color, display_order, pipeline_id")
         .order("display_order");
       if (error) throw error;
       return data as DealStage[];
     },
     enabled: !!currentUser?.account_id,
   });
+
 
   // Fetch products for "Item da Venda"
   const { data: fetchedProducts = [] } = useQuery({
