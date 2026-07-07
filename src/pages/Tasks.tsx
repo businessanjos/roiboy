@@ -556,6 +556,31 @@ export default function Tasks() {
     return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage;
   }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage]);
 
+  // Same filters as baseFilteredTasks but WITHOUT the due_date range filter.
+  // Used for the "Concluídas" stat card which filters by completed_at instead.
+  const baseFilteredTasksIgnoringDate = useMemo(() => tasks.filter((task) => {
+    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesUser = filterUser === "all" ||
+      (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
+    const matchesActivityType = filterActivityType === "all" ||
+      task.activity_type?.id === filterActivityType;
+    const activitySectorId = task.activity_type?.sector_id;
+    let matchesSector = true;
+    if (currentSector?.id === "vendas") {
+      if (activitySectorId && activitySectorId !== "vendas") matchesSector = false;
+      else matchesSector = activitySectorId === "vendas" || (!!task.deal_id && !activitySectorId);
+    } else if (currentSector?.id === "operacoes") {
+      if (activitySectorId && activitySectorId !== "operacoes") matchesSector = false;
+      else matchesSector = activitySectorId === "operacoes" || (!!task.client_id && !task.deal_id && !activitySectorId);
+    } else if (currentSector?.id) {
+      matchesSector = activitySectorId === currentSector.id;
+    }
+    const matchesStage = filterStage === "all" || task.deals?.stage?.id === filterStage;
+    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesStage;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage]);
+
   // Final filtered tasks - applies tab filter on top of base filters
   const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
     const defaultStatus = customStatuses.find(s => s.is_default);
