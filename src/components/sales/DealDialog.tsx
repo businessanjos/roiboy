@@ -86,7 +86,15 @@ const dealSchema = z.object({
   notes: z.string().optional(),
   tags: z.array(z.string()).default([]),
   product_id: z.string().optional(), // Item da Venda
+  education: z.string().optional(),
+  education_specialty: z.string().optional(),
 });
+
+const EDUCATION_OPTIONS = [
+  "Médico","Dentista","Nutricionista","Fisioterapeuta","Psicólogo","Veterinário",
+  "Biomédico","Enfermeiro","Farmacêutico","Fonoaudiólogo","Terapeuta Ocupacional",
+  "Educador Físico","Esteticista","Outro",
+];
 
 type DealFormValues = z.infer<typeof dealSchema>;
 
@@ -182,6 +190,8 @@ export function DealDialog({
       responsible_user_id: currentUser?.id || "",
       notes: "",
       tags: [],
+      education: "",
+      education_specialty: "",
     },
   });
 
@@ -334,6 +344,8 @@ export function DealDialog({
         responsible_user_id: deal.responsible_user_id || "",
         notes: deal.notes || "",
         tags: deal.tags || [],
+        education: (deal as any).education || "",
+        education_specialty: (deal as any).education_specialty || "",
         ...(draft?.values || {}),
       });
     } else {
@@ -351,6 +363,8 @@ export function DealDialog({
         responsible_user_id: currentUser?.id || "",
         notes: "",
         tags: [],
+        education: "",
+        education_specialty: "",
         ...(draft?.values || {}),
       });
       setSendNotification(draft?.sendNotification ?? false);
@@ -404,10 +418,13 @@ export function DealDialog({
       // Auto-assign to creator if no responsible selected
       // Include product_id (Item da Venda) in the data
       const productId = selectedProductId && selectedProductId !== "__none__" ? selectedProductId : undefined;
+      const isMedico = (data.education || "").toLowerCase().startsWith("médic") || (data.education || "").toLowerCase().startsWith("medic");
       const finalData = {
         ...data,
         responsible_user_id: data.responsible_user_id || currentUser?.id || "",
         product_id: productId,
+        education: data.education ? data.education : null,
+        education_specialty: isMedico ? (data.education_specialty?.trim() || null) : null,
       };
       await onSave(finalData, !isEditing && sendNotification);
       clearLocalAutosaveDraft(draftKey);
@@ -898,6 +915,60 @@ export function DealDialog({
                 </TabsContent>
 
                 <TabsContent value="details" className="space-y-4 mt-4">
+                  {/* Formação */}
+                  <FormField
+                    control={form.control}
+                    name="education"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Formação</FormLabel>
+                        <Select
+                          onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
+                          value={field.value || "__none__"}
+                          disabled={isClosed}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a formação" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="__none__">Não informado</SelectItem>
+                            {EDUCATION_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Especialidade (aparece só para Médico) */}
+                  {(() => {
+                    const ed = (form.watch("education") || "").toLowerCase();
+                    if (!ed.startsWith("médic") && !ed.startsWith("medic")) return null;
+                    return (
+                      <FormField
+                        control={form.control}
+                        name="education_specialty"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Especialidade médica</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Ex.: Dermatologia, Ortopedia, Cardiologia..."
+                                {...field}
+                                disabled={isClosed}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    );
+                  })()}
+
                   {/* Source */}
                   <FormField
                     control={form.control}

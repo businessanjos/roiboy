@@ -6098,6 +6098,8 @@ export type Database = {
           currency: string | null
           deleted_at: string | null
           deleted_by: string | null
+          education: string | null
+          education_specialty: string | null
           entry_value: number | null
           expected_close_date: string | null
           has_second_seat: boolean
@@ -6137,6 +6139,8 @@ export type Database = {
           currency?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          education?: string | null
+          education_specialty?: string | null
           entry_value?: number | null
           expected_close_date?: string | null
           has_second_seat?: boolean
@@ -6176,6 +6180,8 @@ export type Database = {
           currency?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          education?: string | null
+          education_specialty?: string | null
           entry_value?: number | null
           expected_close_date?: string | null
           has_second_seat?: boolean
