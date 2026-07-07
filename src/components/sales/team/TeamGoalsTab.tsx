@@ -179,7 +179,7 @@ export function TeamGoalsTab() {
 
     const [usersRes, careersRes, goalsRes, metricsRes] = await Promise.all([
       supabase.from("users").select("id, name, email, avatar_url")
-        .eq("account_id", currentUser.account_id).order("name"),
+        .eq("account_id", currentUser.account_id).eq("is_active", true).order("name"),
       supabase.from("sales_team_careers").select("user_id, cargo")
         .eq("account_id", currentUser.account_id),
       supabase.from("sales_monthly_goals").select("*")
