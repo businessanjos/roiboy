@@ -1533,7 +1533,8 @@ export default function SalesPipeline() {
             <div className="space-y-3">
               {/* Pipeline selector row + unified filters */}
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
                   <PipelineSelector
                     pipelines={pipelines}
                     activePipelineId={activePipelineId}
@@ -1542,114 +1543,128 @@ export default function SalesPipeline() {
                     onUpdate={updatePipeline}
                     onDelete={deletePipeline}
                   />
+                  </div>
                   
-                  {/* Filters */}
-                  <div className="flex items-center gap-2">
+                  
+                  {/* Filters toolbar */}
+                  <div className="flex flex-wrap items-end gap-3 bg-card border border-border rounded-xl p-3 shadow-sm w-full">
                     {activeTab === 'open' && (
-                      <PipelineFilterButton
-                        salesUsers={salesUsers}
-                        stages={stages}
-                        activeFilter={activeFilter}
-                        onFilterChange={setActiveFilter}
-                        availableTags={availableTags}
-                        products={pipelineProducts}
-                      />
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Avançado</label>
+                        <PipelineFilterButton
+                          salesUsers={salesUsers}
+                          stages={stages}
+                          activeFilter={activeFilter}
+                          onFilterChange={setActiveFilter}
+                          availableTags={availableTags}
+                          products={pipelineProducts}
+                        />
+                      </div>
                     )}
                     {activeTab === 'open' && titleTagOptions.length > 0 && (
                       <MultiSelectFilter
                         label="Origem"
                         placeholder="Todas as origens"
-                        width="w-full sm:w-[200px]"
+                        width="w-full sm:w-[220px]"
                         options={titleTagOptions.map(o => ({ value: o.value, label: `${o.label} (${o.count})` }))}
                         selected={titleTagFilter}
                         onChange={setTitleTagFilter}
                       />
                     )}
                     {activeTab === 'open' && (
-                      <Popover open={openDatePopoverOpen} onOpenChange={setOpenDatePopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn(
-                            "h-8 text-xs bg-background justify-start",
-                            openDatePreset !== 'all' && "border-primary text-primary"
-                          )}>
-                            <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                            {openDateLabel}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <div className="flex flex-col sm:flex-row">
-                            <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-0.5 min-w-[170px]">
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 pt-1 pb-1">Criado em</p>
-                              {([
-                                { key: 'all', label: 'Todas as datas' },
-                                { key: 'today', label: 'Hoje' },
-                                { key: 'this_week', label: 'Esta semana' },
-                                { key: 'this_month', label: 'Este mês' },
-                                { key: 'last_month', label: 'Mês passado' },
-                                { key: 'this_quarter', label: 'Este trimestre' },
-                                { key: 'this_year', label: 'Este ano' },
-                              ] as const).map(p => (
-                                <Button
-                                  key={p.key}
-                                  variant={openDatePreset === p.key ? 'secondary' : 'ghost'}
-                                  size="sm"
-                                  className="w-full justify-start text-xs h-7"
-                                  onClick={() => {
-                                    setOpenDatePreset(p.key);
-                                    setOpenDateStart('');
-                                    setOpenDateEnd('');
-                                    setOpenDatePopoverOpen(false);
-                                  }}
-                                >
-                                  {p.label}
-                                </Button>
-                              ))}
-                            </div>
-                            <div className="p-2">
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-1 pb-1">Período personalizado</p>
-                              <CalendarComponent
-                                mode="range"
-                                selected={openDateStart && openDateEnd ? { from: new Date(openDateStart), to: new Date(openDateEnd) } : undefined}
-                                onSelect={(range) => {
-                                  if (range?.from) {
-                                    setOpenDateStart(range.from.toISOString());
-                                    setOpenDateEnd(range.to ? range.to.toISOString() : range.from.toISOString());
-                                    if (range.to) {
-                                      setOpenDatePreset('custom');
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Período</label>
+                        <Popover open={openDatePopoverOpen} onOpenChange={setOpenDatePopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className={cn(
+                              "h-10 text-sm font-normal bg-background justify-start gap-2 min-w-[180px]",
+                              openDatePreset !== 'all' && "border-primary/60 text-primary bg-primary/5"
+                            )}>
+                              <Calendar className="h-4 w-4 opacity-70" />
+                              {openDateLabel}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <div className="flex flex-col sm:flex-row">
+                              <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-0.5 min-w-[170px]">
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 pt-1 pb-1">Criado em</p>
+                                {([
+                                  { key: 'all', label: 'Todas as datas' },
+                                  { key: 'today', label: 'Hoje' },
+                                  { key: 'this_week', label: 'Esta semana' },
+                                  { key: 'this_month', label: 'Este mês' },
+                                  { key: 'last_month', label: 'Mês passado' },
+                                  { key: 'this_quarter', label: 'Este trimestre' },
+                                  { key: 'this_year', label: 'Este ano' },
+                                ] as const).map(p => (
+                                  <Button
+                                    key={p.key}
+                                    variant={openDatePreset === p.key ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    className="w-full justify-start text-xs h-7"
+                                    onClick={() => {
+                                      setOpenDatePreset(p.key);
+                                      setOpenDateStart('');
+                                      setOpenDateEnd('');
                                       setOpenDatePopoverOpen(false);
+                                    }}
+                                  >
+                                    {p.label}
+                                  </Button>
+                                ))}
+                              </div>
+                              <div className="p-2">
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-1 pb-1">Período personalizado</p>
+                                <CalendarComponent
+                                  mode="range"
+                                  selected={openDateStart && openDateEnd ? { from: new Date(openDateStart), to: new Date(openDateEnd) } : undefined}
+                                  onSelect={(range) => {
+                                    if (range?.from) {
+                                      setOpenDateStart(range.from.toISOString());
+                                      setOpenDateEnd(range.to ? range.to.toISOString() : range.from.toISOString());
+                                      if (range.to) {
+                                        setOpenDatePreset('custom');
+                                        setOpenDatePopoverOpen(false);
+                                      }
                                     }
-                                  }
-                                }}
-                                numberOfMonths={1}
-                                locale={ptBR}
-                                className="pointer-events-auto"
-                              />
+                                  }}
+                                  numberOfMonths={1}
+                                  locale={ptBR}
+                                  className="pointer-events-auto"
+                                />
+                              </div>
                             </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     )}
-                    
-                    <div className="relative hidden sm:block">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar negócio..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 h-8 w-[200px] bg-background border-border text-sm"
-                      />
+
+                    <div className="flex flex-col gap-1 flex-1 min-w-[220px]">
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Pesquisa</label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar negócio..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-9 h-10 w-full bg-muted/40 border-border text-sm focus:bg-background transition-colors"
+                        />
+                      </div>
                     </div>
+
                     {canSeeDeleted && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8"
-                        onClick={() => setIsDeletedDrawerOpen(true)}
-                        title="Ver negócios excluídos"
-                      >
-                        <Trash2Icon className="h-3.5 w-3.5 mr-1" />
-                        Excluídos
-                      </Button>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-transparent select-none px-1">.</label>
+                        <Button
+                          variant="outline"
+                          className="h-10 gap-2 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 hover:border-destructive/30 transition-colors"
+                          onClick={() => setIsDeletedDrawerOpen(true)}
+                          title="Ver negócios excluídos"
+                        >
+                          <Trash2Icon className="h-4 w-4" />
+                          Excluídos
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
