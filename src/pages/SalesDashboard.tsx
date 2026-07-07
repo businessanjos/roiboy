@@ -569,6 +569,40 @@ export default function SalesDashboard() {
       .slice(0, 12);
   }, [deals]);
 
+  // Conversão por TAG do título ([XXX] Nome do lead) — origem manual
+  const titleTagConversion = useMemo(() => {
+    const map = new Map<string, { label: string; labelCounts: Map<string, number>; total: number; won: number; lost: number; value: number }>();
+    const bump = (title: string | null | undefined, kind: "created" | "won" | "lost", value: number) => {
+      const info = getTitleTagInfo(title);
+      if (!info) return;
+      const cur = map.get(info.key) || { label: info.raw, labelCounts: new Map(), total: 0, won: 0, lost: 0, value: 0 };
+      cur.labelCounts.set(info.raw, (cur.labelCounts.get(info.raw) ?? 0) + 1);
+      if (kind === "created") cur.total += 1;
+      if (kind === "won") { cur.won += 1; cur.value += value; }
+      if (kind === "lost") cur.lost += 1;
+      map.set(info.key, cur);
+    };
+    for (const d of deals || []) bump((d as any).title, "created", 0);
+    for (const d of wonDeals || []) bump((d as any).title, "won", Number((d as any).received_value ?? (d as any).value ?? 0));
+    for (const d of lostDeals || []) bump((d as any).title, "lost", 0);
+    return Array.from(map.entries())
+      .map(([key, v]) => {
+        let bestLabel = v.label;
+        let bestCount = -1;
+        for (const [raw, c] of v.labelCounts) if (c > bestCount) { bestCount = c; bestLabel = raw; }
+        return {
+          key,
+          name: bestLabel,
+          total: v.total,
+          won: v.won,
+          lost: v.lost,
+          value: v.value,
+          conv: v.total > 0 ? (v.won / v.total) * 100 : 0,
+        };
+      })
+      .sort((a, b) => b.total - a.total || b.won - a.won);
+  }, [deals, wonDeals, lostDeals]);
+
   // Close rate por executivo (won / reuniões realizadas)
   const closeRateByRep = useMemo(() => {
     const userMap = new Map<string, { name: string; avatar: string | null; held: number; won: number }>();
