@@ -53,6 +53,7 @@ interface DealStage {
   name: string;
   color: string;
   display_order: number;
+  pipeline_id: string | null;
 }
 
 interface Deal {
@@ -60,6 +61,7 @@ interface Deal {
   title: string;
   value: number;
   stage_id: string;
+  pipeline_id: string | null;
   status: string;
   created_at: string;
 }
@@ -125,13 +127,14 @@ export function ZappCRMPanel({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deal_stages")
-        .select("id, name, color, display_order")
+        .select("id, name, color, display_order, pipeline_id")
         .order("display_order");
       if (error) throw error;
       return data as DealStage[];
     },
     enabled: !!currentUser?.account_id,
   });
+
 
   // Fetch products for "Item da Venda"
   const { data: fetchedProducts = [] } = useQuery({
@@ -211,7 +214,7 @@ export function ZappCRMPanel({
       if (conversationLeadId || conversationClientId) {
         let query = supabase
           .from("deals")
-          .select("id, title, value, stage_id, status, created_at")
+          .select("id, title, value, stage_id, pipeline_id, status, created_at")
           .neq("status", "lost")
           .order("created_at", { ascending: false });
 
@@ -243,7 +246,7 @@ export function ZappCRMPanel({
           const leadIds = similarLeads.map(l => l.id);
           const { data: dealsByPhone, error: dealsError } = await supabase
             .from("deals")
-            .select("id, title, value, stage_id, status, created_at")
+            .select("id, title, value, stage_id, pipeline_id, status, created_at")
             .in("lead_id", leadIds)
             .neq("status", "lost")
             .order("created_at", { ascending: false });
@@ -265,7 +268,7 @@ export function ZappCRMPanel({
           const clientIds = similarClients.map(c => c.id);
           const { data: dealsByClient, error: dealsError } = await supabase
             .from("deals")
-            .select("id, title, value, stage_id, status, created_at")
+            .select("id, title, value, stage_id, pipeline_id, status, created_at")
             .in("client_id", clientIds)
             .neq("status", "lost")
             .order("created_at", { ascending: false });
@@ -630,7 +633,13 @@ export function ZappCRMPanel({
                 <div className="space-y-2">
                   <Label className="text-xs text-zapp-text-muted">Mover para estágio:</Label>
                   <div className="flex flex-wrap gap-1">
-                    {stages.map(stage => {
+                    {stages
+                      .filter(stage =>
+                        activeDeal.pipeline_id
+                          ? stage.pipeline_id === activeDeal.pipeline_id
+                          : true
+                      )
+                      .map(stage => {
                       const isActive = stage.id === activeDeal.stage_id;
                       return (
                         <Button
