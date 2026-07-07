@@ -915,6 +915,60 @@ export function DealDialog({
                 </TabsContent>
 
                 <TabsContent value="details" className="space-y-4 mt-4">
+                  {/* Formação */}
+                  <FormField
+                    control={form.control}
+                    name="education"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Formação</FormLabel>
+                        <Select
+                          onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
+                          value={field.value || "__none__"}
+                          disabled={isClosed}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a formação" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="__none__">Não informado</SelectItem>
+                            {EDUCATION_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Especialidade (aparece só para Médico) */}
+                  {(() => {
+                    const ed = (form.watch("education") || "").toLowerCase();
+                    if (!ed.startsWith("médic") && !ed.startsWith("medic")) return null;
+                    return (
+                      <FormField
+                        control={form.control}
+                        name="education_specialty"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Especialidade médica</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Ex.: Dermatologia, Ortopedia, Cardiologia..."
+                                {...field}
+                                disabled={isClosed}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    );
+                  })()}
+
                   {/* Source */}
                   <FormField
                     control={form.control}
