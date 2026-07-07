@@ -344,6 +344,8 @@ export function DealDialog({
         responsible_user_id: deal.responsible_user_id || "",
         notes: deal.notes || "",
         tags: deal.tags || [],
+        education: (deal as any).education || "",
+        education_specialty: (deal as any).education_specialty || "",
         ...(draft?.values || {}),
       });
     } else {
