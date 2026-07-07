@@ -132,7 +132,11 @@ export default function OrgChart() {
       }))),
     ];
 
-    setPeople(all);
+    // Exclusões temporárias do organograma
+    const HIDDEN_IDS = new Set<string>([
+      "eb09d679-8bfb-408e-9c4e-cdba00ec5adb", // Maikol Quintana Parnow
+    ]);
+    setPeople(all.filter((p) => !HIDDEN_IDS.has(p.id)));
     setLoading(false);
   }
 
