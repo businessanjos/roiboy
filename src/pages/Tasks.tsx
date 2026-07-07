@@ -712,7 +712,7 @@ export default function Tasks() {
     }).length;
 
     return { pendingCount, overdueCount, inProgressCount, doneCount };
-  }, [baseFilteredTasks, customStatuses]);
+  }, [baseFilteredTasks, baseFilteredTasksIgnoringDate, customStatuses, filterDateStart, filterDateEnd]);
 
   if (loading) {
     return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;
