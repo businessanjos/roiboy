@@ -363,6 +363,8 @@ export function DealDialog({
         responsible_user_id: currentUser?.id || "",
         notes: "",
         tags: [],
+        education: "",
+        education_specialty: "",
         ...(draft?.values || {}),
       });
       setSendNotification(draft?.sendNotification ?? false);
