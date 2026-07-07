@@ -819,6 +819,11 @@ export default function Tasks() {
                     // Task was completed via legacy method, find the first completed status
                     taskStatus = customStatuses.find(s => s.is_completed_status);
                   }
+                  if (!taskStatus && !task.completed_at) {
+                    // Fallback: mostrar tarefas sem status como "Pendente" (status default)
+                    taskStatus = customStatuses.find(s => s.is_default)
+                      ?? customStatuses.find(s => s.name.toLowerCase().includes('pendente'));
+                  }
                   const isCompleted = taskStatus?.is_completed_status || task.completed_at !== null;
                   const priorityConfig = PRIORITY_CONFIG[task.priority];
                   const dueDateInfo = getDueDateInfo(task);
