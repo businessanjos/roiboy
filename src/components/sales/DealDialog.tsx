@@ -86,7 +86,15 @@ const dealSchema = z.object({
   notes: z.string().optional(),
   tags: z.array(z.string()).default([]),
   product_id: z.string().optional(), // Item da Venda
+  education: z.string().optional(),
+  education_specialty: z.string().optional(),
 });
+
+const EDUCATION_OPTIONS = [
+  "Médico","Dentista","Nutricionista","Fisioterapeuta","Psicólogo","Veterinário",
+  "Biomédico","Enfermeiro","Farmacêutico","Fonoaudiólogo","Terapeuta Ocupacional",
+  "Educador Físico","Esteticista","Outro",
+];
 
 type DealFormValues = z.infer<typeof dealSchema>;
 
