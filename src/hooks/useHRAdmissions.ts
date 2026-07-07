@@ -14,9 +14,9 @@ export type AdmissionStage =
 
 export const ADMISSION_STAGES: AdmissionStage[] = [
   "accepted",
+  "medical_exam",
   "documents",
   "esocial",
-  "medical_exam",
   "contract",
   "onboarding",
   "admitted",
