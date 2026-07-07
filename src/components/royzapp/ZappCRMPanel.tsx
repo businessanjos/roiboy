@@ -60,6 +60,7 @@ interface Deal {
   title: string;
   value: number;
   stage_id: string;
+  pipeline_id: string | null;
   status: string;
   created_at: string;
 }
