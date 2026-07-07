@@ -177,6 +177,10 @@ export default function SalesPipeline() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [titleTagFilter, setTitleTagFilter] = usePersistedFilter<string[]>("salesPipeline", "titleTagFilter", []);
+  const [openDatePreset, setOpenDatePreset] = usePersistedFilter<string>("salesPipeline", "openDatePreset", "all");
+  const [openDateStart, setOpenDateStart] = usePersistedFilter<string>("salesPipeline", "openDateStart", "");
+  const [openDateEnd, setOpenDateEnd] = usePersistedFilter<string>("salesPipeline", "openDateEnd", "");
+  const [openDatePopoverOpen, setOpenDatePopoverOpen] = useState(false);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
   const [filterCustomFields, setFilterCustomFields] = useState<CustomFieldOption[]>([]);
@@ -544,12 +548,49 @@ export default function SalesPipeline() {
     return m;
   }, [activityStatusMap]);
 
-  // Deals após aplicar filtro do vendedor/busca (mas antes do filtro de origem).
+  // Range de datas para filtro do pipeline aberto (criação do negócio)
+  const openDateRange = useMemo<{ start: Date; end: Date } | null>(() => {
+    const now = new Date();
+    switch (openDatePreset) {
+      case 'today': return { start: startOfDay(now), end: endOfDay(now) };
+      case 'this_week': return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+      case 'this_month': return { start: startOfMonth(now), end: endOfMonth(now) };
+      case 'last_month': { const d = subMonths(now, 1); return { start: startOfMonth(d), end: endOfMonth(d) }; }
+      case 'this_quarter': return { start: startOfQuarter(now), end: endOfQuarter(now) };
+      case 'this_year': return { start: startOfYear(now), end: endOfYear(now) };
+      case 'custom':
+        if (openDateStart && openDateEnd) return { start: startOfDay(new Date(openDateStart)), end: endOfDay(new Date(openDateEnd)) };
+        return null;
+      default: return null;
+    }
+  }, [openDatePreset, openDateStart, openDateEnd]);
+
+  const openDateLabel = useMemo(() => {
+    switch (openDatePreset) {
+      case 'today': return 'Hoje';
+      case 'this_week': return 'Esta semana';
+      case 'this_month': return 'Este mês';
+      case 'last_month': return 'Mês passado';
+      case 'this_quarter': return 'Este trimestre';
+      case 'this_year': return 'Este ano';
+      case 'custom':
+        if (openDateStart && openDateEnd) return `${format(new Date(openDateStart), 'dd/MM/yy')} - ${format(new Date(openDateEnd), 'dd/MM/yy')}`;
+        return 'Personalizado';
+      default: return 'Todas as datas';
+    }
+  }, [openDatePreset, openDateStart, openDateEnd]);
+
+  // Deals após aplicar filtro do vendedor/busca/data (mas antes do filtro de origem).
   // Usado como base para as opções do filtro de origem e como base do filtro final.
-  const dealsBeforeTagFilter = useMemo(
-    () => applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap),
-    [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap],
-  );
+  const dealsBeforeTagFilter = useMemo(() => {
+    const base = applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap);
+    if (!openDateRange) return base;
+    return base.filter(d => {
+      if (!d.created_at) return false;
+      const created = new Date(d.created_at);
+      return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
+    });
+  }, [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, openDateRange]);
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);
@@ -1523,6 +1564,70 @@ export default function SalesPipeline() {
                         selected={titleTagFilter}
                         onChange={setTitleTagFilter}
                       />
+                    )}
+                    {activeTab === 'open' && (
+                      <Popover open={openDatePopoverOpen} onOpenChange={setOpenDatePopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className={cn(
+                            "h-8 text-xs bg-background justify-start",
+                            openDatePreset !== 'all' && "border-primary text-primary"
+                          )}>
+                            <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                            {openDateLabel}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <div className="flex flex-col sm:flex-row">
+                            <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-0.5 min-w-[170px]">
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 pt-1 pb-1">Criado em</p>
+                              {([
+                                { key: 'all', label: 'Todas as datas' },
+                                { key: 'today', label: 'Hoje' },
+                                { key: 'this_week', label: 'Esta semana' },
+                                { key: 'this_month', label: 'Este mês' },
+                                { key: 'last_month', label: 'Mês passado' },
+                                { key: 'this_quarter', label: 'Este trimestre' },
+                                { key: 'this_year', label: 'Este ano' },
+                              ] as const).map(p => (
+                                <Button
+                                  key={p.key}
+                                  variant={openDatePreset === p.key ? 'secondary' : 'ghost'}
+                                  size="sm"
+                                  className="w-full justify-start text-xs h-7"
+                                  onClick={() => {
+                                    setOpenDatePreset(p.key);
+                                    setOpenDateStart('');
+                                    setOpenDateEnd('');
+                                    setOpenDatePopoverOpen(false);
+                                  }}
+                                >
+                                  {p.label}
+                                </Button>
+                              ))}
+                            </div>
+                            <div className="p-2">
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-1 pb-1">Período personalizado</p>
+                              <CalendarComponent
+                                mode="range"
+                                selected={openDateStart && openDateEnd ? { from: new Date(openDateStart), to: new Date(openDateEnd) } : undefined}
+                                onSelect={(range) => {
+                                  if (range?.from) {
+                                    setOpenDateStart(range.from.toISOString());
+                                    setOpenDateEnd(range.to ? range.to.toISOString() : range.from.toISOString());
+                                    if (range.to) {
+                                      setOpenDatePreset('custom');
+                                      setOpenDatePopoverOpen(false);
+                                    }
+                                  }
+                                }}
+                                numberOfMonths={1}
+                                locale={ptBR}
+                                className="pointer-events-auto"
+                              />
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     )}
                     
                     <div className="relative hidden sm:block">
