@@ -362,8 +362,7 @@ export default function OrgChart() {
                   const headLabel = "Gestor";
                   return (
                     <div key={col.key} className="flex flex-col items-center relative">
-                      {/* connector up */}
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-px h-8 bg-border" />
+
 
                       {/* Header */}
                       <div
