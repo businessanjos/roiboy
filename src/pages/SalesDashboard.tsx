@@ -290,10 +290,12 @@ export default function SalesDashboard() {
   });
 
   // ---------------------- DERIVED ----------------------
+  // Receita recebida = SOMENTE received_value (dinheiro efetivamente entrado).
+  // Nunca cai em `value`, senão parcelas futuras/à vencer contam como recebidas.
   const wonValue = useMemo(
     () =>
       (wonDeals || []).reduce(
-        (acc, d) => acc + Number(d.received_value ?? d.value ?? 0),
+        (acc, d) => acc + Number(d.received_value ?? 0),
         0
       ),
     [wonDeals]
