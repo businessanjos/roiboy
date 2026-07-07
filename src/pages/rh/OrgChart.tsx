@@ -335,27 +335,34 @@ export default function OrgChart() {
                 </div>
               )}
 
-              {/* COO — abaixo do CEO, acima de todos os departamentos */}
-              {coo && (
+              {/* Barra horizontal do CEO — vai do centro da coluna Marketing ao centro da Administrativo */}
+              <div className="relative w-full max-w-[1100px] h-px">
+                <div className="absolute top-0 left-[12.5%] right-[12.5%] h-px bg-border" />
+              </div>
+
+              {/* Tier intermediário: COO acima da coluna Marketing; demais colunas apenas propagam a linha */}
+              <div className="grid grid-cols-4 gap-4 w-full max-w-[1100px]">
                 <div className="flex flex-col items-center">
-                  {renderPersonCard(coo, { size: "md", label: "COO" })}
+                  <div className="w-px h-6 bg-border" />
+                  {coo && renderPersonCard(coo, { size: "md", label: "COO" })}
                   <div className="w-px h-8 bg-border" />
                 </div>
-              )}
-
-              {/* Horizontal connector to all columns */}
-              <div className="w-full max-w-[1100px] h-px bg-border" />
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex justify-center">
+                    <div className="w-px h-full bg-border" />
+                  </div>
+                ))}
+              </div>
 
               {/* Columns — Marketing responde à COO; demais respondem ao CEO */}
-              <div className="grid grid-cols-4 gap-4 w-full max-w-[1100px] pt-8 relative">
+              <div className="grid grid-cols-4 gap-4 w-full max-w-[1100px] relative">
                 {columns.map((col) => {
                   const isMarketing = col.key === "marketing";
                   const columnHead = col.gestor;
                   const headLabel = "Gestor";
                   return (
                     <div key={col.key} className="flex flex-col items-center relative">
-                      {/* connector up */}
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-px h-8 bg-border" />
+
 
                       {/* Header */}
                       <div
