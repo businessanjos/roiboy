@@ -176,6 +176,7 @@ export default function SalesPipeline() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
+  const [titleTagFilter, setTitleTagFilter] = usePersistedFilter<string[]>("salesPipeline", "titleTagFilter", []);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
   const [filterCustomFields, setFilterCustomFields] = useState<CustomFieldOption[]>([]);
