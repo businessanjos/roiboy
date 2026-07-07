@@ -1,0 +1,3 @@
+ALTER TABLE public.hr_collaborator_audit_log DROP CONSTRAINT IF EXISTS hr_collaborator_audit_log_collaborator_id_fkey;
+ALTER TABLE public.hr_collaborator_audit_log ADD CONSTRAINT hr_collaborator_audit_log_collaborator_id_fkey FOREIGN KEY (collaborator_id) REFERENCES public.hr_collaborators(id) ON DELETE SET NULL;
+ALTER TABLE public.hr_collaborator_audit_log ALTER COLUMN collaborator_id DROP NOT NULL;
