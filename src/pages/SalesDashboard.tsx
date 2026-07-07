@@ -179,11 +179,11 @@ export default function SalesDashboard() {
   // ---------- KPI customization (per section, persisted in localStorage) ----------
   type KpiSection = "header" | "funnel" | "performance";
   const KPI_DEFAULTS: Record<KpiSection, string[]> = {
-    header: ["received", "billed", "ticket", "win_rate"],
+    header: ["billed", "received", "ticket", "win_rate"],
     funnel: ["created", "win_rate", "stagnated"],
     performance: ["close_rate", "won_count", "avg_cycle", "no_show"],
   };
-  const KPI_STORAGE_KEY = "sales-dashboard-kpis-v2";
+  const KPI_STORAGE_KEY = "sales-dashboard-kpis-v3";
   const [pickerOpen, setPickerOpen] = useState<KpiSection | null>(null);
   const [kpiSel, setKpiSel] = useState<Record<KpiSection, string[]>>(() => {
     try {
