@@ -633,7 +633,13 @@ export function ZappCRMPanel({
                 <div className="space-y-2">
                   <Label className="text-xs text-zapp-text-muted">Mover para estágio:</Label>
                   <div className="flex flex-wrap gap-1">
-                    {stages.map(stage => {
+                    {stages
+                      .filter(stage =>
+                        activeDeal.pipeline_id
+                          ? stage.pipeline_id === activeDeal.pipeline_id
+                          : true
+                      )
+                      .map(stage => {
                       const isActive = stage.id === activeDeal.stage_id;
                       return (
                         <Button
