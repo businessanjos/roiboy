@@ -134,7 +134,8 @@ export default function OrgChart() {
 
     // Exclusões temporárias do organograma
     const HIDDEN_IDS = new Set<string>([
-      "eb09d679-8bfb-408e-9c4e-cdba00ec5adb", // Maikol Quintana Parnow
+      "eb09d679-8bfb-408e-9c4e-cdba00ec5adb", // Maikol Quintana Parnow (hr_collaborators)
+      "provider:eb09d679-8bfb-408e-9c4e-cdba00ec5adb", // Maikol Quintana Parnow (hr_service_providers)
     ]);
     setPeople(all.filter((p) => !HIDDEN_IDS.has(p.id)));
     setLoading(false);
