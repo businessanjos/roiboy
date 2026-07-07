@@ -548,12 +548,49 @@ export default function SalesPipeline() {
     return m;
   }, [activityStatusMap]);
 
-  // Deals após aplicar filtro do vendedor/busca (mas antes do filtro de origem).
+  // Range de datas para filtro do pipeline aberto (criação do negócio)
+  const openDateRange = useMemo<{ start: Date; end: Date } | null>(() => {
+    const now = new Date();
+    switch (openDatePreset) {
+      case 'today': return { start: startOfDay(now), end: endOfDay(now) };
+      case 'this_week': return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+      case 'this_month': return { start: startOfMonth(now), end: endOfMonth(now) };
+      case 'last_month': { const d = subMonths(now, 1); return { start: startOfMonth(d), end: endOfMonth(d) }; }
+      case 'this_quarter': return { start: startOfQuarter(now), end: endOfQuarter(now) };
+      case 'this_year': return { start: startOfYear(now), end: endOfYear(now) };
+      case 'custom':
+        if (openDateStart && openDateEnd) return { start: startOfDay(new Date(openDateStart)), end: endOfDay(new Date(openDateEnd)) };
+        return null;
+      default: return null;
+    }
+  }, [openDatePreset, openDateStart, openDateEnd]);
+
+  const openDateLabel = useMemo(() => {
+    switch (openDatePreset) {
+      case 'today': return 'Hoje';
+      case 'this_week': return 'Esta semana';
+      case 'this_month': return 'Este mês';
+      case 'last_month': return 'Mês passado';
+      case 'this_quarter': return 'Este trimestre';
+      case 'this_year': return 'Este ano';
+      case 'custom':
+        if (openDateStart && openDateEnd) return `${format(new Date(openDateStart), 'dd/MM/yy')} - ${format(new Date(openDateEnd), 'dd/MM/yy')}`;
+        return 'Personalizado';
+      default: return 'Todas as datas';
+    }
+  }, [openDatePreset, openDateStart, openDateEnd]);
+
+  // Deals após aplicar filtro do vendedor/busca/data (mas antes do filtro de origem).
   // Usado como base para as opções do filtro de origem e como base do filtro final.
-  const dealsBeforeTagFilter = useMemo(
-    () => applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap),
-    [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap],
-  );
+  const dealsBeforeTagFilter = useMemo(() => {
+    const base = applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap);
+    if (!openDateRange) return base;
+    return base.filter(d => {
+      if (!d.created_at) return false;
+      const created = new Date(d.created_at);
+      return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
+    });
+  }, [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, openDateRange]);
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);
