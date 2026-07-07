@@ -1565,6 +1565,70 @@ export default function SalesPipeline() {
                         onChange={setTitleTagFilter}
                       />
                     )}
+                    {activeTab === 'open' && (
+                      <Popover open={openDatePopoverOpen} onOpenChange={setOpenDatePopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className={cn(
+                            "h-8 text-xs bg-background justify-start",
+                            openDatePreset !== 'all' && "border-primary text-primary"
+                          )}>
+                            <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                            {openDateLabel}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <div className="flex flex-col sm:flex-row">
+                            <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-0.5 min-w-[170px]">
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 pt-1 pb-1">Criado em</p>
+                              {([
+                                { key: 'all', label: 'Todas as datas' },
+                                { key: 'today', label: 'Hoje' },
+                                { key: 'this_week', label: 'Esta semana' },
+                                { key: 'this_month', label: 'Este mês' },
+                                { key: 'last_month', label: 'Mês passado' },
+                                { key: 'this_quarter', label: 'Este trimestre' },
+                                { key: 'this_year', label: 'Este ano' },
+                              ] as const).map(p => (
+                                <Button
+                                  key={p.key}
+                                  variant={openDatePreset === p.key ? 'secondary' : 'ghost'}
+                                  size="sm"
+                                  className="w-full justify-start text-xs h-7"
+                                  onClick={() => {
+                                    setOpenDatePreset(p.key);
+                                    setOpenDateStart('');
+                                    setOpenDateEnd('');
+                                    setOpenDatePopoverOpen(false);
+                                  }}
+                                >
+                                  {p.label}
+                                </Button>
+                              ))}
+                            </div>
+                            <div className="p-2">
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-1 pb-1">Período personalizado</p>
+                              <CalendarComponent
+                                mode="range"
+                                selected={openDateStart && openDateEnd ? { from: new Date(openDateStart), to: new Date(openDateEnd) } : undefined}
+                                onSelect={(range) => {
+                                  if (range?.from) {
+                                    setOpenDateStart(range.from.toISOString());
+                                    setOpenDateEnd(range.to ? range.to.toISOString() : range.from.toISOString());
+                                    if (range.to) {
+                                      setOpenDatePreset('custom');
+                                      setOpenDatePopoverOpen(false);
+                                    }
+                                  }
+                                }}
+                                numberOfMonths={1}
+                                locale={ptBR}
+                                className="pointer-events-auto"
+                              />
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                     
                     <div className="relative hidden sm:block">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
