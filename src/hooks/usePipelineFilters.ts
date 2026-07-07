@@ -417,9 +417,16 @@ function evaluateDateCondition(fieldValue: string | null | undefined, operator: 
   if (operator === 'is_not_empty') return !!fieldValue;
 
   const date = new Date(fieldValue!);
+  // Semana começa na segunda-feira (igual à toolbar: weekStartsOn: 1)
   const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay());
+  const dow = today.getDay();
+  const diffToMonday = (dow + 6) % 7;
+  startOfWeek.setDate(today.getDate() - diffToMonday);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
 
   switch (operator) {
     case 'today': {
@@ -428,10 +435,10 @@ function evaluateDateCondition(fieldValue: string | null | undefined, operator: 
       return date >= today && date <= endOfToday;
     }
     case 'this_week':
-      return date >= startOfWeek && date <= today;
+      return date >= startOfWeek && date <= endOfWeek;
     
     case 'this_month':
-      return date >= startOfMonth && date <= today;
+      return date >= startOfMonth && date <= endOfMonth;
     
     case 'older_than_days':
       const daysAgo = new Date(today);
@@ -442,6 +449,7 @@ function evaluateDateCondition(fieldValue: string | null | undefined, operator: 
       const futureDate = new Date(today);
       futureDate.setDate(today.getDate() + Number(value));
       return date >= today && date <= futureDate;
+    
     
     case 'before':
       return date < new Date(value);
