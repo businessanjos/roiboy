@@ -335,21 +335,15 @@ export default function OrgChart() {
                 </div>
               )}
 
-              {/* COO */}
-              {coo && (
-                <div className="flex flex-col items-center">
-                  {renderPersonCard(coo, { size: "lg", label: "COO" })}
-                  <div className="w-px h-8 bg-border" />
-                </div>
-              )}
-
-              {/* Horizontal connector */}
+              {/* Horizontal connector to all columns */}
               <div className="w-full max-w-[1100px] h-px bg-border" />
 
-              {/* Columns */}
+              {/* Columns — todos os gestores reportam ao CEO */}
               <div className="grid grid-cols-4 gap-4 w-full max-w-[1100px] pt-8 relative">
                 {columns.map((col) => {
-                  const reportsToCoo = col.key === "marketing";
+                  const isMarketing = col.key === "marketing";
+                  const columnHead = isMarketing ? coo : col.gestor;
+                  const headLabel = isMarketing ? "COO" : "Gestor";
                   return (
                     <div key={col.key} className="flex flex-col items-center relative">
                       {/* connector up */}
@@ -365,20 +359,20 @@ export default function OrgChart() {
                             <h2 className="text-sm font-semibold text-white">{col.label}</h2>
                           </div>
                           <Badge variant="secondary" className="bg-white/20 text-white border-0 text-[10px]">
-                            {(col.gestor ? 1 : 0) + col.members.length}
+                            {(columnHead ? 1 : 0) + col.members.length}
                           </Badge>
                         </div>
-                        {reportsToCoo && (
+                        {isMarketing && (
                           <p className="text-[10px] text-white/80 mt-0.5">
-                            reporta à COO
+                            liderado pela COO
                           </p>
                         )}
                       </div>
 
-                      {/* Gestor */}
-                      {col.gestor ? (
+                      {/* Head (Gestor ou COO no caso de Marketing) */}
+                      {columnHead ? (
                         <div className="flex flex-col items-center">
-                          {renderPersonCard(col.gestor, { size: "md", badgeColor: col.badgeColor, label: "Gestor" })}
+                          {renderPersonCard(columnHead, { size: "md", badgeColor: col.badgeColor, label: headLabel })}
                           {col.members.length > 0 && <div className="w-px h-6 bg-border" />}
                         </div>
                       ) : (
