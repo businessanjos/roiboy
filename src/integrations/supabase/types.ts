@@ -10633,7 +10633,7 @@ export type Database = {
           account_id: string
           action: string
           changed_fields: Json | null
-          collaborator_id: string
+          collaborator_id: string | null
           created_at: string
           id: string
           new_values: Json | null
@@ -10646,7 +10646,7 @@ export type Database = {
           account_id: string
           action: string
           changed_fields?: Json | null
-          collaborator_id: string
+          collaborator_id?: string | null
           created_at?: string
           id?: string
           new_values?: Json | null
@@ -10659,7 +10659,7 @@ export type Database = {
           account_id?: string
           action?: string
           changed_fields?: Json | null
-          collaborator_id?: string
+          collaborator_id?: string | null
           created_at?: string
           id?: string
           new_values?: Json | null
