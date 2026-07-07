@@ -1191,6 +1191,60 @@ export default function SalesDashboard() {
             </CardContent>
           </Card>
 
+          {/* Origem por TAG do título — [XXX] Nome do lead */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieIcon className="w-5 h-5 text-primary" />
+                Origem por tag do título
+              </CardTitle>
+              <CardDescription>
+                Agrupa deals pelo prefixo entre colchetes no título (ex: [TRAF-IMP-EC], [INSIDE - RM]). Grafias variantes são consolidadas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {titleTagConversion.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">
+                  Nenhum deal com tag [XXX] no título dentro do período.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs uppercase text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 px-2">Tag</th>
+                        <th className="text-right py-2 px-2">Criados</th>
+                        <th className="text-right py-2 px-2">Ganhos</th>
+                        <th className="text-right py-2 px-2">Perdidos</th>
+                        <th className="text-right py-2 px-2">Receita</th>
+                        <th className="text-right py-2 px-2">Conversão</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {titleTagConversion.map((s) => (
+                        <tr key={s.key} className="border-b hover:bg-muted/40 transition-colors">
+                          <td className="py-2 px-2 font-medium truncate max-w-[260px]">
+                            <Badge variant="outline" className="font-mono text-[11px]">[{s.name}]</Badge>
+                          </td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{s.total}</td>
+                          <td className="py-2 px-2 text-right">{s.won}</td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{s.lost}</td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{fmtBRL(s.value)}</td>
+                          <td className="py-2 px-2 text-right">
+                            <Badge variant={s.conv >= 20 ? "default" : "secondary"} className="font-mono">
+                              {fmtPct(s.conv)}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+
           {/* Churn por vendedor */}
           <Card>
             <CardHeader>
