@@ -87,16 +87,19 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
 
       // Fetch all team users and filter to sales team only
       // Exclui usuários inativos (desligados) — não devem aparecer em relatórios do comercial.
-      const SALES_TEAM_NAMES = ["everton", "jonathan", "darlan", "george", "vanessa", "maikol"];
+      const SALES_TEAM_NAMES = ["everton", "jonathan", "darlan", "vanessa", "maikol"];
       const { data: allUsers } = await supabase
         .from("users")
-        .select("id, name, email, avatar_url")
+        .select("id, name, email, avatar_url, team_role:team_roles(name)")
         .eq("account_id", currentUser.account_id)
         .eq("is_active", true);
 
-      const users = (allUsers || []).filter((u) =>
-        SALES_TEAM_NAMES.some((name) => u.name?.toLowerCase().includes(name))
-      );
+      const users = (allUsers || []).filter((u) => {
+        const roleName = ((u as any).team_role?.name || "").toLowerCase();
+        // Exclui SDRs — ranking é apenas de closers/vendedores que fecham receita.
+        if (roleName.includes("sdr")) return false;
+        return SALES_TEAM_NAMES.some((name) => u.name?.toLowerCase().includes(name));
+      });
 
       if (!users || users.length === 0) {
         setMetrics([]);
