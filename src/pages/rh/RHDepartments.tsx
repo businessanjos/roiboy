@@ -173,22 +173,24 @@ export default function RHDepartments() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(dept => {
-            const headName = getHeadName(dept.head_collaborator_id);
-            const parentName = getParentName(dept.parent_department_id);
-            const collabCount = collaboratorCountByDepartment.get(dept.id) ?? 0;
+        (() => {
+          const roots = filtered.filter(d => !d.parent_department_id);
+          const childrenOf = (parentId: string) =>
+            filtered.filter(d => d.parent_department_id === parentId);
 
+          const renderCard = (dept: HRDepartment, isSector = false) => {
+            const headName = getHeadName(dept.head_collaborator_id);
+            const collabCount = collaboratorCountByDepartment.get(dept.id) ?? 0;
             return (
               <Card key={dept.id} className="group hover:shadow-md transition-shadow">
-                <CardContent className="p-4 space-y-3">
+                <CardContent className={`${isSector ? "p-3" : "p-4"} space-y-2`}>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2.5">
                       <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        className={`${isSector ? "w-2.5 h-2.5" : "w-3 h-3"} rounded-full flex-shrink-0`}
                         style={{ backgroundColor: getColorHsl(dept.color) }}
                       />
-                      <h3 className="font-medium text-foreground">{dept.name}</h3>
+                      <h3 className={`${isSector ? "text-sm" : "font-medium"} text-foreground`}>{dept.name}</h3>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -207,38 +209,67 @@ export default function RHDepartments() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-
                   {dept.description && (
                     <p className="text-xs text-muted-foreground line-clamp-2">{dept.description}</p>
                   )}
-
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary" className="text-xs gap-1">
                       <Users className="h-3 w-3" />
-                      {collabCount} colaborador{collabCount !== 1 ? "es" : ""}
+                      {collabCount}
                     </Badge>
                     {!dept.is_active && (
                       <Badge variant="outline" className="text-xs text-muted-foreground">Inativo</Badge>
                     )}
                   </div>
-
                   {headName && (
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium">Responsável:</span> {headName}
                     </p>
                   )}
-
-                  {parentName && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <ChevronRight className="h-3 w-3" />
-                      {parentName}
-                    </p>
-                  )}
                 </CardContent>
               </Card>
             );
-          })}
-        </div>
+          };
+
+          return (
+            <div className="space-y-6">
+              {roots.map(root => {
+                const children = childrenOf(root.id);
+                return (
+                  <div key={root.id} className="space-y-3">
+                    {renderCard(root)}
+                    <div className="ml-6 pl-4 border-l-2 border-border/60 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Setores {children.length > 0 && `(${children.length})`}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 gap-1 text-xs"
+                          onClick={() => {
+                            setEditingDept(null);
+                            setForm({ name: "", description: "", color: root.color, head_collaborator_id: "", parent_department_id: root.id });
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Novo setor
+                        </Button>
+                      </div>
+                      {children.length === 0 ? (
+                        <p className="text-xs text-muted-foreground/70 italic">Nenhum setor</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {children.map(c => renderCard(c, true))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()
       )}
 
       {/* Dialog */}
