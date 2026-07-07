@@ -241,7 +241,7 @@ export default function SalesDashboard() {
       const { data, error } = await supabase
         .from("deals")
         .select(
-          "id, value, received_value, source, won_at, responsible_user_id, sdr_user_id"
+          "id, title, value, received_value, source, won_at, responsible_user_id, sdr_user_id"
         )
         .eq("account_id", accountId!)
         .eq("status", "won")
