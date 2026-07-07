@@ -112,6 +112,8 @@ interface CreateDealData {
   notes?: string;
   tags?: string[];
   product_id?: string; // Item da Venda - será salvo em deal_field_values
+  education?: string | null;
+  education_specialty?: string | null;
 }
 
 interface UpdateDealData extends Partial<CreateDealData> {
