@@ -48,6 +48,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MultiSelectFilter } from "@/components/renewals/MultiSelectFilter";
+import { buildTitleTagOptions, getTitleTagInfo } from "@/lib/sales/titleTags";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -175,6 +176,7 @@ export default function SalesPipeline() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
+  const [titleTagFilter, setTitleTagFilter] = usePersistedFilter<string[]>("salesPipeline", "titleTagFilter", []);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
   const [filterCustomFields, setFilterCustomFields] = useState<CustomFieldOption[]>([]);
@@ -542,11 +544,19 @@ export default function SalesPipeline() {
     return m;
   }, [activityStatusMap]);
 
+  // Available title-tag options (prefixo [XXX] no título do deal)
+  const titleTagOptions = useMemo(() => buildTitleTagOptions(openDeals), [openDeals]);
+
   // Apply unified filter to deals
-  const filteredOpenDeals = useMemo(() =>
-    applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap),
-    [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap]
-  );
+  const filteredOpenDeals = useMemo(() => {
+    const base = applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap);
+    if (!titleTagFilter.length) return base;
+    const selected = new Set(titleTagFilter);
+    return base.filter(d => {
+      const info = getTitleTagInfo(d.title);
+      return info ? selected.has(info.key) : false;
+    });
+  }, [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, titleTagFilter]);
 
   const filteredWonDeals = useMemo(() => 
     applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap), 
@@ -1498,6 +1508,17 @@ export default function SalesPipeline() {
                         products={pipelineProducts}
                       />
                     )}
+                    {activeTab === 'open' && titleTagOptions.length > 0 && (
+                      <MultiSelectFilter
+                        label="Origem"
+                        placeholder="Todas as origens"
+                        width="w-full sm:w-[200px]"
+                        options={titleTagOptions.map(o => ({ value: o.value, label: `${o.label} (${o.count})` }))}
+                        selected={titleTagFilter}
+                        onChange={setTitleTagFilter}
+                      />
+                    )}
+                    
                     <div className="relative hidden sm:block">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input

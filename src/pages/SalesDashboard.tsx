@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { classifyMeetingTask, meetingDedupeKey } from "@/lib/sales/meetingMetrics";
+import { getTitleTagInfo } from "@/lib/sales/titleTags";
 import {
   startOfMonth,
   endOfMonth,
@@ -223,7 +224,7 @@ export default function SalesDashboard() {
       const { data, error } = await supabase
         .from("deals")
         .select(
-          "id, status, value, received_value, source, won_at, lost_at, created_at, lost_reason, loss_reason_id, responsible_user_id, sdr_user_id"
+          "id, title, status, value, received_value, source, won_at, lost_at, created_at, lost_reason, loss_reason_id, responsible_user_id, sdr_user_id"
         )
         .eq("account_id", accountId!)
         .gte("created_at", start.toISOString())
@@ -241,7 +242,7 @@ export default function SalesDashboard() {
       const { data, error } = await supabase
         .from("deals")
         .select(
-          "id, value, received_value, source, won_at, responsible_user_id, sdr_user_id"
+          "id, title, value, received_value, source, won_at, responsible_user_id, sdr_user_id"
         )
         .eq("account_id", accountId!)
         .eq("status", "won")
@@ -568,6 +569,40 @@ export default function SalesDashboard() {
       .sort((a, b) => b.total - a.total)
       .slice(0, 12);
   }, [deals]);
+
+  // Conversão por TAG do título ([XXX] Nome do lead) — origem manual
+  const titleTagConversion = useMemo(() => {
+    const map = new Map<string, { label: string; labelCounts: Map<string, number>; total: number; won: number; lost: number; value: number }>();
+    const bump = (title: string | null | undefined, kind: "created" | "won" | "lost", value: number) => {
+      const info = getTitleTagInfo(title);
+      if (!info) return;
+      const cur = map.get(info.key) || { label: info.raw, labelCounts: new Map(), total: 0, won: 0, lost: 0, value: 0 };
+      cur.labelCounts.set(info.raw, (cur.labelCounts.get(info.raw) ?? 0) + 1);
+      if (kind === "created") cur.total += 1;
+      if (kind === "won") { cur.won += 1; cur.value += value; }
+      if (kind === "lost") cur.lost += 1;
+      map.set(info.key, cur);
+    };
+    for (const d of deals || []) bump((d as any).title, "created", 0);
+    for (const d of wonDeals || []) bump((d as any).title, "won", Number((d as any).received_value ?? (d as any).value ?? 0));
+    for (const d of lostDeals || []) bump((d as any).title, "lost", 0);
+    return Array.from(map.entries())
+      .map(([key, v]) => {
+        let bestLabel = v.label;
+        let bestCount = -1;
+        for (const [raw, c] of v.labelCounts) if (c > bestCount) { bestCount = c; bestLabel = raw; }
+        return {
+          key,
+          name: bestLabel,
+          total: v.total,
+          won: v.won,
+          lost: v.lost,
+          value: v.value,
+          conv: v.total > 0 ? (v.won / v.total) * 100 : 0,
+        };
+      })
+      .sort((a, b) => b.total - a.total || b.won - a.won);
+  }, [deals, wonDeals, lostDeals]);
 
   // Close rate por executivo (won / reuniões realizadas)
   const closeRateByRep = useMemo(() => {
@@ -1155,6 +1190,60 @@ export default function SalesDashboard() {
               )}
             </CardContent>
           </Card>
+
+          {/* Origem por TAG do título — [XXX] Nome do lead */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieIcon className="w-5 h-5 text-primary" />
+                Origem por tag do título
+              </CardTitle>
+              <CardDescription>
+                Agrupa deals pelo prefixo entre colchetes no título (ex: [TRAF-IMP-EC], [INSIDE - RM]). Grafias variantes são consolidadas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {titleTagConversion.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">
+                  Nenhum deal com tag [XXX] no título dentro do período.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs uppercase text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 px-2">Tag</th>
+                        <th className="text-right py-2 px-2">Criados</th>
+                        <th className="text-right py-2 px-2">Ganhos</th>
+                        <th className="text-right py-2 px-2">Perdidos</th>
+                        <th className="text-right py-2 px-2">Receita</th>
+                        <th className="text-right py-2 px-2">Conversão</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {titleTagConversion.map((s) => (
+                        <tr key={s.key} className="border-b hover:bg-muted/40 transition-colors">
+                          <td className="py-2 px-2 font-medium truncate max-w-[260px]">
+                            <Badge variant="outline" className="font-mono text-[11px]">[{s.name}]</Badge>
+                          </td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{s.total}</td>
+                          <td className="py-2 px-2 text-right">{s.won}</td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{s.lost}</td>
+                          <td className="py-2 px-2 text-right text-muted-foreground">{fmtBRL(s.value)}</td>
+                          <td className="py-2 px-2 text-right">
+                            <Badge variant={s.conv >= 20 ? "default" : "secondary"} className="font-mono">
+                              {fmtPct(s.conv)}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
 
           {/* Churn por vendedor */}
           <Card>
