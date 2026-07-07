@@ -585,16 +585,27 @@ export default function Tasks() {
   const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
     const defaultStatus = customStatuses.find(s => s.is_default);
     const targetStatus = activeTab ? customStatuses.find(s => s.id === activeTab) : null;
-    
+
     if (!activeTab) return true;
-    
+
+    // Aba sintética "Atrasadas": tarefas não concluídas com prazo vencido
+    if (activeTab === "__overdue__") {
+      const completedStatusIds = customStatuses.filter(s => s.is_completed_status).map(s => s.id);
+      const isDone = task.completed_at !== null || completedStatusIds.includes(task.custom_status_id || '');
+      if (isDone || !task.due_date) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDate = parseLocalDate(task.due_date);
+      return !!dueDate && dueDate < today;
+    }
+
     // Se a aba ativa NAO e de conclusao, excluir tarefas com completed_at
     if (!targetStatus?.is_completed_status && task.completed_at) return false;
-    
+
     if (task.custom_status_id === activeTab) return true;
     if (!task.custom_status_id && activeTab === defaultStatus?.id && !task.completed_at) return true;
     if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) return true;
-    
+
     return false;
   }), [baseFilteredTasks, activeTab, customStatuses]);
 
@@ -1427,24 +1438,38 @@ export default function Tasks() {
                 </Badge>
               )}
             </TabsTrigger>
-            {customStatuses.map((status) => (
-              <TabsTrigger 
-                key={status.id} 
-                value={status.id} 
-                className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <span 
-                  className="w-2 h-2 rounded-full" 
-                  style={{ backgroundColor: status.color }}
-                />
-                {status.name}
-                {(statusCounts[status.id] || 0) > 0 && (
-                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
-                    {statusCounts[status.id]}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            ))}
+            {customStatuses
+              .filter((status) => !status.name.toLowerCase().includes("cancel"))
+              .map((status) => (
+                <TabsTrigger 
+                  key={status.id} 
+                  value={status.id} 
+                  className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <span 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ backgroundColor: status.color }}
+                  />
+                  {status.name}
+                  {(statusCounts[status.id] || 0) > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
+                      {statusCounts[status.id]}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              ))}
+            <TabsTrigger
+              value="__overdue__"
+              className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <span className="w-2 h-2 rounded-full bg-destructive" />
+              Atrasadas
+              {overdueCount > 0 && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
+                  {overdueCount}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
@@ -1455,6 +1480,9 @@ export default function Tasks() {
               <TaskTable tasks={paginatedTasks} />
             </TabsContent>
           ))}
+          <TabsContent value="__overdue__" className="mt-6">
+            <TaskTable tasks={paginatedTasks} />
+          </TabsContent>
 
           {/* Pagination Controls */}
           {sortedTasks.length > pageSize && (
