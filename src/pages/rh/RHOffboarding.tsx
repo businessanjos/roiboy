@@ -17,7 +17,7 @@ import { TERMINATION_TYPE_LABELS } from "@/lib/rescissionCalc";
 import OffboardingDrawer from "@/components/rh/offboarding/OffboardingDrawer";
 import NewOffboardingDialog from "@/components/rh/offboarding/NewOffboardingDialog";
 
-const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com"];
+const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com"];
 
 const fmtBRL = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v || 0);
 
