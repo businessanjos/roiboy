@@ -1508,6 +1508,17 @@ export default function SalesPipeline() {
                         products={pipelineProducts}
                       />
                     )}
+                    {activeTab === 'open' && titleTagOptions.length > 0 && (
+                      <MultiSelectFilter
+                        label="Origem"
+                        placeholder="Todas as origens"
+                        width="w-full sm:w-[200px]"
+                        options={titleTagOptions.map(o => ({ value: o.value, label: `${o.label} (${o.count})` }))}
+                        selected={titleTagFilter}
+                        onChange={setTitleTagFilter}
+                      />
+                    )}
+                    {false && (
                     <div className="relative hidden sm:block">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input
