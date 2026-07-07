@@ -56,6 +56,7 @@ export function TeamConversationAnalysisTab() {
       const { data: userData } = await supabase
         .from("users")
         .select("id, name")
+        .eq("is_active", true)
         .not("name", "is", null);
 
       if (userData) {

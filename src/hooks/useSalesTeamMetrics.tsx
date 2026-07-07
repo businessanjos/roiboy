@@ -86,11 +86,13 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       };
 
       // Fetch all team users and filter to sales team only
+      // Exclui usuários inativos (desligados) — não devem aparecer em relatórios do comercial.
       const SALES_TEAM_NAMES = ["everton", "jonathan", "darlan", "george", "vanessa", "maikol"];
       const { data: allUsers } = await supabase
         .from("users")
         .select("id, name, email, avatar_url")
-        .eq("account_id", currentUser.account_id);
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true);
 
       const users = (allUsers || []).filter((u) =>
         SALES_TEAM_NAMES.some((name) => u.name?.toLowerCase().includes(name))
