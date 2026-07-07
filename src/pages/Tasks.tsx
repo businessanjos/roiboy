@@ -1480,6 +1480,9 @@ export default function Tasks() {
               <TaskTable tasks={paginatedTasks} />
             </TabsContent>
           ))}
+          <TabsContent value="__overdue__" className="mt-6">
+            <TaskTable tasks={paginatedTasks} />
+          </TabsContent>
 
           {/* Pagination Controls */}
           {sortedTasks.length > pageSize && (
