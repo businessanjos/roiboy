@@ -418,10 +418,13 @@ export function DealDialog({
       // Auto-assign to creator if no responsible selected
       // Include product_id (Item da Venda) in the data
       const productId = selectedProductId && selectedProductId !== "__none__" ? selectedProductId : undefined;
+      const isMedico = (data.education || "").toLowerCase().startsWith("médic") || (data.education || "").toLowerCase().startsWith("medic");
       const finalData = {
         ...data,
         responsible_user_id: data.responsible_user_id || currentUser?.id || "",
         product_id: productId,
+        education: data.education ? data.education : null,
+        education_specialty: isMedico ? (data.education_specialty?.trim() || null) : null,
       };
       await onSave(finalData, !isEditing && sendNotification);
       clearLocalAutosaveDraft(draftKey);
