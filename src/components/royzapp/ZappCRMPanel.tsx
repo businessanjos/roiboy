@@ -53,6 +53,7 @@ interface DealStage {
   name: string;
   color: string;
   display_order: number;
+  pipeline_id: string | null;
 }
 
 interface Deal {
