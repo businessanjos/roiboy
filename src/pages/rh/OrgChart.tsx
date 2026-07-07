@@ -331,6 +331,14 @@ export default function OrgChart() {
               {ceo && (
                 <div className="flex flex-col items-center">
                   {renderPersonCard(ceo, { size: "lg", label: "CEO" })}
+                  <div className="w-px h-6 bg-border" />
+                </div>
+              )}
+
+              {/* COO — abaixo do CEO, acima de todos os departamentos */}
+              {coo && (
+                <div className="flex flex-col items-center">
+                  {renderPersonCard(coo, { size: "md", label: "COO" })}
                   <div className="w-px h-8 bg-border" />
                 </div>
               )}
@@ -338,12 +346,12 @@ export default function OrgChart() {
               {/* Horizontal connector to all columns */}
               <div className="w-full max-w-[1100px] h-px bg-border" />
 
-              {/* Columns — todos os gestores reportam ao CEO */}
+              {/* Columns — Marketing responde à COO; demais respondem ao CEO */}
               <div className="grid grid-cols-4 gap-4 w-full max-w-[1100px] pt-8 relative">
                 {columns.map((col) => {
                   const isMarketing = col.key === "marketing";
-                  const columnHead = isMarketing ? coo : col.gestor;
-                  const headLabel = isMarketing ? "COO" : "Gestor";
+                  const columnHead = col.gestor;
+                  const headLabel = "Gestor";
                   return (
                     <div key={col.key} className="flex flex-col items-center relative">
                       {/* connector up */}
