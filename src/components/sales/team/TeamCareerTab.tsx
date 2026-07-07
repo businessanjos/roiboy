@@ -70,6 +70,7 @@ export function TeamCareerTab() {
         .from("users")
         .select("id, name, email, avatar_url")
         .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
         .neq("id", currentUser.id)
         .order("name"),
       supabase
