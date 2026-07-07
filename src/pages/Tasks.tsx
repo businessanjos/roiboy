@@ -1438,24 +1438,38 @@ export default function Tasks() {
                 </Badge>
               )}
             </TabsTrigger>
-            {customStatuses.map((status) => (
-              <TabsTrigger 
-                key={status.id} 
-                value={status.id} 
-                className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                <span 
-                  className="w-2 h-2 rounded-full" 
-                  style={{ backgroundColor: status.color }}
-                />
-                {status.name}
-                {(statusCounts[status.id] || 0) > 0 && (
-                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
-                    {statusCounts[status.id]}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            ))}
+            {customStatuses
+              .filter((status) => !status.name.toLowerCase().includes("cancel"))
+              .map((status) => (
+                <TabsTrigger 
+                  key={status.id} 
+                  value={status.id} 
+                  className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <span 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ backgroundColor: status.color }}
+                  />
+                  {status.name}
+                  {(statusCounts[status.id] || 0) > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
+                      {statusCounts[status.id]}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              ))}
+            <TabsTrigger
+              value="__overdue__"
+              className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <span className="w-2 h-2 rounded-full bg-destructive" />
+              Atrasadas
+              {overdueCount > 0 && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
+                  {overdueCount}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
