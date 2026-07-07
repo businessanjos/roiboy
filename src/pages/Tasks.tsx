@@ -683,8 +683,22 @@ export default function Tasks() {
     const inProgressCount = baseFilteredTasks.filter(t =>
       !t.completed_at && t.custom_status_id === inProgressStatus?.id
     ).length;
-    const doneCount = baseFilteredTasks.filter(t => t.custom_status_id === doneStatus?.id || t.completed_at !== null).length;
-    
+
+    // Concluídas: filtra por completed_at dentro do range (não por due_date),
+    // para representar "o que foi entregue no período".
+    const completedStatusIdsForDone = customStatuses.filter(s => s.is_completed_status).map(s => s.id);
+    const hasDateFilter = filterDateStart !== "" || filterDateEnd !== "";
+    const doneCount = baseFilteredTasksIgnoringDate.filter(t => {
+      const isDone = t.completed_at !== null || completedStatusIdsForDone.includes(t.custom_status_id || '');
+      if (!isDone) return false;
+      if (!hasDateFilter) return true;
+      if (!t.completed_at) return false;
+      const completedDay = t.completed_at.slice(0, 10);
+      if (filterDateStart && completedDay < filterDateStart) return false;
+      if (filterDateEnd && completedDay > filterDateEnd) return false;
+      return true;
+    }).length;
+
     // Overdue: tasks past due_date that are not completed
     const completedStatusIds = customStatuses.filter(s => s.is_completed_status).map(s => s.id);
     const today = new Date();
