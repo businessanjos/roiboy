@@ -48,6 +48,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MultiSelectFilter } from "@/components/renewals/MultiSelectFilter";
+import { buildTitleTagOptions, getTitleTagInfo } from "@/lib/sales/titleTags";
 import {
   DropdownMenu,
   DropdownMenuContent,
