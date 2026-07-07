@@ -1544,14 +1544,7 @@ export default function SalesPipeline() {
                     onDelete={deletePipeline}
                   />
                   </div>
-                  <PipelineSelector
-                    pipelines={pipelines}
-                    activePipelineId={activePipelineId}
-                    onSelect={setActivePipelineId}
-                    onCreate={createPipeline}
-                    onUpdate={updatePipeline}
-                    onDelete={deletePipeline}
-                  />
+                  
                   
                   {/* Filters toolbar */}
                   <div className="flex flex-wrap items-end gap-3 bg-card border border-border rounded-xl p-3 shadow-sm w-full">
