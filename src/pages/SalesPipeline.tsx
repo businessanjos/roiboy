@@ -544,11 +544,19 @@ export default function SalesPipeline() {
     return m;
   }, [activityStatusMap]);
 
+  // Available title-tag options (prefixo [XXX] no título do deal)
+  const titleTagOptions = useMemo(() => buildTitleTagOptions(openDeals), [openDeals]);
+
   // Apply unified filter to deals
-  const filteredOpenDeals = useMemo(() =>
-    applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap),
-    [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap]
-  );
+  const filteredOpenDeals = useMemo(() => {
+    const base = applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap);
+    if (!titleTagFilter.length) return base;
+    const selected = new Set(titleTagFilter);
+    return base.filter(d => {
+      const info = getTitleTagInfo(d.title);
+      return info ? selected.has(info.key) : false;
+    });
+  }, [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, titleTagFilter]);
 
   const filteredWonDeals = useMemo(() => 
     applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap), 
