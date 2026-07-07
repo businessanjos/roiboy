@@ -223,7 +223,7 @@ export default function SalesDashboard() {
       const { data, error } = await supabase
         .from("deals")
         .select(
-          "id, status, value, received_value, source, won_at, lost_at, created_at, lost_reason, loss_reason_id, responsible_user_id, sdr_user_id"
+          "id, title, status, value, received_value, source, won_at, lost_at, created_at, lost_reason, loss_reason_id, responsible_user_id, sdr_user_id"
         )
         .eq("account_id", accountId!)
         .gte("created_at", start.toISOString())
