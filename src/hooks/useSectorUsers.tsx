@@ -42,7 +42,8 @@ export function useSectorUsers({ sectorId, activeOnly = true }: UseSectorUsersOp
             name,
             email,
             avatar_url,
-            role
+            role,
+            is_active
           )
         `)
         .eq("sector_id", sectorId)
@@ -51,8 +52,32 @@ export function useSectorUsers({ sectorId, activeOnly = true }: UseSectorUsersOp
 
       if (error) throw error;
 
+      // Also fetch inactive HR collaborators to exclude them everywhere
+      let inactiveEmails = new Set<string>();
+      if (activeOnly) {
+        const { data: hrData } = await supabase
+          .from("hr_collaborators")
+          .select("email")
+          .eq("account_id", currentUser.account_id)
+          .eq("status", "inactive");
+        inactiveEmails = new Set(
+          (hrData || [])
+            .map((r: any) => String(r.email || "").trim().toLowerCase())
+            .filter(Boolean),
+        );
+      }
+
       const sectorUsers: SectorUser[] = (data || [])
-        .filter((access: any) => access.user && (!activeOnly || access.is_active))
+        .filter((access: any) => {
+          if (!access.user) return false;
+          if (activeOnly) {
+            if (!access.is_active) return false;
+            if (access.user.is_active === false) return false;
+            const email = String(access.user.email || "").trim().toLowerCase();
+            if (email && inactiveEmails.has(email)) return false;
+          }
+          return true;
+        })
         .map((access: any) => ({
           id: access.user.id,
           name: access.user.name,
