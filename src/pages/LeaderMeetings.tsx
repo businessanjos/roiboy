@@ -301,9 +301,27 @@ function MeetingDetail({ meetingId, onBack }: { meetingId: string; onBack: () =>
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {format(parseISO(m.meeting_date), "EEEE, dd 'de' MMMM yyyy", { locale: ptBR })}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {format(parseISO(m.meeting_date), "EEEE, dd 'de' MMMM yyyy", { locale: ptBR })}
+            </h1>
+            <div className="relative">
+              <Input
+                type="date"
+                value={m.meeting_date}
+                onChange={(e) => {
+                  if (e.target.value && e.target.value !== m.meeting_date) {
+                    updateMeeting.mutate({ meeting_date: e.target.value });
+                  }
+                }}
+                className="w-9 h-9 p-0 opacity-0 absolute inset-0 cursor-pointer"
+                aria-label="Editar data da reunião"
+              />
+              <Button variant="ghost" size="icon" className="h-9 w-9" title="Editar data">
+                <Calendar className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
           {m.title && <p className="text-muted-foreground mt-1">{m.title}</p>}
         </div>
         <div className="flex items-center gap-2">
