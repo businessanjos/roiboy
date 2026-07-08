@@ -2674,6 +2674,57 @@ export type Database = {
           },
         ]
       }
+      client_revenue_history: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          month: string
+          notes: string | null
+          revenue: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month: string
+          notes?: string | null
+          revenue: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month?: string
+          notes?: string | null
+          revenue?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_revenue_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_revenue_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_ryka_provisions: {
         Row: {
           account_id: string
@@ -3154,16 +3205,21 @@ export type Database = {
           country: string | null
           cpf: string | null
           created_at: string
+          current_revenue: number | null
+          current_revenue_month: string | null
+          differential: string | null
           education: string | null
           education_specialty: string | null
           emails: Json | null
           full_name: string
           full_name_normalized: string | null
           id: string
+          initial_revenue: number | null
           instagram: string | null
           instagrams: Json | null
           is_mls: boolean
           logo_url: string | null
+          method_name: string | null
           mls_level: string | null
           neighborhood: string | null
           notes: string | null
@@ -3220,16 +3276,21 @@ export type Database = {
           country?: string | null
           cpf?: string | null
           created_at?: string
+          current_revenue?: number | null
+          current_revenue_month?: string | null
+          differential?: string | null
           education?: string | null
           education_specialty?: string | null
           emails?: Json | null
           full_name: string
           full_name_normalized?: string | null
           id?: string
+          initial_revenue?: number | null
           instagram?: string | null
           instagrams?: Json | null
           is_mls?: boolean
           logo_url?: string | null
+          method_name?: string | null
           mls_level?: string | null
           neighborhood?: string | null
           notes?: string | null
@@ -3286,16 +3347,21 @@ export type Database = {
           country?: string | null
           cpf?: string | null
           created_at?: string
+          current_revenue?: number | null
+          current_revenue_month?: string | null
+          differential?: string | null
           education?: string | null
           education_specialty?: string | null
           emails?: Json | null
           full_name?: string
           full_name_normalized?: string | null
           id?: string
+          initial_revenue?: number | null
           instagram?: string | null
           instagrams?: Json | null
           is_mls?: boolean
           logo_url?: string | null
+          method_name?: string | null
           mls_level?: string | null
           neighborhood?: string | null
           notes?: string | null

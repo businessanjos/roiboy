@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import {
   ArrowLeft, Clock, MessageSquare, TrendingUp, FileText,
   Grid3X3, Calendar, Heart, Link2, FileSignature, CreditCard,
-  Target, AlertTriangle, Lightbulb, User, ClipboardList, ShieldAlert, Instagram,
+  Target, AlertTriangle, Lightbulb, User, ClipboardList, ShieldAlert, Instagram, Briefcase,
 } from "lucide-react";
 
 interface NavItem {
@@ -32,6 +32,7 @@ const navGroups: NavGroup[] = [
   {
     title: "Informações",
     items: [
+      { id: "negocio", label: "Perfil do Negócio", icon: Briefcase },
       { id: "fichas", label: "Fichas (Formulário)", icon: FileText },
       { id: "briefing", label: "Briefing Comercial", icon: ClipboardList },
       { id: "campos", label: "Campos", icon: Grid3X3 },

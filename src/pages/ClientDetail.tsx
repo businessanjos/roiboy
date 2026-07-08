@@ -24,6 +24,7 @@ import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditi
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientMilestones } from "@/components/client/ClientMilestones";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
+import { ClientBusinessProfile } from "@/components/client/ClientBusinessProfile";
 import { ClientChurnSignals } from "@/components/client/ClientChurnSignals";
 import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
 import { ClientLogoUpload } from "@/components/client/ClientLogoUpload";
@@ -2389,6 +2390,9 @@ export default function ClientDetail() {
         </Card>
       )}
 
+      {/* Perfil do Negócio (sempre visível no topo) */}
+      <ClientBusinessProfile clientId={id!} variant="card" />
+
       {/* Content based on active tab from sidebar */}
       {(() => {
         const activeTab = searchParams.get("tab") || "timeline";
@@ -2473,6 +2477,23 @@ export default function ClientDetail() {
               <OperationBriefingForm
                 clientId={id!}
               />
+            );
+          case "negocio":
+            return (
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Perfil do Negócio
+                  </CardTitle>
+                  <CardDescription>
+                    Faturamento, formação, especialidade, nicho, diferencial e método do cliente
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <ClientBusinessProfile clientId={id!} variant="full" />
+                </CardContent>
+              </Card>
             );
           case "campos":
             return (
