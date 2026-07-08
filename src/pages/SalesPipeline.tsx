@@ -650,7 +650,11 @@ export default function SalesPipeline() {
         (d.tags || []).join(' '),
         openDealProductMap[d.id] || '',
       ].filter(Boolean).map(v => String(v));
-      map[d.id] = normalizeForSearch(parts.join(' | '));
+      const normalized = normalizeForSearch(parts.join(' | '));
+      // Anexa versão só-dígitos: permite buscar telefone digitando "11987654321"
+      // mesmo quando armazenado como "+55 (11) 98765-4321" ou "+5511987654321".
+      const digits = normalized.replace(/\D/g, '');
+      map[d.id] = digits ? `${normalized} | ${digits}` : normalized;
     });
     return map;
   }, [deals, openDealProductMap]);
