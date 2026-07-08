@@ -539,7 +539,7 @@ export default function SalesPipeline() {
   // keep the query cost bounded.
   useEffect(() => {
     const term = debouncedSearchTerm.trim();
-    if (term.length < 2 || deals.length === 0) {
+    if (term.length < 2 || deals.length === 0 || !currentUser?.account_id) {
       setDealSearchCustomBlobs({});
       return;
     }
@@ -553,7 +553,9 @@ export default function SalesPipeline() {
         const { data, error } = await supabase
           .from('deal_field_values')
           .select('deal_id, value_text, value_json')
-          .in('deal_id', batch);
+          .eq('account_id', currentUser.account_id)
+          .in('deal_id', batch)
+          .limit(50000);
         if (error) {
           console.error('[SalesPipeline] custom field blob fetch error:', error);
           continue;
@@ -569,6 +571,7 @@ export default function SalesPipeline() {
           if (!acc[row.deal_id]) acc[row.deal_id] = [];
           acc[row.deal_id].push(...parts);
         });
+        if (cancelled) return;
       }
       if (cancelled) return;
       const combined: Record<string, string> = {};
@@ -578,7 +581,7 @@ export default function SalesPipeline() {
       setDealSearchCustomBlobs(combined);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearchTerm, allDealIds]);
+  }, [debouncedSearchTerm, allDealIds, currentUser?.account_id]);
 
   // Base search blob (in-memory, no DB): title, notes, contact/client/lead,
   // responsible, stage, tags, product name.
@@ -680,14 +683,14 @@ export default function SalesPipeline() {
   // Deals após aplicar filtro do vendedor/busca/data (mas antes do filtro de origem).
   // Usado como base para as opções do filtro de origem e como base do filtro final.
   const dealsBeforeTagFilter = useMemo(() => {
-    const base = applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions);
+    const base = applyFilterToDeals(openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions);
     if (!openDateRange) return base;
     return base.filter(d => {
       if (!d.created_at) return false;
       const created = new Date(d.created_at);
       return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
     });
-  }, [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, openDateRange, searchOptions]);
+  }, [openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, openDateRange, searchOptions]);
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);
@@ -703,12 +706,12 @@ export default function SalesPipeline() {
   }, [dealsBeforeTagFilter, titleTagFilter]);
 
   const filteredWonDeals = useMemo(() =>
-    applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap, undefined, undefined, searchOptions),
-    [wonDeals, searchTerm, openDealProductMap, searchOptions]
+    applyFilterToDeals(wonDeals, null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
+    [wonDeals, debouncedSearchTerm, openDealProductMap, searchOptions]
   );
   const filteredLostDeals = useMemo(() =>
-    applyFilterToDeals(lostDeals, null, searchTerm, openDealProductMap, undefined, undefined, searchOptions),
-    [lostDeals, searchTerm, openDealProductMap, searchOptions]
+    applyFilterToDeals(lostDeals, null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
+    [lostDeals, debouncedSearchTerm, openDealProductMap, searchOptions]
   );
 
   // Available months for won deals filter (always include current month)

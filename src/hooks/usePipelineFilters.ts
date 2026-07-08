@@ -252,12 +252,23 @@ export function applyFilterToDeals(
       dealProductMap?.[deal.id] || '',
     ].filter(Boolean).join(' | ').toLowerCase();
 
+    // Exact mode: phrase-boundary match (supports "São Paulo").
+    // Term is bounded by non-alphanumeric or string edges — case-insensitive
+    // and diacritics preserved (blob is already lowercased in the same way).
+    let exactRe: RegExp | null = null;
+    if (mode === 'exact') {
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      try {
+        exactRe = new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, 'u');
+      } catch {
+        exactRe = new RegExp(`(^|[^A-Za-z0-9])${escaped}($|[^A-Za-z0-9])`);
+      }
+    }
+
     filtered = filtered.filter(deal => {
       const blob = blobs?.[deal.id] ?? buildFallbackBlob(deal);
-      if (mode === 'exact') {
-        // Exact word/segment match: split on non-alphanumeric and compare
-        const tokens = blob.split(/[^\p{L}\p{N}@._+-]+/u).filter(Boolean);
-        return tokens.some(t => t === term);
+      if (mode === 'exact' && exactRe) {
+        return exactRe.test(blob);
       }
       return blob.includes(term);
     });
