@@ -147,6 +147,8 @@ interface ContractTriageQueueProps {
   typeFilter?: string;
   productFilter?: string;
   sortOrder?: "az" | "recent";
+  dateRangeStart?: string;
+  dateRangeEnd?: string;
 }
 
 export function ContractTriageQueue({
@@ -159,6 +161,8 @@ export function ContractTriageQueue({
   typeFilter = "all",
   productFilter = "all",
   sortOrder = "recent",
+  dateRangeStart,
+  dateRangeEnd,
 }: ContractTriageQueueProps) {
   const navigate = useNavigate();
   const { isAdmin } = usePermissions();
