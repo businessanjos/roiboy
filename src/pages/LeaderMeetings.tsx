@@ -299,30 +299,30 @@ function MeetingDetail({ meetingId, onBack }: { meetingId: string; onBack: () =>
         <ChevronLeft className="h-4 w-4" /> Voltar
       </Button>
 
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {format(parseISO(m.meeting_date), "EEEE, dd 'de' MMMM yyyy", { locale: ptBR })}
-            </h1>
-            <div className="relative">
-              <Input
-                type="date"
-                value={m.meeting_date}
-                onChange={(e) => {
-                  if (e.target.value && e.target.value !== m.meeting_date) {
-                    updateMeeting.mutate({ meeting_date: e.target.value });
-                  }
-                }}
-                className="w-9 h-9 p-0 opacity-0 absolute inset-0 cursor-pointer"
-                aria-label="Editar data da reunião"
-              />
-              <Button variant="ghost" size="icon" className="h-9 w-9" title="Editar data">
-                <Calendar className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+      <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {format(parseISO(m.meeting_date), "EEEE, dd 'de' MMMM yyyy", { locale: ptBR })}
+          </h1>
           {m.title && <p className="text-muted-foreground mt-1">{m.title}</p>}
+          <div className="flex items-center gap-2 mt-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Label htmlFor="meeting-date-edit" className="text-xs text-muted-foreground">
+              Editar data:
+            </Label>
+            <Input
+              id="meeting-date-edit"
+              type="date"
+              value={m.meeting_date}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v && v !== m.meeting_date) {
+                  updateMeeting.mutate({ meeting_date: v } as any);
+                }
+              }}
+              className="h-8 w-[170px] text-xs"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={m.status === "finalizada" ? "default" : "secondary"}>
