@@ -702,17 +702,25 @@ export default function SalesPipeline() {
       const leadIds = Array.from(leadToDealIds.keys());
       for (let i = 0; i < leadIds.length; i += batchSize) {
         const batch = leadIds.slice(i, i + batchSize);
-        const { data, error } = await supabase
-          .from('leads')
-          .select('id, full_name, phone, email, emails, additional_phones, instagram, instagrams, source, notes, mql, canal, revenue_range, company_name, business_segment, business_niche, city, state, business_city, business_state, tags')
-          .eq('account_id', currentUser.account_id)
-          .in('id', batch)
-          .limit(50000);
+        const [leadsResult, leadTimelineResult] = await Promise.all([
+          supabase
+            .from('leads')
+            .select('id, full_name, phone, email, emails, additional_phones, instagram, instagrams, source, notes, mql, canal, revenue_range, company_name, business_segment, business_niche, city, state, business_city, business_state, tags')
+            .eq('account_id', currentUser.account_id)
+            .in('id', batch)
+            .limit(50000),
+          supabase
+            .from('lead_timeline')
+            .select('lead_id, title, description, event_type, metadata')
+            .eq('account_id', currentUser.account_id)
+            .in('lead_id', batch)
+            .limit(50000),
+        ]);
 
-        if (error) {
-          console.error('[SalesPipeline] lead search blob fetch error:', error);
+        if (leadsResult.error) {
+          console.error('[SalesPipeline] lead search blob fetch error:', leadsResult.error);
         } else {
-          (data || []).forEach((lead: any) => {
+          (leadsResult.data || []).forEach((lead: any) => {
             const ids = leadToDealIds.get(lead.id) || [];
             ids.forEach((dealId) => pushParts(dealId, [
               lead.full_name,
@@ -739,23 +747,40 @@ export default function SalesPipeline() {
           });
         }
 
+        if (leadTimelineResult.error) {
+          console.error('[SalesPipeline] lead timeline search blob fetch error:', leadTimelineResult.error);
+        } else {
+          (leadTimelineResult.data || []).forEach((event: any) => {
+            const ids = leadToDealIds.get(event.lead_id) || [];
+            ids.forEach((dealId) => pushParts(dealId, [event.title, event.description, event.event_type, event.metadata]));
+          });
+        }
+
         if (cancelled) return;
       }
 
       const clientIds = Array.from(clientToDealIds.keys());
       for (let i = 0; i < clientIds.length; i += batchSize) {
         const batch = clientIds.slice(i, i + batchSize);
-        const { data, error } = await supabase
-          .from('clients')
-          .select('id, full_name, phone_e164, emails, additional_phones, instagram, instagrams, notes, company_name, business_segment, business_niche, city, state, business_city, business_state, tags')
-          .eq('account_id', currentUser.account_id)
-          .in('id', batch)
-          .limit(50000);
+        const [clientsResult, clientFollowupsResult] = await Promise.all([
+          supabase
+            .from('clients')
+            .select('id, full_name, phone_e164, emails, additional_phones, instagram, instagrams, notes, company_name, business_segment, business_niche, city, state, business_city, business_state, tags')
+            .eq('account_id', currentUser.account_id)
+            .in('id', batch)
+            .limit(50000),
+          supabase
+            .from('client_followups')
+            .select('client_id, title, content, type')
+            .eq('account_id', currentUser.account_id)
+            .in('client_id', batch)
+            .limit(50000),
+        ]);
 
-        if (error) {
-          console.error('[SalesPipeline] client search blob fetch error:', error);
+        if (clientsResult.error) {
+          console.error('[SalesPipeline] client search blob fetch error:', clientsResult.error);
         } else {
-          (data || []).forEach((client: any) => {
+          (clientsResult.data || []).forEach((client: any) => {
             const ids = clientToDealIds.get(client.id) || [];
             ids.forEach((dealId) => pushParts(dealId, [
               client.full_name,
@@ -774,6 +799,15 @@ export default function SalesPipeline() {
               client.business_state,
               client.tags,
             ]));
+          });
+        }
+
+        if (clientFollowupsResult.error) {
+          console.error('[SalesPipeline] client followup search blob fetch error:', clientFollowupsResult.error);
+        } else {
+          (clientFollowupsResult.data || []).forEach((followup: any) => {
+            const ids = clientToDealIds.get(followup.client_id) || [];
+            ids.forEach((dealId) => pushParts(dealId, [followup.title, followup.content, followup.type]));
           });
         }
 
