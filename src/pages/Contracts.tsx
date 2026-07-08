@@ -1659,7 +1659,7 @@ export default function Contracts() {
 
 
   // Check if any filter is active
-  const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || typeFilter !== "all" || productFilter !== "all";
+  const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || typeFilter !== "all" || productFilter !== "all" || dateFilter.preset !== "year";
 
   const stats = useMemo(() => {
     // Use filtered contracts if filter is active, otherwise current tab's contracts
