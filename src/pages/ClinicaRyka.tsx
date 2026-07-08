@@ -297,14 +297,15 @@ export default function ClinicaRyka() {
                 <TableRow>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Produto</TableHead>
-                  <TableHead>Status Ryka</TableHead>
+                  <TableHead>Acesso</TableHead>
+                  <TableHead>Ryka</TableHead>
                   <TableHead>E-mail acesso</TableHead>
                   <TableHead>Última liberação</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map(({ client, prov, state }) => {
+                {filtered.map(({ client, prov, state, rykaStatus }) => {
                   const initials = client.full_name
                     ?.split(" ")
                     .slice(0, 2)
@@ -355,6 +356,9 @@ export default function ClinicaRyka() {
                       </TableCell>
                       <TableCell>
                         <StatusBadge state={state} whatsapp={prov?.whatsapp_status ?? null} />
+                      </TableCell>
+                      <TableCell>
+                        <RykaStatusBadge status={rykaStatus} />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {prov?.email || (typeof client.emails?.[0] === "string" ? client.emails?.[0] : (client.emails?.[0] as any)?.email) || "—"}
