@@ -99,6 +99,12 @@ import { ConciliateButton } from "@/components/contracts/ConciliateButton";
 import { useBatchConciliationValidation } from "@/hooks/useConciliationValidation";
 import { BarChart3, UserCheck } from "lucide-react";
 import { VipBadge } from "@/components/client/VipBadge";
+import {
+  ContractsDateFilter,
+  ContractsDateFilterValue,
+  getDefaultContractsDateFilter,
+  getPresetRange,
+} from "@/components/contracts/ContractsDateFilter";
 
 interface Contract {
   id: string;
@@ -373,6 +379,11 @@ export default function Contracts() {
   const [typeFilter, setTypeFilter] = usePersistedFilter<string>("contracts", "typeFilter", "all");
   const [productFilter, setProductFilter] = usePersistedFilter<string>("contracts", "productFilter", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"az" | "recent">("contracts", "sortOrder", "recent");
+  const [dateFilter, setDateFilter] = usePersistedFilter<ContractsDateFilterValue>(
+    "contracts",
+    "dateFilter",
+    getDefaultContractsDateFilter()
+  );
   const [activeTab, setActiveTab] = useState<string>("fila");
   const [contractsPage, setContractsPage] = useState(1);
   const [contractsPageSize, setContractsPageSize] = useState(20);
@@ -1578,7 +1589,19 @@ export default function Contracts() {
   const currentContracts = activeTab === "conciliados" ? reconciledContracts : 
     activeTab === "triagem" ? triageContracts : queueContracts;
 
+  // Effective date range: if preset is not custom, always recompute from "now" so a
+  // persisted "Este Ano" filter stays relative even across sessions/year boundaries.
+  const effectiveDateRange = useMemo(() => {
+    if (dateFilter.preset === "custom") {
+      return { start: new Date(dateFilter.start), end: new Date(dateFilter.end) };
+    }
+    const r = getPresetRange(dateFilter.preset);
+    return { start: r.start, end: r.end };
+  }, [dateFilter]);
+
   const filteredContracts = useMemo(() => {
+    const rangeStart = effectiveDateRange.start.getTime();
+    const rangeEnd = effectiveDateRange.end.getTime();
     const filtered = currentContracts.filter((contract) => {
       const matchesSearch = 
         contract.client?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1590,8 +1613,19 @@ export default function Contracts() {
         (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
       const matchesType = typeFilter === "all" || contract.contract_type === typeFilter;
       const matchesProduct = productFilter === "all" || contract.product?.id === productFilter;
+
+      // Date filter: contract must have activity intersecting the range.
+      // Use start_date within range, OR range overlaps [start_date, end_date].
+      const startTs = parseLocalDate(contract.start_date)?.getTime() ?? null;
+      const endTs = contract.end_date ? parseLocalDate(contract.end_date)?.getTime() ?? null : null;
+      let matchesDate = false;
+      if (startTs !== null) {
+        const contractStart = startTs;
+        const contractEnd = endTs ?? Number.POSITIVE_INFINITY;
+        matchesDate = contractStart <= rangeEnd && contractEnd >= rangeStart;
+      }
       
-      return matchesSearch && matchesStatus && matchesType && matchesProduct;
+      return matchesSearch && matchesStatus && matchesType && matchesProduct && matchesDate;
     });
 
     // Apply sorting
@@ -1605,10 +1639,10 @@ export default function Contracts() {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder]);
+  }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder, effectiveDateRange]);
 
   // Reset page when filters or tab change
-  const filterKey = `${searchTerm}-${statusFilter}-${typeFilter}-${productFilter}-${activeTab}`;
+  const filterKey = `${searchTerm}-${statusFilter}-${typeFilter}-${productFilter}-${dateFilter.preset}-${dateFilter.start}-${dateFilter.end}-${activeTab}`;
   const prevFilterKeyRef = useRef(filterKey);
   if (prevFilterKeyRef.current !== filterKey) {
     prevFilterKeyRef.current = filterKey;
@@ -1625,7 +1659,7 @@ export default function Contracts() {
 
 
   // Check if any filter is active
-  const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || typeFilter !== "all" || productFilter !== "all";
+  const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || typeFilter !== "all" || productFilter !== "all" || dateFilter.preset !== "year";
 
   const stats = useMemo(() => {
     // Use filtered contracts if filter is active, otherwise current tab's contracts
@@ -1873,6 +1907,7 @@ export default function Contracts() {
                   className="pl-9"
                 />
               </div>
+              <ContractsDateFilter value={dateFilter} onChange={setDateFilter} />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full md:w-40">
                   <SelectValue placeholder="Status" />
@@ -1987,6 +2022,8 @@ export default function Contracts() {
                 typeFilter={typeFilter}
                 productFilter={productFilter}
                 sortOrder={sortOrder}
+                dateRangeStart={effectiveDateRange.start.toISOString()}
+                dateRangeEnd={effectiveDateRange.end.toISOString()}
               />
             </>
           )}
