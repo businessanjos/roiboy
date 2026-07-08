@@ -537,6 +537,23 @@ export default function SalesPipeline() {
   // actively searching — enables the search box to match anything inside a card
   // (city, empresa, especialidade, etc). Only fires while a term is typed to
   // keep the query cost bounded.
+  // Mapa field_id -> (option value -> label) para traduzir chaves de select/multi_select
+  // em rótulos legíveis no blob de busca (usuário digita "Rykas Pass", banco tem "rykas_pass").
+  const customFieldOptionLabels = useMemo(() => {
+    const m: Record<string, Record<string, string>> = {};
+    for (const f of filterCustomFields) {
+      if (!f.options || !Array.isArray(f.options)) continue;
+      const inner: Record<string, string> = {};
+      for (const opt of f.options as any[]) {
+        if (opt && opt.value != null && opt.label != null) {
+          inner[String(opt.value)] = String(opt.label);
+        }
+      }
+      if (Object.keys(inner).length) m[f.id] = inner;
+    }
+    return m;
+  }, [filterCustomFields]);
+
   useEffect(() => {
     const term = debouncedSearchTerm.trim();
     if (term.length < 2 || deals.length === 0 || !currentUser?.account_id) {
@@ -552,7 +569,7 @@ export default function SalesPipeline() {
         const batch = dealIds.slice(i, i + batchSize);
         const { data, error } = await supabase
           .from('deal_field_values')
-          .select('deal_id, value_text, value_json')
+          .select('deal_id, field_id, value_text, value_json')
           .eq('account_id', currentUser.account_id)
           .in('deal_id', batch)
           .limit(50000);
@@ -563,10 +580,33 @@ export default function SalesPipeline() {
         (data || []).forEach((row: any) => {
           if (!row.deal_id) return;
           const parts: string[] = [];
-          if (row.value_text) parts.push(String(row.value_text));
-          if (row.value_json != null) {
-            try { parts.push(typeof row.value_json === 'string' ? row.value_json : JSON.stringify(row.value_json)); } catch {}
+          const labelMap = row.field_id ? customFieldOptionLabels[row.field_id] : undefined;
+
+          if (row.value_text != null && row.value_text !== '') {
+            const raw = String(row.value_text);
+            parts.push(raw);
+            // Se for select cujo value_text é a chave da opção, adiciona também o label
+            if (labelMap && labelMap[raw]) parts.push(labelMap[raw]);
           }
+
+          if (row.value_json != null) {
+            try {
+              if (Array.isArray(row.value_json)) {
+                for (const v of row.value_json) {
+                  if (v == null) continue;
+                  const s = typeof v === 'string' ? v : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+                  parts.push(s);
+                  if (labelMap && labelMap[s]) parts.push(labelMap[s]);
+                }
+              } else if (typeof row.value_json === 'string') {
+                parts.push(row.value_json);
+                if (labelMap && labelMap[row.value_json]) parts.push(labelMap[row.value_json]);
+              } else {
+                parts.push(JSON.stringify(row.value_json));
+              }
+            } catch { /* ignore */ }
+          }
+
           if (!parts.length) return;
           if (!acc[row.deal_id]) acc[row.deal_id] = [];
           acc[row.deal_id].push(...parts);
@@ -576,12 +616,16 @@ export default function SalesPipeline() {
       if (cancelled) return;
       const combined: Record<string, string> = {};
       for (const [id, arr] of Object.entries(acc)) {
-        combined[id] = normalizeForSearch(arr.join(' | '));
+        const normalized = normalizeForSearch(arr.join(' | '));
+        // Anexa versão só-dígitos para permitir busca por telefone sem máscara
+        const digits = normalized.replace(/\D/g, '');
+        combined[id] = digits ? `${normalized} | ${digits}` : normalized;
       }
       setDealSearchCustomBlobs(combined);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearchTerm, allDealIds, currentUser?.account_id]);
+  }, [debouncedSearchTerm, allDealIds, currentUser?.account_id, customFieldOptionLabels]);
+
 
   // Base search blob (in-memory, no DB): title, notes, contact/client/lead,
   // responsible, stage, tags, product name.
@@ -606,7 +650,11 @@ export default function SalesPipeline() {
         (d.tags || []).join(' '),
         openDealProductMap[d.id] || '',
       ].filter(Boolean).map(v => String(v));
-      map[d.id] = normalizeForSearch(parts.join(' | '));
+      const normalized = normalizeForSearch(parts.join(' | '));
+      // Anexa versão só-dígitos: permite buscar telefone digitando "11987654321"
+      // mesmo quando armazenado como "+55 (11) 98765-4321" ou "+5511987654321".
+      const digits = normalized.replace(/\D/g, '');
+      map[d.id] = digits ? `${normalized} | ${digits}` : normalized;
     });
     return map;
   }, [deals, openDealProductMap]);
