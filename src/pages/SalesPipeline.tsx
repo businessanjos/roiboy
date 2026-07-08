@@ -435,6 +435,10 @@ export default function SalesPipeline() {
   const [dealCustomFieldValues, setDealCustomFieldValues] = useState<Record<string, Record<string, string>>>({});
 
   const allDealIds = useMemo(() => deals.map(d => d.id).join(','), [deals]);
+  const dealSearchRelationKey = useMemo(
+    () => deals.map(d => `${d.id}:${d.lead_id || ''}:${d.client_id || ''}`).join(','),
+    [deals]
+  );
 
   useEffect(() => {
     if (!currentUser?.account_id) return;
@@ -657,7 +661,14 @@ export default function SalesPipeline() {
             .limit(50000),
           supabase
             .from('internal_tasks')
-            .select('deal_id, title, description')
+            .select(`
+              deal_id,
+              title,
+              description,
+              assigned_user:users!internal_tasks_assigned_to_fkey(name),
+              custom_status:task_statuses!internal_tasks_custom_status_id_fkey(name),
+              activity_type:activity_types!internal_tasks_activity_type_id_fkey(name)
+            `)
             .eq('account_id', currentUser.account_id)
             .in('deal_id', batch)
             .limit(50000),
@@ -675,7 +686,13 @@ export default function SalesPipeline() {
           console.error('[SalesPipeline] task search blob fetch error:', tasksResult.error);
         } else {
           (tasksResult.data || []).forEach((row: any) => {
-            pushParts(row.deal_id, [row.title, row.description]);
+            pushParts(row.deal_id, [
+              row.title,
+              row.description,
+              row.activity_type?.name,
+              row.custom_status?.name,
+              row.assigned_user?.name,
+            ]);
           });
         }
 
@@ -774,7 +791,7 @@ export default function SalesPipeline() {
       setDealSearchCustomBlobs(combined);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearchTerm, allDealIds, currentUser?.account_id, customFieldOptionLabels]);
+  }, [debouncedSearchTerm, dealSearchRelationKey, currentUser?.account_id, customFieldOptionLabels]);
 
 
   // Base search blob (in-memory, no DB): title, notes, contact/client/lead,
