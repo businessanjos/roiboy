@@ -531,6 +531,94 @@ export default function SalesPipeline() {
     })();
   }, [customFieldIdsInFilter, allDealIds]);
 
+  // Fetch ALL custom field text values for the current deals when the user is
+  // actively searching — enables the search box to match anything inside a card
+  // (city, empresa, especialidade, etc). Only fires while a term is typed to
+  // keep the query cost bounded.
+  useEffect(() => {
+    const term = debouncedSearchTerm.trim();
+    if (term.length < 2 || deals.length === 0) {
+      setDealSearchCustomBlobs({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const dealIds = deals.map(d => d.id);
+      const batchSize = 200;
+      const acc: Record<string, string[]> = {};
+      for (let i = 0; i < dealIds.length; i += batchSize) {
+        const batch = dealIds.slice(i, i + batchSize);
+        const { data, error } = await supabase
+          .from('deal_field_values')
+          .select('deal_id, value_text, value_json')
+          .in('deal_id', batch);
+        if (error) {
+          console.error('[SalesPipeline] custom field blob fetch error:', error);
+          continue;
+        }
+        (data || []).forEach((row: any) => {
+          if (!row.deal_id) return;
+          const parts: string[] = [];
+          if (row.value_text) parts.push(String(row.value_text));
+          if (row.value_json != null) {
+            try { parts.push(typeof row.value_json === 'string' ? row.value_json : JSON.stringify(row.value_json)); } catch {}
+          }
+          if (!parts.length) return;
+          if (!acc[row.deal_id]) acc[row.deal_id] = [];
+          acc[row.deal_id].push(...parts);
+        });
+      }
+      if (cancelled) return;
+      const combined: Record<string, string> = {};
+      for (const [id, arr] of Object.entries(acc)) {
+        combined[id] = arr.join(' | ').toLowerCase();
+      }
+      setDealSearchCustomBlobs(combined);
+    })();
+    return () => { cancelled = true; };
+  }, [debouncedSearchTerm, allDealIds]);
+
+  // Base search blob (in-memory, no DB): title, notes, contact/client/lead,
+  // responsible, stage, tags, product name.
+  const dealBaseSearchBlobs = useMemo(() => {
+    const map: Record<string, string> = {};
+    deals.forEach(d => {
+      const parts = [
+        d.title,
+        d.notes,
+        d.source,
+        d.contact_name,
+        d.contact_phone,
+        d.contact_email,
+        d.client?.full_name,
+        d.client?.phone_e164,
+        d.lead?.full_name,
+        d.lead?.phone,
+        d.lead?.email,
+        d.responsible_user?.name,
+        d.sdr_user?.name,
+        d.stage?.name,
+        (d.tags || []).join(' '),
+        openDealProductMap[d.id] || '',
+      ].filter(Boolean).map(v => String(v));
+      map[d.id] = parts.join(' | ').toLowerCase();
+    });
+    return map;
+  }, [deals, openDealProductMap]);
+
+  const dealSearchBlobs = useMemo(() => {
+    const out: Record<string, string> = {};
+    const ids = new Set([...Object.keys(dealBaseSearchBlobs), ...Object.keys(dealSearchCustomBlobs)]);
+    ids.forEach(id => {
+      out[id] = (dealBaseSearchBlobs[id] || '') + ' | ' + (dealSearchCustomBlobs[id] || '');
+    });
+    return out;
+  }, [dealBaseSearchBlobs, dealSearchCustomBlobs]);
+
+  const searchOptions = useMemo(() => ({ mode: searchMode, blobs: dealSearchBlobs }), [searchMode, dealSearchBlobs]);
+
+
+
 
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
