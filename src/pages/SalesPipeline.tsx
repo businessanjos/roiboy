@@ -1736,18 +1736,49 @@ export default function SalesPipeline() {
                       </div>
                     )}
 
-                    <div className="flex flex-col gap-1 flex-1 min-w-[220px]">
+                    <div className="flex flex-col gap-1 flex-1 min-w-[260px]">
                       <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Pesquisa</label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="Buscar negócio..."
+                          placeholder={searchMode === 'exact' ? "Correspondência exata..." : "Buscar em qualquer campo do card..."}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-9 h-10 w-full bg-muted/40 border-border text-sm focus:bg-background transition-colors"
+                          className="pl-9 pr-[135px] h-10 w-full bg-muted/40 border-border text-sm focus:bg-background transition-colors"
                         />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                              title="Modo de busca"
+                            >
+                              {searchMode === 'exact' ? 'Exato' : 'Contém'}
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuItem onClick={() => setSearchMode('contains')}>
+                              <Check className={cn("h-4 w-4 mr-2", searchMode !== 'contains' && "opacity-0")} />
+                              <div className="flex flex-col">
+                                <span className="text-sm">O nome contém</span>
+                                <span className="text-[11px] text-muted-foreground">Busca em qualquer parte do card</span>
+                              </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSearchMode('exact')}>
+                              <Check className={cn("h-4 w-4 mr-2", searchMode !== 'exact' && "opacity-0")} />
+                              <div className="flex flex-col">
+                                <span className="text-sm">Correspondência exata</span>
+                                <span className="text-[11px] text-muted-foreground">Palavra ou termo idêntico</span>
+                              </div>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
+
 
                     {canSeeDeleted && (
                       <div className="flex flex-col gap-1">
