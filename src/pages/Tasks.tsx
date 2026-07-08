@@ -536,7 +536,23 @@ export default function Tasks() {
         matchesSector = activitySectorId === "operacoes" ||
           ((!!task.client_id && !task.deal_id && !activitySectorId));
       }
+    } else if (currentSector?.id) {
+      // For other sectors: only match exact sector_id
+      matchesSector = activitySectorId === currentSector.id;
     }
+
+    // Date range filter on due_date
+    const hasDateFilter = filterDateStart !== "" || filterDateEnd !== "";
+    let matchesDateRange = true;
+    if (hasDateFilter) {
+      if (!task.due_date) {
+        matchesDateRange = false;
+      } else {
+        if (filterDateStart && task.due_date < filterDateStart) matchesDateRange = false;
+        if (filterDateEnd && task.due_date > filterDateEnd) matchesDateRange = false;
+      }
+    }
+
 
     // Stage filter
     const matchesStage = filterStage === "all" || 
