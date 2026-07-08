@@ -196,8 +196,23 @@ export function ContractTriageQueue({
         
         // 5. Product filter
         const matchesProduct = productFilter === "all" || contract.product?.id === productFilter;
-        
-        return matchesSearch && matchesStatus && matchesType && matchesProduct;
+
+        // 6. Date range filter (contract activity intersects the range)
+        let matchesDate = true;
+        if (dateRangeStart && dateRangeEnd) {
+          const rs = new Date(dateRangeStart).getTime();
+          const re = new Date(dateRangeEnd).getTime();
+          const startTs = parseLocalDate(contract.start_date)?.getTime() ?? null;
+          const endTs = contract.end_date ? parseLocalDate(contract.end_date)?.getTime() ?? null : null;
+          if (startTs === null) {
+            matchesDate = false;
+          } else {
+            const cEnd = endTs ?? Number.POSITIVE_INFINITY;
+            matchesDate = startTs <= re && cEnd >= rs;
+          }
+        }
+
+        return matchesSearch && matchesStatus && matchesType && matchesProduct && matchesDate;
       })
       .sort((a, b) => {
         if (sortOrder === "az") {
