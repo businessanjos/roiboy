@@ -690,11 +690,19 @@ export function useZappMessaging({
         integration_id: effectiveIntegrationId || "",
         add_signature: false,
       };
-      
+
       if (isGroup && groupJid) {
         payload.group_id = groupJid;
       } else {
         payload.phone = phone;
+      }
+
+      if (replyContext?.external_message_id) {
+        payload.quoted_message_id = replyContext.external_message_id;
+        payload.quoted_from_me = !replyContext.is_from_client;
+        if (replyContext.is_from_client && phone) {
+          payload.quoted_participant = phone;
+        }
       }
       
       const { data, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
