@@ -34,14 +34,14 @@ import { ptBR } from "date-fns/locale";
 
 const RYKA_ELIGIBLE_KEYWORDS = ["rykas mentoring", "eternum club"];
 
-type Filter = "all" | "provisioned" | "pending" | "failed";
+type Filter = "all" | "provisioned" | "pending" | "failed" | "ryka_active" | "ryka_inactive";
 
 interface ClientRow {
   id: string;
   full_name: string;
   company_name: string | null;
   phone_e164: string | null;
-  emails: string[] | null;
+  emails: any[] | null;
   logo_url: string | null;
   avatar_url: string | null;
   status: string;
@@ -57,6 +57,7 @@ interface Provision {
   status: string;
   whatsapp_status: string | null;
   created_at: string;
+  ryka_response: any | null;
 }
 
 export default function ClinicaRyka() {
