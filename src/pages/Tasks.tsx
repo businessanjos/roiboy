@@ -575,7 +575,7 @@ export default function Tasks() {
     let matchesSector = true;
     if (currentSector?.id === "vendas") {
       if (activitySectorId && activitySectorId !== "vendas") matchesSector = false;
-      else matchesSector = activitySectorId === "vendas" || (!!task.deal_id && !activitySectorId);
+      else matchesSector = activitySectorId === "vendas" || ((!!task.deal_id || !!task.lead_id) && !activitySectorId);
     } else if (currentSector?.id === "operacoes") {
       if (activitySectorId && activitySectorId !== "operacoes") matchesSector = false;
       else matchesSector = activitySectorId === "operacoes" || (!!task.client_id && !task.deal_id && !activitySectorId);
