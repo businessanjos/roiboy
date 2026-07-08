@@ -246,9 +246,13 @@ export default function Tasks() {
           activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
         `);
 
-      // Apply server-side sector filter using activity_type_ids
+      // Apply server-side sector filter using activity_type_ids.
+      // IMPORTANT: also include tasks with activity_type_id NULL — sem esse
+      // OR, tarefas sem tipo (comuns em leads criados via automação) somem.
       if (sectorActivityTypeIds && sectorActivityTypeIds.length > 0) {
-        query = query.in("activity_type_id", sectorActivityTypeIds);
+        query = query.or(
+          `activity_type_id.in.(${sectorActivityTypeIds.join(",")}),activity_type_id.is.null`
+        );
       }
 
       // Apply server-side user filter to avoid hitting the 1000-row default limit
@@ -515,22 +519,22 @@ export default function Tasks() {
     
     let matchesSector = true;
     if (currentSector?.id === "vendas") {
-      // For Sales: include if activity belongs to vendas, or has deal_id with no sector specified
+      // For Sales: include if activity belongs to vendas, or has deal_id/lead_id with no sector specified
       // EXCLUDE if activity explicitly belongs to another sector
       if (activitySectorId && activitySectorId !== "vendas") {
         matchesSector = false;
       } else {
-        matchesSector = activitySectorId === "vendas" || 
-          (!!task.deal_id && !activitySectorId);
+        matchesSector = activitySectorId === "vendas" ||
+          ((!!task.deal_id || !!task.lead_id) && !activitySectorId);
       }
     } else if (currentSector?.id === "operacoes") {
-      // For Operations: include if activity belongs to operacoes, or has client without deal and no sector
+      // For Operations: include if activity belongs to operacoes, or has client (without deal) or lead with no sector
       // EXCLUDE if activity explicitly belongs to another sector
       if (activitySectorId && activitySectorId !== "operacoes") {
         matchesSector = false;
       } else {
         matchesSector = activitySectorId === "operacoes" ||
-          (!!task.client_id && !task.deal_id && !activitySectorId);
+          ((!!task.client_id && !task.deal_id && !activitySectorId));
       }
     } else if (currentSector?.id) {
       // For other sectors: only match exact sector_id
@@ -548,6 +552,7 @@ export default function Tasks() {
         if (filterDateEnd && task.due_date > filterDateEnd) matchesDateRange = false;
       }
     }
+
 
     // Stage filter
     const matchesStage = filterStage === "all" || 
@@ -570,7 +575,7 @@ export default function Tasks() {
     let matchesSector = true;
     if (currentSector?.id === "vendas") {
       if (activitySectorId && activitySectorId !== "vendas") matchesSector = false;
-      else matchesSector = activitySectorId === "vendas" || (!!task.deal_id && !activitySectorId);
+      else matchesSector = activitySectorId === "vendas" || ((!!task.deal_id || !!task.lead_id) && !activitySectorId);
     } else if (currentSector?.id === "operacoes") {
       if (activitySectorId && activitySectorId !== "operacoes") matchesSector = false;
       else matchesSector = activitySectorId === "operacoes" || (!!task.client_id && !task.deal_id && !activitySectorId);
