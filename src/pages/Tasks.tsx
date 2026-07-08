@@ -1233,7 +1233,7 @@ export default function Tasks() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-500/5 to-transparent">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -1248,19 +1248,6 @@ export default function Tasks() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-500/5 to-transparent">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Em andamento</p>
-                  <p className="text-3xl font-bold mt-1">{inProgressCount}</p>
-                </div>
-                <div className="p-2.5 rounded-full bg-blue-500/10">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           <Card className={cn(
             "border-l-4 bg-gradient-to-r to-transparent",
