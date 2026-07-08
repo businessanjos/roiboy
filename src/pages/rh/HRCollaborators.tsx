@@ -312,8 +312,9 @@ export default function HRCollaborators() {
           });
           if (rpcErr) throw rpcErr;
           const reassigned = (rpcData as any)?.reassigned || {};
-          const total = Object.values(reassigned).reduce((s: number, n: any) => s + (Number(n) || 0), 0);
+          const total: number = Object.values(reassigned).reduce<number>((s, n) => s + (Number(n) || 0), 0);
           if (total > 0) {
+
             toast.info(`${total} registros transferidos automaticamente para o responsável default da área.`);
           }
         } catch (rpcCatch: any) {
