@@ -78,6 +78,8 @@ import {
   BarChart3,
   Package,
   User,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
