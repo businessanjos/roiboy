@@ -558,9 +558,11 @@ export default function SalesPipeline() {
     return m;
   }, [filterCustomFields]);
 
+  // Gate por booleano — o conteúdo dos blobs não depende do termo em si,
+  // apenas do conjunto de deals. Evita refetch a cada tecla digitada.
+  const isSearchingActive = debouncedSearchTerm.trim().length >= 2;
   useEffect(() => {
-    const term = debouncedSearchTerm.trim();
-    if (term.length < 2 || deals.length === 0 || !currentUser?.account_id) {
+    if (!isSearchingActive || deals.length === 0 || !currentUser?.account_id) {
       setDealSearchCustomBlobs({});
       return;
     }
@@ -825,7 +827,7 @@ export default function SalesPipeline() {
       setDealSearchCustomBlobs(combined);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearchTerm, dealSearchRelationKey, currentUser?.account_id, customFieldOptionLabels]);
+  }, [isSearchingActive, dealSearchRelationKey, currentUser?.account_id, customFieldOptionLabels]);
 
 
   // Base search blob (in-memory, no DB): title, notes, contact/client/lead,
