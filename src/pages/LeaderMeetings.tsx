@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,9 +62,10 @@ export default function LeaderMeetings() {
   const [newDate, setNewDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [newTitle, setNewTitle] = useState("");
 
+  const { hasSectorAccess } = useSectorAccess();
   const canAccess = useMemo(
-    () => isManagementUser(currentUser, isSuperAdmin),
-    [currentUser, isSuperAdmin]
+    () => isManagementUser(currentUser, isSuperAdmin) || hasSectorAccess("reuniao-lideres"),
+    [currentUser, isSuperAdmin, hasSectorAccess]
   );
 
   const meetingsQuery = useQuery({
