@@ -31,7 +31,7 @@ import type { CustomFieldOption } from "@/components/sales/PipelineFilterDialog"
 import { PipelineSelector } from "@/components/sales/PipelineSelector";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { PipelineExportDialog } from "@/components/sales/PipelineExportDialog";
-import { ActiveFilter, applyFilterToDeals } from "@/hooks/usePipelineFilters";
+import { ActiveFilter, applyFilterToDeals, normalizeForSearch } from "@/hooks/usePipelineFilters";
 import { useBatchDealActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 
 import { Button } from "@/components/ui/button";
@@ -576,7 +576,7 @@ export default function SalesPipeline() {
       if (cancelled) return;
       const combined: Record<string, string> = {};
       for (const [id, arr] of Object.entries(acc)) {
-        combined[id] = arr.join(' | ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        combined[id] = normalizeForSearch(arr.join(' | '));
       }
       setDealSearchCustomBlobs(combined);
     })();
@@ -606,7 +606,7 @@ export default function SalesPipeline() {
         (d.tags || []).join(' '),
         openDealProductMap[d.id] || '',
       ].filter(Boolean).map(v => String(v));
-      map[d.id] = parts.join(' | ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      map[d.id] = normalizeForSearch(parts.join(' | '));
     });
     return map;
   }, [deals, openDealProductMap]);
