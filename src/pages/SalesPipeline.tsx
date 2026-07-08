@@ -539,7 +539,7 @@ export default function SalesPipeline() {
   // keep the query cost bounded.
   useEffect(() => {
     const term = debouncedSearchTerm.trim();
-    if (term.length < 2 || deals.length === 0) {
+    if (term.length < 2 || deals.length === 0 || !currentUser?.account_id) {
       setDealSearchCustomBlobs({});
       return;
     }
@@ -553,7 +553,9 @@ export default function SalesPipeline() {
         const { data, error } = await supabase
           .from('deal_field_values')
           .select('deal_id, value_text, value_json')
-          .in('deal_id', batch);
+          .eq('account_id', currentUser.account_id)
+          .in('deal_id', batch)
+          .limit(50000);
         if (error) {
           console.error('[SalesPipeline] custom field blob fetch error:', error);
           continue;
@@ -569,6 +571,7 @@ export default function SalesPipeline() {
           if (!acc[row.deal_id]) acc[row.deal_id] = [];
           acc[row.deal_id].push(...parts);
         });
+        if (cancelled) return;
       }
       if (cancelled) return;
       const combined: Record<string, string> = {};
@@ -578,7 +581,7 @@ export default function SalesPipeline() {
       setDealSearchCustomBlobs(combined);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearchTerm, allDealIds]);
+  }, [debouncedSearchTerm, allDealIds, currentUser?.account_id]);
 
   // Base search blob (in-memory, no DB): title, notes, contact/client/lead,
   // responsible, stage, tags, product name.
