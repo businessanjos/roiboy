@@ -635,7 +635,11 @@ export function useZappMessaging({
     const tempMessageId = `temp-media-${Date.now()}`;
     const now = new Date().toISOString();
     const signedCaption = caption ? buildSignedText(caption) : "";
-    
+
+    // 🔗 Captura o contexto de resposta (quoted) e limpa o preview antes do envio
+    const replyContext = replyingTo ? { ...replyingTo } : null;
+    setReplyingTo(null);
+
     const optimisticMessage: Message = {
       id: tempMessageId,
       content: signedCaption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
@@ -648,8 +652,13 @@ export function useZappMessaging({
       media_filename: file.name,
       audio_duration_sec: null,
       sender_name: null,
+      quoted_message_id: replyContext?.external_message_id || null,
+      quoted_content: replyContext?.content || null,
+      quoted_sender_name: replyContext?.is_from_client
+        ? (replyContext.sender_name || "Cliente")
+        : "Você",
     };
-    
+
     setMessages(prev => [...prev, optimisticMessage]);
     
     try {
