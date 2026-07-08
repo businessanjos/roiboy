@@ -353,21 +353,30 @@ export function ClientBusinessProfile({
               </span>
               {growth == null ? (
                 <span className="text-sm text-muted-foreground mt-1">
-                  Informe inicial e atual
+                  {!client.initial_revenue && !client.current_revenue
+                    ? "Preenche automaticamente"
+                    : !client.initial_revenue
+                    ? "Falta o faturamento inicial"
+                    : "Falta o faturamento atual"}
                 </span>
               ) : (
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span
-                    className={
-                      "text-2xl font-bold " +
-                      (growth >= 0 ? "text-emerald-600" : "text-red-600")
-                    }
-                  >
-                    {growth >= 0 ? "+" : ""}
-                    {growth.toFixed(0)}%
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    desde o início
+                <div className="flex flex-col mt-1">
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className={
+                        "text-2xl font-bold " +
+                        (growth >= 0 ? "text-emerald-600" : "text-red-600")
+                      }
+                    >
+                      {growth >= 0 ? "+" : ""}
+                      {growth.toFixed(0)}%
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      desde o início
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground mt-0.5">
+                    {currency((client.current_revenue ?? 0) - (client.initial_revenue ?? 0))} de crescimento
                   </span>
                 </div>
               )}
