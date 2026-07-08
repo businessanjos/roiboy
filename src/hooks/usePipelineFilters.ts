@@ -216,6 +216,14 @@ export function usePipelineFilters() {
 // Utility function to apply filters to deals
 export type DealSearchMode = 'contains' | 'exact';
 
+// Normaliza para busca: minúsculo + remove diacríticos (São Paulo -> "sao paulo").
+// Exportado para permitir que o consumidor construa blobs com a mesma normalização.
+export function normalizeForSearch(input: unknown): string {
+  if (input === null || input === undefined) return '';
+  const s = typeof input === 'string' ? input : String(input);
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 export function applyFilterToDeals(
   deals: Deal[],
   activeFilter: ActiveFilter | null,
@@ -230,10 +238,10 @@ export function applyFilterToDeals(
   let filtered = [...deals];
 
   if (searchTerm?.trim()) {
-    const term = searchTerm.toLowerCase().trim();
+    const term = normalizeForSearch(searchTerm.trim());
     const mode: DealSearchMode = searchOptions?.mode ?? 'contains';
     const blobs = searchOptions?.blobs;
-    const buildFallbackBlob = (deal: Deal) => [
+    const buildFallbackBlob = (deal: Deal) => normalizeForSearch([
       deal.title,
       deal.notes,
       deal.source,
@@ -250,19 +258,14 @@ export function applyFilterToDeals(
       deal.stage?.name,
       (deal.tags || []).join(' '),
       dealProductMap?.[deal.id] || '',
-    ].filter(Boolean).join(' | ').toLowerCase();
+    ].filter(Boolean).join(' | '));
 
-    // Exact mode: phrase-boundary match (supports "São Paulo").
-    // Term is bounded by non-alphanumeric or string edges — case-insensitive
-    // and diacritics preserved (blob is already lowercased in the same way).
+    // Exact mode: casamento por fronteira de palavra/frase (aceita "sao paulo").
+    // O blob já vem normalizado (sem diacríticos), então basta \w-boundary ASCII.
     let exactRe: RegExp | null = null;
     if (mode === 'exact') {
       const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      try {
-        exactRe = new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, 'u');
-      } catch {
-        exactRe = new RegExp(`(^|[^A-Za-z0-9])${escaped}($|[^A-Za-z0-9])`);
-      }
+      exactRe = new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`);
     }
 
     filtered = filtered.filter(deal => {
