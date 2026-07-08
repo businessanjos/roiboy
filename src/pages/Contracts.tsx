@@ -1588,7 +1588,20 @@ export default function Contracts() {
   const currentContracts = activeTab === "conciliados" ? reconciledContracts : 
     activeTab === "triagem" ? triageContracts : queueContracts;
 
+  // Effective date range: if preset is not custom, always recompute from "now" so a
+  // persisted "Este Ano" filter stays relative even across sessions/year boundaries.
+  const effectiveDateRange = useMemo(() => {
+    if (dateFilter.preset === "custom") {
+      return { start: new Date(dateFilter.start), end: new Date(dateFilter.end) };
+    }
+    const { getPresetRange } = require("@/components/contracts/ContractsDateFilter");
+    const r = getPresetRange(dateFilter.preset);
+    return { start: r.start, end: r.end };
+  }, [dateFilter]);
+
   const filteredContracts = useMemo(() => {
+    const rangeStart = effectiveDateRange.start.getTime();
+    const rangeEnd = effectiveDateRange.end.getTime();
     const filtered = currentContracts.filter((contract) => {
       const matchesSearch = 
         contract.client?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1600,8 +1613,19 @@ export default function Contracts() {
         (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
       const matchesType = typeFilter === "all" || contract.contract_type === typeFilter;
       const matchesProduct = productFilter === "all" || contract.product?.id === productFilter;
+
+      // Date filter: contract must have activity intersecting the range.
+      // Use start_date within range, OR range overlaps [start_date, end_date].
+      const startTs = parseLocalDate(contract.start_date)?.getTime() ?? null;
+      const endTs = contract.end_date ? parseLocalDate(contract.end_date)?.getTime() ?? null : null;
+      let matchesDate = false;
+      if (startTs !== null) {
+        const contractStart = startTs;
+        const contractEnd = endTs ?? Number.POSITIVE_INFINITY;
+        matchesDate = contractStart <= rangeEnd && contractEnd >= rangeStart;
+      }
       
-      return matchesSearch && matchesStatus && matchesType && matchesProduct;
+      return matchesSearch && matchesStatus && matchesType && matchesProduct && matchesDate;
     });
 
     // Apply sorting
@@ -1615,10 +1639,10 @@ export default function Contracts() {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder]);
+  }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder, effectiveDateRange]);
 
   // Reset page when filters or tab change
-  const filterKey = `${searchTerm}-${statusFilter}-${typeFilter}-${productFilter}-${activeTab}`;
+  const filterKey = `${searchTerm}-${statusFilter}-${typeFilter}-${productFilter}-${dateFilter.preset}-${dateFilter.start}-${dateFilter.end}-${activeTab}`;
   const prevFilterKeyRef = useRef(filterKey);
   if (prevFilterKeyRef.current !== filterKey) {
     prevFilterKeyRef.current = filterKey;
