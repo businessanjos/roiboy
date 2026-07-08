@@ -102,7 +102,7 @@ export default function ClinicaRyka() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("client_ryka_provisions")
-        .select("client_id, email, status, whatsapp_status, created_at")
+        .select("client_id, email, status, whatsapp_status, created_at, ryka_response")
         .eq("account_id", accountId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -128,14 +128,22 @@ export default function ClinicaRyka() {
           : prov?.status === "error" || prov?.status === "failed"
             ? "failed"
             : "pending";
-      return { client, prov, state };
+      const rykaStatus: "active" | "inactive" | null =
+        prov?.ryka_response?.ryka_status === "active"
+          ? "active"
+          : prov?.ryka_response?.ryka_status === "inactive"
+            ? "inactive"
+            : null;
+      return { client, prov, state, rykaStatus };
     });
   }, [clientsQuery.data, provisionByClient]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return enriched.filter(({ client, state }) => {
-      if (filter !== "all" && state !== filter) return false;
+    return enriched.filter(({ client, state, rykaStatus }) => {
+      if (filter === "ryka_active" && rykaStatus !== "active") return false;
+      if (filter === "ryka_inactive" && rykaStatus !== "inactive") return false;
+      if (["provisioned", "pending", "failed"].includes(filter) && state !== filter) return false;
       if (!q) return true;
       const haystack = [
         client.full_name,
@@ -155,7 +163,9 @@ export default function ClinicaRyka() {
     const provisioned = enriched.filter((e) => e.state === "provisioned").length;
     const pending = enriched.filter((e) => e.state === "pending").length;
     const failed = enriched.filter((e) => e.state === "failed").length;
-    return { total, provisioned, pending, failed };
+    const rykaActive = enriched.filter((e) => e.rykaStatus === "active").length;
+    const rykaInactive = enriched.filter((e) => e.rykaStatus === "inactive").length;
+    return { total, provisioned, pending, failed, rykaActive, rykaInactive };
   }, [enriched]);
 
   const handleProvision = async (clientId: string) => {
