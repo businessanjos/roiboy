@@ -561,11 +561,23 @@ export default function SalesPipeline() {
   // Gate por booleano — o conteúdo dos blobs não depende do termo em si,
   // apenas do conjunto de deals. Evita refetch a cada tecla digitada.
   const isSearchingActive = debouncedSearchTerm.trim().length >= 2;
+
+  // Cache em memória por chave de relacionamento — trocar de pipeline e voltar
+  // não refaz as consultas enquanto o conjunto de deals for o mesmo.
+  const searchBlobCacheRef = useRef<Map<string, Record<string, string>>>(new Map());
+
   useEffect(() => {
     if (!isSearchingActive || deals.length === 0 || !currentUser?.account_id) {
       setDealSearchCustomBlobs({});
       return;
     }
+    const cacheKey = `${currentUser.account_id}::${dealSearchRelationKey}`;
+    const cached = searchBlobCacheRef.current.get(cacheKey);
+    if (cached) {
+      setDealSearchCustomBlobs(cached);
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       const dealIds = deals.map(d => d.id);
@@ -583,8 +595,9 @@ export default function SalesPipeline() {
           clientToDealIds.set(deal.client_id, ids);
         }
       }
-      const batchSize = 200;
+      const batchSize = 500;
       const acc: Record<string, string[]> = {};
+      const accountId = currentUser.account_id;
 
       const pushParts = (dealId: string | null | undefined, parts: unknown[]) => {
         if (!dealId) return;
@@ -601,34 +614,83 @@ export default function SalesPipeline() {
         acc[dealId].push(...clean);
       };
 
-      for (let i = 0; i < dealIds.length; i += batchSize) {
-        const batch = dealIds.slice(i, i + batchSize);
-        const { data, error } = await supabase
-          .from('deal_field_values')
-          .select('deal_id, field_id, value_text, value_number, value_date, value_boolean, value_json')
-          .eq('account_id', currentUser.account_id)
-          .in('deal_id', batch)
-          .limit(50000);
-        if (error) {
-          console.error('[SalesPipeline] custom field blob fetch error:', error);
-          continue;
-        }
-        (data || []).forEach((row: any) => {
+      const chunk = <T,>(arr: T[], size: number): T[][] => {
+        const out: T[][] = [];
+        for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+        return out;
+      };
+
+      const dealBatches = chunk(dealIds, batchSize);
+      const leadBatches = chunk(Array.from(leadToDealIds.keys()), batchSize);
+      const clientBatches = chunk(Array.from(clientToDealIds.keys()), batchSize);
+
+      // Dispara TODAS as consultas em paralelo (6 tabelas × N batches).
+      const [
+        dfvResults,
+        activitiesResults,
+        tasksResults,
+        leadsResults,
+        leadTimelineResults,
+        clientsResults,
+        followupsResults,
+      ] = await Promise.all([
+        Promise.all(dealBatches.map(batch =>
+          supabase.from('deal_field_values')
+            .select('deal_id, field_id, value_text, value_number, value_date, value_boolean, value_json')
+            .eq('account_id', accountId).in('deal_id', batch).limit(50000)
+        )),
+        Promise.all(dealBatches.map(batch =>
+          supabase.from('deal_activities')
+            .select('deal_id, title, content, old_value, new_value')
+            .eq('account_id', accountId).in('deal_id', batch).limit(50000)
+        )),
+        Promise.all(dealBatches.map(batch =>
+          supabase.from('internal_tasks')
+            .select(`deal_id, title, description,
+              assigned_user:users!internal_tasks_assigned_to_fkey(name),
+              custom_status:task_statuses!internal_tasks_custom_status_id_fkey(name),
+              activity_type:activity_types!internal_tasks_activity_type_id_fkey(name)`)
+            .eq('account_id', accountId).in('deal_id', batch).limit(50000)
+        )),
+        Promise.all(leadBatches.map(batch =>
+          supabase.from('leads')
+            .select('id, full_name, phone, email, emails, additional_phones, instagram, instagrams, source, notes, mql, canal, revenue_range, company_name, business_segment, business_niche, city, state, business_city, business_state, tags')
+            .eq('account_id', accountId).in('id', batch).limit(50000)
+        )),
+        Promise.all(leadBatches.map(batch =>
+          supabase.from('lead_timeline')
+            .select('lead_id, title, description, event_type, metadata')
+            .eq('account_id', accountId).in('lead_id', batch).limit(50000)
+        )),
+        Promise.all(clientBatches.map(batch =>
+          supabase.from('clients')
+            .select('id, full_name, phone_e164, emails, additional_phones, instagram, instagrams, notes, company_name, business_segment, business_niche, city, state, business_city, business_state, tags')
+            .eq('account_id', accountId).in('id', batch).limit(50000)
+        )),
+        Promise.all(clientBatches.map(batch =>
+          supabase.from('client_followups')
+            .select('client_id, title, content, type')
+            .eq('account_id', accountId).in('client_id', batch).limit(50000)
+        )),
+      ]);
+
+      if (cancelled) return;
+
+      // Processa deal_field_values
+      for (const res of dfvResults) {
+        if (res.error) { console.error('[SalesPipeline] custom field blob fetch error:', res.error); continue; }
+        (res.data || []).forEach((row: any) => {
           if (!row.deal_id) return;
           const parts: string[] = [];
           const labelMap = row.field_id ? customFieldOptionLabels[row.field_id] : undefined;
-
           if (row.value_text != null && row.value_text !== '') {
             const raw = String(row.value_text);
             parts.push(raw);
-            // Se for select cujo value_text é a chave da opção, adiciona também o label
             if (labelMap && labelMap[raw]) parts.push(labelMap[raw]);
           }
-
           if (row.value_number != null) parts.push(String(row.value_number));
           if (row.value_date != null) parts.push(String(row.value_date));
           if (row.value_boolean != null) parts.push(row.value_boolean ? 'sim true verdadeiro' : 'nao não false falso');
-
           if (row.value_json != null) {
             try {
               if (Array.isArray(row.value_json)) {
@@ -646,184 +708,79 @@ export default function SalesPipeline() {
               }
             } catch { /* ignore */ }
           }
-
           pushParts(row.deal_id, parts);
         });
-        if (cancelled) return;
       }
 
-      for (let i = 0; i < dealIds.length; i += batchSize) {
-        const batch = dealIds.slice(i, i + batchSize);
-        const [activitiesResult, tasksResult] = await Promise.all([
-          supabase
-            .from('deal_activities')
-            .select('deal_id, title, content, old_value, new_value')
-            .eq('account_id', currentUser.account_id)
-            .in('deal_id', batch)
-            .limit(50000),
-          supabase
-            .from('internal_tasks')
-            .select(`
-              deal_id,
-              title,
-              description,
-              assigned_user:users!internal_tasks_assigned_to_fkey(name),
-              custom_status:task_statuses!internal_tasks_custom_status_id_fkey(name),
-              activity_type:activity_types!internal_tasks_activity_type_id_fkey(name)
-            `)
-            .eq('account_id', currentUser.account_id)
-            .in('deal_id', batch)
-            .limit(50000),
-        ]);
-
-        if (activitiesResult.error) {
-          console.error('[SalesPipeline] activity search blob fetch error:', activitiesResult.error);
-        } else {
-          (activitiesResult.data || []).forEach((row: any) => {
-            pushParts(row.deal_id, [row.title, row.content, row.old_value, row.new_value]);
-          });
-        }
-
-        if (tasksResult.error) {
-          console.error('[SalesPipeline] task search blob fetch error:', tasksResult.error);
-        } else {
-          (tasksResult.data || []).forEach((row: any) => {
-            pushParts(row.deal_id, [
-              row.title,
-              row.description,
-              row.activity_type?.name,
-              row.custom_status?.name,
-              row.assigned_user?.name,
-            ]);
-          });
-        }
-
-        if (cancelled) return;
+      for (const res of activitiesResults) {
+        if (res.error) { console.error('[SalesPipeline] activity search blob fetch error:', res.error); continue; }
+        (res.data || []).forEach((row: any) => {
+          pushParts(row.deal_id, [row.title, row.content, row.old_value, row.new_value]);
+        });
       }
 
-      const leadIds = Array.from(leadToDealIds.keys());
-      for (let i = 0; i < leadIds.length; i += batchSize) {
-        const batch = leadIds.slice(i, i + batchSize);
-        const [leadsResult, leadTimelineResult] = await Promise.all([
-          supabase
-            .from('leads')
-            .select('id, full_name, phone, email, emails, additional_phones, instagram, instagrams, source, notes, mql, canal, revenue_range, company_name, business_segment, business_niche, city, state, business_city, business_state, tags')
-            .eq('account_id', currentUser.account_id)
-            .in('id', batch)
-            .limit(50000),
-          supabase
-            .from('lead_timeline')
-            .select('lead_id, title, description, event_type, metadata')
-            .eq('account_id', currentUser.account_id)
-            .in('lead_id', batch)
-            .limit(50000),
-        ]);
-
-        if (leadsResult.error) {
-          console.error('[SalesPipeline] lead search blob fetch error:', leadsResult.error);
-        } else {
-          (leadsResult.data || []).forEach((lead: any) => {
-            const ids = leadToDealIds.get(lead.id) || [];
-            ids.forEach((dealId) => pushParts(dealId, [
-              lead.full_name,
-              lead.phone,
-              lead.email,
-              lead.emails,
-              lead.additional_phones,
-              lead.instagram,
-              lead.instagrams,
-              lead.source,
-              lead.notes,
-              lead.mql,
-              lead.canal,
-              lead.revenue_range,
-              lead.company_name,
-              lead.business_segment,
-              lead.business_niche,
-              lead.city,
-              lead.state,
-              lead.business_city,
-              lead.business_state,
-              lead.tags,
-            ]));
-          });
-        }
-
-        if (leadTimelineResult.error) {
-          console.error('[SalesPipeline] lead timeline search blob fetch error:', leadTimelineResult.error);
-        } else {
-          (leadTimelineResult.data || []).forEach((event: any) => {
-            const ids = leadToDealIds.get(event.lead_id) || [];
-            ids.forEach((dealId) => pushParts(dealId, [event.title, event.description, event.event_type, event.metadata]));
-          });
-        }
-
-        if (cancelled) return;
+      for (const res of tasksResults) {
+        if (res.error) { console.error('[SalesPipeline] task search blob fetch error:', res.error); continue; }
+        (res.data || []).forEach((row: any) => {
+          pushParts(row.deal_id, [row.title, row.description, row.activity_type?.name, row.custom_status?.name, row.assigned_user?.name]);
+        });
       }
 
-      const clientIds = Array.from(clientToDealIds.keys());
-      for (let i = 0; i < clientIds.length; i += batchSize) {
-        const batch = clientIds.slice(i, i + batchSize);
-        const [clientsResult, clientFollowupsResult] = await Promise.all([
-          supabase
-            .from('clients')
-            .select('id, full_name, phone_e164, emails, additional_phones, instagram, instagrams, notes, company_name, business_segment, business_niche, city, state, business_city, business_state, tags')
-            .eq('account_id', currentUser.account_id)
-            .in('id', batch)
-            .limit(50000),
-          supabase
-            .from('client_followups')
-            .select('client_id, title, content, type')
-            .eq('account_id', currentUser.account_id)
-            .in('client_id', batch)
-            .limit(50000),
-        ]);
+      for (const res of leadsResults) {
+        if (res.error) { console.error('[SalesPipeline] lead search blob fetch error:', res.error); continue; }
+        (res.data || []).forEach((lead: any) => {
+          const ids = leadToDealIds.get(lead.id) || [];
+          ids.forEach((dealId) => pushParts(dealId, [
+            lead.full_name, lead.phone, lead.email, lead.emails, lead.additional_phones,
+            lead.instagram, lead.instagrams, lead.source, lead.notes, lead.mql, lead.canal,
+            lead.revenue_range, lead.company_name, lead.business_segment, lead.business_niche,
+            lead.city, lead.state, lead.business_city, lead.business_state, lead.tags,
+          ]));
+        });
+      }
 
-        if (clientsResult.error) {
-          console.error('[SalesPipeline] client search blob fetch error:', clientsResult.error);
-        } else {
-          (clientsResult.data || []).forEach((client: any) => {
-            const ids = clientToDealIds.get(client.id) || [];
-            ids.forEach((dealId) => pushParts(dealId, [
-              client.full_name,
-              client.phone_e164,
-              client.emails,
-              client.additional_phones,
-              client.instagram,
-              client.instagrams,
-              client.notes,
-              client.company_name,
-              client.business_segment,
-              client.business_niche,
-              client.city,
-              client.state,
-              client.business_city,
-              client.business_state,
-              client.tags,
-            ]));
-          });
-        }
+      for (const res of leadTimelineResults) {
+        if (res.error) { console.error('[SalesPipeline] lead timeline search blob fetch error:', res.error); continue; }
+        (res.data || []).forEach((event: any) => {
+          const ids = leadToDealIds.get(event.lead_id) || [];
+          ids.forEach((dealId) => pushParts(dealId, [event.title, event.description, event.event_type, event.metadata]));
+        });
+      }
 
-        if (clientFollowupsResult.error) {
-          console.error('[SalesPipeline] client followup search blob fetch error:', clientFollowupsResult.error);
-        } else {
-          (clientFollowupsResult.data || []).forEach((followup: any) => {
-            const ids = clientToDealIds.get(followup.client_id) || [];
-            ids.forEach((dealId) => pushParts(dealId, [followup.title, followup.content, followup.type]));
-          });
-        }
+      for (const res of clientsResults) {
+        if (res.error) { console.error('[SalesPipeline] client search blob fetch error:', res.error); continue; }
+        (res.data || []).forEach((client: any) => {
+          const ids = clientToDealIds.get(client.id) || [];
+          ids.forEach((dealId) => pushParts(dealId, [
+            client.full_name, client.phone_e164, client.emails, client.additional_phones,
+            client.instagram, client.instagrams, client.notes, client.company_name,
+            client.business_segment, client.business_niche, client.city, client.state,
+            client.business_city, client.business_state, client.tags,
+          ]));
+        });
+      }
 
-        if (cancelled) return;
+      for (const res of followupsResults) {
+        if (res.error) { console.error('[SalesPipeline] client followup search blob fetch error:', res.error); continue; }
+        (res.data || []).forEach((followup: any) => {
+          const ids = clientToDealIds.get(followup.client_id) || [];
+          ids.forEach((dealId) => pushParts(dealId, [followup.title, followup.content, followup.type]));
+        });
       }
 
       if (cancelled) return;
       const combined: Record<string, string> = {};
       for (const [id, arr] of Object.entries(acc)) {
         const normalized = normalizeForSearch(arr.join(' | '));
-        // Anexa versão só-dígitos para permitir busca por telefone sem máscara
         const digits = normalized.replace(/\D/g, '');
         combined[id] = digits ? `${normalized} | ${digits}` : normalized;
       }
+      // Cache LRU simples — mantém no máximo 5 combinações
+      if (searchBlobCacheRef.current.size >= 5) {
+        const firstKey = searchBlobCacheRef.current.keys().next().value;
+        if (firstKey) searchBlobCacheRef.current.delete(firstKey);
+      }
+      searchBlobCacheRef.current.set(cacheKey, combined);
       setDealSearchCustomBlobs(combined);
     })();
     return () => { cancelled = true; };
