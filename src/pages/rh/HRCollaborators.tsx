@@ -302,15 +302,34 @@ export default function HRCollaborators() {
         console.error("[HR] Failed to write audit log", auditErr);
       }
 
-      // Cut system access only for definitive termination
+      // Cut system access + reassign records on definitive termination
       if (leaveType === "inactive" && deactivateTarget.user_id) {
+        // 1) Reassign leads/deals/clients/tasks/followups/atendimentos to default heir + revoke sessions
+        try {
+          const { data: rpcData, error: rpcErr } = await supabase.rpc("inactivate_collaborator", {
+            _collaborator_id: deactivateTarget.id,
+            _reason: leaveReason.trim() || null,
+          });
+          if (rpcErr) throw rpcErr;
+          const reassigned = (rpcData as any)?.reassigned || {};
+          const total: number = Object.values(reassigned).reduce<number>((s, n) => s + (Number(n) || 0), 0);
+          if (total > 0) {
+
+            toast.info(`${total} registros transferidos automaticamente para o responsável default da área.`);
+          }
+        } catch (rpcCatch: any) {
+          console.error("[HR] inactivate_collaborator RPC failed", rpcCatch);
+          toast.warning("Status atualizado, mas a reatribuição automática falhou: " + (rpcCatch?.message || "erro desconhecido"));
+        }
+
+        // 2) Revoke auth login
         const { error } = await supabase.functions.invoke("admin-manage-user", {
           body: { action: "set_active", auth_user_id: deactivateTarget.user_id, is_active: false },
         });
         if (error) {
-          toast.warning("Status atualizado, mas falha ao desativar acesso ao sistema: " + error.message);
+          toast.warning("Status atualizado, mas falha ao desativar login: " + error.message);
         } else {
-          toast.success("Colaborador desligado e acesso ao sistema desativado.");
+          toast.success("Colaborador desligado, acesso revogado e registros reatribuídos.");
         }
       } else {
         toast.success(
@@ -319,6 +338,7 @@ export default function HRCollaborators() {
           : "Colaborador desligado no RH (sem usuário vinculado ao sistema)."
         );
       }
+
       setDeactivateTarget(null);
     } catch (err: any) {
       toast.error("Erro ao atualizar: " + (err?.message || "desconhecido"));
