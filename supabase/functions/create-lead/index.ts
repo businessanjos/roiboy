@@ -30,10 +30,13 @@ interface CreateLeadPayload {
   create_deal?: boolean;
   pipeline_id?: string;
   pipeline_name?: string;
+  stage_id?: string;
+  stage_name?: string;
   responsible_user_id?: string;
   responsible_email?: string;
   deal_title?: string;
   deal_value?: number;
+
 }
 
 /**
