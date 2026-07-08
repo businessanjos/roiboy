@@ -224,50 +224,62 @@ export default function Tasks() {
         sectorActivityTypeIds = (sectorTypes || []).map(t => t.id);
       }
 
-      let query = supabase
-        .from("internal_tasks")
-        .select(`
-          *,
-          clients:client_id (id, full_name),
-          deals:deal_id (
-            id, 
-            title, 
-            client_id,
-            lead_id,
-            contact_name,
-            contact_phone,
-            stage_id,
-            stage:deal_stages(id, name, color),
-            client:clients(id, full_name, phone_e164),
-            lead:leads(id, full_name, phone)
-          ),
-          leads:lead_id (id, full_name),
-          assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url),
-          activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
-        `);
+      const buildQuery = () => {
+        let q = supabase
+          .from("internal_tasks")
+          .select(`
+            *,
+            clients:client_id (id, full_name),
+            deals:deal_id (
+              id, 
+              title, 
+              client_id,
+              lead_id,
+              contact_name,
+              contact_phone,
+              stage_id,
+              stage:deal_stages(id, name, color),
+              client:clients(id, full_name, phone_e164),
+              lead:leads(id, full_name, phone)
+            ),
+            leads:lead_id (id, full_name),
+            assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url),
+            activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
+          `);
 
-      // Apply server-side sector filter using activity_type_ids.
-      // IMPORTANT: also include tasks with activity_type_id NULL — sem esse
-      // OR, tarefas sem tipo (comuns em leads criados via automação) somem.
-      if (sectorActivityTypeIds && sectorActivityTypeIds.length > 0) {
-        query = query.or(
-          `activity_type_id.in.(${sectorActivityTypeIds.join(",")}),activity_type_id.is.null`
-        );
+        // Sector filter (server-side). Inclui NULL para não perder tarefas
+        // de leads criados via automação sem tipo de atividade definido.
+        if (sectorActivityTypeIds && sectorActivityTypeIds.length > 0) {
+          q = q.or(
+            `activity_type_id.in.(${sectorActivityTypeIds.join(",")}),activity_type_id.is.null`
+          );
+        }
+
+        // User filter (server-side) para não estourar limites em contas grandes.
+        if (filterUser === "mine" && currentUser?.id) {
+          q = q.eq("assigned_to", currentUser.id);
+        } else if (filterUser !== "all" && filterUser) {
+          q = q.eq("assigned_to", filterUser);
+        }
+        return q;
+      };
+
+      // Pagina em blocos de 1000 (limite padrão do PostgREST). Rebuilda a
+      // query a cada iteração para não acumular parâmetros de estado.
+      const PAGE = 1000;
+      const all: Task[] = [];
+      let from = 0;
+      for (let page = 0; page < 50; page++) {
+        const { data, error } = await buildQuery()
+          .order("created_at", { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const chunk = (data || []) as Task[];
+        all.push(...chunk);
+        if (chunk.length < PAGE) break;
+        from += PAGE;
       }
-
-      // Apply server-side user filter to avoid hitting the 1000-row default limit
-      if (filterUser === "mine" && currentUser?.id) {
-        query = query.eq("assigned_to", currentUser.id);
-      } else if (filterUser !== "all" && filterUser) {
-        query = query.eq("assigned_to", filterUser);
-      }
-
-      const { data, error } = await query
-        .order("created_at", { ascending: false })
-        .limit(2000);
-
-      if (error) throw error;
-      return (data || []) as Task[];
+      return all;
     },
     staleTime: 30000,
   });
