@@ -474,3 +474,21 @@ function StatusBadge({
     </Badge>
   );
 }
+
+function RykaStatusBadge({ status }: { status: "active" | "inactive" | null }) {
+  if (status === "active") {
+    return (
+      <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15">
+        <CheckCircle2 className="h-3 w-3 mr-1" /> Ativo
+      </Badge>
+    );
+  }
+  if (status === "inactive") {
+    return (
+      <Badge variant="outline" className="text-slate-600 border-slate-400/50">
+        <AlertCircle className="h-3 w-3 mr-1" /> Inativo
+      </Badge>
+    );
+  }
+  return <span className="text-xs text-muted-foreground">—</span>;
+}
