@@ -1595,7 +1595,6 @@ export default function Contracts() {
     if (dateFilter.preset === "custom") {
       return { start: new Date(dateFilter.start), end: new Date(dateFilter.end) };
     }
-    const { getPresetRange } = require("@/components/contracts/ContractsDateFilter");
     const r = getPresetRange(dateFilter.preset);
     return { start: r.start, end: r.end };
   }, [dateFilter]);
