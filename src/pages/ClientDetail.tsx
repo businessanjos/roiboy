@@ -2390,6 +2390,9 @@ export default function ClientDetail() {
         </Card>
       )}
 
+      {/* Perfil do Negócio (sempre visível no topo) */}
+      <ClientBusinessProfile clientId={id!} variant="card" />
+
       {/* Content based on active tab from sidebar */}
       {(() => {
         const activeTab = searchParams.get("tab") || "timeline";
