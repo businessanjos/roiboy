@@ -422,6 +422,7 @@ function AreaSection({
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["leader-meeting-sections", meetingId] }),
+    onError: (e: any) => toast.error("Erro ao salvar anotação: " + (e?.message || "desconhecido")),
   });
 
   const fields: Array<{ key: keyof Section; label: string; placeholder: string }> = [
