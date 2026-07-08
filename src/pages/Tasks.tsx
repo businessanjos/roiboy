@@ -1066,21 +1066,36 @@ export default function Tasks() {
                       </TableCell>
                       <TableCell className="text-center">
                         {task.assigned_user ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Avatar className="h-7 w-7 mx-auto border-2 border-background shadow-sm">
-                                  <AvatarImage src={task.assigned_user.avatar_url || undefined} />
-                                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
-                                    {getInitials(task.assigned_user.name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs">
-                                <span className="font-medium">{task.assigned_user.name}</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          task.assigned_user.is_active === false ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-[10px] border-dashed text-muted-foreground font-normal">
+                                    Usuário inativo
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  <span className="font-medium">{task.assigned_user.name}</span> (inativo)
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Avatar className="h-7 w-7 mx-auto border-2 border-background shadow-sm">
+                                    <AvatarImage src={task.assigned_user.avatar_url || undefined} />
+                                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
+                                      {getInitials(task.assigned_user.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  <span className="font-medium">{task.assigned_user.name}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
