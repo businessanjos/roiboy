@@ -246,11 +246,13 @@ export default function ClinicaRyka() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <SummaryCard label="Total elegíveis" value={counts.total} />
         <SummaryCard label="Já com acesso" value={counts.provisioned} accent="text-emerald-600" />
         <SummaryCard label="Falta liberar" value={counts.pending} accent="text-amber-600" />
         <SummaryCard label="Falhas" value={counts.failed} accent="text-rose-600" />
+        <SummaryCard label="Ativos no Ryka" value={counts.rykaActive} accent="text-emerald-600" />
+        <SummaryCard label="Inativos no Ryka" value={counts.rykaInactive} accent="text-slate-500" />
       </div>
 
       <Card>
@@ -268,11 +270,13 @@ export default function ClinicaRyka() {
                 />
               </div>
               <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
-                <TabsList>
+                <TabsList className="flex-wrap h-auto">
                   <TabsTrigger value="all">Todos ({counts.total})</TabsTrigger>
                   <TabsTrigger value="provisioned">Com acesso ({counts.provisioned})</TabsTrigger>
                   <TabsTrigger value="pending">Falta liberar ({counts.pending})</TabsTrigger>
                   <TabsTrigger value="failed">Falhas ({counts.failed})</TabsTrigger>
+                  <TabsTrigger value="ryka_active">Ativos Ryka ({counts.rykaActive})</TabsTrigger>
+                  <TabsTrigger value="ryka_inactive">Inativos Ryka ({counts.rykaInactive})</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
