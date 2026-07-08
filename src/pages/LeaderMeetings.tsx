@@ -271,11 +271,14 @@ function MeetingDetail({ meetingId, onBack }: { meetingId: string; onBack: () =>
         .update(patch)
         .eq("id", meetingId);
       if (error) throw error;
+      return patch;
     },
-    onSuccess: () => {
+    onSuccess: (patch) => {
       queryClient.invalidateQueries({ queryKey: ["leader-meeting", meetingId] });
       queryClient.invalidateQueries({ queryKey: ["leader-meetings"] });
+      if (patch && "meeting_date" in patch) toast.success("Data atualizada");
     },
+    onError: (e: any) => toast.error("Erro ao salvar: " + (e?.message || "desconhecido")),
   });
 
   const m = meetingQuery.data;
