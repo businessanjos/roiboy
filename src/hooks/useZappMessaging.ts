@@ -987,6 +987,13 @@ export function useZappMessaging({
             audio_duration_sec: duration || null,
             sender_name: null,
             delivery_status: "pending",
+            quoted_message_id: replyContext?.external_message_id || null,
+            quoted_content: replyContext?.content || null,
+            quoted_sender_name: replyContext?.is_from_client
+              ? (replyContext.sender_name || "Cliente")
+              : replyContext
+                ? "Você"
+                : null,
           };
           
           setMessages(prev => {
@@ -1013,6 +1020,14 @@ export function useZappMessaging({
           payload.group_id = groupJid;
         } else {
           payload.phone = phone;
+        }
+
+        if (replyContext?.external_message_id) {
+          payload.quoted_message_id = replyContext.external_message_id;
+          payload.quoted_from_me = !replyContext.is_from_client;
+          if (replyContext.is_from_client && phone) {
+            payload.quoted_participant = phone;
+          }
         }
         
         const { data, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
