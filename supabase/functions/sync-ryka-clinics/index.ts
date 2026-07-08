@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
   }
 
   // Auth: aceita (a) chamada por usuário logado ou (b) cron com x-cron-secret
-  const CRON_SECRET = Deno.env.get("RYKA_CRON_SECRET");
+  const CRON_SECRET = Deno.env.get("RYKA_CRON_TOKEN") || Deno.env.get("RYKA_CRON_SECRET");
   const cronHeader = req.headers.get("x-cron-secret");
   const isCron = !!(CRON_SECRET && cronHeader && cronHeader === CRON_SECRET);
 
