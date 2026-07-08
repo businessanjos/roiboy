@@ -576,7 +576,7 @@ export default function SalesPipeline() {
       if (cancelled) return;
       const combined: Record<string, string> = {};
       for (const [id, arr] of Object.entries(acc)) {
-        combined[id] = arr.join(' | ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        combined[id] = normalizeForSearch(arr.join(' | '));
       }
       setDealSearchCustomBlobs(combined);
     })();
