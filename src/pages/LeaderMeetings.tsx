@@ -61,9 +61,10 @@ export default function LeaderMeetings() {
   const [newDate, setNewDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [newTitle, setNewTitle] = useState("");
 
+  const { hasSectorAccess } = useSectorAccess();
   const canAccess = useMemo(
-    () => isManagementUser(currentUser, isSuperAdmin),
-    [currentUser, isSuperAdmin]
+    () => isManagementUser(currentUser, isSuperAdmin) || hasSectorAccess("reuniao-lideres"),
+    [currentUser, isSuperAdmin, hasSectorAccess]
   );
 
   const meetingsQuery = useQuery({
