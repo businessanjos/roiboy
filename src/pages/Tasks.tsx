@@ -519,37 +519,22 @@ export default function Tasks() {
     
     let matchesSector = true;
     if (currentSector?.id === "vendas") {
-      // For Sales: include if activity belongs to vendas, or has deal_id with no sector specified
+      // For Sales: include if activity belongs to vendas, or has deal_id/lead_id with no sector specified
       // EXCLUDE if activity explicitly belongs to another sector
       if (activitySectorId && activitySectorId !== "vendas") {
         matchesSector = false;
       } else {
-        matchesSector = activitySectorId === "vendas" || 
-          (!!task.deal_id && !activitySectorId);
+        matchesSector = activitySectorId === "vendas" ||
+          ((!!task.deal_id || !!task.lead_id) && !activitySectorId);
       }
     } else if (currentSector?.id === "operacoes") {
-      // For Operations: include if activity belongs to operacoes, or has client without deal and no sector
+      // For Operations: include if activity belongs to operacoes, or has client (without deal) or lead with no sector
       // EXCLUDE if activity explicitly belongs to another sector
       if (activitySectorId && activitySectorId !== "operacoes") {
         matchesSector = false;
       } else {
         matchesSector = activitySectorId === "operacoes" ||
-          (!!task.client_id && !task.deal_id && !activitySectorId);
-      }
-    } else if (currentSector?.id) {
-      // For other sectors: only match exact sector_id
-      matchesSector = activitySectorId === currentSector.id;
-    }
-
-    // Date range filter on due_date
-    const hasDateFilter = filterDateStart !== "" || filterDateEnd !== "";
-    let matchesDateRange = true;
-    if (hasDateFilter) {
-      if (!task.due_date) {
-        matchesDateRange = false;
-      } else {
-        if (filterDateStart && task.due_date < filterDateStart) matchesDateRange = false;
-        if (filterDateEnd && task.due_date > filterDateEnd) matchesDateRange = false;
+          ((!!task.client_id && !task.deal_id && !activitySectorId));
       }
     }
 
