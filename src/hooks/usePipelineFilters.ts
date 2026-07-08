@@ -241,24 +241,28 @@ export function applyFilterToDeals(
     const term = normalizeForSearch(searchTerm.trim());
     const mode: DealSearchMode = searchOptions?.mode ?? 'contains';
     const blobs = searchOptions?.blobs;
-    const buildFallbackBlob = (deal: Deal) => normalizeForSearch([
-      deal.title,
-      deal.notes,
-      deal.source,
-      deal.contact_name,
-      deal.contact_phone,
-      deal.contact_email,
-      deal.client?.full_name,
-      deal.client?.phone_e164,
-      deal.lead?.full_name,
-      deal.lead?.phone,
-      deal.lead?.email,
-      deal.responsible_user?.name,
-      deal.sdr_user?.name,
-      deal.stage?.name,
-      (deal.tags || []).join(' '),
-      dealProductMap?.[deal.id] || '',
-    ].filter(Boolean).join(' | '));
+    const buildFallbackBlob = (deal: Deal) => {
+      const normalized = normalizeForSearch([
+        deal.title,
+        deal.notes,
+        deal.source,
+        deal.contact_name,
+        deal.contact_phone,
+        deal.contact_email,
+        deal.client?.full_name,
+        deal.client?.phone_e164,
+        deal.lead?.full_name,
+        deal.lead?.phone,
+        deal.lead?.email,
+        deal.responsible_user?.name,
+        deal.sdr_user?.name,
+        deal.stage?.name,
+        (deal.tags || []).join(' '),
+        dealProductMap?.[deal.id] || '',
+      ].filter(Boolean).join(' | '));
+      const digits = normalized.replace(/\D/g, '');
+      return digits ? `${normalized} | ${digits}` : normalized;
+    };
 
     // Exact mode: casamento por fronteira de palavra/frase (aceita "sao paulo").
     // O blob já vem normalizado (sem diacríticos), então basta \w-boundary ASCII.
