@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -271,11 +271,14 @@ function MeetingDetail({ meetingId, onBack }: { meetingId: string; onBack: () =>
         .update(patch)
         .eq("id", meetingId);
       if (error) throw error;
+      return patch;
     },
-    onSuccess: () => {
+    onSuccess: (patch) => {
       queryClient.invalidateQueries({ queryKey: ["leader-meeting", meetingId] });
       queryClient.invalidateQueries({ queryKey: ["leader-meetings"] });
+      if (patch && "meeting_date" in patch) toast.success("Data atualizada");
     },
+    onError: (e: any) => toast.error("Erro ao salvar: " + (e?.message || "desconhecido")),
   });
 
   const m = meetingQuery.data;
@@ -419,6 +422,7 @@ function AreaSection({
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["leader-meeting-sections", meetingId] }),
+    onError: (e: any) => toast.error("Erro ao salvar anotação: " + (e?.message || "desconhecido")),
   });
 
   const fields: Array<{ key: keyof Section; label: string; placeholder: string }> = [
@@ -671,28 +675,76 @@ function AutoSaveTextarea({
   minHeight?: number;
 }) {
   const [local, setLocal] = useState(value);
-  const [dirty, setDirty] = useState(false);
+  const [status, setStatus] = useState<"idle" | "dirty" | "saving" | "saved">("idle");
+  const dirtyRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef(value);
 
-  // Sync external changes when not editing
-  useMemo(() => {
-    if (!dirty) setLocal(value);
-  }, [value, dirty]);
+  // Sync from server only when not being edited
+  useEffect(() => {
+    if (!dirtyRef.current) {
+      setLocal(value);
+      lastSavedRef.current = value;
+    }
+  }, [value]);
+
+  const flush = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (local !== lastSavedRef.current) {
+      setStatus("saving");
+      onSave(local);
+      lastSavedRef.current = local;
+      dirtyRef.current = false;
+      setTimeout(() => setStatus("saved"), 300);
+    } else {
+      dirtyRef.current = false;
+      setStatus("idle");
+    }
+  };
+
+  // Flush on unmount / tab close
+  useEffect(() => {
+    const handler = () => {
+      if (dirtyRef.current && local !== lastSavedRef.current) {
+        onSave(local);
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => {
+      window.removeEventListener("beforeunload", handler);
+      if (dirtyRef.current && local !== lastSavedRef.current) {
+        onSave(local);
+      }
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [local]);
 
   return (
-    <Textarea
-      value={local}
-      placeholder={placeholder}
-      style={{ minHeight }}
-      onChange={(e) => {
-        setLocal(e.target.value);
-        setDirty(true);
-      }}
-      onBlur={() => {
-        if (dirty && local !== value) {
-          onSave(local);
-        }
-        setDirty(false);
-      }}
-    />
+    <div className="space-y-1">
+      <Textarea
+        value={local}
+        placeholder={placeholder}
+        style={{ minHeight }}
+        onChange={(e) => {
+          const v = e.target.value;
+          setLocal(v);
+          dirtyRef.current = true;
+          setStatus("dirty");
+          if (timerRef.current) clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(() => flush(), 800);
+        }}
+        onBlur={() => flush()}
+      />
+      <div className="text-[10px] text-muted-foreground h-3 flex items-center gap-1">
+        {status === "dirty" && <span>Editando…</span>}
+        {status === "saving" && <span>Salvando…</span>}
+        {status === "saved" && <span className="text-green-600">✓ Salvo</span>}
+      </div>
+    </div>
   );
 }
+
