@@ -175,6 +175,13 @@ export default function SalesPipeline() {
   }, [currentUser?.account_id]);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchMode, setSearchMode] = usePersistedFilter<"contains" | "exact">("salesPipeline", "searchMode", "contains");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+  const [dealSearchCustomBlobs, setDealSearchCustomBlobs] = useState<Record<string, string>>({});
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [titleTagFilter, setTitleTagFilter] = usePersistedFilter<string[]>("salesPipeline", "titleTagFilter", []);
   const [openDatePreset, setOpenDatePreset] = usePersistedFilter<string>("salesPipeline", "openDatePreset", "all");
