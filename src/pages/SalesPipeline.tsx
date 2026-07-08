@@ -533,10 +533,10 @@ export default function SalesPipeline() {
     })();
   }, [customFieldIdsInFilter, allDealIds]);
 
-  // Fetch ALL custom field text values for the current deals when the user is
-  // actively searching — enables the search box to match anything inside a card
-  // (city, empresa, especialidade, etc). Only fires while a term is typed to
-  // keep the query cost bounded.
+  // Fetch ALL searchable secondary data for the current deals when the user is
+  // actively searching — enables the search box to match what appears in the
+  // deal drawer/timeline too (observações, atividades, tarefas, lead/client).
+  // Only fires while a term is typed to keep the query cost bounded.
   // Mapa field_id -> (option value -> label) para traduzir chaves de select/multi_select
   // em rótulos legíveis no blob de busca (usuário digita "Rykas Pass", banco tem "rykas_pass").
   const customFieldOptionLabels = useMemo(() => {
@@ -563,13 +563,43 @@ export default function SalesPipeline() {
     let cancelled = false;
     (async () => {
       const dealIds = deals.map(d => d.id);
+      const leadToDealIds = new Map<string, string[]>();
+      const clientToDealIds = new Map<string, string[]>();
+      for (const deal of deals) {
+        if (deal.lead_id) {
+          const ids = leadToDealIds.get(deal.lead_id) || [];
+          ids.push(deal.id);
+          leadToDealIds.set(deal.lead_id, ids);
+        }
+        if (deal.client_id) {
+          const ids = clientToDealIds.get(deal.client_id) || [];
+          ids.push(deal.id);
+          clientToDealIds.set(deal.client_id, ids);
+        }
+      }
       const batchSize = 200;
       const acc: Record<string, string[]> = {};
+
+      const pushParts = (dealId: string | null | undefined, parts: unknown[]) => {
+        if (!dealId) return;
+        const clean = parts
+          .flatMap((value) => {
+            if (value === null || value === undefined || value === '') return [];
+            if (Array.isArray(value)) return value.map(v => typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v));
+            if (typeof value === 'object') return [JSON.stringify(value)];
+            return [String(value)];
+          })
+          .filter(Boolean);
+        if (!clean.length) return;
+        if (!acc[dealId]) acc[dealId] = [];
+        acc[dealId].push(...clean);
+      };
+
       for (let i = 0; i < dealIds.length; i += batchSize) {
         const batch = dealIds.slice(i, i + batchSize);
         const { data, error } = await supabase
           .from('deal_field_values')
-          .select('deal_id, field_id, value_text, value_json')
+          .select('deal_id, field_id, value_text, value_number, value_date, value_boolean, value_json')
           .eq('account_id', currentUser.account_id)
           .in('deal_id', batch)
           .limit(50000);
@@ -589,6 +619,10 @@ export default function SalesPipeline() {
             if (labelMap && labelMap[raw]) parts.push(labelMap[raw]);
           }
 
+          if (row.value_number != null) parts.push(String(row.value_number));
+          if (row.value_date != null) parts.push(String(row.value_date));
+          if (row.value_boolean != null) parts.push(row.value_boolean ? 'sim true verdadeiro' : 'nao não false falso');
+
           if (row.value_json != null) {
             try {
               if (Array.isArray(row.value_json)) {
@@ -607,12 +641,128 @@ export default function SalesPipeline() {
             } catch { /* ignore */ }
           }
 
-          if (!parts.length) return;
-          if (!acc[row.deal_id]) acc[row.deal_id] = [];
-          acc[row.deal_id].push(...parts);
+          pushParts(row.deal_id, parts);
         });
         if (cancelled) return;
       }
+
+      for (let i = 0; i < dealIds.length; i += batchSize) {
+        const batch = dealIds.slice(i, i + batchSize);
+        const [activitiesResult, tasksResult] = await Promise.all([
+          supabase
+            .from('deal_activities')
+            .select('deal_id, title, content, old_value, new_value')
+            .eq('account_id', currentUser.account_id)
+            .in('deal_id', batch)
+            .limit(50000),
+          supabase
+            .from('internal_tasks')
+            .select('deal_id, title, description')
+            .eq('account_id', currentUser.account_id)
+            .in('deal_id', batch)
+            .limit(50000),
+        ]);
+
+        if (activitiesResult.error) {
+          console.error('[SalesPipeline] activity search blob fetch error:', activitiesResult.error);
+        } else {
+          (activitiesResult.data || []).forEach((row: any) => {
+            pushParts(row.deal_id, [row.title, row.content, row.old_value, row.new_value]);
+          });
+        }
+
+        if (tasksResult.error) {
+          console.error('[SalesPipeline] task search blob fetch error:', tasksResult.error);
+        } else {
+          (tasksResult.data || []).forEach((row: any) => {
+            pushParts(row.deal_id, [row.title, row.description]);
+          });
+        }
+
+        if (cancelled) return;
+      }
+
+      const leadIds = Array.from(leadToDealIds.keys());
+      for (let i = 0; i < leadIds.length; i += batchSize) {
+        const batch = leadIds.slice(i, i + batchSize);
+        const { data, error } = await supabase
+          .from('leads')
+          .select('id, full_name, phone, email, emails, additional_phones, instagram, instagrams, source, notes, mql, canal, revenue_range, company_name, business_segment, business_niche, city, state, business_city, business_state, tags')
+          .eq('account_id', currentUser.account_id)
+          .in('id', batch)
+          .limit(50000);
+
+        if (error) {
+          console.error('[SalesPipeline] lead search blob fetch error:', error);
+        } else {
+          (data || []).forEach((lead: any) => {
+            const ids = leadToDealIds.get(lead.id) || [];
+            ids.forEach((dealId) => pushParts(dealId, [
+              lead.full_name,
+              lead.phone,
+              lead.email,
+              lead.emails,
+              lead.additional_phones,
+              lead.instagram,
+              lead.instagrams,
+              lead.source,
+              lead.notes,
+              lead.mql,
+              lead.canal,
+              lead.revenue_range,
+              lead.company_name,
+              lead.business_segment,
+              lead.business_niche,
+              lead.city,
+              lead.state,
+              lead.business_city,
+              lead.business_state,
+              lead.tags,
+            ]));
+          });
+        }
+
+        if (cancelled) return;
+      }
+
+      const clientIds = Array.from(clientToDealIds.keys());
+      for (let i = 0; i < clientIds.length; i += batchSize) {
+        const batch = clientIds.slice(i, i + batchSize);
+        const { data, error } = await supabase
+          .from('clients')
+          .select('id, full_name, phone_e164, emails, additional_phones, instagram, instagrams, notes, company_name, business_segment, business_niche, city, state, business_city, business_state, tags')
+          .eq('account_id', currentUser.account_id)
+          .in('id', batch)
+          .limit(50000);
+
+        if (error) {
+          console.error('[SalesPipeline] client search blob fetch error:', error);
+        } else {
+          (data || []).forEach((client: any) => {
+            const ids = clientToDealIds.get(client.id) || [];
+            ids.forEach((dealId) => pushParts(dealId, [
+              client.full_name,
+              client.phone_e164,
+              client.emails,
+              client.additional_phones,
+              client.instagram,
+              client.instagrams,
+              client.notes,
+              client.company_name,
+              client.business_segment,
+              client.business_niche,
+              client.city,
+              client.state,
+              client.business_city,
+              client.business_state,
+              client.tags,
+            ]));
+          });
+        }
+
+        if (cancelled) return;
+      }
+
       if (cancelled) return;
       const combined: Record<string, string> = {};
       for (const [id, arr] of Object.entries(acc)) {
