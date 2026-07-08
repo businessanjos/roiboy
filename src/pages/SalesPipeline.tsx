@@ -827,7 +827,7 @@ export default function SalesPipeline() {
       setDealSearchCustomBlobs(combined);
     })();
     return () => { cancelled = true; };
-  }, [debouncedSearchTerm, dealSearchRelationKey, currentUser?.account_id, customFieldOptionLabels]);
+  }, [isSearchingActive, dealSearchRelationKey, currentUser?.account_id, customFieldOptionLabels]);
 
 
   // Base search blob (in-memory, no DB): title, notes, contact/client/lead,
