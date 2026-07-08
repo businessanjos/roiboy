@@ -24,6 +24,7 @@ import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditi
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientMilestones } from "@/components/client/ClientMilestones";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
+import { ClientBusinessProfile } from "@/components/client/ClientBusinessProfile";
 import { ClientChurnSignals } from "@/components/client/ClientChurnSignals";
 import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
 import { ClientLogoUpload } from "@/components/client/ClientLogoUpload";
