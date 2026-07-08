@@ -2021,6 +2021,8 @@ export default function Contracts() {
                 typeFilter={typeFilter}
                 productFilter={productFilter}
                 sortOrder={sortOrder}
+                dateRangeStart={effectiveDateRange.start.toISOString()}
+                dateRangeEnd={effectiveDateRange.end.toISOString()}
               />
             </>
           )}
