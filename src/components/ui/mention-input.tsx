@@ -33,7 +33,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
     const fetchSuggestions = async (query: string) => {
       try {
         const { data, error } = await supabase
-          .from("users")
+          .from("active_users")
           .select("id, name, avatar_url")
           .ilike("name", `%${query}%`)
           .limit(5);
