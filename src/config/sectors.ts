@@ -70,7 +70,7 @@ import {
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "gestao-tech" | "rh" | "eventos" | "configuracoes";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "gestao-tech" | "rh" | "eventos" | "reuniao-lideres" | "configuracoes";
 
 export interface NavItem {
   to: string;
@@ -311,6 +311,19 @@ export const sectors: Sector[] = [
       { to: "/events/playbooks", icon: BookOpenCheck, label: "Playbooks", permission: PERMISSIONS.EVENTS_VIEW },
       { to: "/events/inventory", icon: Boxes, label: "Inventário", permission: PERMISSIONS.EVENTS_VIEW },
       { to: "/events/suppliers", icon: Briefcase, label: "Fornecedores", permission: PERMISSIONS.EVENTS_VIEW },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
+    ],
+  },
+  {
+    id: "reuniao-lideres",
+    name: "Reunião de Líderes",
+    description: "Rituais de liderança, atas e KPIs por área",
+    icon: UsersRound,
+    color: "text-amber-600",
+    bgColor: "bg-amber-500/10",
+    defaultRoute: "/reuniao-lideres",
+    navItems: [
+      { to: "/reuniao-lideres", icon: UsersRound, label: "Reunião de Líderes" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
