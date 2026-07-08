@@ -671,28 +671,76 @@ function AutoSaveTextarea({
   minHeight?: number;
 }) {
   const [local, setLocal] = useState(value);
-  const [dirty, setDirty] = useState(false);
+  const [status, setStatus] = useState<"idle" | "dirty" | "saving" | "saved">("idle");
+  const dirtyRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef(value);
 
-  // Sync external changes when not editing
-  useMemo(() => {
-    if (!dirty) setLocal(value);
-  }, [value, dirty]);
+  // Sync from server only when not being edited
+  useEffect(() => {
+    if (!dirtyRef.current) {
+      setLocal(value);
+      lastSavedRef.current = value;
+    }
+  }, [value]);
+
+  const flush = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (local !== lastSavedRef.current) {
+      setStatus("saving");
+      onSave(local);
+      lastSavedRef.current = local;
+      dirtyRef.current = false;
+      setTimeout(() => setStatus("saved"), 300);
+    } else {
+      dirtyRef.current = false;
+      setStatus("idle");
+    }
+  };
+
+  // Flush on unmount / tab close
+  useEffect(() => {
+    const handler = () => {
+      if (dirtyRef.current && local !== lastSavedRef.current) {
+        onSave(local);
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => {
+      window.removeEventListener("beforeunload", handler);
+      if (dirtyRef.current && local !== lastSavedRef.current) {
+        onSave(local);
+      }
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [local]);
 
   return (
-    <Textarea
-      value={local}
-      placeholder={placeholder}
-      style={{ minHeight }}
-      onChange={(e) => {
-        setLocal(e.target.value);
-        setDirty(true);
-      }}
-      onBlur={() => {
-        if (dirty && local !== value) {
-          onSave(local);
-        }
-        setDirty(false);
-      }}
-    />
+    <div className="space-y-1">
+      <Textarea
+        value={local}
+        placeholder={placeholder}
+        style={{ minHeight }}
+        onChange={(e) => {
+          const v = e.target.value;
+          setLocal(v);
+          dirtyRef.current = true;
+          setStatus("dirty");
+          if (timerRef.current) clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(() => flush(), 800);
+        }}
+        onBlur={() => flush()}
+      />
+      <div className="text-[10px] text-muted-foreground h-3 flex items-center gap-1">
+        {status === "dirty" && <span>Editando…</span>}
+        {status === "saving" && <span>Salvando…</span>}
+        {status === "saved" && <span className="text-green-600">✓ Salvo</span>}
+      </div>
+    </div>
   );
 }
+
