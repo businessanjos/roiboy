@@ -139,7 +139,7 @@ export default function ClinicaRyka() {
       const haystack = [
         client.full_name,
         client.company_name,
-        ...(client.emails ?? []),
+        ...((client.emails ?? []).map((e: any) => (typeof e === "string" ? e : e?.email)).filter(Boolean)),
         client.phone_e164,
       ]
         .filter(Boolean)
@@ -342,7 +342,7 @@ export default function ClinicaRyka() {
                         <StatusBadge state={state} whatsapp={prov?.whatsapp_status ?? null} />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {prov?.email || client.emails?.[0] || "—"}
+                        {prov?.email || (typeof client.emails?.[0] === "string" ? client.emails?.[0] : (client.emails?.[0] as any)?.email) || "—"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {prov?.created_at
