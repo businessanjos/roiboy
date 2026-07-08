@@ -34,14 +34,14 @@ import { ptBR } from "date-fns/locale";
 
 const RYKA_ELIGIBLE_KEYWORDS = ["rykas mentoring", "eternum club"];
 
-type Filter = "all" | "provisioned" | "pending" | "failed";
+type Filter = "all" | "provisioned" | "pending" | "failed" | "ryka_active" | "ryka_inactive";
 
 interface ClientRow {
   id: string;
   full_name: string;
   company_name: string | null;
   phone_e164: string | null;
-  emails: string[] | null;
+  emails: any[] | null;
   logo_url: string | null;
   avatar_url: string | null;
   status: string;
@@ -57,6 +57,7 @@ interface Provision {
   status: string;
   whatsapp_status: string | null;
   created_at: string;
+  ryka_response: any | null;
 }
 
 export default function ClinicaRyka() {
@@ -101,7 +102,7 @@ export default function ClinicaRyka() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("client_ryka_provisions")
-        .select("client_id, email, status, whatsapp_status, created_at")
+        .select("client_id, email, status, whatsapp_status, created_at, ryka_response")
         .eq("account_id", accountId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -127,14 +128,22 @@ export default function ClinicaRyka() {
           : prov?.status === "error" || prov?.status === "failed"
             ? "failed"
             : "pending";
-      return { client, prov, state };
+      const rykaStatus: "active" | "inactive" | null =
+        prov?.ryka_response?.ryka_status === "active"
+          ? "active"
+          : prov?.ryka_response?.ryka_status === "inactive"
+            ? "inactive"
+            : null;
+      return { client, prov, state, rykaStatus };
     });
   }, [clientsQuery.data, provisionByClient]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return enriched.filter(({ client, state }) => {
-      if (filter !== "all" && state !== filter) return false;
+    return enriched.filter(({ client, state, rykaStatus }) => {
+      if (filter === "ryka_active" && rykaStatus !== "active") return false;
+      if (filter === "ryka_inactive" && rykaStatus !== "inactive") return false;
+      if (["provisioned", "pending", "failed"].includes(filter) && state !== filter) return false;
       if (!q) return true;
       const haystack = [
         client.full_name,
@@ -154,7 +163,9 @@ export default function ClinicaRyka() {
     const provisioned = enriched.filter((e) => e.state === "provisioned").length;
     const pending = enriched.filter((e) => e.state === "pending").length;
     const failed = enriched.filter((e) => e.state === "failed").length;
-    return { total, provisioned, pending, failed };
+    const rykaActive = enriched.filter((e) => e.rykaStatus === "active").length;
+    const rykaInactive = enriched.filter((e) => e.rykaStatus === "inactive").length;
+    return { total, provisioned, pending, failed, rykaActive, rykaInactive };
   }, [enriched]);
 
   const handleProvision = async (clientId: string) => {
@@ -235,11 +246,13 @@ export default function ClinicaRyka() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <SummaryCard label="Total elegíveis" value={counts.total} />
         <SummaryCard label="Já com acesso" value={counts.provisioned} accent="text-emerald-600" />
         <SummaryCard label="Falta liberar" value={counts.pending} accent="text-amber-600" />
         <SummaryCard label="Falhas" value={counts.failed} accent="text-rose-600" />
+        <SummaryCard label="Ativos no Ryka" value={counts.rykaActive} accent="text-emerald-600" />
+        <SummaryCard label="Inativos no Ryka" value={counts.rykaInactive} accent="text-slate-500" />
       </div>
 
       <Card>
@@ -257,11 +270,13 @@ export default function ClinicaRyka() {
                 />
               </div>
               <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
-                <TabsList>
+                <TabsList className="flex-wrap h-auto">
                   <TabsTrigger value="all">Todos ({counts.total})</TabsTrigger>
                   <TabsTrigger value="provisioned">Com acesso ({counts.provisioned})</TabsTrigger>
                   <TabsTrigger value="pending">Falta liberar ({counts.pending})</TabsTrigger>
                   <TabsTrigger value="failed">Falhas ({counts.failed})</TabsTrigger>
+                  <TabsTrigger value="ryka_active">Ativos Ryka ({counts.rykaActive})</TabsTrigger>
+                  <TabsTrigger value="ryka_inactive">Inativos Ryka ({counts.rykaInactive})</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -282,14 +297,15 @@ export default function ClinicaRyka() {
                 <TableRow>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Produto</TableHead>
-                  <TableHead>Status Ryka</TableHead>
+                  <TableHead>Acesso</TableHead>
+                  <TableHead>Ryka</TableHead>
                   <TableHead>E-mail acesso</TableHead>
                   <TableHead>Última liberação</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map(({ client, prov, state }) => {
+                {filtered.map(({ client, prov, state, rykaStatus }) => {
                   const initials = client.full_name
                     ?.split(" ")
                     .slice(0, 2)
@@ -340,6 +356,9 @@ export default function ClinicaRyka() {
                       </TableCell>
                       <TableCell>
                         <StatusBadge state={state} whatsapp={prov?.whatsapp_status ?? null} />
+                      </TableCell>
+                      <TableCell>
+                        <RykaStatusBadge status={rykaStatus} />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {prov?.email || (typeof client.emails?.[0] === "string" ? client.emails?.[0] : (client.emails?.[0] as any)?.email) || "—"}
@@ -454,4 +473,22 @@ function StatusBadge({
       <Clock className="h-3 w-3 mr-1" /> Falta liberar
     </Badge>
   );
+}
+
+function RykaStatusBadge({ status }: { status: "active" | "inactive" | null }) {
+  if (status === "active") {
+    return (
+      <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15">
+        <CheckCircle2 className="h-3 w-3 mr-1" /> Ativo
+      </Badge>
+    );
+  }
+  if (status === "inactive") {
+    return (
+      <Badge variant="outline" className="text-slate-600 border-slate-400/50">
+        <AlertCircle className="h-3 w-3 mr-1" /> Inativo
+      </Badge>
+    );
+  }
+  return <span className="text-xs text-muted-foreground">—</span>;
 }
