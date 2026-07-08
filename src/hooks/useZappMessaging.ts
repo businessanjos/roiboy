@@ -924,6 +924,11 @@ export function useZappMessaging({
     setUploadingMedia(true);
     const now = new Date().toISOString();
     let insertedMessageId: string | null = null;
+
+    // 🔗 Captura o contexto de resposta (quoted) e limpa o preview antes do envio
+    const replyContext = replyingTo ? { ...replyingTo } : null;
+    setReplyingTo(null);
+
     
     try {
       const isOgg = audioBlob.type.includes('ogg');
