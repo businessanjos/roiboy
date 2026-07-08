@@ -576,7 +576,7 @@ export default function SalesPipeline() {
       if (cancelled) return;
       const combined: Record<string, string> = {};
       for (const [id, arr] of Object.entries(acc)) {
-        combined[id] = arr.join(' | ').toLowerCase();
+        combined[id] = arr.join(' | ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       }
       setDealSearchCustomBlobs(combined);
     })();
@@ -606,7 +606,7 @@ export default function SalesPipeline() {
         (d.tags || []).join(' '),
         openDealProductMap[d.id] || '',
       ].filter(Boolean).map(v => String(v));
-      map[d.id] = parts.join(' | ').toLowerCase();
+      map[d.id] = parts.join(' | ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     });
     return map;
   }, [deals, openDealProductMap]);
