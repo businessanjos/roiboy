@@ -635,7 +635,11 @@ export function useZappMessaging({
     const tempMessageId = `temp-media-${Date.now()}`;
     const now = new Date().toISOString();
     const signedCaption = caption ? buildSignedText(caption) : "";
-    
+
+    // 🔗 Captura o contexto de resposta (quoted) e limpa o preview antes do envio
+    const replyContext = replyingTo ? { ...replyingTo } : null;
+    setReplyingTo(null);
+
     const optimisticMessage: Message = {
       id: tempMessageId,
       content: signedCaption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
@@ -648,8 +652,13 @@ export function useZappMessaging({
       media_filename: file.name,
       audio_duration_sec: null,
       sender_name: null,
+      quoted_message_id: replyContext?.external_message_id || null,
+      quoted_content: replyContext?.content || null,
+      quoted_sender_name: replyContext?.is_from_client
+        ? (replyContext.sender_name || "Cliente")
+        : "Você",
     };
-    
+
     setMessages(prev => [...prev, optimisticMessage]);
     
     try {
@@ -681,11 +690,19 @@ export function useZappMessaging({
         integration_id: effectiveIntegrationId || "",
         add_signature: false,
       };
-      
+
       if (isGroup && groupJid) {
         payload.group_id = groupJid;
       } else {
         payload.phone = phone;
+      }
+
+      if (replyContext?.external_message_id) {
+        payload.quoted_message_id = replyContext.external_message_id;
+        payload.quoted_from_me = !replyContext.is_from_client;
+        if (replyContext.is_from_client && phone) {
+          payload.quoted_participant = phone;
+        }
       }
       
       const { data, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
@@ -722,6 +739,13 @@ export function useZappMessaging({
           external_message_id: externalId,
           sender_user_id: currentUser?.id || null,
           sender_name: currentUser?.name || null,
+          quoted_message_id: replyContext?.external_message_id || null,
+          quoted_content: replyContext?.content || null,
+          quoted_sender_name: replyContext?.is_from_client
+            ? (replyContext.sender_name || "Cliente")
+            : replyContext
+              ? "Você"
+              : null,
         }).select("id").single();
 
         if (insertError) {
@@ -900,6 +924,11 @@ export function useZappMessaging({
     setUploadingMedia(true);
     const now = new Date().toISOString();
     let insertedMessageId: string | null = null;
+
+    // 🔗 Captura o contexto de resposta (quoted) e limpa o preview antes do envio
+    const replyContext = replyingTo ? { ...replyingTo } : null;
+    setReplyingTo(null);
+
     
     try {
       const isOgg = audioBlob.type.includes('ogg');
@@ -932,6 +961,13 @@ export function useZappMessaging({
           sent_at: now,
           sender_user_id: currentUser?.id || null,
           sender_name: currentUser?.name || null,
+          quoted_message_id: replyContext?.external_message_id || null,
+          quoted_content: replyContext?.content || null,
+          quoted_sender_name: replyContext?.is_from_client
+            ? (replyContext.sender_name || "Cliente")
+            : replyContext
+              ? "Você"
+              : null,
         }).select("id").single();
         
         if (insertError) throw insertError;
@@ -951,6 +987,13 @@ export function useZappMessaging({
             audio_duration_sec: duration || null,
             sender_name: null,
             delivery_status: "pending",
+            quoted_message_id: replyContext?.external_message_id || null,
+            quoted_content: replyContext?.content || null,
+            quoted_sender_name: replyContext?.is_from_client
+              ? (replyContext.sender_name || "Cliente")
+              : replyContext
+                ? "Você"
+                : null,
           };
           
           setMessages(prev => {
@@ -977,6 +1020,14 @@ export function useZappMessaging({
           payload.group_id = groupJid;
         } else {
           payload.phone = phone;
+        }
+
+        if (replyContext?.external_message_id) {
+          payload.quoted_message_id = replyContext.external_message_id;
+          payload.quoted_from_me = !replyContext.is_from_client;
+          if (replyContext.is_from_client && phone) {
+            payload.quoted_participant = phone;
+          }
         }
         
         const { data, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
