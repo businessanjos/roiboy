@@ -2478,6 +2478,23 @@ export default function ClientDetail() {
                 clientId={id!}
               />
             );
+          case "negocio":
+            return (
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Perfil do Negócio
+                  </CardTitle>
+                  <CardDescription>
+                    Faturamento, formação, especialidade, nicho, diferencial e método do cliente
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <ClientBusinessProfile clientId={id!} variant="full" />
+                </CardContent>
+              </Card>
+            );
           case "campos":
             return (
               <Card className="shadow-card">
