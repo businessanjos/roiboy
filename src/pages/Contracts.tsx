@@ -378,6 +378,11 @@ export default function Contracts() {
   const [typeFilter, setTypeFilter] = usePersistedFilter<string>("contracts", "typeFilter", "all");
   const [productFilter, setProductFilter] = usePersistedFilter<string>("contracts", "productFilter", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"az" | "recent">("contracts", "sortOrder", "recent");
+  const [dateFilter, setDateFilter] = usePersistedFilter<ContractsDateFilterValue>(
+    "contracts",
+    "dateFilter",
+    getDefaultContractsDateFilter()
+  );
   const [activeTab, setActiveTab] = useState<string>("fila");
   const [contractsPage, setContractsPage] = useState(1);
   const [contractsPageSize, setContractsPageSize] = useState(20);
