@@ -82,22 +82,32 @@ Deno.serve(async (req) => {
     return jsonResp({ error: "Integração Ryka não configurada (CLINICA_RYKA_LIST_URL/API_KEY)" }, 500);
   }
 
-  // Auth do chamador
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) return jsonResp({ error: "Não autorizado" }, 401);
-  const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: claims, error: authErr } = await callerClient.auth.getClaims(authHeader.replace("Bearer ", ""));
-  if (authErr || !claims?.claims) return jsonResp({ error: "Token inválido" }, 401);
-  const authUserId = claims.claims.sub as string;
+  // Auth: aceita (a) chamada por usuário logado ou (b) cron com x-cron-secret
+  const CRON_SECRET = Deno.env.get("RYKA_CRON_SECRET");
+  const cronHeader = req.headers.get("x-cron-secret");
+  const isCron = !!(CRON_SECRET && cronHeader && cronHeader === CRON_SECRET);
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-  const { data: userRow } = await admin
-    .from("users")
-    .select("id, account_id")
-    .eq("auth_user_id", authUserId)
+  let accountIds: string[] = [];
+  let triggeredBy: string | null = null;
+
+  if (isCron) {
+    const { data: accs } = await admin.from("accounts").select("id");
+    accountIds = (accs || []).map((a: any) => a.id);
+  } else {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) return jsonResp({ error: "Não autorizado" }, 401);
+    const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claims, error: authErr } = await callerClient.auth.getClaims(authHeader.replace("Bearer ", ""));
+    if (authErr || !claims?.claims) return jsonResp({ error: "Token inválido" }, 401);
+    const authUserId = claims.claims.sub as string;
+    const { data: userRow } = await admin
+      .from("users")
+      .select("id, account_id")
+      .eq("auth_user_id", authUserId)
     .maybeSingle();
   if (!userRow?.account_id) return jsonResp({ error: "Usuário sem conta vinculada" }, 403);
 
