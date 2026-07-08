@@ -409,12 +409,15 @@ export default function Dashboard() {
     return m.cancelamentos + m.encerramentos;
   };
 
-  // Retention metrics (within filtered period)
+  // Retention metrics (cohort-style, mesma janela em numerador e denominador)
+  // Base início do período ≈ ativos atuais + saídas no período − novos no período
+  // Retenção = (base − saídas) / base
   const retentionMetrics = useMemo(() => {
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + sumExits(m), 0);
-    const total = (contractStats?.active ?? gestaoClientStats.active) + cancelamentos;
-    const rate = total > 0 ? Math.round(((total - cancelamentos) / total) * 100) : 100;
+    const ativosAtuais = contractStats?.active ?? gestaoClientStats.active;
+    const baseInicio = Math.max(0, ativosAtuais + cancelamentos - novos);
+    const rate = baseInicio > 0 ? Math.round(((baseInicio - cancelamentos) / baseInicio) * 100) : 100;
     return { rate, novos, cancelamentos };
   }, [monthlyChartData, contractStats, gestaoClientStats, gestaoExitTypeFilter]);
 
