@@ -88,6 +88,7 @@ interface User {
   id: string;
   name: string;
   avatar_url: string | null;
+  is_active?: boolean | null;
 }
 
 interface Client {
