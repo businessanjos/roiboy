@@ -246,9 +246,13 @@ export default function Tasks() {
           activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
         `);
 
-      // Apply server-side sector filter using activity_type_ids
+      // Apply server-side sector filter using activity_type_ids.
+      // IMPORTANT: also include tasks with activity_type_id NULL — sem esse
+      // OR, tarefas sem tipo (comuns em leads criados via automação) somem.
       if (sectorActivityTypeIds && sectorActivityTypeIds.length > 0) {
-        query = query.in("activity_type_id", sectorActivityTypeIds);
+        query = query.or(
+          `activity_type_id.in.(${sectorActivityTypeIds.join(",")}),activity_type_id.is.null`
+        );
       }
 
       // Apply server-side user filter to avoid hitting the 1000-row default limit
