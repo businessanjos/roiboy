@@ -88,6 +88,7 @@ interface User {
   id: string;
   name: string;
   avatar_url: string | null;
+  is_active?: boolean | null;
 }
 
 interface Client {
@@ -243,7 +244,7 @@ export default function Tasks() {
               lead:leads(id, full_name, phone)
             ),
             leads:lead_id (id, full_name),
-            assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url),
+            assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url, is_active),
             activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
           `);
 
@@ -1065,21 +1066,36 @@ export default function Tasks() {
                       </TableCell>
                       <TableCell className="text-center">
                         {task.assigned_user ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Avatar className="h-7 w-7 mx-auto border-2 border-background shadow-sm">
-                                  <AvatarImage src={task.assigned_user.avatar_url || undefined} />
-                                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
-                                    {getInitials(task.assigned_user.name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs">
-                                <span className="font-medium">{task.assigned_user.name}</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          task.assigned_user.is_active === false ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-[10px] border-dashed text-muted-foreground font-normal">
+                                    Usuário inativo
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  <span className="font-medium">{task.assigned_user.name}</span> (inativo)
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Avatar className="h-7 w-7 mx-auto border-2 border-background shadow-sm">
+                                    <AvatarImage src={task.assigned_user.avatar_url || undefined} />
+                                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
+                                      {getInitials(task.assigned_user.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  <span className="font-medium">{task.assigned_user.name}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
