@@ -78,6 +78,8 @@ import {
   BarChart3,
   Package,
   User,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -175,6 +177,13 @@ export default function SalesPipeline() {
   }, [currentUser?.account_id]);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchMode, setSearchMode] = usePersistedFilter<"contains" | "exact">("salesPipeline", "searchMode", "contains");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+  const [dealSearchCustomBlobs, setDealSearchCustomBlobs] = useState<Record<string, string>>({});
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [titleTagFilter, setTitleTagFilter] = usePersistedFilter<string[]>("salesPipeline", "titleTagFilter", []);
   const [openDatePreset, setOpenDatePreset] = usePersistedFilter<string>("salesPipeline", "openDatePreset", "all");
@@ -524,6 +533,94 @@ export default function SalesPipeline() {
     })();
   }, [customFieldIdsInFilter, allDealIds]);
 
+  // Fetch ALL custom field text values for the current deals when the user is
+  // actively searching — enables the search box to match anything inside a card
+  // (city, empresa, especialidade, etc). Only fires while a term is typed to
+  // keep the query cost bounded.
+  useEffect(() => {
+    const term = debouncedSearchTerm.trim();
+    if (term.length < 2 || deals.length === 0) {
+      setDealSearchCustomBlobs({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const dealIds = deals.map(d => d.id);
+      const batchSize = 200;
+      const acc: Record<string, string[]> = {};
+      for (let i = 0; i < dealIds.length; i += batchSize) {
+        const batch = dealIds.slice(i, i + batchSize);
+        const { data, error } = await supabase
+          .from('deal_field_values')
+          .select('deal_id, value_text, value_json')
+          .in('deal_id', batch);
+        if (error) {
+          console.error('[SalesPipeline] custom field blob fetch error:', error);
+          continue;
+        }
+        (data || []).forEach((row: any) => {
+          if (!row.deal_id) return;
+          const parts: string[] = [];
+          if (row.value_text) parts.push(String(row.value_text));
+          if (row.value_json != null) {
+            try { parts.push(typeof row.value_json === 'string' ? row.value_json : JSON.stringify(row.value_json)); } catch {}
+          }
+          if (!parts.length) return;
+          if (!acc[row.deal_id]) acc[row.deal_id] = [];
+          acc[row.deal_id].push(...parts);
+        });
+      }
+      if (cancelled) return;
+      const combined: Record<string, string> = {};
+      for (const [id, arr] of Object.entries(acc)) {
+        combined[id] = arr.join(' | ').toLowerCase();
+      }
+      setDealSearchCustomBlobs(combined);
+    })();
+    return () => { cancelled = true; };
+  }, [debouncedSearchTerm, allDealIds]);
+
+  // Base search blob (in-memory, no DB): title, notes, contact/client/lead,
+  // responsible, stage, tags, product name.
+  const dealBaseSearchBlobs = useMemo(() => {
+    const map: Record<string, string> = {};
+    deals.forEach(d => {
+      const parts = [
+        d.title,
+        d.notes,
+        d.source,
+        d.contact_name,
+        d.contact_phone,
+        d.contact_email,
+        d.client?.full_name,
+        d.client?.phone_e164,
+        d.lead?.full_name,
+        d.lead?.phone,
+        d.lead?.email,
+        d.responsible_user?.name,
+        d.sdr_user?.name,
+        d.stage?.name,
+        (d.tags || []).join(' '),
+        openDealProductMap[d.id] || '',
+      ].filter(Boolean).map(v => String(v));
+      map[d.id] = parts.join(' | ').toLowerCase();
+    });
+    return map;
+  }, [deals, openDealProductMap]);
+
+  const dealSearchBlobs = useMemo(() => {
+    const out: Record<string, string> = {};
+    const ids = new Set([...Object.keys(dealBaseSearchBlobs), ...Object.keys(dealSearchCustomBlobs)]);
+    ids.forEach(id => {
+      out[id] = (dealBaseSearchBlobs[id] || '') + ' | ' + (dealSearchCustomBlobs[id] || '');
+    });
+    return out;
+  }, [dealBaseSearchBlobs, dealSearchCustomBlobs]);
+
+  const searchOptions = useMemo(() => ({ mode: searchMode, blobs: dealSearchBlobs }), [searchMode, dealSearchBlobs]);
+
+
+
 
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
@@ -583,14 +680,14 @@ export default function SalesPipeline() {
   // Deals após aplicar filtro do vendedor/busca/data (mas antes do filtro de origem).
   // Usado como base para as opções do filtro de origem e como base do filtro final.
   const dealsBeforeTagFilter = useMemo(() => {
-    const base = applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap);
+    const base = applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions);
     if (!openDateRange) return base;
     return base.filter(d => {
       if (!d.created_at) return false;
       const created = new Date(d.created_at);
       return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
     });
-  }, [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, openDateRange]);
+  }, [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, openDateRange, searchOptions]);
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);
@@ -605,13 +702,13 @@ export default function SalesPipeline() {
     });
   }, [dealsBeforeTagFilter, titleTagFilter]);
 
-  const filteredWonDeals = useMemo(() => 
-    applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap), 
-    [wonDeals, searchTerm, openDealProductMap]
+  const filteredWonDeals = useMemo(() =>
+    applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap, undefined, undefined, searchOptions),
+    [wonDeals, searchTerm, openDealProductMap, searchOptions]
   );
-  const filteredLostDeals = useMemo(() => 
-    applyFilterToDeals(lostDeals, null, searchTerm, openDealProductMap), 
-    [lostDeals, searchTerm, openDealProductMap]
+  const filteredLostDeals = useMemo(() =>
+    applyFilterToDeals(lostDeals, null, searchTerm, openDealProductMap, undefined, undefined, searchOptions),
+    [lostDeals, searchTerm, openDealProductMap, searchOptions]
   );
 
   // Available months for won deals filter (always include current month)
@@ -1639,18 +1736,49 @@ export default function SalesPipeline() {
                       </div>
                     )}
 
-                    <div className="flex flex-col gap-1 flex-1 min-w-[220px]">
+                    <div className="flex flex-col gap-1 flex-1 min-w-[260px]">
                       <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Pesquisa</label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="Buscar negócio..."
+                          placeholder={searchMode === 'exact' ? "Correspondência exata..." : "Buscar em qualquer campo do card..."}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-9 h-10 w-full bg-muted/40 border-border text-sm focus:bg-background transition-colors"
+                          className="pl-9 pr-[135px] h-10 w-full bg-muted/40 border-border text-sm focus:bg-background transition-colors"
                         />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                              title="Modo de busca"
+                            >
+                              {searchMode === 'exact' ? 'Exato' : 'Contém'}
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuItem onClick={() => setSearchMode('contains')}>
+                              <Check className={cn("h-4 w-4 mr-2", searchMode !== 'contains' && "opacity-0")} />
+                              <div className="flex flex-col">
+                                <span className="text-sm">O nome contém</span>
+                                <span className="text-[11px] text-muted-foreground">Busca em qualquer parte do card</span>
+                              </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSearchMode('exact')}>
+                              <Check className={cn("h-4 w-4 mr-2", searchMode !== 'exact' && "opacity-0")} />
+                              <div className="flex flex-col">
+                                <span className="text-sm">Correspondência exata</span>
+                                <span className="text-[11px] text-muted-foreground">Palavra ou termo idêntico</span>
+                              </div>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
+
 
                     {canSeeDeleted && (
                       <div className="flex flex-col gap-1">

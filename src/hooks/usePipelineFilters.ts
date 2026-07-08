@@ -214,13 +214,16 @@ export function usePipelineFilters() {
 }
 
 // Utility function to apply filters to deals
+export type DealSearchMode = 'contains' | 'exact';
+
 export function applyFilterToDeals(
   deals: Deal[],
   activeFilter: ActiveFilter | null,
   searchTerm?: string,
   dealProductMap?: Record<string, string>,
   dealCustomFieldValues?: Record<string, Record<string, string>>,
-  dealNextActivityMap?: Record<string, string | null>
+  dealNextActivityMap?: Record<string, string | null>,
+  searchOptions?: { mode?: DealSearchMode; blobs?: Record<string, string> }
 ): Deal[] {
   if (!activeFilter && !searchTerm?.trim()) return deals;
 
@@ -228,13 +231,36 @@ export function applyFilterToDeals(
 
   if (searchTerm?.trim()) {
     const term = searchTerm.toLowerCase().trim();
-    filtered = filtered.filter(deal =>
-      deal.title.toLowerCase().includes(term) ||
-      deal.contact_name?.toLowerCase().includes(term) ||
-      deal.contact_phone?.toLowerCase().includes(term) ||
-      deal.client?.full_name?.toLowerCase().includes(term) ||
-      deal.client?.phone_e164?.toLowerCase().includes(term)
-    );
+    const mode: DealSearchMode = searchOptions?.mode ?? 'contains';
+    const blobs = searchOptions?.blobs;
+    const buildFallbackBlob = (deal: Deal) => [
+      deal.title,
+      deal.notes,
+      deal.source,
+      deal.contact_name,
+      deal.contact_phone,
+      deal.contact_email,
+      deal.client?.full_name,
+      deal.client?.phone_e164,
+      deal.lead?.full_name,
+      deal.lead?.phone,
+      deal.lead?.email,
+      deal.responsible_user?.name,
+      deal.sdr_user?.name,
+      deal.stage?.name,
+      (deal.tags || []).join(' '),
+      dealProductMap?.[deal.id] || '',
+    ].filter(Boolean).join(' | ').toLowerCase();
+
+    filtered = filtered.filter(deal => {
+      const blob = blobs?.[deal.id] ?? buildFallbackBlob(deal);
+      if (mode === 'exact') {
+        // Exact word/segment match: split on non-alphanumeric and compare
+        const tokens = blob.split(/[^\p{L}\p{N}@._+-]+/u).filter(Boolean);
+        return tokens.some(t => t === term);
+      }
+      return blob.includes(term);
+    });
   }
 
   if (!activeFilter) return filtered;
