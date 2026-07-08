@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
