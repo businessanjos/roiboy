@@ -1908,11 +1908,6 @@ export default function Contracts() {
                 />
               </div>
               <ContractsDateFilter value={dateFilter} onChange={setDateFilter} />
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full md:w-40">
                   <SelectValue placeholder="Status" />
