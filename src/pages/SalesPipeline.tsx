@@ -678,14 +678,14 @@ export default function SalesPipeline() {
   // Deals após aplicar filtro do vendedor/busca/data (mas antes do filtro de origem).
   // Usado como base para as opções do filtro de origem e como base do filtro final.
   const dealsBeforeTagFilter = useMemo(() => {
-    const base = applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap);
+    const base = applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions);
     if (!openDateRange) return base;
     return base.filter(d => {
       if (!d.created_at) return false;
       const created = new Date(d.created_at);
       return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
     });
-  }, [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, openDateRange]);
+  }, [openDeals, activeFilter, searchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, openDateRange, searchOptions]);
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);
@@ -700,13 +700,13 @@ export default function SalesPipeline() {
     });
   }, [dealsBeforeTagFilter, titleTagFilter]);
 
-  const filteredWonDeals = useMemo(() => 
-    applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap), 
-    [wonDeals, searchTerm, openDealProductMap]
+  const filteredWonDeals = useMemo(() =>
+    applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap, undefined, undefined, searchOptions),
+    [wonDeals, searchTerm, openDealProductMap, searchOptions]
   );
-  const filteredLostDeals = useMemo(() => 
-    applyFilterToDeals(lostDeals, null, searchTerm, openDealProductMap), 
-    [lostDeals, searchTerm, openDealProductMap]
+  const filteredLostDeals = useMemo(() =>
+    applyFilterToDeals(lostDeals, null, searchTerm, openDealProductMap, undefined, undefined, searchOptions),
+    [lostDeals, searchTerm, openDealProductMap, searchOptions]
   );
 
   // Available months for won deals filter (always include current month)
