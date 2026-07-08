@@ -264,20 +264,32 @@ export function applyFilterToDeals(
       return digits ? `${normalized} | ${digits}` : normalized;
     };
 
+    // Variante só-dígitos do termo: quando o usuário digita telefone com máscara
+    // ("(11) 98765-4321"), casamos contra o apêndice de dígitos do blob.
+    const termDigits = term.replace(/\D/g, '');
+    const useDigits = termDigits.length >= 4 && /\d/.test(term);
+
     // Exact mode: casamento por fronteira de palavra/frase (aceita "sao paulo").
     // O blob já vem normalizado (sem diacríticos), então basta \w-boundary ASCII.
     let exactRe: RegExp | null = null;
+    let exactDigitsRe: RegExp | null = null;
     if (mode === 'exact') {
       const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       exactRe = new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`);
+      if (useDigits) {
+        const escapedDigits = termDigits.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        exactDigitsRe = new RegExp(`(^|[^a-z0-9])${escapedDigits}($|[^a-z0-9])`);
+      }
     }
 
     filtered = filtered.filter(deal => {
       const blob = blobs?.[deal.id] ?? buildFallbackBlob(deal);
       if (mode === 'exact' && exactRe) {
-        return exactRe.test(blob);
+        if (exactRe.test(blob)) return true;
+        return !!exactDigitsRe && exactDigitsRe.test(blob);
       }
-      return blob.includes(term);
+      if (blob.includes(term)) return true;
+      return useDigits && blob.includes(termDigits);
     });
   }
 
