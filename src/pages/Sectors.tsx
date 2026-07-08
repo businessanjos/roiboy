@@ -408,7 +408,7 @@ export default function Sectors() {
         </div>
 
         {/* Liderança Eternum — visível apenas para gestão (heads/diretores/sócios/admins) */}
-        {isManagementUser(currentUser, isSuperAdmin) && (
+        {(isManagementUser(currentUser, isSuperAdmin) || hasSectorAccess("reuniao-lideres")) && (
           <div className="mt-6">
             <div
               onClick={() => navigate("/reuniao-lideres")}
