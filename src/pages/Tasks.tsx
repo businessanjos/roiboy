@@ -244,7 +244,7 @@ export default function Tasks() {
               lead:leads(id, full_name, phone)
             ),
             leads:lead_id (id, full_name),
-            assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url),
+            assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url, is_active),
             activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
           `);
 
