@@ -606,7 +606,7 @@ export default function SalesPipeline() {
         (d.tags || []).join(' '),
         openDealProductMap[d.id] || '',
       ].filter(Boolean).map(v => String(v));
-      map[d.id] = parts.join(' | ').toLowerCase();
+      map[d.id] = parts.join(' | ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     });
     return map;
   }, [deals, openDealProductMap]);
