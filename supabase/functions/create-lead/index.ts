@@ -30,10 +30,13 @@ interface CreateLeadPayload {
   create_deal?: boolean;
   pipeline_id?: string;
   pipeline_name?: string;
+  stage_id?: string;
+  stage_name?: string;
   responsible_user_id?: string;
   responsible_email?: string;
   deal_title?: string;
   deal_value?: number;
+
 }
 
 /**
@@ -379,16 +382,44 @@ Deno.serve(async (req) => {
         }
 
         if (pipelineId) {
-          // First stage of the pipeline
-          const { data: firstStage } = await supabase
-            .from("deal_stages")
-            .select("id")
-            .eq("pipeline_id", pipelineId)
-            .order("display_order", { ascending: true })
-            .limit(1)
-            .maybeSingle();
+          // Resolve stage: prefer explicit stage_id (if it belongs to this pipeline),
+          // then stage_name (ilike within this pipeline), else first stage by display_order.
+          let resolvedStage: { id: string } | null = null;
 
-          if (firstStage) {
+          if ((payload as any).stage_id) {
+            const { data: s } = await supabase
+              .from("deal_stages")
+              .select("id")
+              .eq("pipeline_id", pipelineId)
+              .eq("id", (payload as any).stage_id)
+              .maybeSingle();
+            if (s) resolvedStage = s;
+          }
+
+          if (!resolvedStage && (payload as any).stage_name) {
+            const { data: s } = await supabase
+              .from("deal_stages")
+              .select("id")
+              .eq("pipeline_id", pipelineId)
+              .ilike("name", (payload as any).stage_name)
+              .maybeSingle();
+            if (s) resolvedStage = s;
+          }
+
+          if (!resolvedStage) {
+            const { data: firstStage } = await supabase
+              .from("deal_stages")
+              .select("id")
+              .eq("pipeline_id", pipelineId)
+              .order("display_order", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            resolvedStage = firstStage || null;
+          }
+
+          if (resolvedStage) {
+            const firstStage = resolvedStage;
+
             const { data: deal, error: dealErr } = await supabase
               .from("deals")
               .insert({
