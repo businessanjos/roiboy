@@ -262,12 +262,23 @@ export default function Tasks() {
         query = query.eq("assigned_to", filterUser);
       }
 
-      const { data, error } = await query
-        .order("created_at", { ascending: false })
-        .limit(2000);
-
-      if (error) throw error;
-      return (data || []) as Task[];
+      // Paginate to bypass PostgREST 1000-row default AND avoid arbitrary caps
+      // (havia 19k+ tarefas na conta e o .limit(2000) escondia ~17k).
+      const PAGE = 1000;
+      const all: Task[] = [];
+      let from = 0;
+      // Cap defensivo: 50 páginas = 50k linhas, mais que suficiente
+      for (let page = 0; page < 50; page++) {
+        const { data, error } = await query
+          .order("created_at", { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const chunk = (data || []) as Task[];
+        all.push(...chunk);
+        if (chunk.length < PAGE) break;
+        from += PAGE;
+      }
+      return all;
     },
     staleTime: 30000,
   });
