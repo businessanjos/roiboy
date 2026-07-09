@@ -21,6 +21,9 @@ import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 import { MultiSelectFilter } from "@/components/renewals/MultiSelectFilter";
 import { VipBadge } from "@/components/client/VipBadge";
+import { RenewalBlockedDialog } from "@/components/client/RenewalBlockedDialog";
+import { useClientsFinancialStatusBatch } from "@/hooks/useClientsFinancialStatusBatch";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface RenewalContract {
   id: string;
@@ -75,6 +78,9 @@ export default function Renewals() {
   const [renewalDialog, setRenewalDialog] = useState<{ open: boolean; contract: RenewalContract | null }>({ open: false, contract: null });
   const [renewalForm, setRenewalForm] = useState({ product_id: "", payment_method: "", value: "" });
   const [savingRenewal, setSavingRenewal] = useState(false);
+  const [blockedDialog, setBlockedDialog] = useState<{ open: boolean; contract: RenewalContract | null }>({ open: false, contract: null });
+  const { isAdmin } = usePermissions();
+  const financialStatusBatch = useClientsFinancialStatusBatch(contracts.map((c) => c.client_id));
   const PAGE_SIZE = 20;
   const [upcomingPage, setUpcomingPage] = useState(1);
   const [expiredPage, setExpiredPage] = useState(1);
@@ -94,6 +100,12 @@ export default function Renewals() {
 
     // If selecting "renewed", open dialog instead of saving directly
     if (newOutcome === "renewed") {
+      // Bloqueio de renovação para inadimplentes
+      const status = financialStatusBatch.data?.get(contract.client_id);
+      if (status && status.risk === "critical" && !isAdmin) {
+        setBlockedDialog({ open: true, contract });
+        return;
+      }
       setRenewalForm({ product_id: "", payment_method: "", value: String(contract.renewal_value) });
       setRenewalDialog({ open: true, contract });
       return;
@@ -135,7 +147,7 @@ export default function Renewals() {
       console.error("Error saving outcome:", err);
       toast.error("Erro ao salvar status");
     }
-  }, [currentUser, outcomeMap]);
+  }, [currentUser, outcomeMap, financialStatusBatch.data, isAdmin]);
 
   const handleConfirmRenewal = async () => {
     const contract = renewalDialog.contract;
@@ -1105,6 +1117,28 @@ export default function Renewals() {
       </Tabs>
 
       {/* Renewal Confirmation Dialog */}
+      <RenewalBlockedDialog
+        open={blockedDialog.open}
+        onClose={() => setBlockedDialog({ open: false, contract: null })}
+        clientName={blockedDialog.contract?.client_name || ""}
+        overdueCount={
+          (blockedDialog.contract && financialStatusBatch.data?.get(blockedDialog.contract.client_id)?.overdue_count) || 0
+        }
+        overdueAmount={
+          (blockedDialog.contract && financialStatusBatch.data?.get(blockedDialog.contract.client_id)?.overdue_amount) || 0
+        }
+        maxDaysOverdue={
+          (blockedDialog.contract && financialStatusBatch.data?.get(blockedDialog.contract.client_id)?.oldest_overdue_days) || 0
+        }
+        canOverride={isAdmin}
+        onOverrideAsAdmin={() => {
+          if (!blockedDialog.contract) return;
+          const c = blockedDialog.contract;
+          setBlockedDialog({ open: false, contract: null });
+          setRenewalForm({ product_id: "", payment_method: "", value: String(c.renewal_value) });
+          setRenewalDialog({ open: true, contract: c });
+        }}
+      />
       <Dialog open={renewalDialog.open} onOpenChange={(open) => !open && setRenewalDialog({ open: false, contract: null })}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
