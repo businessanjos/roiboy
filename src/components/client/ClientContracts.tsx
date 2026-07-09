@@ -313,12 +313,8 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
 
   const openRenewalDialog = (contract: Contract, bypass = false) => {
     // Bloqueio de renovação para clientes inadimplentes (admin pode ignorar)
-    if (!bypass && renewalBlock.isBlocked && !isAdmin) {
-      setRenewalBlockedOpen(true);
-      return;
-    }
-    if (!bypass && renewalBlock.isBlocked && isAdmin) {
-      // admin: mostra o dialog com opção de override — só continua se ele clicar
+    if (!bypass && renewalBlock.isBlocked) {
+      setPendingRenewalContract(contract);
       setRenewalBlockedOpen(true);
       return;
     }
