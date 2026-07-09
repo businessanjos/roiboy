@@ -119,7 +119,7 @@ export default function FinancialActiveClientsPage() {
 
       const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes] = await Promise.all([
         clientIds.length
-          ? supabase.from("clients").select("id, full_name, company_name").in("id", clientIds as string[])
+          ? supabase.from("clients").select("id, full_name, company_name, sales_user_id").in("id", clientIds as string[])
           : Promise.resolve({ data: [], error: null } as any),
         productIds.length
           ? supabase.from("products").select("id, name, color").in("id", productIds as string[])
@@ -163,6 +163,9 @@ export default function FinancialActiveClientsPage() {
         if (d.responsible_user_id) userIds.add(d.responsible_user_id);
         else if (d.sdr_user_id) userIds.add(d.sdr_user_id);
       });
+      (clientsRes.data || []).forEach((c: any) => {
+        if (c.sales_user_id) userIds.add(c.sales_user_id);
+      });
       const usersRes = userIds.size
         ? await supabase.from("users").select("id, name").in("id", [...userIds])
         : ({ data: [] } as any);
@@ -178,7 +181,11 @@ export default function FinancialActiveClientsPage() {
         const product = c.product_id ? (productMap.get(c.product_id) as any) : null;
         const deal = c.deal_id ? (dealMap.get(c.deal_id) as any) : null;
         const fallbackDeal = deal ?? (c.client_id ? bestDealByClient.get(c.client_id) : null);
-        const salesUserId = fallbackDeal?.responsible_user_id || fallbackDeal?.sdr_user_id || null;
+        const salesUserId =
+          fallbackDeal?.responsible_user_id ||
+          fallbackDeal?.sdr_user_id ||
+          client?.sales_user_id ||
+          null;
         const salesRep = salesUserId ? (userMap.get(salesUserId) as string | undefined) ?? null : null;
         const { entrada, installmentValue } = extractEntrada(
           c.installments_detail,
