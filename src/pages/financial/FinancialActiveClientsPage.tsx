@@ -95,7 +95,7 @@ export default function FinancialActiveClientsPage() {
       const { data: contracts, error } = await supabase
         .from("client_contracts")
         .select(
-          "id, client_id, value, payment_method, installments_count, installments_detail, product_id, deal_id, status, start_date"
+          "id, client_id, value, payment_method, installments_count, installments_detail, product_id, deal_id, status, start_date, created_at"
         )
         .eq("account_id", accountId)
         .eq("status", "active");
