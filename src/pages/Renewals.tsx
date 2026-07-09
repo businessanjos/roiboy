@@ -78,6 +78,9 @@ export default function Renewals() {
   const [renewalDialog, setRenewalDialog] = useState<{ open: boolean; contract: RenewalContract | null }>({ open: false, contract: null });
   const [renewalForm, setRenewalForm] = useState({ product_id: "", payment_method: "", value: "" });
   const [savingRenewal, setSavingRenewal] = useState(false);
+  const [blockedDialog, setBlockedDialog] = useState<{ open: boolean; contract: RenewalContract | null }>({ open: false, contract: null });
+  const { isAdmin } = usePermissions();
+  const financialStatusBatch = useClientsFinancialStatusBatch(contracts.map((c) => c.client_id));
   const PAGE_SIZE = 20;
   const [upcomingPage, setUpcomingPage] = useState(1);
   const [expiredPage, setExpiredPage] = useState(1);
