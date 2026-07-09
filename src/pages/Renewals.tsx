@@ -1117,6 +1117,28 @@ export default function Renewals() {
       </Tabs>
 
       {/* Renewal Confirmation Dialog */}
+      <RenewalBlockedDialog
+        open={blockedDialog.open}
+        onClose={() => setBlockedDialog({ open: false, contract: null })}
+        clientName={blockedDialog.contract?.client_name || ""}
+        overdueCount={
+          (blockedDialog.contract && financialStatusBatch.data?.get(blockedDialog.contract.client_id)?.overdue_count) || 0
+        }
+        overdueAmount={
+          (blockedDialog.contract && financialStatusBatch.data?.get(blockedDialog.contract.client_id)?.overdue_amount) || 0
+        }
+        maxDaysOverdue={
+          (blockedDialog.contract && financialStatusBatch.data?.get(blockedDialog.contract.client_id)?.oldest_overdue_days) || 0
+        }
+        canOverride={isAdmin}
+        onOverrideAsAdmin={() => {
+          if (!blockedDialog.contract) return;
+          const c = blockedDialog.contract;
+          setBlockedDialog({ open: false, contract: null });
+          setRenewalForm({ product_id: "", payment_method: "", value: String(c.renewal_value) });
+          setRenewalDialog({ open: true, contract: c });
+        }}
+      />
       <Dialog open={renewalDialog.open} onOpenChange={(open) => !open && setRenewalDialog({ open: false, contract: null })}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
