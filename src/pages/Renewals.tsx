@@ -21,6 +21,9 @@ import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 import { MultiSelectFilter } from "@/components/renewals/MultiSelectFilter";
 import { VipBadge } from "@/components/client/VipBadge";
+import { RenewalBlockedDialog } from "@/components/client/RenewalBlockedDialog";
+import { useClientsFinancialStatusBatch } from "@/hooks/useClientsFinancialStatusBatch";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface RenewalContract {
   id: string;
