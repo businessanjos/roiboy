@@ -104,7 +104,7 @@ function offsetLabel(days: number) {
 }
 
 export default function FinancialCollectionsRulerPage() {
-  const { data: currentUser } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const { toast } = useToast();
   const qc = useQueryClient();
