@@ -163,6 +163,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [renewingContract, setRenewingContract] = useState<Contract | null>(null);
   const [renewalBlockedOpen, setRenewalBlockedOpen] = useState(false);
+  const [pendingRenewalContract, setPendingRenewalContract] = useState<Contract | null>(null);
   const renewalBlock = useCanRenewClient(clientId);
   const { isAdmin } = usePermissions();
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
