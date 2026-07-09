@@ -1288,6 +1288,162 @@ export type Database = {
           },
         ]
       }
+      billing_reminder_client_settings: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          custom_channels: string[] | null
+          id: string
+          notes: string | null
+          pause_reason: string | null
+          paused: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          custom_channels?: string[] | null
+          id?: string
+          notes?: string | null
+          pause_reason?: string | null
+          paused?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          custom_channels?: string[] | null
+          id?: string
+          notes?: string | null
+          pause_reason?: string | null
+          paused?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_reminder_client_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "billing_reminder_client_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_reminder_rules: {
+        Row: {
+          account_id: string
+          active: boolean
+          channels: string[]
+          created_at: string
+          created_by: string | null
+          days_offset: number
+          id: string
+          message: string
+          name: string
+          sort_order: number
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          active?: boolean
+          channels?: string[]
+          created_at?: string
+          created_by?: string | null
+          days_offset: number
+          id?: string
+          message: string
+          name: string
+          sort_order?: number
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          active?: boolean
+          channels?: string[]
+          created_at?: string
+          created_by?: string | null
+          days_offset?: number
+          id?: string
+          message?: string
+          name?: string
+          sort_order?: number
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      billing_reminder_sends: {
+        Row: {
+          account_id: string
+          channel: string
+          client_id: string | null
+          error: string | null
+          id: string
+          installment_id: string
+          message_preview: string | null
+          recipient: string | null
+          rule_id: string
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          account_id: string
+          channel: string
+          client_id?: string | null
+          error?: string | null
+          id?: string
+          installment_id: string
+          message_preview?: string | null
+          recipient?: string | null
+          rule_id: string
+          sent_at?: string
+          status: string
+        }
+        Update: {
+          account_id?: string
+          channel?: string
+          client_id?: string | null
+          error?: string | null
+          id?: string
+          installment_id?: string
+          message_preview?: string | null
+          recipient?: string | null
+          rule_id?: string
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_reminder_sends_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "installments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_reminder_sends_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "billing_reminder_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boletos: {
         Row: {
           account_id: string
