@@ -35,6 +35,7 @@ interface Row {
   installment_value: number | null;
   total_value: number;
   start_date: string | null;
+  created_at: string | null;
 }
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
