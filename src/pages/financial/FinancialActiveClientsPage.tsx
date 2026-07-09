@@ -216,9 +216,20 @@ export default function FinancialActiveClientsPage() {
         };
       });
 
-      // default DB order: alphabetical (used only when no preset applies)
-      rows.sort((a, b) => a.client_name.localeCompare(b.client_name, "pt-BR"));
-      return rows;
+      // Dedupe by client_id + product_id: keep the most recent contract
+      const dedupeKey = (r: Row & { product_id?: string | null }) =>
+        `${r.client_id}::${(r as any).product_id ?? r.product_name ?? ""}`;
+      const rowsWithPid = rows.map((r, i) => ({ ...r, product_id: (contracts as any[])[i]?.product_id ?? null }));
+      const bestByKey = new Map<string, typeof rowsWithPid[number]>();
+      for (const r of rowsWithPid) {
+        const k = dedupeKey(r);
+        const cur = bestByKey.get(k);
+        const ts = (x: any) => new Date(x.start_date || x.created_at || 0).getTime();
+        if (!cur || ts(r) > ts(cur)) bestByKey.set(k, r);
+      }
+      const deduped = [...bestByKey.values()].map(({ product_id, ...rest }) => rest as Row);
+      deduped.sort((a, b) => a.client_name.localeCompare(b.client_name, "pt-BR"));
+      return deduped;
     },
   });
 
