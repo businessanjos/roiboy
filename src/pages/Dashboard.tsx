@@ -64,6 +64,7 @@ import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 import { OperationsConsultantWorkloadCard } from "@/components/dashboard/OperationsConsultantWorkloadCard";
+import { OverdueClientsCard } from "@/components/dashboard/OverdueClientsCard";
 import { canViewOpsConsultantWorkload } from "@/lib/featureFlags";
 import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/components/dashboard/CancellationAnalyticsModal";
 import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
