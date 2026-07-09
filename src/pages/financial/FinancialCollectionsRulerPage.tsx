@@ -196,7 +196,7 @@ export default function FinancialCollectionsRulerPage() {
       const { error } = await supabase
         .from("billing_reminder_client_settings")
         .upsert(
-          { ...s, account_id: accountId! } as unknown as Record<string, unknown>,
+          { ...s, account_id: accountId! } as never,
           { onConflict: "client_id" },
         );
       if (error) throw error;
