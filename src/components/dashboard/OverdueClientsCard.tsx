@@ -32,7 +32,8 @@ interface OverdueClient {
  */
 export function OverdueClientsCard() {
   const { currentUser } = useCurrentUser();
-  const { hasFullAccess } = usePermissions();
+  const { isAdmin } = usePermissions();
+  const hasFullAccess = isAdmin;
   const [rows, setRows] = useState<OverdueClient[]>([]);
   const [loading, setLoading] = useState(true);
 
