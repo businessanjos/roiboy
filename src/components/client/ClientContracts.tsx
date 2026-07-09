@@ -1272,6 +1272,24 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         </DialogContent>
       </Dialog>
 
+      <RenewalBlockedDialog
+        open={renewalBlockedOpen}
+        onClose={() => {
+          setRenewalBlockedOpen(false);
+          setPendingRenewalContract(null);
+        }}
+        clientName={contracts[0] ? ((contracts[0] as any).client_name || "Cliente") : "Cliente"}
+        overdueCount={renewalBlock.overdueCount}
+        overdueAmount={renewalBlock.overdueAmount}
+        maxDaysOverdue={renewalBlock.maxDaysOverdue}
+        canOverride={isAdmin}
+        onOverrideAsAdmin={() => {
+          const c = pendingRenewalContract;
+          setRenewalBlockedOpen(false);
+          setPendingRenewalContract(null);
+          if (c) openRenewalDialog(c, true);
+        }}
+      />
     </div>
   );
 }
