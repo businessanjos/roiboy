@@ -7,26 +7,90 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Check, Loader2, AlertCircle, FileCheck, MapPin, User, Package } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  AlertCircle,
+  FileCheck,
+  MapPin,
+  User,
+  Package,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConciliationValidation } from "@/hooks/useConciliationValidation";
 
 interface ConciliateButtonProps {
   contractId: string;
+  clientId?: string;
   validation: ConciliationValidation | undefined;
   onSuccess: () => void;
 }
 
+type PendencyKey = "entries" | "document" | "address" | "product";
+
+const PENDENCY_GUIDE: Record<
+  PendencyKey,
+  { title: string; where: string; how: string }
+> = {
+  entries: {
+    title: "Lançamentos financeiros",
+    where: "Cliente > aba Financeiro (ou Contrato > Gerar recebíveis)",
+    how: "Abra o contrato e clique em 'Gerar recebíveis' para criar as parcelas no financeiro.",
+  },
+  document: {
+    title: "CPF ou CNPJ",
+    where: "Cliente > aba Dados > campo CPF/CNPJ",
+    how: "Abra o cadastro do cliente e preencha CPF (pessoa física) ou CNPJ (empresa).",
+  },
+  address: {
+    title: "Endereço completo",
+    where: "Cliente > aba Dados > seção Endereço",
+    how: "Preencha rua, cidade, estado e CEP no cadastro do cliente.",
+  },
+  product: {
+    title: "Produto vinculado",
+    where: "Contrato > campo Produto",
+    how: "Edite o contrato e selecione o produto correspondente.",
+  },
+};
+
+function mapMissing(items: string[] = []): PendencyKey[] {
+  const keys: PendencyKey[] = [];
+  for (const it of items) {
+    const l = it.toLowerCase();
+    if (l.includes("lançamento")) keys.push("entries");
+    else if (l.includes("cpf") || l.includes("cnpj")) keys.push("document");
+    else if (l.includes("endereço")) keys.push("address");
+    else if (l.includes("produto")) keys.push("product");
+  }
+  return keys;
+}
+
 export function ConciliateButton({
   contractId,
+  clientId,
   validation,
   onSuccess,
 }: ConciliateButtonProps) {
   const [isConciliating, setIsConciliating] = useState(false);
+  const [pendingOpen, setPendingOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleConciliate = async () => {
-    if (!validation?.canConciliate) return;
+    if (!validation?.canConciliate) {
+      setErrorMsg(null);
+      setPendingOpen(true);
+      return;
+    }
 
     setIsConciliating(true);
     try {
@@ -42,15 +106,18 @@ export function ConciliateButton({
 
       toast.success("Contrato marcado como conciliado");
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error conciliating:", error);
-      toast.error("Erro ao atualizar contrato");
+      setErrorMsg(
+        error?.message ||
+          "Erro desconhecido ao atualizar o contrato. Tente novamente."
+      );
+      setPendingOpen(true);
     } finally {
       setIsConciliating(false);
     }
   };
 
-  // Loading state
   if (validation?.isLoading) {
     return (
       <Button variant="outline" size="sm" disabled>
@@ -61,143 +128,149 @@ export function ConciliateButton({
   }
 
   const canConciliate = validation?.canConciliate ?? false;
+  const missingKeys = mapMissing(validation?.missingItems);
 
   return (
-    <div className="flex items-center gap-2">
-      {/* Status indicators */}
-      <div className="hidden xl:flex items-center gap-1.5">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "w-5 h-5 rounded-full flex items-center justify-center",
-                  validation?.hasFinancialEntries
-                    ? "bg-emerald-100 text-emerald-600"
-                    : "bg-amber-100 text-amber-600"
-                )}
-              >
-                <FileCheck className="h-3 w-3" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              {validation?.hasFinancialEntries
-                ? "Lançamentos financeiros gerados"
-                : "Lançamentos financeiros pendentes"}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+    <>
+      <div className="flex items-center gap-2">
+        <div className="hidden xl:flex items-center gap-1.5">
+          {[
+            {
+              ok: validation?.hasFinancialEntries,
+              icon: FileCheck,
+              okLabel: "Lançamentos financeiros gerados",
+              pendingLabel: "Lançamentos financeiros pendentes",
+            },
+            {
+              ok: validation?.hasDocument,
+              icon: User,
+              okLabel: "CPF/CNPJ preenchido",
+              pendingLabel: "CPF ou CNPJ pendente",
+            },
+            {
+              ok: validation?.hasAddress,
+              icon: MapPin,
+              okLabel: "Endereço completo",
+              pendingLabel: "Endereço pendente",
+            },
+            {
+              ok: validation?.hasProduct,
+              icon: Package,
+              okLabel: "Produto vinculado",
+              pendingLabel: "Produto pendente",
+            },
+          ].map((s, i) => (
+            <TooltipProvider key={i}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      "w-5 h-5 rounded-full flex items-center justify-center",
+                      s.ok
+                        ? "bg-emerald-100 text-emerald-600"
+                        : "bg-amber-100 text-amber-600"
+                    )}
+                  >
+                    <s.icon className="h-3 w-3" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {s.ok ? s.okLabel : s.pendingLabel}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ))}
+        </div>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "w-5 h-5 rounded-full flex items-center justify-center",
-                  validation?.hasDocument
-                    ? "bg-emerald-100 text-emerald-600"
-                    : "bg-amber-100 text-amber-600"
-                )}
-              >
-                <User className="h-3 w-3" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              {validation?.hasDocument
-                ? "CPF/CNPJ preenchido"
-                : "CPF ou CNPJ pendente"}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "w-5 h-5 rounded-full flex items-center justify-center",
-                  validation?.hasAddress
-                    ? "bg-emerald-100 text-emerald-600"
-                    : "bg-amber-100 text-amber-600"
-                )}
-              >
-                <MapPin className="h-3 w-3" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              {validation?.hasAddress
-                ? "Endereço completo"
-                : "Endereço pendente"}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "w-5 h-5 rounded-full flex items-center justify-center",
-                  validation?.hasProduct
-                    ? "bg-emerald-100 text-emerald-600"
-                    : "bg-amber-100 text-amber-600"
-                )}
-              >
-                <Package className="h-3 w-3" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              {validation?.hasProduct
-                ? "Produto vinculado"
-                : "Produto pendente"}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Button
+          variant={canConciliate ? "default" : "outline"}
+          size="sm"
+          disabled={isConciliating}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleConciliate();
+          }}
+          className={cn(!canConciliate && "border-amber-300 text-amber-700")}
+        >
+          {isConciliating ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : canConciliate ? (
+            <Check className="h-4 w-4 mr-1" />
+          ) : (
+            <AlertCircle className="h-4 w-4 mr-1" />
+          )}
+          Conciliar
+        </Button>
       </div>
 
-      {/* Conciliate button */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>
-              <Button
-                variant={canConciliate ? "default" : "outline"}
-                size="sm"
-                disabled={!canConciliate || isConciliating}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleConciliate();
-                }}
-                className={cn(
-                  !canConciliate && "opacity-60 cursor-not-allowed"
-                )}
-              >
-                {isConciliating ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : canConciliate ? (
-                  <Check className="h-4 w-4 mr-1" />
-                ) : (
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                )}
-                Conciliar
-              </Button>
-            </span>
-          </TooltipTrigger>
-          {!canConciliate && validation?.missingItems && (
-            <TooltipContent side="left" className="max-w-xs">
-              <p className="font-medium mb-1">Pendências para conciliar:</p>
-              <ul className="text-xs space-y-0.5">
-                {validation.missingItems.map((item) => (
-                  <li key={item} className="flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3 text-amber-500" />
-                    {item}
+      <Dialog open={pendingOpen} onOpenChange={setPendingOpen}>
+        <DialogContent
+          className="max-w-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              {errorMsg
+                ? "Não foi possível conciliar"
+                : "Pendências para conciliar"}
+            </DialogTitle>
+            <DialogDescription>
+              {errorMsg
+                ? "O sistema retornou um erro ao atualizar o contrato."
+                : "Preencha os itens abaixo antes de marcar o contrato como conciliado."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {errorMsg ? (
+            <div className="rounded-md bg-destructive/10 text-destructive text-sm p-3 border border-destructive/20">
+              {errorMsg}
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {missingKeys.length === 0 && (
+                <li className="text-sm text-muted-foreground">
+                  Nenhuma pendência detectada.
+                </li>
+              )}
+              {missingKeys.map((k) => {
+                const g = PENDENCY_GUIDE[k];
+                return (
+                  <li
+                    key={k}
+                    className="rounded-md border p-3 space-y-1 bg-amber-50/50"
+                  >
+                    <div className="flex items-center gap-2 font-medium text-sm">
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
+                      {g.title}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium">Onde preencher:</span>{" "}
+                      {g.where}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium">Como resolver:</span>{" "}
+                      {g.how}
+                    </div>
                   </li>
-                ))}
-              </ul>
-            </TooltipContent>
+                );
+              })}
+            </ul>
           )}
-        </Tooltip>
-      </TooltipProvider>
-    </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            {clientId && (
+              <Button
+                variant="outline"
+                onClick={() => window.open(`/clients/${clientId}`, "_blank")}
+              >
+                Abrir cliente
+              </Button>
+            )}
+            <Button onClick={() => setPendingOpen(false)}>Entendi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
