@@ -76,6 +76,7 @@ interface SendLog {
   id: string;
   rule_id: string;
   installment_id: string;
+  client_id: string | null;
   channel: string;
   recipient: string | null;
   status: string;
