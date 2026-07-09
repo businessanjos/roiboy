@@ -156,6 +156,7 @@ export default function FinancialActiveClientsPage() {
           installments_count: c.installments_count,
           installment_value: installmentValue,
           total_value: Number(c.value || 0),
+          start_date: c.start_date || null,
         };
       });
 
