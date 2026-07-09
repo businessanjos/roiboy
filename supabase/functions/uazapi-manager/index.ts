@@ -525,14 +525,23 @@ async function uazapiInstance(endpoint: string, method: string, token: string, b
     throw new Error(`Resposta inválida do WhatsApp: ${responseText.substring(0, 100)}`);
   }
   
-  // UAZAPI retorna { error: false } em sucesso, { error: true } em falha
+  // UAZAPI retorna { error: false } em sucesso, { error: true|"msg" } em falha
   if (json.error === true || json.error === "true") {
     throw new Error(json.message || json.error_message || "Erro ao enviar mensagem");
   }
-  
+  // Algumas rotas devolvem { error: "mensagem descritiva" } com HTTP 4xx/5xx
+  if (typeof json.error === "string" && json.error.trim().length > 0) {
+    throw new Error(json.error);
+  }
+
   // "Method Not Allowed" = endpoint errado
   if (json.message === "Method Not Allowed" || r.status === 405) {
     throw new Error(`Endpoint inválido: ${endpoint}`);
+  }
+
+  // Qualquer outro HTTP não-2xx sem campo error tratado acima
+  if (!r.ok) {
+    throw new Error(json.message || json.error_message || `Falha no WhatsApp (HTTP ${r.status})`);
   }
   
   return json;
