@@ -171,7 +171,7 @@ export const sectors: Sector[] = [
       { to: "/financial/configuracoes/fiscal", icon: Receipt, label: "Config. Fiscal (NFS-e)", permission: PERMISSIONS.CLIENTS_VIEW, group: "Integrações" },
       // Outros
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW, group: "Outros" },
-      { to: "/clients", icon: Users, label: "Clientes Ativos", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/financial/clientes-ativos", icon: Users, label: "Clientes Ativos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
