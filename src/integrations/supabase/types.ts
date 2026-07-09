@@ -25381,6 +25381,10 @@ export type Database = {
       }
       format_call_duration: { Args: { seconds: number }; Returns: string }
       generate_checkin_code: { Args: never; Returns: string }
+      generate_contract_installments: {
+        Args: { _contract_id: string }
+        Returns: Json
+      }
       generate_contract_receivables: {
         Args: { _contract_id: string }
         Returns: number
