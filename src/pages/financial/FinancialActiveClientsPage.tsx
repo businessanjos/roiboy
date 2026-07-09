@@ -7,10 +7,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, ExternalLink } from "lucide-react";
+import { Users, Search, ExternalLink, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { formatBRLPrecise } from "@/lib/financial-format";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format, startOfMonth, startOfQuarter, startOfYear, endOfMonth, endOfQuarter, endOfYear } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
+
+type DatePreset = "recent" | "month" | "quarter" | "year" | "custom";
 
 interface Row {
   contract_id: string;
@@ -25,6 +34,7 @@ interface Row {
   installments_count: number | null;
   installment_value: number | null;
   total_value: number;
+  start_date: string | null;
 }
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -75,6 +85,8 @@ export default function FinancialActiveClientsPage() {
   const accountId = currentUser?.account_id;
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [datePreset, setDatePreset] = useState<DatePreset>("recent");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
 
   const { data, isLoading } = useQuery({
     enabled: !!accountId,
@@ -83,7 +95,7 @@ export default function FinancialActiveClientsPage() {
       const { data: contracts, error } = await supabase
         .from("client_contracts")
         .select(
-          "id, client_id, value, payment_method, installments_count, installments_detail, product_id, deal_id, status"
+          "id, client_id, value, payment_method, installments_count, installments_detail, product_id, deal_id, status, start_date"
         )
         .eq("account_id", accountId)
         .eq("status", "active");
@@ -146,25 +158,55 @@ export default function FinancialActiveClientsPage() {
           installments_count: c.installments_count,
           installment_value: installmentValue,
           total_value: Number(c.value || 0),
+          start_date: c.start_date || null,
         };
       });
 
+      // default DB order: alphabetical (used only when no preset applies)
       rows.sort((a, b) => a.client_name.localeCompare(b.client_name, "pt-BR"));
       return rows;
     },
   });
 
+  const dateRange = useMemo<{ from: Date | null; to: Date | null }>(() => {
+    const now = new Date();
+    if (datePreset === "month") return { from: startOfMonth(now), to: endOfMonth(now) };
+    if (datePreset === "quarter") return { from: startOfQuarter(now), to: endOfQuarter(now) };
+    if (datePreset === "year") return { from: startOfYear(now), to: endOfYear(now) };
+    if (datePreset === "custom") return { from: customRange?.from ?? null, to: customRange?.to ?? null };
+    return { from: null, to: null };
+  }, [datePreset, customRange]);
+
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    if (!s) return data || [];
-    return (data || []).filter(
-      (r) =>
-        r.client_name.toLowerCase().includes(s) ||
-        r.company_name?.toLowerCase().includes(s) ||
-        r.sales_rep?.toLowerCase().includes(s) ||
-        r.product_name?.toLowerCase().includes(s)
-    );
-  }, [data, search]);
+    let rows = data || [];
+    if (dateRange.from || dateRange.to) {
+      rows = rows.filter((r) => {
+        if (!r.start_date) return false;
+        const d = new Date(r.start_date);
+        if (dateRange.from && d < dateRange.from) return false;
+        if (dateRange.to && d > dateRange.to) return false;
+        return true;
+      });
+    }
+    if (s) {
+      rows = rows.filter(
+        (r) =>
+          r.client_name.toLowerCase().includes(s) ||
+          r.company_name?.toLowerCase().includes(s) ||
+          r.sales_rep?.toLowerCase().includes(s) ||
+          r.product_name?.toLowerCase().includes(s)
+      );
+    }
+    if (datePreset === "recent" || datePreset === "month" || datePreset === "quarter" || datePreset === "year" || datePreset === "custom") {
+      rows = [...rows].sort((a, b) => {
+        const ta = a.start_date ? new Date(a.start_date).getTime() : 0;
+        const tb = b.start_date ? new Date(b.start_date).getTime() : 0;
+        return tb - ta;
+      });
+    }
+    return rows;
+  }, [data, search, dateRange, datePreset]);
 
   return (
     <div className="space-y-4">
@@ -181,14 +223,69 @@ export default function FinancialActiveClientsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por cliente, vendedor ou produto..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[240px] max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por cliente, vendedor ou produto..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
+              <SelectTrigger className="w-[210px]">
+                <SelectValue placeholder="Filtro por data" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Mais recente ao mais antigo</SelectItem>
+                <SelectItem value="month">Este mês</SelectItem>
+                <SelectItem value="quarter">Este trimestre</SelectItem>
+                <SelectItem value="year">Este ano</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+            {datePreset === "custom" && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal min-w-[240px]",
+                      !customRange?.from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customRange?.from ? (
+                      customRange.to ? (
+                        <>
+                          {format(customRange.from, "dd/MM/yy", { locale: ptBR })} —{" "}
+                          {format(customRange.to, "dd/MM/yy", { locale: ptBR })}
+                        </>
+                      ) : (
+                        format(customRange.from, "dd/MM/yy", { locale: ptBR })
+                      )
+                    ) : (
+                      <span>Selecionar período</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={customRange}
+                    onSelect={setCustomRange}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+            <div className="text-xs text-muted-foreground ml-auto">
+              {filtered.length} contrato(s)
+            </div>
           </div>
 
           {isLoading ? (
