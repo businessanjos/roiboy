@@ -911,6 +911,8 @@ export default function Dashboard() {
             <GroupEngagementReport />
           </div>
 
+          <OverdueClientsCard />
+
           {canViewOpsConsultantWorkload(currentUser?.email) && (
             <OperationsConsultantWorkloadCard />
           )}
