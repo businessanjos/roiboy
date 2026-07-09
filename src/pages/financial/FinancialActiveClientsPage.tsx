@@ -163,6 +163,9 @@ export default function FinancialActiveClientsPage() {
         if (d.responsible_user_id) userIds.add(d.responsible_user_id);
         else if (d.sdr_user_id) userIds.add(d.sdr_user_id);
       });
+      (clientsRes.data || []).forEach((c: any) => {
+        if (c.sales_user_id) userIds.add(c.sales_user_id);
+      });
       const usersRes = userIds.size
         ? await supabase.from("users").select("id, name").in("id", [...userIds])
         : ({ data: [] } as any);
