@@ -40,17 +40,28 @@ interface Row {
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   credit_card: "Cartão de Crédito",
+  cartao_credito: "Cartão de Crédito",
   debit_card: "Cartão de Débito",
+  cartao_debito: "Cartão de Débito",
   boleto: "Boleto",
+  boletos: "Boleto",
   pix: "Pix",
+  pix_cheques: "Pix + Cheques",
   transfer: "Transferência",
+  transferencia: "Transferência",
   cash: "Dinheiro",
+  dinheiro: "Dinheiro",
   check: "Cheque",
+  cheque: "Cheque",
+  cheques: "Cheques",
   recurring_card: "Recorrência Cartão",
 };
 
-function labelPayment(m: string | null) {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function labelPayment(m: string | null, pmMap: Map<string, string>) {
   if (!m) return "—";
+  if (UUID_RE.test(m)) return pmMap.get(m) ?? "—";
   return PAYMENT_METHOD_LABELS[m] ?? m;
 }
 
