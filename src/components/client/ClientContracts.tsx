@@ -162,6 +162,9 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [contractToDelete, setContractToDelete] = useState<string | null>(null);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [renewingContract, setRenewingContract] = useState<Contract | null>(null);
+  const [renewalBlockedOpen, setRenewalBlockedOpen] = useState(false);
+  const renewalBlock = useCanRenewClient(clientId);
+  const { isAdmin } = usePermissions();
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
