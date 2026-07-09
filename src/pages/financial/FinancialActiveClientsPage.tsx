@@ -119,7 +119,7 @@ export default function FinancialActiveClientsPage() {
 
       const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes] = await Promise.all([
         clientIds.length
-          ? supabase.from("clients").select("id, full_name, company_name").in("id", clientIds as string[])
+          ? supabase.from("clients").select("id, full_name, company_name, sales_user_id").in("id", clientIds as string[])
           : Promise.resolve({ data: [], error: null } as any),
         productIds.length
           ? supabase.from("products").select("id, name, color").in("id", productIds as string[])
