@@ -181,11 +181,15 @@ export default function FinancialActiveClientsPage() {
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
+    const rowDate = (r: Row) => {
+      const d = r.start_date || r.created_at;
+      return d ? new Date(d) : null;
+    };
     let rows = data || [];
     if (dateRange.from || dateRange.to) {
       rows = rows.filter((r) => {
-        if (!r.start_date) return false;
-        const d = new Date(r.start_date);
+        const d = rowDate(r);
+        if (!d) return false;
         if (dateRange.from && d < dateRange.from) return false;
         if (dateRange.to && d > dateRange.to) return false;
         return true;
@@ -200,15 +204,13 @@ export default function FinancialActiveClientsPage() {
           r.product_name?.toLowerCase().includes(s)
       );
     }
-    if (datePreset === "recent" || datePreset === "month" || datePreset === "quarter" || datePreset === "year" || datePreset === "custom") {
-      rows = [...rows].sort((a, b) => {
-        const ta = a.start_date ? new Date(a.start_date).getTime() : 0;
-        const tb = b.start_date ? new Date(b.start_date).getTime() : 0;
-        return tb - ta;
-      });
-    }
+    rows = [...rows].sort((a, b) => {
+      const ta = rowDate(a)?.getTime() ?? 0;
+      const tb = rowDate(b)?.getTime() ?? 0;
+      return tb - ta;
+    });
     return rows;
-  }, [data, search, dateRange, datePreset]);
+  }, [data, search, dateRange]);
 
   return (
     <div className="space-y-4">
