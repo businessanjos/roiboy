@@ -147,12 +147,24 @@ export default function FinancialCollectionsRulerPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("billing_reminder_sends")
-        .select("*, billing_reminder_rules:rule_id(name), clients:client_id(full_name)")
+        .select("*, billing_reminder_rules:rule_id(name)")
         .eq("account_id", accountId!)
         .order("sent_at", { ascending: false })
         .limit(200);
       if (error) throw error;
-      return (data || []) as SendLog[];
+      const rows = (data || []) as unknown as SendLog[];
+      const clientIds = [...new Set(rows.map((r) => r.client_id).filter(Boolean))] as string[];
+      if (clientIds.length > 0) {
+        const { data: cs } = await supabase
+          .from("clients")
+          .select("id, full_name")
+          .in("id", clientIds);
+        const map = new Map((cs || []).map((c) => [c.id, c.full_name]));
+        rows.forEach((r) => {
+          if (r.client_id) r.clients = { full_name: map.get(r.client_id) || "—" };
+        });
+      }
+      return rows;
     },
   });
 
