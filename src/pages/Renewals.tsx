@@ -147,7 +147,7 @@ export default function Renewals() {
       console.error("Error saving outcome:", err);
       toast.error("Erro ao salvar status");
     }
-  }, [currentUser, outcomeMap]);
+  }, [currentUser, outcomeMap, financialStatusBatch.data, isAdmin]);
 
   const handleConfirmRenewal = async () => {
     const contract = renewalDialog.contract;
