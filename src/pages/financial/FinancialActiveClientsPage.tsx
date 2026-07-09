@@ -117,7 +117,7 @@ export default function FinancialActiveClientsPage() {
       const productIds = [...new Set((contracts || []).map((c) => c.product_id).filter(Boolean))];
       const dealIds = [...new Set((contracts || []).map((c) => c.deal_id).filter(Boolean))];
 
-      const [clientsRes, productsRes, dealsRes] = await Promise.all([
+      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes] = await Promise.all([
         clientIds.length
           ? supabase.from("clients").select("id, full_name, company_name").in("id", clientIds as string[])
           : Promise.resolve({ data: [], error: null } as any),
@@ -127,15 +127,41 @@ export default function FinancialActiveClientsPage() {
         dealIds.length
           ? supabase
               .from("deals")
-              .select("id, sales_user_id, responsible_user_id")
+              .select("id, client_id, responsible_user_id, sdr_user_id, entry_value, status, won_at, created_at")
               .in("id", dealIds as string[])
+          : Promise.resolve({ data: [], error: null } as any),
+        supabase.from("payment_methods").select("id, name").eq("account_id", accountId),
+        clientIds.length
+          ? supabase
+              .from("deals")
+              .select("id, client_id, responsible_user_id, sdr_user_id, entry_value, status, won_at, created_at")
+              .in("client_id", clientIds as string[])
+              .order("won_at", { ascending: false, nullsFirst: false })
           : Promise.resolve({ data: [], error: null } as any),
       ]);
 
+      // Build best-deal-per-client map from dealsByClientRes (prefer won, else latest)
+      const bestDealByClient = new Map<string, any>();
+      (dealsByClientRes.data || []).forEach((d: any) => {
+        if (!d.client_id) return;
+        const cur = bestDealByClient.get(d.client_id);
+        if (!cur) {
+          bestDealByClient.set(d.client_id, d);
+          return;
+        }
+        const score = (x: any) =>
+          (x.status === "won" ? 2 : 0) + (x.won_at ? 1 : 0);
+        if (score(d) > score(cur)) bestDealByClient.set(d.client_id, d);
+      });
+
       const userIds = new Set<string>();
       (dealsRes.data || []).forEach((d: any) => {
-        if (d.sales_user_id) userIds.add(d.sales_user_id);
-        else if (d.responsible_user_id) userIds.add(d.responsible_user_id);
+        if (d.responsible_user_id) userIds.add(d.responsible_user_id);
+        else if (d.sdr_user_id) userIds.add(d.sdr_user_id);
+      });
+      bestDealByClient.forEach((d: any) => {
+        if (d.responsible_user_id) userIds.add(d.responsible_user_id);
+        else if (d.sdr_user_id) userIds.add(d.sdr_user_id);
       });
       const usersRes = userIds.size
         ? await supabase.from("users").select("id, name").in("id", [...userIds])
@@ -145,18 +171,26 @@ export default function FinancialActiveClientsPage() {
       const productMap = new Map((productsRes.data || []).map((p: any) => [p.id, p]));
       const dealMap = new Map((dealsRes.data || []).map((d: any) => [d.id, d]));
       const userMap = new Map((usersRes.data || []).map((u: any) => [u.id, u.name]));
+      const pmMap = new Map((paymentMethodsRes.data || []).map((p: any) => [p.id, p.name]));
 
       const rows: Row[] = (contracts || []).map((c: any) => {
         const client = clientMap.get(c.client_id) as any;
         const product = c.product_id ? (productMap.get(c.product_id) as any) : null;
         const deal = c.deal_id ? (dealMap.get(c.deal_id) as any) : null;
-        const salesUserId = deal?.sales_user_id || deal?.responsible_user_id || null;
+        const fallbackDeal = deal ?? (c.client_id ? bestDealByClient.get(c.client_id) : null);
+        const salesUserId = fallbackDeal?.responsible_user_id || fallbackDeal?.sdr_user_id || null;
         const salesRep = salesUserId ? (userMap.get(salesUserId) as string | undefined) ?? null : null;
         const { entrada, installmentValue } = extractEntrada(
           c.installments_detail,
           c.installments_count,
           Number(c.value || 0)
         );
+        const finalEntrada =
+          entrada != null && entrada > 0
+            ? entrada
+            : fallbackDeal?.entry_value && Number(fallbackDeal.entry_value) > 0
+              ? Number(fallbackDeal.entry_value)
+              : null;
         return {
           contract_id: c.id,
           client_id: c.client_id,
@@ -165,8 +199,8 @@ export default function FinancialActiveClientsPage() {
           product_name: product?.name || null,
           product_color: product?.color || null,
           sales_rep: salesRep,
-          payment_method: c.payment_method,
-          entrada,
+          payment_method: c.payment_method ? labelPayment(c.payment_method, pmMap) : null,
+          entrada: finalEntrada,
           installments_count: c.installments_count,
           installment_value: installmentValue,
           total_value: Number(c.value || 0),
