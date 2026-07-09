@@ -162,6 +162,7 @@ export default function FinancialActiveClientsPage() {
         };
       });
 
+      // default DB order: alphabetical (used only when no preset applies)
       rows.sort((a, b) => a.client_name.localeCompare(b.client_name, "pt-BR"));
       return rows;
     },
