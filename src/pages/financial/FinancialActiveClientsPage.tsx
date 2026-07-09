@@ -1,0 +1,280 @@
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Users, Search, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { formatBRLPrecise } from "@/lib/financial-format";
+
+interface Row {
+  contract_id: string;
+  client_id: string;
+  client_name: string;
+  company_name: string | null;
+  product_name: string | null;
+  product_color: string | null;
+  sales_rep: string | null;
+  payment_method: string | null;
+  entrada: number | null;
+  installments_count: number | null;
+  installment_value: number | null;
+  total_value: number;
+}
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  credit_card: "Cartão de Crédito",
+  debit_card: "Cartão de Débito",
+  boleto: "Boleto",
+  pix: "Pix",
+  transfer: "Transferência",
+  cash: "Dinheiro",
+  check: "Cheque",
+  recurring_card: "Recorrência Cartão",
+};
+
+function labelPayment(m: string | null) {
+  if (!m) return "—";
+  return PAYMENT_METHOD_LABELS[m] ?? m;
+}
+
+/** Extract entrada from installments_detail if the first installment is larger than the rest. */
+function extractEntrada(detail: any, installmentsCount: number | null, value: number): { entrada: number | null; installmentValue: number | null } {
+  if (Array.isArray(detail) && detail.length > 0) {
+    const amounts = detail
+      .map((d: any) => Number(d?.amount ?? d?.value ?? 0))
+      .filter((n) => n > 0);
+    if (amounts.length >= 2) {
+      const first = amounts[0];
+      const rest = amounts.slice(1);
+      const restAvg = rest.reduce((s, n) => s + n, 0) / rest.length;
+      const uniform = rest.every((n) => Math.abs(n - restAvg) < 0.01);
+      if (uniform && Math.abs(first - restAvg) > 0.01) {
+        return { entrada: first, installmentValue: restAvg };
+      }
+      // uniform (including first)
+      return { entrada: null, installmentValue: amounts[0] };
+    }
+    if (amounts.length === 1) {
+      return { entrada: null, installmentValue: amounts[0] };
+    }
+  }
+  if (installmentsCount && installmentsCount > 0) {
+    return { entrada: null, installmentValue: value / installmentsCount };
+  }
+  return { entrada: null, installmentValue: null };
+}
+
+export default function FinancialActiveClientsPage() {
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
+  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+
+  const { data, isLoading } = useQuery({
+    enabled: !!accountId,
+    queryKey: ["financial-active-clients", accountId],
+    queryFn: async () => {
+      const { data: contracts, error } = await supabase
+        .from("client_contracts")
+        .select(
+          "id, client_id, value, payment_method, installments_count, installments_detail, product_id, deal_id, status"
+        )
+        .eq("account_id", accountId)
+        .eq("status", "active");
+      if (error) throw error;
+
+      const clientIds = [...new Set((contracts || []).map((c) => c.client_id).filter(Boolean))];
+      const productIds = [...new Set((contracts || []).map((c) => c.product_id).filter(Boolean))];
+      const dealIds = [...new Set((contracts || []).map((c) => c.deal_id).filter(Boolean))];
+
+      const [clientsRes, productsRes, dealsRes] = await Promise.all([
+        clientIds.length
+          ? supabase.from("clients").select("id, full_name, company_name").in("id", clientIds as string[])
+          : Promise.resolve({ data: [], error: null } as any),
+        productIds.length
+          ? supabase.from("products").select("id, name, color").in("id", productIds as string[])
+          : Promise.resolve({ data: [], error: null } as any),
+        dealIds.length
+          ? supabase
+              .from("deals")
+              .select("id, sales_user_id, responsible_user_id")
+              .in("id", dealIds as string[])
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
+
+      const userIds = new Set<string>();
+      (dealsRes.data || []).forEach((d: any) => {
+        if (d.sales_user_id) userIds.add(d.sales_user_id);
+        else if (d.responsible_user_id) userIds.add(d.responsible_user_id);
+      });
+      const usersRes = userIds.size
+        ? await supabase.from("users").select("id, name").in("id", [...userIds])
+        : ({ data: [] } as any);
+
+      const clientMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]));
+      const productMap = new Map((productsRes.data || []).map((p: any) => [p.id, p]));
+      const dealMap = new Map((dealsRes.data || []).map((d: any) => [d.id, d]));
+      const userMap = new Map((usersRes.data || []).map((u: any) => [u.id, u.name]));
+
+      const rows: Row[] = (contracts || []).map((c: any) => {
+        const client = clientMap.get(c.client_id) as any;
+        const product = c.product_id ? (productMap.get(c.product_id) as any) : null;
+        const deal = c.deal_id ? (dealMap.get(c.deal_id) as any) : null;
+        const salesUserId = deal?.sales_user_id || deal?.responsible_user_id || null;
+        const salesRep = salesUserId ? (userMap.get(salesUserId) as string | undefined) ?? null : null;
+        const { entrada, installmentValue } = extractEntrada(
+          c.installments_detail,
+          c.installments_count,
+          Number(c.value || 0)
+        );
+        return {
+          contract_id: c.id,
+          client_id: c.client_id,
+          client_name: client?.full_name || "—",
+          company_name: client?.company_name || null,
+          product_name: product?.name || null,
+          product_color: product?.color || null,
+          sales_rep: salesRep,
+          payment_method: c.payment_method,
+          entrada,
+          installments_count: c.installments_count,
+          installment_value: installmentValue,
+          total_value: Number(c.value || 0),
+        };
+      });
+
+      rows.sort((a, b) => a.client_name.localeCompare(b.client_name, "pt-BR"));
+      return rows;
+    },
+  });
+
+  const filtered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (!s) return data || [];
+    return (data || []).filter(
+      (r) =>
+        r.client_name.toLowerCase().includes(s) ||
+        r.company_name?.toLowerCase().includes(s) ||
+        r.sales_rep?.toLowerCase().includes(s) ||
+        r.product_name?.toLowerCase().includes(s)
+    );
+  }, [data, search]);
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            <div>
+              <CardTitle>Clientes Ativos — Visão Financeira</CardTitle>
+              <CardDescription>
+                Dados transacionais e de pagamento dos contratos ativos. Distinta da visão do CS.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por cliente, vendedor ou produto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-12" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10">
+              Nenhum contrato ativo encontrado.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead>Forma de Pagamento</TableHead>
+                    <TableHead className="text-right">Entrada</TableHead>
+                    <TableHead className="text-center">Parcelas</TableHead>
+                    <TableHead className="text-right">Valor da Parcela</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="w-10" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((r) => (
+                    <TableRow key={r.contract_id}>
+                      <TableCell>
+                        <div className="font-medium">{r.client_name}</div>
+                        {r.company_name && (
+                          <div className="text-xs text-muted-foreground">{r.company_name}</div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {r.product_name ? (
+                          <Badge
+                            variant="outline"
+                            style={{
+                              borderColor: r.product_color || "#6b7280",
+                              color: r.product_color || "#6b7280",
+                            }}
+                          >
+                            {r.product_name}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {r.sales_rep || <span className="text-muted-foreground text-sm">—</span>}
+                      </TableCell>
+                      <TableCell>{labelPayment(r.payment_method)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {r.entrada != null ? formatBRLPrecise(r.entrada) : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-center tabular-nums">
+                        {r.installments_count ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {r.installment_value != null ? formatBRLPrecise(r.installment_value) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">
+                        {formatBRLPrecise(r.total_value)}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => navigate(`/clients/${r.client_id}`)}
+                          title="Abrir ficha do cliente"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
