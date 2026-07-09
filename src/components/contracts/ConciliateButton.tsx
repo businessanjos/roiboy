@@ -252,8 +252,12 @@ export function ConciliateButton({
       setOpen(false);
       onSuccess();
     } catch (e: any) {
+    } catch (e: any) {
       console.error(e);
-      setErrorMsg(e?.message || "Erro ao atualizar o contrato");
+      const msg = e?.message || "Erro ao atualizar o contrato";
+      setErrorMsg(msg);
+      toast.error(msg);
+      setOpen(true);
     } finally {
       setIsConciliating(false);
     }
