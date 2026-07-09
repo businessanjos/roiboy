@@ -35,6 +35,7 @@ interface Row {
   installment_value: number | null;
   total_value: number;
   start_date: string | null;
+  created_at: string | null;
 }
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -95,7 +96,7 @@ export default function FinancialActiveClientsPage() {
       const { data: contracts, error } = await supabase
         .from("client_contracts")
         .select(
-          "id, client_id, value, payment_method, installments_count, installments_detail, product_id, deal_id, status, start_date"
+          "id, client_id, value, payment_method, installments_count, installments_detail, product_id, deal_id, status, start_date, created_at"
         )
         .eq("account_id", accountId)
         .eq("status", "active");
@@ -159,6 +160,7 @@ export default function FinancialActiveClientsPage() {
           installment_value: installmentValue,
           total_value: Number(c.value || 0),
           start_date: c.start_date || null,
+          created_at: c.created_at || null,
         };
       });
 
@@ -179,11 +181,15 @@ export default function FinancialActiveClientsPage() {
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
+    const rowDate = (r: Row) => {
+      const d = r.start_date || r.created_at;
+      return d ? new Date(d) : null;
+    };
     let rows = data || [];
     if (dateRange.from || dateRange.to) {
       rows = rows.filter((r) => {
-        if (!r.start_date) return false;
-        const d = new Date(r.start_date);
+        const d = rowDate(r);
+        if (!d) return false;
         if (dateRange.from && d < dateRange.from) return false;
         if (dateRange.to && d > dateRange.to) return false;
         return true;
@@ -198,15 +204,13 @@ export default function FinancialActiveClientsPage() {
           r.product_name?.toLowerCase().includes(s)
       );
     }
-    if (datePreset === "recent" || datePreset === "month" || datePreset === "quarter" || datePreset === "year" || datePreset === "custom") {
-      rows = [...rows].sort((a, b) => {
-        const ta = a.start_date ? new Date(a.start_date).getTime() : 0;
-        const tb = b.start_date ? new Date(b.start_date).getTime() : 0;
-        return tb - ta;
-      });
-    }
+    rows = [...rows].sort((a, b) => {
+      const ta = rowDate(a)?.getTime() ?? 0;
+      const tb = rowDate(b)?.getTime() ?? 0;
+      return tb - ta;
+    });
     return rows;
-  }, [data, search, dateRange, datePreset]);
+  }, [data, search, dateRange]);
 
   return (
     <div className="space-y-4">
