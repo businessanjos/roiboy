@@ -347,6 +347,7 @@ const App = () => (
                               <Route path="prestadores" element={<FinancialProvidersPortalPage />} />
                               <Route path="pagadores" element={<FinancialPayersPage />} />
                               <Route path="configuracoes/fiscal" element={<FinancialFiscalSettingsPage />} />
+                              <Route path="clientes-ativos" element={<FinancialActiveClientsPage />} />
                             </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
