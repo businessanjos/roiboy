@@ -326,6 +326,7 @@ const ContractTableRow = memo(function ContractTableRow({
           {activeTab === "fila" && (
             <ConciliateButton
               contractId={contract.id}
+              clientId={contract.client_id}
               validation={validation}
               onSuccess={onConciliateSuccess}
             />
