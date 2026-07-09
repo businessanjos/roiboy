@@ -310,7 +310,17 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       : `parcelado_${installments}`;
   };
 
-  const openRenewalDialog = (contract: Contract) => {
+  const openRenewalDialog = (contract: Contract, bypass = false) => {
+    // Bloqueio de renovação para clientes inadimplentes (admin pode ignorar)
+    if (!bypass && renewalBlock.isBlocked && !isAdmin) {
+      setRenewalBlockedOpen(true);
+      return;
+    }
+    if (!bypass && renewalBlock.isBlocked && isAdmin) {
+      // admin: mostra o dialog com opção de override — só continua se ele clicar
+      setRenewalBlockedOpen(true);
+      return;
+    }
     setRenewingContract(contract);
     const nextDay = contract.end_date 
       ? format(new Date(parseLocalDate(contract.end_date)!.getTime() + 86400000), "yyyy-MM-dd")
