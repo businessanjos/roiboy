@@ -253,7 +253,10 @@ export function ConciliateButton({
       onSuccess();
     } catch (e: any) {
       console.error(e);
-      setErrorMsg(e?.message || "Erro ao atualizar o contrato");
+      const msg = e?.message || "Erro ao atualizar o contrato";
+      setErrorMsg(msg);
+      toast.error(msg);
+      setOpen(true);
     } finally {
       setIsConciliating(false);
     }
@@ -329,11 +332,8 @@ export function ConciliateButton({
           disabled={isConciliating}
           onClick={(e) => {
             e.stopPropagation();
-            if (canConciliate) {
-              handleConciliate();
-            } else {
-              openDialog();
-            }
+            e.preventDefault();
+            openDialog();
           }}
           className={cn(!canConciliate && "border-amber-300 text-amber-700")}
         >
