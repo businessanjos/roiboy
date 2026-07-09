@@ -181,7 +181,11 @@ export default function FinancialActiveClientsPage() {
         const product = c.product_id ? (productMap.get(c.product_id) as any) : null;
         const deal = c.deal_id ? (dealMap.get(c.deal_id) as any) : null;
         const fallbackDeal = deal ?? (c.client_id ? bestDealByClient.get(c.client_id) : null);
-        const salesUserId = fallbackDeal?.responsible_user_id || fallbackDeal?.sdr_user_id || null;
+        const salesUserId =
+          fallbackDeal?.responsible_user_id ||
+          fallbackDeal?.sdr_user_id ||
+          client?.sales_user_id ||
+          null;
         const salesRep = salesUserId ? (userMap.get(salesUserId) as string | undefined) ?? null : null;
         const { entrada, installmentValue } = extractEntrada(
           c.installments_detail,
