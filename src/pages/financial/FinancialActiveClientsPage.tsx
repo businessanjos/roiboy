@@ -85,6 +85,8 @@ export default function FinancialActiveClientsPage() {
   const accountId = currentUser?.account_id;
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [datePreset, setDatePreset] = useState<DatePreset>("recent");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
 
   const { data, isLoading } = useQuery({
     enabled: !!accountId,
