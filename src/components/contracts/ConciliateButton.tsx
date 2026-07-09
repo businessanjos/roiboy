@@ -333,7 +333,11 @@ export function ConciliateButton({
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
-            openDialog();
+            if (canConciliate) {
+              handleConciliate();
+            } else {
+              openDialog();
+            }
           }}
           className={cn(!canConciliate && "border-amber-300 text-amber-700")}
         >
