@@ -214,6 +214,7 @@ const FinancialOmieIntegrationPage = lazyRetry(() => import("./pages/financial/F
 const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/FinancialPluggyStatusPage"));
 const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
 const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
+const FinancialCollectionsRulerPage = lazyRetry(() => import("./pages/financial/FinancialCollectionsRulerPage"));
 const FinancialTaxPage = lazyRetry(() => import("./pages/financial/FinancialTaxPage"));
 const FinancialProvidersPortalPage = lazyRetry(() => import("./pages/financial/FinancialProvidersPortalPage"));
 const FinancialPayersPage = lazyRetry(() => import("./pages/financial/FinancialPayersPage"));
@@ -340,6 +341,7 @@ const App = () => (
                               <Route path="integracoes/pluggy" element={<FinancialPluggyStatusPage />} />
                               <Route path="importar" element={<FinancialImportPage />} />
                               <Route path="cobranca" element={<FinancialDunningKanbanPage />} />
+                              <Route path="regua-cobranca" element={<FinancialCollectionsRulerPage />} />
                               <Route path="tributario" element={<FinancialTaxPage />} />
                               <Route path="prestadores" element={<FinancialProvidersPortalPage />} />
                               <Route path="pagadores" element={<FinancialPayersPage />} />

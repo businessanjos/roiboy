@@ -156,6 +156,7 @@ export const sectors: Sector[] = [
       { to: "/financial/alerts", icon: Bell, label: "Alertas", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/importar", icon: ArrowLeftRight, label: "Importar (Cielo/Cheque)", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/cobranca", icon: LayoutGrid, label: "CRM de Cobrança", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/financial/regua-cobranca", icon: Bell, label: "Régua de Cobrança", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/tributario", icon: Scale, label: "Tributário", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/prestadores", icon: UsersRound, label: "Portal Prestadores", permission: PERMISSIONS.CLIENTS_VIEW },
       // Relatórios
