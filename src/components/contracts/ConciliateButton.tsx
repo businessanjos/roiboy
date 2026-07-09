@@ -329,11 +329,8 @@ export function ConciliateButton({
           disabled={isConciliating}
           onClick={(e) => {
             e.stopPropagation();
-            if (canConciliate) {
-              handleConciliate();
-            } else {
-              openDialog();
-            }
+            e.preventDefault();
+            openDialog();
           }}
           className={cn(!canConciliate && "border-amber-300 text-amber-700")}
         >
