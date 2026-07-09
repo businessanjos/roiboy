@@ -390,7 +390,7 @@ export default function FinancialActiveClientsPage() {
                       <TableCell>
                         {r.sales_rep || <span className="text-muted-foreground text-sm">—</span>}
                       </TableCell>
-                      <TableCell>{labelPayment(r.payment_method)}</TableCell>
+                      <TableCell>{r.payment_method || <span className="text-muted-foreground text-sm">—</span>}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {r.entrada != null ? formatBRLPrecise(r.entrada) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
