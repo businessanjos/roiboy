@@ -100,6 +100,12 @@ export default function Renewals() {
 
     // If selecting "renewed", open dialog instead of saving directly
     if (newOutcome === "renewed") {
+      // Bloqueio de renovação para inadimplentes
+      const status = financialStatusBatch.data?.get(contract.client_id);
+      if (status && status.risk === "critical" && !isAdmin) {
+        setBlockedDialog({ open: true, contract });
+        return;
+      }
       setRenewalForm({ product_id: "", payment_method: "", value: String(contract.renewal_value) });
       setRenewalDialog({ open: true, contract });
       return;
