@@ -168,17 +168,45 @@ export default function FinancialActiveClientsPage() {
     },
   });
 
+  const dateRange = useMemo<{ from: Date | null; to: Date | null }>(() => {
+    const now = new Date();
+    if (datePreset === "month") return { from: startOfMonth(now), to: endOfMonth(now) };
+    if (datePreset === "quarter") return { from: startOfQuarter(now), to: endOfQuarter(now) };
+    if (datePreset === "year") return { from: startOfYear(now), to: endOfYear(now) };
+    if (datePreset === "custom") return { from: customRange?.from ?? null, to: customRange?.to ?? null };
+    return { from: null, to: null };
+  }, [datePreset, customRange]);
+
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    if (!s) return data || [];
-    return (data || []).filter(
-      (r) =>
-        r.client_name.toLowerCase().includes(s) ||
-        r.company_name?.toLowerCase().includes(s) ||
-        r.sales_rep?.toLowerCase().includes(s) ||
-        r.product_name?.toLowerCase().includes(s)
-    );
-  }, [data, search]);
+    let rows = data || [];
+    if (dateRange.from || dateRange.to) {
+      rows = rows.filter((r) => {
+        if (!r.start_date) return false;
+        const d = new Date(r.start_date);
+        if (dateRange.from && d < dateRange.from) return false;
+        if (dateRange.to && d > dateRange.to) return false;
+        return true;
+      });
+    }
+    if (s) {
+      rows = rows.filter(
+        (r) =>
+          r.client_name.toLowerCase().includes(s) ||
+          r.company_name?.toLowerCase().includes(s) ||
+          r.sales_rep?.toLowerCase().includes(s) ||
+          r.product_name?.toLowerCase().includes(s)
+      );
+    }
+    if (datePreset === "recent" || datePreset === "month" || datePreset === "quarter" || datePreset === "year" || datePreset === "custom") {
+      rows = [...rows].sort((a, b) => {
+        const ta = a.start_date ? new Date(a.start_date).getTime() : 0;
+        const tb = b.start_date ? new Date(b.start_date).getTime() : 0;
+        return tb - ta;
+      });
+    }
+    return rows;
+  }, [data, search, dateRange, datePreset]);
 
   return (
     <div className="space-y-4">
