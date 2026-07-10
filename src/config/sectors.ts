@@ -78,6 +78,7 @@ export interface NavItem {
   label: string;
   permission?: Permission | Permission[];
   group?: string;
+  comingSoon?: boolean;
 }
 
 export interface Sector {
