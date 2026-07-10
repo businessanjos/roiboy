@@ -578,3 +578,176 @@ export function Sidebar() {
     </aside>
   );
 }
+
+// ---- Financial sidebar: collapsible grouped navigation ----
+type FGNavItem = {
+  to: string;
+  icon: typeof Shield;
+  label: string;
+  group?: string;
+  comingSoon?: boolean;
+};
+
+const FIN_GROUP_STORAGE_KEY = "sidebar.financial.groups.v1";
+const FIN_DEFAULT_GROUP = "Principal";
+
+function FinancialGroupedNav({
+  items,
+  collapsed,
+  onNavigate,
+  pathname,
+  search,
+}: {
+  items: FGNavItem[];
+  collapsed: boolean;
+  onNavigate?: () => void;
+  pathname: string;
+  search: string;
+}) {
+  // Build ordered groups preserving first-seen order
+  const groups = useMemo(() => {
+    const order: string[] = [];
+    const map = new Map<string, FGNavItem[]>();
+    items.forEach((item) => {
+      const g = item.group || FIN_DEFAULT_GROUP;
+      if (!map.has(g)) {
+        map.set(g, []);
+        order.push(g);
+      }
+      map.get(g)!.push(item);
+    });
+    // Ensure "Em Breve" is always last
+    const idx = order.indexOf("Em Breve");
+    if (idx > -1) {
+      order.splice(idx, 1);
+      order.push("Em Breve");
+    }
+    return order.map((name) => ({ name, items: map.get(name)! }));
+  }, [items]);
+
+  const activeGroup = useMemo(() => {
+    for (const g of groups) {
+      if (g.items.some((it) => {
+        const [p] = it.to.split("?");
+        return pathname === p || pathname.startsWith(p + "/");
+      })) return g.name;
+    }
+    return null;
+  }, [groups, pathname]);
+
+  const [openState, setOpenState] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem(FIN_GROUP_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return {};
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FIN_GROUP_STORAGE_KEY, JSON.stringify(openState));
+    } catch {}
+  }, [openState]);
+
+  const isGroupOpen = (name: string) => {
+    if (name in openState) return openState[name];
+    // Default: open the group containing the active route; others closed except Principal
+    if (activeGroup === name) return true;
+    return name === FIN_DEFAULT_GROUP;
+  };
+
+  const toggleGroup = (name: string) =>
+    setOpenState((prev) => ({ ...prev, [name]: !isGroupOpen(name) }));
+
+  if (collapsed) {
+    // Collapsed: flat list of icons (no headers)
+    return (
+      <div className="space-y-1">
+        {items.map((item) => {
+          const [itemPath] = item.to.split("?");
+          const isActive = pathname === itemPath || pathname.startsWith(itemPath + "/");
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={onNavigate}
+              title={item.label}
+              className={cn(
+                "flex items-center justify-center px-2 py-2.5 rounded-lg text-sm transition-all",
+                isActive
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                item.comingSoon && "opacity-60"
+              )}
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+            </NavLink>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {groups.map((g) => {
+        const open = isGroupOpen(g.name);
+        const isEmBreve = g.name === "Em Breve";
+        return (
+          <Collapsible key={g.name} open={open} onOpenChange={() => toggleGroup(g.name)}>
+            <CollapsibleTrigger
+              className={cn(
+                "w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-md text-[10px] uppercase tracking-wider font-semibold transition-colors",
+                "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                isEmBreve && "text-amber-600 dark:text-amber-500"
+              )}
+            >
+              <span>{g.name}</span>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 transition-transform",
+                  open ? "rotate-0" : "-rotate-90"
+                )}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-1 space-y-1">
+              {g.items.map((item) => {
+                const [itemPath, itemSearch = ""] = item.to.split("?");
+                const itemSearchValue = itemSearch ? `?${itemSearch}` : "";
+                const isActive = itemSearchValue
+                  ? pathname === itemPath && search === itemSearchValue
+                  : pathname === itemPath || (itemPath !== "/" && pathname.startsWith(itemPath + "/"));
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                      isActive
+                        ? "bg-accent text-accent-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      item.comingSoon && "opacity-70"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4 flex-shrink-0" />
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {item.comingSoon && (
+                      <Badge
+                        variant="outline"
+                        className="h-4 px-1.5 text-[9px] uppercase tracking-wide border-amber-500/40 text-amber-600 dark:text-amber-500"
+                      >
+                        Em breve
+                      </Badge>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
+    </div>
+  );
+}
+
