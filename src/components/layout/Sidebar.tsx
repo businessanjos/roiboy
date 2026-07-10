@@ -317,7 +317,16 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {filteredNavItems.map((item, idx) => {
+        {currentSector?.id === "financeiro" ? (
+          <FinancialGroupedNav
+            items={filteredNavItems}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+            pathname={location.pathname}
+            search={location.search}
+          />
+        ) : (
+          filteredNavItems.map((item, idx) => {
           const [itemPath, itemSearch = ""] = item.to.split("?");
           const itemSearchValue = itemSearch ? `?${itemSearch}` : "";
           const hasSearchSibling = filteredNavItems.some(other => {
@@ -375,7 +384,9 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
               {isHighlighted && <div className={cn("my-1.5 border-t border-border/50", collapsed && "mx-1")} />}
             </div>
           );
-        })}
+          })
+        )}
+
 
         {/* Quick sector navigation for sales reps */}
         {isSalesRep && currentSector && salesRepOtherSectors.length > 0 && (
