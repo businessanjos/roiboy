@@ -67,6 +67,7 @@ type InstallmentRow = {
     company_id: string | null;
     account_id: string;
     client_id: string | null;
+    contract_id: string | null;
     product_id: string | null;
     nf_number: string | null;
     nf_series: string | null;
@@ -81,6 +82,17 @@ type InstallmentRow = {
       company_name: string | null;
     } | null;
     product?: {
+      id: string;
+      name: string;
+      color: string | null;
+    } | null;
+    /**
+     * Product resolved from the deal's "Item da Venda" custom field
+     * (source of truth from the commercial pipeline). When present, this
+     * overrides the product_id copied into the invoice/contract, which may
+     * be stale if the deal's product changed after the contract was created.
+     */
+    deal_product?: {
       id: string;
       name: string;
       color: string | null;
@@ -165,7 +177,7 @@ export default function FinancialInstallmentsPage() {
       let query = supabase
         .from("installments")
         .select(
-          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
+          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, contract_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
         )
         .order("due_date", { ascending: true })
         .limit(500);
@@ -186,8 +198,68 @@ export default function FinancialInstallmentsPage() {
       const clientIds = Array.from(
         new Set(list.map((r) => r.invoices?.client_id).filter((v): v is string => !!v))
       );
+      const contractIds = Array.from(
+        new Set(list.map((r) => r.invoices?.contract_id).filter((v): v is string => !!v))
+      );
+
+      // Resolve "Item da Venda" custom field id for this account (source of
+      // truth for the deal's product).
+      const itemVendaFieldRes = await supabase
+        .from("custom_fields")
+        .select("id")
+        .eq("account_id", accountId!)
+        .eq("name", "Item da Venda")
+        .maybeSingle();
+      const itemVendaFieldId = itemVendaFieldRes.data?.id as string | undefined;
+
+      // 1. contracts → deal_id
+      const contractsRes = contractIds.length
+        ? await supabase
+            .from("client_contracts")
+            .select("id, deal_id, product_id")
+            .in("id", contractIds)
+        : ({ data: [], error: null } as any);
+      if (contractsRes.error)
+        console.error("[FinancialInstallments] contracts batch error:", contractsRes.error);
+      const contractsById = new Map<string, any>(
+        (contractsRes.data ?? []).map((c: any) => [c.id, c])
+      );
+
+      const dealIds: string[] = Array.from(
+        new Set(
+          ((contractsRes.data ?? []) as any[])
+            .map((c) => c.deal_id as string | null)
+            .filter((v): v is string => !!v)
+        )
+      );
+
+      // 2. deal_field_values → Item da Venda value (usually a product UUID)
+      const dealFieldRes =
+        dealIds.length && itemVendaFieldId
+          ? await supabase
+              .from("deal_field_values")
+              .select("deal_id, value_text")
+              .eq("field_id", itemVendaFieldId)
+              .in("deal_id", dealIds)
+          : ({ data: [], error: null } as any);
+      if (dealFieldRes.error)
+        console.error("[FinancialInstallments] deal_field_values error:", dealFieldRes.error);
+
+      const dealProductIdByDeal = new Map<string, string>();
+      (dealFieldRes.data ?? []).forEach((row: any) => {
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (row.value_text && uuidRegex.test(row.value_text)) {
+          dealProductIdByDeal.set(row.deal_id, row.value_text);
+        }
+      });
+
+      // 3. Collect ALL product ids to fetch (invoice's own + deal-resolved)
       const productIds = Array.from(
-        new Set(list.map((r) => r.invoices?.product_id).filter((v): v is string => !!v))
+        new Set([
+          ...list.map((r) => r.invoices?.product_id).filter((v): v is string => !!v),
+          ...Array.from(dealProductIdByDeal.values()),
+        ])
       );
 
       const [clientsRes, productsRes] = await Promise.all([
@@ -206,9 +278,19 @@ export default function FinancialInstallmentsPage() {
       const productsById = new Map<string, any>((productsRes.data ?? []).map((p: any) => [p.id, p]));
 
       list.forEach((r) => {
-        if (r.invoices?.client_id) r.invoices.clients = clientsById.get(r.invoices.client_id) ?? null;
-        if (r.invoices?.product_id) r.invoices.product = productsById.get(r.invoices.product_id) ?? null;
+        if (!r.invoices) return;
+        if (r.invoices.client_id) r.invoices.clients = clientsById.get(r.invoices.client_id) ?? null;
+        if (r.invoices.product_id) r.invoices.product = productsById.get(r.invoices.product_id) ?? null;
 
+        // Rota completa: parcelas → contrato → deal → Item da Venda
+        const contract = r.invoices.contract_id ? contractsById.get(r.invoices.contract_id) : null;
+        const dealProductId = contract?.deal_id ? dealProductIdByDeal.get(contract.deal_id) : null;
+        if (dealProductId) {
+          const dp = productsById.get(dealProductId) ?? null;
+          r.invoices.deal_product = dp;
+          // Override: deal (comercial) is the source of truth
+          if (dp) r.invoices.product = dp;
+        }
       });
 
       return list;
