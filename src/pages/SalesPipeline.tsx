@@ -14,6 +14,7 @@ import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation
 import { useLossReasons } from "@/hooks/useLossReasons";
 import {
   DEAL_FIELD_IDS,
+  NEGOTIATION_REQUIRED_FIELDS,
   fetchDealCustomFieldValues,
   updateClientWithDealData,
   getContractDataFromDealFields,
@@ -80,7 +81,9 @@ import {
   User,
   ChevronDown,
   Check,
+  AlertTriangle,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -363,6 +366,69 @@ export default function SalesPipeline() {
       setDealProductMap({});
     });
   }, [currentUser?.account_id, outcomeDealIds]);
+
+  // Fetch structured negotiation fields for WON deals to flag incomplete records.
+  const [negotiationStatusMap, setNegotiationStatusMap] = useState<Record<string, string[]>>({});
+  const wonDealIdsKey = useMemo(() => wonDeals.map((d) => d.id).join(','), [wonDeals]);
+
+  useEffect(() => {
+    if (wonDeals.length === 0) {
+      setNegotiationStatusMap({});
+      return;
+    }
+    const dealIds = wonDeals.map((d) => d.id);
+    const fieldIds = NEGOTIATION_REQUIRED_FIELDS.map((f) => f.id);
+
+    const chunk = <T,>(arr: T[], size: number) => {
+      const out: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+      return out;
+    };
+
+    (async () => {
+      try {
+        const chunks = chunk(dealIds, 200);
+        const results = await Promise.all(
+          chunks.map((ids) =>
+            supabase
+              .from('deal_field_values')
+              .select('deal_id, field_id, value_text, value_number')
+              .in('deal_id', ids)
+              .in('field_id', fieldIds)
+          )
+        );
+
+        // Map deal_id -> Set of filled field_ids
+        const filled: Record<string, Set<string>> = {};
+        results.forEach(({ data, error }) => {
+          if (error) throw error;
+          (data || []).forEach((row: any) => {
+            const meta = NEGOTIATION_REQUIRED_FIELDS.find((f) => f.id === row.field_id);
+            if (!meta) return;
+            const isFilled = meta.kind === 'number'
+              ? row.value_number !== null && row.value_number !== undefined
+              : row.value_text !== null && row.value_text !== '' && row.value_text !== undefined;
+            if (!isFilled) return;
+            if (!filled[row.deal_id]) filled[row.deal_id] = new Set();
+            filled[row.deal_id].add(row.field_id);
+          });
+        });
+
+        const map: Record<string, string[]> = {};
+        dealIds.forEach((id) => {
+          const missing = NEGOTIATION_REQUIRED_FIELDS
+            .filter((f) => !filled[id]?.has(f.id))
+            .map((f) => f.label);
+          if (missing.length > 0) map[id] = missing;
+        });
+        setNegotiationStatusMap(map);
+      } catch (err) {
+        console.error('[SalesPipeline] Error fetching negotiation status:', err);
+        setNegotiationStatusMap({});
+      }
+    })();
+  }, [wonDealIdsKey]);
+
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
@@ -2253,6 +2319,29 @@ export default function SalesPipeline() {
                         : "—"}
                     </p>
                   </div>
+                  {(() => {
+                    const incompleteCount = filteredWonDealsByMonth.filter(
+                      (d) => (negotiationStatusMap[d.id]?.length ?? 0) > 0
+                    ).length;
+                    if (incompleteCount === 0) return null;
+                    return (
+                      <>
+                        <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-600" />
+                          <div>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Negociação incompleta</p>
+                            <p className="text-lg sm:text-xl font-semibold text-amber-600">
+                              {incompleteCount}
+                              <span className="text-xs sm:text-sm text-muted-foreground font-normal">
+                                {" "}/ {filteredWonDealsByMonth.length}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <DealListView 
@@ -2261,7 +2350,9 @@ export default function SalesPipeline() {
                   onDealClick={handleDealClick} 
                   showStatus
                   dealProductMap={dealProductMap}
+                  negotiationStatusMap={negotiationStatusMap}
                 />
+
               </TabsContent>
 
               <TabsContent value="lost" className="mt-0 space-y-3 sm:space-y-4">
@@ -2407,12 +2498,14 @@ function DealListView({
   onDealClick,
   showStatus = false,
   dealProductMap,
+  negotiationStatusMap,
 }: { 
   deals: Deal[];
   stages: DealStage[];
   onDealClick: (deal: Deal) => void;
   showStatus?: boolean;
   dealProductMap?: Record<string, { productId: string; productName: string; isUpsell?: boolean }>;
+  negotiationStatusMap?: Record<string, string[]>;
 }) {
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
   
@@ -2573,6 +2666,29 @@ function DealListView({
                         {deal.status === 'won' ? 'Ganha' : 'Perdida'}
                       </Badge>
                     )}
+                    {deal.status === 'won' && negotiationStatusMap?.[deal.id]?.length ? (
+                      <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] sm:text-xs gap-1 border-amber-500/60 text-amber-700 bg-amber-500/10"
+                            >
+                              <AlertTriangle className="h-3 w-3" />
+                              Negociação incompleta
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="font-medium mb-1">Campos faltando:</p>
+                            <ul className="list-disc list-inside text-xs">
+                              {negotiationStatusMap[deal.id].map((label) => (
+                                <li key={label}>{label}</li>
+                              ))}
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : null}
                     {/* Won date - shown only for won deals */}
                     {deal.status === 'won' && deal.won_at && (
                       <div className="flex items-center gap-1 text-xs sm:text-sm text-emerald-600">

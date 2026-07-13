@@ -9,7 +9,17 @@ export const DEAL_FIELD_IDS = {
   ITEM_VENDA: '033b91fb-3add-4c96-aec9-567fefbd0fb2',
   FORMA_PAGAMENTO: 'b2cd2366-b990-43d9-a0b7-1b567fbed729',
   DESCRICAO_NEGOCIACAO: 'ca39f0cf-d071-4271-a2a9-23d9d6993780',
+  PARCELAS: '069ee7f8-befd-482d-990d-13048b17180c',
+  VALOR_ENTRADA: '86c93211-5013-48a6-affe-e53d81931cb6',
 };
+
+// Structured fields required to consider a won deal's negotiation complete
+// (reportable via deal_field_values).
+export const NEGOTIATION_REQUIRED_FIELDS: Array<{ id: string; label: string; kind: 'text' | 'number' }> = [
+  { id: 'b2cd2366-b990-43d9-a0b7-1b567fbed729', label: 'Forma de Pagamento', kind: 'text' },
+  { id: '069ee7f8-befd-482d-990d-13048b17180c', label: 'Parcelas', kind: 'text' },
+  { id: '86c93211-5013-48a6-affe-e53d81931cb6', label: 'Valor de Entrada', kind: 'number' },
+];
 
 // Mapping from "Item da Venda" select values to product names (fallback estático)
 const ITEM_VENDA_TO_PRODUCT: Record<string, string> = {
