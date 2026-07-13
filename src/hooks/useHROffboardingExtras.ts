@@ -221,7 +221,7 @@ export async function reassignCollaboratorResources(
 export const EXTERNAL_ACCESS_SYSTEMS = [
   { key: "google_workspace", label: "Google Workspace (e-mail, Drive, Calendar)" },
   { key: "roy_zapp", label: "RoyZapp / Instâncias WhatsApp" },
-  { key: "omie", label: "Omie ERP" },
+  
   { key: "pluggy", label: "Pluggy / Open Finance" },
   { key: "meta_business", label: "Meta Business Manager" },
   { key: "instagram", label: "Instagram corporativo" },
