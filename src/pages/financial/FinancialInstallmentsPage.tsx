@@ -67,6 +67,7 @@ type InstallmentRow = {
     company_id: string | null;
     account_id: string;
     client_id: string | null;
+    product_id: string | null;
     nf_number: string | null;
     nf_series: string | null;
     nf_status: string | null;
@@ -79,8 +80,14 @@ type InstallmentRow = {
       cnpj: string | null;
       company_name: string | null;
     } | null;
+    product?: {
+      id: string;
+      name: string;
+      color: string | null;
+    } | null;
   };
 };
+
 
 const STATUS_META: Record<string, { label: string; className: string; icon: any }> = {
   pending: { label: "Pendente", className: "bg-muted text-muted-foreground", icon: Clock },
