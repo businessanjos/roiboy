@@ -281,6 +281,14 @@ export default function FinancialActiveClientsPage() {
     return { from: null, to: null };
   }, [datePreset, customRange]);
 
+  const productOptions = useMemo(() => {
+    const map = new Map<string, { name: string; color: string | null }>();
+    (data || []).forEach((r) => {
+      if (r.product_name) map.set(r.product_name, { name: r.product_name, color: r.product_color });
+    });
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [data]);
+
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     const rowDate = (r: Row) => {
@@ -297,6 +305,9 @@ export default function FinancialActiveClientsPage() {
         return true;
       });
     }
+    if (productFilter !== "all") {
+      rows = rows.filter((r) => (r.product_name || "") === productFilter);
+    }
     if (s) {
       rows = rows.filter(
         (r) =>
@@ -312,7 +323,7 @@ export default function FinancialActiveClientsPage() {
       return tb - ta;
     });
     return rows;
-  }, [data, search, dateRange]);
+  }, [data, search, dateRange, productFilter]);
 
   return (
     <div className="space-y-4">
