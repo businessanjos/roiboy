@@ -310,7 +310,7 @@ export default function EventDetail() {
             <div className="flex items-center gap-3">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{event.title}</h1>
               {(!event.status || (event.status !== "completed" && event.status !== "cancelled")) && event.scheduled_at && new Date(event.scheduled_at) < new Date()
-                ? <Badge variant="secondary">Realizado</Badge>
+                ? <Badge variant="secondary">Concluído</Badge>
                 : getStatusBadge(event.status)}
             </div>
             <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
