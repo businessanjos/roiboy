@@ -69,8 +69,29 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("");
 
+  // Recurrence (only applied when creating a new event)
+  type Freq = "none" | "daily" | "weekly" | "monthly";
+  const WEEK_DAYS = [
+    { v: 0, label: "Dom" }, { v: 1, label: "Seg" }, { v: 2, label: "Ter" },
+    { v: 3, label: "Qua" }, { v: 4, label: "Qui" }, { v: 5, label: "Sex" }, { v: 6, label: "Sáb" },
+  ];
+  const [frequency, setFrequency] = useState<Freq>("none");
+  const [interval, setIntervalN] = useState(1);
+  const [weekDays, setWeekDays] = useState<number[]>([]);
+  const [endMode, setEndMode] = useState<"date" | "count">("date");
+  const [untilDate, setUntilDate] = useState("");
+  const [occurrences, setOccurrences] = useState(10);
+
   useEffect(() => {
     if (!open) return;
+    // reset recurrence each open
+    setFrequency("none");
+    setIntervalN(1);
+    setWeekDays([]);
+    setEndMode("date");
+    setUntilDate("");
+    setOccurrences(10);
+
     if (event) {
       setTitle(event.title ?? "");
       setEventType(event.event_type ?? "live");
@@ -94,6 +115,54 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
       setColor("");
     }
   }, [open, event, defaultYear]);
+
+  function generateOccurrences(startISO: string, endISO: string | null): { scheduled_at: string; ends_at: string | null }[] {
+    const start = new Date(startISO);
+    const durationMs = endISO ? new Date(endISO).getTime() - start.getTime() : 0;
+    const until = endMode === "date" && untilDate ? new Date(untilDate + "T23:59:59") : null;
+    const maxCount = endMode === "count" ? Math.max(1, Math.min(occurrences, 500)) : 500;
+    const results: Date[] = [];
+    const step = Math.max(1, interval);
+
+    if (frequency === "daily") {
+      const cursor = new Date(start);
+      while (results.length < maxCount) {
+        if (until && cursor > until) break;
+        results.push(new Date(cursor));
+        cursor.setDate(cursor.getDate() + step);
+      }
+    } else if (frequency === "weekly") {
+      const days = weekDays.length ? weekDays : [start.getDay()];
+      const weekStart = new Date(start);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const hardCap = until
+        ? Math.ceil((until.getTime() - weekStart.getTime()) / (7 * 86400000)) + 1
+        : Math.ceil(maxCount / days.length) + 1;
+      for (let w = 0; w < hardCap && results.length < maxCount; w++) {
+        for (const d of [...days].sort((a, b) => a - b)) {
+          const occ = new Date(weekStart);
+          occ.setDate(weekStart.getDate() + w * step * 7 + d);
+          occ.setHours(start.getHours(), start.getMinutes(), 0, 0);
+          if (occ < start) continue;
+          if (until && occ > until) { w = hardCap; break; }
+          results.push(occ);
+          if (results.length >= maxCount) break;
+        }
+      }
+    } else if (frequency === "monthly") {
+      const cursor = new Date(start);
+      while (results.length < maxCount) {
+        if (until && cursor > until) break;
+        results.push(new Date(cursor));
+        cursor.setMonth(cursor.getMonth() + step);
+      }
+    }
+
+    return results.map((d) => ({
+      scheduled_at: d.toISOString(),
+      ends_at: durationMs ? new Date(d.getTime() + durationMs).toISOString() : null,
+    }));
+  }
 
   const types = getEventTypesForCategory("all");
 
