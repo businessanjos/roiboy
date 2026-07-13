@@ -111,8 +111,8 @@ export default function EternumAttendance() {
       setLoadingClients(true);
       const { data: contracts, error } = await supabase
         .from("client_contracts")
-        .select("client_id, clients!inner(id, full_name, logo_url)")
-        .in("product_id", ETERNUM_CLUB_PRODUCT_IDS)
+        .select("client_id, product_id, clients!inner(id, full_name, logo_url)")
+        .in("product_id", ALL_ETERNUM_PRODUCT_IDS)
         .eq("status", "active");
 
       if (error) {
@@ -124,7 +124,18 @@ export default function EternumAttendance() {
       const uniq = new Map<string, ClientRow>();
       (contracts ?? []).forEach((row: any) => {
         const c = row.clients;
-        if (c && !uniq.has(c.id)) uniq.set(c.id, c);
+        if (!c) return;
+        const existing = uniq.get(c.id);
+        if (existing) {
+          existing.productIds.add(row.product_id);
+        } else {
+          uniq.set(c.id, {
+            id: c.id,
+            full_name: c.full_name,
+            logo_url: c.logo_url,
+            productIds: new Set([row.product_id]),
+          });
+        }
       });
       const list = Array.from(uniq.values()).sort((a, b) =>
         a.full_name.localeCompare(b.full_name, "pt-BR"),
