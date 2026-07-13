@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, ExternalLink, CalendarIcon } from "lucide-react";
+import { Users, Search, ExternalLink, CalendarIcon, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { formatBRLPrecise } from "@/lib/financial-format";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { format, startOfMonth, startOfQuarter, startOfYear, endOfMonth, endOfQuarter, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
+import { ActiveClientContractSheet } from "@/components/financial/ActiveClientContractSheet";
 
 type DatePreset = "recent" | "month" | "quarter" | "year" | "custom";
 
@@ -99,6 +100,7 @@ export default function FinancialActiveClientsPage() {
   const [search, setSearch] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("recent");
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
+  const [detailRow, setDetailRow] = useState<Row | null>(null);
 
   const { data, isLoading } = useQuery({
     enabled: !!accountId,
@@ -422,14 +424,24 @@ export default function FinancialActiveClientsPage() {
                         {formatBRLPrecise(r.total_value)}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/clients/${r.client_id}`)}
-                          title="Abrir ficha do cliente"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDetailRow(r)}
+                            title="Ver detalhes e recebíveis"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => navigate(`/clients/${r.client_id}`)}
+                            title="Abrir ficha do cliente"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -439,6 +451,15 @@ export default function FinancialActiveClientsPage() {
           )}
         </CardContent>
       </Card>
+
+      <ActiveClientContractSheet
+        contractId={detailRow?.contract_id ?? null}
+        clientId={detailRow?.client_id ?? null}
+        clientName={detailRow?.client_name}
+        productName={detailRow?.product_name}
+        productColor={detailRow?.product_color}
+        onClose={() => setDetailRow(null)}
+      />
     </div>
   );
 }
