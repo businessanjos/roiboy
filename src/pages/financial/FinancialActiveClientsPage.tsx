@@ -246,12 +246,17 @@ export default function FinancialActiveClientsPage() {
           c.installments_count,
           Number(c.value || 0)
         );
+        const entradaFromCustomField = c.deal_id ? entradaByDealId.get(c.deal_id) ?? null : null;
         const finalEntrada =
           entrada != null && entrada > 0
             ? entrada
             : fallbackDeal?.entry_value && Number(fallbackDeal.entry_value) > 0
               ? Number(fallbackDeal.entry_value)
-              : null;
+              : fallbackDeal?.received_value && Number(fallbackDeal.received_value) > 0
+                ? Number(fallbackDeal.received_value)
+                : entradaFromCustomField && entradaFromCustomField > 0
+                  ? entradaFromCustomField
+                  : null;
         const agg = aggByContract.get(c.id);
         const contractCount = Number(c.installments_count) || 0;
         const detailCount = Array.isArray(c.installments_detail) ? c.installments_detail.length : 0;
