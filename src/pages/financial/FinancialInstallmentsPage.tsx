@@ -148,10 +148,15 @@ export default function FinancialInstallmentsPage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
+  const [billingFilter, setBillingFilter] = useState<string>("all"); // all | cnpj | cpf
+  const [datePreset, setDatePreset] = useState<string>("all"); // all | month | quarter | year | custom
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [nfInvoice, setNfInvoice] = useState<InstallmentRow["invoices"] | null>(null);
   const [nfOpen, setNfOpen] = useState(false);
+
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["financial-installments", accountId, currentCompanyId],
