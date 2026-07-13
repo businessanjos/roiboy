@@ -18,7 +18,7 @@ export const DEAL_FIELD_IDS = {
 export const NEGOTIATION_REQUIRED_FIELDS: Array<{ id: string; label: string; kind: 'text' | 'number' }> = [
   { id: 'b2cd2366-b990-43d9-a0b7-1b567fbed729', label: 'Forma de Pagamento', kind: 'text' },
   { id: '069ee7f8-befd-482d-990d-13048b17180c', label: 'Parcelas', kind: 'text' },
-  { id: '86c93211-5013-48a6-affe-e53d81931cb6', label: 'Valor de Entrada', kind: 'number' },
+  // "Valor de Entrada" foi removido: o Cash Collect nativo (deals.received_value) é a fonte da verdade.
 ];
 
 // Mapping from "Item da Venda" select values to product names (fallback estático)
