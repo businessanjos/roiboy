@@ -2319,6 +2319,29 @@ export default function SalesPipeline() {
                         : "—"}
                     </p>
                   </div>
+                  {(() => {
+                    const incompleteCount = filteredWonDealsByMonth.filter(
+                      (d) => (negotiationStatusMap[d.id]?.length ?? 0) > 0
+                    ).length;
+                    if (incompleteCount === 0) return null;
+                    return (
+                      <>
+                        <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-600" />
+                          <div>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Negociação incompleta</p>
+                            <p className="text-lg sm:text-xl font-semibold text-amber-600">
+                              {incompleteCount}
+                              <span className="text-xs sm:text-sm text-muted-foreground font-normal">
+                                {" "}/ {filteredWonDealsByMonth.length}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <DealListView 
@@ -2327,7 +2350,9 @@ export default function SalesPipeline() {
                   onDealClick={handleDealClick} 
                   showStatus
                   dealProductMap={dealProductMap}
+                  negotiationStatusMap={negotiationStatusMap}
                 />
+
               </TabsContent>
 
               <TabsContent value="lost" className="mt-0 space-y-3 sm:space-y-4">
