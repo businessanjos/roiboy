@@ -347,6 +347,31 @@ export default function FinancialEntriesPage() {
     },
   });
 
+  // Reverse payment mutation
+  const reverseMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      const { error } = await supabase
+        .from("financial_entries")
+        .update({
+          status: "pending",
+          payment_date: null,
+          is_conciliated: false,
+          conciliated_at: null,
+          conciliated_by: null,
+        })
+        .eq("id", entryId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
+      toast({ title: "Pagamento estornado", description: "O lançamento voltou para 'A vencer'." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível estornar o pagamento.", variant: "destructive" });
+    },
+  });
+
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
