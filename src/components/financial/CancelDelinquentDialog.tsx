@@ -308,7 +308,9 @@ export function CancelDelinquentDialog({
             </span>
           </div>
           <div className="text-xs text-muted-foreground">
-            {(pending || []).length} parcela(s) pendente(s)/vencida(s)
+            {hasEntries
+              ? `${(pending || []).length} parcela(s) pendente(s)/vencida(s)`
+              : "Nenhuma parcela lançada no financeiro — usando valor do contrato menos o recebido."}
           </div>
         </div>
 
