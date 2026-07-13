@@ -2666,6 +2666,29 @@ function DealListView({
                         {deal.status === 'won' ? 'Ganha' : 'Perdida'}
                       </Badge>
                     )}
+                    {deal.status === 'won' && negotiationStatusMap?.[deal.id]?.length ? (
+                      <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] sm:text-xs gap-1 border-amber-500/60 text-amber-700 bg-amber-500/10"
+                            >
+                              <AlertTriangle className="h-3 w-3" />
+                              Negociação incompleta
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="font-medium mb-1">Campos faltando:</p>
+                            <ul className="list-disc list-inside text-xs">
+                              {negotiationStatusMap[deal.id].map((label) => (
+                                <li key={label}>{label}</li>
+                              ))}
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : null}
                     {/* Won date - shown only for won deals */}
                     {deal.status === 'won' && deal.won_at && (
                       <div className="flex items-center gap-1 text-xs sm:text-sm text-emerald-600">
