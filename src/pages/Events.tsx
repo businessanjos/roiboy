@@ -1625,7 +1625,8 @@ export default function Events() {
                             Cancelado
                           </Badge>
                         ) : isEventPast(event) ? (
-                          <Badge className="bg-slate-500/15 text-slate-700 border-slate-500/30 hover:bg-slate-500/20">
+                          <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20">
+                            <Check className="h-3 w-3 mr-1" />
                             Concluído
                           </Badge>
                         ) : (
