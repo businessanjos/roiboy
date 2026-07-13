@@ -451,6 +451,15 @@ export default function FinancialActiveClientsPage() {
           )}
         </CardContent>
       </Card>
+
+      <ActiveClientContractSheet
+        contractId={detailRow?.contract_id ?? null}
+        clientId={detailRow?.client_id ?? null}
+        clientName={detailRow?.client_name}
+        productName={detailRow?.product_name}
+        productColor={detailRow?.product_color}
+        onClose={() => setDetailRow(null)}
+      />
     </div>
   );
 }
