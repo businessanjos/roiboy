@@ -247,12 +247,12 @@ export default function FinancialInstallmentsPage() {
 
       const dealProductIdByDeal = new Map<string, string>();
       (dealFieldRes.data ?? []).forEach((row: any) => {
-        const uuidRegex =
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (row.value_text && uuidRegex.test(row.value_text)) {
-          dealProductIdByDeal.set(row.deal_id, row.value_text);
+        const resolved = resolveItemVendaToProductId(row.value_text);
+        if (resolved) {
+          dealProductIdByDeal.set(row.deal_id, resolved);
         }
       });
+
 
       // 3. Collect ALL product ids to fetch (invoice's own + deal-resolved)
       const productIds = Array.from(
