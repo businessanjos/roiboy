@@ -171,13 +171,22 @@ export default function FinancialInstallmentsPage() {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (search) {
         const q = search.toLowerCase();
-        if (
-          !r.invoice_id.toLowerCase().includes(q) &&
-          !String(r.number).includes(q)
-        )
-          return false;
+        const client = r.invoices?.clients;
+        const hay = [
+          r.invoice_id,
+          String(r.number),
+          client?.full_name,
+          client?.company_name,
+          client?.cpf,
+          client?.cnpj,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
       }
       return true;
+
     });
   }, [rows, search, statusFilter]);
 
