@@ -222,7 +222,7 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{event?.id ? "Editar evento" : "Novo evento"}</DialogTitle>
           <DialogDescription>
