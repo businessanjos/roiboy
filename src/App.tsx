@@ -340,12 +340,10 @@ const App = () => (
                               <Route path="notas-fiscais" element={<FinancialNotasFiscaisPage />} />
                               <Route path="balance-sheet" element={<FinancialBalanceSheetPage />} />
                               <Route path="payment-methods" element={<FinancialPaymentMethodsPage />} />
-                              <Route path="integracoes/omie" element={<FinancialOmieIntegrationPage />} />
                               <Route path="integracoes/pluggy" element={<FinancialPluggyStatusPage />} />
                               <Route path="importar" element={<FinancialImportPage />} />
                               <Route path="cobranca" element={<FinancialDunningKanbanPage />} />
                               <Route path="regua-cobranca" element={<FinancialCollectionsRulerPage />} />
-                              <Route path="tributario" element={<FinancialTaxPage />} />
                               <Route path="prestadores" element={<FinancialProvidersPortalPage />} />
                               <Route path="pagadores" element={<FinancialPayersPage />} />
                               <Route path="configuracoes/fiscal" element={<FinancialFiscalSettingsPage />} />
