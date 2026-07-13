@@ -800,7 +800,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Package className="h-4 w-4" />
-                Omie / Manual
+                Lançamentos manuais
               </div>
               
               <div className="space-y-3">
