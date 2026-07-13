@@ -60,11 +60,19 @@ type InstallmentRow = {
     id: string;
     company_id: string | null;
     account_id: string;
+    client_id: string | null;
     nf_number: string | null;
     nf_series: string | null;
     nf_status: string | null;
     nf_issued_at: string | null;
     nf_url: string | null;
+    clients?: {
+      id: string;
+      full_name: string | null;
+      cpf: string | null;
+      cnpj: string | null;
+      company_name: string | null;
+    } | null;
   };
 };
 
@@ -80,9 +88,45 @@ const STATUS_META: Record<string, { label: string; className: string; icon: any 
   partial: { label: "Parcial", className: "bg-amber-500/15 text-amber-600", icon: Clock },
 };
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  pix: "Pix",
+  boleto: "Boleto",
+  cartao: "Cartão",
+  cartao_credito: "Cartão de crédito",
+  cartao_debito: "Cartão de débito",
+  cartao_recorrencia: "Cartão recorrência",
+  cheque: "Cheque",
+  check: "Cheque",
+  cheques: "Cheques",
+  dinheiro: "Dinheiro",
+  transferencia: "Transferência",
+  ted: "TED",
+  doc: "DOC",
+  pix_cheques: "Pix + Cheques",
+  pix_cartao_cheques: "Pix + Cartão + Cheques",
+  pix_boleto_parcelado: "Pix + Boleto parcelado",
+  cartao_cheques: "Cartão + Cheques",
+  cartao_boleto_parcelado: "Cartão + Boleto parcelado",
+};
+
+function formatPaymentMethod(value: string | null): string {
+  if (!value) return "—";
+  const key = value.toLowerCase().trim();
+  if (PAYMENT_METHOD_LABELS[key]) return PAYMENT_METHOD_LABELS[key];
+  // Capitalize first letter as fallback
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function formatCnpj(cnpj: string): string {
+  const digits = cnpj.replace(/\D/g, "");
+  if (digits.length !== 14) return cnpj;
+  return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
+
 
 export default function FinancialInstallmentsPage() {
   const { currentUser } = useCurrentUser();
@@ -103,10 +147,11 @@ export default function FinancialInstallmentsPage() {
       let query = supabase
         .from("installments")
         .select(
-          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
+          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url, clients(id, full_name, cpf, cnpj, company_name))"
         )
         .order("due_date", { ascending: true })
         .limit(500);
+
 
       if (currentCompanyId) {
         query = query.eq("invoices.company_id", currentCompanyId);
@@ -126,13 +171,22 @@ export default function FinancialInstallmentsPage() {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (search) {
         const q = search.toLowerCase();
-        if (
-          !r.invoice_id.toLowerCase().includes(q) &&
-          !String(r.number).includes(q)
-        )
-          return false;
+        const client = r.invoices?.clients;
+        const hay = [
+          r.invoice_id,
+          String(r.number),
+          client?.full_name,
+          client?.company_name,
+          client?.cpf,
+          client?.cnpj,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
       }
       return true;
+
     });
   }, [rows, search, statusFilter]);
 
@@ -186,7 +240,7 @@ export default function FinancialInstallmentsPage() {
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nº ou ID da fatura..."
+            placeholder="Buscar por cliente, CPF/CNPJ, nº ou fatura..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -213,12 +267,13 @@ export default function FinancialInstallmentsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">#</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Faturamento</TableHead>
+                <TableHead>CNPJ</TableHead>
                 <TableHead>Vencimento</TableHead>
                 <TableHead>Valor</TableHead>
-                <TableHead>Forma</TableHead>
-                <TableHead>Status detalhado</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Pago em</TableHead>
+                <TableHead>Forma de pagamento</TableHead>
                 <TableHead>NF Fiscal</TableHead>
                 <TableHead className="text-right">Histórico</TableHead>
               </TableRow>
@@ -227,14 +282,14 @@ export default function FinancialInstallmentsPage() {
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={10}>
                       <Skeleton className="h-8 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-10">
                     Nenhuma parcela encontrada para esta empresa.
                   </TableCell>
                 </TableRow>
@@ -242,6 +297,9 @@ export default function FinancialInstallmentsPage() {
                 filtered.map((r) => {
                   const meta = STATUS_META[r.status] ?? STATUS_META.pending;
                   const Icon = meta.icon;
+                  const client = r.invoices?.clients;
+                  const isCnpj = !!client?.cnpj;
+                  const clientName = client?.company_name || client?.full_name || "—";
                   return (
                     <TableRow
                       key={r.id}
@@ -249,30 +307,35 @@ export default function FinancialInstallmentsPage() {
                       className="cursor-pointer hover:bg-muted/40"
                     >
                       <TableCell className="font-medium">{r.number}</TableCell>
+                      <TableCell className="font-medium">{clientName}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={isCnpj ? "bg-blue-500/10 text-blue-600 border-blue-500/30" : "bg-purple-500/10 text-purple-600 border-purple-500/30"}>
+                          {isCnpj ? "CNPJ" : "CPF"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {isCnpj ? formatCnpj(client!.cnpj!) : "—"}
+                      </TableCell>
                       <TableCell>
                         {format(new Date(r.due_date), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell>{formatCurrency(Number(r.amount))}</TableCell>
-                      <TableCell className="capitalize text-muted-foreground">
-                        {r.payment_method ?? "—"}
-                      </TableCell>
                       <TableCell>
-                        <PaymentStatusBadge value={r.payment_status} />
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={meta.className}>
-                          <Icon className="h-3 w-3 mr-1" />
-                          {meta.label}
-                        </Badge>
-                        {r.locked && (
-                          <Lock className="inline h-3 w-3 ml-2 text-muted-foreground" />
-                        )}
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={meta.className}>
+                            <Icon className="h-3 w-3 mr-1" />
+                            {meta.label}
+                          </Badge>
+                          {r.locked && (
+                            <Lock className="inline h-3 w-3 text-muted-foreground" />
+                          )}
+                          <PaymentStatusBadge value={r.payment_status} />
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {r.paid_at
-                          ? format(new Date(r.paid_at), "dd/MM/yyyy", { locale: ptBR })
-                          : "—"}
+                        {formatPaymentMethod(r.payment_method)}
                       </TableCell>
+
                       <TableCell>
                         {r.invoices?.nf_number && r.invoices?.nf_status === "issued" ? (
                           <Button
