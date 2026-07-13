@@ -775,7 +775,7 @@ export default function Events() {
     if (filterStatus === "open") {
       matchesStatus = isEventOpen(event);
     } else if (filterStatus === "completed") {
-      matchesStatus = event.status === "completed" || (!event.status && isEventPast(event));
+      matchesStatus = event.status === "completed" || (event.status !== "cancelled" && isEventPast(event));
     } else if (filterStatus === "cancelled") {
       matchesStatus = event.status === "cancelled";
     }
