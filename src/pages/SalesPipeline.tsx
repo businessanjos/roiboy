@@ -366,6 +366,69 @@ export default function SalesPipeline() {
       setDealProductMap({});
     });
   }, [currentUser?.account_id, outcomeDealIds]);
+
+  // Fetch structured negotiation fields for WON deals to flag incomplete records.
+  const [negotiationStatusMap, setNegotiationStatusMap] = useState<Record<string, string[]>>({});
+  const wonDealIdsKey = useMemo(() => wonDeals.map((d) => d.id).join(','), [wonDeals]);
+
+  useEffect(() => {
+    if (wonDeals.length === 0) {
+      setNegotiationStatusMap({});
+      return;
+    }
+    const dealIds = wonDeals.map((d) => d.id);
+    const fieldIds = NEGOTIATION_REQUIRED_FIELDS.map((f) => f.id);
+
+    const chunk = <T,>(arr: T[], size: number) => {
+      const out: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+      return out;
+    };
+
+    (async () => {
+      try {
+        const chunks = chunk(dealIds, 200);
+        const results = await Promise.all(
+          chunks.map((ids) =>
+            supabase
+              .from('deal_field_values')
+              .select('deal_id, field_id, value_text, value_number')
+              .in('deal_id', ids)
+              .in('field_id', fieldIds)
+          )
+        );
+
+        // Map deal_id -> Set of filled field_ids
+        const filled: Record<string, Set<string>> = {};
+        results.forEach(({ data, error }) => {
+          if (error) throw error;
+          (data || []).forEach((row: any) => {
+            const meta = NEGOTIATION_REQUIRED_FIELDS.find((f) => f.id === row.field_id);
+            if (!meta) return;
+            const isFilled = meta.kind === 'number'
+              ? row.value_number !== null && row.value_number !== undefined
+              : row.value_text !== null && row.value_text !== '' && row.value_text !== undefined;
+            if (!isFilled) return;
+            if (!filled[row.deal_id]) filled[row.deal_id] = new Set();
+            filled[row.deal_id].add(row.field_id);
+          });
+        });
+
+        const map: Record<string, string[]> = {};
+        dealIds.forEach((id) => {
+          const missing = NEGOTIATION_REQUIRED_FIELDS
+            .filter((f) => !filled[id]?.has(f.id))
+            .map((f) => f.label);
+          if (missing.length > 0) map[id] = missing;
+        });
+        setNegotiationStatusMap(map);
+      } catch (err) {
+        console.error('[SalesPipeline] Error fetching negotiation status:', err);
+        setNegotiationStatusMap({});
+      }
+    })();
+  }, [wonDealIdsKey]);
+
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
