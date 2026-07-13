@@ -18,6 +18,39 @@ const ETERNUM_CLUB_PRODUCT_IDS = [
   "b8c50eca-6fd9-41ac-a1d3-f78086daaea7", // Eternum Club
   "6f74bb43-a1be-410f-a708-6abab066bb38", // Ren. Eternum Club
 ];
+const ETERNUM_PRIVATE_PRODUCT_IDS = [
+  "ab609e84-9c61-4e0b-9559-212010d9be83", // Eternum Private
+  "b7ba9aa5-42fd-4419-b813-5de646d6711c", // Ren. Eternum Private
+];
+const ETERNUM_MVP_PRODUCT_IDS = [
+  "8e8b0cc7-6965-4241-9aab-b959e7fc7893", // Eternum MVP
+];
+const ALL_ETERNUM_PRODUCT_IDS = [
+  ...ETERNUM_CLUB_PRODUCT_IDS,
+  ...ETERNUM_PRIVATE_PRODUCT_IDS,
+  ...ETERNUM_MVP_PRODUCT_IDS,
+];
+
+type EventAudience = "private" | "mvp" | "club";
+
+function getEventAudience(title: string | null | undefined): EventAudience {
+  const t = (title || "").toLowerCase();
+  if (t.includes("private")) return "private";
+  if (t.includes("mvp")) return "mvp";
+  return "club";
+}
+
+const AUDIENCE_LABEL: Record<EventAudience, string> = {
+  private: "Eternum Private",
+  mvp: "Eternum MVP",
+  club: "Eternum Club",
+};
+
+const AUDIENCE_PRODUCT_IDS: Record<EventAudience, string[]> = {
+  private: ETERNUM_PRIVATE_PRODUCT_IDS,
+  mvp: ETERNUM_MVP_PRODUCT_IDS,
+  club: ETERNUM_CLUB_PRODUCT_IDS,
+};
 
 interface EventRow {
   id: string;
@@ -31,6 +64,7 @@ interface ClientRow {
   id: string;
   full_name: string;
   logo_url: string | null;
+  productIds: Set<string>;
 }
 
 export default function EternumAttendance() {
@@ -77,8 +111,8 @@ export default function EternumAttendance() {
       setLoadingClients(true);
       const { data: contracts, error } = await supabase
         .from("client_contracts")
-        .select("client_id, clients!inner(id, full_name, logo_url)")
-        .in("product_id", ETERNUM_CLUB_PRODUCT_IDS)
+        .select("client_id, product_id, clients!inner(id, full_name, logo_url)")
+        .in("product_id", ALL_ETERNUM_PRODUCT_IDS)
         .eq("status", "active");
 
       if (error) {
@@ -90,7 +124,18 @@ export default function EternumAttendance() {
       const uniq = new Map<string, ClientRow>();
       (contracts ?? []).forEach((row: any) => {
         const c = row.clients;
-        if (c && !uniq.has(c.id)) uniq.set(c.id, c);
+        if (!c) return;
+        const existing = uniq.get(c.id);
+        if (existing) {
+          existing.productIds.add(row.product_id);
+        } else {
+          uniq.set(c.id, {
+            id: c.id,
+            full_name: c.full_name,
+            logo_url: c.logo_url,
+            productIds: new Set([row.product_id]),
+          });
+        }
       });
       const list = Array.from(uniq.values()).sort((a, b) =>
         a.full_name.localeCompare(b.full_name, "pt-BR"),
@@ -185,11 +230,21 @@ export default function EternumAttendance() {
     });
   }, [events, eventSearch, modalityFilter, statusFilter]);
 
+  const audience = useMemo<EventAudience>(
+    () => getEventAudience(selectedEvent?.title),
+    [selectedEvent],
+  );
+
+  const eligibleClients = useMemo(() => {
+    const productIds = AUDIENCE_PRODUCT_IDS[audience];
+    return clients.filter((c) => productIds.some((p) => c.productIds.has(p)));
+  }, [clients, audience]);
+
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter((c) => c.full_name.toLowerCase().includes(q));
-  }, [clients, search]);
+    if (!q) return eligibleClients;
+    return eligibleClients.filter((c) => c.full_name.toLowerCase().includes(q));
+  }, [eligibleClients, search]);
 
   const presentCount = attendanceSet.size;
 
@@ -255,9 +310,9 @@ export default function EternumAttendance() {
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Presença em Eventos — Eternum Club</h1>
+        <h1 className="text-2xl font-bold">Presença em Eventos — Eternum</h1>
         <p className="text-sm text-muted-foreground">
-          Marque a presença dos clientes ativos do Eternum Club nos eventos.
+          Marque a presença dos clientes ativos nos eventos. A lista se adapta ao público do evento (Club, Private ou MVP).
         </p>
       </div>
 
@@ -385,11 +440,11 @@ export default function EternumAttendance() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="h-4 w-4" /> Clientes ativos — Eternum Club
+                  <Users className="h-4 w-4" /> Clientes ativos — {AUDIENCE_LABEL[audience]}
                 </CardTitle>
                 {selectedEvent && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {selectedEvent.title} · {presentCount} de {clients.length} presentes
+                    {selectedEvent.title} · {presentCount} de {eligibleClients.length} presentes
                   </p>
                 )}
               </div>
