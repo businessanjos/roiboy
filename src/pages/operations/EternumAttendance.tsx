@@ -141,7 +141,7 @@ export default function EternumAttendance() {
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return clients;
-    return clients.filter((c) => c.name.toLowerCase().includes(q));
+    return clients.filter((c) => c.full_name.toLowerCase().includes(q));
   }, [clients, search]);
 
   const presentCount = attendanceSet.size;
