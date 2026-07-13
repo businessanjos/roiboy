@@ -50,6 +50,17 @@ type OriginalEntry = {
   status: string;
 };
 
+async function fetchFullEntry(id: string) {
+  const { data } = await supabase
+    .from("financial_entries")
+    .select(
+      "id, account_id, company_id, cost_center_id, supplier_id, seller_id, project_id, deal_id, entry_type, category_id, bank_account_id, client_id, contract_id, currency, notes, description"
+    )
+    .eq("id", id)
+    .maybeSingle();
+  return data as any;
+}
+
 export function RenegotiateEntryDialog({
   entry,
   open,
