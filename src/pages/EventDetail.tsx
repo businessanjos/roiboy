@@ -266,12 +266,19 @@ export default function EventDetail() {
   };
 
   const getStatusBadge = (status: string | null) => {
+    if (status === "completed") {
+      return (
+        <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20">
+          <Check className="h-3 w-3 mr-1" />
+          Concluído
+        </Badge>
+      );
+    }
     const config: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       draft: { label: "Rascunho", variant: "outline" },
       planned: { label: "Planejado", variant: "secondary" },
       confirmed: { label: "Confirmado", variant: "default" },
       in_progress: { label: "Em andamento", variant: "default" },
-      completed: { label: "Concluído", variant: "secondary" },
       cancelled: { label: "Cancelado", variant: "destructive" }
     };
     const { label, variant } = config[status || 'draft'] || config.draft;
