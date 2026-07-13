@@ -377,11 +377,11 @@ export default function EternumAttendance() {
                             />
                           ) : (
                             <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                              {client.name.charAt(0).toUpperCase()}
+                              {client.full_name.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <span className="text-sm font-medium flex-1">
-                            {client.name}
+                            {client.full_name}
                           </span>
                           {present && (
                             <Badge variant="default" className="text-[10px]">
