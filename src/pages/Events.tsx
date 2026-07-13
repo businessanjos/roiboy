@@ -1626,7 +1626,7 @@ export default function Events() {
                           </Badge>
                         ) : isEventPast(event) ? (
                           <Badge className="bg-slate-500/15 text-slate-700 border-slate-500/30 hover:bg-slate-500/20">
-                            Realizado
+                            Concluído
                           </Badge>
                         ) : (
                           <Badge variant="outline">
