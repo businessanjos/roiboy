@@ -150,6 +150,7 @@ export default function Events() {
   const { logAudit } = useAuditLog();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventWithProducts | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [selectedEventForQr, setSelectedEventForQr] = useState<EventWithProducts | null>(null);
@@ -485,6 +486,9 @@ export default function Events() {
   };
 
   const handleSubmit = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
     if (!title.trim()) {
       toast({
         title: "Erro",
@@ -703,6 +707,9 @@ export default function Events() {
     setDialogOpen(false);
     resetForm();
     invalidateEvents();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -1398,8 +1405,8 @@ export default function Events() {
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSubmit}>
-                {editingEvent ? "Salvar" : "Criar"}
+              <Button onClick={handleSubmit} disabled={saving}>
+                {saving ? "Salvando..." : editingEvent ? "Salvar" : "Criar"}
               </Button>
             </DialogFooter>
           </DialogContent>
