@@ -125,18 +125,56 @@ export default function EternumAttendance() {
   );
 
   const [modalityFilter, setModalityFilter] = useState<"all" | "online" | "presencial">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "completed">("all");
+
+  const STATUS_LABEL: Record<string, string> = {
+    planned: "Planejado",
+    draft: "Rascunho",
+    scheduled: "Agendado",
+    confirmed: "Confirmado",
+    in_progress: "Em andamento",
+    ongoing: "Em andamento",
+    completed: "Concluído",
+    done: "Concluído",
+    finished: "Concluído",
+    cancelled: "Cancelado",
+    canceled: "Cancelado",
+    postponed: "Adiado",
+  };
+
+  const MODALITY_LABEL: Record<string, string> = {
+    online: "Online",
+    presencial: "Presencial",
+    hibrido: "Híbrido",
+    "híbrido": "Híbrido",
+  };
+
+  const isCompletedStatus = (s: string | null) => {
+    const v = (s || "").toLowerCase();
+    return v === "completed" || v === "done" || v === "finished";
+  };
 
   const filteredEvents = useMemo(() => {
     const q = eventSearch.trim().toLowerCase();
     return events.filter((e) => {
       if (q && !e.title.toLowerCase().includes(q)) return false;
-      if (modalityFilter === "all") return true;
-      const m = (e.modality || "").toLowerCase();
-      if (modalityFilter === "online") return m === "online";
-      // presencial groups presencial + híbrido
-      return m === "presencial" || m === "hibrido" || m === "híbrido";
+      if (modalityFilter !== "all") {
+        const m = (e.modality || "").toLowerCase();
+        if (modalityFilter === "online" && m !== "online") return false;
+        if (
+          modalityFilter === "presencial" &&
+          !(m === "presencial" || m === "hibrido" || m === "híbrido")
+        )
+          return false;
+      }
+      if (statusFilter !== "all") {
+        const done = isCompletedStatus(e.status);
+        if (statusFilter === "completed" && !done) return false;
+        if (statusFilter === "open" && done) return false;
+      }
+      return true;
     });
-  }, [events, eventSearch, modalityFilter]);
+  }, [events, eventSearch, modalityFilter, statusFilter]);
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
