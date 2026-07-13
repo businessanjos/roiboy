@@ -282,6 +282,23 @@ export default function EternumAttendance() {
                 </Button>
               ))}
             </div>
+            <div className="flex gap-1 mt-1">
+              {([
+                { id: "all", label: "Todos" },
+                { id: "open", label: "Em aberto" },
+                { id: "completed", label: "Concluídos" },
+              ] as const).map((opt) => (
+                <Button
+                  key={opt.id}
+                  size="sm"
+                  variant={statusFilter === opt.id ? "default" : "outline"}
+                  className="h-7 px-2 text-xs flex-1"
+                  onClick={() => setStatusFilter(opt.id)}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+            </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-0">
             <ScrollArea className="h-full">
