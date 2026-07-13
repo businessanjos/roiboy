@@ -504,7 +504,8 @@ export default function FinancialEntriesPage() {
     const matchesConciliation = conciliationFilter === "all" || 
       (conciliationFilter === "conciliated" && entry.is_conciliated) ||
       (conciliationFilter === "pending" && !entry.is_conciliated && entry.status === "paid");
-    return matchesSearch && matchesStatus && matchesCategory && matchesConciliation;
+    const matchesProduct = productFilter === "all" || (entry as any).contract?.product_id === productFilter;
+    return matchesSearch && matchesStatus && matchesCategory && matchesConciliation && matchesProduct;
   });
 
   const {
