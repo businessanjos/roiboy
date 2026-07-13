@@ -455,8 +455,17 @@ export default function FinancialActiveClientsPage() {
                       <TableCell className="text-center tabular-nums">
                         {r.installments_count ?? "—"}
                       </TableCell>
+                      <TableCell className="text-center tabular-nums">
+                        <span className={r.installments_count && r.installments_paid >= r.installments_count ? "text-emerald-600 font-medium" : ""}>
+                          {r.installments_paid}
+                          {r.installments_count ? `/${r.installments_count}` : ""}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {r.installment_value != null ? formatBRLPrecise(r.installment_value) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-emerald-700">
+                        {r.total_received > 0 ? formatBRLPrecise(r.total_received) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
                         {formatBRLPrecise(r.total_value)}
