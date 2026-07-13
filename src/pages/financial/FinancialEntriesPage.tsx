@@ -704,6 +704,25 @@ export default function FinancialEntriesPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={productFilter} onValueChange={setProductFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Produto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos produtos</SelectItem>
+                {products.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ background: p.color || "#6b7280" }}
+                      />
+                      {p.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={conciliationFilter} onValueChange={setConciliationFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Conciliação" />
