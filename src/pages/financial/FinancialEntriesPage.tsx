@@ -176,6 +176,7 @@ export default function FinancialEntriesPage() {
   const [isBarcodeReceivableOpen, setIsBarcodeReceivableOpen] = useState(false);
   const [isManualPayableOpen, setIsManualPayableOpen] = useState(false);
   const [isManualReceivableOpen, setIsManualReceivableOpen] = useState(false);
+  const [renegotiatingEntry, setRenegotiatingEntry] = useState<FinancialEntry | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
