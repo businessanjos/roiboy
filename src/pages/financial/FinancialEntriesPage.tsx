@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
-import { format, startOfMonth, endOfMonth, parseISO, addMonths, isBefore } from "date-fns";
+import { format, startOfMonth, endOfMonth, parseISO, addMonths, isBefore, startOfQuarter, endOfQuarter, startOfYear, endOfYear, addQuarters, addYears, getQuarter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Plus,
@@ -160,6 +160,8 @@ export default function FinancialEntriesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [conciliationFilter, setConciliationFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
+  const [periodFilter, setPeriodFilter] = useState<"month" | "quarter" | "year" | "all">("month");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -194,22 +196,48 @@ export default function FinancialEntriesPage() {
     notes: "",
   });
 
+  // Period range
+  const { startDate, endDate, periodLabel } = useMemo(() => {
+    let s: Date; let e: Date; let label: string;
+    if (periodFilter === "quarter") {
+      s = startOfQuarter(currentMonth); e = endOfQuarter(currentMonth);
+      label = `${getQuarter(currentMonth)}º trimestre ${format(currentMonth, "yyyy")}`;
+    } else if (periodFilter === "year") {
+      s = startOfYear(currentMonth); e = endOfYear(currentMonth);
+      label = format(currentMonth, "yyyy");
+    } else if (periodFilter === "all") {
+      s = new Date(2000, 0, 1); e = new Date(2100, 11, 31);
+      label = "Todo o período";
+    } else {
+      s = startOfMonth(currentMonth); e = endOfMonth(currentMonth);
+      label = format(currentMonth, "MMMM yyyy", { locale: ptBR });
+    }
+    return {
+      startDate: format(s, "yyyy-MM-dd"),
+      endDate: format(e, "yyyy-MM-dd"),
+      periodLabel: label,
+    };
+  }, [periodFilter, currentMonth]);
+
+  const shiftPeriod = (dir: -1 | 1) => {
+    if (periodFilter === "quarter") setCurrentMonth(addQuarters(currentMonth, dir));
+    else if (periodFilter === "year") setCurrentMonth(addYears(currentMonth, dir));
+    else setCurrentMonth(addMonths(currentMonth, dir));
+  };
+
   // Fetch entries
   const { data: entries = [], isLoading: entriesLoading } = useQuery({
-    queryKey: ["financial-entries", accountId, activeTab, currentMonth],
+    queryKey: ["financial-entries", accountId, activeTab, startDate, endDate],
     queryFn: async () => {
       if (!accountId) return [];
-      
-      const startDate = format(startOfMonth(currentMonth), "yyyy-MM-dd");
-      const endDate = format(endOfMonth(currentMonth), "yyyy-MM-dd");
-      
       const { data, error } = await supabase
         .from("financial_entries")
         .select(`
           *,
           category:financial_categories(id, name, color),
           bank_account:bank_accounts(id, name, bank_name),
-          client:clients(id, full_name)
+          client:clients(id, full_name),
+          contract:client_contracts(id, product_id, product:products(id, name, color))
         `)
         .eq("account_id", accountId)
         .eq("entry_type", activeTab)
@@ -218,7 +246,7 @@ export default function FinancialEntriesPage() {
         .order("due_date", { ascending: true });
       
       if (error) throw error;
-      return data as FinancialEntry[];
+      return data as any[];
     },
     enabled: !!accountId,
   });
@@ -270,6 +298,23 @@ export default function FinancialEntriesPage() {
         .order("full_name");
       if (error) throw error;
       return data as Client[];
+    },
+    enabled: !!accountId,
+  });
+
+  // Fetch products
+  const { data: products = [] } = useQuery({
+    queryKey: ["products-list-financial", accountId],
+    queryFn: async () => {
+      if (!accountId) return [];
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, color")
+        .eq("account_id", accountId)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string; color: string | null }[];
     },
     enabled: !!accountId,
   });
@@ -459,7 +504,8 @@ export default function FinancialEntriesPage() {
     const matchesConciliation = conciliationFilter === "all" || 
       (conciliationFilter === "conciliated" && entry.is_conciliated) ||
       (conciliationFilter === "pending" && !entry.is_conciliated && entry.status === "paid");
-    return matchesSearch && matchesStatus && matchesCategory && matchesConciliation;
+    const matchesProduct = productFilter === "all" || (entry as any).contract?.product_id === productFilter;
+    return matchesSearch && matchesStatus && matchesCategory && matchesConciliation && matchesProduct;
   });
 
   const {
@@ -535,17 +581,37 @@ export default function FinancialEntriesPage() {
         }
       />
 
-      {/* Month Navigation */}
-      <div className="flex items-center justify-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, -1))}>
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <span className="text-lg font-medium min-w-[180px] text-center">
-          {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-        </span>
-        <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-          <ChevronRight className="h-5 w-5" />
-        </Button>
+      {/* Period Navigation */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as any)}>
+          <SelectTrigger className="w-[170px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="month">Este mês</SelectItem>
+            <SelectItem value="quarter">Este trimestre</SelectItem>
+            <SelectItem value="year">Este ano</SelectItem>
+            <SelectItem value="all">Todo o período</SelectItem>
+          </SelectContent>
+        </Select>
+        {periodFilter !== "all" && (
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => shiftPeriod(-1)}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <span className="text-lg font-medium min-w-[200px] text-center capitalize">
+              {periodLabel}
+            </span>
+            <Button variant="ghost" size="icon" onClick={() => shiftPeriod(1)}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
+        {(periodFilter !== "month" || format(currentMonth, "yyyy-MM") !== format(new Date(), "yyyy-MM")) && (
+          <Button variant="outline" size="sm" onClick={() => { setPeriodFilter("month"); setCurrentMonth(new Date()); }}>
+            Hoje
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -567,7 +633,7 @@ export default function FinancialEntriesPage() {
             <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
               <FinancialKpiCard
                 icon={WalletIcon}
-                label="Total no mês"
+                label={periodFilter === "month" ? "Total no mês" : periodFilter === "quarter" ? "Total no trimestre" : periodFilter === "year" ? "Total no ano" : "Total"}
                 value={formatBRLCompact(totals.total)}
               />
               <FinancialKpiCard
@@ -635,6 +701,25 @@ export default function FinancialEntriesPage() {
                 <SelectItem value="all">Todas categorias</SelectItem>
                 {filteredCategories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={productFilter} onValueChange={setProductFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Produto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos produtos</SelectItem>
+                {products.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ background: p.color || "#6b7280" }}
+                      />
+                      {p.name}
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
