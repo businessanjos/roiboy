@@ -136,8 +136,6 @@
 - [Custom RSVP Forms](mem://features/events/customizable-rsvp-forms) — JSONB custom form fields
 - [Typeform/n8n Ingestion](mem://integrations/n8n-typeform-api-endpoints) — Edge functions for lead creation
 - [Google Calendar No-Show Sync](mem://integrations/calendar/no-show-sync) — Auto-syncs red calendar events
-- [Omie Identity Matching](mem://integrations/omie/client-identity-validation-pt) — CPF/CNPJ and Name cross-validation
-- [Omie Financial Bridge Page](mem://integrations/omie/financial-bridge-page-pt) — Página /financial/integracoes/omie
 - [YouTube Analytics Sync](mem://features/marketing/youtube-integration-pt) — Tracking videos/shorts/lives
 - [Campaign Forms (Formulários Roy)](mem://features/marketing/campaign-forms-pt) — Substitui Typeform: /c/:slug + tracking funil/UTM/abandono na aba "Formulários Roy" de /marketing/trafego-pago
 - [Content HQ](mem://features/marketing/content-hq-pt) — Área /marketing/content-hq Bruna+Everton, multi-plataforma, IA gera estratégia/pautas/briefings
