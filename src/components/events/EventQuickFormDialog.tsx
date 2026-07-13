@@ -189,7 +189,25 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
       ({ error } = await supabase.from("events").update(payload).eq("id", event.id));
     } else {
       payload.account_id = currentUser.account_id;
-      ({ error } = await supabase.from("events").insert(payload));
+      if (frequency !== "none" && scheduledAt) {
+        const occ = generateOccurrences(fromLocalInput(scheduledAt)!, fromLocalInput(endsAt));
+        if (occ.length === 0) {
+          setSaving(false);
+          toast({ title: "Nenhuma ocorrência gerada", description: "Ajuste a frequência ou o prazo final.", variant: "destructive" });
+          return;
+        }
+        const rows = occ.map((o) => ({ ...payload, scheduled_at: o.scheduled_at, ends_at: o.ends_at }));
+        ({ error } = await supabase.from("events").insert(rows));
+        if (!error) {
+          setSaving(false);
+          toast({ title: `${rows.length} eventos criados` });
+          onOpenChange(false);
+          onSaved?.();
+          return;
+        }
+      } else {
+        ({ error } = await supabase.from("events").insert(payload));
+      }
     }
     setSaving(false);
 
