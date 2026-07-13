@@ -37,7 +37,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import OmieDashboardSection from "@/components/financial/OmieDashboardSection";
+
 import { FinancialPageHeader, FinancialKpiCard, FinancialEmptyState } from "@/components/financial/_shared";
 import { formatBRL, formatBRLCompact, formatAxisBRL, formatPct } from "@/lib/financial-format";
 
