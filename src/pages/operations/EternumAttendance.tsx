@@ -29,7 +29,7 @@ interface EventRow {
 
 interface ClientRow {
   id: string;
-  name: string;
+  full_name: string;
   logo_url: string | null;
 }
 
