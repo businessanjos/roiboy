@@ -302,6 +302,23 @@ export default function FinancialEntriesPage() {
     enabled: !!accountId,
   });
 
+  // Fetch products
+  const { data: products = [] } = useQuery({
+    queryKey: ["products-list-financial", accountId],
+    queryFn: async () => {
+      if (!accountId) return [];
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, color")
+        .eq("account_id", accountId)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string; color: string | null }[];
+    },
+    enabled: !!accountId,
+  });
+
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { entry_type: string }) => {
