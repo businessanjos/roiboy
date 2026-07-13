@@ -335,11 +335,11 @@ export default function EternumAttendance() {
                         </div>
                         <div className="flex gap-1 mt-2">
                           <Badge variant="outline" className="text-[10px] py-0">
-                            {event.modality}
+                            {MODALITY_LABEL[(event.modality || "").toLowerCase()] || event.modality}
                           </Badge>
                           {event.status && (
                             <Badge variant="secondary" className="text-[10px] py-0">
-                              {event.status}
+                              {STATUS_LABEL[event.status.toLowerCase()] || event.status}
                             </Badge>
                           )}
                         </div>
