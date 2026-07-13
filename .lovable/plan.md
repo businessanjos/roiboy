@@ -1,109 +1,46 @@
-# Fluxo End-to-End de Inativação de Colaboradores
+## O que muda
 
-## Situação atual
-
-- Fonte de verdade decidida: `hr_collaborators.status = 'inactive'`.
-- 6 colaboradores inativos hoje (Ana Sant'Anna, Dayara, Lena, Michele, Rosane, Vanessa) ainda aparecem em seletores, menções `@`, filtros, rankings e como responsáveis de leads/deals/clientes.
-- Não existe função centralizada de inativação — cada tela filtra do seu jeito, muitas nem filtram.
+Hoje, quando um deal é marcado como "ganho", um contrato é criado — mas as parcelas no financeiro só são geradas quando alguém abre o contrato, preenche parcelas/data e clica em "Gerar Parcelas". A ideia é fazer esse passo acontecer sozinho, usando os dados que o comercial já preencheu no pipeline.
 
 ## Regras de negócio
 
-**Default de reatribuição por área** (aplicado quando o inativo é responsável em algum registro ativo):
+Quando o deal vira "ganho" e gera contrato, calcular automaticamente:
 
-| Origem | Vai para |
-|---|---|
-| Comercial (SDR, Closer, Head Comercial, Mentor) | Jonathan Marcato |
-| CX / Operações / Onboarding | Andréia Barros |
-| Financeiro / RH / Administrativo / Marketing | Maikol Parnow |
-| Fallback (sem área identificada) | Jonathan Marcato |
+- **Valor total das parcelas** = `deals.value − deals.received_value` (ex.: 240k − 20k = 220k)
+- **Nº de parcelas** = campo customizado "Parcelas" do deal (ex.: 11)
+- **Valor por parcela** = total ÷ parcelas (ex.: 20k)
+- **Forma de pagamento** = campo customizado "Forma de Pagamento" do deal
+- **1º vencimento** = data de recebimento da entrada + 30 dias
+  - Se `received_value > 0`: usa `won_at` como referência da entrada
+  - Se `received_value = 0`: usa `won_at` mesmo (comercial ajusta manualmente depois)
+- **Ajuste manual continua disponível**: a aba "Negociação" do contrato segue permitindo editar tudo antes de gerar, e o botão "Gerar Parcelas" continua existindo pra quem precisar refazer.
 
-Detecção de área usa `hr_collaborators.department` + `team_roles` do usuário.
+## Onde tocar
 
-## Backend — migração única
+1. **`src/utils/dealToClientContractMapping.ts`**  
+   - Expandir `DealFieldValues` e `ContractDataFromDeal` para incluir `parcelas` (número) e `payment_method`.
+   - Ler o campo `PARCELAS` em `fetchDealCustomFieldValues` (parsear label "11x" → 11).
 
-### 1. Função canônica de área
-`public.get_default_reassignment_user(inactive_user_id uuid) returns uuid`
-SECURITY DEFINER, lê `hr_collaborators.department` do inativo e retorna o `user_id` do herdeiro conforme tabela acima.
+2. **Fluxo de criação de contrato quando deal é ganho** (procurar onde `client_contracts` é criado após won — provavelmente em `SalesPipeline.tsx` ou hook relacionado):
+   - Ao criar o `client_contracts`, já gravar:
+     - `installments_count` = parcelas do deal
+     - `first_due_date` = `won_at + 30 dias`
+     - `payment_method` = forma do deal
+     - `installments_detail` = array uniforme de N parcelas (valor por parcela, `due_date` = 1º venc + i meses, `method` = forma)
+   - Em seguida, flipar `receivables_generated = true` + `receivables_generated_at` para o trigger `contract_generate_receivables` disparar e criar tudo em `financial_entries` + `installments`.
 
-### 2. Função central de inativação
-`public.inactivate_collaborator(collaborator_id uuid, reason text)` — SECURITY DEFINER. Passos, em transação:
-
-1. Marca `hr_collaborators.status = 'inactive'`, `termination_date = today`.
-2. Resolve `heir_user_id` via `get_default_reassignment_user`.
-3. Reatribui tudo o que estava no inativo para o herdeiro:
-   - `leads.responsible_user_id`, `sdr_user_id`
-   - `deals.responsible_user_id`, `sales_user_id`, `sdr_user_id`
-   - `clients.responsible_user_id`
-   - `client_contracts.responsible_user_id`
-   - `internal_tasks.assigned_to`
-   - `client_followups.user_id` (apenas os `status = 'pending'`)
-   - `zapp_conversation_assignments.assigned_user_id` (apenas ativas)
-   - `deal_activities` pendentes
-4. Revoga acesso: `users.role = 'inactive'`, deleta `user_sessions`, `push_subscriptions`, `user_integrations`, `user_sector_access`, `user_team_roles`.
-5. Registra em `audit_logs` (quem inativou, herdeiro, contagens por tabela).
-
-### 3. View canônica de usuários ativos
-```
-CREATE VIEW public.active_users AS
-SELECT u.* FROM users u
-LEFT JOIN hr_collaborators c ON c.user_id = u.id
-WHERE COALESCE(c.status, 'active') <> 'inactive'
-  AND COALESCE(u.role, '') <> 'inactive';
-```
-Com `security_invoker=on` + GRANTs. Todo seletor/menção passa a consumir essa view.
-
-### 4. Job de auto-heal diário
-Cron `pg_cron` 03:00 chamando `public.auto_heal_inactive_assignments()`:
-- Varre leads/deals/clients/contracts/tasks/followups/zapp assignments com `responsible_user_id` de inativo.
-- Reatribui via `get_default_reassignment_user`.
-- Loga em `audit_logs` com `action = 'auto_heal_inactive'`.
-
-### 5. Roda uma vez agora
-Executa `auto_heal_inactive_assignments()` imediatamente para limpar o legado dos 6 inativos atuais.
-
-## Frontend
-
-### Hook central
-`src/hooks/useActiveUsers.ts` — consulta a view `active_users`. Substitui as consultas diretas em `users` que alimentam:
-- `mention-textarea` / `mention-input` (menções `@` na timeline)
-- Seletores de responsável (leads, deals, clients, contracts, tasks, events, followups)
-- Filtros por responsável (Kanban de vendas, listas)
-- Rankings (Sales Ranking, TV View, dashboards de time)
-- RoyZapp: seletor de atendente e transferências
-- Financeiro: reconciliação (dono do lançamento)
-
-Auditoria automatizada via `rg` para garantir que não sobre `.from("users")` em superfícies de escolha ativa. Superfícies históricas (timeline exibindo nome antigo, quem criou o registro) continuam mostrando o inativo — regra confirmada.
-
-### UI de inativação em `/rh/collaborators`
-Botão **Inativar** abre dialog que:
-- Mostra o herdeiro default calculado por área (editável).
-- Lista contagens ("47 leads, 12 deals, 3 clientes serão transferidos para Jonathan").
-- Pede motivo.
-- Chama `inactivate_collaborator` via RPC.
-- Invalida caches (`users`, `active_users`, `leads`, `deals`, `clients`).
-
-## Detalhes técnicos
-
-- Todas as mudanças de schema (view, functions, trigger, GRANTs) em uma migração; o cron via `supabase--insert`.
-- `active_users` recebe `GRANT SELECT` para `authenticated`; RLS herda do invocador.
-- `inactivate_collaborator` só pode ser chamada por admin ou RH (checagem via `has_role`).
-- Índices já existem em `responsible_user_id` das tabelas afetadas.
-- Nenhuma alteração em `auth.users` — só `users` do schema `public`.
-
-## Arquivos
-
-**Novos**
-- `supabase/migrations/<ts>_inactive_collaborator_flow.sql`
-- `src/hooks/useActiveUsers.ts`
-- `src/components/rh/InactivateCollaboratorDialog.tsx`
-
-**Editados (superfícies de seletor/menção/ranking)**
-- `src/components/ui/mention-textarea.tsx`, `mention-input.tsx`
-- `src/hooks/useSectorUsers.tsx`
-- `src/pages/rh/HRCollaborators.tsx` (novo botão)
-- Seletores em Leads, Deals, Clients, Contracts, Tasks, Events, RoyZapp, Financeiro (troca de fonte para `active_users`)
+3. **Segurança**: só auto-gerar se:
+   - `deals.value > deals.received_value` (tem saldo a parcelar)
+   - Campo "Parcelas" preenchido e > 0
+   - Se qualquer condição falhar, cai no fluxo antigo (contrato criado sem parcelas, usuário preenche na aba Negociação).
 
 ## Fora de escopo
 
-- Recontratação (reativar inativo) — se aparecer no futuro, invertemos via update simples de status.
-- Reatribuir manualmente registro a registro — o herdeiro default resolve; usuário rebalanceia depois via UI existente.
+- Não mexer no `PaymentBreakdownComposer` (mix Pix+Cheques etc.) — se o comercial escolheu forma composta, ele continua ajustando manualmente na aba Negociação; a auto-geração só roda para formas simples.
+- Não alterar entradas já existentes: se o contrato já tinha `receivables_generated = true`, não refaz nada.
+
+## Verificação
+
+- Fechar um deal de teste no pipeline com valor 240k, entrada 20k, 11 parcelas, Forma "Pix"
+- Confirmar que aparecem 11 parcelas de 20k no financeiro, 1ª vencendo 30 dias após o `won_at`
+- Fechar outro sem preencher "Parcelas": contrato criado, aba Negociação continua pedindo preenchimento manual
