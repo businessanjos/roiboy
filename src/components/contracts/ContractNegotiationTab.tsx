@@ -97,10 +97,12 @@ export function ContractNegotiationTab({
     return "standard";
   });
   const [description, setDescription] = useState(initialDescription || "");
-  const [paymentMethod, setPaymentMethod] = useState(initialMethod || "");
-  const [installments, setInstallments] = useState(initialInstallments || 1);
+  const [paymentMethod, setPaymentMethod] = useState(initialMethod || (hasSalesBreakdown ? salesBreakdown[0]?.method || "" : ""));
+  const [installments, setInstallments] = useState(
+    initialInstallments || (hasSalesBreakdown ? salesBreakdown.length : 1)
+  );
   const [firstDueDate, setFirstDueDate] = useState(
-    initialDueDate || format(new Date(), "yyyy-MM-dd")
+    initialDueDate || (hasSalesBreakdown ? salesBreakdown[0]?.due_date : null) || format(new Date(), "yyyy-MM-dd")
   );
   const [receivablesGenerated, setReceivablesGenerated] = useState(initialReceivablesGenerated);
 
