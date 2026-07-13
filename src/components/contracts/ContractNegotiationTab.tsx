@@ -29,6 +29,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface InstallmentDetailItem {
+  amount?: number | string | null;
+  value?: number | string | null;
+  due_date?: string | null;
+  method?: string | null;
+  method_label?: string | null;
+}
+
 interface ContractNegotiationTabProps {
   contractId: string;
   contractValue: number;
@@ -39,6 +47,7 @@ interface ContractNegotiationTabProps {
   paymentMethod: string | null;
   installmentsCount: number | null;
   firstDueDate: string | null;
+  installmentsDetail?: InstallmentDetailItem[] | any;
   receivablesGenerated: boolean;
   onUpdate: () => void;
 }
@@ -71,9 +80,14 @@ export function ContractNegotiationTab({
   paymentMethod: initialMethod,
   installmentsCount: initialInstallments,
   firstDueDate: initialDueDate,
+  installmentsDetail: initialDetail,
   receivablesGenerated: initialReceivablesGenerated,
   onUpdate,
 }: ContractNegotiationTabProps) {
+  const salesBreakdown: InstallmentDetailItem[] = Array.isArray(initialDetail)
+    ? (initialDetail as InstallmentDetailItem[]).filter((d) => d && (d.amount != null || d.value != null))
+    : [];
+  const hasSalesBreakdown = salesBreakdown.length > 0;
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   // Detectar tipo automaticamente: se tem descrição mas não tem tipo, é custom
@@ -83,10 +97,12 @@ export function ContractNegotiationTab({
     return "standard";
   });
   const [description, setDescription] = useState(initialDescription || "");
-  const [paymentMethod, setPaymentMethod] = useState(initialMethod || "");
-  const [installments, setInstallments] = useState(initialInstallments || 1);
+  const [paymentMethod, setPaymentMethod] = useState(initialMethod || (hasSalesBreakdown ? salesBreakdown[0]?.method || "" : ""));
+  const [installments, setInstallments] = useState(
+    initialInstallments || (hasSalesBreakdown ? salesBreakdown.length : 1)
+  );
   const [firstDueDate, setFirstDueDate] = useState(
-    initialDueDate || format(new Date(), "yyyy-MM-dd")
+    initialDueDate || (hasSalesBreakdown ? salesBreakdown[0]?.due_date : null) || format(new Date(), "yyyy-MM-dd")
   );
   const [receivablesGenerated, setReceivablesGenerated] = useState(initialReceivablesGenerated);
 
@@ -153,7 +169,7 @@ export function ContractNegotiationTab({
   const handleGenerateReceivables = async () => {
     // Triple-check to prevent duplicate generation
     if (generating || receivablesGenerated || generatedRef.current) {
-      console.warn('Generation blocked: already in progress or completed');
+      console.warn("Generation blocked: already in progress or completed");
       return;
     }
 
@@ -165,61 +181,65 @@ export function ContractNegotiationTab({
     // Mark immediately BEFORE any async operation
     generatedRef.current = true;
     setGenerating(true);
-    
+
     try {
-      const entries = [];
-      const baseDate = new Date(firstDueDate);
-
-      for (let i = 0; i < installments; i++) {
-        const dueDate = addMonths(baseDate, i);
-        entries.push({
-          account_id: accountId,
-          client_id: clientId,
-          contract_id: contractId,
-          entry_type: "receivable",
-          description: `Parcela ${i + 1}/${installments} - Contrato`,
-          amount: Math.round(installmentValue * 100) / 100,
-          due_date: format(dueDate, "yyyy-MM-dd"),
-          status: "pending",
-          is_recurring: false,
-          is_conciliated: false,
-          currency: "BRL",
-        });
+      // 1) Persist the negotiation on the contract. Only overwrite installments_detail
+      //    if the sales team didn't already provide a breakdown (respect the sales input).
+      const updatePayload: Record<string, any> = {
+        payment_method: paymentMethod,
+        installments_count: installments,
+        first_due_date: firstDueDate,
+        negotiation_type: negotiationType,
+      };
+      if (!hasSalesBreakdown) {
+        // Build a simple uniform breakdown so the DB generator has explicit due dates.
+        const base = new Date(firstDueDate);
+        const per = Math.round((contractValue / installments) * 100) / 100;
+        updatePayload.installments_detail = Array.from({ length: installments }).map((_, i) => ({
+          amount: per,
+          due_date: format(addMonths(base, i), "yyyy-MM-dd"),
+          method: paymentMethod,
+        }));
       }
 
-      const { error: entriesError } = await supabase
-        .from("financial_entries")
-        .insert(entries);
+      const { error: prepError } = await supabase
+        .from("client_contracts")
+        .update(updatePayload)
+        .eq("id", contractId);
 
-      if (entriesError) {
-        generatedRef.current = false; // Allow retry on error
-        throw entriesError;
+      if (prepError) {
+        generatedRef.current = false;
+        throw prepError;
       }
 
-      // Mark receivables as generated
-      const { error: updateError } = await supabase
+      // 2) Flip the flag — the DB trigger `contract_generate_receivables` will
+      //    create the entries in financial_entries + installments/invoices,
+      //    honoring installments_detail (including the sales-team breakdown) and
+      //    assigning a fallback income category so RLS/validation triggers pass.
+      const { error: flagError } = await supabase
         .from("client_contracts")
         .update({
           receivables_generated: true,
           receivables_generated_at: new Date().toISOString(),
-          payment_method: paymentMethod,
-          installments_count: installments,
-          first_due_date: firstDueDate,
         })
         .eq("id", contractId);
 
-      if (updateError) {
-        generatedRef.current = false; // Allow retry on error
-        throw updateError;
+      if (flagError) {
+        generatedRef.current = false;
+        throw flagError;
       }
 
       setReceivablesGenerated(true);
       toast.success(`${installments} parcela(s) gerada(s) no contas a receber`);
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating receivables:", error);
-      toast.error("Erro ao gerar parcelas");
-      generatedRef.current = false; // Allow retry on error
+      const msg =
+        error?.message ||
+        error?.error_description ||
+        "Erro ao gerar parcelas";
+      toast.error(msg);
+      generatedRef.current = false;
     } finally {
       setGenerating(false);
     }
@@ -382,6 +402,48 @@ export function ContractNegotiationTab({
               </div>
             </CardContent>
           </Card>
+
+          {/* Detalhamento vindo do comercial (PaymentBreakdownComposer) */}
+          {hasSalesBreakdown && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-primary/40 text-primary">
+                    Detalhamento do comercial
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {salesBreakdown.length} parcela(s) já preenchidas na negociação
+                  </span>
+                </div>
+                <div className="rounded-md border bg-background divide-y">
+                  {salesBreakdown.map((d, i) => {
+                    const amount = Number(d.amount ?? d.value ?? 0);
+                    return (
+                      <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-6 tabular-nums">#{i + 1}</span>
+                          {d.method_label || d.method ? (
+                            <Badge variant="outline" className="text-[10px] py-0 h-4">
+                              {d.method_label || d.method}
+                            </Badge>
+                          ) : null}
+                          <span className="text-muted-foreground text-xs">
+                            {d.due_date
+                              ? format(new Date(d.due_date), "dd/MM/yyyy", { locale: ptBR })
+                              : "sem data"}
+                          </span>
+                        </div>
+                        <span className="font-medium tabular-nums">{formatCurrency(amount)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ao gerar, o financeiro respeita este detalhamento (valores e datas por parcela).
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Generate Receivables Button */}
           {receivablesGenerated ? (

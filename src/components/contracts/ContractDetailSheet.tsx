@@ -74,6 +74,7 @@ interface Contract {
   payment_method?: string | null;
   installments_count?: number | null;
   first_due_date?: string | null;
+  installments_detail?: any;
   receivables_generated?: boolean;
   client?: {
     id: string;
@@ -747,6 +748,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
               paymentMethod={contract.payment_method || null}
               installmentsCount={contract.installments_count || null}
               firstDueDate={contract.first_due_date || null}
+              installmentsDetail={contract.installments_detail ?? null}
               receivablesGenerated={contract.receivables_generated || false}
               onUpdate={onUpdate}
             />
