@@ -33,6 +33,8 @@ interface Row {
   payment_method: string | null;
   entrada: number | null;
   installments_count: number | null;
+  installments_paid: number;
+  total_received: number;
   installment_value: number | null;
   total_value: number;
   start_date: string | null;
