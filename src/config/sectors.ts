@@ -170,7 +170,7 @@ export const sectors: Sector[] = [
       { to: "/financial/integracoes/pluggy", icon: Landmark, label: "Pluggy", permission: PERMISSIONS.CLIENTS_VIEW, group: "Integrações" },
       { to: "/financial/configuracoes/fiscal", icon: Receipt, label: "Config. Fiscal (NFS-e)", permission: PERMISSIONS.CLIENTS_VIEW, group: "Integrações" },
       // Em Breve
-      { to: "/financial/tributario", icon: Scale, label: "Tributário", permission: PERMISSIONS.CLIENTS_VIEW, group: "Em Breve", comingSoon: true },
+      
       { to: "/financial/prestadores", icon: UsersRound, label: "Portal Prestadores", permission: PERMISSIONS.CLIENTS_VIEW, group: "Em Breve", comingSoon: true },
       { to: "/financial/regua-cobranca", icon: Bell, label: "Régua de Cobrança", permission: PERMISSIONS.CLIENTS_VIEW, group: "Em Breve", comingSoon: true },
       { to: "/financial/drf", icon: Receipt, label: "DRF", permission: PERMISSIONS.CLIENTS_VIEW, group: "Em Breve", comingSoon: true },
