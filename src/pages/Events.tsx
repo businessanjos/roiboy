@@ -1615,6 +1615,10 @@ export default function Events() {
                           <Badge variant="destructive">
                             Cancelado
                           </Badge>
+                        ) : event.scheduled_at && new Date(event.scheduled_at) < new Date() ? (
+                          <Badge className="bg-slate-500/15 text-slate-700 border-slate-500/30 hover:bg-slate-500/20">
+                            Realizado
+                          </Badge>
                         ) : (
                           <Badge variant="outline">
                             Em Aberto
