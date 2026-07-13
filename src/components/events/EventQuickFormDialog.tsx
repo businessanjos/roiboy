@@ -271,6 +271,106 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
             </div>
           </div>
 
+          {!event?.id && (
+            <div className="space-y-3 rounded-md border border-border/60 p-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">Repetição</Label>
+                <Select value={frequency} onValueChange={(v) => setFrequency(v as Freq)}>
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não repete</SelectItem>
+                    <SelectItem value="daily">Diariamente</SelectItem>
+                    <SelectItem value="weekly">Semanalmente</SelectItem>
+                    <SelectItem value="monthly">Mensalmente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {frequency !== "none" && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">A cada</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={interval}
+                          onChange={(e) => setIntervalN(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-20"
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          {frequency === "daily" ? "dia(s)" : frequency === "weekly" ? "semana(s)" : "mês(es)"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Término</Label>
+                      <Select value={endMode} onValueChange={(v) => setEndMode(v as any)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="date">Até uma data</SelectItem>
+                          <SelectItem value="count">Após N ocorrências</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {frequency === "weekly" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dias da semana</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {WEEK_DAYS.map((d) => {
+                          const active = weekDays.includes(d.v);
+                          return (
+                            <button
+                              key={d.v}
+                              type="button"
+                              onClick={() =>
+                                setWeekDays((prev) =>
+                                  prev.includes(d.v) ? prev.filter((x) => x !== d.v) : [...prev, d.v]
+                                )
+                              }
+                              className={`px-2.5 py-1 rounded-md text-xs border transition-colors ${
+                                active
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Vazio = usa o dia da data de início.
+                      </p>
+                    </div>
+                  )}
+
+                  {endMode === "date" ? (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Prazo final</Label>
+                      <Input type="date" value={untilDate} onChange={(e) => setUntilDate(e.target.value)} />
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Nº de ocorrências</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={500}
+                        value={occurrences}
+                        onChange={(e) => setOccurrences(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-24"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           {modality === "presencial" && (
             <div className="space-y-1.5">
               <Label>Endereço</Label>
