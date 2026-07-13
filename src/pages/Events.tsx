@@ -878,13 +878,9 @@ export default function Events() {
               if (!open) resetForm();
             }}>
               <DialogTrigger asChild>
-                <Button 
-                  className="gap-2 shrink-0"
-                  disabled={!canCreate("events")}
-                  title={!canCreate("events") ? "Limite de eventos atingido. Faça upgrade do plano." : undefined}
-                >
-                  {!canCreate("events") ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                  {!canCreate("events") ? "Limite atingido" : "Novo Evento"}
+                <Button className="gap-2 shrink-0">
+                  <Plus className="h-4 w-4" />
+                  Novo Evento
                 </Button>
               </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
