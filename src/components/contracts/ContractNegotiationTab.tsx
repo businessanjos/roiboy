@@ -80,9 +80,14 @@ export function ContractNegotiationTab({
   paymentMethod: initialMethod,
   installmentsCount: initialInstallments,
   firstDueDate: initialDueDate,
+  installmentsDetail: initialDetail,
   receivablesGenerated: initialReceivablesGenerated,
   onUpdate,
 }: ContractNegotiationTabProps) {
+  const salesBreakdown: InstallmentDetailItem[] = Array.isArray(initialDetail)
+    ? (initialDetail as InstallmentDetailItem[]).filter((d) => d && (d.amount != null || d.value != null))
+    : [];
+  const hasSalesBreakdown = salesBreakdown.length > 0;
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   // Detectar tipo automaticamente: se tem descrição mas não tem tipo, é custom
