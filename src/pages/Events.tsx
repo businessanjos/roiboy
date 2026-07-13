@@ -487,6 +487,8 @@ export default function Events() {
 
   const handleSubmit = async () => {
     if (saving) return;
+    setSaving(true);
+    try {
     if (!title.trim()) {
       toast({
         title: "Erro",
