@@ -67,6 +67,7 @@ type InstallmentRow = {
     company_id: string | null;
     account_id: string;
     client_id: string | null;
+    contract_id: string | null;
     product_id: string | null;
     nf_number: string | null;
     nf_series: string | null;
@@ -81,6 +82,17 @@ type InstallmentRow = {
       company_name: string | null;
     } | null;
     product?: {
+      id: string;
+      name: string;
+      color: string | null;
+    } | null;
+    /**
+     * Product resolved from the deal's "Item da Venda" custom field
+     * (source of truth from the commercial pipeline). When present, this
+     * overrides the product_id copied into the invoice/contract, which may
+     * be stale if the deal's product changed after the contract was created.
+     */
+    deal_product?: {
       id: string;
       name: string;
       color: string | null;
