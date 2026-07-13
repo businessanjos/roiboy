@@ -748,6 +748,19 @@ export default function Events() {
     );
   };
 
+  const isEventPast = (event: Event) => {
+    const dateToCompare = event.ends_at || event.scheduled_at;
+    if (!dateToCompare) return false;
+    const eventDate = new Date(dateToCompare);
+    if (Number.isNaN(eventDate.getTime())) return false;
+    return eventDate.getTime() < Date.now();
+  };
+
+  const isEventOpen = (event: Event) => {
+    const hasFinalStatus = event.status === "completed" || event.status === "cancelled";
+    return !hasFinalStatus && !isEventPast(event);
+  };
+
   // Filter events based on search, filters, and modality tab
   const filteredEvents = events.filter((event) => {
     const matchesSearch = 
@@ -760,9 +773,9 @@ export default function Events() {
     
     let matchesStatus = true;
     if (filterStatus === "open") {
-      matchesStatus = !event.status || (event.status !== "completed" && event.status !== "cancelled");
+      matchesStatus = isEventOpen(event);
     } else if (filterStatus === "completed") {
-      matchesStatus = event.status === "completed";
+      matchesStatus = event.status === "completed" || (!event.status && isEventPast(event));
     } else if (filterStatus === "cancelled") {
       matchesStatus = event.status === "cancelled";
     }
@@ -1615,7 +1628,7 @@ export default function Events() {
                           <Badge variant="destructive">
                             Cancelado
                           </Badge>
-                        ) : event.scheduled_at && new Date(event.scheduled_at) < new Date() ? (
+                        ) : isEventPast(event) ? (
                           <Badge className="bg-slate-500/15 text-slate-700 border-slate-500/30 hover:bg-slate-500/20">
                             Realizado
                           </Badge>
