@@ -29,6 +29,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface InstallmentDetailItem {
+  amount?: number | string | null;
+  value?: number | string | null;
+  due_date?: string | null;
+  method?: string | null;
+  method_label?: string | null;
+}
+
 interface ContractNegotiationTabProps {
   contractId: string;
   contractValue: number;
@@ -39,6 +47,7 @@ interface ContractNegotiationTabProps {
   paymentMethod: string | null;
   installmentsCount: number | null;
   firstDueDate: string | null;
+  installmentsDetail?: InstallmentDetailItem[] | any;
   receivablesGenerated: boolean;
   onUpdate: () => void;
 }
