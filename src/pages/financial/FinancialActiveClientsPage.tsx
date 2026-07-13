@@ -100,6 +100,7 @@ export default function FinancialActiveClientsPage() {
   const [search, setSearch] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("recent");
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
+  const [detailRow, setDetailRow] = useState<Row | null>(null);
 
   const { data, isLoading } = useQuery({
     enabled: !!accountId,
