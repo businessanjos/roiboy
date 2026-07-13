@@ -93,7 +93,7 @@ export default function EternumAttendance() {
         if (c && !uniq.has(c.id)) uniq.set(c.id, c);
       });
       const list = Array.from(uniq.values()).sort((a, b) =>
-        a.name.localeCompare(b.name, "pt-BR"),
+        a.full_name.localeCompare(b.full_name, "pt-BR"),
       );
       setClients(list);
       setLoadingClients(false);
