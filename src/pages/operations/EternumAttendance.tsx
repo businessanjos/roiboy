@@ -18,6 +18,39 @@ const ETERNUM_CLUB_PRODUCT_IDS = [
   "b8c50eca-6fd9-41ac-a1d3-f78086daaea7", // Eternum Club
   "6f74bb43-a1be-410f-a708-6abab066bb38", // Ren. Eternum Club
 ];
+const ETERNUM_PRIVATE_PRODUCT_IDS = [
+  "ab609e84-9c61-4e0b-9559-212010d9be83", // Eternum Private
+  "b7ba9aa5-42fd-4419-b813-5de646d6711c", // Ren. Eternum Private
+];
+const ETERNUM_MVP_PRODUCT_IDS = [
+  "8e8b0cc7-6965-4241-9aab-b959e7fc7893", // Eternum MVP
+];
+const ALL_ETERNUM_PRODUCT_IDS = [
+  ...ETERNUM_CLUB_PRODUCT_IDS,
+  ...ETERNUM_PRIVATE_PRODUCT_IDS,
+  ...ETERNUM_MVP_PRODUCT_IDS,
+];
+
+type EventAudience = "private" | "mvp" | "club";
+
+function getEventAudience(title: string | null | undefined): EventAudience {
+  const t = (title || "").toLowerCase();
+  if (t.includes("private")) return "private";
+  if (t.includes("mvp")) return "mvp";
+  return "club";
+}
+
+const AUDIENCE_LABEL: Record<EventAudience, string> = {
+  private: "Eternum Private",
+  mvp: "Eternum MVP",
+  club: "Eternum Club",
+};
+
+const AUDIENCE_PRODUCT_IDS: Record<EventAudience, string[]> = {
+  private: ETERNUM_PRIVATE_PRODUCT_IDS,
+  mvp: ETERNUM_MVP_PRODUCT_IDS,
+  club: ETERNUM_CLUB_PRODUCT_IDS,
+};
 
 interface EventRow {
   id: string;
@@ -31,6 +64,7 @@ interface ClientRow {
   id: string;
   full_name: string;
   logo_url: string | null;
+  productIds: Set<string>;
 }
 
 export default function EternumAttendance() {
