@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, ExternalLink, CalendarIcon } from "lucide-react";
+import { Users, Search, ExternalLink, CalendarIcon, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { formatBRLPrecise } from "@/lib/financial-format";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { format, startOfMonth, startOfQuarter, startOfYear, endOfMonth, endOfQuarter, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
+import { ActiveClientContractSheet } from "@/components/financial/ActiveClientContractSheet";
 
 type DatePreset = "recent" | "month" | "quarter" | "year" | "custom";
 
