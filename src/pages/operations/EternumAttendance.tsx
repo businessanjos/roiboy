@@ -55,7 +55,7 @@ export default function EternumAttendance() {
       const { data, error } = await supabase
         .from("events")
         .select("id, title, scheduled_at, modality, status")
-        .ilike("title", "%eternum%")
+        .or("title.ilike.%eternum%,title.ilike.EC -%,title.ilike.EC-%,title.ilike.EC %")
         .order("scheduled_at", { ascending: false });
       if (error) {
         toast.error("Erro ao carregar eventos");
