@@ -196,7 +196,9 @@ export interface DealFieldValues {
   itemVenda?: string;
   formaPagamento?: string;
   descricaoNegociacao?: string;
+  parcelas?: number;
 }
+
 
 export async function fetchDealCustomFieldValues(dealId: string): Promise<DealFieldValues> {
   const { data } = await supabase
@@ -226,7 +228,15 @@ export async function fetchDealCustomFieldValues(dealId: string): Promise<DealFi
       case DEAL_FIELD_IDS.DESCRICAO_NEGOCIACAO:
         result.descricaoNegociacao = row.value_text || undefined;
         break;
+      case DEAL_FIELD_IDS.PARCELAS: {
+        const raw = row.value_text?.toString().trim() || '';
+        // Options store "1", "2", ..., "24" as value; also handle "11x" format defensively.
+        const parsed = parseInt(raw.replace(/[^\d]/g, ''), 10);
+        if (!isNaN(parsed) && parsed > 0) result.parcelas = parsed;
+        break;
+      }
     }
+
   });
   
   console.log('[DealMapping] Fetched deal field values for deal:', dealId, result);
