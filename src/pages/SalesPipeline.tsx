@@ -1691,7 +1691,63 @@ export default function SalesPipeline() {
               createdByUserId: currentUser.id,
               accountId: currentUser.account_id,
             });
+
+            // STEP 5.2: Auto-generate installments in financial if we have enough data.
+            // Rule: total to installment = deal.value − received_value (Cash Collect entry).
+            // First due date = today (won moment) + 30 days. Sales team can still adjust
+            // manually in the contract's "Negociação" tab if needed.
+            try {
+              const totalValue = Number(deal.value) || 0;
+              const received = Number(deal.received_value) || 0;
+              const toInstallment = Math.max(0, totalValue - received);
+              const parcelas = dealFieldValues.parcelas || 0;
+              const paymentMethod = contractDataFromDeal.payment_method;
+
+              if (parcelas > 0 && toInstallment > 0 && paymentMethod) {
+                const firstDue = addDays(new Date(), 30);
+                const per = Math.round((toInstallment / parcelas) * 100) / 100;
+                const installments_detail = Array.from({ length: parcelas }).map((_, i) => ({
+                  amount: per,
+                  due_date: format(addMonths(firstDue, i), "yyyy-MM-dd"),
+                  method: paymentMethod,
+                }));
+
+                const { error: prepErr } = await supabase
+                  .from("client_contracts")
+                  .update({
+                    installments_count: parcelas,
+                    first_due_date: format(firstDue, "yyyy-MM-dd"),
+                    installments_detail,
+                  })
+                  .eq("id", newContract.id);
+
+                if (prepErr) {
+                  console.error("[MarkAsWon] Auto-installments prep error:", prepErr);
+                } else {
+                  const { error: flagErr } = await supabase
+                    .from("client_contracts")
+                    .update({
+                      receivables_generated: true,
+                      receivables_generated_at: new Date().toISOString(),
+                    })
+                    .eq("id", newContract.id);
+
+                  if (flagErr) {
+                    console.error("[MarkAsWon] Auto-installments flag error:", flagErr);
+                  } else {
+                    console.log(`[MarkAsWon] Auto-generated ${parcelas} installment(s) of R$ ${per} starting ${format(firstDue, "dd/MM/yyyy")}`);
+                    toast.success(`${parcelas} parcela(s) geradas automaticamente no financeiro`);
+                  }
+                }
+              } else {
+                console.log("[MarkAsWon] Skipping auto-installments:", { parcelas, toInstallment, paymentMethod });
+              }
+            } catch (autoErr) {
+              console.error("[MarkAsWon] Error auto-generating installments:", autoErr);
+              // Non-blocking — user can still generate manually in the Negociação tab.
+            }
           }
+
         }
       }
 
