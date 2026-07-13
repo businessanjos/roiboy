@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, ExternalLink, CalendarIcon, Eye } from "lucide-react";
+import { Users, Search, ExternalLink, CalendarIcon, Eye, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { formatBRLPrecise } from "@/lib/financial-format";
@@ -19,6 +19,8 @@ import { format, startOfMonth, startOfQuarter, startOfYear, endOfMonth, endOfQua
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { ActiveClientContractSheet } from "@/components/financial/ActiveClientContractSheet";
+import { CancelDelinquentDialog } from "@/components/financial/CancelDelinquentDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 type DatePreset = "recent" | "month" | "quarter" | "year" | "custom";
 
@@ -104,6 +106,8 @@ export default function FinancialActiveClientsPage() {
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [productFilter, setProductFilter] = useState<string>("all");
   const [detailRow, setDetailRow] = useState<Row | null>(null);
+  const [cancelRow, setCancelRow] = useState<Row | null>(null);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     enabled: !!accountId,
@@ -519,6 +523,15 @@ export default function FinancialActiveClientsPage() {
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setCancelRow(r)}
+                            title="Cancelar por inadimplência / Renegociar"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                          >
+                            <Ban className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -537,6 +550,26 @@ export default function FinancialActiveClientsPage() {
         productName={detailRow?.product_name}
         productColor={detailRow?.product_color}
         onClose={() => setDetailRow(null)}
+      />
+
+      <CancelDelinquentDialog
+        target={
+          cancelRow
+            ? {
+                contract_id: cancelRow.contract_id,
+                client_id: cancelRow.client_id,
+                client_name: cancelRow.client_name,
+                product_name: cancelRow.product_name,
+                total_value: cancelRow.total_value,
+                total_received: cancelRow.total_received,
+              }
+            : null
+        }
+        open={!!cancelRow}
+        onOpenChange={(o) => !o && setCancelRow(null)}
+        onDone={() => {
+          queryClient.invalidateQueries({ queryKey: ["financial-active-clients"] });
+        }}
       />
     </div>
   );
