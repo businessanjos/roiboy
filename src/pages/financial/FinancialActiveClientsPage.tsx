@@ -551,6 +551,26 @@ export default function FinancialActiveClientsPage() {
         productColor={detailRow?.product_color}
         onClose={() => setDetailRow(null)}
       />
+
+      <CancelDelinquentDialog
+        target={
+          cancelRow
+            ? {
+                contract_id: cancelRow.contract_id,
+                client_id: cancelRow.client_id,
+                client_name: cancelRow.client_name,
+                product_name: cancelRow.product_name,
+                total_value: cancelRow.total_value,
+                total_received: cancelRow.total_received,
+              }
+            : null
+        }
+        open={!!cancelRow}
+        onOpenChange={(o) => !o && setCancelRow(null)}
+        onDone={() => {
+          queryClient.invalidateQueries({ queryKey: ["financial-active-clients"] });
+        }}
+      />
     </div>
   );
 }
