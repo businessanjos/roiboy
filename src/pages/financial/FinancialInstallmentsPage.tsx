@@ -165,7 +165,7 @@ export default function FinancialInstallmentsPage() {
       let query = supabase
         .from("installments")
         .select(
-          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
+          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
         )
         .order("due_date", { ascending: true })
         .limit(500);
@@ -182,37 +182,38 @@ export default function FinancialInstallmentsPage() {
 
       const list = (data ?? []) as any as InstallmentRow[];
 
-      // Fetch clients in a single batch and hydrate onto rows (avoids PostgREST
-      // nested embed edge cases that were returning empty client objects).
+      // Batch-fetch clients (avoids PostgREST nested embed edge cases).
       const clientIds = Array.from(
-        new Set(
-          list
-            .map((r) => r.invoices?.client_id)
-            .filter((v): v is string => !!v)
-        )
+        new Set(list.map((r) => r.invoices?.client_id).filter((v): v is string => !!v))
+      );
+      const productIds = Array.from(
+        new Set(list.map((r) => r.invoices?.product_id).filter((v): v is string => !!v))
       );
 
-      if (clientIds.length > 0) {
-        const { data: clients, error: cErr } = await supabase
-          .from("clients")
-          .select("id, full_name, cpf, cnpj, company_name")
-          .in("id", clientIds);
+      const [clientsRes, productsRes] = await Promise.all([
+        clientIds.length
+          ? supabase.from("clients").select("id, full_name, cpf, cnpj, company_name").in("id", clientIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        productIds.length
+          ? supabase.from("products").select("id, name, color").in("id", productIds)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
 
-        if (cErr) {
-          console.error("[FinancialInstallments] clients batch error:", cErr);
-        } else {
-          const byId = new Map((clients ?? []).map((c: any) => [c.id, c]));
-          list.forEach((r) => {
-            if (r.invoices?.client_id) {
-              r.invoices.clients = byId.get(r.invoices.client_id) ?? null;
-            }
-          });
-        }
-      }
+      if (clientsRes.error) console.error("[FinancialInstallments] clients batch error:", clientsRes.error);
+      if (productsRes.error) console.error("[FinancialInstallments] products batch error:", productsRes.error);
+
+      const clientsById = new Map((clientsRes.data ?? []).map((c: any) => [c.id, c]));
+      const productsById = new Map((productsRes.data ?? []).map((p: any) => [p.id, p]));
+
+      list.forEach((r) => {
+        if (r.invoices?.client_id) r.invoices.clients = clientsById.get(r.invoices.client_id) ?? null;
+        if (r.invoices?.product_id) r.invoices.product = productsById.get(r.invoices.product_id) ?? null;
+      });
 
       return list;
     },
   });
+
 
 
   const filtered = useMemo(() => {
