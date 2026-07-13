@@ -111,6 +111,7 @@ export const sectors: Sector[] = [
       { to: "/vips", icon: Crown, label: "VIPs", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/renewals", icon: Repeat, label: "Renovações", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/operations/presenca-eventos", icon: UserCheck, label: "Presença em Eventos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/operations/consultant-bonus", icon: Trophy, label: "Premiação & Bônus" },
       { to: "/operations/scripts", icon: MessageSquare, label: "Scripts" },
       { to: "/operations/instagram-ranking", icon: Instagram, label: "Ranking Instagram" },
