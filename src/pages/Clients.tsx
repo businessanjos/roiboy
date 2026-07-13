@@ -307,9 +307,6 @@ export default function Clients() {
   const [importing, setImporting] = useState(false);
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
 
-  // Bulk Omie Sync state
-  const [bulkSyncing, setBulkSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, success: 0, failed: 0 });
   const [syncingProducts, setSyncingProducts] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1230,50 +1227,8 @@ export default function Clients() {
     URL.revokeObjectURL(url);
   };
 
-  const handleBulkOmieSync = async () => {
-    if (clients.length === 0) {
-      toast.error("Nenhum cliente para sincronizar");
-      return;
-    }
 
-    setBulkSyncing(true);
-    setSyncProgress({ current: 0, total: clients.length, success: 0, failed: 0 });
 
-    let success = 0;
-    let failed = 0;
-
-    for (let i = 0; i < clients.length; i++) {
-      const client = clients[i];
-      setSyncProgress(prev => ({ ...prev, current: i + 1 }));
-
-      try {
-        const { error } = await supabase.functions.invoke('sync-omie', {
-          body: { client_id: client.id }
-        });
-
-        if (error) {
-          console.error(`Sync failed for ${client.full_name}:`, error);
-          failed++;
-        } else {
-          success++;
-        }
-      } catch (err) {
-        console.error(`Sync error for ${client.full_name}:`, err);
-        failed++;
-      }
-    }
-
-    setSyncProgress(prev => ({ ...prev, success, failed }));
-    setBulkSyncing(false);
-
-    if (failed === 0) {
-      toast.success(`${success} cliente(s) sincronizado(s) com sucesso!`);
-    } else {
-      toast.warning(`Sincronização concluída: ${success} sucesso, ${failed} falha(s)`);
-    }
-
-    fetchClients();
-  };
 
   // Sync products from contracts to client_products
   const syncProductsFromContracts = async () => {

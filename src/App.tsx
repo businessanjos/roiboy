@@ -211,12 +211,12 @@ const FinancialBalanceSheetPage = lazyRetry(() => import("./pages/financial/Fina
 const FinancialInvoicesPage = lazyRetry(() => import("./pages/financial/FinancialInvoicesPage"));
 const FinancialInstallmentsPage = lazyRetry(() => import("./pages/financial/FinancialInstallmentsPage"));
 const FinancialPaymentMethodsPage = lazyRetry(() => import("./pages/financial/FinancialPaymentMethodsPage"));
-const FinancialOmieIntegrationPage = lazyRetry(() => import("./pages/financial/FinancialOmieIntegrationPage"));
+
 const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/FinancialPluggyStatusPage"));
 const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
 const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
 const FinancialCollectionsRulerPage = lazyRetry(() => import("./pages/financial/FinancialCollectionsRulerPage"));
-const FinancialTaxPage = lazyRetry(() => import("./pages/financial/FinancialTaxPage"));
+
 const FinancialProvidersPortalPage = lazyRetry(() => import("./pages/financial/FinancialProvidersPortalPage"));
 const FinancialPayersPage = lazyRetry(() => import("./pages/financial/FinancialPayersPage"));
 const FinancialFiscalSettingsPage = lazyRetry(() => import("./pages/financial/FinancialFiscalSettingsPage"));
@@ -340,12 +340,10 @@ const App = () => (
                               <Route path="notas-fiscais" element={<FinancialNotasFiscaisPage />} />
                               <Route path="balance-sheet" element={<FinancialBalanceSheetPage />} />
                               <Route path="payment-methods" element={<FinancialPaymentMethodsPage />} />
-                              <Route path="integracoes/omie" element={<FinancialOmieIntegrationPage />} />
                               <Route path="integracoes/pluggy" element={<FinancialPluggyStatusPage />} />
                               <Route path="importar" element={<FinancialImportPage />} />
                               <Route path="cobranca" element={<FinancialDunningKanbanPage />} />
                               <Route path="regua-cobranca" element={<FinancialCollectionsRulerPage />} />
-                              <Route path="tributario" element={<FinancialTaxPage />} />
                               <Route path="prestadores" element={<FinancialProvidersPortalPage />} />
                               <Route path="pagadores" element={<FinancialPayersPage />} />
                               <Route path="configuracoes/fiscal" element={<FinancialFiscalSettingsPage />} />

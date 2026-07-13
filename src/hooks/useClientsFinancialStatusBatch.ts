@@ -29,7 +29,7 @@ function classify(s: Omit<BatchClientFinancialStatus, "risk" | "client_id">): Fi
 
 /**
  * Hook em batch: status financeiro de muitos clientes em uma query única,
- * lendo direto de financial_entries (alimentado por Operações + Omie).
+ * lendo direto de financial_entries (alimentado por Operações e lançamentos manuais).
  */
 export function useClientsFinancialStatusBatch(clientIds: string[]) {
   const ids = [...new Set(clientIds.filter(Boolean))].sort();

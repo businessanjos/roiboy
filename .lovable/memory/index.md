@@ -13,6 +13,7 @@
 - Product Badges: Sempre exibir produto em tabelas/listas como Badge colorida usando `products.color` (SELECT inclui color, fallback #6b7280, nunca cinza genérico).
 - Open Finance: Pluggy é o integrador padrão (substitui banco.mcp.ai). Edge functions `pluggy-*`, dialog `PluggyConnectDialog`, discriminador `bank_accounts.openfinance_provider`.
 - NFS-e: Emissão via Notazz (`NOTAZZ_API_KEY`). Edge `nfse-issue`/`nfse-webhook`, config em `/financial/configuracoes/fiscal`, componente `<EmitirNFButton>`.
+- Omie: integração 100% removida (tabelas, edge functions, páginas Omie/Tributário, colunas `omie_*`). Financeiro vive só de Comercial/CS + manuais + importadores. Não recriar.
 
 ## Memories
 
@@ -101,8 +102,7 @@
 - [Insights External Access](mem://features/insights/external-access-credentials-pt) — Password-protected viewer panels
 - [Financial Reconciliation](mem://features/financial/reconciliation-usability-pt) — Mandatory client/origin display
 - [Financial Sidebar Layout](mem://style/navigation/financial-sidebar-unification-v2-pt) — Main sidebar unification
-- [ROY Financial Roadmap](mem://features/financial/roy-financial-roadmap-pt) — Blueprint multi-CNPJ + Pagador separado + parcelas imutáveis
-- [Tributário & Contador](mem://features/financial/tax-and-accountant-pt) — Área /financial/tributario com regime, contador e alertas de IA
+- [ROY Financial Roadmap](mem://features/financial/roy-financial-roadmap-pt) — Financeiro nativo pós-remoção Omie; dados vêm de Comercial/CS + lançamentos manuais + importadores
 - [Portal de Prestadores](mem://features/financial/providers-portal-pt) — Link público /portal/prestador/:token para envio mensal de NF + dados bancários
 - [Payers & Cross-feed](mem://features/financial/payers-and-cross-feed-pt) — Pagadores (CRUD /financial/pagadores + PayerSelector + ensure_payer_from_client), quitação automática de contrato, write-off por cancelamento, badge "pronto p/ renovar"
 - [NFS-e Emission Notazz](mem://features/financial/nfse-emission-notazz-pt) — Emissão NFS-e via Notazz: contratadas + nfse_issuances, trigger on_payment, edge functions nfse-issue/nfse-webhook, página /financial/configuracoes/fiscal, componente EmitirNFButton
@@ -137,8 +137,6 @@
 - [Custom RSVP Forms](mem://features/events/customizable-rsvp-forms) — JSONB custom form fields
 - [Typeform/n8n Ingestion](mem://integrations/n8n-typeform-api-endpoints) — Edge functions for lead creation
 - [Google Calendar No-Show Sync](mem://integrations/calendar/no-show-sync) — Auto-syncs red calendar events
-- [Omie Identity Matching](mem://integrations/omie/client-identity-validation-pt) — CPF/CNPJ and Name cross-validation
-- [Omie Financial Bridge Page](mem://integrations/omie/financial-bridge-page-pt) — Página /financial/integracoes/omie
 - [YouTube Analytics Sync](mem://features/marketing/youtube-integration-pt) — Tracking videos/shorts/lives
 - [Campaign Forms (Formulários Roy)](mem://features/marketing/campaign-forms-pt) — Substitui Typeform: /c/:slug + tracking funil/UTM/abandono na aba "Formulários Roy" de /marketing/trafego-pago
 - [Content HQ](mem://features/marketing/content-hq-pt) — Área /marketing/content-hq Bruna+Everton, multi-plataforma, IA gera estratégia/pautas/briefings

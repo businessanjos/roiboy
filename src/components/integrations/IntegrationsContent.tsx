@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { WebhooksTab } from "./webhooks/WebhooksTab";
 import { ThreeCPlusAgentConfig } from "./ThreeCPlusAgentConfig";
-import { OmieIntegrationTab } from "./OmieIntegrationTab";
+
 import { GoogleDriveCard } from "./GoogleDriveCard";
 
 import type { Tables } from "@/integrations/supabase/types";
@@ -41,7 +41,6 @@ const integrations_list = [
   { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video },
   { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar },
   { id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone },
-  { id: "omie", name: "Omie", description: "Integração com ERP Omie para Ordens de Serviço", icon: Building },
 ];
 
 export function IntegrationsContent() {
@@ -490,10 +489,6 @@ export function IntegrationsContent() {
               <Phone className="h-4 w-4" />
               <span>3C Plus</span>
             </TabsTrigger>
-            <TabsTrigger value="omie" className="gap-2 px-3 py-2">
-              <Building className="h-4 w-4" />
-              <span>Omie</span>
-            </TabsTrigger>
             <TabsTrigger value="gdrive" className="gap-2 px-3 py-2">
               <Cloud className="h-4 w-4" />
               <span>Google Drive</span>
@@ -911,10 +906,7 @@ export function IntegrationsContent() {
           )}
         </TabsContent>
 
-        {/* Omie Tab */}
-        <TabsContent value="omie" className="space-y-4">
-          <OmieIntegrationTab />
-        </TabsContent>
+
 
         {/* Google Drive Tab */}
         <TabsContent value="gdrive" className="space-y-4">

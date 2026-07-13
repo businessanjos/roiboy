@@ -141,7 +141,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const [financialEntries, setFinancialEntries] = useState<FinancialEntry[]>([]);
   const [clientData, setClientData] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
+  
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
@@ -357,35 +357,6 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     };
   }, [clientId]);
 
-  const handleSyncOmie = async () => {
-    setSyncing(true);
-    try {
-      const response = await supabase.functions.invoke('sync-omie', {
-        body: { client_id: clientId },
-      });
-
-      if (response.error) throw response.error;
-
-      const result = response.data;
-      
-      if (result.synced > 0) {
-        toast.success(`Sincronizado com sucesso! Status atualizado.`);
-      } else if (result.details?.[0]?.status === 'not_found') {
-        toast.warning('Cliente não encontrado na Omie. Verifique se o telefone/nome está correto.');
-      } else if (result.details?.[0]?.status === 'no_receivables') {
-        toast.info('Nenhuma conta a receber encontrada na Omie para este cliente.');
-      } else {
-        toast.info('Sincronização concluída.');
-      }
-      
-      fetchSubscriptions();
-    } catch (error: any) {
-      console.error('Error syncing with Omie:', error);
-      toast.error(error.message || 'Erro ao sincronizar com Omie');
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const handleEditNote = (sub: Subscription) => {
     setEditingNoteId(sub.id);
@@ -601,19 +572,6 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
               Novo Lançamento
             </Button>
           )}
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={handleSyncOmie}
-            disabled={syncing}
-          >
-            {syncing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Sincronizar Omie
-          </Button>
         </div>
       </div>
 
@@ -842,7 +800,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Package className="h-4 w-4" />
-                Omie / Manual
+                Lançamentos manuais
               </div>
               
               <div className="space-y-3">

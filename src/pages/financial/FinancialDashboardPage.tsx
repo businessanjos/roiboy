@@ -37,7 +37,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import OmieDashboardSection from "@/components/financial/OmieDashboardSection";
+
 import { FinancialPageHeader, FinancialKpiCard, FinancialEmptyState } from "@/components/financial/_shared";
 import { formatBRL, formatBRLCompact, formatAxisBRL, formatPct } from "@/lib/financial-format";
 
@@ -143,7 +143,7 @@ export default function FinancialDashboardPage() {
         description={`Visão consolidada do mês — ${format(new Date(), "dd 'de' MMMM, yyyy", { locale: ptBR })}`}
       />
 
-      <OmieDashboardSection />
+      
 
       {/* ===== Seção 1 — Saúde do mês ===== */}
       <section className="space-y-3">
