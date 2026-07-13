@@ -440,11 +440,11 @@ export default function EternumAttendance() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="h-4 w-4" /> Clientes ativos — Eternum Club
+                  <Users className="h-4 w-4" /> Clientes ativos — {AUDIENCE_LABEL[audience]}
                 </CardTitle>
                 {selectedEvent && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {selectedEvent.title} · {presentCount} de {clients.length} presentes
+                    {selectedEvent.title} · {presentCount} de {eligibleClients.length} presentes
                   </p>
                 )}
               </div>
