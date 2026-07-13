@@ -196,7 +196,9 @@ export interface DealFieldValues {
   itemVenda?: string;
   formaPagamento?: string;
   descricaoNegociacao?: string;
+  parcelas?: number;
 }
+
 
 export async function fetchDealCustomFieldValues(dealId: string): Promise<DealFieldValues> {
   const { data } = await supabase
