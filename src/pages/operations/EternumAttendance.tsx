@@ -230,11 +230,21 @@ export default function EternumAttendance() {
     });
   }, [events, eventSearch, modalityFilter, statusFilter]);
 
+  const audience = useMemo<EventAudience>(
+    () => getEventAudience(selectedEvent?.title),
+    [selectedEvent],
+  );
+
+  const eligibleClients = useMemo(() => {
+    const productIds = AUDIENCE_PRODUCT_IDS[audience];
+    return clients.filter((c) => productIds.some((p) => c.productIds.has(p)));
+  }, [clients, audience]);
+
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter((c) => c.full_name.toLowerCase().includes(q));
-  }, [clients, search]);
+    if (!q) return eligibleClients;
+    return eligibleClients.filter((c) => c.full_name.toLowerCase().includes(q));
+  }, [eligibleClients, search]);
 
   const presentCount = attendanceSet.size;
 
