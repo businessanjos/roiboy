@@ -127,7 +127,10 @@ export default function FinancialActiveClientsPage() {
       const dealIds = [...new Set((contracts || []).map((c) => c.deal_id).filter(Boolean))];
       const contractIds = [...new Set((contracts || []).map((c) => c.id).filter(Boolean))];
 
-      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes, entriesRes] = await Promise.all([
+      // Custom field IDs (see src/utils/dealToClientContractMapping.ts)
+      const VALOR_ENTRADA_FIELD_ID = "86c93211-5013-48a6-affe-e53d81931cb6";
+
+      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes, entriesRes, entradaFieldRes] = await Promise.all([
         clientIds.length
           ? supabase.from("clients").select("id, full_name, company_name, sales_user_id").in("id", clientIds as string[])
           : Promise.resolve({ data: [], error: null } as any),
@@ -137,14 +140,14 @@ export default function FinancialActiveClientsPage() {
         dealIds.length
           ? supabase
               .from("deals")
-              .select("id, client_id, responsible_user_id, sdr_user_id, entry_value, status, won_at, created_at")
+              .select("id, client_id, responsible_user_id, sdr_user_id, entry_value, received_value, status, won_at, created_at")
               .in("id", dealIds as string[])
           : Promise.resolve({ data: [], error: null } as any),
         supabase.from("payment_methods").select("id, name").eq("account_id", accountId),
         clientIds.length
           ? supabase
               .from("deals")
-              .select("id, client_id, responsible_user_id, sdr_user_id, entry_value, status, won_at, created_at")
+              .select("id, client_id, responsible_user_id, sdr_user_id, entry_value, received_value, status, won_at, created_at")
               .in("client_id", clientIds as string[])
               .order("won_at", { ascending: false, nullsFirst: false })
           : Promise.resolve({ data: [], error: null } as any),
@@ -156,7 +159,25 @@ export default function FinancialActiveClientsPage() {
               .eq("entry_type", "receivable")
               .neq("status", "cancelled")
           : Promise.resolve({ data: [], error: null } as any),
+        dealIds.length
+          ? supabase
+              .from("deal_field_values")
+              .select("deal_id, value_number, value_text")
+              .in("deal_id", dealIds as string[])
+              .eq("field_id", VALOR_ENTRADA_FIELD_ID)
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
+
+      // Map deal_id -> Valor de Entrada (custom field), preferring value_number
+      const entradaByDealId = new Map<string, number>();
+      (entradaFieldRes.data || []).forEach((row: any) => {
+        const n = row.value_number != null
+          ? Number(row.value_number)
+          : row.value_text != null
+            ? Number(String(row.value_text).replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", "."))
+            : NaN;
+        if (!Number.isNaN(n) && n > 0 && row.deal_id) entradaByDealId.set(row.deal_id, n);
+      });
 
       // Aggregate receivable entries per contract
       type Agg = { count: number; paid: number; received: number };
