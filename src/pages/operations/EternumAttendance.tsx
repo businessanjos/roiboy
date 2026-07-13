@@ -227,6 +227,23 @@ export default function EternumAttendance() {
               onChange={(e) => setEventSearch(e.target.value)}
               className="h-8"
             />
+            <div className="flex gap-1 mt-1">
+              {([
+                { id: "all", label: "Todos" },
+                { id: "online", label: "Online" },
+                { id: "presencial", label: "Presencial" },
+              ] as const).map((opt) => (
+                <Button
+                  key={opt.id}
+                  size="sm"
+                  variant={modalityFilter === opt.id ? "default" : "outline"}
+                  className="h-7 px-2 text-xs flex-1"
+                  onClick={() => setModalityFilter(opt.id)}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+            </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-0">
             <ScrollArea className="h-full">
