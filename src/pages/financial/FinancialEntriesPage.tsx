@@ -86,7 +86,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
 import { formatBRLCompact } from "@/lib/financial-format";
-import { Receipt as ReceiptIcon, Wallet as WalletIcon } from "lucide-react";
+import { Receipt as ReceiptIcon, Wallet as WalletIcon, RefreshCw } from "lucide-react";
+import { RenegotiateEntryDialog } from "@/components/financial/RenegotiateEntryDialog";
 interface FinancialEntry {
   id: string;
   entry_type: "payable" | "receivable";
