@@ -581,17 +581,37 @@ export default function FinancialEntriesPage() {
         }
       />
 
-      {/* Month Navigation */}
-      <div className="flex items-center justify-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, -1))}>
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <span className="text-lg font-medium min-w-[180px] text-center">
-          {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-        </span>
-        <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-          <ChevronRight className="h-5 w-5" />
-        </Button>
+      {/* Period Navigation */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as any)}>
+          <SelectTrigger className="w-[170px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="month">Este mês</SelectItem>
+            <SelectItem value="quarter">Este trimestre</SelectItem>
+            <SelectItem value="year">Este ano</SelectItem>
+            <SelectItem value="all">Todo o período</SelectItem>
+          </SelectContent>
+        </Select>
+        {periodFilter !== "all" && (
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => shiftPeriod(-1)}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <span className="text-lg font-medium min-w-[200px] text-center capitalize">
+              {periodLabel}
+            </span>
+            <Button variant="ghost" size="icon" onClick={() => shiftPeriod(1)}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
+        {(periodFilter !== "month" || format(currentMonth, "yyyy-MM") !== format(new Date(), "yyyy-MM")) && (
+          <Button variant="outline" size="sm" onClick={() => { setPeriodFilter("month"); setCurrentMonth(new Date()); }}>
+            Hoje
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
