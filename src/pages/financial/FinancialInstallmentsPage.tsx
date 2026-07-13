@@ -50,6 +50,7 @@ import { EmitirNFButton } from "@/components/financial/nfse/EmitirNFButton";
 import { FileCheck, FilePlus2, Wallet, CheckCircle, Clock as ClockIcon } from "lucide-react";
 import { FinancialPageHeader, FinancialKpiCard, FinancialEmptyState } from "@/components/financial/_shared";
 import { formatBRLCompact } from "@/lib/financial-format";
+import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
 
 type InstallmentRow = {
   id: string;
@@ -180,7 +181,7 @@ export default function FinancialInstallmentsPage() {
           "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, contract_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
         )
         .order("due_date", { ascending: true })
-        .limit(500);
+        .limit(3000);
 
       if (currentCompanyId) {
         query = query.eq("invoices.company_id", currentCompanyId);
@@ -247,12 +248,12 @@ export default function FinancialInstallmentsPage() {
 
       const dealProductIdByDeal = new Map<string, string>();
       (dealFieldRes.data ?? []).forEach((row: any) => {
-        const uuidRegex =
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (row.value_text && uuidRegex.test(row.value_text)) {
-          dealProductIdByDeal.set(row.deal_id, row.value_text);
+        const resolved = resolveItemVendaToProductId(row.value_text);
+        if (resolved) {
+          dealProductIdByDeal.set(row.deal_id, resolved);
         }
       });
+
 
       // 3. Collect ALL product ids to fetch (invoice's own + deal-resolved)
       const productIds = Array.from(
