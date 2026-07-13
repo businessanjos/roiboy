@@ -29,7 +29,7 @@ interface EventRow {
 
 interface ClientRow {
   id: string;
-  name: string;
+  full_name: string;
   logo_url: string | null;
 }
 
@@ -77,7 +77,7 @@ export default function EternumAttendance() {
       setLoadingClients(true);
       const { data: contracts, error } = await supabase
         .from("client_contracts")
-        .select("client_id, clients!inner(id, name, logo_url)")
+        .select("client_id, clients!inner(id, full_name, logo_url)")
         .in("product_id", ETERNUM_CLUB_PRODUCT_IDS)
         .eq("status", "active");
 
@@ -93,7 +93,7 @@ export default function EternumAttendance() {
         if (c && !uniq.has(c.id)) uniq.set(c.id, c);
       });
       const list = Array.from(uniq.values()).sort((a, b) =>
-        a.name.localeCompare(b.name, "pt-BR"),
+        a.full_name.localeCompare(b.full_name, "pt-BR"),
       );
       setClients(list);
       setLoadingClients(false);
@@ -141,7 +141,7 @@ export default function EternumAttendance() {
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return clients;
-    return clients.filter((c) => c.name.toLowerCase().includes(q));
+    return clients.filter((c) => c.full_name.toLowerCase().includes(q));
   }, [clients, search]);
 
   const presentCount = attendanceSet.size;
@@ -377,11 +377,11 @@ export default function EternumAttendance() {
                             />
                           ) : (
                             <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                              {client.name.charAt(0).toUpperCase()}
+                              {client.full_name.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <span className="text-sm font-medium flex-1">
-                            {client.name}
+                            {client.full_name}
                           </span>
                           {present && (
                             <Badge variant="default" className="text-[10px]">
