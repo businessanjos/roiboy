@@ -77,7 +77,7 @@ export default function EternumAttendance() {
       setLoadingClients(true);
       const { data: contracts, error } = await supabase
         .from("client_contracts")
-        .select("client_id, clients!inner(id, name, logo_url)")
+        .select("client_id, clients!inner(id, full_name, logo_url)")
         .in("product_id", ETERNUM_CLUB_PRODUCT_IDS)
         .eq("status", "active");
 
