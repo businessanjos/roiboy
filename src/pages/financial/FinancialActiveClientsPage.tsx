@@ -226,6 +226,14 @@ export default function FinancialActiveClientsPage() {
             : fallbackDeal?.entry_value && Number(fallbackDeal.entry_value) > 0
               ? Number(fallbackDeal.entry_value)
               : null;
+        const agg = aggByContract.get(c.id);
+        const contractCount = Number(c.installments_count) || 0;
+        const detailCount = Array.isArray(c.installments_detail) ? c.installments_detail.length : 0;
+        const installmentsCount = Math.max(
+          contractCount,
+          detailCount,
+          agg?.count || 0
+        ) || null;
         return {
           contract_id: c.id,
           client_id: c.client_id,
@@ -236,7 +244,9 @@ export default function FinancialActiveClientsPage() {
           sales_rep: salesRep,
           payment_method: c.payment_method ? labelPayment(c.payment_method, pmMap) : null,
           entrada: finalEntrada,
-          installments_count: c.installments_count,
+          installments_count: installmentsCount,
+          installments_paid: agg?.paid || 0,
+          total_received: agg?.received || 0,
           installment_value: installmentValue,
           total_value: Number(c.value || 0),
           start_date: c.start_date || null,
