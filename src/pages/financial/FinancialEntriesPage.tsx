@@ -766,6 +766,18 @@ export default function FinancialEntriesPage() {
                                     Registrar Pagamento
                                   </DropdownMenuItem>
                                 )}
+                                {(entry.status === "paid" || entry.status === "partially_paid") && (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      if (confirm("Estornar este pagamento? O lançamento voltará para 'A vencer'.")) {
+                                        reverseMutation.mutate(entry.id);
+                                      }
+                                    }}
+                                  >
+                                    <Undo2 className="h-4 w-4 mr-2" />
+                                    Estornar Pagamento
+                                  </DropdownMenuItem>
+                                )}
                                 {entry.status === "paid" && !entry.is_conciliated && (
                                   <DropdownMenuItem onClick={() => conciliateMutation.mutate(entry.id)}>
                                     <Check className="h-4 w-4 mr-2" />
