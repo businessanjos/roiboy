@@ -362,6 +362,25 @@ export default function FinancialActiveClientsPage() {
                 <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={productFilter} onValueChange={setProductFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Produto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os produtos</SelectItem>
+                {productOptions.map((p) => (
+                  <SelectItem key={p.name} value={p.name}>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: p.color || "#6b7280" }}
+                      />
+                      {p.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {datePreset === "custom" && (
               <Popover>
                 <PopoverTrigger asChild>
