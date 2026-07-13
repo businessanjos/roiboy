@@ -489,9 +489,9 @@ export function IntegrationsContent() {
               <Phone className="h-4 w-4" />
               <span>3C Plus</span>
             </TabsTrigger>
-            <TabsTrigger value="omie" className="gap-2 px-3 py-2">
-              <Building className="h-4 w-4" />
-              <span>Omie</span>
+            <TabsTrigger value="gdrive" className="gap-2 px-3 py-2">
+              <Cloud className="h-4 w-4" />
+              <span>Google Drive</span>
             </TabsTrigger>
             <TabsTrigger value="gdrive" className="gap-2 px-3 py-2">
               <Cloud className="h-4 w-4" />
