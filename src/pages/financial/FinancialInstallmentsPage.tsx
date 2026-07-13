@@ -50,6 +50,7 @@ import { EmitirNFButton } from "@/components/financial/nfse/EmitirNFButton";
 import { FileCheck, FilePlus2, Wallet, CheckCircle, Clock as ClockIcon } from "lucide-react";
 import { FinancialPageHeader, FinancialKpiCard, FinancialEmptyState } from "@/components/financial/_shared";
 import { formatBRLCompact } from "@/lib/financial-format";
+import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
 
 type InstallmentRow = {
   id: string;
