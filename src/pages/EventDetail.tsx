@@ -34,7 +34,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Check
 } from "lucide-react";
 import {
   AlertDialog,
