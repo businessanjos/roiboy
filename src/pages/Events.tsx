@@ -1405,8 +1405,8 @@ export default function Events() {
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSubmit}>
-                {editingEvent ? "Salvar" : "Criar"}
+              <Button onClick={handleSubmit} disabled={saving}>
+                {saving ? "Salvando..." : editingEvent ? "Salvar" : "Criar"}
               </Button>
             </DialogFooter>
           </DialogContent>
