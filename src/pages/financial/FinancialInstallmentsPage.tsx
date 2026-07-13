@@ -60,11 +60,19 @@ type InstallmentRow = {
     id: string;
     company_id: string | null;
     account_id: string;
+    client_id: string | null;
     nf_number: string | null;
     nf_series: string | null;
     nf_status: string | null;
     nf_issued_at: string | null;
     nf_url: string | null;
+    clients?: {
+      id: string;
+      full_name: string | null;
+      cpf: string | null;
+      cnpj: string | null;
+      company_name: string | null;
+    } | null;
   };
 };
 
@@ -80,9 +88,45 @@ const STATUS_META: Record<string, { label: string; className: string; icon: any 
   partial: { label: "Parcial", className: "bg-amber-500/15 text-amber-600", icon: Clock },
 };
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  pix: "Pix",
+  boleto: "Boleto",
+  cartao: "Cartão",
+  cartao_credito: "Cartão de crédito",
+  cartao_debito: "Cartão de débito",
+  cartao_recorrencia: "Cartão recorrência",
+  cheque: "Cheque",
+  check: "Cheque",
+  cheques: "Cheques",
+  dinheiro: "Dinheiro",
+  transferencia: "Transferência",
+  ted: "TED",
+  doc: "DOC",
+  pix_cheques: "Pix + Cheques",
+  pix_cartao_cheques: "Pix + Cartão + Cheques",
+  pix_boleto_parcelado: "Pix + Boleto parcelado",
+  cartao_cheques: "Cartão + Cheques",
+  cartao_boleto_parcelado: "Cartão + Boleto parcelado",
+};
+
+function formatPaymentMethod(value: string | null): string {
+  if (!value) return "—";
+  const key = value.toLowerCase().trim();
+  if (PAYMENT_METHOD_LABELS[key]) return PAYMENT_METHOD_LABELS[key];
+  // Capitalize first letter as fallback
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function formatCnpj(cnpj: string): string {
+  const digits = cnpj.replace(/\D/g, "");
+  if (digits.length !== 14) return cnpj;
+  return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
+
 
 export default function FinancialInstallmentsPage() {
   const { currentUser } = useCurrentUser();
