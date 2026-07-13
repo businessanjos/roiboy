@@ -414,10 +414,21 @@ export default function SalesPipeline() {
           });
         });
 
+        const VALOR_ENTRADA_ID = '86c93211-5013-48a6-affe-e53d81931cb6';
         const map: Record<string, string[]> = {};
+        const dealById = new Map(wonDeals.map((d: any) => [d.id, d]));
         dealIds.forEach((id) => {
+          const deal: any = dealById.get(id);
+          const nativeEntrada =
+            (Number(deal?.entry_value) || 0) > 0 ||
+            (Number(deal?.received_value) || 0) > 0;
           const missing = NEGOTIATION_REQUIRED_FIELDS
-            .filter((f) => !filled[id]?.has(f.id))
+            .filter((f) => {
+              if (filled[id]?.has(f.id)) return false;
+              // Cash Collect / entry_value nativo do deal supre "Valor de Entrada"
+              if (f.id === VALOR_ENTRADA_ID && nativeEntrada) return false;
+              return true;
+            })
             .map((f) => f.label);
           if (missing.length > 0) map[id] = missing;
         });
