@@ -149,9 +149,18 @@ export default function EternumAttendance() {
     "híbrido": "Híbrido",
   };
 
-  const isCompletedStatus = (s: string | null) => {
+  const isCancelledStatus = (s: string | null) => {
     const v = (s || "").toLowerCase();
-    return v === "completed" || v === "done" || v === "finished";
+    return v === "cancelled" || v === "canceled";
+  };
+
+  const isEventCompleted = (e: EventRow) => {
+    const v = (e.status || "").toLowerCase();
+    if (v === "completed" || v === "done" || v === "finished") return true;
+    if (isCancelledStatus(e.status)) return false;
+    // Past-dated events without explicit status are treated as completed
+    if (e.scheduled_at && new Date(e.scheduled_at).getTime() < Date.now()) return true;
+    return false;
   };
 
   const filteredEvents = useMemo(() => {
@@ -168,7 +177,7 @@ export default function EternumAttendance() {
           return false;
       }
       if (statusFilter !== "all") {
-        const done = isCompletedStatus(e.status);
+        const done = isEventCompleted(e);
         if (statusFilter === "completed" && !done) return false;
         if (statusFilter === "open" && done) return false;
       }
