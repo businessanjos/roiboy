@@ -217,15 +217,28 @@ export default function FinancialInstallmentsPage() {
 
 
 
-  // Distinct products present in the loaded rows (for the product filter dropdown)
-  const availableProducts = useMemo(() => {
-    const map = new Map<string, { id: string; name: string }>();
-    rows.forEach((r) => {
-      const p = r.invoices?.product;
-      if (p?.id && p?.name) map.set(p.id, { id: p.id, name: p.name });
-    });
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  }, [rows]);
+  // Product options for the filter — pulled from the products catalog so the
+  // list matches the rest of the app (Sales, Contracts, etc.) even when the
+  // current installments view has 0 rows for a product.
+  const { data: availableProducts = [] } = useQuery({
+    queryKey: ["financial-installments-products", accountId],
+    enabled: !!accountId,
+    queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, is_active")
+        .eq("account_id", accountId!)
+        .order("name", { ascending: true });
+      if (error) {
+        console.error("[FinancialInstallments] products list error:", error);
+        return [];
+      }
+      return (data ?? [])
+        .filter((p: any) => p.is_active !== false)
+        .map((p: any) => ({ id: p.id, name: p.name }));
+    },
+  });
+
 
   const dateInterval = useMemo(() => {
     const now = new Date();
