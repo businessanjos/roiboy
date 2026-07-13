@@ -310,9 +310,9 @@ export default function EternumAttendance() {
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Presença em Eventos — Eternum Club</h1>
+        <h1 className="text-2xl font-bold">Presença em Eventos — Eternum</h1>
         <p className="text-sm text-muted-foreground">
-          Marque a presença dos clientes ativos do Eternum Club nos eventos.
+          Marque a presença dos clientes ativos nos eventos. A lista se adapta ao público do evento (Club, Private ou MVP).
         </p>
       </div>
 
