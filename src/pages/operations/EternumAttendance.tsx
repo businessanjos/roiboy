@@ -14,43 +14,11 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const ETERNUM_CLUB_PRODUCT_IDS = [
-  "b8c50eca-6fd9-41ac-a1d3-f78086daaea7", // Eternum Club
-  "6f74bb43-a1be-410f-a708-6abab066bb38", // Ren. Eternum Club
-];
-const ETERNUM_PRIVATE_PRODUCT_IDS = [
-  "ab609e84-9c61-4e0b-9559-212010d9be83", // Eternum Private
-  "b7ba9aa5-42fd-4419-b813-5de646d6711c", // Ren. Eternum Private
-];
-const ETERNUM_MVP_PRODUCT_IDS = [
-  "8e8b0cc7-6965-4241-9aab-b959e7fc7893", // Eternum MVP
-];
-const ALL_ETERNUM_PRODUCT_IDS = [
-  ...ETERNUM_CLUB_PRODUCT_IDS,
-  ...ETERNUM_PRIVATE_PRODUCT_IDS,
-  ...ETERNUM_MVP_PRODUCT_IDS,
-];
-
-type EventAudience = "private" | "mvp" | "club";
-
-function getEventAudience(title: string | null | undefined): EventAudience {
-  const t = (title || "").toLowerCase();
-  if (t.includes("private")) return "private";
-  if (t.includes("mvp")) return "mvp";
-  return "club";
+interface ProductLite {
+  id: string;
+  name: string;
+  color: string | null;
 }
-
-const AUDIENCE_LABEL: Record<EventAudience, string> = {
-  private: "Eternum Private",
-  mvp: "Eternum MVP",
-  club: "Eternum Club",
-};
-
-const AUDIENCE_PRODUCT_IDS: Record<EventAudience, string[]> = {
-  private: ETERNUM_PRIVATE_PRODUCT_IDS,
-  mvp: ETERNUM_MVP_PRODUCT_IDS,
-  club: ETERNUM_CLUB_PRODUCT_IDS,
-};
 
 interface EventRow {
   id: string;
@@ -58,6 +26,7 @@ interface EventRow {
   scheduled_at: string | null;
   modality: string;
   status: string | null;
+  productIds: string[];
 }
 
 interface ClientRow {
@@ -67,11 +36,31 @@ interface ClientRow {
   productIds: Set<string>;
 }
 
+const PRODUCT_BADGE_FALLBACK = "#6b7280";
+
+function ProductBadge({ product }: { product: ProductLite }) {
+  const color = product.color || PRODUCT_BADGE_FALLBACK;
+  return (
+    <Badge
+      variant="outline"
+      className="text-[10px] py-0 font-medium"
+      style={{
+        backgroundColor: `${color}20`,
+        borderColor: color,
+        color,
+      }}
+    >
+      {product.name}
+    </Badge>
+  );
+}
+
 export default function EternumAttendance() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
 
   const [events, setEvents] = useState<EventRow[]>([]);
+  const [productsById, setProductsById] = useState<Record<string, ProductLite>>({});
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [attendanceSet, setAttendanceSet] = useState<Set<string>>(new Set());
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -81,38 +70,81 @@ export default function EternumAttendance() {
   const [search, setSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
 
-  // Load Eternum events
+  // Load Eternum events + linked products
   useEffect(() => {
     if (!accountId) return;
     (async () => {
       setLoadingEvents(true);
       const { data, error } = await supabase
         .from("events")
-        .select("id, title, scheduled_at, modality, status")
+        .select(
+          "id, title, scheduled_at, modality, status, event_products(product_id, products(id, name, color))",
+        )
         .or("title.ilike.%eternum%,title.ilike.EC -%,title.ilike.EC-%,title.ilike.EC %")
         .order("scheduled_at", { ascending: false });
       if (error) {
         toast.error("Erro ao carregar eventos");
-      } else {
-        setEvents((data ?? []) as EventRow[]);
-        if (data && data.length > 0 && !selectedEventId) {
-          setSelectedEventId(data[0].id);
-        }
+        setLoadingEvents(false);
+        return;
+      }
+      const productMap: Record<string, ProductLite> = {};
+      const rows: EventRow[] = (data ?? []).map((e: any) => {
+        const productIds: string[] = [];
+        (e.event_products ?? []).forEach((ep: any) => {
+          if (!ep?.product_id) return;
+          productIds.push(ep.product_id);
+          if (ep.products && !productMap[ep.product_id]) {
+            productMap[ep.product_id] = {
+              id: ep.products.id,
+              name: ep.products.name,
+              color: ep.products.color ?? null,
+            };
+          }
+        });
+        return {
+          id: e.id,
+          title: e.title,
+          scheduled_at: e.scheduled_at,
+          modality: e.modality,
+          status: e.status,
+          productIds,
+        };
+      });
+      setEvents(rows);
+      setProductsById((prev) => ({ ...prev, ...productMap }));
+      if (rows.length > 0 && !selectedEventId) {
+        setSelectedEventId(rows[0].id);
       }
       setLoadingEvents(false);
     })();
      
   }, [accountId]);
 
-  // Load active Eternum Club clients
+  const selectedEvent = useMemo(
+    () => events.find((e) => e.id === selectedEventId) ?? null,
+    [events, selectedEventId],
+  );
+
+  const selectedProductIds = selectedEvent?.productIds ?? [];
+
+  // Load active clients whose contracts cover any product linked to the selected event
   useEffect(() => {
-    if (!accountId) return;
+    if (!accountId || !selectedEvent) {
+      setClients([]);
+      return;
+    }
+    if (selectedProductIds.length === 0) {
+      setClients([]);
+      return;
+    }
     (async () => {
       setLoadingClients(true);
       const { data: contracts, error } = await supabase
         .from("client_contracts")
-        .select("client_id, product_id, clients!inner(id, full_name, logo_url)")
-        .in("product_id", ALL_ETERNUM_PRODUCT_IDS)
+        .select(
+          "client_id, product_id, products(id, name, color), clients!inner(id, full_name, logo_url)",
+        )
+        .in("product_id", selectedProductIds)
         .eq("status", "active");
 
       if (error) {
@@ -121,10 +153,18 @@ export default function EternumAttendance() {
         return;
       }
 
+      const productMap: Record<string, ProductLite> = {};
       const uniq = new Map<string, ClientRow>();
       (contracts ?? []).forEach((row: any) => {
         const c = row.clients;
         if (!c) return;
+        if (row.products && !productMap[row.product_id]) {
+          productMap[row.product_id] = {
+            id: row.products.id,
+            name: row.products.name,
+            color: row.products.color ?? null,
+          };
+        }
         const existing = uniq.get(c.id);
         if (existing) {
           existing.productIds.add(row.product_id);
@@ -140,10 +180,12 @@ export default function EternumAttendance() {
       const list = Array.from(uniq.values()).sort((a, b) =>
         a.full_name.localeCompare(b.full_name, "pt-BR"),
       );
+      setProductsById((prev) => ({ ...prev, ...productMap }));
       setClients(list);
       setLoadingClients(false);
     })();
-  }, [accountId]);
+     
+  }, [accountId, selectedEventId, selectedProductIds.join(",")]);
 
   // Load attendance for selected event
   useEffect(() => {
@@ -164,28 +206,8 @@ export default function EternumAttendance() {
     })();
   }, [selectedEventId]);
 
-  const selectedEvent = useMemo(
-    () => events.find((e) => e.id === selectedEventId) ?? null,
-    [events, selectedEventId],
-  );
-
   const [modalityFilter, setModalityFilter] = useState<"all" | "online" | "presencial">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "open" | "completed">("all");
-
-  const STATUS_LABEL: Record<string, string> = {
-    planned: "Planejado",
-    draft: "Rascunho",
-    scheduled: "Agendado",
-    confirmed: "Confirmado",
-    in_progress: "Em andamento",
-    ongoing: "Em andamento",
-    completed: "Concluído",
-    done: "Concluído",
-    finished: "Concluído",
-    cancelled: "Cancelado",
-    canceled: "Cancelado",
-    postponed: "Adiado",
-  };
 
   const MODALITY_LABEL: Record<string, string> = {
     online: "Online",
@@ -203,7 +225,6 @@ export default function EternumAttendance() {
     const v = (e.status || "").toLowerCase();
     if (v === "completed" || v === "done" || v === "finished") return true;
     if (isCancelledStatus(e.status)) return false;
-    // Past-dated events without explicit status are treated as completed
     if (e.scheduled_at && new Date(e.scheduled_at).getTime() < Date.now()) return true;
     return false;
   };
@@ -230,21 +251,11 @@ export default function EternumAttendance() {
     });
   }, [events, eventSearch, modalityFilter, statusFilter]);
 
-  const audience = useMemo<EventAudience>(
-    () => getEventAudience(selectedEvent?.title),
-    [selectedEvent],
-  );
-
-  const eligibleClients = useMemo(() => {
-    const productIds = AUDIENCE_PRODUCT_IDS[audience];
-    return clients.filter((c) => productIds.some((p) => c.productIds.has(p)));
-  }, [clients, audience]);
-
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return eligibleClients;
-    return eligibleClients.filter((c) => c.full_name.toLowerCase().includes(q));
-  }, [eligibleClients, search]);
+    if (!q) return clients;
+    return clients.filter((c) => c.full_name.toLowerCase().includes(q));
+  }, [clients, search]);
 
   const presentCount = attendanceSet.size;
 
@@ -307,12 +318,20 @@ export default function EternumAttendance() {
     toast.success(`${toAdd.length} presença(s) marcada(s)`);
   };
 
+  const selectedEventProducts = useMemo(
+    () =>
+      selectedProductIds
+        .map((id) => productsById[id])
+        .filter((p): p is ProductLite => Boolean(p)),
+    [selectedProductIds, productsById],
+  );
+
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Presença em Eventos — Eternum</h1>
         <p className="text-sm text-muted-foreground">
-          Marque a presença dos clientes ativos nos eventos. A lista se adapta ao público do evento (Club, Private ou MVP).
+          A lista de clientes se adapta automaticamente aos produtos vinculados ao evento selecionado.
         </p>
       </div>
 
@@ -378,6 +397,9 @@ export default function EternumAttendance() {
                 ) : (
                   filteredEvents.map((event) => {
                     const isActive = event.id === selectedEventId;
+                    const eventProducts = event.productIds
+                      .map((id) => productsById[id])
+                      .filter((p): p is ProductLite => Boolean(p));
                     return (
                       <button
                         key={event.id}
@@ -397,7 +419,7 @@ export default function EternumAttendance() {
                               })
                             : "Sem data"}
                         </div>
-                        <div className="flex gap-1 mt-2">
+                        <div className="flex flex-wrap gap-1 mt-2">
                           <Badge variant="outline" className="text-[10px] py-0">
                             {MODALITY_LABEL[(event.modality || "").toLowerCase()] || event.modality}
                           </Badge>
@@ -424,6 +446,9 @@ export default function EternumAttendance() {
                               </Badge>
                             );
                           })()}
+                          {eventProducts.map((p) => (
+                            <ProductBadge key={p.id} product={p} />
+                          ))}
                         </div>
                       </button>
                     );
@@ -438,14 +463,21 @@ export default function EternumAttendance() {
         <Card className="h-[calc(100vh-200px)] flex flex-col">
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="h-4 w-4" /> Clientes ativos — {AUDIENCE_LABEL[audience]}
+                  <Users className="h-4 w-4" /> Clientes elegíveis
                 </CardTitle>
                 {selectedEvent && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {selectedEvent.title} · {presentCount} de {eligibleClients.length} presentes
+                    {selectedEvent.title} · {presentCount} de {clients.length} presentes
                   </p>
+                )}
+                {selectedEventProducts.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {selectedEventProducts.map((p) => (
+                      <ProductBadge key={p.id} product={p} />
+                    ))}
+                  </div>
                 )}
               </div>
               <Button
@@ -475,6 +507,10 @@ export default function EternumAttendance() {
                   <p className="text-sm text-muted-foreground p-8 text-center">
                     Selecione um evento à esquerda para marcar presenças.
                   </p>
+                ) : selectedProductIds.length === 0 ? (
+                  <p className="text-sm text-muted-foreground p-8 text-center">
+                    Este evento ainda não tem produtos vinculados. Vincule os produtos no cadastro do evento para exibir os clientes elegíveis aqui.
+                  </p>
                 ) : loadingClients ? (
                   <div className="space-y-2">
                     {Array.from({ length: 8 }).map((_, i) => (
@@ -490,6 +526,9 @@ export default function EternumAttendance() {
                     {filteredClients.map((client) => {
                       const present = attendanceSet.has(client.id);
                       const isSaving = savingId === client.id;
+                      const clientProducts = Array.from(client.productIds)
+                        .map((id) => productsById[id])
+                        .filter((p): p is ProductLite => Boolean(p));
                       return (
                         <label
                           key={client.id}
@@ -517,9 +556,18 @@ export default function EternumAttendance() {
                               {client.full_name.charAt(0).toUpperCase()}
                             </div>
                           )}
-                          <span className="text-sm font-medium flex-1">
-                            {client.full_name}
-                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">
+                              {client.full_name}
+                            </div>
+                            {clientProducts.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {clientProducts.map((p) => (
+                                  <ProductBadge key={p.id} product={p} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
                           {present && (
                             <Badge variant="default" className="text-[10px]">
                               Presente
