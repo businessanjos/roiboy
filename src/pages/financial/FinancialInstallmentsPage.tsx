@@ -3,8 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCompany } from "@/contexts/CompanyContext";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { DateRange } from "react-day-picker";
+
 import {
   Receipt,
   Search,
@@ -61,6 +67,7 @@ type InstallmentRow = {
     company_id: string | null;
     account_id: string;
     client_id: string | null;
+    product_id: string | null;
     nf_number: string | null;
     nf_series: string | null;
     nf_status: string | null;
@@ -73,8 +80,14 @@ type InstallmentRow = {
       cnpj: string | null;
       company_name: string | null;
     } | null;
+    product?: {
+      id: string;
+      name: string;
+      color: string | null;
+    } | null;
   };
 };
+
 
 const STATUS_META: Record<string, { label: string; className: string; icon: any }> = {
   pending: { label: "Pendente", className: "bg-muted text-muted-foreground", icon: Clock },
@@ -135,10 +148,15 @@ export default function FinancialInstallmentsPage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
+  const [billingFilter, setBillingFilter] = useState<string>("all"); // all | cnpj | cpf
+  const [datePreset, setDatePreset] = useState<string>("all"); // all | month | quarter | year | custom
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [nfInvoice, setNfInvoice] = useState<InstallmentRow["invoices"] | null>(null);
   const [nfOpen, setNfOpen] = useState(false);
+
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["financial-installments", accountId, currentCompanyId],
@@ -147,7 +165,7 @@ export default function FinancialInstallmentsPage() {
       let query = supabase
         .from("installments")
         .select(
-          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
+          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
         )
         .order("due_date", { ascending: true })
         .limit(500);
@@ -164,42 +182,97 @@ export default function FinancialInstallmentsPage() {
 
       const list = (data ?? []) as any as InstallmentRow[];
 
-      // Fetch clients in a single batch and hydrate onto rows (avoids PostgREST
-      // nested embed edge cases that were returning empty client objects).
+      // Batch-fetch clients (avoids PostgREST nested embed edge cases).
       const clientIds = Array.from(
-        new Set(
-          list
-            .map((r) => r.invoices?.client_id)
-            .filter((v): v is string => !!v)
-        )
+        new Set(list.map((r) => r.invoices?.client_id).filter((v): v is string => !!v))
+      );
+      const productIds = Array.from(
+        new Set(list.map((r) => r.invoices?.product_id).filter((v): v is string => !!v))
       );
 
-      if (clientIds.length > 0) {
-        const { data: clients, error: cErr } = await supabase
-          .from("clients")
-          .select("id, full_name, cpf, cnpj, company_name")
-          .in("id", clientIds);
+      const [clientsRes, productsRes] = await Promise.all([
+        clientIds.length
+          ? supabase.from("clients").select("id, full_name, cpf, cnpj, company_name").in("id", clientIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        productIds.length
+          ? supabase.from("products").select("id, name, color").in("id", productIds)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
 
-        if (cErr) {
-          console.error("[FinancialInstallments] clients batch error:", cErr);
-        } else {
-          const byId = new Map((clients ?? []).map((c: any) => [c.id, c]));
-          list.forEach((r) => {
-            if (r.invoices?.client_id) {
-              r.invoices.clients = byId.get(r.invoices.client_id) ?? null;
-            }
-          });
-        }
-      }
+      if (clientsRes.error) console.error("[FinancialInstallments] clients batch error:", clientsRes.error);
+      if (productsRes.error) console.error("[FinancialInstallments] products batch error:", productsRes.error);
+
+      const clientsById = new Map<string, any>((clientsRes.data ?? []).map((c: any) => [c.id, c]));
+      const productsById = new Map<string, any>((productsRes.data ?? []).map((p: any) => [p.id, p]));
+
+      list.forEach((r) => {
+        if (r.invoices?.client_id) r.invoices.clients = clientsById.get(r.invoices.client_id) ?? null;
+        if (r.invoices?.product_id) r.invoices.product = productsById.get(r.invoices.product_id) ?? null;
+
+      });
 
       return list;
     },
   });
 
 
+
+  // Distinct products present in the loaded rows (for the product filter dropdown)
+  const availableProducts = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    rows.forEach((r) => {
+      const p = r.invoices?.product;
+      if (p?.id && p?.name) map.set(p.id, { id: p.id, name: p.name });
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [rows]);
+
+  const dateInterval = useMemo(() => {
+    const now = new Date();
+    switch (datePreset) {
+      case "month":
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+      case "quarter":
+        return { start: startOfQuarter(now), end: endOfQuarter(now) };
+      case "year":
+        return { start: startOfYear(now), end: endOfYear(now) };
+      case "custom":
+        if (customRange?.from && customRange?.to) {
+          return { start: customRange.from, end: customRange.to };
+        }
+        return null;
+      default:
+        return null;
+    }
+  }, [datePreset, customRange]);
+
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+
+      if (productFilter !== "all") {
+        if (productFilter === "none") {
+          if (r.invoices?.product_id) return false;
+        } else if (r.invoices?.product_id !== productFilter) {
+          return false;
+        }
+      }
+
+      if (billingFilter !== "all") {
+        const isCnpj = !!r.invoices?.clients?.cnpj;
+        if (billingFilter === "cnpj" && !isCnpj) return false;
+        if (billingFilter === "cpf" && isCnpj) return false;
+      }
+
+      if (dateInterval) {
+        try {
+          const d = parseISO(r.due_date);
+          if (!isWithinInterval(d, dateInterval)) return false;
+        } catch {
+          return false;
+        }
+      }
+
       if (search) {
         const q = search.toLowerCase();
         const client = r.invoices?.clients;
@@ -210,6 +283,7 @@ export default function FinancialInstallmentsPage() {
           client?.company_name,
           client?.cpf,
           client?.cnpj,
+          r.invoices?.product?.name,
         ]
           .filter(Boolean)
           .join(" ")
@@ -217,9 +291,9 @@ export default function FinancialInstallmentsPage() {
         if (!hay.includes(q)) return false;
       }
       return true;
-
     });
-  }, [rows, search, statusFilter]);
+  }, [rows, search, statusFilter, productFilter, billingFilter, dateInterval]);
+
 
   const totals = useMemo(() => {
     return filtered.reduce(
@@ -271,12 +345,90 @@ export default function FinancialInstallmentsPage() {
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por cliente, CPF/CNPJ, nº ou fatura..."
+            placeholder="Buscar por cliente, CPF/CNPJ, produto, nº ou fatura..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
+
+        <Select value={productFilter} onValueChange={setProductFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Produto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os produtos</SelectItem>
+            <SelectItem value="none">Sem produto</SelectItem>
+            {availableProducts.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={billingFilter} onValueChange={setBillingFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Faturamento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">CPF e CNPJ</SelectItem>
+            <SelectItem value="cnpj">Apenas CNPJ</SelectItem>
+            <SelectItem value="cpf">Apenas CPF</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={datePreset} onValueChange={setDatePreset}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todo período</SelectItem>
+            <SelectItem value="month">Este mês</SelectItem>
+            <SelectItem value="quarter">Este trimestre</SelectItem>
+            <SelectItem value="year">Este ano</SelectItem>
+            <SelectItem value="custom">Personalizado</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {datePreset === "custom" && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "justify-start text-left font-normal min-w-[240px]",
+                  !customRange?.from && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {customRange?.from ? (
+                  customRange.to ? (
+                    <>
+                      {format(customRange.from, "dd/MM/yy", { locale: ptBR })} –{" "}
+                      {format(customRange.to, "dd/MM/yy", { locale: ptBR })}
+                    </>
+                  ) : (
+                    format(customRange.from, "dd/MM/yy", { locale: ptBR })
+                  )
+                ) : (
+                  <span>Selecionar intervalo</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={customRange}
+                onSelect={setCustomRange}
+                numberOfMonths={2}
+                locale={ptBR}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+        )}
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-44">
             <SelectValue />
@@ -291,6 +443,7 @@ export default function FinancialInstallmentsPage() {
           </SelectContent>
         </Select>
       </div>
+
 
       <Card>
         <CardContent className="p-0">
