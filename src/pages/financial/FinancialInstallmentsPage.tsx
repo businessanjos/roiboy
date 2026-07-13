@@ -217,9 +217,62 @@ export default function FinancialInstallmentsPage() {
 
 
 
+  // Distinct products present in the loaded rows (for the product filter dropdown)
+  const availableProducts = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    rows.forEach((r) => {
+      const p = r.invoices?.product;
+      if (p?.id && p?.name) map.set(p.id, { id: p.id, name: p.name });
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [rows]);
+
+  const dateInterval = useMemo(() => {
+    const now = new Date();
+    switch (datePreset) {
+      case "month":
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+      case "quarter":
+        return { start: startOfQuarter(now), end: endOfQuarter(now) };
+      case "year":
+        return { start: startOfYear(now), end: endOfYear(now) };
+      case "custom":
+        if (customRange?.from && customRange?.to) {
+          return { start: customRange.from, end: customRange.to };
+        }
+        return null;
+      default:
+        return null;
+    }
+  }, [datePreset, customRange]);
+
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+
+      if (productFilter !== "all") {
+        if (productFilter === "none") {
+          if (r.invoices?.product_id) return false;
+        } else if (r.invoices?.product_id !== productFilter) {
+          return false;
+        }
+      }
+
+      if (billingFilter !== "all") {
+        const isCnpj = !!r.invoices?.clients?.cnpj;
+        if (billingFilter === "cnpj" && !isCnpj) return false;
+        if (billingFilter === "cpf" && isCnpj) return false;
+      }
+
+      if (dateInterval) {
+        try {
+          const d = parseISO(r.due_date);
+          if (!isWithinInterval(d, dateInterval)) return false;
+        } catch {
+          return false;
+        }
+      }
+
       if (search) {
         const q = search.toLowerCase();
         const client = r.invoices?.clients;
@@ -230,6 +283,7 @@ export default function FinancialInstallmentsPage() {
           client?.company_name,
           client?.cpf,
           client?.cnpj,
+          r.invoices?.product?.name,
         ]
           .filter(Boolean)
           .join(" ")
@@ -237,9 +291,9 @@ export default function FinancialInstallmentsPage() {
         if (!hay.includes(q)) return false;
       }
       return true;
-
     });
-  }, [rows, search, statusFilter]);
+  }, [rows, search, statusFilter, productFilter, billingFilter, dateInterval]);
+
 
   const totals = useMemo(() => {
     return filtered.reduce(
