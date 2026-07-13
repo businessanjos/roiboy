@@ -295,6 +295,7 @@ const App = () => (
                             <Route path="/clients/:id" element={<ClientDetail />} />
                             <Route path="/renewals" element={<Renewals />} />
                             <Route path="/operations/onboarding" element={<ClientOnboardingHub />} />
+                            <Route path="/operations/presenca-eventos" element={<EternumAttendance />} />
                             <Route path="/operations/clinica-ryka" element={<ClinicaRyka />} />
                             <Route path="/operations/consultant-bonus" element={<ConsultantBonus />} />
                             <Route path="/operations/cs-incentive-presentation" element={<CsIncentivePresentation />} />
