@@ -28,6 +28,7 @@ import {
   ChevronRight,
   CreditCard,
   Sheet,
+  Undo2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -344,6 +345,31 @@ export default function FinancialEntriesPage() {
     },
     onError: () => {
       toast({ title: "Erro", description: "Não foi possível registrar o pagamento.", variant: "destructive" });
+    },
+  });
+
+  // Reverse payment mutation
+  const reverseMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      const { error } = await supabase
+        .from("financial_entries")
+        .update({
+          status: "pending",
+          payment_date: null,
+          is_conciliated: false,
+          conciliated_at: null,
+          conciliated_by: null,
+        })
+        .eq("id", entryId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
+      toast({ title: "Pagamento estornado", description: "O lançamento voltou para 'A vencer'." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível estornar o pagamento.", variant: "destructive" });
     },
   });
 
@@ -739,6 +765,18 @@ export default function FinancialEntriesPage() {
                                   <DropdownMenuItem onClick={() => handlePay(entry)}>
                                     <CheckCircle2 className="h-4 w-4 mr-2" />
                                     Registrar Pagamento
+                                  </DropdownMenuItem>
+                                )}
+                                {(entry.status === "paid" || entry.status === "partially_paid") && (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      if (confirm("Estornar este pagamento? O lançamento voltará para 'A vencer'.")) {
+                                        reverseMutation.mutate(entry.id);
+                                      }
+                                    }}
+                                  >
+                                    <Undo2 className="h-4 w-4 mr-2" />
+                                    Estornar Pagamento
                                   </DropdownMenuItem>
                                 )}
                                 {entry.status === "paid" && !entry.is_conciliated && (
