@@ -211,7 +211,7 @@ const FinancialBalanceSheetPage = lazyRetry(() => import("./pages/financial/Fina
 const FinancialInvoicesPage = lazyRetry(() => import("./pages/financial/FinancialInvoicesPage"));
 const FinancialInstallmentsPage = lazyRetry(() => import("./pages/financial/FinancialInstallmentsPage"));
 const FinancialPaymentMethodsPage = lazyRetry(() => import("./pages/financial/FinancialPaymentMethodsPage"));
-const FinancialOmieIntegrationPage = lazyRetry(() => import("./pages/financial/FinancialOmieIntegrationPage"));
+
 const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/FinancialPluggyStatusPage"));
 const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
 const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
