@@ -345,12 +345,90 @@ export default function FinancialInstallmentsPage() {
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por cliente, CPF/CNPJ, nº ou fatura..."
+            placeholder="Buscar por cliente, CPF/CNPJ, produto, nº ou fatura..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
+
+        <Select value={productFilter} onValueChange={setProductFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Produto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os produtos</SelectItem>
+            <SelectItem value="none">Sem produto</SelectItem>
+            {availableProducts.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={billingFilter} onValueChange={setBillingFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Faturamento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">CPF e CNPJ</SelectItem>
+            <SelectItem value="cnpj">Apenas CNPJ</SelectItem>
+            <SelectItem value="cpf">Apenas CPF</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={datePreset} onValueChange={setDatePreset}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todo período</SelectItem>
+            <SelectItem value="month">Este mês</SelectItem>
+            <SelectItem value="quarter">Este trimestre</SelectItem>
+            <SelectItem value="year">Este ano</SelectItem>
+            <SelectItem value="custom">Personalizado</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {datePreset === "custom" && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "justify-start text-left font-normal min-w-[240px]",
+                  !customRange?.from && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {customRange?.from ? (
+                  customRange.to ? (
+                    <>
+                      {format(customRange.from, "dd/MM/yy", { locale: ptBR })} –{" "}
+                      {format(customRange.to, "dd/MM/yy", { locale: ptBR })}
+                    </>
+                  ) : (
+                    format(customRange.from, "dd/MM/yy", { locale: ptBR })
+                  )
+                ) : (
+                  <span>Selecionar intervalo</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={customRange}
+                onSelect={setCustomRange}
+                numberOfMonths={2}
+                locale={ptBR}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+        )}
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-44">
             <SelectValue />
@@ -365,6 +443,7 @@ export default function FinancialInstallmentsPage() {
           </SelectContent>
         </Select>
       </div>
+
 
       <Card>
         <CardContent className="p-0">
