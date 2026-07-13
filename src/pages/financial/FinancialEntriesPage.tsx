@@ -832,6 +832,16 @@ export default function FinancialEntriesPage() {
         </TabsContent>
       </Tabs>
 
+      <RenegotiateEntryDialog
+        entry={renegotiatingEntry as any}
+        open={!!renegotiatingEntry}
+        onOpenChange={(o) => { if (!o) setRenegotiatingEntry(null); }}
+        onRenegotiated={() => {
+          queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
+          setRenegotiatingEntry(null);
+        }}
+      />
+
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-lg">
