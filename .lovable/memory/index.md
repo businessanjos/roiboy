@@ -13,6 +13,7 @@
 - Product Badges: Sempre exibir produto em tabelas/listas como Badge colorida usando `products.color` (SELECT inclui color, fallback #6b7280, nunca cinza genérico).
 - Open Finance: Pluggy é o integrador padrão (substitui banco.mcp.ai). Edge functions `pluggy-*`, dialog `PluggyConnectDialog`, discriminador `bank_accounts.openfinance_provider`.
 - NFS-e: Emissão via Notazz (`NOTAZZ_API_KEY`). Edge `nfse-issue`/`nfse-webhook`, config em `/financial/configuracoes/fiscal`, componente `<EmitirNFButton>`.
+- Omie: integração 100% removida (tabelas, edge functions, páginas Omie/Tributário, colunas `omie_*`). Financeiro vive só de Comercial/CS + manuais + importadores. Não recriar.
 
 ## Memories
 
