@@ -14,6 +14,7 @@ import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation
 import { useLossReasons } from "@/hooks/useLossReasons";
 import {
   DEAL_FIELD_IDS,
+  NEGOTIATION_REQUIRED_FIELDS,
   fetchDealCustomFieldValues,
   updateClientWithDealData,
   getContractDataFromDealFields,
