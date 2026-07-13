@@ -97,10 +97,15 @@ export function CancelDelinquentDialog({
     },
   });
 
-  const totalOwed = useMemo(
+  const entriesTotal = useMemo(
     () => (pending || []).reduce((s, e: any) => s + (Number(e.amount) || 0), 0),
     [pending]
   );
+  const hasEntries = (pending || []).length > 0;
+  // Fallback: if no receivables were generated yet, use contract value minus what was received.
+  const totalOwed = hasEntries
+    ? entriesTotal
+    : Math.max(0, (target?.total_value ?? 0) - (target?.total_received ?? 0));
   const overdueCount = useMemo(
     () => (pending || []).filter((e: any) => e.status === "overdue").length,
     [pending]
