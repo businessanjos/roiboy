@@ -74,6 +74,7 @@ interface Contract {
   payment_method?: string | null;
   installments_count?: number | null;
   first_due_date?: string | null;
+  installments_detail?: any;
   receivables_generated?: boolean;
   client?: {
     id: string;
