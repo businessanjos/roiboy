@@ -267,12 +267,13 @@ export default function FinancialInstallmentsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">#</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Faturamento</TableHead>
+                <TableHead>CNPJ</TableHead>
                 <TableHead>Vencimento</TableHead>
                 <TableHead>Valor</TableHead>
-                <TableHead>Forma</TableHead>
-                <TableHead>Status detalhado</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Pago em</TableHead>
+                <TableHead>Forma de pagamento</TableHead>
                 <TableHead>NF Fiscal</TableHead>
                 <TableHead className="text-right">Histórico</TableHead>
               </TableRow>
@@ -281,14 +282,14 @@ export default function FinancialInstallmentsPage() {
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={10}>
                       <Skeleton className="h-8 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-10">
                     Nenhuma parcela encontrada para esta empresa.
                   </TableCell>
                 </TableRow>
@@ -296,6 +297,9 @@ export default function FinancialInstallmentsPage() {
                 filtered.map((r) => {
                   const meta = STATUS_META[r.status] ?? STATUS_META.pending;
                   const Icon = meta.icon;
+                  const client = r.invoices?.clients;
+                  const isCnpj = !!client?.cnpj;
+                  const clientName = client?.company_name || client?.full_name || "—";
                   return (
                     <TableRow
                       key={r.id}
@@ -303,30 +307,35 @@ export default function FinancialInstallmentsPage() {
                       className="cursor-pointer hover:bg-muted/40"
                     >
                       <TableCell className="font-medium">{r.number}</TableCell>
+                      <TableCell className="font-medium">{clientName}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={isCnpj ? "bg-blue-500/10 text-blue-600 border-blue-500/30" : "bg-purple-500/10 text-purple-600 border-purple-500/30"}>
+                          {isCnpj ? "CNPJ" : "CPF"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {isCnpj ? formatCnpj(client!.cnpj!) : "—"}
+                      </TableCell>
                       <TableCell>
                         {format(new Date(r.due_date), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell>{formatCurrency(Number(r.amount))}</TableCell>
-                      <TableCell className="capitalize text-muted-foreground">
-                        {r.payment_method ?? "—"}
-                      </TableCell>
                       <TableCell>
-                        <PaymentStatusBadge value={r.payment_status} />
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={meta.className}>
-                          <Icon className="h-3 w-3 mr-1" />
-                          {meta.label}
-                        </Badge>
-                        {r.locked && (
-                          <Lock className="inline h-3 w-3 ml-2 text-muted-foreground" />
-                        )}
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={meta.className}>
+                            <Icon className="h-3 w-3 mr-1" />
+                            {meta.label}
+                          </Badge>
+                          {r.locked && (
+                            <Lock className="inline h-3 w-3 text-muted-foreground" />
+                          )}
+                          <PaymentStatusBadge value={r.payment_status} />
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {r.paid_at
-                          ? format(new Date(r.paid_at), "dd/MM/yyyy", { locale: ptBR })
-                          : "—"}
+                        {formatPaymentMethod(r.payment_method)}
                       </TableCell>
+
                       <TableCell>
                         {r.invoices?.nf_number && r.invoices?.nf_status === "issued" ? (
                           <Button
