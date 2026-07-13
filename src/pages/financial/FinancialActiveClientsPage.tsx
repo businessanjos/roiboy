@@ -120,8 +120,9 @@ export default function FinancialActiveClientsPage() {
       const clientIds = [...new Set((contracts || []).map((c) => c.client_id).filter(Boolean))];
       const productIds = [...new Set((contracts || []).map((c) => c.product_id).filter(Boolean))];
       const dealIds = [...new Set((contracts || []).map((c) => c.deal_id).filter(Boolean))];
+      const contractIds = [...new Set((contracts || []).map((c) => c.id).filter(Boolean))];
 
-      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes] = await Promise.all([
+      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes, entriesRes] = await Promise.all([
         clientIds.length
           ? supabase.from("clients").select("id, full_name, company_name, sales_user_id").in("id", clientIds as string[])
           : Promise.resolve({ data: [], error: null } as any),
@@ -142,7 +143,30 @@ export default function FinancialActiveClientsPage() {
               .in("client_id", clientIds as string[])
               .order("won_at", { ascending: false, nullsFirst: false })
           : Promise.resolve({ data: [], error: null } as any),
+        contractIds.length
+          ? supabase
+              .from("financial_entries")
+              .select("id, contract_id, amount, status")
+              .in("contract_id", contractIds as string[])
+              .eq("entry_type", "receivable")
+              .neq("status", "cancelled")
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
+
+      // Aggregate receivable entries per contract
+      type Agg = { count: number; paid: number; received: number };
+      const aggByContract = new Map<string, Agg>();
+      (entriesRes.data || []).forEach((e: any) => {
+        const cid = e.contract_id as string;
+        if (!cid) return;
+        const cur = aggByContract.get(cid) || { count: 0, paid: 0, received: 0 };
+        cur.count += 1;
+        if (e.status === "paid" || e.status === "partially_paid") {
+          cur.paid += 1;
+          cur.received += Number(e.amount) || 0;
+        }
+        aggByContract.set(cid, cur);
+      });
 
       // Build best-deal-per-client map from dealsByClientRes (prefer won, else latest)
       const bestDealByClient = new Map<string, any>();
