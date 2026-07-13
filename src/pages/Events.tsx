@@ -150,6 +150,7 @@ export default function Events() {
   const { logAudit } = useAuditLog();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventWithProducts | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [selectedEventForQr, setSelectedEventForQr] = useState<EventWithProducts | null>(null);
