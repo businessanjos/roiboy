@@ -169,7 +169,7 @@ export function ContractNegotiationTab({
   const handleGenerateReceivables = async () => {
     // Triple-check to prevent duplicate generation
     if (generating || receivablesGenerated || generatedRef.current) {
-      console.warn('Generation blocked: already in progress or completed');
+      console.warn("Generation blocked: already in progress or completed");
       return;
     }
 
@@ -181,61 +181,65 @@ export function ContractNegotiationTab({
     // Mark immediately BEFORE any async operation
     generatedRef.current = true;
     setGenerating(true);
-    
+
     try {
-      const entries = [];
-      const baseDate = new Date(firstDueDate);
-
-      for (let i = 0; i < installments; i++) {
-        const dueDate = addMonths(baseDate, i);
-        entries.push({
-          account_id: accountId,
-          client_id: clientId,
-          contract_id: contractId,
-          entry_type: "receivable",
-          description: `Parcela ${i + 1}/${installments} - Contrato`,
-          amount: Math.round(installmentValue * 100) / 100,
-          due_date: format(dueDate, "yyyy-MM-dd"),
-          status: "pending",
-          is_recurring: false,
-          is_conciliated: false,
-          currency: "BRL",
-        });
+      // 1) Persist the negotiation on the contract. Only overwrite installments_detail
+      //    if the sales team didn't already provide a breakdown (respect the sales input).
+      const updatePayload: Record<string, any> = {
+        payment_method: paymentMethod,
+        installments_count: installments,
+        first_due_date: firstDueDate,
+        negotiation_type: negotiationType,
+      };
+      if (!hasSalesBreakdown) {
+        // Build a simple uniform breakdown so the DB generator has explicit due dates.
+        const base = new Date(firstDueDate);
+        const per = Math.round((contractValue / installments) * 100) / 100;
+        updatePayload.installments_detail = Array.from({ length: installments }).map((_, i) => ({
+          amount: per,
+          due_date: format(addMonths(base, i), "yyyy-MM-dd"),
+          method: paymentMethod,
+        }));
       }
 
-      const { error: entriesError } = await supabase
-        .from("financial_entries")
-        .insert(entries);
+      const { error: prepError } = await supabase
+        .from("client_contracts")
+        .update(updatePayload)
+        .eq("id", contractId);
 
-      if (entriesError) {
-        generatedRef.current = false; // Allow retry on error
-        throw entriesError;
+      if (prepError) {
+        generatedRef.current = false;
+        throw prepError;
       }
 
-      // Mark receivables as generated
-      const { error: updateError } = await supabase
+      // 2) Flip the flag — the DB trigger `contract_generate_receivables` will
+      //    create the entries in financial_entries + installments/invoices,
+      //    honoring installments_detail (including the sales-team breakdown) and
+      //    assigning a fallback income category so RLS/validation triggers pass.
+      const { error: flagError } = await supabase
         .from("client_contracts")
         .update({
           receivables_generated: true,
           receivables_generated_at: new Date().toISOString(),
-          payment_method: paymentMethod,
-          installments_count: installments,
-          first_due_date: firstDueDate,
         })
         .eq("id", contractId);
 
-      if (updateError) {
-        generatedRef.current = false; // Allow retry on error
-        throw updateError;
+      if (flagError) {
+        generatedRef.current = false;
+        throw flagError;
       }
 
       setReceivablesGenerated(true);
       toast.success(`${installments} parcela(s) gerada(s) no contas a receber`);
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating receivables:", error);
-      toast.error("Erro ao gerar parcelas");
-      generatedRef.current = false; // Allow retry on error
+      const msg =
+        error?.message ||
+        error?.error_description ||
+        "Erro ao gerar parcelas";
+      toast.error(msg);
+      generatedRef.current = false;
     } finally {
       setGenerating(false);
     }
