@@ -196,22 +196,48 @@ export default function FinancialEntriesPage() {
     notes: "",
   });
 
+  // Period range
+  const { startDate, endDate, periodLabel } = useMemo(() => {
+    let s: Date; let e: Date; let label: string;
+    if (periodFilter === "quarter") {
+      s = startOfQuarter(currentMonth); e = endOfQuarter(currentMonth);
+      label = `${getQuarter(currentMonth)}º trimestre ${format(currentMonth, "yyyy")}`;
+    } else if (periodFilter === "year") {
+      s = startOfYear(currentMonth); e = endOfYear(currentMonth);
+      label = format(currentMonth, "yyyy");
+    } else if (periodFilter === "all") {
+      s = new Date(2000, 0, 1); e = new Date(2100, 11, 31);
+      label = "Todo o período";
+    } else {
+      s = startOfMonth(currentMonth); e = endOfMonth(currentMonth);
+      label = format(currentMonth, "MMMM yyyy", { locale: ptBR });
+    }
+    return {
+      startDate: format(s, "yyyy-MM-dd"),
+      endDate: format(e, "yyyy-MM-dd"),
+      periodLabel: label,
+    };
+  }, [periodFilter, currentMonth]);
+
+  const shiftPeriod = (dir: -1 | 1) => {
+    if (periodFilter === "quarter") setCurrentMonth(addQuarters(currentMonth, dir));
+    else if (periodFilter === "year") setCurrentMonth(addYears(currentMonth, dir));
+    else setCurrentMonth(addMonths(currentMonth, dir));
+  };
+
   // Fetch entries
   const { data: entries = [], isLoading: entriesLoading } = useQuery({
-    queryKey: ["financial-entries", accountId, activeTab, currentMonth],
+    queryKey: ["financial-entries", accountId, activeTab, startDate, endDate],
     queryFn: async () => {
       if (!accountId) return [];
-      
-      const startDate = format(startOfMonth(currentMonth), "yyyy-MM-dd");
-      const endDate = format(endOfMonth(currentMonth), "yyyy-MM-dd");
-      
       const { data, error } = await supabase
         .from("financial_entries")
         .select(`
           *,
           category:financial_categories(id, name, color),
           bank_account:bank_accounts(id, name, bank_name),
-          client:clients(id, full_name)
+          client:clients(id, full_name),
+          contract:client_contracts(id, product_id, product:products(id, name, color))
         `)
         .eq("account_id", accountId)
         .eq("entry_type", activeTab)
@@ -220,7 +246,7 @@ export default function FinancialEntriesPage() {
         .order("due_date", { ascending: true });
       
       if (error) throw error;
-      return data as FinancialEntry[];
+      return data as any[];
     },
     enabled: !!accountId,
   });
