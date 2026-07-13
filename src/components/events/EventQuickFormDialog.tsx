@@ -69,8 +69,29 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("");
 
+  // Recurrence (only applied when creating a new event)
+  type Freq = "none" | "daily" | "weekly" | "monthly";
+  const WEEK_DAYS = [
+    { v: 0, label: "Dom" }, { v: 1, label: "Seg" }, { v: 2, label: "Ter" },
+    { v: 3, label: "Qua" }, { v: 4, label: "Qui" }, { v: 5, label: "Sex" }, { v: 6, label: "Sáb" },
+  ];
+  const [frequency, setFrequency] = useState<Freq>("none");
+  const [interval, setIntervalN] = useState(1);
+  const [weekDays, setWeekDays] = useState<number[]>([]);
+  const [endMode, setEndMode] = useState<"date" | "count">("date");
+  const [untilDate, setUntilDate] = useState("");
+  const [occurrences, setOccurrences] = useState(10);
+
   useEffect(() => {
     if (!open) return;
+    // reset recurrence each open
+    setFrequency("none");
+    setIntervalN(1);
+    setWeekDays([]);
+    setEndMode("date");
+    setUntilDate("");
+    setOccurrences(10);
+
     if (event) {
       setTitle(event.title ?? "");
       setEventType(event.event_type ?? "live");
@@ -94,6 +115,54 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
       setColor("");
     }
   }, [open, event, defaultYear]);
+
+  function generateOccurrences(startISO: string, endISO: string | null): { scheduled_at: string; ends_at: string | null }[] {
+    const start = new Date(startISO);
+    const durationMs = endISO ? new Date(endISO).getTime() - start.getTime() : 0;
+    const until = endMode === "date" && untilDate ? new Date(untilDate + "T23:59:59") : null;
+    const maxCount = endMode === "count" ? Math.max(1, Math.min(occurrences, 500)) : 500;
+    const results: Date[] = [];
+    const step = Math.max(1, interval);
+
+    if (frequency === "daily") {
+      const cursor = new Date(start);
+      while (results.length < maxCount) {
+        if (until && cursor > until) break;
+        results.push(new Date(cursor));
+        cursor.setDate(cursor.getDate() + step);
+      }
+    } else if (frequency === "weekly") {
+      const days = weekDays.length ? weekDays : [start.getDay()];
+      const weekStart = new Date(start);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const hardCap = until
+        ? Math.ceil((until.getTime() - weekStart.getTime()) / (7 * 86400000)) + 1
+        : Math.ceil(maxCount / days.length) + 1;
+      for (let w = 0; w < hardCap && results.length < maxCount; w++) {
+        for (const d of [...days].sort((a, b) => a - b)) {
+          const occ = new Date(weekStart);
+          occ.setDate(weekStart.getDate() + w * step * 7 + d);
+          occ.setHours(start.getHours(), start.getMinutes(), 0, 0);
+          if (occ < start) continue;
+          if (until && occ > until) { w = hardCap; break; }
+          results.push(occ);
+          if (results.length >= maxCount) break;
+        }
+      }
+    } else if (frequency === "monthly") {
+      const cursor = new Date(start);
+      while (results.length < maxCount) {
+        if (until && cursor > until) break;
+        results.push(new Date(cursor));
+        cursor.setMonth(cursor.getMonth() + step);
+      }
+    }
+
+    return results.map((d) => ({
+      scheduled_at: d.toISOString(),
+      ends_at: durationMs ? new Date(d.getTime() + durationMs).toISOString() : null,
+    }));
+  }
 
   const types = getEventTypesForCategory("all");
 
@@ -120,7 +189,25 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
       ({ error } = await supabase.from("events").update(payload).eq("id", event.id));
     } else {
       payload.account_id = currentUser.account_id;
-      ({ error } = await supabase.from("events").insert(payload));
+      if (frequency !== "none" && scheduledAt) {
+        const occ = generateOccurrences(fromLocalInput(scheduledAt)!, fromLocalInput(endsAt));
+        if (occ.length === 0) {
+          setSaving(false);
+          toast({ title: "Nenhuma ocorrência gerada", description: "Ajuste a frequência ou o prazo final.", variant: "destructive" });
+          return;
+        }
+        const rows = occ.map((o) => ({ ...payload, scheduled_at: o.scheduled_at, ends_at: o.ends_at }));
+        ({ error } = await supabase.from("events").insert(rows));
+        if (!error) {
+          setSaving(false);
+          toast({ title: `${rows.length} eventos criados` });
+          onOpenChange(false);
+          onSaved?.();
+          return;
+        }
+      } else {
+        ({ error } = await supabase.from("events").insert(payload));
+      }
     }
     setSaving(false);
 
@@ -183,6 +270,106 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
               <Input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
             </div>
           </div>
+
+          {!event?.id && (
+            <div className="space-y-3 rounded-md border border-border/60 p-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">Repetição</Label>
+                <Select value={frequency} onValueChange={(v) => setFrequency(v as Freq)}>
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não repete</SelectItem>
+                    <SelectItem value="daily">Diariamente</SelectItem>
+                    <SelectItem value="weekly">Semanalmente</SelectItem>
+                    <SelectItem value="monthly">Mensalmente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {frequency !== "none" && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">A cada</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={interval}
+                          onChange={(e) => setIntervalN(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-20"
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          {frequency === "daily" ? "dia(s)" : frequency === "weekly" ? "semana(s)" : "mês(es)"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Término</Label>
+                      <Select value={endMode} onValueChange={(v) => setEndMode(v as any)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="date">Até uma data</SelectItem>
+                          <SelectItem value="count">Após N ocorrências</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {frequency === "weekly" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dias da semana</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {WEEK_DAYS.map((d) => {
+                          const active = weekDays.includes(d.v);
+                          return (
+                            <button
+                              key={d.v}
+                              type="button"
+                              onClick={() =>
+                                setWeekDays((prev) =>
+                                  prev.includes(d.v) ? prev.filter((x) => x !== d.v) : [...prev, d.v]
+                                )
+                              }
+                              className={`px-2.5 py-1 rounded-md text-xs border transition-colors ${
+                                active
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Vazio = usa o dia da data de início.
+                      </p>
+                    </div>
+                  )}
+
+                  {endMode === "date" ? (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Prazo final</Label>
+                      <Input type="date" value={untilDate} onChange={(e) => setUntilDate(e.target.value)} />
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Nº de ocorrências</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={500}
+                        value={occurrences}
+                        onChange={(e) => setOccurrences(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-24"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {modality === "presencial" && (
             <div className="space-y-1.5">
