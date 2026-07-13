@@ -1698,7 +1698,7 @@ export default function SalesPipeline() {
             // manually in the contract's "Negociação" tab if needed.
             try {
               const totalValue = Number(deal.value) || 0;
-              const received = Number(deal.received_value) || 0;
+              const received = Number((deal as any).received_value) || 0;
               const toInstallment = Math.max(0, totalValue - received);
               const parcelas = dealFieldValues.parcelas || 0;
               const paymentMethod = contractDataFromDeal.payment_method;
