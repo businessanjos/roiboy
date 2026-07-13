@@ -403,6 +403,48 @@ export function ContractNegotiationTab({
             </CardContent>
           </Card>
 
+          {/* Detalhamento vindo do comercial (PaymentBreakdownComposer) */}
+          {hasSalesBreakdown && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-primary/40 text-primary">
+                    Detalhamento do comercial
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {salesBreakdown.length} parcela(s) já preenchidas na negociação
+                  </span>
+                </div>
+                <div className="rounded-md border bg-background divide-y">
+                  {salesBreakdown.map((d, i) => {
+                    const amount = Number(d.amount ?? d.value ?? 0);
+                    return (
+                      <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-6 tabular-nums">#{i + 1}</span>
+                          {d.method_label || d.method ? (
+                            <Badge variant="outline" className="text-[10px] py-0 h-4">
+                              {d.method_label || d.method}
+                            </Badge>
+                          ) : null}
+                          <span className="text-muted-foreground text-xs">
+                            {d.due_date
+                              ? format(new Date(d.due_date), "dd/MM/yyyy", { locale: ptBR })
+                              : "sem data"}
+                          </span>
+                        </div>
+                        <span className="font-medium tabular-nums">{formatCurrency(amount)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ao gerar, o financeiro respeita este detalhamento (valores e datas por parcela).
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Generate Receivables Button */}
           {receivablesGenerated ? (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
