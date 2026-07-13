@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { WebhooksTab } from "./webhooks/WebhooksTab";
 import { ThreeCPlusAgentConfig } from "./ThreeCPlusAgentConfig";
-import { OmieIntegrationTab } from "./OmieIntegrationTab";
+
 import { GoogleDriveCard } from "./GoogleDriveCard";
 
 import type { Tables } from "@/integrations/supabase/types";
