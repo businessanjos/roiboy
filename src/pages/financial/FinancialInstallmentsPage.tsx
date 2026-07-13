@@ -225,11 +225,11 @@ export default function FinancialInstallmentsPage() {
         (contractsRes.data ?? []).map((c: any) => [c.id, c])
       );
 
-      const dealIds = Array.from(
+      const dealIds: string[] = Array.from(
         new Set(
-          (contractsRes.data ?? [])
-            .map((c: any) => c.deal_id)
-            .filter((v: any): v is string => !!v)
+          ((contractsRes.data ?? []) as any[])
+            .map((c) => c.deal_id as string | null)
+            .filter((v): v is string => !!v)
         )
       );
 
