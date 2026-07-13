@@ -143,7 +143,7 @@ export default function FinancialDashboardPage() {
         description={`Visão consolidada do mês — ${format(new Date(), "dd 'de' MMMM, yyyy", { locale: ptBR })}`}
       />
 
-      <OmieDashboardSection />
+      
 
       {/* ===== Seção 1 — Saúde do mês ===== */}
       <section className="space-y-3">
