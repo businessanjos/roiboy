@@ -86,7 +86,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
 import { formatBRLCompact } from "@/lib/financial-format";
-import { Receipt as ReceiptIcon, Wallet as WalletIcon } from "lucide-react";
+import { Receipt as ReceiptIcon, Wallet as WalletIcon, RefreshCw } from "lucide-react";
+import { RenegotiateEntryDialog } from "@/components/financial/RenegotiateEntryDialog";
 interface FinancialEntry {
   id: string;
   entry_type: "payable" | "receivable";
@@ -176,6 +177,7 @@ export default function FinancialEntriesPage() {
   const [isBarcodeReceivableOpen, setIsBarcodeReceivableOpen] = useState(false);
   const [isManualPayableOpen, setIsManualPayableOpen] = useState(false);
   const [isManualReceivableOpen, setIsManualReceivableOpen] = useState(false);
+  const [renegotiatingEntry, setRenegotiatingEntry] = useState<FinancialEntry | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -789,6 +791,12 @@ export default function FinancialEntriesPage() {
                                   <Edit2 className="h-4 w-4 mr-2" />
                                   Editar
                                 </DropdownMenuItem>
+                                {entry.status !== "cancelled" && (
+                                  <DropdownMenuItem onClick={() => setRenegotiatingEntry(entry)}>
+                                    <RefreshCw className="h-4 w-4 mr-2" />
+                                    Renegociar
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-destructive"
@@ -823,6 +831,16 @@ export default function FinancialEntriesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <RenegotiateEntryDialog
+        entry={renegotiatingEntry as any}
+        open={!!renegotiatingEntry}
+        onOpenChange={(o) => { if (!o) setRenegotiatingEntry(null); }}
+        onRenegotiated={() => {
+          queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
+          setRenegotiatingEntry(null);
+        }}
+      />
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
