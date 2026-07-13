@@ -906,10 +906,7 @@ export function IntegrationsContent() {
           )}
         </TabsContent>
 
-        {/* Omie Tab */}
-        <TabsContent value="omie" className="space-y-4">
-          <OmieIntegrationTab />
-        </TabsContent>
+
 
         {/* Google Drive Tab */}
         <TabsContent value="gdrive" className="space-y-4">
