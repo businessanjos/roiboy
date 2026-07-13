@@ -174,6 +174,9 @@ export function RenegotiateEntryDialog({
       const stamp = format(new Date(), "dd/MM/yyyy HH:mm");
       const historyNote = `\n\n[Renegociado em ${stamp}] Motivo: ${reason.trim()}`;
 
+      const full = await fetchFullEntry(entry.id);
+      if (!full) throw new Error("Lançamento original não encontrado");
+
       // 1) Cancel original entry
       const { error: cancelErr } = await supabase
         .from("financial_entries")
@@ -184,29 +187,37 @@ export function RenegotiateEntryDialog({
         .eq("id", entry.id);
       if (cancelErr) throw cancelErr;
 
-      // 2) Build new entries
-      const baseNew = {
+      // 2) Build new entries (copy scoping fields from original)
+      const baseNew: Record<string, any> = {
+        account_id: full.account_id,
+        company_id: full.company_id,
+        cost_center_id: full.cost_center_id,
+        supplier_id: full.supplier_id,
+        seller_id: full.seller_id,
+        project_id: full.project_id,
+        deal_id: full.deal_id,
         entry_type: entry.entry_type,
         category_id: entry.category_id,
         bank_account_id: entry.bank_account_id,
         client_id: entry.client_id,
         contract_id: entry.contract_id,
         currency: entry.currency ?? "BRL",
-        status: "pending" as const,
+        status: "pending",
         source: "renegotiation",
-        notes: `Renegociação de "${entry.description}" (${entry.id}). Motivo: ${reason.trim()}`,
+        source_id: entry.id,
       };
 
       const rows: any[] = [];
       const totalParts = items.length + ((Number(downPayment) || 0) > 0 ? 1 : 0);
+      const baseNoteHeader = `Renegociação de "${entry.description}" (origem ${entry.id}). Motivo: ${reason.trim()}`;
 
       if ((Number(downPayment) || 0) > 0) {
         rows.push({
           ...baseNew,
-          description: `${entry.description} — Entrada (renegociação) (1/${totalParts})`,
+          description: `${entry.description} — Entrada renegociação (1/${totalParts})`,
           amount: Number(downPayment),
           due_date: downPaymentDate,
-          payment_method: method,
+          notes: `${baseNoteHeader}\nForma de pagamento: ${method}`,
         });
       }
 
@@ -217,7 +228,7 @@ export function RenegotiateEntryDialog({
           description: `${entry.description} — Parcela renegociada (${idx}/${totalParts})`,
           amount: Number(it.amount) || 0,
           due_date: it.due_date,
-          payment_method: it.payment_method,
+          notes: `${baseNoteHeader}\nForma de pagamento: ${it.payment_method}`,
         });
       });
 
