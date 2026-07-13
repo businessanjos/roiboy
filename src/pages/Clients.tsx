@@ -307,9 +307,6 @@ export default function Clients() {
   const [importing, setImporting] = useState(false);
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
 
-  // Bulk Omie Sync state
-  const [bulkSyncing, setBulkSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, success: 0, failed: 0 });
   const [syncingProducts, setSyncingProducts] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
