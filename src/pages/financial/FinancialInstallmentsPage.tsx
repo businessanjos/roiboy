@@ -202,12 +202,13 @@ export default function FinancialInstallmentsPage() {
       if (clientsRes.error) console.error("[FinancialInstallments] clients batch error:", clientsRes.error);
       if (productsRes.error) console.error("[FinancialInstallments] products batch error:", productsRes.error);
 
-      const clientsById = new Map((clientsRes.data ?? []).map((c: any) => [c.id, c]));
-      const productsById = new Map((productsRes.data ?? []).map((p: any) => [p.id, p]));
+      const clientsById = new Map<string, any>((clientsRes.data ?? []).map((c: any) => [c.id, c]));
+      const productsById = new Map<string, any>((productsRes.data ?? []).map((p: any) => [p.id, p]));
 
       list.forEach((r) => {
         if (r.invoices?.client_id) r.invoices.clients = clientsById.get(r.invoices.client_id) ?? null;
         if (r.invoices?.product_id) r.invoices.product = productsById.get(r.invoices.product_id) ?? null;
+
       });
 
       return list;
