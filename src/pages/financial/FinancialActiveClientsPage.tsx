@@ -106,6 +106,8 @@ export default function FinancialActiveClientsPage() {
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [productFilter, setProductFilter] = useState<string>("all");
   const [detailRow, setDetailRow] = useState<Row | null>(null);
+  const [cancelRow, setCancelRow] = useState<Row | null>(null);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     enabled: !!accountId,
