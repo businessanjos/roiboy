@@ -735,7 +735,7 @@ export default function FinancialEntriesPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                {entry.status === "pending" && (
+                                {(entry.status === "pending" || entry.status === "overdue" || entry.status === "partially_paid") && (
                                   <DropdownMenuItem onClick={() => handlePay(entry)}>
                                     <CheckCircle2 className="h-4 w-4 mr-2" />
                                     Registrar Pagamento
