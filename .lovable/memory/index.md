@@ -101,8 +101,7 @@
 - [Insights External Access](mem://features/insights/external-access-credentials-pt) — Password-protected viewer panels
 - [Financial Reconciliation](mem://features/financial/reconciliation-usability-pt) — Mandatory client/origin display
 - [Financial Sidebar Layout](mem://style/navigation/financial-sidebar-unification-v2-pt) — Main sidebar unification
-- [ROY Financial Roadmap](mem://features/financial/roy-financial-roadmap-pt) — Blueprint multi-CNPJ + Pagador separado + parcelas imutáveis
-- [Tributário & Contador](mem://features/financial/tax-and-accountant-pt) — Área /financial/tributario com regime, contador e alertas de IA
+- [ROY Financial Roadmap](mem://features/financial/roy-financial-roadmap-pt) — Financeiro nativo pós-remoção Omie; dados vêm de Comercial/CS + lançamentos manuais + importadores
 - [Portal de Prestadores](mem://features/financial/providers-portal-pt) — Link público /portal/prestador/:token para envio mensal de NF + dados bancários
 - [Payers & Cross-feed](mem://features/financial/payers-and-cross-feed-pt) — Pagadores (CRUD /financial/pagadores + PayerSelector + ensure_payer_from_client), quitação automática de contrato, write-off por cancelamento, badge "pronto p/ renovar"
 - [NFS-e Emission Notazz](mem://features/financial/nfse-emission-notazz-pt) — Emissão NFS-e via Notazz: contratadas + nfse_issuances, trigger on_payment, edge functions nfse-issue/nfse-webhook, página /financial/configuracoes/fiscal, componente EmitirNFButton
