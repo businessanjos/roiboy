@@ -166,7 +166,7 @@ export const sectors: Sector[] = [
       { to: "/financial/aging", icon: BarChart3, label: "Aging", permission: PERMISSIONS.CLIENTS_VIEW, group: "Relatórios" },
       { to: "/financial/profitability", icon: DollarSign, label: "Rentabilidade", permission: PERMISSIONS.CLIENTS_VIEW, group: "Relatórios" },
       // Integrações
-      { to: "/financial/integracoes/omie", icon: ArrowLeftRight, label: "Omie", permission: PERMISSIONS.CLIENTS_VIEW, group: "Integrações" },
+      
       { to: "/financial/integracoes/pluggy", icon: Landmark, label: "Pluggy", permission: PERMISSIONS.CLIENTS_VIEW, group: "Integrações" },
       { to: "/financial/configuracoes/fiscal", icon: Receipt, label: "Config. Fiscal (NFS-e)", permission: PERMISSIONS.CLIENTS_VIEW, group: "Integrações" },
       // Em Breve
