@@ -124,11 +124,19 @@ export default function EternumAttendance() {
     [events, selectedEventId],
   );
 
+  const [modalityFilter, setModalityFilter] = useState<"all" | "online" | "presencial">("all");
+
   const filteredEvents = useMemo(() => {
     const q = eventSearch.trim().toLowerCase();
-    if (!q) return events;
-    return events.filter((e) => e.title.toLowerCase().includes(q));
-  }, [events, eventSearch]);
+    return events.filter((e) => {
+      if (q && !e.title.toLowerCase().includes(q)) return false;
+      if (modalityFilter === "all") return true;
+      const m = (e.modality || "").toLowerCase();
+      if (modalityFilter === "online") return m === "online";
+      // presencial groups presencial + híbrido
+      return m === "presencial" || m === "hibrido" || m === "híbrido";
+    });
+  }, [events, eventSearch, modalityFilter]);
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
