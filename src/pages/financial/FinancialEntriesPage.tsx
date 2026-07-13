@@ -160,6 +160,8 @@ export default function FinancialEntriesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [conciliationFilter, setConciliationFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
+  const [periodFilter, setPeriodFilter] = useState<"month" | "quarter" | "year" | "all">("month");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
