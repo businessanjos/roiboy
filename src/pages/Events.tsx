@@ -96,6 +96,18 @@ interface AttendanceRecord {
 }
 
 type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao";
+type RecurrenceFrequency = "none" | "daily" | "weekly" | "monthly";
+type RecurrenceEndMode = "date" | "count";
+
+const WEEK_DAYS = [
+  { value: 0, label: "Dom" },
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+  { value: 6, label: "Sáb" },
+];
 
 interface Event {
   id: string;
@@ -166,6 +178,12 @@ export default function Events() {
   const [meetingUrl, setMeetingUrl] = useState("");
   const [materialUrl, setMaterialUrl] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>("none");
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
+  const [recurrenceWeekDays, setRecurrenceWeekDays] = useState<number[]>([]);
+  const [recurrenceEndMode, setRecurrenceEndMode] = useState<RecurrenceEndMode>("date");
+  const [recurrenceUntilDate, setRecurrenceUntilDate] = useState("");
+  const [recurrenceOccurrences, setRecurrenceOccurrences] = useState(10);
   const [allowExternalGuests, setAllowExternalGuests] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [visibleSectors, setVisibleSectors] = useState<string[]>([]);
@@ -334,6 +352,12 @@ export default function Events() {
     setMeetingUrl("");
     setMaterialUrl("");
     setIsRecurring(false);
+    setRecurrenceFrequency("none");
+    setRecurrenceInterval(1);
+    setRecurrenceWeekDays([]);
+    setRecurrenceEndMode("date");
+    setRecurrenceUntilDate("");
+    setRecurrenceOccurrences(10);
     setAllowExternalGuests(false);
     setSelectedProducts([]);
     setDaySchedules({});
@@ -390,12 +414,74 @@ export default function Events() {
     setMeetingUrl(event.meeting_url || "");
     setMaterialUrl(event.material_url || "");
     setIsRecurring(event.is_recurring);
+    setRecurrenceFrequency("none");
+    setRecurrenceInterval(1);
+    setRecurrenceWeekDays([]);
+    setRecurrenceEndMode("date");
+    setRecurrenceUntilDate("");
+    setRecurrenceOccurrences(10);
     setAllowExternalGuests((event as any).allow_external_guests || false);
     setSelectedProducts(event.event_products.map(ep => ep.product_id));
     setVisibleSectors((event as any).visible_sectors || []);
     setMentorUserId((event as any).mentor_user_id || "");
     setDaySchedules({});
     setDialogOpen(true);
+  };
+
+  const generateRecurringDates = () => {
+    if (!scheduledAt || recurrenceFrequency === "none") return [];
+    const start = new Date(scheduledAt);
+    if (Number.isNaN(start.getTime())) return [];
+
+    const step = Math.max(1, recurrenceInterval || 1);
+    const maxCount = recurrenceEndMode === "count"
+      ? Math.max(1, Math.min(recurrenceOccurrences || 1, 500))
+      : 500;
+    const until = recurrenceEndMode === "date" && recurrenceUntilDate
+      ? new Date(`${recurrenceUntilDate}T23:59:59`)
+      : null;
+    const dates: Date[] = [];
+
+    if (recurrenceFrequency === "daily") {
+      const cursor = new Date(start);
+      while (dates.length < maxCount) {
+        if (until && cursor > until) break;
+        dates.push(new Date(cursor));
+        cursor.setDate(cursor.getDate() + step);
+      }
+    }
+
+    if (recurrenceFrequency === "weekly") {
+      const days = recurrenceWeekDays.length ? recurrenceWeekDays : [start.getDay()];
+      const weekStart = new Date(start);
+      weekStart.setDate(start.getDate() - start.getDay());
+      const hardCap = until
+        ? Math.ceil((until.getTime() - weekStart.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
+        : Math.ceil(maxCount / days.length) + 2;
+
+      for (let week = 0; week < hardCap && dates.length < maxCount; week += 1) {
+        for (const day of [...days].sort((a, b) => a - b)) {
+          const occurrence = new Date(weekStart);
+          occurrence.setDate(weekStart.getDate() + week * step * 7 + day);
+          occurrence.setHours(start.getHours(), start.getMinutes(), 0, 0);
+          if (occurrence < start) continue;
+          if (until && occurrence > until) return dates;
+          dates.push(occurrence);
+          if (dates.length >= maxCount) break;
+        }
+      }
+    }
+
+    if (recurrenceFrequency === "monthly") {
+      const cursor = new Date(start);
+      while (dates.length < maxCount) {
+        if (until && cursor > until) break;
+        dates.push(new Date(cursor));
+        cursor.setMonth(cursor.getMonth() + step);
+      }
+    }
+
+    return dates;
   };
 
   const handleSubmit = async () => {
@@ -476,6 +562,79 @@ export default function Events() {
         .from("event_products")
         .delete()
         .eq("event_id", editingEvent.id);
+    } else if (isRecurring && recurrenceFrequency !== "none" && !isMultiDay && eventType !== "material") {
+      if (recurrenceEndMode === "date" && !recurrenceUntilDate) {
+        toast({
+          title: "Prazo final obrigatório",
+          description: "Informe até quando a recorrência deve criar eventos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const recurringDates = generateRecurringDates();
+      if (recurringDates.length === 0) {
+        toast({
+          title: "Nenhuma ocorrência gerada",
+          description: "Ajuste a data inicial, frequência ou prazo final.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const recurringRows = recurringDates.map((date) => ({
+        ...eventData,
+        scheduled_at: localDateTimeToUTC(format(date, "yyyy-MM-dd'T'HH:mm")),
+        is_recurring: true,
+        public_registration_code: generateCode(),
+        checkin_code: modality === "presencial" ? generateCode() : null,
+      }));
+
+      const { data, error } = await supabase
+        .from("events")
+        .insert(recurringRows)
+        .select("id");
+
+      if (error || !data?.length) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível criar os eventos recorrentes",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      eventId = data[0].id;
+
+      if (selectedProducts.length > 0) {
+        const productLinks = data.flatMap((createdEvent) =>
+          selectedProducts.map(productId => ({
+            event_id: createdEvent.id,
+            product_id: productId,
+            account_id: accountId,
+          }))
+        );
+
+        await supabase.from("event_products").insert(productLinks);
+      }
+
+      logAudit({
+        action: "create",
+        entityType: "event",
+        entityId: eventId,
+        entityName: title.trim(),
+        details: { event_type: eventType, modality, products: selectedProducts.length, recurrence: recurrenceFrequency, occurrences: data.length }
+      });
+
+      toast({
+        title: `${data.length} eventos criados`,
+        description: `${title} foi criado como recorrência.`,
+      });
+
+      setDialogOpen(false);
+      resetForm();
+      invalidateEvents();
+      return;
     } else {
       const { data, error } = await supabase
         .from("events")
@@ -978,16 +1137,127 @@ export default function Events() {
                     />
                   </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="recurring"
-                        checked={isRecurring}
-                        onCheckedChange={(checked) => setIsRecurring(!!checked)}
-                      />
-                      <Label htmlFor="recurring" className="text-sm font-normal">
-                        Evento recorrente (semanal)
-                      </Label>
-                    </div>
+                    {!editingEvent && (
+                      <div className="space-y-3 rounded-lg border p-3">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="recurring"
+                            checked={isRecurring}
+                            onCheckedChange={(checked) => {
+                              const enabled = !!checked;
+                              setIsRecurring(enabled);
+                              setRecurrenceFrequency(enabled ? "weekly" : "none");
+                            }}
+                          />
+                          <Label htmlFor="recurring" className="text-sm font-medium">
+                            Evento recorrente
+                          </Label>
+                        </div>
+
+                        {isRecurring && (
+                          <div className="space-y-3 pl-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label>Frequência</Label>
+                                <Select value={recurrenceFrequency} onValueChange={(value: RecurrenceFrequency) => setRecurrenceFrequency(value)}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="daily">Diariamente</SelectItem>
+                                    <SelectItem value="weekly">Semanalmente</SelectItem>
+                                    <SelectItem value="monthly">Mensalmente</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>A cada</Label>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={recurrenceInterval}
+                                    onChange={(e) => setRecurrenceInterval(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                                    className="w-20"
+                                  />
+                                  <span className="text-sm text-muted-foreground">
+                                    {recurrenceFrequency === "daily" ? "dia(s)" : recurrenceFrequency === "weekly" ? "semana(s)" : "mês(es)"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {recurrenceFrequency === "weekly" && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <Label>Dias da semana</Label>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setRecurrenceWeekDays([1, 4])}
+                                  >
+                                    Seg + Qui
+                                  </Button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {WEEK_DAYS.map((day) => {
+                                    const active = recurrenceWeekDays.includes(day.value);
+                                    return (
+                                      <Button
+                                        key={day.value}
+                                        type="button"
+                                        variant={active ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => {
+                                          setRecurrenceWeekDays((current) =>
+                                            current.includes(day.value)
+                                              ? current.filter((value) => value !== day.value)
+                                              : [...current, day.value]
+                                          );
+                                        }}
+                                      >
+                                        {day.label}
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label>Término</Label>
+                                <Select value={recurrenceEndMode} onValueChange={(value: RecurrenceEndMode) => setRecurrenceEndMode(value)}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="date">Até uma data</SelectItem>
+                                    <SelectItem value="count">Após N ocorrências</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              {recurrenceEndMode === "date" ? (
+                                <div className="space-y-2">
+                                  <Label>Prazo final</Label>
+                                  <Input type="date" value={recurrenceUntilDate} onChange={(e) => setRecurrenceUntilDate(e.target.value)} />
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <Label>Nº de ocorrências</Label>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={500}
+                                    value={recurrenceOccurrences}
+                                    onChange={(e) => setRecurrenceOccurrences(Math.max(1, Math.min(500, parseInt(e.target.value, 10) || 1)))}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     
                     <div className="flex items-center space-x-2">
                       <Checkbox
