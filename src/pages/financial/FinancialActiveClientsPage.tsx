@@ -33,6 +33,8 @@ interface Row {
   payment_method: string | null;
   entrada: number | null;
   installments_count: number | null;
+  installments_paid: number;
+  total_received: number;
   installment_value: number | null;
   total_value: number;
   start_date: string | null;
@@ -118,8 +120,9 @@ export default function FinancialActiveClientsPage() {
       const clientIds = [...new Set((contracts || []).map((c) => c.client_id).filter(Boolean))];
       const productIds = [...new Set((contracts || []).map((c) => c.product_id).filter(Boolean))];
       const dealIds = [...new Set((contracts || []).map((c) => c.deal_id).filter(Boolean))];
+      const contractIds = [...new Set((contracts || []).map((c) => c.id).filter(Boolean))];
 
-      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes] = await Promise.all([
+      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes, entriesRes] = await Promise.all([
         clientIds.length
           ? supabase.from("clients").select("id, full_name, company_name, sales_user_id").in("id", clientIds as string[])
           : Promise.resolve({ data: [], error: null } as any),
@@ -140,7 +143,30 @@ export default function FinancialActiveClientsPage() {
               .in("client_id", clientIds as string[])
               .order("won_at", { ascending: false, nullsFirst: false })
           : Promise.resolve({ data: [], error: null } as any),
+        contractIds.length
+          ? supabase
+              .from("financial_entries")
+              .select("id, contract_id, amount, status")
+              .in("contract_id", contractIds as string[])
+              .eq("entry_type", "receivable")
+              .neq("status", "cancelled")
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
+
+      // Aggregate receivable entries per contract
+      type Agg = { count: number; paid: number; received: number };
+      const aggByContract = new Map<string, Agg>();
+      (entriesRes.data || []).forEach((e: any) => {
+        const cid = e.contract_id as string;
+        if (!cid) return;
+        const cur = aggByContract.get(cid) || { count: 0, paid: 0, received: 0 };
+        cur.count += 1;
+        if (e.status === "paid" || e.status === "partially_paid") {
+          cur.paid += 1;
+          cur.received += Number(e.amount) || 0;
+        }
+        aggByContract.set(cid, cur);
+      });
 
       // Build best-deal-per-client map from dealsByClientRes (prefer won, else latest)
       const bestDealByClient = new Map<string, any>();
@@ -200,6 +226,14 @@ export default function FinancialActiveClientsPage() {
             : fallbackDeal?.entry_value && Number(fallbackDeal.entry_value) > 0
               ? Number(fallbackDeal.entry_value)
               : null;
+        const agg = aggByContract.get(c.id);
+        const contractCount = Number(c.installments_count) || 0;
+        const detailCount = Array.isArray(c.installments_detail) ? c.installments_detail.length : 0;
+        const installmentsCount = Math.max(
+          contractCount,
+          detailCount,
+          agg?.count || 0
+        ) || null;
         return {
           contract_id: c.id,
           client_id: c.client_id,
@@ -210,7 +244,9 @@ export default function FinancialActiveClientsPage() {
           sales_rep: salesRep,
           payment_method: c.payment_method ? labelPayment(c.payment_method, pmMap) : null,
           entrada: finalEntrada,
-          installments_count: c.installments_count,
+          installments_count: installmentsCount,
+          installments_paid: agg?.paid || 0,
+          total_received: agg?.received || 0,
           installment_value: installmentValue,
           total_value: Number(c.value || 0),
           start_date: c.start_date || null,
@@ -378,7 +414,9 @@ export default function FinancialActiveClientsPage() {
                     <TableHead>Forma de Pagamento</TableHead>
                     <TableHead className="text-right">Entrada</TableHead>
                     <TableHead className="text-center">Parcelas</TableHead>
+                    <TableHead className="text-center">Pagas</TableHead>
                     <TableHead className="text-right">Valor da Parcela</TableHead>
+                    <TableHead className="text-right">Recebido</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
@@ -417,8 +455,17 @@ export default function FinancialActiveClientsPage() {
                       <TableCell className="text-center tabular-nums">
                         {r.installments_count ?? "—"}
                       </TableCell>
+                      <TableCell className="text-center tabular-nums">
+                        <span className={r.installments_count && r.installments_paid >= r.installments_count ? "text-emerald-600 font-medium" : ""}>
+                          {r.installments_paid}
+                          {r.installments_count ? `/${r.installments_count}` : ""}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {r.installment_value != null ? formatBRLPrecise(r.installment_value) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-emerald-700">
+                        {r.total_received > 0 ? formatBRLPrecise(r.total_received) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
                         {formatBRLPrecise(r.total_value)}
