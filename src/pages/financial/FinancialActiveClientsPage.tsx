@@ -19,6 +19,8 @@ import { format, startOfMonth, startOfQuarter, startOfYear, endOfMonth, endOfQua
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { ActiveClientContractSheet } from "@/components/financial/ActiveClientContractSheet";
+import { CancelDelinquentDialog } from "@/components/financial/CancelDelinquentDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 type DatePreset = "recent" | "month" | "quarter" | "year" | "custom";
 
