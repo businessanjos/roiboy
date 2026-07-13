@@ -181,7 +181,7 @@ export default function FinancialInstallmentsPage() {
           "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, contract_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
         )
         .order("due_date", { ascending: true })
-        .limit(500);
+        .limit(3000);
 
       if (currentCompanyId) {
         query = query.eq("invoices.company_id", currentCompanyId);
