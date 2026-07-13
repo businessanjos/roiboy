@@ -572,19 +572,6 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
               Novo Lançamento
             </Button>
           )}
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={handleSyncOmie}
-            disabled={syncing}
-          >
-            {syncing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Sincronizar Omie
-          </Button>
         </div>
       </div>
 
