@@ -633,7 +633,7 @@ export default function FinancialEntriesPage() {
             <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
               <FinancialKpiCard
                 icon={WalletIcon}
-                label="Total no mês"
+                label={periodFilter === "month" ? "Total no mês" : periodFilter === "quarter" ? "Total no trimestre" : periodFilter === "year" ? "Total no ano" : "Total"}
                 value={formatBRLCompact(totals.total)}
               />
               <FinancialKpiCard
