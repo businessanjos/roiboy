@@ -9101,120 +9101,6 @@ export type Database = {
           },
         ]
       }
-      financial_accountant: {
-        Row: {
-          account_id: string
-          crc: string | null
-          created_at: string
-          email: string | null
-          escritorio: string | null
-          frequencia: string | null
-          honorario_brl: number | null
-          id: string
-          nome: string | null
-          observacoes: string | null
-          omie_settings_id: string
-          telefone: string | null
-          updated_at: string
-          whatsapp: string | null
-        }
-        Insert: {
-          account_id: string
-          crc?: string | null
-          created_at?: string
-          email?: string | null
-          escritorio?: string | null
-          frequencia?: string | null
-          honorario_brl?: number | null
-          id?: string
-          nome?: string | null
-          observacoes?: string | null
-          omie_settings_id: string
-          telefone?: string | null
-          updated_at?: string
-          whatsapp?: string | null
-        }
-        Update: {
-          account_id?: string
-          crc?: string | null
-          created_at?: string
-          email?: string | null
-          escritorio?: string | null
-          frequencia?: string | null
-          honorario_brl?: number | null
-          id?: string
-          nome?: string | null
-          observacoes?: string | null
-          omie_settings_id?: string
-          telefone?: string | null
-          updated_at?: string
-          whatsapp?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "financial_accountant_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financial_accountant_omie_settings_id_fkey"
-            columns: ["omie_settings_id"]
-            isOneToOne: true
-            referencedRelation: "omie_settings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      financial_accountant_interactions: {
-        Row: {
-          account_id: string
-          accountant_id: string
-          anexo_url: string | null
-          created_at: string
-          created_by: string | null
-          id: string
-          nota: string
-          ocorrido_em: string
-        }
-        Insert: {
-          account_id: string
-          accountant_id: string
-          anexo_url?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          nota: string
-          ocorrido_em?: string
-        }
-        Update: {
-          account_id?: string
-          accountant_id?: string
-          anexo_url?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          nota?: string
-          ocorrido_em?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "financial_accountant_interactions_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financial_accountant_interactions_accountant_id_fkey"
-            columns: ["accountant_id"]
-            isOneToOne: false
-            referencedRelation: "financial_accountant"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       financial_budgets: {
         Row: {
           account_id: string
@@ -9437,11 +9323,7 @@ export type Database = {
           is_conciliated: boolean
           is_recurring: boolean
           issue_date: string | null
-          last_omie_sync_at: string | null
           notes: string | null
-          omie_id: string | null
-          omie_payload: Json | null
-          omie_sync_at: string | null
           openfinance_transaction_id: string | null
           parent_entry_id: string | null
           payment_date: string | null
@@ -9486,11 +9368,7 @@ export type Database = {
           is_conciliated?: boolean
           is_recurring?: boolean
           issue_date?: string | null
-          last_omie_sync_at?: string | null
           notes?: string | null
-          omie_id?: string | null
-          omie_payload?: Json | null
-          omie_sync_at?: string | null
           openfinance_transaction_id?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
@@ -9535,11 +9413,7 @@ export type Database = {
           is_conciliated?: boolean
           is_recurring?: boolean
           issue_date?: string | null
-          last_omie_sync_at?: string | null
           notes?: string | null
-          omie_id?: string | null
-          omie_payload?: Json | null
-          omie_sync_at?: string | null
           openfinance_transaction_id?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
@@ -9590,13 +9464,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financial_entries_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "omie_settings"
             referencedColumns: ["id"]
           },
           {
@@ -10025,190 +9892,6 @@ export type Database = {
             columns: ["suggested_client_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      financial_tax_ai_runs: {
-        Row: {
-          account_id: string
-          alerts_created: number | null
-          created_at: string
-          created_by: string | null
-          id: string
-          input_summary: Json | null
-          model: string | null
-          omie_settings_id: string
-          output: Json | null
-        }
-        Insert: {
-          account_id: string
-          alerts_created?: number | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          input_summary?: Json | null
-          model?: string | null
-          omie_settings_id: string
-          output?: Json | null
-        }
-        Update: {
-          account_id?: string
-          alerts_created?: number | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          input_summary?: Json | null
-          model?: string | null
-          omie_settings_id?: string
-          output?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "financial_tax_ai_runs_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financial_tax_ai_runs_omie_settings_id_fkey"
-            columns: ["omie_settings_id"]
-            isOneToOne: false
-            referencedRelation: "omie_settings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      financial_tax_alerts: {
-        Row: {
-          acao_sugerida: string | null
-          account_id: string
-          created_at: string
-          descricao: string | null
-          id: string
-          omie_settings_id: string
-          origem: Database["public"]["Enums"]["tax_alert_origin"]
-          resolved_at: string | null
-          resolved_by: string | null
-          severidade: Database["public"]["Enums"]["tax_alert_severity"]
-          status: Database["public"]["Enums"]["tax_alert_status"]
-          tipo: string
-          titulo: string
-        }
-        Insert: {
-          acao_sugerida?: string | null
-          account_id: string
-          created_at?: string
-          descricao?: string | null
-          id?: string
-          omie_settings_id: string
-          origem?: Database["public"]["Enums"]["tax_alert_origin"]
-          resolved_at?: string | null
-          resolved_by?: string | null
-          severidade?: Database["public"]["Enums"]["tax_alert_severity"]
-          status?: Database["public"]["Enums"]["tax_alert_status"]
-          tipo: string
-          titulo: string
-        }
-        Update: {
-          acao_sugerida?: string | null
-          account_id?: string
-          created_at?: string
-          descricao?: string | null
-          id?: string
-          omie_settings_id?: string
-          origem?: Database["public"]["Enums"]["tax_alert_origin"]
-          resolved_at?: string | null
-          resolved_by?: string | null
-          severidade?: Database["public"]["Enums"]["tax_alert_severity"]
-          status?: Database["public"]["Enums"]["tax_alert_status"]
-          tipo?: string
-          titulo?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "financial_tax_alerts_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financial_tax_alerts_omie_settings_id_fkey"
-            columns: ["omie_settings_id"]
-            isOneToOne: false
-            referencedRelation: "omie_settings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      financial_tax_profile: {
-        Row: {
-          account_id: string
-          atividade: string | null
-          cnae_principal: string | null
-          cnaes_secundarios: string[] | null
-          created_at: string
-          id: string
-          inscricao_estadual: string | null
-          inscricao_municipal: string | null
-          observacoes: string | null
-          omie_settings_id: string
-          opcao_regime_em: string | null
-          regime: Database["public"]["Enums"]["tax_regime"] | null
-          simples_annex: Database["public"]["Enums"]["tax_simples_annex"] | null
-          updated_at: string
-        }
-        Insert: {
-          account_id: string
-          atividade?: string | null
-          cnae_principal?: string | null
-          cnaes_secundarios?: string[] | null
-          created_at?: string
-          id?: string
-          inscricao_estadual?: string | null
-          inscricao_municipal?: string | null
-          observacoes?: string | null
-          omie_settings_id: string
-          opcao_regime_em?: string | null
-          regime?: Database["public"]["Enums"]["tax_regime"] | null
-          simples_annex?:
-            | Database["public"]["Enums"]["tax_simples_annex"]
-            | null
-          updated_at?: string
-        }
-        Update: {
-          account_id?: string
-          atividade?: string | null
-          cnae_principal?: string | null
-          cnaes_secundarios?: string[] | null
-          created_at?: string
-          id?: string
-          inscricao_estadual?: string | null
-          inscricao_municipal?: string | null
-          observacoes?: string | null
-          omie_settings_id?: string
-          opcao_regime_em?: string | null
-          regime?: Database["public"]["Enums"]["tax_regime"] | null
-          simples_annex?:
-            | Database["public"]["Enums"]["tax_simples_annex"]
-            | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "financial_tax_profile_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financial_tax_profile_omie_settings_id_fkey"
-            columns: ["omie_settings_id"]
-            isOneToOne: true
-            referencedRelation: "omie_settings"
             referencedColumns: ["id"]
           },
         ]
@@ -17869,137 +17552,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      omie_integration_logs: {
-        Row: {
-          account_id: string
-          action: string
-          created_at: string
-          deal_id: string | null
-          error_message: string | null
-          id: string
-          omie_os_id: string | null
-          request_payload: Json | null
-          response_payload: Json | null
-          status: string
-        }
-        Insert: {
-          account_id: string
-          action?: string
-          created_at?: string
-          deal_id?: string | null
-          error_message?: string | null
-          id?: string
-          omie_os_id?: string | null
-          request_payload?: Json | null
-          response_payload?: Json | null
-          status?: string
-        }
-        Update: {
-          account_id?: string
-          action?: string
-          created_at?: string
-          deal_id?: string | null
-          error_message?: string | null
-          id?: string
-          omie_os_id?: string | null
-          request_payload?: Json | null
-          response_payload?: Json | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "omie_integration_logs_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "omie_integration_logs_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      omie_settings: {
-        Row: {
-          account_id: string
-          app_key: string
-          app_secret: string
-          cnpj: string | null
-          color: string | null
-          created_at: string
-          default_bank_account_code: string | null
-          default_category_code: string | null
-          default_city: string | null
-          default_retem_iss: string
-          default_service_code: string | null
-          default_service_lc116_code: string | null
-          default_tax_type: string
-          field_mappings: Json | null
-          id: string
-          is_default: boolean
-          is_enabled: boolean
-          legal_name: string | null
-          trade_name: string | null
-          updated_at: string
-        }
-        Insert: {
-          account_id: string
-          app_key?: string
-          app_secret?: string
-          cnpj?: string | null
-          color?: string | null
-          created_at?: string
-          default_bank_account_code?: string | null
-          default_category_code?: string | null
-          default_city?: string | null
-          default_retem_iss?: string
-          default_service_code?: string | null
-          default_service_lc116_code?: string | null
-          default_tax_type?: string
-          field_mappings?: Json | null
-          id?: string
-          is_default?: boolean
-          is_enabled?: boolean
-          legal_name?: string | null
-          trade_name?: string | null
-          updated_at?: string
-        }
-        Update: {
-          account_id?: string
-          app_key?: string
-          app_secret?: string
-          cnpj?: string | null
-          color?: string | null
-          created_at?: string
-          default_bank_account_code?: string | null
-          default_category_code?: string | null
-          default_city?: string | null
-          default_retem_iss?: string
-          default_service_code?: string | null
-          default_service_lc116_code?: string | null
-          default_tax_type?: string
-          field_mappings?: Json | null
-          id?: string
-          is_default?: boolean
-          is_enabled?: boolean
-          legal_name?: string | null
-          trade_name?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "omie_settings_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       openfinance_sync_logs: {
         Row: {
@@ -26026,11 +25578,6 @@ export type Database = {
       roi_type: "tangible" | "intangible"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "pending" | "in_progress" | "done" | "overdue" | "cancelled"
-      tax_alert_origin: "manual" | "ai"
-      tax_alert_severity: "info" | "warning" | "critical"
-      tax_alert_status: "open" | "read" | "resolved" | "dismissed"
-      tax_regime: "mei" | "simples_nacional" | "lucro_presumido" | "lucro_real"
-      tax_simples_annex: "I" | "II" | "III" | "IV" | "V"
       trend_type: "up" | "flat" | "down"
       user_role:
         | "admin"
@@ -26397,11 +25944,6 @@ export const Constants = {
       roi_type: ["tangible", "intangible"],
       task_priority: ["low", "medium", "high", "urgent"],
       task_status: ["pending", "in_progress", "done", "overdue", "cancelled"],
-      tax_alert_origin: ["manual", "ai"],
-      tax_alert_severity: ["info", "warning", "critical"],
-      tax_alert_status: ["open", "read", "resolved", "dismissed"],
-      tax_regime: ["mei", "simples_nacional", "lucro_presumido", "lucro_real"],
-      tax_simples_annex: ["I", "II", "III", "IV", "V"],
       trend_type: ["up", "flat", "down"],
       user_role: [
         "admin",
