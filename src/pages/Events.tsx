@@ -707,6 +707,9 @@ export default function Events() {
     setDialogOpen(false);
     resetForm();
     invalidateEvents();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
