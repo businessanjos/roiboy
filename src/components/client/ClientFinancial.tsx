@@ -141,7 +141,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const [financialEntries, setFinancialEntries] = useState<FinancialEntry[]>([]);
   const [clientData, setClientData] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
+  
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
