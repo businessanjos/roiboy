@@ -91,6 +91,7 @@ interface ZappConversationPanelProps {
   availableUsersCount: number;
   clientProducts: Record<string, { id: string; name: string; color?: string }[]>;
   clientResponsibles?: Record<string, { id: string; name: string }>;
+  convToClientId?: Record<string, string>;
   leadDealStages?: Record<string, { stageName: string; stageColor: string }>;
   
   // Counts
