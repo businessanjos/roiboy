@@ -1848,13 +1848,14 @@ Deno.serve(async (req) => {
           // and caching caused bugs where closed conversations weren't reopened
           const { data: existingAssignments } = await supabase
             .from("zapp_conversation_assignments")
-            .select("id, status, agent_id, department_id, assigned_at, closed_at")
+            .select("id, status, agent_id, department_id, assigned_at, closed_at, department:zapp_departments(sector_id)")
             .eq("account_id", accountId)
             .eq("zapp_conversation_id", zappConversationId)
             .order("department_id", { nullsFirst: false })
             .limit(5);
           
-          const existingAssignment = existingAssignments?.find(a => a.department_id !== null) 
+          const existingAssignment = existingAssignments?.find(a => sectorDepartmentId && a.department_id === sectorDepartmentId)
+            || existingAssignments?.find(a => a.department_id !== null)
             || existingAssignments?.[0] 
             || null;
 
@@ -1897,25 +1898,32 @@ Deno.serve(async (req) => {
             }
             
           if (!isRecentlyClosed) {
-            // BLINDAGEM DE SETOR: Log security alert if trying to change department
-            if (sectorDepartmentId && existingAssignment.department_id && 
-                sectorDepartmentId !== existingAssignment.department_id) {
-              console.warn(`[SECURITY] Blocked department change attempt: ${existingAssignment.department_id} -> ${sectorDepartmentId} for assignment ${existingAssignment.id}`);
+            const shouldRepairDepartment = Boolean(
+              sectorDepartmentId &&
+              existingAssignment.department_id &&
+              sectorDepartmentId !== existingAssignment.department_id
+            );
+
+            if (shouldRepairDepartment) {
+              console.warn(
+                `[ZAPP] Repairing assignment department ${existingAssignment.department_id} -> ${sectorDepartmentId} ` +
+                `for conversation ${zappConversationId} from integration sector ${sectorId}`
+              );
             }
             
             // CORREÇÃO: Se reabrindo conversa fechada, limpar atendente e metadados de fechamento para voltar à fila
             const isReopeningFromClosed = existingAssignment.status === "closed" && newStatus === "triage";
+            const shouldReleaseToQueue = isReopeningFromClosed || shouldRepairDepartment;
             
             await supabase
                 .from("zapp_conversation_assignments")
                 .update({
                   updated_at: timestamp,
-                  status: newStatus,
-                  // Limpar agent_id e closed_at quando reabrindo de closed para que volte à Fila
-                  ...(isReopeningFromClosed ? { agent_id: null, assigned_at: null, closed_at: null, closed_by: null } : {}),
-                  // BLINDAGEM: Só define department_id se o assignment NÃO tiver um
-                  // NUNCA sobrescrever um department_id existente para evitar migração entre setores
-                  ...(sectorDepartmentId && !existingAssignment.department_id ? { department_id: sectorDepartmentId } : {}),
+                  status: shouldRepairDepartment ? "pending" : newStatus,
+                  // Limpar agent_id quando reabrindo ou quando o atendimento estava preso no setor errado.
+                  ...(shouldReleaseToQueue ? { agent_id: null, assigned_at: null, closed_at: null, closed_by: null } : {}),
+                  // O department_id deve acompanhar o setor real da integração/conversa.
+                  ...(sectorDepartmentId && (!existingAssignment.department_id || shouldRepairDepartment) ? { department_id: sectorDepartmentId } : {}),
                 })
                 .eq("id", existingAssignment.id);
               
@@ -2176,26 +2184,33 @@ Deno.serve(async (req) => {
               .maybeSingle();
 
             if (existingAssignment) {
-              // BLINDAGEM DE SETOR: Log security alert if trying to change department
-              if (sectorDepartmentId && existingAssignment.department_id && 
-                  sectorDepartmentId !== existingAssignment.department_id) {
-                console.warn(`[SECURITY] Blocked department change attempt: ${existingAssignment.department_id} -> ${sectorDepartmentId} for assignment ${existingAssignment.id}`);
+              const shouldRepairDepartment = Boolean(
+                sectorDepartmentId &&
+                existingAssignment.department_id &&
+                sectorDepartmentId !== existingAssignment.department_id
+              );
+
+              if (shouldRepairDepartment) {
+                console.warn(
+                  `[ZAPP] Repairing assignment department ${existingAssignment.department_id} -> ${sectorDepartmentId} ` +
+                  `for conversation ${zappConversationId} from integration sector ${sectorId}`
+                );
               }
               
               // CORREÇÃO: Se reabrindo conversa fechada, limpar atendente para voltar à fila
               const isReopeningFromClosed = existingAssignment.status === "closed";
+              const shouldReleaseToQueue = isReopeningFromClosed || shouldRepairDepartment;
               
               await supabase
                 .from("zapp_conversation_assignments")
                 .update({
                   updated_at: timestamp,
                   // If conversation was closed and client sends new message, reopen to triage
-                  status: isReopeningFromClosed ? "triage" : existingAssignment.status,
-                  // Limpar agent_id e closed_at quando reabrindo de closed para que volte à Fila
-                  ...(isReopeningFromClosed ? { agent_id: null, assigned_at: null, closed_at: null, closed_by: null } : {}),
-                  // BLINDAGEM: Só define department_id se o assignment NÃO tiver um
-                  // NUNCA sobrescrever um department_id existente para evitar migração entre setores
-                  ...(sectorDepartmentId && !existingAssignment.department_id ? { department_id: sectorDepartmentId } : {}),
+                  status: shouldRepairDepartment ? "pending" : isReopeningFromClosed ? "triage" : existingAssignment.status,
+                  // Limpar agent_id quando reabrindo ou quando o atendimento estava preso no setor errado.
+                  ...(shouldReleaseToQueue ? { agent_id: null, assigned_at: null, closed_at: null, closed_by: null } : {}),
+                  // O department_id deve acompanhar o setor real da integração/conversa.
+                  ...(sectorDepartmentId && (!existingAssignment.department_id || shouldRepairDepartment) ? { department_id: sectorDepartmentId } : {}),
                 })
                 .eq("id", existingAssignment.id);
             } else {
