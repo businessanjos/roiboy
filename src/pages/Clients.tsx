@@ -2063,13 +2063,21 @@ export default function Clients() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as "recent" | "alphabetical")}>
-            <SelectTrigger className="w-[160px]">
+          <Select value={sortOrder} onValueChange={(v) => setSortOrder(v)}>
+            <SelectTrigger className="w-[220px]">
               <SelectValue placeholder="Ordenar" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="recent">Mais recentes</SelectItem>
               <SelectItem value="alphabetical">A-Z (Nome)</SelectItem>
+              <SelectItem value="initial_desc">Fat. Inicial (maior)</SelectItem>
+              <SelectItem value="initial_asc">Fat. Inicial (menor)</SelectItem>
+              <SelectItem value="current_desc">Fat. Atual (maior)</SelectItem>
+              <SelectItem value="current_asc">Fat. Atual (menor)</SelectItem>
+              <SelectItem value="evolution_desc">Evolução (maior)</SelectItem>
+              <SelectItem value="evolution_asc">Evolução (menor)</SelectItem>
+              <SelectItem value="record_desc">Recorde (maior)</SelectItem>
+              <SelectItem value="record_asc">Recorde (menor)</SelectItem>
             </SelectContent>
           </Select>
           <Button 
