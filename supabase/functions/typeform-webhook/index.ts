@@ -483,16 +483,18 @@ Deno.serve(async (req) => {
               .single();
 
             if (dealErr) {
-              console.error("[typeform-webhook] deal creation on match failed:", dealErr);
+              noteFailure(`Falha ao criar deal para lead existente: ${dealErr.message}`);
             } else if (newDeal) {
               dealId = newDeal.id;
               console.log(`[typeform-webhook] Deal created on match: ${newDeal.id} → ${isMql ? "Closer" : "TP - Eternum Pass"}`);
             }
+          } else {
+            noteFailure(`Pipeline "${targetName}" sem estágio inicial`);
           }
         }
       }
-    } catch (e) {
-      console.error("[typeform-webhook] match→deal branch failed:", e);
+    } catch (e: any) {
+      noteFailure(`Erro no roteamento do lead existente: ${e?.message || e}`);
     }
   }
 
