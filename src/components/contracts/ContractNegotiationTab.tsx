@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { format, addMonths } from "date-fns";
+import { format, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Loader2,
@@ -26,6 +26,9 @@ import {
   QrCode,
   CheckCircle,
   Receipt,
+  Plus,
+  Trash2,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
