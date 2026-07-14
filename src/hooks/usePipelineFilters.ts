@@ -88,6 +88,12 @@ export const RECOMMENDED_FILTERS = [
     conditions: [{ field: 'next_activity_date', operator: 'is_empty', value: null }],
     match_type: 'all' as const
   },
+  {
+    id: 'no_tasks',
+    name: 'Sem tarefa cadastrada',
+    conditions: [{ field: 'total_tasks', operator: 'equals', value: 0 }],
+    match_type: 'all' as const
+  },
 ];
 
 
@@ -231,7 +237,8 @@ export function applyFilterToDeals(
   dealProductMap?: Record<string, string>,
   dealCustomFieldValues?: Record<string, Record<string, string>>,
   dealNextActivityMap?: Record<string, string | null>,
-  searchOptions?: { mode?: DealSearchMode; blobs?: Record<string, string> }
+  searchOptions?: { mode?: DealSearchMode; blobs?: Record<string, string> },
+  dealTaskCountMap?: Record<string, number>
 ): Deal[] {
   if (!activeFilter && !searchTerm?.trim()) return deals;
 
@@ -310,7 +317,7 @@ export function applyFilterToDeals(
   if (conditions.length === 0) return filtered;
 
   return filtered.filter(deal => {
-    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues, dealNextActivityMap));
+    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap));
     if (matchType === 'all') return results.every(Boolean);
     return results.some(Boolean);
   });
@@ -323,7 +330,7 @@ function toArray(value: any): any[] {
   return [value];
 }
 
-function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>, dealNextActivityMap?: Record<string, string | null>): boolean {
+function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>, dealNextActivityMap?: Record<string, string | null>, dealTaskCountMap?: Record<string, number>): boolean {
   const { field, operator, value, include_empty } = condition;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -429,6 +436,12 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
       if (operator === 'is_not_empty') return true;
       return evaluateDateCondition(nextDue, operator, value, today);
     }
+
+    case 'total_tasks': {
+      const count = dealTaskCountMap?.[deal.id] ?? 0;
+      return evaluateNumberCondition(count, operator, value);
+    }
+
 
 
     default:
