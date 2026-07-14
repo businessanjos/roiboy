@@ -413,8 +413,12 @@ Deno.serve(async (req) => {
       leadId = result.existing_lead.id;
       method = "email";
     } else {
-      console.error("[typeform-webhook] createLeadCore failed:", result.error);
+      noteFailure(`createLeadCore falhou: ${result.error}`);
     }
+  } else if (row.is_completed && !leadId && !dealId) {
+    // Completou a ficha mas não deu match nem conseguimos criar
+    if (!email) noteFailure("Resposta completa sem e-mail — impossível criar lead");
+    else if (!full_name) noteFailure("Resposta completa sem nome — impossível criar lead");
   }
 
   // ---------- Matched lead but no deal yet → create deal (routes by MQL) ----------
@@ -440,7 +444,9 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: true })
           .limit(1)
           .maybeSingle();
-        if (pipe?.id) {
+        if (!pipe?.id) {
+          noteFailure(`Pipeline "${targetName}" não encontrado para roteamento do lead existente`);
+        } else {
           const { data: firstStage } = await supabase
             .from("deal_stages")
             .select("id")
