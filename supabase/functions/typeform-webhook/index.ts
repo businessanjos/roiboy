@@ -75,8 +75,87 @@ function parseFormTitle(title: string): { tag: string | null; source: string; ca
   let source = "Typeform";
   if (prefix.startsWith("TRAF-")) source = "Tráfego Pago";
   else if (prefix.startsWith("ORG-")) source = "Orgânico";
+  else if (prefix.startsWith("IND")) source = "Indicação";
   return { tag, source, canal: source };
 }
+
+// ---------- Custom field IDs (Anjos/Ever account) ----------
+// These are the *lead* custom fields we populate from a Typeform response.
+const LEAD_MQL_FIELD_ID = "e4270e93-e9b9-4d9b-9589-d614ce335bcd";
+const LEAD_CANAL_FIELD_ID = "3bcdcf47-076e-47f2-a1ab-a4dd1ec8398a";
+const LEAD_FATURAMENTO_FIELD_ID = "e352a1ca-cfbc-435a-95f7-2f53b5cac041";
+
+// Map form source → Canal option value
+const CANAL_OPTION_BY_SOURCE: Record<string, string> = {
+  "Tráfego Pago": "opt_2",
+  "Orgânico": "opt_1",
+  "Indicação": "opt_1770990177251",
+};
+
+function mqlFromRevenueLabel(label: string): "opt_1" | "opt_2" {
+  const l = (label || "").toLowerCase();
+  const abaixo = l.match(/abaixo\s+de\s+(\d+)/);
+  if (abaixo && parseInt(abaixo[1]) <= 30) return "opt_2";
+  const entre = l.match(/entre\s+(\d+)\s+e\s+(\d+)/);
+  if (entre && parseInt(entre[2]) <= 30) return "opt_2";
+  if (/ate\s+30|até\s+30/.test(l)) return "opt_2";
+  return "opt_1";
+}
+
+function formatAnswerValue(a: any): string {
+  const t = a?.type || a?.field?.type;
+  if (t === "email") return a?.email || "";
+  if (t === "phone_number") return a?.phone_number || "";
+  if (t === "short_text" || t === "long_text" || t === "text") return a?.text || "";
+  if (t === "number") return String(a?.number ?? "");
+  if (t === "boolean") return a?.boolean ? "Sim" : "Não";
+  if (t === "date") return a?.date || "";
+  if (t === "url") return a?.url || "";
+  if (t === "choice") return a?.choice?.label || a?.choice?.other || "";
+  if (t === "choices") return (a?.choices?.labels || []).join(", ");
+  if (t === "file_url") return a?.file_url || "";
+  return "";
+}
+
+function buildTypeformNote(formTitle: string, answers: any[], submittedAt: string | null): string {
+  const header = `📋 Ficha Typeform${formTitle ? ` — ${formTitle}` : ""}`;
+  const when = submittedAt ? `Recebida em: ${new Date(submittedAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : "";
+  const lines = (answers || [])
+    .map((a) => {
+      const label = (a?.field?.title || a?.field?.ref || a?.field?.id || "").toString().trim();
+      const value = formatAnswerValue(a).trim();
+      if (!label || !value) return null;
+      return `• ${label}: ${value}`;
+    })
+    .filter(Boolean);
+  return [header, when, "", ...lines].filter(Boolean).join("\n");
+}
+
+async function upsertLeadFieldValue(
+  supabase: any,
+  accountId: string,
+  leadId: string,
+  fieldId: string,
+  valueText: string | null,
+) {
+  if (!valueText) return;
+  // Delete any existing value for this (lead, field) then insert fresh — keeps
+  // things idempotent when the same Typeform response is replayed.
+  await supabase
+    .from("lead_field_values")
+    .delete()
+    .eq("lead_id", leadId)
+    .eq("field_id", fieldId)
+    .eq("account_id", accountId);
+  await supabase.from("lead_field_values").insert({
+    lead_id: leadId,
+    field_id: fieldId,
+    account_id: accountId,
+    value_text: valueText,
+  });
+}
+
+
 
 // ---------- Signature ----------
 
