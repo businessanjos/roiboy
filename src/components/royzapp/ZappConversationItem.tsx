@@ -90,6 +90,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
   isSelected,
   currentAgentId,
   clientProducts,
+  clientResponsibles,
   leadDealStages,
   onSelect,
   onMarkAsRead,
