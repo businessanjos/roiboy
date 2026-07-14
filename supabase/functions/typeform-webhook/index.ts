@@ -90,6 +90,19 @@ const DEAL_MQL_FIELD_ID = "448404cd-0344-4892-a574-2387b1c17578";
 const DEAL_FATURAMENTO_FIELD_ID = "ed5c7c0e-0740-4945-b982-70a593ffae0c";
 const DEAL_ORIGEM_FIELD_ID = "43d7d9a1-9370-45f3-803a-93717d2a6d1d";
 const DEAL_PRIMEIRO_CONTATO_FIELD_ID = "166fe351-b29b-4f08-b330-88f82c65f625";
+const DEAL_CANAL_FIELD_ID = "16ebda9f-cd3b-412c-bb06-0950001963c5";
+
+// Deriva o canal (Trafego Pago / Organico) a partir da tag ou origem da venda.
+// TRAF-* → trafego_pago, ORG-* → organico. Retorna null quando não dá pra inferir.
+function canalFromTagOrOrigem(tag: string | null, origemLabel?: string | null): string | null {
+  const candidates = [tag, origemLabel].filter(Boolean) as string[];
+  for (const raw of candidates) {
+    const s = raw.toUpperCase();
+    if (/\bTRAF[-\]]/.test(s) || s.includes("TRAF-")) return "trafego_pago";
+    if (/\bORG[-\]]/.test(s) || s.includes("ORG-")) return "organico";
+  }
+  return null;
+}
 
 // Map form source → Canal option value (lead field)
 const CANAL_OPTION_BY_SOURCE: Record<string, string> = {
@@ -464,6 +477,7 @@ Deno.serve(async (req) => {
           DEAL_FATURAMENTO_FIELD_ID,
           DEAL_ORIGEM_FIELD_ID,
           DEAL_PRIMEIRO_CONTATO_FIELD_ID,
+          DEAL_CANAL_FIELD_ID,
         ]);
       const optionsOf = (id: string) =>
         (dealFieldDefs || []).find((f: any) => f.id === id)?.options as any[] | undefined;
@@ -500,6 +514,16 @@ Deno.serve(async (req) => {
         await upsertDealFieldValue(supabase, accountId, enrichDealId, DEAL_PRIMEIRO_CONTATO_FIELD_ID, {
           value_date: submittedDate,
         });
+      }
+
+      // Canal de Venda — derivado da tag / origem (TRAF → Trafego Pago, ORG → Orgânico)
+      {
+        const canalValue = canalFromTagOrOrigem(tag, tag);
+        if (canalValue) {
+          await upsertDealFieldValue(supabase, accountId, enrichDealId, DEAL_CANAL_FIELD_ID, {
+            value_text: canalValue,
+          });
+        }
       }
     } catch (e) {
       console.error("[typeform-webhook] deal-field enrichment failed:", e);
