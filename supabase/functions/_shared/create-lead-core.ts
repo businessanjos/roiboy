@@ -323,6 +323,30 @@ export async function createLeadCore(
         pipelineId = pipe?.id || null;
       }
 
+      // MQL-based auto-routing: opt_1 (MQL) → Closer, opt_2 (não-MQL) → Rykas Pass
+      if (!pipelineId) {
+        const MQL_FIELD_ID_LOCAL = "e4270e93-e9b9-4d9b-9589-d614ce335bcd";
+        const resolvedMql =
+          fieldInserts.find((f: any) => f.field_id === MQL_FIELD_ID_LOCAL)?.value_text ||
+          (payload.mql?.trim() || null);
+        const isMql = resolvedMql === "opt_1" || /^sim\b/i.test(resolvedMql || "");
+        const targetName = isMql ? "Closer" : "%ryka%pass%";
+        const { data: routedPipe } = await supabase
+          .from("pipelines")
+          .select("id")
+          .eq("account_id", accountId)
+          .ilike("name", targetName)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        pipelineId = routedPipe?.id || null;
+        if (pipelineId) {
+          console.log(`[create-lead-core] Auto-routed by MQL=${resolvedMql} → pipeline ${isMql ? "Closer" : "Rykas Pass"} (${pipelineId})`);
+        }
+      }
+
+
+
       let responsibleUserId = payload.responsible_user_id || null;
       if (!responsibleUserId && payload.responsible_email) {
         const { data: u } = await supabase
