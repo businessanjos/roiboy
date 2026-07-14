@@ -385,6 +385,17 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               )}
             </>
           )}
+          {/* Consultor responsável */}
+          {responsible && (
+            <Badge
+              variant="secondary"
+              className="text-[10px] px-1.5 py-0 h-4 border-0 bg-violet-500/15 text-violet-500 flex items-center gap-1"
+              title={`Consultor: ${responsible.name}`}
+            >
+              <User className="h-2.5 w-2.5" />
+              {responsible.name.split(" ")[0]}
+            </Badge>
+          )}
         </div>
       </div>
     </div>
