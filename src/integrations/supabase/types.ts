@@ -25255,6 +25255,10 @@ export type Database = {
         Returns: undefined
       }
       refresh_client_latest_metrics: { Args: never; Returns: undefined }
+      regenerate_contract_receivables: {
+        Args: { _contract_id: string }
+        Returns: number
+      }
       register_for_event: {
         Args: {
           p_code: string

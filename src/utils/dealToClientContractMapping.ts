@@ -11,6 +11,7 @@ export const DEAL_FIELD_IDS = {
   DESCRICAO_NEGOCIACAO: 'ca39f0cf-d071-4271-a2a9-23d9d6993780',
   PARCELAS: '069ee7f8-befd-482d-990d-13048b17180c',
   VALOR_ENTRADA: '86c93211-5013-48a6-affe-e53d81931cb6',
+  PAYMENT_BREAKDOWN: 'afc29a55-2252-4875-86d7-dc26ffd232a5',
 };
 
 // Structured fields required to consider a won deal's negotiation complete
@@ -189,6 +190,14 @@ export async function mapItemVendaToProductId(itemVendaValue: string): Promise<s
   return productId;
 }
 
+export interface DealPaymentBreakdownItem {
+  method: string;
+  method_label?: string;
+  amount: number | null;
+  installments: number | null;
+  first_due_date: string | null;
+}
+
 export interface DealFieldValues {
   instagram?: string;
   cidade?: { city?: string; state?: string; formatted_address?: string };
@@ -197,6 +206,7 @@ export interface DealFieldValues {
   formaPagamento?: string;
   descricaoNegociacao?: string;
   parcelas?: number;
+  paymentBreakdown?: DealPaymentBreakdownItem[];
 }
 
 
@@ -235,6 +245,18 @@ export async function fetchDealCustomFieldValues(dealId: string): Promise<DealFi
         if (!isNaN(parsed) && parsed > 0) result.parcelas = parsed;
         break;
       }
+      case DEAL_FIELD_IDS.PAYMENT_BREAKDOWN: {
+        // Stored by RequiredFieldsModal as value_json = PaymentBreakdownItem[].
+        // Also handles a defensive parse if it was serialized as text.
+        let raw: any = row.value_json;
+        if (!raw && row.value_text) {
+          try { raw = JSON.parse(row.value_text); } catch { raw = null; }
+        }
+        if (Array.isArray(raw) && raw.length > 0) {
+          result.paymentBreakdown = raw as DealPaymentBreakdownItem[];
+        }
+        break;
+      }
     }
 
   });
@@ -242,6 +264,43 @@ export async function fetchDealCustomFieldValues(dealId: string): Promise<DealFi
   console.log('[DealMapping] Fetched deal field values for deal:', dealId, result);
   
   return result;
+}
+
+/**
+ * Expands the sales-team payment breakdown into a flat installments_detail array
+ * matching the format expected by `client_contracts.installments_detail` and the
+ * `generate_contract_receivables` DB function.
+ *
+ * Each PaymentBreakdownItem { method, amount, installments, first_due_date } is
+ * expanded into `installments` rows of amount/installments, each 1 month apart
+ * starting from first_due_date. Rows from all methods are concatenated in the
+ * user-provided order and renumbered sequentially.
+ */
+export function expandBreakdownToInstallments(
+  breakdown: DealPaymentBreakdownItem[] | undefined | null
+): Array<{ amount: number; due_date: string; method: string; method_label?: string }> {
+  if (!breakdown || breakdown.length === 0) return [];
+  const out: Array<{ amount: number; due_date: string; method: string; method_label?: string }> = [];
+  for (const item of breakdown) {
+    const total = Number(item.amount) || 0;
+    const count = Math.max(1, Math.floor(Number(item.installments) || 0));
+    if (total <= 0 || !item.first_due_date) continue;
+    const base = Math.floor((total / count) * 100) / 100;
+    const remainder = Math.round((total - base * count) * 100) / 100;
+    const startDate = new Date(item.first_due_date + 'T00:00:00');
+    for (let i = 0; i < count; i++) {
+      const d = new Date(startDate);
+      d.setMonth(d.getMonth() + i);
+      const amt = i === 0 ? Math.round((base + remainder) * 100) / 100 : base;
+      out.push({
+        amount: amt,
+        due_date: d.toISOString().slice(0, 10),
+        method: item.method,
+        method_label: item.method_label,
+      });
+    }
+  }
+  return out;
 }
 
 export async function updateClientWithDealData(

@@ -349,6 +349,54 @@ export function ContractNegotiationTab({
     }
   };
 
+  const handleRegenerateReceivables = async () => {
+    if (generating) return;
+    if (!detailBalanced) {
+      toast.error(
+        `O detalhamento (${formatCurrency(detailTotal)}) precisa somar exatamente o valor do contrato (${formatCurrency(contractValue)}).`
+      );
+      return;
+    }
+    if (!window.confirm(
+      "Isso vai apagar as parcelas em aberto deste contrato no financeiro e recriar conforme o detalhamento atual. Parcelas já pagas serão preservadas (a operação será bloqueada se houver alguma). Deseja continuar?"
+    )) {
+      return;
+    }
+    setGenerating(true);
+    try {
+      // 1) Persist the current editable detail on the contract before regenerating
+      const { error: upErr } = await supabase
+        .from("client_contracts")
+        .update({
+          payment_method: paymentMethod,
+          installments_count: detail.length,
+          first_due_date: detail[0]?.due_date || firstDueDate,
+          installments_detail: detail.map((d, i) => ({
+            number: i + 1,
+            amount: Number(d.amount) || 0,
+            due_date: d.due_date,
+            method: d.method,
+          })),
+        })
+        .eq("id", contractId);
+      if (upErr) throw upErr;
+
+      // 2) Call the DB function that clears open entries and re-triggers the generator
+      const { data, error } = await supabase.rpc("regenerate_contract_receivables", {
+        _contract_id: contractId,
+      });
+      if (error) throw error;
+
+      toast.success(`${data ?? detail.length} parcela(s) recriada(s) no financeiro`);
+      onUpdate();
+    } catch (error: any) {
+      console.error("Error regenerating receivables:", error);
+      toast.error(error?.message || "Erro ao refazer parcelas");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -628,16 +676,39 @@ export function ContractNegotiationTab({
           </div>
 
 
-          {/* Generate Receivables Button */}
+          {/* Generate / Regenerate Receivables Button */}
           {receivablesGenerated ? (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
-              <CheckCircle className="h-5 w-5" />
-              <span className="text-sm font-medium">Parcelas já geradas no financeiro</span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
+                <CheckCircle className="h-5 w-5" />
+                <span className="text-sm font-medium">Parcelas já geradas no financeiro</span>
+              </div>
+              <Button
+                onClick={handleRegenerateReceivables}
+                disabled={generating || !detailBalanced}
+                variant="outline"
+                className="w-full"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Refazendo parcelas...
+                  </>
+                ) : (
+                  <>
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Refazer {detail.length} parcela(s) no Financeiro
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Refazer apaga apenas parcelas em aberto e recria conforme o detalhamento acima. Parcelas já pagas bloqueiam a operação.
+              </p>
             </div>
           ) : (
             <Button
               onClick={handleGenerateReceivables}
-              disabled={generating || !paymentMethod}
+              disabled={generating || !paymentMethod || !detailBalanced}
               className="w-full"
               size="lg"
             >
@@ -649,7 +720,7 @@ export function ContractNegotiationTab({
               ) : (
                 <>
                   <Receipt className="h-4 w-4 mr-2" />
-                  Gerar {installments} Parcela(s) no Financeiro
+                  Gerar {detail.length} Parcela(s) no Financeiro
                 </>
               )}
             </Button>
