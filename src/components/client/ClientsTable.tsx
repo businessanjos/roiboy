@@ -45,6 +45,7 @@ export const ClientsTable = memo(function ClientsTable({
         <TableHead className="font-medium text-center min-w-[100px]">Graduação</TableHead>
         <TableHead className="font-medium text-center min-w-[140px]">Área de Atuação</TableHead>
         <TableHead className="font-medium text-center min-w-[130px]">Formação</TableHead>
+        <TableHead className="font-medium text-center min-w-[130px]">Fat. Inicial</TableHead>
         <TableHead className="font-medium text-center min-w-[130px]">Fat. Atual</TableHead>
         <TableHead className="font-medium text-center min-w-[120px]">Evolução</TableHead>
         <TableHead className="font-medium text-center min-w-[130px]">Recorde</TableHead>
