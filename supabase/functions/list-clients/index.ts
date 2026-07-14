@@ -783,6 +783,26 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Memory-based sort + pagination (evolution, record).
+    let memorySortTotal: number | null = null;
+    if (isMemorySort) {
+      const asc = sortParam.endsWith("_asc");
+      const isEvolution = sortParam.startsWith("evolution");
+      filteredClients = [...filteredClients].sort((a: any, b: any) => {
+        let av: number, bv: number;
+        if (isEvolution) {
+          av = (Number(a.current_revenue) || 0) - (Number(a.initial_revenue) || 0);
+          bv = (Number(b.current_revenue) || 0) - (Number(b.initial_revenue) || 0);
+        } else {
+          av = Number(a.revenue_record?.revenue) || 0;
+          bv = Number(b.revenue_record?.revenue) || 0;
+        }
+        return asc ? av - bv : bv - av;
+      });
+      memorySortTotal = filteredClients.length;
+      filteredClients = filteredClients.slice(offset, offset + limit);
+    }
+
     // Use count from SQL when no post-query filters were applied, otherwise use filtered length
     const hasPostQueryFilters =
       (contractFilter && contractFilter !== "all") ||
