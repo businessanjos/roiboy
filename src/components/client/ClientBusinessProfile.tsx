@@ -464,10 +464,54 @@ export function ClientBusinessProfile({
               placeholder="Nome do método/produto"
             />
           </div>
+
+          {/* Ryka + Recorde row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-lg border bg-card p-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+                <Activity className="h-3.5 w-3.5" /> Clínica Ryka
+              </span>
+              <div className="mt-1 flex items-center gap-2">
+                <span className={`inline-block h-2 w-2 rounded-full ${rykaMeta.dot}`} />
+                <span className={`text-sm font-semibold ${rykaMeta.cls}`}>
+                  {rykaMeta.label}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {rykaStatus === "none"
+                  ? "Cliente ainda não provisionado no Clínica Ryka"
+                  : "Status do provisionamento mais recente"}
+              </p>
+            </div>
+
+            <div className="rounded-lg border bg-card p-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+                <Trophy className="h-3.5 w-3.5 text-amber-500" /> Recorde de faturamento
+              </span>
+              {revenueRecord ? (
+                <div className="mt-1">
+                  <div className="text-lg font-bold text-amber-600">
+                    {currency(Number(revenueRecord.revenue))}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground capitalize">
+                    {monthLabel(revenueRecord.month)} • desde o início da mentoria
+                  </div>
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground mt-1 block">
+                  Sem histórico de faturamento ainda
+                </span>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      <ClientClinicsManager clientId={clientId} accountId={client.account_id} />
+      </>
     );
   }
+
 
   // -------------------- FULL VIEW --------------------
   return (
