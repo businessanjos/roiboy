@@ -403,7 +403,7 @@ Deno.serve(async (req) => {
               console.error("[typeform-webhook] deal creation on match failed:", dealErr);
             } else if (newDeal) {
               dealId = newDeal.id;
-              console.log(`[typeform-webhook] Deal created on match: ${newDeal.id} → ${isMql ? "Closer" : "Rykas Pass"}`);
+              console.log(`[typeform-webhook] Deal created on match: ${newDeal.id} → ${isMql ? "Closer" : "TP - Eternum Pass"}`);
             }
           }
         }
