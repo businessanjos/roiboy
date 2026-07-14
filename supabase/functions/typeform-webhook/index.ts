@@ -200,6 +200,7 @@ Deno.serve(async (req) => {
       canal,
       tags,
       create_deal: true,
+      deal_title: tag ? `${tag} ${full_name}` : full_name,
     });
 
     if (result.status === "created") {
