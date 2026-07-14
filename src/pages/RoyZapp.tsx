@@ -230,6 +230,7 @@ export default function RoyZapp() {
     loading,
     availableProducts,
     clientProducts,
+    clientResponsibles,
     leadDealStages,
     currentAgent,
     hasGlobalVisibility,
@@ -1179,6 +1180,7 @@ export default function RoyZapp() {
           availableProducts={availableProducts}
           availableUsersCount={availableUsers.length}
           clientProducts={clientProducts}
+          clientResponsibles={clientResponsibles}
           leadDealStages={leadDealStages}
           activeConversations={activeConversations}
           myConversations={myConversations}

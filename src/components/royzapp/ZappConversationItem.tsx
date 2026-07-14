@@ -38,6 +38,7 @@ interface ZappConversationItemProps {
   isSelected: boolean;
   currentAgentId: string | null;
   clientProducts: Record<string, { id: string; name: string; color?: string }[]>;
+  clientResponsibles?: Record<string, { id: string; name: string }>;
   leadDealStages?: Record<string, { stageName: string; stageColor: string }>;
   onSelect: (assignment: ConversationAssignment) => void;
   onMarkAsRead: (zappConvId: string) => void;
@@ -89,6 +90,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
   isSelected,
   currentAgentId,
   clientProducts,
+  clientResponsibles,
   leadDealStages,
   onSelect,
   onMarkAsRead,
@@ -111,6 +113,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
 
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const products = clientId ? clientProducts[clientId] : undefined;
+  const responsible = clientId ? clientResponsibles?.[clientId] : undefined;
   const leadId = assignment.zapp_conversation?.lead_id;
   const dealStage = leadId ? leadDealStages?.[leadId] : undefined;
 
@@ -381,6 +384,17 @@ export const ZappConversationItem = memo(function ZappConversationItem({
                 </span>
               )}
             </>
+          )}
+          {/* Consultor responsável */}
+          {responsible && (
+            <Badge
+              variant="secondary"
+              className="text-[10px] px-1.5 py-0 h-4 border-0 bg-violet-500/15 text-violet-500 flex items-center gap-1"
+              title={`Consultor: ${responsible.name}`}
+            >
+              <User className="h-2.5 w-2.5" />
+              {responsible.name.split(" ")[0]}
+            </Badge>
           )}
         </div>
       </div>

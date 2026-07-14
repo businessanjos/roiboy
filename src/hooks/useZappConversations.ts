@@ -48,6 +48,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   const [assignments, setAssignments] = useState<ConversationAssignment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [clientProducts, setClientProducts] = useState<Record<string, { id: string; name: string; color?: string }[]>>({});
+  const [clientResponsibles, setClientResponsibles] = useState<Record<string, { id: string; name: string }>>({});
   const [leadDealStages, setLeadDealStages] = useState<Record<string, { stageName: string; stageColor: string }>>({});
 
   const currentDepartmentIdRef = useRef<string | null>(null);
@@ -90,6 +91,28 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           }
         });
         setClientProducts(prev => ({ ...prev, ...productsMap }));
+      }
+
+      // Fetch responsible users for these clients
+      const { data: clientsData } = await supabase
+        .from("clients")
+        .select("id, responsible_user_id")
+        .in("id", clientIds)
+        .not("responsible_user_id", "is", null);
+
+      if (clientsData && clientsData.length > 0) {
+        const userIds = [...new Set(clientsData.map((c: any) => c.responsible_user_id).filter(Boolean))];
+        const { data: usersData } = await supabase
+          .from("users")
+          .select("id, name")
+          .in("id", userIds);
+        const userMap = new Map((usersData || []).map((u: any) => [u.id, u.name]));
+        const respMap: Record<string, { id: string; name: string }> = {};
+        clientsData.forEach((c: any) => {
+          const name = userMap.get(c.responsible_user_id);
+          if (name) respMap[c.id] = { id: c.responsible_user_id, name };
+        });
+        setClientResponsibles(prev => ({ ...prev, ...respMap }));
       }
     }
 
@@ -605,6 +628,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     rawAssignments: assignments,
     messages,
     clientProducts,
+    clientResponsibles,
     leadDealStages,
     fetchAssignmentsOnly,
     fetchAssignmentsForDepartment,

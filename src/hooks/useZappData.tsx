@@ -139,6 +139,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     loading,
     availableProducts: filters.availableProducts,
     clientProducts: conversations.clientProducts,
+    clientResponsibles: conversations.clientResponsibles,
     leadDealStages: conversations.leadDealStages,
 
     // WhatsApp

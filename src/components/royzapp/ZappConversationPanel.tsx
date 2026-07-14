@@ -90,6 +90,7 @@ interface ZappConversationPanelProps {
   availableProducts: { id: string; name: string; color: string | null }[];
   availableUsersCount: number;
   clientProducts: Record<string, { id: string; name: string; color?: string }[]>;
+  clientResponsibles?: Record<string, { id: string; name: string }>;
   leadDealStages?: Record<string, { stageName: string; stageColor: string }>;
   
   // Counts
@@ -194,6 +195,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   availableProducts,
   availableUsersCount,
   clientProducts,
+  clientResponsibles,
   leadDealStages,
   activeConversations,
   myConversations,
@@ -729,6 +731,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                         isSelected={selectedConversation?.id === assignment.id}
                         currentAgentId={currentAgentId}
                         clientProducts={clientProducts}
+                        clientResponsibles={clientResponsibles}
                         leadDealStages={leadDealStages}
                         onSelect={onSelectConversation}
                         onMarkAsRead={onMarkAsRead}
@@ -757,6 +760,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                           isSelected={selectedConversation?.id === assignment.id}
                           currentAgentId={currentAgentId}
                           clientProducts={clientProducts}
+                        clientResponsibles={clientResponsibles}
                           leadDealStages={leadDealStages}
                           onSelect={onSelectConversation}
                           onMarkAsRead={onMarkAsRead}
@@ -784,6 +788,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                               isSelected={selectedConversation?.id === assignment.id}
                               currentAgentId={currentAgentId}
                               clientProducts={clientProducts}
+                        clientResponsibles={clientResponsibles}
                               leadDealStages={leadDealStages}
                               onSelect={onSelectConversation}
                               onMarkAsRead={onMarkAsRead}
@@ -809,6 +814,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                     isSelected={selectedConversation?.id === assignment.id}
                     currentAgentId={currentAgentId}
                     clientProducts={clientProducts}
+                        clientResponsibles={clientResponsibles}
                     leadDealStages={leadDealStages}
                     onSelect={onSelectConversation}
                     onMarkAsRead={onMarkAsRead}
