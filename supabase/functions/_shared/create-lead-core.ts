@@ -360,6 +360,21 @@ export async function createLeadCore(
         responsibleUserId = u?.id || null;
       }
 
+      // Distribuição padrão: leads TRAF-*/ORG-* caem no Jonathan Marcato (gestor)
+      if (!responsibleUserId) {
+        const firstTag = (tags[0] || "").toUpperCase();
+        const src = (payload.source || "").toLowerCase();
+        const looksLikeFormLead =
+          /\[(TRAF|ORG|IND)-/i.test(firstTag) ||
+          src.includes("tráfego") || src.includes("trafego") ||
+          src.includes("orgânico") || src.includes("organico");
+        if (looksLikeFormLead) {
+          responsibleUserId = "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
+          console.log("[create-lead-core] Default responsible → Jonathan Marcato");
+        }
+      }
+
+
       if (pipelineId) {
         let resolvedStage: { id: string } | null = null;
         if (payload.stage_id) {
@@ -416,6 +431,55 @@ export async function createLeadCore(
             console.error("[create-lead-core] deal insert failed:", dealErr);
           } else {
             createdDeal = deal;
+            // ---------- Deal custom-field enrichment (mirror do typeform-webhook) ----------
+            try {
+              const DEAL_MQL_FIELD_ID = "448404cd-0344-4892-a574-2387b1c17578";
+              const DEAL_FATURAMENTO_FIELD_ID = "ed5c7c0e-0740-4945-b982-70a593ffae0c";
+              const DEAL_ORIGEM_FIELD_ID = "43d7d9a1-9370-45f3-803a-93717d2a6d1d";
+              const DEAL_PRIMEIRO_CONTATO_FIELD_ID = "166fe351-b29b-4f08-b330-88f82c65f625";
+              const DEAL_CANAL_FIELD_ID = "16ebda9f-cd3b-412c-bb06-0950001963c5";
+
+              const { data: dealDefs } = await supabase
+                .from("custom_fields")
+                .select("id, options")
+                .in("id", [DEAL_FATURAMENTO_FIELD_ID, DEAL_ORIGEM_FIELD_ID]);
+              const optsOf = (id: string) =>
+                (dealDefs || []).find((f: any) => f.id === id)?.options as any[] | undefined;
+              const resolveOpt = (opts: any[] | undefined, raw: string | null | undefined) => {
+                if (!opts || !raw) return null;
+                const n = normalize(raw);
+                const m = opts.find((o: any) => normalize(o.label) === n || o.value === raw);
+                return m?.value || null;
+              };
+
+              const resolvedMqlField = fieldInserts.find((f: any) => f.field_id === MQL_FIELD_ID)?.value_text;
+              const isMqlDeal = resolvedMqlField === "opt_1" || /^sim\b/i.test(payload.mql || "");
+              const dealInserts: any[] = [
+                { deal_id: deal.id, field_id: DEAL_MQL_FIELD_ID, account_id: accountId, value_text: isMqlDeal ? "sim_acima_30k" : "nao_abaixo_30k" },
+                { deal_id: deal.id, field_id: DEAL_PRIMEIRO_CONTATO_FIELD_ID, account_id: accountId, value_date: new Date().toISOString().slice(0, 10) },
+              ];
+
+              if (payload.revenue_range) {
+                const fat = resolveOpt(optsOf(DEAL_FATURAMENTO_FIELD_ID), payload.revenue_range);
+                if (fat) dealInserts.push({ deal_id: deal.id, field_id: DEAL_FATURAMENTO_FIELD_ID, account_id: accountId, value_text: fat });
+              }
+
+              const firstTag = tags[0] || "";
+              if (firstTag) {
+                const origem = resolveOpt(optsOf(DEAL_ORIGEM_FIELD_ID), firstTag);
+                if (origem) dealInserts.push({ deal_id: deal.id, field_id: DEAL_ORIGEM_FIELD_ID, account_id: accountId, value_json: [origem] });
+              }
+
+              const upper = (firstTag || payload.source || "").toUpperCase();
+              const canal = /TRAF-/.test(upper) ? "trafego_pago" : (/ORG-/.test(upper) || /ORG[ÂA]NICO/.test(upper) ? "organico" : null);
+              if (canal) dealInserts.push({ deal_id: deal.id, field_id: DEAL_CANAL_FIELD_ID, account_id: accountId, value_text: canal });
+
+              await supabase.from("deal_field_values").delete().eq("deal_id", deal.id).in("field_id", dealInserts.map((d) => d.field_id));
+              const { error: dfvErr } = await supabase.from("deal_field_values").insert(dealInserts);
+              if (dfvErr) console.error("[create-lead-core] deal field enrich failed:", dfvErr);
+            } catch (e) {
+              console.error("[create-lead-core] deal enrichment error:", e);
+            }
           }
         }
       }
@@ -426,3 +490,5 @@ export async function createLeadCore(
 
   return { status: "created", lead: newLead, deal: createdDeal };
 }
+
+
