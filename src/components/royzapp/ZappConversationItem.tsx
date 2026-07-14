@@ -385,17 +385,30 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               )}
             </>
           )}
-          {/* Consultor responsável */}
-          {responsible && (
-            <Badge
-              variant="secondary"
-              className="text-[10px] px-1.5 py-0 h-4 border-0 bg-violet-500/15 text-violet-500 flex items-center gap-1"
-              title={`Consultor: ${responsible.name}`}
-            >
-              <User className="h-2.5 w-2.5" />
-              {responsible.name.split(" ")[0]}
-            </Badge>
-          )}
+          {/* Consultor responsável — só exibe se for diferente do atendente já mostrado acima */}
+          {(() => {
+            if (!responsible) return null;
+            const agentName = assignment.agent_id ? getAgentName(assignment.agent_id) : null;
+            const norm = (s: string) =>
+              s
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .trim();
+            if (agentName && norm(agentName).split(" ")[0] === norm(responsible.name).split(" ")[0]) {
+              return null;
+            }
+            return (
+              <Badge
+                variant="secondary"
+                className="text-[10px] px-1.5 py-0 h-4 border-0 bg-violet-500/15 text-violet-500 flex items-center gap-1"
+                title={`Consultor responsável: ${responsible.name}`}
+              >
+                <User className="h-2.5 w-2.5" />
+                {responsible.name.split(" ")[0]}
+              </Badge>
+            );
+          })()}
         </div>
       </div>
     </div>
