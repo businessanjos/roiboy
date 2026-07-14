@@ -2254,6 +2254,25 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* Área de Atuação Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Área de Atuação</Label>
+                <Select value={filterArea} onValueChange={setFilterArea}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todas as áreas</SelectItem>
+                    {areaOptions.map((a) => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                    <SelectItem value="none">Sem área</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+
+
 
               {/* Clear Filters Button */}
               {activeFilterCount > 0 && (
