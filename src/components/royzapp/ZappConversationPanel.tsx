@@ -195,6 +195,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   availableProducts,
   availableUsersCount,
   clientProducts,
+  clientResponsibles,
   leadDealStages,
   activeConversations,
   myConversations,
