@@ -681,6 +681,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     messages,
     clientProducts,
     clientResponsibles,
+    convToClientId,
     leadDealStages,
     fetchAssignmentsOnly,
     fetchAssignmentsForDepartment,
