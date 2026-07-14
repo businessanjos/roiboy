@@ -71,6 +71,9 @@ interface ClientRow {
   education: string | null;
   education_specialty: string | null;
   business_niche: string | null;
+  onboarding_started_at: string | null;
+  contract_start_date: string | null;
+  created_at: string | null;
 }
 
 interface HistoryRow {
@@ -139,7 +142,7 @@ export function ClientBusinessProfile({
     const { data: c, error: cErr } = await supabase
       .from("clients")
       .select(
-        "id, account_id, initial_revenue, current_revenue, current_revenue_month, differential, method_name, education, education_specialty, business_niche"
+        "id, account_id, initial_revenue, current_revenue, current_revenue_month, differential, method_name, education, education_specialty, business_niche, onboarding_started_at, contract_start_date, created_at"
       )
       .eq("id", clientId)
       .single();
@@ -291,13 +294,37 @@ export function ClientBusinessProfile({
 
   const growth = client ? growthPct(client.initial_revenue, client.current_revenue) : null;
 
+  const mentoringStart = useMemo(() => {
+    const raw =
+      client?.onboarding_started_at ||
+      client?.contract_start_date ||
+      client?.created_at ||
+      null;
+    return raw ? new Date(raw) : null;
+  }, [client]);
+
+  const mentoringStartMonth = mentoringStart ? format(mentoringStart, "yyyy-MM") : null;
+
   const revenueRecord = useMemo(() => {
     if (!history || history.length === 0) return null;
-    return history.reduce(
+    const eligible = mentoringStartMonth
+      ? history.filter((h) => h.month >= mentoringStartMonth)
+      : history;
+    const pool = eligible.length ? eligible : history;
+    return pool.reduce(
       (best, h) => (Number(h.revenue) > Number(best.revenue) ? h : best),
-      history[0]
+      pool[0]
     );
-  }, [history]);
+  }, [history, mentoringStartMonth]);
+
+  const mentoringMonths = useMemo(() => {
+    if (!mentoringStart) return null;
+    const now = new Date();
+    const months =
+      (now.getFullYear() - mentoringStart.getFullYear()) * 12 +
+      (now.getMonth() - mentoringStart.getMonth());
+    return Math.max(0, months);
+  }, [mentoringStart]);
 
   if (loading) {
     return (
@@ -465,8 +492,35 @@ export function ClientBusinessProfile({
             />
           </div>
 
-          {/* Ryka + Recorde row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Entrada + Ryka + Recorde row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-lg border bg-card p-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+                <Briefcase className="h-3.5 w-3.5" /> Entrada na mentoria
+              </span>
+              {mentoringStart ? (
+                <div className="mt-1">
+                  <div className="text-lg font-bold text-foreground capitalize">
+                    {format(mentoringStart, "MMM 'de' yyyy", { locale: ptBR })}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {mentoringMonths != null
+                      ? `há ${mentoringMonths} ${mentoringMonths === 1 ? "mês" : "meses"}`
+                      : ""}
+                    {" • "}
+                    {format(mentoringStart, "dd/MM/yyyy")}
+                    {!client?.onboarding_started_at && !client?.contract_start_date && (
+                      <span className="text-amber-600"> (estimado)</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground mt-1 block">
+                  Data indisponível
+                </span>
+              )}
+            </div>
+
             <div className="rounded-lg border bg-card p-3">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
                 <Activity className="h-3.5 w-3.5" /> Clínica Ryka
