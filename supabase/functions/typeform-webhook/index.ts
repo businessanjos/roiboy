@@ -477,6 +477,7 @@ Deno.serve(async (req) => {
           DEAL_FATURAMENTO_FIELD_ID,
           DEAL_ORIGEM_FIELD_ID,
           DEAL_PRIMEIRO_CONTATO_FIELD_ID,
+          DEAL_CANAL_FIELD_ID,
         ]);
       const optionsOf = (id: string) =>
         (dealFieldDefs || []).find((f: any) => f.id === id)?.options as any[] | undefined;
