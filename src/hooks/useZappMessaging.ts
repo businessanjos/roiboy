@@ -692,6 +692,11 @@ export function useZappMessaging({
   // Send media message (image/document/video)
   const sendMediaMessage = async (file: File, mediaType: "image" | "document" | "video", caption?: string) => {
     if (!selectedConversation || uploadingMedia) return;
+
+    if (file.size > MAX_ZAPP_MEDIA_SIZE_BYTES) {
+      toast.error("Arquivo muito grande. Máximo 70MB.");
+      return;
+    }
     
     const contactInfo = getContactInfo(selectedConversation);
     const phone = contactInfo.phone;
