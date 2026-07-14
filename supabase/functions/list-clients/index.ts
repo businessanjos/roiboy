@@ -371,6 +371,14 @@ Deno.serve(async (req) => {
         stage_id,
         education,
         education_specialty,
+        business_niche,
+        differential,
+        method_name,
+        initial_revenue,
+        current_revenue,
+        current_revenue_month,
+        onboarding_started_at,
+        contract_start_date,
         client_products (
           product_id,
           products:product_id (
