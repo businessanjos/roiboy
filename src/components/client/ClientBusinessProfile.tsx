@@ -19,7 +19,10 @@ import {
   Pencil,
   Check,
   X,
+  Trophy,
+  Activity,
 } from "lucide-react";
+import { ClientClinicsManager } from "./ClientClinicsManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
