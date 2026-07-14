@@ -49,6 +49,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [clientProducts, setClientProducts] = useState<Record<string, { id: string; name: string; color?: string }[]>>({});
   const [clientResponsibles, setClientResponsibles] = useState<Record<string, { id: string; name: string }>>({});
+  const [convToClientId, setConvToClientId] = useState<Record<string, string>>({});
   const [leadDealStages, setLeadDealStages] = useState<Record<string, { stageName: string; stageColor: string }>>({});
 
   const currentDepartmentIdRef = useRef<string | null>(null);
@@ -72,9 +73,57 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
   // Fetch supplementary data (products, deal stages) for assignments
   const fetchSupplementaryData = useCallback(async (assignmentsData: ConversationAssignment[]) => {
-    const clientIds = assignmentsData
-      .map((a) => a.zapp_conversation?.client_id || a.conversation?.client?.id)
-      .filter((id): id is string => !!id);
+    const linkedClientIds = new Set(
+      assignmentsData
+        .map((a) => a.zapp_conversation?.client_id || a.conversation?.client?.id)
+        .filter((id): id is string => !!id)
+    );
+
+    // Fallback: resolve unlinked conversations to clients by phone_e164 or full_name.
+    // Otherwise clients like "Larissa Ferreira Ferraz Eleodoro - RM" (which exist in CRM
+    // but whose zapp_conversation has no client_id) would never show product/consultor badges.
+    const unresolvedConvs = assignmentsData
+      .map((a) => a.zapp_conversation)
+      .filter((z: any) => z && !z.client_id && !z.is_group) as any[];
+
+    const newConvMap: Record<string, string> = {};
+    if (unresolvedConvs.length > 0) {
+      const phones = [...new Set(unresolvedConvs.map((z) => z.phone_e164).filter((p) => p && p.length >= 10))] as string[];
+      const rawNames = [...new Set(unresolvedConvs.map((z) => z.contact_name).filter(Boolean))] as string[];
+
+      const [byPhoneRes, byNameRes] = await Promise.all([
+        phones.length
+          ? supabase.from("clients").select("id, full_name, phone_e164").in("phone_e164", phones).limit(2000)
+          : Promise.resolve({ data: [] as any[] }),
+        rawNames.length
+          ? supabase.from("clients").select("id, full_name, phone_e164").in("full_name", rawNames).limit(2000)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+      const byPhone = new Map<string, string>();
+      const byName = new Map<string, string>();
+      ((byPhoneRes as any).data || []).forEach((c: any) => {
+        if (c.phone_e164) byPhone.set(c.phone_e164, c.id);
+      });
+      ((byNameRes as any).data || []).forEach((c: any) => {
+        if (c.full_name) byName.set(c.full_name.toLowerCase().trim(), c.id);
+      });
+
+      for (const z of unresolvedConvs) {
+        let id: string | undefined = z.phone_e164 ? byPhone.get(z.phone_e164) : undefined;
+        if (!id && z.contact_name) id = byName.get(z.contact_name.toLowerCase().trim());
+        if (id) {
+          newConvMap[z.id] = id;
+          linkedClientIds.add(id);
+        }
+      }
+
+      if (Object.keys(newConvMap).length) {
+        setConvToClientId((prev) => ({ ...prev, ...newConvMap }));
+      }
+    }
+
+    const clientIds = Array.from(linkedClientIds);
 
     if (clientIds.length > 0) {
       const { data: cpData } = await supabase
@@ -629,6 +678,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     messages,
     clientProducts,
     clientResponsibles,
+    convToClientId,
     leadDealStages,
     fetchAssignmentsOnly,
     fetchAssignmentsForDepartment,
