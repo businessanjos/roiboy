@@ -319,7 +319,15 @@ export function ClientBusinessProfile({
 
   // -------------------- COMPACT CARD --------------------
   if (variant === "card") {
+    const rykaMeta = {
+      active: { label: "Ativo", cls: "text-emerald-600", dot: "bg-emerald-500" },
+      pending: { label: "Provisionando", cls: "text-amber-600", dot: "bg-amber-500" },
+      error: { label: "Erro no provisionamento", cls: "text-red-600", dot: "bg-red-500" },
+      none: { label: "Não utiliza", cls: "text-muted-foreground", dot: "bg-muted-foreground/50" },
+    }[rykaStatus];
+
     return (
+      <>
       <Card className="shadow-card border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3">
