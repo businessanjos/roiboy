@@ -354,7 +354,7 @@ Deno.serve(async (req) => {
 
       if (!hasActive) {
         const isMql = mqlOption === "opt_1";
-        const targetName = isMql ? "Closer" : "%ryka%pass%";
+        const targetName = isMql ? "Closer" : "TP - Eternum Pass";
         const { data: pipe } = await supabase
           .from("pipelines")
           .select("id")
