@@ -306,6 +306,15 @@ export function useDeals(pipelineId?: string | null) {
     }
   }, [currentUser?.account_id, pipelineId, toast]);
 
+  // Clear previous pipeline's data immediately on pipeline switch so the UI
+  // never renders stale cross-pipeline deals while the new fetch is in flight.
+  useEffect(() => {
+    setDeals([]);
+    setStages([]);
+    setLoading(true);
+    setStagesLoading(true);
+  }, [pipelineId]);
+
   useEffect(() => {
     fetchStages();
     fetchDeals();
