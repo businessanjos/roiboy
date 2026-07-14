@@ -462,6 +462,13 @@ Deno.serve(async (req) => {
           q = q.eq("education", educationFilter);
         }
       }
+      if (areaFilter && areaFilter !== "all") {
+        if (areaFilter === "none") {
+          q = q.or("business_niche.is.null,business_niche.eq.");
+        } else {
+          q = q.eq("business_niche", areaFilter);
+        }
+      }
       return q;
     };
 
