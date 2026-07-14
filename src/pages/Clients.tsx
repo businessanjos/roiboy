@@ -545,6 +545,7 @@ export default function Clients() {
       if (filterLinks === "with") params.set("with_links", "true");
       if (filterCountry !== "all") params.set("country", filterCountry);
       if (filterEducation !== "all") params.set("education", filterEducation);
+      if (filterArea !== "all") params.set("area", filterArea);
       params.set("sort", sortOrder);
       
       const response = await fetch(
