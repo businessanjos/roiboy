@@ -113,6 +113,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
 
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const products = clientId ? clientProducts[clientId] : undefined;
+  const responsible = clientId ? clientResponsibles?.[clientId] : undefined;
   const leadId = assignment.zapp_conversation?.lead_id;
   const dealStage = leadId ? leadDealStages?.[leadId] : undefined;
 
