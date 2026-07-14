@@ -43,11 +43,13 @@ function extractAnswers(answers: any[] = []): AnswerBundle {
     }
 
     if (t === "choice" && a?.choice?.label) {
-      if (!revenue_range && fieldMatches(a, ["faturamento", "fatura", "receita", "renda"])) {
-        revenue_range = a.choice.label;
+      const label = a.choice.label as string;
+      const looksLikeRevenue = /mil reais|milh(ã|a)o|acima de|abaixo de|R\$/i.test(label);
+      if (!revenue_range && (fieldMatches(a, ["faturamento", "fatura", "receita", "renda"]) || looksLikeRevenue)) {
+        revenue_range = label;
       }
       if (!segment && fieldMatches(a, ["segmento", "nicho", "area", "área", "atua"])) {
-        segment = a.choice.label;
+        segment = label;
       }
     }
     if (t === "choices" && Array.isArray(a?.choices?.labels)) {
