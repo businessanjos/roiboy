@@ -481,4 +481,14 @@ export async function createLeadCore(
               console.error("[create-lead-core] deal enrichment error:", e);
             }
           }
+        }
+      }
+    } catch (e) {
+      console.error("[create-lead-core] deal creation failed:", e);
+    }
+  }
+
+  return { status: "created", lead: newLead, deal: createdDeal };
+}
+
 
