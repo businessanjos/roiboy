@@ -348,6 +348,37 @@ Deno.serve(async (req) => {
   const JONATHAN_ACCOUNT_ID = "796e7970-fd93-4574-a871-6090624cace6";
   const distributionUserId = accountId === JONATHAN_ACCOUNT_ID ? JONATHAN_MARCATO_ID : null;
 
+  // ---------- Silent-failure tracker ----------
+  // Stamps typeform_responses with a status + reason and pings the
+  // distribution user so nothing gets lost between Typeform → Roy.
+  const failures: string[] = [];
+  const noteFailure = (reason: string) => { failures.push(reason); console.error(`[typeform-webhook] ${reason}`); };
+  const finalizeProcessing = async () => {
+    const status = failures.length ? "failed" : (row.is_completed ? "ok" : "pending");
+    await supabase.from("typeform_responses").update({
+      processing_status: status,
+      processing_error: failures.length ? failures.join(" | ") : null,
+      processed_at: new Date().toISOString(),
+    }).eq("form_id", formId).eq("response_id", row.response_id);
+
+    if (failures.length && distributionUserId) {
+      const details = [
+        row.email ? `email: ${row.email}` : null,
+        row.full_name ? `nome: ${row.full_name}` : null,
+        row.phone ? `tel: ${row.phone}` : null,
+      ].filter(Boolean).join(" · ");
+      await supabase.from("notifications").insert({
+        account_id: accountId,
+        user_id: distributionUserId,
+        type: "warning",
+        title: `Falha ao processar resposta Typeform${formTitle ? ` — ${formTitle}` : ""}`,
+        content: `${failures.join(" | ")}${details ? ` (${details})` : ""}`,
+        link: "/marketing/trafego-pago?tab=typeform",
+        source_type: "typeform_response",
+      });
+    }
+  };
+
   // Determine MQL once from the revenue label (also used by createLeadCore).
   const mqlOption = mqlFromRevenueLabel(bundle.revenue_range);
   const mqlLabel = mqlOption === "opt_1" ? "SIM - Acima de 30k" : "NÃO - Abaixo de 30k";
