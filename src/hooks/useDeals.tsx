@@ -139,6 +139,16 @@ export function useDeals(pipelineId?: string | null) {
   const [loading, setLoading] = useState(true);
   const [stagesLoading, setStagesLoading] = useState(true);
 
+  // Race guards: each fetch bumps its ref; stale fetches must not call setState.
+  // Prevents cross-pipeline contamination when the user switches pipelines while
+  // a previous paginated fetch is still in flight.
+  const stagesFetchIdRef = useRef(0);
+  const dealsFetchIdRef = useRef(0);
+  const currentPipelineIdRef = useRef<string | null | undefined>(pipelineId);
+  useEffect(() => {
+    currentPipelineIdRef.current = pipelineId;
+  }, [pipelineId]);
+
   const fetchStages = useCallback(async () => {
     if (!currentUser?.account_id) return;
     
