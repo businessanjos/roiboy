@@ -2403,11 +2403,36 @@ export default function Clients() {
                     <TableHead className="font-medium text-center min-w-[160px] bg-muted">Vínculo</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px] bg-muted">Área de Atuação</TableHead>
                     <TableHead className="font-medium text-center min-w-[130px] bg-muted">Formação</TableHead>
-                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Fat. Inicial</TableHead>
-                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Fat. Atual</TableHead>
-                    <TableHead className="font-medium text-center min-w-[110px] bg-muted">Evolução</TableHead>
-                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Recorde</TableHead>
-                    <TableHead className="font-medium text-center min-w-[110px] bg-muted">Clínicas</TableHead>
+                    {(() => {
+                      const SortHead = ({ label, keyName, width }: { label: string; keyName: "initial" | "current" | "evolution" | "record"; width: string }) => {
+                        const asc = `${keyName}_asc`;
+                        const desc = `${keyName}_desc`;
+                        const active = sortOrder === asc || sortOrder === desc;
+                        const isAsc = sortOrder === asc;
+                        const Icon = !active ? ArrowUpDown : isAsc ? ArrowUp : ArrowDown;
+                        return (
+                          <TableHead className={`font-medium text-center ${width} bg-muted`}>
+                            <button
+                              type="button"
+                              onClick={() => setSortOrder(active ? (isAsc ? desc : "recent") : desc)}
+                              className={`inline-flex items-center gap-1 mx-auto hover:text-primary transition-colors ${active ? "text-primary" : ""}`}
+                              title="Ordenar"
+                            >
+                              <span>{label}</span>
+                              <Icon className="h-3 w-3" />
+                            </button>
+                          </TableHead>
+                        );
+                      };
+                      return (
+                        <>
+                          <SortHead label="Fat. Inicial" keyName="initial" width="min-w-[130px]" />
+                          <SortHead label="Fat. Atual" keyName="current" width="min-w-[130px]" />
+                          <SortHead label="Evolução" keyName="evolution" width="min-w-[110px]" />
+                          <SortHead label="Recorde" keyName="record" width="min-w-[130px]" />
+                        </>
+                      );
+                    })()}
                     <TableHead className="font-medium text-center min-w-[100px] bg-muted">Clínica Ryka</TableHead>
                     <TableHead className="font-medium text-center min-w-[110px] bg-muted">Entrada</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px] bg-muted">Contrato</TableHead>
