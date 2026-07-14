@@ -729,6 +729,7 @@ export function useZappMessaging({
     const tempMessageId = `temp-media-${Date.now()}`;
     const now = new Date().toISOString();
     const signedCaption = caption ? buildSignedText(caption) : "";
+    const mediaMimetype = resolveUploadContentType(file);
 
     // 🔗 Captura o contexto de resposta (quoted) e limpa o preview antes do envio
     const replyContext = replyingTo ? { ...replyingTo } : null;
@@ -742,7 +743,7 @@ export function useZappMessaging({
       message_type: mediaType,
       media_url: URL.createObjectURL(file),
       media_type: mediaType,
-      media_mimetype: file.type,
+      media_mimetype: mediaMimetype,
       media_filename: file.name,
       audio_duration_sec: null,
       sender_name: null,
@@ -771,7 +772,7 @@ export function useZappMessaging({
         action,
         media_url: mediaUrl,
         media_type: mediaType,
-        media_mimetype: resolveUploadContentType(file),
+        media_mimetype: mediaMimetype,
         caption: signedCaption,
         file_name: file.name,
         sector_id: selectedSectorId || "",
@@ -821,7 +822,7 @@ export function useZappMessaging({
           message_type: mediaType,
           media_url: mediaUrl,
           media_type: mediaType,
-          media_mimetype: file.type,
+          media_mimetype: mediaMimetype,
           media_filename: file.name,
           sent_at: now,
           external_message_id: externalId,
