@@ -73,9 +73,60 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
   // Fetch supplementary data (products, deal stages) for assignments
   const fetchSupplementaryData = useCallback(async (assignmentsData: ConversationAssignment[]) => {
-    const clientIds = assignmentsData
-      .map((a) => a.zapp_conversation?.client_id || a.conversation?.client?.id)
-      .filter((id): id is string => !!id);
+    const linkedClientIds = new Set(
+      assignmentsData
+        .map((a) => a.zapp_conversation?.client_id || a.conversation?.client?.id)
+        .filter((id): id is string => !!id)
+    );
+
+    // Fallback: resolve unlinked conversations to clients by phone_e164 or full_name.
+    // Otherwise clients like "Larissa Ferreira Ferraz Eleodoro - RM" (which exist in CRM
+    // but whose zapp_conversation has no client_id) would never show product/consultor badges.
+    const unresolvedConvs = assignmentsData
+      .map((a) => a.zapp_conversation)
+      .filter((z: any) => z && !z.client_id && !z.is_group) as any[];
+
+    const newConvMap: Record<string, string> = {};
+    if (unresolvedConvs.length > 0) {
+      const phones = [...new Set(unresolvedConvs.map((z) => z.phone_e164).filter((p) => p && p.length >= 10))] as string[];
+      const rawNames = [...new Set(unresolvedConvs.map((z) => z.contact_name).filter(Boolean))] as string[];
+      // PostgREST .in() can't handle commas/quotes safely; keep it simple.
+      const safeNames = rawNames.filter((n) => !/[",()]/.test(n));
+
+      const orParts: string[] = [];
+      if (phones.length) orParts.push(`phone_e164.in.(${phones.join(",")})`);
+      if (safeNames.length) orParts.push(`full_name.in.(${safeNames.map((n) => `"${n}"`).join(",")})`);
+
+      if (orParts.length) {
+        const { data: matched } = await supabase
+          .from("clients")
+          .select("id, full_name, phone_e164")
+          .or(orParts.join(","))
+          .limit(2000);
+
+        const byPhone = new Map<string, string>();
+        const byName = new Map<string, string>();
+        (matched || []).forEach((c: any) => {
+          if (c.phone_e164) byPhone.set(c.phone_e164, c.id);
+          if (c.full_name) byName.set(c.full_name.toLowerCase().trim(), c.id);
+        });
+
+        for (const z of unresolvedConvs) {
+          let id: string | undefined = z.phone_e164 ? byPhone.get(z.phone_e164) : undefined;
+          if (!id && z.contact_name) id = byName.get(z.contact_name.toLowerCase().trim());
+          if (id) {
+            newConvMap[z.id] = id;
+            linkedClientIds.add(id);
+          }
+        }
+
+        if (Object.keys(newConvMap).length) {
+          setConvToClientId((prev) => ({ ...prev, ...newConvMap }));
+        }
+      }
+    }
+
+    const clientIds = Array.from(linkedClientIds);
 
     if (clientIds.length > 0) {
       const { data: cpData } = await supabase
