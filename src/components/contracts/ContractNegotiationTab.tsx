@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { format, addMonths } from "date-fns";
+import { format, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Loader2,
@@ -26,6 +26,9 @@ import {
   QrCode,
   CheckCircle,
   Receipt,
+  Plus,
+  Trash2,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -106,6 +109,43 @@ export function ContractNegotiationTab({
   );
   const [receivablesGenerated, setReceivablesGenerated] = useState(initialReceivablesGenerated);
 
+  // Editable installments detail (source of truth for what's saved / generated)
+  type EditableInstallment = { amount: number; due_date: string; method: string };
+  const buildDetail = (
+    count: number,
+    startDate: string,
+    method: string,
+    total: number
+  ): EditableInstallment[] => {
+    const safeCount = Math.max(1, Math.floor(count || 1));
+    const base = Math.floor((total / safeCount) * 100) / 100;
+    const remainder = Math.round((total - base * safeCount) * 100) / 100;
+    const startD = startDate ? parseISO(startDate) : new Date();
+    return Array.from({ length: safeCount }).map((_, i) => ({
+      amount: i === 0 ? Math.round((base + remainder) * 100) / 100 : base,
+      due_date: format(addMonths(startD, i), "yyyy-MM-dd"),
+      method: method || "pix",
+    }));
+  };
+
+  const initialEditable: EditableInstallment[] = hasSalesBreakdown
+    ? salesBreakdown.map((d, i) => ({
+        amount: Number(d.amount ?? d.value ?? 0),
+        due_date:
+          d.due_date ||
+          format(addMonths(parseISO(initialDueDate || format(new Date(), "yyyy-MM-dd")), i), "yyyy-MM-dd"),
+        method: d.method || initialMethod || "pix",
+      }))
+    : buildDetail(
+        initialInstallments || 1,
+        initialDueDate || format(new Date(), "yyyy-MM-dd"),
+        initialMethod || "pix",
+        contractValue
+      );
+
+  const [detail, setDetail] = useState<EditableInstallment[]>(initialEditable);
+  const [detailDirty, setDetailDirty] = useState<boolean>(hasSalesBreakdown);
+
   // Ref to prevent duplicate generation during re-renders
   const generatedRef = useRef(initialReceivablesGenerated);
 
@@ -128,6 +168,61 @@ export function ContractNegotiationTab({
     setReceivablesGenerated(initialReceivablesGenerated);
   }, [initialType, initialDescription, initialMethod, initialInstallments, initialDueDate, initialReceivablesGenerated]);
 
+  // Auto-recalculate detail when inputs change, unless the user has manually edited
+  useEffect(() => {
+    if (detailDirty) return;
+    setDetail(buildDetail(installments, firstDueDate, paymentMethod, contractValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [installments, firstDueDate, paymentMethod, contractValue]);
+
+  const detailTotal = useMemo(
+    () => Math.round(detail.reduce((s, d) => s + (Number(d.amount) || 0), 0) * 100) / 100,
+    [detail]
+  );
+  const detailBalanced = Math.abs(detailTotal - contractValue) < 0.01;
+
+  const updateInstallmentAt = (idx: number, patch: Partial<EditableInstallment>) => {
+    setDetailDirty(true);
+    setDetail((prev) => prev.map((d, i) => (i === idx ? { ...d, ...patch } : d)));
+  };
+
+  const addInstallment = () => {
+    setDetailDirty(true);
+    setDetail((prev) => {
+      const last = prev[prev.length - 1];
+      const nextDate = last
+        ? format(addMonths(parseISO(last.due_date), 1), "yyyy-MM-dd")
+        : format(new Date(), "yyyy-MM-dd");
+      return [
+        ...prev,
+        { amount: 0, due_date: nextDate, method: paymentMethod || "pix" },
+      ];
+    });
+    setInstallments((n) => n + 1);
+  };
+
+  const removeInstallmentAt = (idx: number) => {
+    if (detail.length <= 1) return;
+    setDetailDirty(true);
+    setDetail((prev) => prev.filter((_, i) => i !== idx));
+    setInstallments((n) => Math.max(1, n - 1));
+  };
+
+  const distributeEqually = () => {
+    setDetailDirty(false);
+    setDetail(buildDetail(installments, firstDueDate, paymentMethod || "pix", contractValue));
+  };
+
+  const distributeRemainder = () => {
+    setDetailDirty(true);
+    setDetail((prev) => {
+      if (prev.length === 0) return prev;
+      const lockedSum = prev.slice(1).reduce((s, d) => s + (Number(d.amount) || 0), 0);
+      const firstAmount = Math.round((contractValue - lockedSum) * 100) / 100;
+      return prev.map((d, i) => (i === 0 ? { ...d, amount: firstAmount } : d));
+    });
+  };
+
   const installmentValue = contractValue / installments;
 
   const handleSave = async () => {
@@ -146,8 +241,14 @@ export function ContractNegotiationTab({
       } else {
         updateData.negotiation_description = null;
         updateData.payment_method = paymentMethod;
-        updateData.installments_count = installments;
-        updateData.first_due_date = firstDueDate;
+        updateData.installments_count = detail.length || installments;
+        updateData.first_due_date = detail[0]?.due_date || firstDueDate;
+        updateData.installments_detail = detail.map((d, i) => ({
+          number: i + 1,
+          amount: Number(d.amount) || 0,
+          due_date: d.due_date,
+          method: d.method,
+        }));
       }
 
       const { error } = await supabase
@@ -183,24 +284,27 @@ export function ContractNegotiationTab({
     setGenerating(true);
 
     try {
-      // 1) Persist the negotiation on the contract. Only overwrite installments_detail
-      //    if the sales team didn't already provide a breakdown (respect the sales input).
+      // 1) Persist the negotiation on the contract using the editable installments detail.
+      if (!detailBalanced) {
+        toast.error(
+          `O detalhamento (${formatCurrency(detailTotal)}) precisa somar exatamente o valor do contrato (${formatCurrency(contractValue)}).`
+        );
+        generatedRef.current = false;
+        setGenerating(false);
+        return;
+      }
       const updatePayload: Record<string, any> = {
         payment_method: paymentMethod,
-        installments_count: installments,
-        first_due_date: firstDueDate,
+        installments_count: detail.length || installments,
+        first_due_date: detail[0]?.due_date || firstDueDate,
         negotiation_type: negotiationType,
+        installments_detail: detail.map((d, i) => ({
+          number: i + 1,
+          amount: Number(d.amount) || 0,
+          due_date: d.due_date,
+          method: d.method,
+        })),
       };
-      if (!hasSalesBreakdown) {
-        // Build a simple uniform breakdown so the DB generator has explicit due dates.
-        const base = new Date(firstDueDate);
-        const per = Math.round((contractValue / installments) * 100) / 100;
-        updatePayload.installments_detail = Array.from({ length: installments }).map((_, i) => ({
-          amount: per,
-          due_date: format(addMonths(base, i), "yyyy-MM-dd"),
-          method: paymentMethod,
-        }));
-      }
 
       const { error: prepError } = await supabase
         .from("client_contracts")
@@ -378,72 +482,151 @@ export function ContractNegotiationTab({
             <CardContent className="pt-4">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Valor total:</span>
+                  <span className="text-muted-foreground">Valor total do contrato:</span>
                   <span className="font-medium">{formatCurrency(contractValue)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Parcelas:</span>
-                  <span className="font-medium">{installments}x</span>
+                  <span className="font-medium">{detail.length}x</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
-                  <span className="text-muted-foreground">Valor por parcela:</span>
-                  <span className="font-semibold text-primary">
-                    {formatCurrency(installmentValue)}
+                  <span className="text-muted-foreground">Soma do detalhamento:</span>
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      detailBalanced ? "text-primary" : "text-destructive"
+                    )}
+                  >
+                    {formatCurrency(detailTotal)}
+                    {!detailBalanced && (
+                      <span className="ml-2 text-xs font-normal">
+                        (diferença {formatCurrency(detailTotal - contractValue)})
+                      </span>
+                    )}
                   </span>
                 </div>
-                {firstDueDate && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">1º vencimento:</span>
-                    <span className="font-medium">
-                      {format(new Date(firstDueDate), "dd/MM/yyyy", { locale: ptBR })}
-                    </span>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Detalhamento vindo do comercial (PaymentBreakdownComposer) */}
-          {hasSalesBreakdown && (
-            <Card className="border-primary/30 bg-primary/5">
-              <CardContent className="pt-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="border-primary/40 text-primary">
-                    Detalhamento do comercial
+          {/* Editable Installments Detail */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Label className="text-base font-medium">Detalhamento das Parcelas</Label>
+                {hasSalesBreakdown && (
+                  <Badge variant="outline" className="border-primary/40 text-primary text-[10px]">
+                    Vindo do comercial
                   </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {salesBreakdown.length} parcela(s) já preenchidas na negociação
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={distributeRemainder}
+                  className="h-8 text-xs"
+                  title="Ajusta a 1ª parcela para fechar com o total do contrato"
+                >
+                  Ajustar diferença
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={distributeEqually}
+                  className="h-8 text-xs"
+                >
+                  <Wand2 className="h-3 w-3 mr-1" />
+                  Recalcular
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-md border bg-background divide-y">
+              <div className="grid grid-cols-[32px_1fr_140px_140px_32px] gap-2 px-3 py-2 text-[11px] text-muted-foreground uppercase tracking-wide bg-muted/40">
+                <div>#</div>
+                <div>Valor</div>
+                <div>Vencimento</div>
+                <div>Forma</div>
+                <div></div>
+              </div>
+              {detail.map((d, idx) => (
+                <div
+                  key={idx}
+                  className="grid grid-cols-[32px_1fr_140px_140px_32px] gap-2 px-3 py-2 items-center"
+                >
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {idx + 1}
                   </span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={d.amount}
+                    onChange={(e) =>
+                      updateInstallmentAt(idx, {
+                        amount: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="h-8 text-sm"
+                  />
+                  <Input
+                    type="date"
+                    value={d.due_date}
+                    onChange={(e) =>
+                      updateInstallmentAt(idx, { due_date: e.target.value })
+                    }
+                    className="h-8 text-sm"
+                  />
+                  <Select
+                    value={d.method || "pix"}
+                    onValueChange={(v) => updateInstallmentAt(idx, { method: v })}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_METHODS.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="transferencia">Transferência</SelectItem>
+                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeInstallmentAt(idx)}
+                    disabled={detail.length <= 1}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <div className="rounded-md border bg-background divide-y">
-                  {salesBreakdown.map((d, i) => {
-                    const amount = Number(d.amount ?? d.value ?? 0);
-                    return (
-                      <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground w-6 tabular-nums">#{i + 1}</span>
-                          {d.method_label || d.method ? (
-                            <Badge variant="outline" className="text-[10px] py-0 h-4">
-                              {d.method_label || d.method}
-                            </Badge>
-                          ) : null}
-                          <span className="text-muted-foreground text-xs">
-                            {d.due_date
-                              ? format(new Date(d.due_date), "dd/MM/yyyy", { locale: ptBR })
-                              : "sem data"}
-                          </span>
-                        </div>
-                        <span className="font-medium tabular-nums">{formatCurrency(amount)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Ao gerar, o financeiro respeita este detalhamento (valores e datas por parcela).
-                </p>
-              </CardContent>
-            </Card>
-          )}
+              ))}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addInstallment}
+              className="w-full"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Adicionar parcela
+            </Button>
+
+            <p className="text-xs text-muted-foreground">
+              Alterando o nº de parcelas, a data do 1º vencimento ou a forma padrão acima, o detalhamento é recalculado automaticamente. Ao editar diretamente uma parcela, os valores passam a ser manuais — use "Recalcular" para redistribuir igualmente.
+            </p>
+          </div>
+
 
           {/* Generate Receivables Button */}
           {receivablesGenerated ? (
