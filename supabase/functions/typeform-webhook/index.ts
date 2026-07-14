@@ -515,6 +515,16 @@ Deno.serve(async (req) => {
           value_date: submittedDate,
         });
       }
+
+      // Canal de Venda — derivado da tag / origem (TRAF → Trafego Pago, ORG → Orgânico)
+      {
+        const canalValue = canalFromTagOrOrigem(tag, tag);
+        if (canalValue) {
+          await upsertDealFieldValue(supabase, accountId, enrichDealId, DEAL_CANAL_FIELD_ID, {
+            value_text: canalValue,
+          });
+        }
+      }
     } catch (e) {
       console.error("[typeform-webhook] deal-field enrichment failed:", e);
     }
