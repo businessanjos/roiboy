@@ -2894,7 +2894,7 @@ export default function Clients() {
                   )}
                 </TableBody>
               </table>
-          </ScrollArea>
+          </div>
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid gap-3">
