@@ -370,7 +370,11 @@ export default function SalesPipeline() {
 
   // Fetch structured negotiation fields for WON deals to flag incomplete records.
   const [negotiationStatusMap, setNegotiationStatusMap] = useState<Record<string, string[]>>({});
-  const wonDealIdsKey = useMemo(() => wonDeals.map((d) => d.id).join(','), [wonDeals]);
+  // Include updated_at so inline edits to Parcelas / Forma de Pagamento re-run the check
+  const wonDealIdsKey = useMemo(
+    () => wonDeals.map((d: any) => `${d.id}:${d.updated_at || ''}`).join(','),
+    [wonDeals]
+  );
 
   useEffect(() => {
     if (wonDeals.length === 0) {
