@@ -2347,7 +2347,7 @@ export default function Clients() {
                     <TableHead className="font-medium text-center min-w-[110px] bg-muted">Evolução</TableHead>
                     <TableHead className="font-medium text-center min-w-[130px] bg-muted">Recorde</TableHead>
                     <TableHead className="font-medium text-center min-w-[110px] bg-muted">Clínicas</TableHead>
-                    <TableHead className="font-medium text-center min-w-[100px] bg-muted">Ryka</TableHead>
+                    <TableHead className="font-medium text-center min-w-[100px] bg-muted">Clínica Ryka</TableHead>
                     <TableHead className="font-medium text-center min-w-[110px] bg-muted">Entrada</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px] bg-muted">Contrato</TableHead>
 
