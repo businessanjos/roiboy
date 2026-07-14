@@ -85,7 +85,13 @@ const LEAD_MQL_FIELD_ID = "e4270e93-e9b9-4d9b-9589-d614ce335bcd";
 const LEAD_CANAL_FIELD_ID = "3bcdcf47-076e-47f2-a1ab-a4dd1ec8398a";
 const LEAD_FATURAMENTO_FIELD_ID = "e352a1ca-cfbc-435a-95f7-2f53b5cac041";
 
-// Map form source → Canal option value
+// *Deal* custom fields we populate from a Typeform response.
+const DEAL_MQL_FIELD_ID = "448404cd-0344-4892-a574-2387b1c17578";
+const DEAL_FATURAMENTO_FIELD_ID = "ed5c7c0e-0740-4945-b982-70a593ffae0c";
+const DEAL_ORIGEM_FIELD_ID = "43d7d9a1-9370-45f3-803a-93717d2a6d1d";
+const DEAL_PRIMEIRO_CONTATO_FIELD_ID = "166fe351-b29b-4f08-b330-88f82c65f625";
+
+// Map form source → Canal option value (lead field)
 const CANAL_OPTION_BY_SOURCE: Record<string, string> = {
   "Tráfego Pago": "opt_2",
   "Orgânico": "opt_1",
@@ -100,6 +106,18 @@ function mqlFromRevenueLabel(label: string): "opt_1" | "opt_2" {
   if (entre && parseInt(entre[2]) <= 30) return "opt_2";
   if (/ate\s+30|até\s+30/.test(l)) return "opt_2";
   return "opt_1";
+}
+
+function normalizeLabel(s: string): string {
+  return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+/** Find the option `value` in a select/multi_select field whose label matches `raw`. */
+function resolveOptionValue(fieldOptions: any[] | null | undefined, raw: string): string | null {
+  if (!fieldOptions || !raw) return null;
+  const target = normalizeLabel(raw);
+  const hit = fieldOptions.find((o: any) => normalizeLabel(o?.label) === target);
+  return hit?.value ?? null;
 }
 
 function formatAnswerValue(a: any): string {
@@ -139,8 +157,6 @@ async function upsertLeadFieldValue(
   valueText: string | null,
 ) {
   if (!valueText) return;
-  // Delete any existing value for this (lead, field) then insert fresh — keeps
-  // things idempotent when the same Typeform response is replayed.
   await supabase
     .from("lead_field_values")
     .delete()
@@ -154,6 +170,31 @@ async function upsertLeadFieldValue(
     value_text: valueText,
   });
 }
+
+async function upsertDealFieldValue(
+  supabase: any,
+  accountId: string,
+  dealId: string,
+  fieldId: string,
+  payload: { value_text?: string | null; value_date?: string | null; value_json?: any },
+) {
+  await supabase
+    .from("deal_field_values")
+    .delete()
+    .eq("deal_id", dealId)
+    .eq("field_id", fieldId)
+    .eq("account_id", accountId);
+  await supabase.from("deal_field_values").insert({
+    deal_id: dealId,
+    field_id: fieldId,
+    account_id: accountId,
+    value_text: payload.value_text ?? null,
+    value_date: payload.value_date ?? null,
+    value_json: payload.value_json ?? null,
+  });
+}
+
+
 
 
 
