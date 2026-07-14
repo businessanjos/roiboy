@@ -11,7 +11,7 @@ import { CountryFlag } from "@/components/ui/CountryFlag";
 
 import { CustomField } from "@/components/custom-fields";
 import { FieldValueEditor } from "@/components/custom-fields";
-import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban, GraduationCap, Briefcase } from "lucide-react";
+import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban, GraduationCap, Briefcase, TrendingUp, TrendingDown, Trophy, Building2, Activity, CalendarDays } from "lucide-react";
 import { getMlsBadgeClasses, getMlsLevelLabel } from "@/lib/mls-utils";
 import { cn } from "@/lib/utils";
 import { 
