@@ -1924,15 +1924,19 @@ Deno.serve(async (req) => {
           } else {
             const { error: assignmentError } = await supabase
               .from("zapp_conversation_assignments")
-              .upsert({
+              .insert({
                 account_id: accountId,
                 zapp_conversation_id: zappConversationId,
                 status: "triage", // New conversations start in triage
                 department_id: sectorDepartmentId, // Associate with sector's department
-              }, { onConflict: "account_id,zapp_conversation_id,department_id", ignoreDuplicates: true });
+              });
 
             if (assignmentError) {
-              console.error("Error creating zapp assignment:", assignmentError);
+              if (assignmentError.code === "23505") {
+                console.log(`Zapp assignment already exists for conversation ${zappConversationId}`);
+              } else {
+                console.error("Error creating zapp assignment:", assignmentError);
+              }
             } else {
               console.log(`Created new zapp assignment in queue (department: ${sectorDepartmentId})`);
             }
