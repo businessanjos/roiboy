@@ -13,6 +13,7 @@ interface ZappConversationListProps {
   selectedConversation: ConversationAssignment | null;
   currentAgent: Agent | null;
   clientProducts: Record<string, { id: string; name: string; color?: string }[]>;
+  clientResponsibles?: Record<string, { id: string; name: string }>;
   searchQuery: string;
   inboxTab: "mine" | "queue";
   filterStatus: string;
