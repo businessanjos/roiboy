@@ -208,6 +208,16 @@ Deno.serve(async (req) => {
 
   await supabase.from("typeform_responses").upsert(row, { onConflict: "form_id,response_id" });
 
+  // Fetch the form title once — used to derive tag/source and for the note header.
+  const { data: formRow } = await supabase
+    .from("typeform_forms")
+    .select("title")
+    .eq("account_id", accountId)
+    .eq("form_id", formId)
+    .maybeSingle();
+  const formTitle = formRow?.title || "";
+  const { tag, source, canal } = parseFormTitle(formTitle);
+
   // ---------- Match against existing leads/deals ----------
   let leadId: string | null = null, dealId: string | null = null, method: string | null = null;
   if (email) {
@@ -245,33 +255,20 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Distribuição: leads/deals do Typeform caem para o Jonathan Marcato
+  // (gestor que faz a triagem/distribuição para os vendedores).
+  const JONATHAN_MARCATO_ID = "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
+  const JONATHAN_ACCOUNT_ID = "796e7970-fd93-4574-a871-6090624cace6";
+  const distributionUserId = accountId === JONATHAN_ACCOUNT_ID ? JONATHAN_MARCATO_ID : null;
+
+  // Determine MQL once from the revenue label (also used by createLeadCore).
+  const mqlOption = mqlFromRevenueLabel(bundle.revenue_range);
+  const mqlLabel = mqlOption === "opt_1" ? "SIM - Acima de 30k" : "NÃO - Abaixo de 30k";
+
   // ---------- No match + submission complete → create the lead (replaces N8N) ----------
   let createdLeadId: string | null = null;
   if (!leadId && !dealId && row.is_completed && email && full_name) {
-    // Look up the form to get its title so we can derive tag/source/canal.
-    const { data: formRow } = await supabase
-      .from("typeform_forms")
-      .select("title")
-      .eq("account_id", accountId)
-      .eq("form_id", formId)
-      .maybeSingle();
-
-    const { tag, source, canal } = parseFormTitle(formRow?.title || "");
     const tags = tag ? [tag] : [];
-
-    // Basic MQL rule (matches historical N8N behavior; product-aware logic
-    // in createLeadCore may override it based on account products).
-    const rr = bundle.revenue_range.toLowerCase();
-    const isBelow30k = /abaixo\s+de\s+(\d+)/.test(rr) && parseInt(rr.match(/abaixo\s+de\s+(\d+)/)![1]) <= 30
-      || /entre\s+(\d+)\s+e\s+(\d+)/.test(rr) && parseInt(rr.match(/entre\s+(\d+)\s+e\s+(\d+)/)![2]) <= 30
-      || /ate\s+30|até\s+30/.test(rr);
-    const mql = isBelow30k ? "NÃO - Abaixo de 30k" : "SIM - Acima de 30k";
-
-    // Distribuição: leads/deals do Typeform caem para o Jonathan Marcato
-    // (gestor que faz a triagem/distribuição para os vendedores).
-    const JONATHAN_MARCATO_ID = "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
-    const JONATHAN_ACCOUNT_ID = "796e7970-fd93-4574-a871-6090624cace6";
-    const distributionUserId = accountId === JONATHAN_ACCOUNT_ID ? JONATHAN_MARCATO_ID : undefined;
 
     const result = await createLeadCore(supabase, accountId, {
       full_name,
@@ -280,19 +277,19 @@ Deno.serve(async (req) => {
       instagram: bundle.instagram || undefined,
       revenue_range: bundle.revenue_range || undefined,
       segment: bundle.segment || undefined,
-      mql,
+      mql: mqlLabel,
       source,
       canal,
       tags,
       create_deal: true,
       deal_title: tag ? `${tag} ${full_name}` : full_name,
-      responsible_user_id: distributionUserId,
+      responsible_user_id: distributionUserId || undefined,
     });
-
 
     if (result.status === "created") {
       createdLeadId = result.lead.id;
       leadId = createdLeadId;
+      dealId = result.deal?.id || null;
       method = "created_from_typeform";
     } else if (result.status === "duplicate") {
       leadId = result.existing_lead.id;
@@ -315,12 +312,7 @@ Deno.serve(async (req) => {
       );
 
       if (!hasActive) {
-        const rr = bundle.revenue_range.toLowerCase();
-        const isBelow30k =
-          (/abaixo\s+de\s+(\d+)/.test(rr) && parseInt(rr.match(/abaixo\s+de\s+(\d+)/)![1]) <= 30) ||
-          (/entre\s+(\d+)\s+e\s+(\d+)/.test(rr) && parseInt(rr.match(/entre\s+(\d+)\s+e\s+(\d+)/)![2]) <= 30) ||
-          /ate\s+30|até\s+30/.test(rr);
-        const isMql = !isBelow30k;
+        const isMql = mqlOption === "opt_1";
         const targetName = isMql ? "Closer" : "%ryka%pass%";
         const { data: pipe } = await supabase
           .from("pipelines")
@@ -344,14 +336,8 @@ Deno.serve(async (req) => {
               .select("full_name, email, phone")
               .eq("id", leadId)
               .maybeSingle();
-            const { tag, source } = parseFormTitle(
-              (await supabase.from("typeform_forms").select("title").eq("account_id", accountId).eq("form_id", formId).maybeSingle()).data?.title || "",
-            );
             const baseName = leadRow?.full_name || full_name || email;
             const dealTitle = tag ? `${tag} ${baseName}` : baseName;
-            const JONATHAN_MARCATO_ID_MATCH = "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
-            const JONATHAN_ACCOUNT_ID_MATCH = "796e7970-fd93-4574-a871-6090624cace6";
-            const distributionUserIdMatch = accountId === JONATHAN_ACCOUNT_ID_MATCH ? JONATHAN_MARCATO_ID_MATCH : null;
             const { data: newDeal, error: dealErr } = await supabase
               .from("deals")
               .insert({
@@ -366,7 +352,7 @@ Deno.serve(async (req) => {
                 source,
                 tags: tag ? [tag] : [],
                 status: "open",
-                responsible_user_id: distributionUserIdMatch,
+                responsible_user_id: distributionUserId,
                 stage_changed_at: new Date().toISOString(),
               })
               .select("id")
@@ -386,6 +372,74 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ---------- Enrich lead custom fields (MQL / Canal / Faturamento) ----------
+  // For newly-created leads createLeadCore already inserted them; we only need
+  // this for matched (pre-existing) leads whose fields were empty.
+  if (leadId && !createdLeadId) {
+    try {
+      await upsertLeadFieldValue(supabase, accountId, leadId, LEAD_MQL_FIELD_ID, mqlOption);
+      const canalOption = CANAL_OPTION_BY_SOURCE[source] || null;
+      if (canalOption) {
+        await upsertLeadFieldValue(supabase, accountId, leadId, LEAD_CANAL_FIELD_ID, canalOption);
+      }
+      if (bundle.revenue_range) {
+        await upsertLeadFieldValue(
+          supabase, accountId, leadId, LEAD_FATURAMENTO_FIELD_ID, bundle.revenue_range,
+        );
+      }
+      // Also stamp the columns directly on the lead so cards/lists reflect it.
+      await supabase.from("leads").update({
+        mql: mqlLabel,
+        revenue_range: bundle.revenue_range || null,
+        canal: source && source !== "Typeform" ? source : null,
+      }).eq("id", leadId).eq("account_id", accountId);
+    } catch (e) {
+      console.error("[typeform-webhook] lead-field enrichment failed:", e);
+    }
+  }
+
+  // ---------- Add "Ficha Typeform" note on the deal (replaces N8N anotações) ----------
+  try {
+    let noteDealId = dealId;
+    if (!noteDealId && leadId) {
+      const { data: latestDeal } = await supabase
+        .from("deals")
+        .select("id")
+        .eq("account_id", accountId)
+        .eq("lead_id", leadId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      noteDealId = latestDeal?.id || null;
+    }
+    if (noteDealId && row.is_completed) {
+      const content = buildTypeformNote(formTitle, fr.answers || [], fr.submitted_at || null);
+      // Avoid duplicating the same note if the webhook is replayed.
+      const { data: existingNote } = await supabase
+        .from("deal_activities")
+        .select("id")
+        .eq("account_id", accountId)
+        .eq("deal_id", noteDealId)
+        .eq("type", "note")
+        .ilike("content", `%${row.response_id}%`)
+        .maybeSingle();
+      if (!existingNote) {
+        await supabase.from("deal_activities").insert({
+          account_id: accountId,
+          deal_id: noteDealId,
+          type: "note",
+          title: `Ficha Typeform${formTitle ? ` — ${formTitle}` : ""}`,
+          content: `${content}\n\nresponse_id: ${row.response_id}`,
+          user_id: distributionUserId,
+          completed_at: new Date().toISOString(),
+        });
+        if (!dealId) dealId = noteDealId;
+      }
+    }
+  } catch (e) {
+    console.error("[typeform-webhook] deal-note insert failed:", e);
+  }
+
   if (leadId || dealId) {
     await supabase.from("typeform_responses").update({ matched_lead_id: leadId, matched_deal_id: dealId, match_method: method })
       .eq("form_id", formId).eq("response_id", row.response_id);
@@ -395,3 +449,4 @@ Deno.serve(async (req) => {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
+
