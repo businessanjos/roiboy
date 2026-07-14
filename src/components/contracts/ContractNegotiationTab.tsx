@@ -482,72 +482,151 @@ export function ContractNegotiationTab({
             <CardContent className="pt-4">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Valor total:</span>
+                  <span className="text-muted-foreground">Valor total do contrato:</span>
                   <span className="font-medium">{formatCurrency(contractValue)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Parcelas:</span>
-                  <span className="font-medium">{installments}x</span>
+                  <span className="font-medium">{detail.length}x</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
-                  <span className="text-muted-foreground">Valor por parcela:</span>
-                  <span className="font-semibold text-primary">
-                    {formatCurrency(installmentValue)}
+                  <span className="text-muted-foreground">Soma do detalhamento:</span>
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      detailBalanced ? "text-primary" : "text-destructive"
+                    )}
+                  >
+                    {formatCurrency(detailTotal)}
+                    {!detailBalanced && (
+                      <span className="ml-2 text-xs font-normal">
+                        (diferença {formatCurrency(detailTotal - contractValue)})
+                      </span>
+                    )}
                   </span>
                 </div>
-                {firstDueDate && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">1º vencimento:</span>
-                    <span className="font-medium">
-                      {format(new Date(firstDueDate), "dd/MM/yyyy", { locale: ptBR })}
-                    </span>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Detalhamento vindo do comercial (PaymentBreakdownComposer) */}
-          {hasSalesBreakdown && (
-            <Card className="border-primary/30 bg-primary/5">
-              <CardContent className="pt-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="border-primary/40 text-primary">
-                    Detalhamento do comercial
+          {/* Editable Installments Detail */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Label className="text-base font-medium">Detalhamento das Parcelas</Label>
+                {hasSalesBreakdown && (
+                  <Badge variant="outline" className="border-primary/40 text-primary text-[10px]">
+                    Vindo do comercial
                   </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {salesBreakdown.length} parcela(s) já preenchidas na negociação
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={distributeRemainder}
+                  className="h-8 text-xs"
+                  title="Ajusta a 1ª parcela para fechar com o total do contrato"
+                >
+                  Ajustar diferença
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={distributeEqually}
+                  className="h-8 text-xs"
+                >
+                  <Wand2 className="h-3 w-3 mr-1" />
+                  Recalcular
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-md border bg-background divide-y">
+              <div className="grid grid-cols-[32px_1fr_140px_140px_32px] gap-2 px-3 py-2 text-[11px] text-muted-foreground uppercase tracking-wide bg-muted/40">
+                <div>#</div>
+                <div>Valor</div>
+                <div>Vencimento</div>
+                <div>Forma</div>
+                <div></div>
+              </div>
+              {detail.map((d, idx) => (
+                <div
+                  key={idx}
+                  className="grid grid-cols-[32px_1fr_140px_140px_32px] gap-2 px-3 py-2 items-center"
+                >
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {idx + 1}
                   </span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={d.amount}
+                    onChange={(e) =>
+                      updateInstallmentAt(idx, {
+                        amount: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="h-8 text-sm"
+                  />
+                  <Input
+                    type="date"
+                    value={d.due_date}
+                    onChange={(e) =>
+                      updateInstallmentAt(idx, { due_date: e.target.value })
+                    }
+                    className="h-8 text-sm"
+                  />
+                  <Select
+                    value={d.method || "pix"}
+                    onValueChange={(v) => updateInstallmentAt(idx, { method: v })}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_METHODS.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="transferencia">Transferência</SelectItem>
+                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeInstallmentAt(idx)}
+                    disabled={detail.length <= 1}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <div className="rounded-md border bg-background divide-y">
-                  {salesBreakdown.map((d, i) => {
-                    const amount = Number(d.amount ?? d.value ?? 0);
-                    return (
-                      <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground w-6 tabular-nums">#{i + 1}</span>
-                          {d.method_label || d.method ? (
-                            <Badge variant="outline" className="text-[10px] py-0 h-4">
-                              {d.method_label || d.method}
-                            </Badge>
-                          ) : null}
-                          <span className="text-muted-foreground text-xs">
-                            {d.due_date
-                              ? format(new Date(d.due_date), "dd/MM/yyyy", { locale: ptBR })
-                              : "sem data"}
-                          </span>
-                        </div>
-                        <span className="font-medium tabular-nums">{formatCurrency(amount)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Ao gerar, o financeiro respeita este detalhamento (valores e datas por parcela).
-                </p>
-              </CardContent>
-            </Card>
-          )}
+              ))}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addInstallment}
+              className="w-full"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Adicionar parcela
+            </Button>
+
+            <p className="text-xs text-muted-foreground">
+              Alterando o nº de parcelas, a data do 1º vencimento ou a forma padrão acima, o detalhamento é recalculado automaticamente. Ao editar diretamente uma parcela, os valores passam a ser manuais — use "Recalcular" para redistribuir igualmente.
+            </p>
+          </div>
+
 
           {/* Generate Receivables Button */}
           {receivablesGenerated ? (
