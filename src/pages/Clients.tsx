@@ -2713,29 +2713,6 @@ export default function Clients() {
                           )}
                         </TableCell>
 
-                        {/* Clínicas */}
-                        <TableCell className="text-center">
-                          {client.clinics_count > 0 ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant="outline" className="text-xs">
-                                    <Building2 className="h-3 w-3 mr-1" />
-                                    {client.clinics_count}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">
-                                    {client.clinics_count} clínica{client.clinics_count > 1 ? "s" : ""}
-                                    {client.primary_clinic_name ? ` • Principal: ${client.primary_clinic_name}` : ""}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
 
                         {/* Ryka */}
                         <TableCell className="text-center">
