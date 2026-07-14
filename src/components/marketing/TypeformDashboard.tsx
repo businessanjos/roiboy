@@ -150,14 +150,16 @@ export function TypeformDashboard() {
   useEffect(() => { loadPerFormMetrics(); }, [loadPerFormMetrics]);
 
   // Big picture — reflete o mesmo funil (respeita período selecionado)
+  // Completion rate segue a semântica do Typeform: completed / visits.
   const bigPicture = funnel ? {
     visits: funnel.visits,
     starts: funnel.starts,
     submissions: funnel.submissions,
-    completion_rate: funnel.completion_rate,
+    completion_rate: funnel.visits ? (funnel.completed / funnel.visits) * 100 : 0,
     avg_time: funnel.avg_time,
   } : null;
   const loadingBigPicture = loadingFunnel;
+
 
 
 
