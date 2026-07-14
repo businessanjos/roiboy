@@ -360,6 +360,21 @@ export async function createLeadCore(
         responsibleUserId = u?.id || null;
       }
 
+      // Distribuição padrão: leads TRAF-*/ORG-* caem no Jonathan Marcato (gestor)
+      if (!responsibleUserId) {
+        const firstTag = (tags[0] || "").toUpperCase();
+        const src = (payload.source || "").toLowerCase();
+        const looksLikeFormLead =
+          /\[(TRAF|ORG|IND)-/i.test(firstTag) ||
+          src.includes("tráfego") || src.includes("trafego") ||
+          src.includes("orgânico") || src.includes("organico");
+        if (looksLikeFormLead) {
+          responsibleUserId = "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
+          console.log("[create-lead-core] Default responsible → Jonathan Marcato");
+        }
+      }
+
+
       if (pipelineId) {
         let resolvedStage: { id: string } | null = null;
         if (payload.stage_id) {
