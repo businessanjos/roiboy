@@ -1702,31 +1702,48 @@ export default function SalesPipeline() {
             });
 
             // STEP 5.2: Auto-generate installments in financial if we have enough data.
-            // Rule: total to installment = deal.value − received_value (Cash Collect entry).
-            // First due date = today (won moment) + 30 days. Sales team can still adjust
-            // manually in the contract's "Negociação" tab if needed.
+            // Priority order:
+            //   1) "Detalhamento de Pagamento" (PaymentBreakdownComposer) — one row per
+            //      method with amount + installments + first_due_date. Expanded into
+            //      the full flat installments_detail array.
+            //   2) Legacy simple "Parcelas" field: distributes (deal.value − received)
+            //      evenly, starting 30 days from today.
+            // In both cases the "Negociação" tab still lets the user fine-tune before
+            // the receivables are actually created.
             try {
               const totalValue = Number(deal.value) || 0;
               const received = Number((deal as any).received_value) || 0;
-              const toInstallment = Math.max(0, totalValue - received);
-              const parcelas = dealFieldValues.parcelas || 0;
               const paymentMethod = contractDataFromDeal.payment_method;
+              const breakdown = dealFieldValues.paymentBreakdown;
 
-              if (parcelas > 0 && toInstallment > 0 && paymentMethod) {
-                const firstDue = addDays(new Date(), 30);
-                const per = Math.round((toInstallment / parcelas) * 100) / 100;
-                const installments_detail = Array.from({ length: parcelas }).map((_, i) => ({
-                  amount: per,
-                  due_date: format(addMonths(firstDue, i), "yyyy-MM-dd"),
-                  method: paymentMethod,
-                }));
+              let installmentsDetail: Array<{ amount: number; due_date: string; method: string }> = [];
+              let firstDueIso: string | null = null;
 
+              if (breakdown && breakdown.length > 0) {
+                installmentsDetail = expandBreakdownToInstallments(breakdown);
+                firstDueIso = installmentsDetail[0]?.due_date || null;
+              } else {
+                const parcelas = dealFieldValues.parcelas || 0;
+                const toInstallment = Math.max(0, totalValue - received);
+                if (parcelas > 0 && toInstallment > 0 && paymentMethod) {
+                  const firstDue = addDays(new Date(), 30);
+                  firstDueIso = format(firstDue, "yyyy-MM-dd");
+                  const per = Math.round((toInstallment / parcelas) * 100) / 100;
+                  installmentsDetail = Array.from({ length: parcelas }).map((_, i) => ({
+                    amount: per,
+                    due_date: format(addMonths(firstDue, i), "yyyy-MM-dd"),
+                    method: paymentMethod,
+                  }));
+                }
+              }
+
+              if (installmentsDetail.length > 0 && firstDueIso) {
                 const { error: prepErr } = await supabase
                   .from("client_contracts")
                   .update({
-                    installments_count: parcelas,
-                    first_due_date: format(firstDue, "yyyy-MM-dd"),
-                    installments_detail,
+                    installments_count: installmentsDetail.length,
+                    first_due_date: firstDueIso,
+                    installments_detail: installmentsDetail,
                   })
                   .eq("id", newContract.id);
 
@@ -1744,12 +1761,12 @@ export default function SalesPipeline() {
                   if (flagErr) {
                     console.error("[MarkAsWon] Auto-installments flag error:", flagErr);
                   } else {
-                    console.log(`[MarkAsWon] Auto-generated ${parcelas} installment(s) of R$ ${per} starting ${format(firstDue, "dd/MM/yyyy")}`);
-                    toast.success(`${parcelas} parcela(s) geradas automaticamente no financeiro`);
+                    console.log(`[MarkAsWon] Auto-generated ${installmentsDetail.length} installment(s) from ${breakdown?.length ? "breakdown" : "parcelas"} starting ${firstDueIso}`);
+                    toast.success(`${installmentsDetail.length} parcela(s) geradas automaticamente no financeiro`);
                   }
                 }
               } else {
-                console.log("[MarkAsWon] Skipping auto-installments:", { parcelas, toInstallment, paymentMethod });
+                console.log("[MarkAsWon] Skipping auto-installments: no breakdown or parcelas");
               }
             } catch (autoErr) {
               console.error("[MarkAsWon] Error auto-generating installments:", autoErr);
