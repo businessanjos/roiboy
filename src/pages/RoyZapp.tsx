@@ -1182,6 +1182,7 @@ export default function RoyZapp() {
           availableUsersCount={availableUsers.length}
           clientProducts={clientProducts}
           clientResponsibles={clientResponsibles}
+          convToClientId={convToClientId}
           leadDealStages={leadDealStages}
           activeConversations={activeConversations}
           myConversations={myConversations}
