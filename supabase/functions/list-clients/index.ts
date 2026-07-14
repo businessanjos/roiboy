@@ -408,8 +408,8 @@ Deno.serve(async (req) => {
         )
       `;
 
-    const orderColumn = sortParam === "alphabetical" ? "full_name" : "created_at";
-    const orderAscending = sortParam === "alphabetical";
+    const orderColumn = nativeSort.col;
+    const orderAscending = nativeSort.asc;
 
     const applyCommonFilters = (q: any) => {
       if (search) {
