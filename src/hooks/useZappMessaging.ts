@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import fixWebmDuration from "fix-webm-duration";
+import * as tus from "tus-js-client";
 import { Message } from "@/hooks/useZappData";
 import { ConversationAssignment, getContactInfo } from "@/components/royzapp/types";
 import { invokeWhatsAppManager } from "@/lib/whatsappRouting";
@@ -21,6 +22,85 @@ interface UseZappMessagingProps {
 }
 
 const normalizeSignature = (signature: string) => signature.trim().replace(/:+$/, "").trim();
+
+const MAX_ZAPP_MEDIA_SIZE_BYTES = 70 * 1024 * 1024;
+const RESUMABLE_UPLOAD_THRESHOLD_BYTES = 45 * 1024 * 1024;
+const TUS_CHUNK_SIZE_BYTES = 6 * 1024 * 1024;
+
+const VIDEO_CONTENT_TYPES_BY_EXTENSION: Record<string, string> = {
+  mov: "video/quicktime",
+  qt: "video/quicktime",
+  mp4: "video/mp4",
+  m4v: "video/x-m4v",
+  webm: "video/webm",
+  mkv: "video/x-matroska",
+  avi: "video/x-msvideo",
+};
+
+const getFileExtension = (fileName: string) => fileName.split(".").pop()?.toLowerCase() || "";
+
+const isVideoFile = (file: File) => {
+  const extension = getFileExtension(file.name);
+  return file.type.startsWith("video/") || extension in VIDEO_CONTENT_TYPES_BY_EXTENSION;
+};
+
+const resolveZappMediaType = (file: File, fallback: "image" | "document" | "video"): "image" | "document" | "video" => {
+  if (file.type.startsWith("image/")) return "image";
+  if (isVideoFile(file)) return "video";
+  return fallback;
+};
+
+const resolveUploadContentType = (file: File) => {
+  const extension = getFileExtension(file.name);
+  if (file.type && file.type !== "application/octet-stream") return file.type;
+  return VIDEO_CONTENT_TYPES_BY_EXTENSION[extension] || file.type || "application/octet-stream";
+};
+
+const uploadZappMediaFile = async (bucket: string, fileName: string, file: File) => {
+  const contentType = resolveUploadContentType(file);
+
+  if (file.size <= RESUMABLE_UPLOAD_THRESHOLD_BYTES) {
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, file, { cacheControl: "3600", upsert: false, contentType });
+
+    if (error) throw error;
+    return;
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    throw new Error("Sessão expirada. Faça login novamente para enviar arquivos grandes.");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const upload = new tus.Upload(file, {
+      endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
+      retryDelays: [0, 1000, 3000, 5000],
+      chunkSize: TUS_CHUNK_SIZE_BYTES,
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        "x-upsert": "false",
+      },
+      metadata: {
+        bucketName: bucket,
+        objectName: fileName,
+        contentType,
+        cacheControl: "3600",
+      },
+      onError: reject,
+      onSuccess: () => resolve(),
+    });
+
+    upload.start();
+  });
+};
 
 const buildSignatureHeader = (signature: string) => {
   const cleanSignature = normalizeSignature(signature);
@@ -296,7 +376,7 @@ export function useZappMessaging({
 
     if (filePreview && selectedConversation) {
       const file = filePreview.file;
-      const mediaType: "image" | "video" | "document" = file.type.startsWith('video/') ? 'video' : 'document';
+      const mediaType = resolveZappMediaType(file, "document");
       URL.revokeObjectURL(filePreview.url);
       setFilePreview(null);
       await sendMediaMessage(file, mediaType);
@@ -612,6 +692,11 @@ export function useZappMessaging({
   // Send media message (image/document/video)
   const sendMediaMessage = async (file: File, mediaType: "image" | "document" | "video", caption?: string) => {
     if (!selectedConversation || uploadingMedia) return;
+
+    if (file.size > MAX_ZAPP_MEDIA_SIZE_BYTES) {
+      toast.error("Arquivo muito grande. Máximo 70MB.");
+      return;
+    }
     
     const contactInfo = getContactInfo(selectedConversation);
     const phone = contactInfo.phone;
@@ -665,15 +750,8 @@ export function useZappMessaging({
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const fileName = `${currentUser!.account_id}/${Date.now()}/${safeName}`;
       const bucket = "zapp-media";
-      
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, file, { cacheControl: '3600', upsert: false });
-      
-      if (uploadError) {
-        console.error("[ZAPP-MEDIA] Storage upload error:", uploadError);
-        throw uploadError;
-      }
+
+      await uploadZappMediaFile(bucket, fileName, file);
       console.log("[ZAPP-MEDIA] Storage upload OK");
       
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
@@ -784,11 +862,11 @@ export function useZappMessaging({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, mediaType: "image" | "document") => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 70 * 1024 * 1024) {
+      if (file.size > MAX_ZAPP_MEDIA_SIZE_BYTES) {
         toast.error("Arquivo muito grande. Máximo 70MB.");
         return;
       }
-      const resolvedType: "image" | "document" | "video" = file.type.startsWith('video/') ? 'video' : mediaType;
+      const resolvedType = resolveZappMediaType(file, mediaType);
       sendMediaMessage(file, resolvedType);
     }
     e.target.value = "";
