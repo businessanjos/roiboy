@@ -214,6 +214,82 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ---------- Matched lead but no deal yet → create deal (routes by MQL) ----------
+  if (leadId && !createdLeadId && row.is_completed) {
+    try {
+      const { data: existingDeals } = await supabase
+        .from("deals")
+        .select("id, status")
+        .eq("account_id", accountId)
+        .eq("lead_id", leadId);
+      const hasActive = (existingDeals || []).some(
+        (d: any) => !["won", "lost", "canceled", "cancelled"].includes((d.status || "").toLowerCase()),
+      );
+
+      if (!hasActive) {
+        const rr = bundle.revenue_range.toLowerCase();
+        const isBelow30k =
+          (/abaixo\s+de\s+(\d+)/.test(rr) && parseInt(rr.match(/abaixo\s+de\s+(\d+)/)![1]) <= 30) ||
+          (/entre\s+(\d+)\s+e\s+(\d+)/.test(rr) && parseInt(rr.match(/entre\s+(\d+)\s+e\s+(\d+)/)![2]) <= 30) ||
+          /ate\s+30|até\s+30/.test(rr);
+        const isMql = !isBelow30k;
+        const targetName = isMql ? "Closer" : "%ryka%pass%";
+        const { data: pipe } = await supabase
+          .from("pipelines")
+          .select("id")
+          .eq("account_id", accountId)
+          .ilike("name", targetName)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (pipe?.id) {
+          const { data: firstStage } = await supabase
+            .from("deal_stages")
+            .select("id")
+            .eq("pipeline_id", pipe.id)
+            .order("display_order", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (firstStage?.id) {
+            const { data: leadRow } = await supabase
+              .from("leads")
+              .select("full_name, email, phone")
+              .eq("id", leadId)
+              .maybeSingle();
+            const { tag, source } = parseFormTitle(
+              (await supabase.from("typeform_forms").select("title").eq("account_id", accountId).eq("form_id", formId).maybeSingle()).data?.title || "",
+            );
+            const { data: newDeal, error: dealErr } = await supabase
+              .from("deals")
+              .insert({
+                account_id: accountId,
+                lead_id: leadId,
+                pipeline_id: pipe.id,
+                stage_id: firstStage.id,
+                title: leadRow?.full_name || full_name || email,
+                contact_name: leadRow?.full_name || full_name || null,
+                contact_email: leadRow?.email || email || null,
+                contact_phone: leadRow?.phone || phone || null,
+                source,
+                status: "open",
+                stage_changed_at: new Date().toISOString(),
+              })
+              .select("id")
+              .single();
+            if (dealErr) {
+              console.error("[typeform-webhook] deal creation on match failed:", dealErr);
+            } else if (newDeal) {
+              dealId = newDeal.id;
+              console.log(`[typeform-webhook] Deal created on match: ${newDeal.id} → ${isMql ? "Closer" : "Rykas Pass"}`);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[typeform-webhook] match→deal branch failed:", e);
+    }
+  }
+
   if (leadId || dealId) {
     await supabase.from("typeform_responses").update({ matched_lead_id: leadId, matched_deal_id: dealId, match_method: method })
       .eq("form_id", formId).eq("response_id", row.response_id);
