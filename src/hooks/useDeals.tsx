@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
@@ -139,9 +139,21 @@ export function useDeals(pipelineId?: string | null) {
   const [loading, setLoading] = useState(true);
   const [stagesLoading, setStagesLoading] = useState(true);
 
+  // Race guards: each fetch bumps its ref; stale fetches must not call setState.
+  // Prevents cross-pipeline contamination when the user switches pipelines while
+  // a previous paginated fetch is still in flight.
+  const stagesFetchIdRef = useRef(0);
+  const dealsFetchIdRef = useRef(0);
+  const currentPipelineIdRef = useRef<string | null | undefined>(pipelineId);
+  useEffect(() => {
+    currentPipelineIdRef.current = pipelineId;
+  }, [pipelineId]);
+
   const fetchStages = useCallback(async () => {
     if (!currentUser?.account_id) return;
-    
+
+    const fetchId = ++stagesFetchIdRef.current;
+    const requestedPipelineId = pipelineId;
     setStagesLoading(true);
     try {
       let query = supabase
@@ -150,20 +162,25 @@ export function useDeals(pipelineId?: string | null) {
         .eq('account_id', currentUser.account_id)
         .order('display_order', { ascending: true });
 
-      if (pipelineId) {
-        query = query.eq('pipeline_id', pipelineId);
+      if (requestedPipelineId) {
+        query = query.eq('pipeline_id', requestedPipelineId);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
+      // Discard result if pipeline changed or a newer fetch superseded us
+      if (fetchId !== stagesFetchIdRef.current || requestedPipelineId !== currentPipelineIdRef.current) {
+        return;
+      }
+
       // If no stages exist for this pipeline, create defaults
-      if ((!data || data.length === 0) && pipelineId) {
+      if ((!data || data.length === 0) && requestedPipelineId) {
         const stagesToCreate = DEFAULT_STAGES.map((stage, index) => ({
           ...stage,
           account_id: currentUser.account_id,
-          pipeline_id: pipelineId,
+          pipeline_id: requestedPipelineId,
           display_order: index,
         }));
 
@@ -173,11 +190,18 @@ export function useDeals(pipelineId?: string | null) {
           .select();
 
         if (createError) throw createError;
+        if (fetchId !== stagesFetchIdRef.current || requestedPipelineId !== currentPipelineIdRef.current) return;
         setStages(createdStages || []);
       } else {
-        setStages(data || []);
+        // Defensive filter: even if the query drifted, only accept stages of the
+        // requested pipeline. Prevents cross-pipeline stage bleed.
+        const safeData = requestedPipelineId
+          ? (data || []).filter((s: any) => s.pipeline_id === requestedPipelineId)
+          : (data || []);
+        setStages(safeData);
       }
     } catch (error: any) {
+      if (fetchId !== stagesFetchIdRef.current) return;
       console.error('Error fetching stages:', error);
       toast({
         title: "Erro ao carregar stages",
@@ -185,13 +209,17 @@ export function useDeals(pipelineId?: string | null) {
         variant: "destructive",
       });
     } finally {
-      setStagesLoading(false);
+      if (fetchId === stagesFetchIdRef.current) {
+        setStagesLoading(false);
+      }
     }
   }, [currentUser?.account_id, pipelineId, toast]);
 
   const fetchDeals = useCallback(async () => {
     if (!currentUser?.account_id) return;
-    
+
+    const fetchId = ++dealsFetchIdRef.current;
+    const requestedPipelineId = pipelineId;
     setLoading(true);
     try {
       const selectQuery = `
@@ -212,6 +240,11 @@ export function useDeals(pipelineId?: string | null) {
       let hasMore = true;
 
       while (hasMore) {
+        // Abort mid-pagination if a newer fetch superseded us or the pipeline changed.
+        if (fetchId !== dealsFetchIdRef.current || requestedPipelineId !== currentPipelineIdRef.current) {
+          return;
+        }
+
         const batch = await withRetry(async () => {
           let query = supabase
             .from('deals')
@@ -221,8 +254,8 @@ export function useDeals(pipelineId?: string | null) {
             .order('created_at', { ascending: false })
             .range(from, from + PAGE_SIZE - 1);
 
-          if (pipelineId) {
-            query = query.eq('pipeline_id', pipelineId);
+          if (requestedPipelineId) {
+            query = query.eq('pipeline_id', requestedPipelineId);
           }
 
           const { data, error } = await query;
@@ -239,7 +272,18 @@ export function useDeals(pipelineId?: string | null) {
         }
       }
 
-      const formattedDeals: Deal[] = allData.map(deal => ({
+      // Final race-check before committing to state
+      if (fetchId !== dealsFetchIdRef.current || requestedPipelineId !== currentPipelineIdRef.current) {
+        return;
+      }
+
+      // Defensive filter: never surface a deal from a different pipeline than
+      // the one currently active. Guards against server drift or stale joins.
+      const safeData = requestedPipelineId
+        ? allData.filter((d: any) => d.pipeline_id === requestedPipelineId)
+        : allData;
+
+      const formattedDeals: Deal[] = safeData.map(deal => ({
         ...deal,
         status: deal.status as 'open' | 'won' | 'lost',
         tags: Array.isArray(deal.tags) ? deal.tags as string[] : [],
@@ -248,6 +292,7 @@ export function useDeals(pipelineId?: string | null) {
 
       setDeals(formattedDeals);
     } catch (error: any) {
+      if (fetchId !== dealsFetchIdRef.current) return;
       console.error('Error fetching deals:', error);
       toast({
         title: "Erro ao carregar negociações",
@@ -255,9 +300,20 @@ export function useDeals(pipelineId?: string | null) {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (fetchId === dealsFetchIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [currentUser?.account_id, pipelineId, toast]);
+
+  // Clear previous pipeline's data immediately on pipeline switch so the UI
+  // never renders stale cross-pipeline deals while the new fetch is in flight.
+  useEffect(() => {
+    setDeals([]);
+    setStages([]);
+    setLoading(true);
+    setStagesLoading(true);
+  }, [pipelineId]);
 
   useEffect(() => {
     fetchStages();
