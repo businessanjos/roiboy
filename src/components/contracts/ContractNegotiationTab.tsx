@@ -349,6 +349,54 @@ export function ContractNegotiationTab({
     }
   };
 
+  const handleRegenerateReceivables = async () => {
+    if (generating) return;
+    if (!detailBalanced) {
+      toast.error(
+        `O detalhamento (${formatCurrency(detailTotal)}) precisa somar exatamente o valor do contrato (${formatCurrency(contractValue)}).`
+      );
+      return;
+    }
+    if (!window.confirm(
+      "Isso vai apagar as parcelas em aberto deste contrato no financeiro e recriar conforme o detalhamento atual. Parcelas já pagas serão preservadas (a operação será bloqueada se houver alguma). Deseja continuar?"
+    )) {
+      return;
+    }
+    setGenerating(true);
+    try {
+      // 1) Persist the current editable detail on the contract before regenerating
+      const { error: upErr } = await supabase
+        .from("client_contracts")
+        .update({
+          payment_method: paymentMethod,
+          installments_count: detail.length,
+          first_due_date: detail[0]?.due_date || firstDueDate,
+          installments_detail: detail.map((d, i) => ({
+            number: i + 1,
+            amount: Number(d.amount) || 0,
+            due_date: d.due_date,
+            method: d.method,
+          })),
+        })
+        .eq("id", contractId);
+      if (upErr) throw upErr;
+
+      // 2) Call the DB function that clears open entries and re-triggers the generator
+      const { data, error } = await supabase.rpc("regenerate_contract_receivables", {
+        _contract_id: contractId,
+      });
+      if (error) throw error;
+
+      toast.success(`${data ?? detail.length} parcela(s) recriada(s) no financeiro`);
+      onUpdate();
+    } catch (error: any) {
+      console.error("Error regenerating receivables:", error);
+      toast.error(error?.message || "Erro ao refazer parcelas");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
