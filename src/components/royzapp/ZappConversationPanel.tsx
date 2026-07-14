@@ -731,6 +731,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                         isSelected={selectedConversation?.id === assignment.id}
                         currentAgentId={currentAgentId}
                         clientProducts={clientProducts}
+                        clientResponsibles={clientResponsibles}
                         leadDealStages={leadDealStages}
                         onSelect={onSelectConversation}
                         onMarkAsRead={onMarkAsRead}
@@ -759,6 +760,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                           isSelected={selectedConversation?.id === assignment.id}
                           currentAgentId={currentAgentId}
                           clientProducts={clientProducts}
+                        clientResponsibles={clientResponsibles}
                           leadDealStages={leadDealStages}
                           onSelect={onSelectConversation}
                           onMarkAsRead={onMarkAsRead}
@@ -786,6 +788,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                               isSelected={selectedConversation?.id === assignment.id}
                               currentAgentId={currentAgentId}
                               clientProducts={clientProducts}
+                        clientResponsibles={clientResponsibles}
                               leadDealStages={leadDealStages}
                               onSelect={onSelectConversation}
                               onMarkAsRead={onMarkAsRead}
@@ -811,6 +814,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                     isSelected={selectedConversation?.id === assignment.id}
                     currentAgentId={currentAgentId}
                     clientProducts={clientProducts}
+                        clientResponsibles={clientResponsibles}
                     leadDealStages={leadDealStages}
                     onSelect={onSelectConversation}
                     onMarkAsRead={onMarkAsRead}
