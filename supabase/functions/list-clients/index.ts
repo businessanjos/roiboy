@@ -89,7 +89,26 @@ Deno.serve(async (req) => {
     const withLinks = url.searchParams.get("with_links") === "true";
     const countryCode = (url.searchParams.get("country") || "").toUpperCase();
     const educationFilter = url.searchParams.get("education") || "";
+    const areaFilter = url.searchParams.get("area") || "";
     const sortParam = url.searchParams.get("sort") || "recent";
+
+    // Native (DB-orderable) sort mapping.
+    const NATIVE_SORTS: Record<string, { col: string; asc: boolean }> = {
+      recent: { col: "created_at", asc: false },
+      alphabetical: { col: "full_name", asc: true },
+      initial_asc: { col: "initial_revenue", asc: true },
+      initial_desc: { col: "initial_revenue", asc: false },
+      current_asc: { col: "current_revenue", asc: true },
+      current_desc: { col: "current_revenue", asc: false },
+    };
+    const MEMORY_SORTS = new Set([
+      "evolution_asc",
+      "evolution_desc",
+      "record_asc",
+      "record_desc",
+    ]);
+    const isMemorySort = MEMORY_SORTS.has(sortParam);
+    const nativeSort = NATIVE_SORTS[sortParam] || NATIVE_SORTS.recent;
 
     // Map ISO country code -> list of DDI prefixes (digits only).
     // Multiple codes can share a DDI (US/CA on +1) and one country can have multiple (rare).
