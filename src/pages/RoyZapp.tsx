@@ -231,6 +231,7 @@ export default function RoyZapp() {
     availableProducts,
     clientProducts,
     clientResponsibles,
+    convToClientId,
     leadDealStages,
     currentAgent,
     hasGlobalVisibility,
