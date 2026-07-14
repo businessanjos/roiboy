@@ -284,24 +284,27 @@ export function ContractNegotiationTab({
     setGenerating(true);
 
     try {
-      // 1) Persist the negotiation on the contract. Only overwrite installments_detail
-      //    if the sales team didn't already provide a breakdown (respect the sales input).
+      // 1) Persist the negotiation on the contract using the editable installments detail.
+      if (!detailBalanced) {
+        toast.error(
+          `O detalhamento (${formatCurrency(detailTotal)}) precisa somar exatamente o valor do contrato (${formatCurrency(contractValue)}).`
+        );
+        generatedRef.current = false;
+        setGenerating(false);
+        return;
+      }
       const updatePayload: Record<string, any> = {
         payment_method: paymentMethod,
-        installments_count: installments,
-        first_due_date: firstDueDate,
+        installments_count: detail.length || installments,
+        first_due_date: detail[0]?.due_date || firstDueDate,
         negotiation_type: negotiationType,
+        installments_detail: detail.map((d, i) => ({
+          number: i + 1,
+          amount: Number(d.amount) || 0,
+          due_date: d.due_date,
+          method: d.method,
+        })),
       };
-      if (!hasSalesBreakdown) {
-        // Build a simple uniform breakdown so the DB generator has explicit due dates.
-        const base = new Date(firstDueDate);
-        const per = Math.round((contractValue / installments) * 100) / 100;
-        updatePayload.installments_detail = Array.from({ length: installments }).map((_, i) => ({
-          amount: per,
-          due_date: format(addMonths(base, i), "yyyy-MM-dd"),
-          method: paymentMethod,
-        }));
-      }
 
       const { error: prepError } = await supabase
         .from("client_contracts")
