@@ -488,7 +488,47 @@ export async function createLeadCore(
     }
   }
 
+  // ---------- Auto-cria tarefa "Primeiro Contato Realizado" ----------
+  // Toda vez que um lead entra (qualquer canal/funil) já sobe uma tarefa pro
+  // vendedor. Ele só marca como feito quando fizer o contato — assim a gestão
+  // acompanha o processo sem depender de anotação manual.
+  try {
+    const { data: activityType } = await supabase
+      .from("activity_types")
+      .select("id")
+      .eq("account_id", accountId)
+      .ilike("name", "Primeiro Contato Realizado")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (activityType?.id) {
+      const assignee =
+        (createdDeal as any)?.responsible_user_id ||
+        payload.responsible_user_id ||
+        null;
+      const creator = assignee; // created_by é NOT NULL — usa o próprio responsável
+      if (creator) {
+        const { error: taskErr } = await supabase.from("internal_tasks").insert({
+          account_id: accountId,
+          title: "Primeiro Contato Realizado",
+          activity_type_id: activityType.id,
+          lead_id: newLead.id,
+          deal_id: (createdDeal as any)?.id || null,
+          assigned_to: assignee,
+          created_by: creator,
+          due_date: new Date().toISOString().slice(0, 10),
+          status: "pending",
+          priority: "medium",
+        });
+        if (taskErr) console.error("[create-lead-core] first-contact task failed:", taskErr);
+      }
+    }
+  } catch (e) {
+    console.error("[create-lead-core] first-contact task error:", e);
+  }
+
   return { status: "created", lead: newLead, deal: createdDeal };
 }
+
 
 
