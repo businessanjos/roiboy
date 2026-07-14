@@ -151,7 +151,9 @@ export function useDeals(pipelineId?: string | null) {
 
   const fetchStages = useCallback(async () => {
     if (!currentUser?.account_id) return;
-    
+
+    const fetchId = ++stagesFetchIdRef.current;
+    const requestedPipelineId = pipelineId;
     setStagesLoading(true);
     try {
       let query = supabase
@@ -160,20 +162,25 @@ export function useDeals(pipelineId?: string | null) {
         .eq('account_id', currentUser.account_id)
         .order('display_order', { ascending: true });
 
-      if (pipelineId) {
-        query = query.eq('pipeline_id', pipelineId);
+      if (requestedPipelineId) {
+        query = query.eq('pipeline_id', requestedPipelineId);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
+      // Discard result if pipeline changed or a newer fetch superseded us
+      if (fetchId !== stagesFetchIdRef.current || requestedPipelineId !== currentPipelineIdRef.current) {
+        return;
+      }
+
       // If no stages exist for this pipeline, create defaults
-      if ((!data || data.length === 0) && pipelineId) {
+      if ((!data || data.length === 0) && requestedPipelineId) {
         const stagesToCreate = DEFAULT_STAGES.map((stage, index) => ({
           ...stage,
           account_id: currentUser.account_id,
-          pipeline_id: pipelineId,
+          pipeline_id: requestedPipelineId,
           display_order: index,
         }));
 
@@ -183,11 +190,18 @@ export function useDeals(pipelineId?: string | null) {
           .select();
 
         if (createError) throw createError;
+        if (fetchId !== stagesFetchIdRef.current || requestedPipelineId !== currentPipelineIdRef.current) return;
         setStages(createdStages || []);
       } else {
-        setStages(data || []);
+        // Defensive filter: even if the query drifted, only accept stages of the
+        // requested pipeline. Prevents cross-pipeline stage bleed.
+        const safeData = requestedPipelineId
+          ? (data || []).filter((s: any) => s.pipeline_id === requestedPipelineId)
+          : (data || []);
+        setStages(safeData);
       }
     } catch (error: any) {
+      if (fetchId !== stagesFetchIdRef.current) return;
       console.error('Error fetching stages:', error);
       toast({
         title: "Erro ao carregar stages",
@@ -195,7 +209,9 @@ export function useDeals(pipelineId?: string | null) {
         variant: "destructive",
       });
     } finally {
-      setStagesLoading(false);
+      if (fetchId === stagesFetchIdRef.current) {
+        setStagesLoading(false);
+      }
     }
   }, [currentUser?.account_id, pipelineId, toast]);
 
