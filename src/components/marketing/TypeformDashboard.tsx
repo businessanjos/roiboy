@@ -102,6 +102,16 @@ export function TypeformDashboard() {
 
   useEffect(() => { loadForms(); }, [loadForms]);
 
+  // Sync titles from Typeform on mount — users rename forms there and expect it to reflect here.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.functions.invoke('typeform-manager', { body: { action: 'sync_titles' } });
+      if (data?.updated) await loadForms();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
   const loadFunnel = useCallback(async () => {
     if (!selectedForm) { setFunnel(null); setConsistency(null); return; }
     if (period === 'custom' && !customReady) return;
