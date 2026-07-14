@@ -11,6 +11,7 @@ export const DEAL_FIELD_IDS = {
   DESCRICAO_NEGOCIACAO: 'ca39f0cf-d071-4271-a2a9-23d9d6993780',
   PARCELAS: '069ee7f8-befd-482d-990d-13048b17180c',
   VALOR_ENTRADA: '86c93211-5013-48a6-affe-e53d81931cb6',
+  PAYMENT_BREAKDOWN: 'afc29a55-2252-4875-86d7-dc26ffd232a5',
 };
 
 // Structured fields required to consider a won deal's negotiation complete
