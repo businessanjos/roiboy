@@ -543,31 +543,54 @@ Deno.serve(async (req) => {
     }
 
     // Fetch all enrichment data in parallel
-    const [metricsResult, contractsResult, pendingFormsResult, teamUsersResult] =
-      await Promise.all([
-        supabase
-          .from("client_latest_metrics")
-          .select("client_id, vnps, score, has_conversation, message_count")
-          .in("client_id", clientIds),
+    const [
+      metricsResult,
+      contractsResult,
+      pendingFormsResult,
+      teamUsersResult,
+      rykaResult,
+      revenueHistoryResult,
+      clinicsResult,
+    ] = await Promise.all([
+      supabase
+        .from("client_latest_metrics")
+        .select("client_id, vnps, score, has_conversation, message_count")
+        .in("client_id", clientIds),
 
-        supabase
-          .from("client_contracts")
-          .select("client_id, status, start_date, end_date, value, product_id")
-          .eq("account_id", accountId)
-          .in("client_id", clientIds)
-          .order("created_at", { ascending: false }),
+      supabase
+        .from("client_contracts")
+        .select("client_id, status, start_date, end_date, value, product_id")
+        .eq("account_id", accountId)
+        .in("client_id", clientIds)
+        .order("created_at", { ascending: false }),
 
-        supabase
-          .from("client_form_sends")
-          .select(`client_id, sent_at, form_id`)
-          .in("client_id", clientIds)
-          .is("responded_at", null),
+      supabase
+        .from("client_form_sends")
+        .select(`client_id, sent_at, form_id`)
+        .in("client_id", clientIds)
+        .is("responded_at", null),
 
-        supabase
-          .from("users")
-          .select("id, name, email")
-          .eq("account_id", accountId),
-      ]);
+      supabase
+        .from("users")
+        .select("id, name, email")
+        .eq("account_id", accountId),
+
+      supabase
+        .from("client_ryka_provisions")
+        .select("client_id, status, created_at")
+        .in("client_id", clientIds)
+        .order("created_at", { ascending: false }),
+
+      supabase
+        .from("client_revenue_history")
+        .select("client_id, month, revenue")
+        .in("client_id", clientIds),
+
+      supabase
+        .from("client_clinics")
+        .select("client_id, name, is_primary")
+        .in("client_id", clientIds),
+    ]);
 
     // Fetch form titles separately
     const formIds = [
