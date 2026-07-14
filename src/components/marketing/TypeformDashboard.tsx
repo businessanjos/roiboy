@@ -83,6 +83,8 @@ export function TypeformDashboard() {
   const [consistency, setConsistency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingFunnel, setLoadingFunnel] = useState(false);
+  const [perFormMetrics, setPerFormMetrics] = useState<Record<string, { submissions: number; completed: number; matched: number; won: number; won_value: number } | null>>({});
+  const [loadingPerForm, setLoadingPerForm] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [availableForms, setAvailableForms] = useState<any[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
@@ -122,6 +124,31 @@ export function TypeformDashboard() {
   }, [selectedForm, periodPayload, period, customReady]);
 
   useEffect(() => { loadFunnel(); }, [loadFunnel]);
+
+  const loadPerFormMetrics = useCallback(async () => {
+    if (!forms.length) { setPerFormMetrics({}); return; }
+    if (period === 'custom' && !customReady) return;
+    setLoadingPerForm(true);
+    const entries = await Promise.all(forms.map(async (f) => {
+      const { data, error } = await supabase.functions.invoke('typeform-manager', {
+        body: { action: 'get_dashboard', form_id: f.form_id, ...periodPayload },
+      });
+      if (error || !data?.funnel) return [f.form_id, null] as const;
+      const fn = data.funnel;
+      return [f.form_id, {
+        submissions: fn.submissions || 0,
+        completed: fn.completed || 0,
+        matched: fn.matched_responses || 0,
+        won: fn.won || 0,
+        won_value: fn.won_value || 0,
+      }] as const;
+    }));
+    setPerFormMetrics(Object.fromEntries(entries));
+    setLoadingPerForm(false);
+  }, [forms, periodPayload, period, customReady]);
+
+  useEffect(() => { loadPerFormMetrics(); }, [loadPerFormMetrics]);
+
 
   const openAdd = async () => {
     setAddOpen(true);
@@ -501,34 +528,59 @@ export function TypeformDashboard() {
 
       {forms.length > 0 && (
         <Card className="bg-card/50 border-border/30">
-          <CardHeader><CardTitle className="text-base">Formulários rastreados</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle className="text-base">Formulários rastreados</CardTitle>
+              <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">
+                Métricas · {periodLabel}
+              </Badge>
+            </div>
+          </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {forms.map(f => (
-                <div key={f.id} className="flex items-center justify-between p-3 rounded-md border border-border/30 hover:bg-muted/30">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{f.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">ID: {f.form_id}</p>
+              {forms.map(f => {
+                const m = perFormMetrics[f.form_id];
+                return (
+                  <div key={f.id} className="flex items-center justify-between gap-4 p-3 rounded-md border border-border/30 hover:bg-muted/30">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{f.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">ID: {f.form_id}</p>
+                      </div>
+                      {f.campaign_tag && <Badge variant="secondary">{f.campaign_tag}</Badge>}
+                      {f.webhook_installed ? (
+                        <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30">Webhook ativo</Badge>
+                      ) : (
+                        <Badge variant="outline">Sem webhook</Badge>
+                      )}
                     </div>
-                    {f.campaign_tag && <Badge variant="secondary">{f.campaign_tag}</Badge>}
-                    {f.webhook_installed ? (
-                      <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30">Webhook ativo</Badge>
-                    ) : (
-                      <Badge variant="outline">Sem webhook</Badge>
-                    )}
+                    <div className="hidden md:flex items-center gap-4 shrink-0">
+                      {loadingPerForm && !m ? (
+                        <Skeleton className="h-8 w-64" />
+                      ) : m ? (
+                        <>
+                          <MiniMetric icon={CheckCircle2} label="Submissões" value={m.submissions.toLocaleString('pt-BR')} color="text-sky-500" />
+                          <MiniMetric icon={CheckCircle2} label="Completos" value={m.completed.toLocaleString('pt-BR')} color="text-emerald-500" />
+                          <MiniMetric icon={Users} label="Lead Roy" value={m.matched.toLocaleString('pt-BR')} color="text-violet-500" />
+                          <MiniMetric icon={Trophy} label="Ganhos" value={`${m.won}${m.won_value ? ` · ${fmtBRL(m.won_value)}` : ''}`} color="text-amber-500" />
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">sem dados</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" asChild><a href={`https://admin.typeform.com/form/${f.form_id}`} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4" /></a></Button>
+                      <Button variant="ghost" size="icon" onClick={() => removeForm(f.form_id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" asChild><a href={`https://admin.typeform.com/form/${f.form_id}`} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4" /></a></Button>
-                    <Button variant="ghost" size="icon" onClick={() => removeForm(f.form_id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
       )}
+
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
@@ -772,6 +824,18 @@ function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, sour
       </div>
       <p className="text-xl font-bold">{typeof value === 'number' ? value.toLocaleString('pt-BR') : value}</p>
       {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+function MiniMetric({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color?: string }) {
+  return (
+    <div className="flex flex-col items-end min-w-0">
+      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <Icon className={`w-3 h-3 ${color || ''}`} />
+        <span>{label}</span>
+      </div>
+      <p className={`text-sm font-semibold ${color || ''}`}>{value}</p>
     </div>
   );
 }
