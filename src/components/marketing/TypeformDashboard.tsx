@@ -149,6 +149,23 @@ export function TypeformDashboard() {
 
   useEffect(() => { loadPerFormMetrics(); }, [loadPerFormMetrics]);
 
+  // Big picture (Typeform Insights lifetime — live)
+  const [bigPicture, setBigPicture] = useState<{ visits: number; starts: number; submissions: number; completion_rate: number; avg_time: number } | null>(null);
+  const [loadingBigPicture, setLoadingBigPicture] = useState(false);
+  const loadBigPicture = useCallback(async () => {
+    if (!selectedForm) { setBigPicture(null); return; }
+    setLoadingBigPicture(true);
+    const { data, error } = await supabase.functions.invoke('typeform-manager', {
+      body: { action: 'get_big_picture', form_id: selectedForm },
+    });
+    if (error) setBigPicture(null);
+    else setBigPicture(data?.metrics || null);
+    setLoadingBigPicture(false);
+  }, [selectedForm]);
+  useEffect(() => { loadBigPicture(); }, [loadBigPicture]);
+
+
+
 
   const openAdd = async () => {
     setAddOpen(true);
