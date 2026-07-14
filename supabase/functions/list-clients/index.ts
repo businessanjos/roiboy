@@ -371,6 +371,14 @@ Deno.serve(async (req) => {
         stage_id,
         education,
         education_specialty,
+        business_niche,
+        differential,
+        method_name,
+        initial_revenue,
+        current_revenue,
+        current_revenue_month,
+        onboarding_started_at,
+        contract_start_date,
         client_products (
           product_id,
           products:product_id (
@@ -535,31 +543,54 @@ Deno.serve(async (req) => {
     }
 
     // Fetch all enrichment data in parallel
-    const [metricsResult, contractsResult, pendingFormsResult, teamUsersResult] =
-      await Promise.all([
-        supabase
-          .from("client_latest_metrics")
-          .select("client_id, vnps, score, has_conversation, message_count")
-          .in("client_id", clientIds),
+    const [
+      metricsResult,
+      contractsResult,
+      pendingFormsResult,
+      teamUsersResult,
+      rykaResult,
+      revenueHistoryResult,
+      clinicsResult,
+    ] = await Promise.all([
+      supabase
+        .from("client_latest_metrics")
+        .select("client_id, vnps, score, has_conversation, message_count")
+        .in("client_id", clientIds),
 
-        supabase
-          .from("client_contracts")
-          .select("client_id, status, start_date, end_date, value, product_id")
-          .eq("account_id", accountId)
-          .in("client_id", clientIds)
-          .order("created_at", { ascending: false }),
+      supabase
+        .from("client_contracts")
+        .select("client_id, status, start_date, end_date, value, product_id")
+        .eq("account_id", accountId)
+        .in("client_id", clientIds)
+        .order("created_at", { ascending: false }),
 
-        supabase
-          .from("client_form_sends")
-          .select(`client_id, sent_at, form_id`)
-          .in("client_id", clientIds)
-          .is("responded_at", null),
+      supabase
+        .from("client_form_sends")
+        .select(`client_id, sent_at, form_id`)
+        .in("client_id", clientIds)
+        .is("responded_at", null),
 
-        supabase
-          .from("users")
-          .select("id, name, email")
-          .eq("account_id", accountId),
-      ]);
+      supabase
+        .from("users")
+        .select("id, name, email")
+        .eq("account_id", accountId),
+
+      supabase
+        .from("client_ryka_provisions")
+        .select("client_id, status, created_at")
+        .in("client_id", clientIds)
+        .order("created_at", { ascending: false }),
+
+      supabase
+        .from("client_revenue_history")
+        .select("client_id, month, revenue")
+        .in("client_id", clientIds),
+
+      supabase
+        .from("client_clinics")
+        .select("client_id, name, is_primary")
+        .in("client_id", clientIds),
+    ]);
 
     // Fetch form titles separately
     const formIds = [
@@ -609,6 +640,36 @@ Deno.serve(async (req) => {
     const teamUsersMap = new Map();
     teamUsersResult.data?.forEach((u) => teamUsersMap.set(u.id, u));
 
+    // Ryka: latest provision per client
+    const rykaMap = new Map<string, string>();
+    rykaResult.data?.forEach((r: any) => {
+      if (!rykaMap.has(r.client_id)) {
+        let s = "pending";
+        if (r.status === "success" || r.status === "active") s = "active";
+        else if (r.status === "error" || r.status === "failed") s = "error";
+        rykaMap.set(r.client_id, s);
+      }
+    });
+
+    // Revenue record: max revenue per client (only >= mentoring start month)
+    const revenueRecordMap = new Map<string, { month: string; revenue: number }>();
+    revenueHistoryResult.data?.forEach((h: any) => {
+      const current = revenueRecordMap.get(h.client_id);
+      const rev = Number(h.revenue) || 0;
+      if (!current || rev > current.revenue) {
+        revenueRecordMap.set(h.client_id, { month: h.month, revenue: rev });
+      }
+    });
+
+    // Clinics count per client
+    const clinicsMap = new Map<string, { count: number; primary: string | null }>();
+    clinicsResult.data?.forEach((c: any) => {
+      const prev = clinicsMap.get(c.client_id) || { count: 0, primary: null };
+      prev.count += 1;
+      if (c.is_primary && !prev.primary) prev.primary = c.name;
+      clinicsMap.set(c.client_id, prev);
+    });
+
     // Enrich clients with all data
     const enrichedClients = clients?.map((client) => {
       const metrics = metricsMap.get(client.id) || {};
@@ -616,6 +677,7 @@ Deno.serve(async (req) => {
       const responsibleUser = client.responsible_user_id
         ? teamUsersMap.get(client.responsible_user_id)
         : null;
+      const clinicsInfo = clinicsMap.get(client.id) || { count: 0, primary: null };
 
       return {
         ...client,
@@ -630,6 +692,10 @@ Deno.serve(async (req) => {
         message_count: metrics.message_count || 0,
         pending_forms: pendingFormsMap.get(client.id) || [],
         responsible_user: responsibleUser,
+        ryka_status: rykaMap.get(client.id) || "none",
+        revenue_record: revenueRecordMap.get(client.id) || null,
+        clinics_count: clinicsInfo.count,
+        primary_clinic_name: clinicsInfo.primary,
       };
     }) || [];
 

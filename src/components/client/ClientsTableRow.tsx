@@ -11,7 +11,7 @@ import { CountryFlag } from "@/components/ui/CountryFlag";
 
 import { CustomField } from "@/components/custom-fields";
 import { FieldValueEditor } from "@/components/custom-fields";
-import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban, GraduationCap, Briefcase } from "lucide-react";
+import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban, GraduationCap, Briefcase, TrendingUp, TrendingDown, Trophy, Building2, Activity, CalendarDays } from "lucide-react";
 import { getMlsBadgeClasses, getMlsLevelLabel } from "@/lib/mls-utils";
 import { cn } from "@/lib/utils";
 import { 
@@ -160,6 +160,187 @@ export const ClientsTableRow = memo(function ClientsTableRow({
           <span className="text-xs text-muted-foreground">—</span>
         )}
       </TableCell>
+
+      {/* Formação */}
+      <TableCell className="text-center">
+        {client.education ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs max-w-[120px] truncate">
+                  <GraduationCap className="h-3 w-3 mr-1 flex-shrink-0" />
+                  {client.education}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">
+                  {client.education}
+                  {client.education_specialty ? ` • ${client.education_specialty}` : ""}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
+
+      {/* Faturamento Atual */}
+      <TableCell className="text-center">
+        {client.current_revenue != null ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="inline-flex flex-col items-center leading-tight">
+                  <span className="text-xs font-semibold text-primary">
+                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(client.current_revenue))}
+                  </span>
+                  {client.current_revenue_month && (
+                    <span className="text-[10px] text-muted-foreground">
+                      {format(new Date(client.current_revenue_month + "-01"), "MMM/yy", { locale: ptBR })}
+                    </span>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">
+                  Inicial: {client.initial_revenue != null
+                    ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(client.initial_revenue))
+                    : "—"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
+
+      {/* Evolução */}
+      <TableCell className="text-center">
+        {(() => {
+          const initial = Number(client.initial_revenue) || 0;
+          const current = Number(client.current_revenue) || 0;
+          if (!initial || !current) return <span className="text-xs text-muted-foreground">—</span>;
+          const pct = ((current - initial) / initial) * 100;
+          const positive = pct >= 0;
+          const Icon = positive ? TrendingUp : TrendingDown;
+          return (
+            <span className={cn("inline-flex items-center gap-1 text-xs font-semibold", positive ? "text-emerald-600" : "text-red-600")}>
+              <Icon className="h-3 w-3" />
+              {positive ? "+" : ""}{pct.toFixed(0)}%
+            </span>
+          );
+        })()}
+      </TableCell>
+
+      {/* Recorde */}
+      <TableCell className="text-center">
+        {client.revenue_record ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="inline-flex flex-col items-center leading-tight">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600">
+                    <Trophy className="h-3 w-3" />
+                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(client.revenue_record.revenue))}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {format(new Date(client.revenue_record.month + "-01"), "MMM/yy", { locale: ptBR })}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Recorde desde o início da mentoria</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
+
+      {/* Clínicas */}
+      <TableCell className="text-center">
+        {client.clinics_count > 0 ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs">
+                  <Building2 className="h-3 w-3 mr-1" />
+                  {client.clinics_count}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">
+                  {client.clinics_count} clínica{client.clinics_count > 1 ? "s" : ""}
+                  {client.primary_clinic_name ? ` • Principal: ${client.primary_clinic_name}` : ""}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
+
+      {/* Ryka */}
+      <TableCell className="text-center">
+        {(() => {
+          const s = client.ryka_status || "none";
+          const meta: Record<string, { label: string; cls: string; dot: string }> = {
+            active: { label: "Ativo", cls: "text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400", dot: "bg-emerald-500" },
+            pending: { label: "Pendente", cls: "text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400", dot: "bg-amber-500" },
+            error: { label: "Erro", cls: "text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-400", dot: "bg-red-500" },
+            none: { label: "—", cls: "text-muted-foreground bg-muted", dot: "bg-muted-foreground/40" },
+          };
+          const m = meta[s];
+          if (s === "none") return <span className="text-xs text-muted-foreground">—</span>;
+          return (
+            <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium", m.cls)}>
+              <span className={cn("h-1.5 w-1.5 rounded-full", m.dot)} />
+              <Activity className="h-3 w-3" />
+              {m.label}
+            </span>
+          );
+        })()}
+      </TableCell>
+
+      {/* Entrada na mentoria */}
+      <TableCell className="text-center">
+        {(() => {
+          const raw = client.onboarding_started_at || client.contract_start_date || client.created_at;
+          if (!raw) return <span className="text-xs text-muted-foreground">—</span>;
+          const d = new Date(raw);
+          const estimated = !client.onboarding_started_at && !client.contract_start_date;
+          const now = new Date();
+          const months = Math.max(0, (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth()));
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="inline-flex flex-col items-center leading-tight">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium">
+                      <CalendarDays className="h-3 w-3" />
+                      {format(d, "MMM/yy", { locale: ptBR })}
+                    </span>
+                    <span className={cn("text-[10px]", estimated ? "text-amber-600" : "text-muted-foreground")}>
+                      há {months} {months === 1 ? "mês" : "meses"}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    {format(d, "dd/MM/yyyy", { locale: ptBR })}
+                    {estimated ? " (estimado — sem data de onboarding)" : ""}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        })()}
+      </TableCell>
+
 
       {/* Contract Cell */}
       <TableCell className="text-center">

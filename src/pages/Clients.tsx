@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Lock, Trash2, Kanban, PauseCircle, Ban, GitMerge, ChevronLeft } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Lock, Trash2, Kanban, PauseCircle, Ban, GitMerge, ChevronLeft, Target, GraduationCap, TrendingUp, TrendingDown, Trophy, Building2, CalendarDays } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import * as XLSX from "xlsx";
 import { ClientKanban } from "@/components/client/ClientKanban";
@@ -2340,8 +2340,16 @@ export default function Clients() {
                     <TableHead className="font-medium sticky left-0 top-0 bg-muted z-40 w-[240px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
                     <TableHead className="font-medium text-center w-[160px] bg-muted">Produto</TableHead>
                     <TableHead className="font-medium text-center min-w-[160px] bg-muted">Vínculo</TableHead>
+                    <TableHead className="font-medium text-center min-w-[140px] bg-muted">Área de Atuação</TableHead>
+                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Formação</TableHead>
+                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Fat. Atual</TableHead>
+                    <TableHead className="font-medium text-center min-w-[110px] bg-muted">Evolução</TableHead>
+                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Recorde</TableHead>
+                    <TableHead className="font-medium text-center min-w-[110px] bg-muted">Clínicas</TableHead>
+                    <TableHead className="font-medium text-center min-w-[100px] bg-muted">Ryka</TableHead>
+                    <TableHead className="font-medium text-center min-w-[110px] bg-muted">Entrada</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px] bg-muted">Contrato</TableHead>
-                    
+
                     <TableHead className="font-medium text-center min-w-[120px] bg-muted">Responsável</TableHead>
                     <TableHead className="font-medium text-right min-w-[80px] bg-muted">Ação</TableHead>
                   </TableRow>
@@ -2349,14 +2357,14 @@ export default function Clients() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8">
+                      <TableCell colSpan={14} className="text-center py-8">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
                         Carregando...
                       </TableCell>
                     </TableRow>
                   ) : filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                         Nenhum cliente encontrado.
                       </TableCell>
                     </TableRow>
@@ -2490,6 +2498,200 @@ export default function Clients() {
                           ) : (
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
+                        </TableCell>
+
+                        {/* Área de Atuação */}
+                        <TableCell className="text-center">
+                          {client.business_niche ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-xs max-w-[130px] truncate">
+                                    <Target className="h-3 w-3 mr-1 flex-shrink-0" />
+                                    {client.business_niche}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent><p className="text-xs">{client.business_niche}</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+
+                        {/* Formação */}
+                        <TableCell className="text-center">
+                          {client.education ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-xs max-w-[120px] truncate">
+                                    <GraduationCap className="h-3 w-3 mr-1 flex-shrink-0" />
+                                    {client.education}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">
+                                    {client.education}{client.education_specialty ? ` • ${client.education_specialty}` : ""}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+
+                        {/* Faturamento Atual */}
+                        <TableCell className="text-center">
+                          {client.current_revenue != null ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="inline-flex flex-col items-center leading-tight">
+                                    <span className="text-xs font-semibold text-primary">
+                                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(client.current_revenue))}
+                                    </span>
+                                    {client.current_revenue_month && (
+                                      <span className="text-[10px] text-muted-foreground">
+                                        {format(new Date(client.current_revenue_month + "-01"), "MMM/yy", { locale: ptBR })}
+                                      </span>
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">
+                                    Inicial: {client.initial_revenue != null
+                                      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(client.initial_revenue))
+                                      : "—"}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+
+                        {/* Evolução */}
+                        <TableCell className="text-center">
+                          {(() => {
+                            const initial = Number(client.initial_revenue) || 0;
+                            const current = Number(client.current_revenue) || 0;
+                            if (!initial || !current) return <span className="text-xs text-muted-foreground">—</span>;
+                            const pct = ((current - initial) / initial) * 100;
+                            const positive = pct >= 0;
+                            const Icon = positive ? TrendingUp : TrendingDown;
+                            return (
+                              <span className={cn("inline-flex items-center gap-1 text-xs font-semibold", positive ? "text-emerald-600" : "text-red-600")}>
+                                <Icon className="h-3 w-3" />
+                                {positive ? "+" : ""}{pct.toFixed(0)}%
+                              </span>
+                            );
+                          })()}
+                        </TableCell>
+
+                        {/* Recorde */}
+                        <TableCell className="text-center">
+                          {client.revenue_record ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="inline-flex flex-col items-center leading-tight">
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600">
+                                      <Trophy className="h-3 w-3" />
+                                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(client.revenue_record.revenue))}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {format(new Date(client.revenue_record.month + "-01"), "MMM/yy", { locale: ptBR })}
+                                    </span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent><p className="text-xs">Recorde desde o início da mentoria</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+
+                        {/* Clínicas */}
+                        <TableCell className="text-center">
+                          {client.clinics_count > 0 ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-xs">
+                                    <Building2 className="h-3 w-3 mr-1" />
+                                    {client.clinics_count}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">
+                                    {client.clinics_count} clínica{client.clinics_count > 1 ? "s" : ""}
+                                    {client.primary_clinic_name ? ` • Principal: ${client.primary_clinic_name}` : ""}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+
+                        {/* Ryka */}
+                        <TableCell className="text-center">
+                          {(() => {
+                            const s = client.ryka_status || "none";
+                            if (s === "none") return <span className="text-xs text-muted-foreground">—</span>;
+                            const meta: Record<string, { label: string; cls: string; dot: string }> = {
+                              active: { label: "Ativo", cls: "text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400", dot: "bg-emerald-500" },
+                              pending: { label: "Pendente", cls: "text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400", dot: "bg-amber-500" },
+                              error: { label: "Erro", cls: "text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-400", dot: "bg-red-500" },
+                            };
+                            const m = meta[s];
+                            return (
+                              <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium", m.cls)}>
+                                <span className={cn("h-1.5 w-1.5 rounded-full", m.dot)} />
+                                {m.label}
+                              </span>
+                            );
+                          })()}
+                        </TableCell>
+
+                        {/* Entrada na mentoria */}
+                        <TableCell className="text-center">
+                          {(() => {
+                            const raw = client.onboarding_started_at || client.contract_start_date || client.created_at;
+                            if (!raw) return <span className="text-xs text-muted-foreground">—</span>;
+                            const d = new Date(raw);
+                            const estimated = !client.onboarding_started_at && !client.contract_start_date;
+                            const now = new Date();
+                            const months = Math.max(0, (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth()));
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex flex-col items-center leading-tight">
+                                      <span className="inline-flex items-center gap-1 text-xs font-medium">
+                                        <CalendarDays className="h-3 w-3" />
+                                        {format(d, "MMM/yy", { locale: ptBR })}
+                                      </span>
+                                      <span className={cn("text-[10px]", estimated ? "text-amber-600" : "text-muted-foreground")}>
+                                        há {months} {months === 1 ? "mês" : "meses"}
+                                      </span>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">
+                                      {format(d, "dd/MM/yyyy", { locale: ptBR })}
+                                      {estimated ? " (estimado)" : ""}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="text-center">
                           <button
