@@ -423,9 +423,13 @@ export const ZappConversationItem = memo(function ZappConversationItem({
   const prevTags = prevProps.assignment.conversation_tags?.map(t => t.tag_id).join(',') || '';
   const nextTags = nextProps.assignment.conversation_tags?.map(t => t.tag_id).join(',') || '';
 
+  const convId = nextProps.assignment.zapp_conversation?.id;
   const clientId =
     nextProps.assignment.zapp_conversation?.client_id ||
-    nextProps.assignment.conversation?.client?.id;
+    nextProps.assignment.conversation?.client?.id ||
+    (convId ? nextProps.convToClientId?.[convId] : undefined);
+  const prevConvClient = convId ? prevProps.convToClientId?.[convId] : undefined;
+  const nextConvClient = convId ? nextProps.convToClientId?.[convId] : undefined;
   const leadId = nextProps.assignment.zapp_conversation?.lead_id;
 
   // Compare the actual per-client slices we render, not just map identity.
