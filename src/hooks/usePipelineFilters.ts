@@ -88,6 +88,12 @@ export const RECOMMENDED_FILTERS = [
     conditions: [{ field: 'next_activity_date', operator: 'is_empty', value: null }],
     match_type: 'all' as const
   },
+  {
+    id: 'no_tasks',
+    name: 'Sem tarefa cadastrada',
+    conditions: [{ field: 'total_tasks', operator: 'equals', value: 0 }],
+    match_type: 'all' as const
+  },
 ];
 
 
