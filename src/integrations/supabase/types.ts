@@ -1686,6 +1686,141 @@ export type Database = {
         }
         Relationships: []
       }
+      client_clinic_goals: {
+        Row: {
+          account_id: string
+          actual_amount: number | null
+          client_id: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          goal_amount: number
+          id: string
+          month: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          actual_amount?: number | null
+          client_id: string
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          goal_amount?: number
+          id?: string
+          month: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          actual_amount?: number | null
+          client_id?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          goal_amount?: number
+          id?: string
+          month?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_clinic_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_clinic_goals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_clinic_goals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_clinic_goals_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "client_clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_clinics: {
+        Row: {
+          account_id: string
+          city: string | null
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_primary: boolean
+          name: string
+          notes: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          city?: string | null
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_primary?: boolean
+          name: string
+          notes?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          city?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_primary?: boolean
+          name?: string
+          notes?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_clinics_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_clinics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_clinics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_contracts: {
         Row: {
           account_id: string

@@ -19,7 +19,10 @@ import {
   Pencil,
   Check,
   X,
+  Trophy,
+  Activity,
 } from "lucide-react";
+import { ClientClinicsManager } from "./ClientClinicsManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -117,6 +120,7 @@ export function ClientBusinessProfile({
   const { currentUser } = useCurrentUser();
   const [client, setClient] = useState<ClientRow | null>(null);
   const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [rykaStatus, setRykaStatus] = useState<"active" | "pending" | "error" | "none">("none");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -154,6 +158,19 @@ export function ClientBusinessProfile({
       .eq("client_id", clientId)
       .order("month", { ascending: true });
     setHistory((h || []) as any);
+
+    const { data: ryka } = await supabase
+      .from("client_ryka_provisions")
+      .select("status")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!ryka) setRykaStatus("none");
+    else if (ryka.status === "success" || ryka.status === "active") setRykaStatus("active");
+    else if (ryka.status === "error" || ryka.status === "failed") setRykaStatus("error");
+    else setRykaStatus("pending");
+
     setLoading(false);
   };
 
@@ -274,6 +291,14 @@ export function ClientBusinessProfile({
 
   const growth = client ? growthPct(client.initial_revenue, client.current_revenue) : null;
 
+  const revenueRecord = useMemo(() => {
+    if (!history || history.length === 0) return null;
+    return history.reduce(
+      (best, h) => (Number(h.revenue) > Number(best.revenue) ? h : best),
+      history[0]
+    );
+  }, [history]);
+
   if (loading) {
     return (
       <Card className="shadow-card">
@@ -294,7 +319,15 @@ export function ClientBusinessProfile({
 
   // -------------------- COMPACT CARD --------------------
   if (variant === "card") {
+    const rykaMeta = {
+      active: { label: "Ativo", cls: "text-emerald-600", dot: "bg-emerald-500" },
+      pending: { label: "Provisionando", cls: "text-amber-600", dot: "bg-amber-500" },
+      error: { label: "Erro no provisionamento", cls: "text-red-600", dot: "bg-red-500" },
+      none: { label: "Não utiliza", cls: "text-muted-foreground", dot: "bg-muted-foreground/50" },
+    }[rykaStatus];
+
     return (
+      <>
       <Card className="shadow-card border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3">
@@ -404,13 +437,13 @@ export function ClientBusinessProfile({
               placeholder="Ex: Cardiologia"
             />
             <InlineTextField
-              label="Nicho"
+              label="Área de Atuação"
               icon={<Target className="h-3.5 w-3.5" />}
               value={client.business_niche}
               draft={drafts.business_niche}
               onDraft={(v) => setDrafts((d) => ({ ...d, business_niche: v }))}
               onCommit={() => commitText("business_niche")}
-              placeholder="Ex: Longevidade"
+              placeholder="Ex: Longevidade, Estética"
             />
             <InlineTextField
               label="Diferencial"
@@ -431,10 +464,54 @@ export function ClientBusinessProfile({
               placeholder="Nome do método/produto"
             />
           </div>
+
+          {/* Ryka + Recorde row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-lg border bg-card p-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+                <Activity className="h-3.5 w-3.5" /> Clínica Ryka
+              </span>
+              <div className="mt-1 flex items-center gap-2">
+                <span className={`inline-block h-2 w-2 rounded-full ${rykaMeta.dot}`} />
+                <span className={`text-sm font-semibold ${rykaMeta.cls}`}>
+                  {rykaMeta.label}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {rykaStatus === "none"
+                  ? "Cliente ainda não provisionado no Clínica Ryka"
+                  : "Status do provisionamento mais recente"}
+              </p>
+            </div>
+
+            <div className="rounded-lg border bg-card p-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+                <Trophy className="h-3.5 w-3.5 text-amber-500" /> Recorde de faturamento
+              </span>
+              {revenueRecord ? (
+                <div className="mt-1">
+                  <div className="text-lg font-bold text-amber-600">
+                    {currency(Number(revenueRecord.revenue))}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground capitalize">
+                    {monthLabel(revenueRecord.month)} • desde o início da mentoria
+                  </div>
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground mt-1 block">
+                  Sem histórico de faturamento ainda
+                </span>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      <ClientClinicsManager clientId={clientId} accountId={client.account_id} />
+      </>
     );
   }
+
 
   // -------------------- FULL VIEW --------------------
   return (
