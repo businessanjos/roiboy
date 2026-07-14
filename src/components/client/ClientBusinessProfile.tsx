@@ -429,13 +429,13 @@ export function ClientBusinessProfile({
               placeholder="Ex: Cardiologia"
             />
             <InlineTextField
-              label="Nicho"
+              label="Área de Atuação"
               icon={<Target className="h-3.5 w-3.5" />}
               value={client.business_niche}
               draft={drafts.business_niche}
               onDraft={(v) => setDrafts((d) => ({ ...d, business_niche: v }))}
               onCommit={() => commitText("business_niche")}
-              placeholder="Ex: Longevidade"
+              placeholder="Ex: Longevidade, Estética"
             />
             <InlineTextField
               label="Diferencial"
