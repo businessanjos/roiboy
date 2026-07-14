@@ -14,6 +14,8 @@ interface ZappConversationListProps {
   currentAgent: Agent | null;
   clientProducts: Record<string, { id: string; name: string; color?: string }[]>;
   clientResponsibles?: Record<string, { id: string; name: string }>;
+  convToClientId?: Record<string, string>;
+  leadDealStages?: Record<string, { stageName: string; stageColor: string }>;
   searchQuery: string;
   inboxTab: "mine" | "queue";
   filterStatus: string;
