@@ -641,8 +641,8 @@ Deno.serve(async (req) => {
         if (!dealId) dealId = noteDealId;
       }
     }
-  } catch (e) {
-    console.error("[typeform-webhook] deal-note insert failed:", e);
+  } catch (e: any) {
+    noteFailure(`Falha ao inserir nota da ficha no deal: ${e?.message || e}`);
   }
 
   if (leadId || dealId) {
@@ -650,7 +650,9 @@ Deno.serve(async (req) => {
       .eq("form_id", formId).eq("response_id", row.response_id);
   }
 
-  return new Response(JSON.stringify({ ok: true, matched_lead_id: leadId, matched_deal_id: dealId, created: !!createdLeadId }), {
+  await finalizeProcessing();
+
+  return new Response(JSON.stringify({ ok: true, matched_lead_id: leadId, matched_deal_id: dealId, created: !!createdLeadId, failures }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
