@@ -54,6 +54,14 @@ export type { MentionData };
 
 const HC_KEY = "royzapp-attachment-menu-hc";
 
+const VIDEO_EXTENSIONS = new Set(["mov", "qt", "mp4", "m4v", "webm", "mkv", "avi"]);
+
+const isVideoAttachment = (file?: File) => {
+  if (!file) return false;
+  const extension = file.name.split(".").pop()?.toLowerCase() || "";
+  return file.type.startsWith("video/") || VIDEO_EXTENSIONS.has(extension);
+};
+
 function AttachmentMenu({
   uploadingMedia,
   fileInputRef,
@@ -330,7 +338,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
     onSetFilePreview?.(null);
   };
 
-  const isVideo = filePreview?.file.type.startsWith('video/');
+  const isVideo = isVideoAttachment(filePreview?.file);
 
   return (
     <>
