@@ -392,6 +392,7 @@ export default function Clients() {
       if (filterLinks === "with") baseParams["with_links"] = "true";
       if (filterCountry !== "all") baseParams["country"] = filterCountry;
       if (filterEducation !== "all") baseParams["education"] = filterEducation;
+      if (filterArea !== "all") baseParams["area"] = filterArea;
       baseParams["sort"] = sortOrder;
 
       const pageSize = 200;
