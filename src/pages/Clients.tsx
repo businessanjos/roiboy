@@ -2340,8 +2340,16 @@ export default function Clients() {
                     <TableHead className="font-medium sticky left-0 top-0 bg-muted z-40 w-[240px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
                     <TableHead className="font-medium text-center w-[160px] bg-muted">Produto</TableHead>
                     <TableHead className="font-medium text-center min-w-[160px] bg-muted">Vínculo</TableHead>
+                    <TableHead className="font-medium text-center min-w-[140px] bg-muted">Área de Atuação</TableHead>
+                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Formação</TableHead>
+                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Fat. Atual</TableHead>
+                    <TableHead className="font-medium text-center min-w-[110px] bg-muted">Evolução</TableHead>
+                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Recorde</TableHead>
+                    <TableHead className="font-medium text-center min-w-[110px] bg-muted">Clínicas</TableHead>
+                    <TableHead className="font-medium text-center min-w-[100px] bg-muted">Ryka</TableHead>
+                    <TableHead className="font-medium text-center min-w-[110px] bg-muted">Entrada</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px] bg-muted">Contrato</TableHead>
-                    
+
                     <TableHead className="font-medium text-center min-w-[120px] bg-muted">Responsável</TableHead>
                     <TableHead className="font-medium text-right min-w-[80px] bg-muted">Ação</TableHead>
                   </TableRow>
