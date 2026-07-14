@@ -598,7 +598,7 @@ Deno.serve(async (req) => {
         }
       }
     } catch (e) {
-      console.error("[typeform-webhook] deal-field enrichment failed:", e);
+      noteFailure(`Enriquecimento de campos do deal falhou: ${(e as any)?.message || e}`);
     }
   }
 
