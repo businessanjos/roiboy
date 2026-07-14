@@ -270,6 +270,9 @@ Deno.serve(async (req) => {
             );
             const baseName = leadRow?.full_name || full_name || email;
             const dealTitle = tag ? `${tag} ${baseName}` : baseName;
+            const JONATHAN_MARCATO_ID_MATCH = "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
+            const JONATHAN_ACCOUNT_ID_MATCH = "796e7970-fd93-4574-a871-6090624cace6";
+            const distributionUserIdMatch = accountId === JONATHAN_ACCOUNT_ID_MATCH ? JONATHAN_MARCATO_ID_MATCH : null;
             const { data: newDeal, error: dealErr } = await supabase
               .from("deals")
               .insert({
@@ -284,10 +287,12 @@ Deno.serve(async (req) => {
                 source,
                 tags: tag ? [tag] : [],
                 status: "open",
+                responsible_user_id: distributionUserIdMatch,
                 stage_changed_at: new Date().toISOString(),
               })
               .select("id")
               .single();
+
             if (dealErr) {
               console.error("[typeform-webhook] deal creation on match failed:", dealErr);
             } else if (newDeal) {
