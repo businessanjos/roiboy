@@ -318,7 +318,7 @@ export function TypeformDashboard() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold">Big picture</span>
-                  <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5 text-[10px]">Typeform · lifetime · ao vivo</Badge>
+                  <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5 text-[10px]">Typeform · {periodLabel}</Badge>
                 </div>
                 {loadingBigPicture && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
               </div>
