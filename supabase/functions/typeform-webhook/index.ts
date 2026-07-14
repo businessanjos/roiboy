@@ -199,6 +199,7 @@ Deno.serve(async (req) => {
       source,
       canal,
       tags,
+      create_deal: true,
     });
 
     if (result.status === "created") {
