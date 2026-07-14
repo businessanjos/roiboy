@@ -784,8 +784,8 @@ export function useZappMessaging({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, mediaType: "image" | "document") => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        toast.error("Arquivo muito grande. Máximo 50MB.");
+      if (file.size > 70 * 1024 * 1024) {
+        toast.error("Arquivo muito grande. Máximo 70MB.");
         return;
       }
       const resolvedType: "image" | "document" | "video" = file.type.startsWith('video/') ? 'video' : mediaType;
