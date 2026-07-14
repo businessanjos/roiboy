@@ -231,10 +231,10 @@ Deno.serve(async (req) => {
             .select("id, form_id, account_id, submitted_at, is_completed, email, phone, matched_lead_id, matched_deal_id")
             .eq("account_id", accountId)
             .in("form_id", scopeFormIds)
-            .gte("created_at", since);
-          if (untilISO) q = q.lte("created_at", untilISO);
+            .gte("submitted_at", since);
+          if (untilISO) q = q.lte("submitted_at", untilISO);
           const { data: page, error: pageErr } = await q
-            .order("created_at", { ascending: true })
+            .order("submitted_at", { ascending: true })
             .range(from, from + PAGE - 1);
           if (pageErr) { console.error("[typeform-manager] page fetch failed:", pageErr); break; }
           const batch = page || [];
