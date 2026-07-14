@@ -520,7 +520,7 @@ Deno.serve(async (req) => {
         canal: source && source !== "Typeform" ? source : null,
       }).eq("id", leadId).eq("account_id", accountId);
     } catch (e) {
-      console.error("[typeform-webhook] lead-field enrichment failed:", e);
+      noteFailure(`Enriquecimento de campos do lead falhou: ${(e as any)?.message || e}`);
     }
   }
 
