@@ -217,7 +217,9 @@ export function useDeals(pipelineId?: string | null) {
 
   const fetchDeals = useCallback(async () => {
     if (!currentUser?.account_id) return;
-    
+
+    const fetchId = ++dealsFetchIdRef.current;
+    const requestedPipelineId = pipelineId;
     setLoading(true);
     try {
       const selectQuery = `
@@ -238,6 +240,11 @@ export function useDeals(pipelineId?: string | null) {
       let hasMore = true;
 
       while (hasMore) {
+        // Abort mid-pagination if a newer fetch superseded us or the pipeline changed.
+        if (fetchId !== dealsFetchIdRef.current || requestedPipelineId !== currentPipelineIdRef.current) {
+          return;
+        }
+
         const batch = await withRetry(async () => {
           let query = supabase
             .from('deals')
@@ -247,8 +254,8 @@ export function useDeals(pipelineId?: string | null) {
             .order('created_at', { ascending: false })
             .range(from, from + PAGE_SIZE - 1);
 
-          if (pipelineId) {
-            query = query.eq('pipeline_id', pipelineId);
+          if (requestedPipelineId) {
+            query = query.eq('pipeline_id', requestedPipelineId);
           }
 
           const { data, error } = await query;
@@ -265,7 +272,18 @@ export function useDeals(pipelineId?: string | null) {
         }
       }
 
-      const formattedDeals: Deal[] = allData.map(deal => ({
+      // Final race-check before committing to state
+      if (fetchId !== dealsFetchIdRef.current || requestedPipelineId !== currentPipelineIdRef.current) {
+        return;
+      }
+
+      // Defensive filter: never surface a deal from a different pipeline than
+      // the one currently active. Guards against server drift or stale joins.
+      const safeData = requestedPipelineId
+        ? allData.filter((d: any) => d.pipeline_id === requestedPipelineId)
+        : allData;
+
+      const formattedDeals: Deal[] = safeData.map(deal => ({
         ...deal,
         status: deal.status as 'open' | 'won' | 'lost',
         tags: Array.isArray(deal.tags) ? deal.tags as string[] : [],
@@ -274,6 +292,7 @@ export function useDeals(pipelineId?: string | null) {
 
       setDeals(formattedDeals);
     } catch (error: any) {
+      if (fetchId !== dealsFetchIdRef.current) return;
       console.error('Error fetching deals:', error);
       toast({
         title: "Erro ao carregar negociações",
@@ -281,7 +300,9 @@ export function useDeals(pipelineId?: string | null) {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (fetchId === dealsFetchIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [currentUser?.account_id, pipelineId, toast]);
 
