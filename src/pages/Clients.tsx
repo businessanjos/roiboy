@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Lock, Trash2, Kanban, PauseCircle, Ban, GitMerge, ChevronLeft, Target, GraduationCap, TrendingUp, TrendingDown, Trophy, Building2, CalendarDays } from "lucide-react";
+import { Plus, Search, ArrowRight, ArrowUp, ArrowDown, ArrowUpDown, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Lock, Trash2, Kanban, PauseCircle, Ban, GitMerge, ChevronLeft, Target, GraduationCap, TrendingUp, TrendingDown, Trophy, Building2, CalendarDays } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import * as XLSX from "xlsx";
 import { ClientKanban } from "@/components/client/ClientKanban";
@@ -281,8 +281,10 @@ export default function Clients() {
   const [filterCountry, setFilterCountry] = usePersistedFilter<string>("clients", "country", "all");
   const [filterRisk, setFilterRisk] = usePersistedFilter<string>("clients", "risk", "all");
   const [filterEducation, setFilterEducation] = usePersistedFilter<string>("clients", "education", "all");
-  const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
+  const [filterArea, setFilterArea] = usePersistedFilter<string>("clients", "area", "all");
+  const [sortOrder, setSortOrder] = usePersistedFilter<string>("clients", "sortOrder", "recent");
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
+  const [areaOptions, setAreaOptions] = useState<string[]>([]);
 
   // Tab → contract filter mapping (overrides filterContract on fetch)
   const tabContractFilter: Record<string, string | null> = {
@@ -390,6 +392,7 @@ export default function Clients() {
       if (filterLinks === "with") baseParams["with_links"] = "true";
       if (filterCountry !== "all") baseParams["country"] = filterCountry;
       if (filterEducation !== "all") baseParams["education"] = filterEducation;
+      if (filterArea !== "all") baseParams["area"] = filterArea;
       baseParams["sort"] = sortOrder;
 
       const pageSize = 200;
@@ -542,6 +545,7 @@ export default function Clients() {
       if (filterLinks === "with") params.set("with_links", "true");
       if (filterCountry !== "all") params.set("country", filterCountry);
       if (filterEducation !== "all") params.set("education", filterEducation);
+      if (filterArea !== "all") params.set("area", filterArea);
       params.set("sort", sortOrder);
       
       const response = await fetch(
@@ -808,6 +812,7 @@ export default function Clients() {
       if (filterLinks === "with") p.set("with_links", "true");
       if (filterCountry !== "all") p.set("country", filterCountry);
       if (filterEducation !== "all") p.set("education", filterEducation);
+      if (filterArea !== "all") p.set("area", filterArea);
       return p;
     };
     try {
@@ -840,13 +845,32 @@ export default function Clients() {
       fetchTabCounts();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, sortOrder, activeTab]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, sortOrder, activeTab]);
 
   // Fetch client stages when account is available
   useEffect(() => {
     if (accountId || currentUser?.account_id) {
       fetchClientStages();
     }
+  }, [accountId, currentUser?.account_id]);
+
+  // Fetch distinct business_niche values for the Area filter
+  useEffect(() => {
+    const accId = accountId || currentUser?.account_id;
+    if (!accId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("business_niche")
+        .eq("account_id", accId)
+        .not("business_niche", "is", null)
+        .neq("business_niche", "")
+        .limit(2000);
+      const uniq = Array.from(
+        new Set((data || []).map((r: any) => (r.business_niche || "").trim()).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+      setAreaOptions(uniq);
+    })();
   }, [accountId, currentUser?.account_id]);
 
   // Fetch field values when clients are loaded
@@ -1314,6 +1338,7 @@ export default function Clients() {
     filterLinks !== "all",
     filterCountry !== "all",
     filterEducation !== "all",
+    filterArea !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -1324,6 +1349,7 @@ export default function Clients() {
     setFilterLinks("all");
     setFilterCountry("all");
     setFilterEducation("all");
+    setFilterArea("all");
   };
 
   // Country options for the filter dropdown.
@@ -2038,13 +2064,21 @@ export default function Clients() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as "recent" | "alphabetical")}>
-            <SelectTrigger className="w-[160px]">
+          <Select value={sortOrder} onValueChange={(v) => setSortOrder(v)}>
+            <SelectTrigger className="w-[220px]">
               <SelectValue placeholder="Ordenar" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="recent">Mais recentes</SelectItem>
               <SelectItem value="alphabetical">A-Z (Nome)</SelectItem>
+              <SelectItem value="initial_desc">Fat. Inicial (maior)</SelectItem>
+              <SelectItem value="initial_asc">Fat. Inicial (menor)</SelectItem>
+              <SelectItem value="current_desc">Fat. Atual (maior)</SelectItem>
+              <SelectItem value="current_asc">Fat. Atual (menor)</SelectItem>
+              <SelectItem value="evolution_desc">Evolução (maior)</SelectItem>
+              <SelectItem value="evolution_asc">Evolução (menor)</SelectItem>
+              <SelectItem value="record_desc">Recorde (maior)</SelectItem>
+              <SelectItem value="record_asc">Recorde (menor)</SelectItem>
             </SelectContent>
           </Select>
           <Button 
@@ -2220,6 +2254,25 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* Área de Atuação Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Área de Atuação</Label>
+                <Select value={filterArea} onValueChange={setFilterArea}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todas as áreas</SelectItem>
+                    {areaOptions.map((a) => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                    <SelectItem value="none">Sem área</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+
+
 
               {/* Clear Filters Button */}
               {activeFilterCount > 0 && (
@@ -2297,6 +2350,14 @@ export default function Clients() {
                     </button>
                   </Badge>
                 )}
+                {filterArea !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Área: {filterArea === "none" ? "Sem área" : filterArea}
+                    <button onClick={() => setFilterArea("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
               </div>
             )}
           </Card>
@@ -2342,11 +2403,36 @@ export default function Clients() {
                     <TableHead className="font-medium text-center min-w-[160px] bg-muted">Vínculo</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px] bg-muted">Área de Atuação</TableHead>
                     <TableHead className="font-medium text-center min-w-[130px] bg-muted">Formação</TableHead>
-                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Fat. Inicial</TableHead>
-                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Fat. Atual</TableHead>
-                    <TableHead className="font-medium text-center min-w-[110px] bg-muted">Evolução</TableHead>
-                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Recorde</TableHead>
-                    <TableHead className="font-medium text-center min-w-[110px] bg-muted">Clínicas</TableHead>
+                    {(() => {
+                      const SortHead = ({ label, keyName, width }: { label: string; keyName: "initial" | "current" | "evolution" | "record"; width: string }) => {
+                        const asc = `${keyName}_asc`;
+                        const desc = `${keyName}_desc`;
+                        const active = sortOrder === asc || sortOrder === desc;
+                        const isAsc = sortOrder === asc;
+                        const Icon = !active ? ArrowUpDown : isAsc ? ArrowUp : ArrowDown;
+                        return (
+                          <TableHead className={`font-medium text-center ${width} bg-muted`}>
+                            <button
+                              type="button"
+                              onClick={() => setSortOrder(active ? (isAsc ? desc : "recent") : desc)}
+                              className={`inline-flex items-center gap-1 mx-auto hover:text-primary transition-colors ${active ? "text-primary" : ""}`}
+                              title="Ordenar"
+                            >
+                              <span>{label}</span>
+                              <Icon className="h-3 w-3" />
+                            </button>
+                          </TableHead>
+                        );
+                      };
+                      return (
+                        <>
+                          <SortHead label="Fat. Inicial" keyName="initial" width="min-w-[130px]" />
+                          <SortHead label="Fat. Atual" keyName="current" width="min-w-[130px]" />
+                          <SortHead label="Evolução" keyName="evolution" width="min-w-[110px]" />
+                          <SortHead label="Recorde" keyName="record" width="min-w-[130px]" />
+                        </>
+                      );
+                    })()}
                     <TableHead className="font-medium text-center min-w-[100px] bg-muted">Clínica Ryka</TableHead>
                     <TableHead className="font-medium text-center min-w-[110px] bg-muted">Entrada</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px] bg-muted">Contrato</TableHead>
@@ -2358,14 +2444,14 @@ export default function Clients() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center py-8">
+                      <TableCell colSpan={13} className="text-center py-8">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
                         Carregando...
                       </TableCell>
                     </TableRow>
                   ) : filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                         Nenhum cliente encontrado.
                       </TableCell>
                     </TableRow>
@@ -2627,29 +2713,6 @@ export default function Clients() {
                           )}
                         </TableCell>
 
-                        {/* Clínicas */}
-                        <TableCell className="text-center">
-                          {client.clinics_count > 0 ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant="outline" className="text-xs">
-                                    <Building2 className="h-3 w-3 mr-1" />
-                                    {client.clinics_count}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">
-                                    {client.clinics_count} clínica{client.clinics_count > 1 ? "s" : ""}
-                                    {client.primary_clinic_name ? ` • Principal: ${client.primary_clinic_name}` : ""}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
 
                         {/* Ryka */}
                         <TableCell className="text-center">

@@ -89,7 +89,26 @@ Deno.serve(async (req) => {
     const withLinks = url.searchParams.get("with_links") === "true";
     const countryCode = (url.searchParams.get("country") || "").toUpperCase();
     const educationFilter = url.searchParams.get("education") || "";
+    const areaFilter = url.searchParams.get("area") || "";
     const sortParam = url.searchParams.get("sort") || "recent";
+
+    // Native (DB-orderable) sort mapping.
+    const NATIVE_SORTS: Record<string, { col: string; asc: boolean }> = {
+      recent: { col: "created_at", asc: false },
+      alphabetical: { col: "full_name", asc: true },
+      initial_asc: { col: "initial_revenue", asc: true },
+      initial_desc: { col: "initial_revenue", asc: false },
+      current_asc: { col: "current_revenue", asc: true },
+      current_desc: { col: "current_revenue", asc: false },
+    };
+    const MEMORY_SORTS = new Set([
+      "evolution_asc",
+      "evolution_desc",
+      "record_asc",
+      "record_desc",
+    ]);
+    const isMemorySort = MEMORY_SORTS.has(sortParam);
+    const nativeSort = NATIVE_SORTS[sortParam] || NATIVE_SORTS.recent;
 
     // Map ISO country code -> list of DDI prefixes (digits only).
     // Multiple codes can share a DDI (US/CA on +1) and one country can have multiple (rare).
@@ -389,8 +408,8 @@ Deno.serve(async (req) => {
         )
       `;
 
-    const orderColumn = sortParam === "alphabetical" ? "full_name" : "created_at";
-    const orderAscending = sortParam === "alphabetical";
+    const orderColumn = nativeSort.col;
+    const orderAscending = nativeSort.asc;
 
     const applyCommonFilters = (q: any) => {
       if (search) {
@@ -443,6 +462,13 @@ Deno.serve(async (req) => {
           q = q.eq("education", educationFilter);
         }
       }
+      if (areaFilter && areaFilter !== "all") {
+        if (areaFilter === "none") {
+          q = q.or("business_niche.is.null,business_niche.eq.");
+        } else {
+          q = q.eq("business_niche", areaFilter);
+        }
+      }
       return q;
     };
 
@@ -477,24 +503,27 @@ Deno.serve(async (req) => {
         clientsError = errored.error;
       } else {
         const merged = chunkResults.flatMap((r) => r.data || []);
-        // Sort
-        merged.sort((a: any, b: any) => {
-          const av = a[orderColumn] ?? "";
-          const bv = b[orderColumn] ?? "";
-          if (av < bv) return orderAscending ? -1 : 1;
-          if (av > bv) return orderAscending ? 1 : -1;
-          return 0;
-        });
-        count = merged.length;
-        clients = merged.slice(offset, offset + limit);
+        if (isMemorySort) {
+          // Defer sort/pagination until after enrichment.
+          clients = merged;
+          count = merged.length;
+        } else {
+          merged.sort((a: any, b: any) => {
+            const av = a[orderColumn] ?? "";
+            const bv = b[orderColumn] ?? "";
+            if (av < bv) return orderAscending ? -1 : 1;
+            if (av > bv) return orderAscending ? 1 : -1;
+            return 0;
+          });
+          count = merged.length;
+          clients = merged.slice(offset, offset + limit);
+        }
       }
     } else {
       let query = supabase
         .from("clients")
         .select(CLIENT_SELECT, { count: "exact" })
-        .eq("account_id", accountId)
-        .order(orderColumn, { ascending: orderAscending })
-        .range(offset, offset + limit - 1);
+        .eq("account_id", accountId);
 
       query = applyCommonFilters(query);
 
@@ -502,9 +531,18 @@ Deno.serve(async (req) => {
         query = query.in("id", preFilterIds);
       }
 
+      if (isMemorySort) {
+        // Fetch a large batch, defer sort/pagination until after enrichment.
+        query = query.limit(5000);
+      } else {
+        query = query
+          .order(orderColumn, { ascending: orderAscending, nullsFirst: false })
+          .range(offset, offset + limit - 1);
+      }
+
       const result = await query;
       clients = result.data || [];
-      count = result.count ?? 0;
+      count = result.count ?? clients.length;
       clientsError = result.error;
     }
 
@@ -745,13 +783,35 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Memory-based sort + pagination (evolution, record).
+    let memorySortTotal: number | null = null;
+    if (isMemorySort) {
+      const asc = sortParam.endsWith("_asc");
+      const isEvolution = sortParam.startsWith("evolution");
+      filteredClients = [...filteredClients].sort((a: any, b: any) => {
+        let av: number, bv: number;
+        if (isEvolution) {
+          av = (Number(a.current_revenue) || 0) - (Number(a.initial_revenue) || 0);
+          bv = (Number(b.current_revenue) || 0) - (Number(b.initial_revenue) || 0);
+        } else {
+          av = Number(a.revenue_record?.revenue) || 0;
+          bv = Number(b.revenue_record?.revenue) || 0;
+        }
+        return asc ? av - bv : bv - av;
+      });
+      memorySortTotal = filteredClients.length;
+      filteredClients = filteredClients.slice(offset, offset + limit);
+    }
+
     // Use count from SQL when no post-query filters were applied, otherwise use filtered length
     const hasPostQueryFilters =
       (contractFilter && contractFilter !== "all") ||
       clientStatus === "no_contract" ||
       userRole === "operation";
 
-    const totalCount = hasPostQueryFilters ? filteredClients.length : (count || 0);
+    const totalCount = memorySortTotal !== null
+      ? memorySortTotal
+      : hasPostQueryFilters ? filteredClients.length : (count || 0);
 
     console.log(
       `Found ${count} clients, returning ${filteredClients.length} enriched`
