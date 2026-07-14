@@ -437,6 +437,12 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
       return evaluateDateCondition(nextDue, operator, value, today);
     }
 
+    case 'total_tasks': {
+      const count = dealTaskCountMap?.[deal.id] ?? 0;
+      return evaluateNumberCondition(count, operator, value);
+    }
+
+
 
     default:
       return true;
