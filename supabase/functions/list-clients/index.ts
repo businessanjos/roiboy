@@ -809,7 +809,9 @@ Deno.serve(async (req) => {
       clientStatus === "no_contract" ||
       userRole === "operation";
 
-    const totalCount = hasPostQueryFilters ? filteredClients.length : (count || 0);
+    const totalCount = memorySortTotal !== null
+      ? memorySortTotal
+      : hasPostQueryFilters ? filteredClients.length : (count || 0);
 
     console.log(
       `Found ${count} clients, returning ${filteredClients.length} enriched`
