@@ -468,6 +468,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.currentAgentId === nextProps.currentAgentId &&
     prevTags === nextTags &&
+    prevConvClient === nextConvClient &&
     productsEqual &&
     respEqual &&
     stageEqual
