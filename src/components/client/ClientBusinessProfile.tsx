@@ -120,6 +120,7 @@ export function ClientBusinessProfile({
   const { currentUser } = useCurrentUser();
   const [client, setClient] = useState<ClientRow | null>(null);
   const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [rykaStatus, setRykaStatus] = useState<"active" | "pending" | "error" | "none">("none");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
