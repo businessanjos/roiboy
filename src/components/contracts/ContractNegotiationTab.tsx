@@ -109,6 +109,43 @@ export function ContractNegotiationTab({
   );
   const [receivablesGenerated, setReceivablesGenerated] = useState(initialReceivablesGenerated);
 
+  // Editable installments detail (source of truth for what's saved / generated)
+  type EditableInstallment = { amount: number; due_date: string; method: string };
+  const buildDetail = (
+    count: number,
+    startDate: string,
+    method: string,
+    total: number
+  ): EditableInstallment[] => {
+    const safeCount = Math.max(1, Math.floor(count || 1));
+    const base = Math.floor((total / safeCount) * 100) / 100;
+    const remainder = Math.round((total - base * safeCount) * 100) / 100;
+    const startD = startDate ? parseISO(startDate) : new Date();
+    return Array.from({ length: safeCount }).map((_, i) => ({
+      amount: i === 0 ? Math.round((base + remainder) * 100) / 100 : base,
+      due_date: format(addMonths(startD, i), "yyyy-MM-dd"),
+      method: method || "pix",
+    }));
+  };
+
+  const initialEditable: EditableInstallment[] = hasSalesBreakdown
+    ? salesBreakdown.map((d, i) => ({
+        amount: Number(d.amount ?? d.value ?? 0),
+        due_date:
+          d.due_date ||
+          format(addMonths(parseISO(initialDueDate || format(new Date(), "yyyy-MM-dd")), i), "yyyy-MM-dd"),
+        method: d.method || initialMethod || "pix",
+      }))
+    : buildDetail(
+        initialInstallments || 1,
+        initialDueDate || format(new Date(), "yyyy-MM-dd"),
+        initialMethod || "pix",
+        contractValue
+      );
+
+  const [detail, setDetail] = useState<EditableInstallment[]>(initialEditable);
+  const [detailDirty, setDetailDirty] = useState<boolean>(hasSalesBreakdown);
+
   // Ref to prevent duplicate generation during re-renders
   const generatedRef = useRef(initialReceivablesGenerated);
 
@@ -130,6 +167,61 @@ export function ContractNegotiationTab({
     setFirstDueDate(initialDueDate || format(new Date(), "yyyy-MM-dd"));
     setReceivablesGenerated(initialReceivablesGenerated);
   }, [initialType, initialDescription, initialMethod, initialInstallments, initialDueDate, initialReceivablesGenerated]);
+
+  // Auto-recalculate detail when inputs change, unless the user has manually edited
+  useEffect(() => {
+    if (detailDirty) return;
+    setDetail(buildDetail(installments, firstDueDate, paymentMethod, contractValue));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [installments, firstDueDate, paymentMethod, contractValue]);
+
+  const detailTotal = useMemo(
+    () => Math.round(detail.reduce((s, d) => s + (Number(d.amount) || 0), 0) * 100) / 100,
+    [detail]
+  );
+  const detailBalanced = Math.abs(detailTotal - contractValue) < 0.01;
+
+  const updateInstallmentAt = (idx: number, patch: Partial<EditableInstallment>) => {
+    setDetailDirty(true);
+    setDetail((prev) => prev.map((d, i) => (i === idx ? { ...d, ...patch } : d)));
+  };
+
+  const addInstallment = () => {
+    setDetailDirty(true);
+    setDetail((prev) => {
+      const last = prev[prev.length - 1];
+      const nextDate = last
+        ? format(addMonths(parseISO(last.due_date), 1), "yyyy-MM-dd")
+        : format(new Date(), "yyyy-MM-dd");
+      return [
+        ...prev,
+        { amount: 0, due_date: nextDate, method: paymentMethod || "pix" },
+      ];
+    });
+    setInstallments((n) => n + 1);
+  };
+
+  const removeInstallmentAt = (idx: number) => {
+    if (detail.length <= 1) return;
+    setDetailDirty(true);
+    setDetail((prev) => prev.filter((_, i) => i !== idx));
+    setInstallments((n) => Math.max(1, n - 1));
+  };
+
+  const distributeEqually = () => {
+    setDetailDirty(false);
+    setDetail(buildDetail(installments, firstDueDate, paymentMethod || "pix", contractValue));
+  };
+
+  const distributeRemainder = () => {
+    setDetailDirty(true);
+    setDetail((prev) => {
+      if (prev.length === 0) return prev;
+      const lockedSum = prev.slice(1).reduce((s, d) => s + (Number(d.amount) || 0), 0);
+      const firstAmount = Math.round((contractValue - lockedSum) * 100) / 100;
+      return prev.map((d, i) => (i === 0 ? { ...d, amount: firstAmount } : d));
+    });
+  };
 
   const installmentValue = contractValue / installments;
 
