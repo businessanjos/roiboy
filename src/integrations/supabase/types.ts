@@ -22625,6 +22625,9 @@ export type Database = {
           matched_lead_id: string | null
           metadata: Json | null
           phone: string | null
+          processed_at: string | null
+          processing_error: string | null
+          processing_status: string | null
           response_id: string
           submitted_at: string | null
           updated_at: string
@@ -22645,6 +22648,9 @@ export type Database = {
           matched_lead_id?: string | null
           metadata?: Json | null
           phone?: string | null
+          processed_at?: string | null
+          processing_error?: string | null
+          processing_status?: string | null
           response_id: string
           submitted_at?: string | null
           updated_at?: string
@@ -22665,6 +22671,9 @@ export type Database = {
           matched_lead_id?: string | null
           metadata?: Json | null
           phone?: string | null
+          processed_at?: string | null
+          processing_error?: string | null
+          processing_status?: string | null
           response_id?: string
           submitted_at?: string | null
           updated_at?: string
