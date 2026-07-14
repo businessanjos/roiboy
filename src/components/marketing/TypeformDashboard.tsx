@@ -125,6 +125,31 @@ export function TypeformDashboard() {
 
   useEffect(() => { loadFunnel(); }, [loadFunnel]);
 
+  const loadPerFormMetrics = useCallback(async () => {
+    if (!forms.length) { setPerFormMetrics({}); return; }
+    if (period === 'custom' && !customReady) return;
+    setLoadingPerForm(true);
+    const entries = await Promise.all(forms.map(async (f) => {
+      const { data, error } = await supabase.functions.invoke('typeform-manager', {
+        body: { action: 'get_dashboard', form_id: f.form_id, ...periodPayload },
+      });
+      if (error || !data?.funnel) return [f.form_id, null] as const;
+      const fn = data.funnel;
+      return [f.form_id, {
+        submissions: fn.submissions || 0,
+        completed: fn.completed || 0,
+        matched: fn.matched_responses || 0,
+        won: fn.won || 0,
+        won_value: fn.won_value || 0,
+      }] as const;
+    }));
+    setPerFormMetrics(Object.fromEntries(entries));
+    setLoadingPerForm(false);
+  }, [forms, periodPayload, period, customReady]);
+
+  useEffect(() => { loadPerFormMetrics(); }, [loadPerFormMetrics]);
+
+
   const openAdd = async () => {
     setAddOpen(true);
     setLoadingAvailable(true);
