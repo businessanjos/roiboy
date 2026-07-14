@@ -812,6 +812,7 @@ export default function Clients() {
       if (filterLinks === "with") p.set("with_links", "true");
       if (filterCountry !== "all") p.set("country", filterCountry);
       if (filterEducation !== "all") p.set("education", filterEducation);
+      if (filterArea !== "all") p.set("area", filterArea);
       return p;
     };
     try {
