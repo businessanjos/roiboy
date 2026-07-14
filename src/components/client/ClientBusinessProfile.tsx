@@ -71,6 +71,9 @@ interface ClientRow {
   education: string | null;
   education_specialty: string | null;
   business_niche: string | null;
+  onboarding_started_at: string | null;
+  contract_start_date: string | null;
+  created_at: string | null;
 }
 
 interface HistoryRow {
