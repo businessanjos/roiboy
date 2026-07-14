@@ -244,8 +244,35 @@ Deno.serve(async (req) => {
   if (!fr) return new Response("ignored", { headers: corsHeaders });
 
   const formId = fr.form_id || fr.definition?.id;
-  const bundle = extractAnswers(fr.answers || []);
+
+  // Enrich each answer with the field title/ref from fr.definition.fields.
+  // Typeform's per-answer `field` block only carries {id,type,ref}; the human
+  // title lives on the definition. Without this merge, downstream code
+  // (extractAnswers, buildTypeformNote) falls back to raw UUIDs and misses
+  // faturamento/segment/etc.
+  const defFields: any[] = Array.isArray(fr.definition?.fields) ? fr.definition.fields : [];
+  const defById = new Map<string, any>();
+  const defByRef = new Map<string, any>();
+  for (const f of defFields) {
+    if (f?.id) defById.set(f.id, f);
+    if (f?.ref) defByRef.set(f.ref, f);
+  }
+  const enrichedAnswers = (fr.answers || []).map((a: any) => {
+    const src = (a?.field?.id && defById.get(a.field.id)) || (a?.field?.ref && defByRef.get(a.field.ref)) || null;
+    if (!src) return a;
+    return {
+      ...a,
+      field: {
+        ...(a.field || {}),
+        title: a?.field?.title || src.title || "",
+        ref: a?.field?.ref || src.ref || "",
+      },
+    };
+  });
+
+  const bundle = extractAnswers(enrichedAnswers);
   const { email, phone, full_name } = bundle;
+
 
   const row = {
     account_id: accountId,
