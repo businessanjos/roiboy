@@ -403,6 +403,7 @@ export async function createLeadCore(
               contact_email: normalizedEmail || null,
               value: payload.deal_value ?? null,
               source: payload.source?.trim() || null,
+              tags: payload.tags && payload.tags.length ? payload.tags : null,
               status: "open",
               stage_changed_at: new Date().toISOString(),
             })
