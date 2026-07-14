@@ -753,7 +753,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
             <input
               ref={imageInputRef}
               type="file"
-              accept="image/*,video/*"
+              accept="image/*,video/*,.mov,.mp4,.webm,.mkv,.avi"
               className="hidden"
               onChange={(e) => onFileSelect(e, "image")}
             />
