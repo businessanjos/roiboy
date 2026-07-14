@@ -113,7 +113,10 @@ export const ZappConversationItem = memo(function ZappConversationItem({
     }
   };
 
-  const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
+  // Resolve clientId with fallback to name/phone match (handles unlinked zapp_conversations)
+  const linkedClientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
+  const fallbackClientId = zappConvId ? convToClientId?.[zappConvId] : undefined;
+  const clientId = linkedClientId || fallbackClientId;
   const products = clientId ? clientProducts[clientId] : undefined;
   const responsible = clientId ? clientResponsibles?.[clientId] : undefined;
   const leadId = assignment.zapp_conversation?.lead_id;
