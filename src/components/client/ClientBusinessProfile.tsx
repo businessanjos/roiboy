@@ -492,8 +492,35 @@ export function ClientBusinessProfile({
             />
           </div>
 
-          {/* Ryka + Recorde row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Entrada + Ryka + Recorde row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-lg border bg-card p-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+                <Briefcase className="h-3.5 w-3.5" /> Entrada na mentoria
+              </span>
+              {mentoringStart ? (
+                <div className="mt-1">
+                  <div className="text-lg font-bold text-foreground capitalize">
+                    {format(mentoringStart, "MMM 'de' yyyy", { locale: ptBR })}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {mentoringMonths != null
+                      ? `há ${mentoringMonths} ${mentoringMonths === 1 ? "mês" : "meses"}`
+                      : ""}
+                    {" • "}
+                    {format(mentoringStart, "dd/MM/yyyy")}
+                    {!client?.onboarding_started_at && !client?.contract_start_date && (
+                      <span className="text-amber-600"> (estimado)</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground mt-1 block">
+                  Data indisponível
+                </span>
+              )}
+            </div>
+
             <div className="rounded-lg border bg-card p-3">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
                 <Activity className="h-3.5 w-3.5" /> Clínica Ryka
