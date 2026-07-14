@@ -404,11 +404,38 @@ export const ZappConversationItem = memo(function ZappConversationItem({
   // Custom comparison for memo - only re-render if these change
   const prevTags = prevProps.assignment.conversation_tags?.map(t => t.tag_id).join(',') || '';
   const nextTags = nextProps.assignment.conversation_tags?.map(t => t.tag_id).join(',') || '';
-  
+
+  const clientId =
+    nextProps.assignment.zapp_conversation?.client_id ||
+    nextProps.assignment.conversation?.client?.id;
+  const leadId = nextProps.assignment.zapp_conversation?.lead_id;
+
+  // Compare the actual per-client slices we render, not just map identity.
+  // This guarantees the responsible/product badges appear as soon as the
+  // async fetch resolves, even if the outer map reference is preserved.
+  const prevProducts = clientId ? prevProps.clientProducts?.[clientId] : undefined;
+  const nextProducts = clientId ? nextProps.clientProducts?.[clientId] : undefined;
+  const productsEqual =
+    prevProducts === nextProducts ||
+    ((prevProducts?.length ?? 0) === (nextProducts?.length ?? 0) &&
+      (prevProducts ?? []).every((p, i) => p.id === nextProducts?.[i]?.id));
+
+  const prevResp = clientId ? prevProps.clientResponsibles?.[clientId] : undefined;
+  const nextResp = clientId ? nextProps.clientResponsibles?.[clientId] : undefined;
+  const respEqual = prevResp?.id === nextResp?.id && prevResp?.name === nextResp?.name;
+
+  const prevStage = leadId ? prevProps.leadDealStages?.[leadId] : undefined;
+  const nextStage = leadId ? nextProps.leadDealStages?.[leadId] : undefined;
+  const stageEqual =
+    prevStage?.stageName === nextStage?.stageName &&
+    prevStage?.stageColor === nextStage?.stageColor;
+
   return (
     prevProps.assignment.id === nextProps.assignment.id &&
     prevProps.assignment.status === nextProps.assignment.status &&
     prevProps.assignment.agent_id === nextProps.assignment.agent_id &&
+    prevProps.assignment.zapp_conversation?.client_id === nextProps.assignment.zapp_conversation?.client_id &&
+    prevProps.assignment.zapp_conversation?.lead_id === nextProps.assignment.zapp_conversation?.lead_id &&
     prevProps.assignment.zapp_conversation?.unread_count === nextProps.assignment.zapp_conversation?.unread_count &&
     prevProps.assignment.zapp_conversation?.last_message_preview === nextProps.assignment.zapp_conversation?.last_message_preview &&
     prevProps.assignment.zapp_conversation?.last_message_at === nextProps.assignment.zapp_conversation?.last_message_at &&
@@ -419,6 +446,8 @@ export const ZappConversationItem = memo(function ZappConversationItem({
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.currentAgentId === nextProps.currentAgentId &&
     prevTags === nextTags &&
-    prevProps.leadDealStages === nextProps.leadDealStages
+    productsEqual &&
+    respEqual &&
+    stageEqual
   );
 });
