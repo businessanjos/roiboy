@@ -19,6 +19,7 @@ import {
   updateClientWithDealData,
   getContractDataFromDealFields,
   formatDealCustomFieldsForTimeline,
+  expandBreakdownToInstallments,
 } from "@/utils/dealToClientContractMapping";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
