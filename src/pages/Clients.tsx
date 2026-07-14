@@ -1318,6 +1318,7 @@ export default function Clients() {
     filterLinks !== "all",
     filterCountry !== "all",
     filterEducation !== "all",
+    filterArea !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -1328,6 +1329,7 @@ export default function Clients() {
     setFilterLinks("all");
     setFilterCountry("all");
     setFilterEducation("all");
+    setFilterArea("all");
   };
 
   // Country options for the filter dropdown.
