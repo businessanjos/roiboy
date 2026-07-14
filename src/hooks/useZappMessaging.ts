@@ -39,6 +39,11 @@ const VIDEO_CONTENT_TYPES_BY_EXTENSION: Record<string, string> = {
 
 const getFileExtension = (fileName: string) => fileName.split(".").pop()?.toLowerCase() || "";
 
+const isQuickTimeVideoFile = (file: File) => {
+  const extension = getFileExtension(file.name);
+  return extension === "mov" || extension === "qt" || file.type.toLowerCase() === "video/quicktime";
+};
+
 const isVideoFile = (file: File) => {
   const extension = getFileExtension(file.name);
   return file.type.startsWith("video/") || extension in VIDEO_CONTENT_TYPES_BY_EXTENSION;
@@ -46,6 +51,10 @@ const isVideoFile = (file: File) => {
 
 const resolveZappMediaType = (file: File, fallback: "image" | "document" | "video"): "image" | "document" | "video" => {
   if (file.type.startsWith("image/")) return "image";
+  // WhatsApp/Uazapi frequently reject iPhone .MOV as a native video payload.
+  // Send QuickTime files as documents so Customer Success can reliably deliver them.
+  if (isQuickTimeVideoFile(file)) return "document";
+  if (fallback === "document") return "document";
   if (isVideoFile(file)) return "video";
   return fallback;
 };
@@ -720,6 +729,7 @@ export function useZappMessaging({
     const tempMessageId = `temp-media-${Date.now()}`;
     const now = new Date().toISOString();
     const signedCaption = caption ? buildSignedText(caption) : "";
+    const mediaMimetype = resolveUploadContentType(file);
 
     // 🔗 Captura o contexto de resposta (quoted) e limpa o preview antes do envio
     const replyContext = replyingTo ? { ...replyingTo } : null;
@@ -733,7 +743,7 @@ export function useZappMessaging({
       message_type: mediaType,
       media_url: URL.createObjectURL(file),
       media_type: mediaType,
-      media_mimetype: file.type,
+      media_mimetype: mediaMimetype,
       media_filename: file.name,
       audio_duration_sec: null,
       sender_name: null,
@@ -762,6 +772,7 @@ export function useZappMessaging({
         action,
         media_url: mediaUrl,
         media_type: mediaType,
+        media_mimetype: mediaMimetype,
         caption: signedCaption,
         file_name: file.name,
         sector_id: selectedSectorId || "",
@@ -811,7 +822,7 @@ export function useZappMessaging({
           message_type: mediaType,
           media_url: mediaUrl,
           media_type: mediaType,
-          media_mimetype: file.type,
+          media_mimetype: mediaMimetype,
           media_filename: file.name,
           sent_at: now,
           external_message_id: externalId,

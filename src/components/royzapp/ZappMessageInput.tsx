@@ -768,7 +768,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mov,.qt,.mp4,.m4v,.webm,.mkv,.avi,video/*"
               className="hidden"
               onChange={(e) => onFileSelect(e, "document")}
             />
