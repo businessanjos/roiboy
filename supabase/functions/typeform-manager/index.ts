@@ -553,6 +553,67 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ----- BIG PICTURE: live Typeform Insights summary (lifetime) -----
+    if (action === "get_big_picture") {
+      const formIdParam: string = body.form_id;
+      if (!formIdParam) {
+        return new Response(JSON.stringify({ error: "form_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Resolve tracked forms scoped to this account
+      const { data: tracked } = await supabase
+        .from("typeform_forms")
+        .select("form_id, title")
+        .eq("account_id", accountId);
+      const trackedIds = (tracked || []).map((f: any) => f.form_id);
+
+      const targets: string[] = formIdParam === "__all__"
+        ? trackedIds
+        : (trackedIds.includes(formIdParam) ? [formIdParam] : []);
+
+      if (!targets.length) {
+        return new Response(JSON.stringify({ metrics: { visits: 0, starts: 0, submissions: 0, completion_rate: 0, avg_time: 0 }, per_form: [], fetched_at: new Date().toISOString() }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const perForm: any[] = [];
+      let aggVisits = 0, aggStarts = 0, aggSubs = 0, wCompletion = 0, wAvg = 0;
+
+      await Promise.all(targets.map(async (fid) => {
+        try {
+          const summary = await tfFetch(`/insights/${fid}/summary`, TOKEN);
+          const formSummary = summary?.form?.summary || {};
+          const fields = summary?.fields || [];
+          const visits = Number(formSummary?.total_visits || 0);
+          const firstField = fields.find((f: any) => f?.type !== "welcome_screen" && f?.type !== "thankyou_screen");
+          const starts = Number(firstField?.views || formSummary?.unique_visits || 0);
+          const submissions = Number(formSummary?.responses_count || 0);
+          const completion_rate = Number(formSummary?.completion_rate || (visits ? (submissions / visits) * 100 : 0));
+          const avg_time = Number(formSummary?.average_time || 0);
+          perForm.push({ form_id: fid, visits, starts, submissions, completion_rate, avg_time });
+          aggVisits += visits;
+          aggStarts += starts;
+          aggSubs += submissions;
+          const w = visits || 1;
+          wCompletion += completion_rate * w;
+          wAvg += avg_time * w;
+        } catch (e) {
+          console.error(`big_picture ${fid}:`, e);
+          perForm.push({ form_id: fid, error: String((e as any)?.message || e) });
+        }
+      }));
+
+      const totalWeight = aggVisits || perForm.filter(p => !p.error).length || 1;
+      const metrics = {
+        visits: aggVisits,
+        starts: aggStarts,
+        submissions: aggSubs,
+        completion_rate: aggVisits ? (wCompletion / totalWeight) : (perForm.length ? (perForm.reduce((s, p) => s + (p.completion_rate || 0), 0) / perForm.length) : 0),
+        avg_time: aggVisits ? (wAvg / totalWeight) : (perForm.length ? (perForm.reduce((s, p) => s + (p.avg_time || 0), 0) / perForm.length) : 0),
+      };
+
+      return new Response(JSON.stringify({ metrics, per_form: perForm, fetched_at: new Date().toISOString() }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     return new Response(JSON.stringify({ error: "unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error(e);
