@@ -1803,14 +1803,27 @@ export default function SalesPipeline() {
                 const parcelas = dealFieldValues.parcelas || 0;
                 const toInstallment = Math.max(0, totalValue - received);
                 if (parcelas > 0 && toInstallment > 0 && paymentMethod) {
-                  const firstDue = addDays(new Date(), 30);
-                  firstDueIso = format(firstDue, "yyyy-MM-dd");
+                  const today = new Date();
+                  const firstDue = addDays(today, 30);
                   const per = Math.round((toInstallment / parcelas) * 100) / 100;
-                  installmentsDetail = Array.from({ length: parcelas }).map((_, i) => ({
+                  const parcelasDetail = Array.from({ length: parcelas }).map((_, i) => ({
                     amount: per,
                     due_date: format(addMonths(firstDue, i), "yyyy-MM-dd"),
                     method: paymentMethod,
                   }));
+                  // Entrada (Cash Collect): quando já houve valor recebido, ela vira
+                  // a 1ª parcela do plano — total efetivo = Entrada + N parcelas.
+                  if (received > 0) {
+                    const entradaIso = format(today, "yyyy-MM-dd");
+                    installmentsDetail = [
+                      { amount: received, due_date: entradaIso, method: "entrada" },
+                      ...parcelasDetail,
+                    ];
+                    firstDueIso = entradaIso;
+                  } else {
+                    installmentsDetail = parcelasDetail;
+                    firstDueIso = format(firstDue, "yyyy-MM-dd");
+                  }
                 }
               }
 
