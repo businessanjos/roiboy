@@ -503,24 +503,27 @@ Deno.serve(async (req) => {
         clientsError = errored.error;
       } else {
         const merged = chunkResults.flatMap((r) => r.data || []);
-        // Sort
-        merged.sort((a: any, b: any) => {
-          const av = a[orderColumn] ?? "";
-          const bv = b[orderColumn] ?? "";
-          if (av < bv) return orderAscending ? -1 : 1;
-          if (av > bv) return orderAscending ? 1 : -1;
-          return 0;
-        });
-        count = merged.length;
-        clients = merged.slice(offset, offset + limit);
+        if (isMemorySort) {
+          // Defer sort/pagination until after enrichment.
+          clients = merged;
+          count = merged.length;
+        } else {
+          merged.sort((a: any, b: any) => {
+            const av = a[orderColumn] ?? "";
+            const bv = b[orderColumn] ?? "";
+            if (av < bv) return orderAscending ? -1 : 1;
+            if (av > bv) return orderAscending ? 1 : -1;
+            return 0;
+          });
+          count = merged.length;
+          clients = merged.slice(offset, offset + limit);
+        }
       }
     } else {
       let query = supabase
         .from("clients")
         .select(CLIENT_SELECT, { count: "exact" })
-        .eq("account_id", accountId)
-        .order(orderColumn, { ascending: orderAscending })
-        .range(offset, offset + limit - 1);
+        .eq("account_id", accountId);
 
       query = applyCommonFilters(query);
 
@@ -528,9 +531,18 @@ Deno.serve(async (req) => {
         query = query.in("id", preFilterIds);
       }
 
+      if (isMemorySort) {
+        // Fetch a large batch, defer sort/pagination until after enrichment.
+        query = query.limit(5000);
+      } else {
+        query = query
+          .order(orderColumn, { ascending: orderAscending, nullsFirst: false })
+          .range(offset, offset + limit - 1);
+      }
+
       const result = await query;
       clients = result.data || [];
-      count = result.count ?? 0;
+      count = result.count ?? clients.length;
       clientsError = result.error;
     }
 
