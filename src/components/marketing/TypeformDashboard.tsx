@@ -149,20 +149,16 @@ export function TypeformDashboard() {
 
   useEffect(() => { loadPerFormMetrics(); }, [loadPerFormMetrics]);
 
-  // Big picture (Typeform Insights lifetime — live)
-  const [bigPicture, setBigPicture] = useState<{ visits: number; starts: number; submissions: number; completion_rate: number; avg_time: number } | null>(null);
-  const [loadingBigPicture, setLoadingBigPicture] = useState(false);
-  const loadBigPicture = useCallback(async () => {
-    if (!selectedForm) { setBigPicture(null); return; }
-    setLoadingBigPicture(true);
-    const { data, error } = await supabase.functions.invoke('typeform-manager', {
-      body: { action: 'get_big_picture', form_id: selectedForm },
-    });
-    if (error) setBigPicture(null);
-    else setBigPicture(data?.metrics || null);
-    setLoadingBigPicture(false);
-  }, [selectedForm]);
-  useEffect(() => { loadBigPicture(); }, [loadBigPicture]);
+  // Big picture — reflete o mesmo funil (respeita período selecionado)
+  const bigPicture = funnel ? {
+    visits: funnel.visits,
+    starts: funnel.starts,
+    submissions: funnel.submissions,
+    completion_rate: funnel.completion_rate,
+    avg_time: funnel.avg_time,
+  } : null;
+  const loadingBigPicture = loadingFunnel;
+
 
 
 
