@@ -90,6 +90,7 @@ interface ZappConversationPanelProps {
   availableProducts: { id: string; name: string; color: string | null }[];
   availableUsersCount: number;
   clientProducts: Record<string, { id: string; name: string; color?: string }[]>;
+  clientResponsibles?: Record<string, { id: string; name: string }>;
   leadDealStages?: Record<string, { stageName: string; stageColor: string }>;
   
   // Counts
