@@ -188,6 +188,12 @@ Deno.serve(async (req) => {
       || /ate\s+30|até\s+30/.test(rr);
     const mql = isBelow30k ? "NÃO - Abaixo de 30k" : "SIM - Acima de 30k";
 
+    // Distribuição: leads/deals do Typeform caem para o Jonathan Marcato
+    // (gestor que faz a triagem/distribuição para os vendedores).
+    const JONATHAN_MARCATO_ID = "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
+    const JONATHAN_ACCOUNT_ID = "796e7970-fd93-4574-a871-6090624cace6";
+    const distributionUserId = accountId === JONATHAN_ACCOUNT_ID ? JONATHAN_MARCATO_ID : undefined;
+
     const result = await createLeadCore(supabase, accountId, {
       full_name,
       email,
@@ -201,7 +207,9 @@ Deno.serve(async (req) => {
       tags,
       create_deal: true,
       deal_title: tag ? `${tag} ${full_name}` : full_name,
+      responsible_user_id: distributionUserId,
     });
+
 
     if (result.status === "created") {
       createdLeadId = result.lead.id;
@@ -262,6 +270,9 @@ Deno.serve(async (req) => {
             );
             const baseName = leadRow?.full_name || full_name || email;
             const dealTitle = tag ? `${tag} ${baseName}` : baseName;
+            const JONATHAN_MARCATO_ID_MATCH = "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
+            const JONATHAN_ACCOUNT_ID_MATCH = "796e7970-fd93-4574-a871-6090624cace6";
+            const distributionUserIdMatch = accountId === JONATHAN_ACCOUNT_ID_MATCH ? JONATHAN_MARCATO_ID_MATCH : null;
             const { data: newDeal, error: dealErr } = await supabase
               .from("deals")
               .insert({
@@ -276,10 +287,12 @@ Deno.serve(async (req) => {
                 source,
                 tags: tag ? [tag] : [],
                 status: "open",
+                responsible_user_id: distributionUserIdMatch,
                 stage_changed_at: new Date().toISOString(),
               })
               .select("id")
               .single();
+
             if (dealErr) {
               console.error("[typeform-webhook] deal creation on match failed:", dealErr);
             } else if (newDeal) {

@@ -157,10 +157,12 @@ export async function createLeadCore(
       canal: payload.canal?.trim() || null,
       tags: tags.length > 0 ? tags : [],
       notes: payload.notes?.trim() || null,
+      responsible_user_id: payload.responsible_user_id || null,
       status: "new",
     })
     .select("id, full_name, phone, status, email")
     .single();
+
 
   if (insertError || !newLead) {
     return { status: "error", error: insertError?.message || "insert failed" };
