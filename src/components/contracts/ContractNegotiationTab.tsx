@@ -628,16 +628,39 @@ export function ContractNegotiationTab({
           </div>
 
 
-          {/* Generate Receivables Button */}
+          {/* Generate / Regenerate Receivables Button */}
           {receivablesGenerated ? (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
-              <CheckCircle className="h-5 w-5" />
-              <span className="text-sm font-medium">Parcelas já geradas no financeiro</span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
+                <CheckCircle className="h-5 w-5" />
+                <span className="text-sm font-medium">Parcelas já geradas no financeiro</span>
+              </div>
+              <Button
+                onClick={handleRegenerateReceivables}
+                disabled={generating || !detailBalanced}
+                variant="outline"
+                className="w-full"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Refazendo parcelas...
+                  </>
+                ) : (
+                  <>
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Refazer {detail.length} parcela(s) no Financeiro
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Refazer apaga apenas parcelas em aberto e recria conforme o detalhamento acima. Parcelas já pagas bloqueiam a operação.
+              </p>
             </div>
           ) : (
             <Button
               onClick={handleGenerateReceivables}
-              disabled={generating || !paymentMethod}
+              disabled={generating || !paymentMethod || !detailBalanced}
               className="w-full"
               size="lg"
             >
@@ -649,7 +672,7 @@ export function ContractNegotiationTab({
               ) : (
                 <>
                   <Receipt className="h-4 w-4 mr-2" />
-                  Gerar {installments} Parcela(s) no Financeiro
+                  Gerar {detail.length} Parcela(s) no Financeiro
                 </>
               )}
             </Button>
