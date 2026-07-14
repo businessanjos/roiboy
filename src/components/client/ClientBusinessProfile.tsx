@@ -291,6 +291,14 @@ export function ClientBusinessProfile({
 
   const growth = client ? growthPct(client.initial_revenue, client.current_revenue) : null;
 
+  const revenueRecord = useMemo(() => {
+    if (!history || history.length === 0) return null;
+    return history.reduce(
+      (best, h) => (Number(h.revenue) > Number(best.revenue) ? h : best),
+      history[0]
+    );
+  }, [history]);
+
   if (loading) {
     return (
       <Card className="shadow-card">
