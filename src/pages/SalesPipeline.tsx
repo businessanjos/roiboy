@@ -370,7 +370,11 @@ export default function SalesPipeline() {
 
   // Fetch structured negotiation fields for WON deals to flag incomplete records.
   const [negotiationStatusMap, setNegotiationStatusMap] = useState<Record<string, string[]>>({});
-  const wonDealIdsKey = useMemo(() => wonDeals.map((d) => d.id).join(','), [wonDeals]);
+  // Include updated_at so inline edits to Parcelas / Forma de Pagamento re-run the check
+  const wonDealIdsKey = useMemo(
+    () => wonDeals.map((d: any) => `${d.id}:${d.updated_at || ''}`).join(','),
+    [wonDeals]
+  );
 
   useEffect(() => {
     if (wonDeals.length === 0) {
@@ -440,6 +444,79 @@ export default function SalesPipeline() {
       }
     })();
   }, [wonDealIdsKey]);
+
+  // Realtime: refresh badge when Parcelas / Forma de Pagamento are edited inline
+  useEffect(() => {
+    if (wonDeals.length === 0) return;
+    const wonIds = new Set(wonDeals.map((d: any) => d.id));
+    const fieldIds = new Set(NEGOTIATION_REQUIRED_FIELDS.map((f) => f.id));
+    const channel = supabase
+      .channel('negotiation-status-refresh')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'deal_field_values' },
+        (payload: any) => {
+          const row = payload.new || payload.old;
+          if (!row) return;
+          if (!wonIds.has(row.deal_id)) return;
+          if (!fieldIds.has(row.field_id)) return;
+          // Bump a re-run by mutating a version counter via state setter
+          setNegotiationRefreshTick((t) => t + 1);
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [wonDealIdsKey]);
+
+  const [negotiationRefreshTick, setNegotiationRefreshTick] = useState(0);
+  useEffect(() => {
+    if (negotiationRefreshTick === 0) return;
+    // Re-run the negotiation status fetch by re-reading current deals
+    (async () => {
+      try {
+        const dealIds = wonDeals.map((d: any) => d.id);
+        const fieldIds = NEGOTIATION_REQUIRED_FIELDS.map((f) => f.id);
+        if (dealIds.length === 0) return;
+        const { data, error } = await supabase
+          .from('deal_field_values')
+          .select('deal_id, field_id, value_text, value_number')
+          .in('deal_id', dealIds)
+          .in('field_id', fieldIds);
+        if (error) throw error;
+        const filled: Record<string, Set<string>> = {};
+        (data || []).forEach((row: any) => {
+          const meta = NEGOTIATION_REQUIRED_FIELDS.find((f) => f.id === row.field_id);
+          if (!meta) return;
+          const isFilled = meta.kind === 'number'
+            ? row.value_number !== null && row.value_number !== undefined
+            : row.value_text !== null && row.value_text !== '' && row.value_text !== undefined;
+          if (!isFilled) return;
+          if (!filled[row.deal_id]) filled[row.deal_id] = new Set();
+          filled[row.deal_id].add(row.field_id);
+        });
+        const VALOR_ENTRADA_ID = '86c93211-5013-48a6-affe-e53d81931cb6';
+        const map: Record<string, string[]> = {};
+        const dealById = new Map(wonDeals.map((d: any) => [d.id, d]));
+        dealIds.forEach((id) => {
+          const deal: any = dealById.get(id);
+          const nativeEntrada =
+            (Number(deal?.entry_value) || 0) > 0 ||
+            (Number(deal?.received_value) || 0) > 0;
+          const missing = NEGOTIATION_REQUIRED_FIELDS
+            .filter((f) => {
+              if (filled[id]?.has(f.id)) return false;
+              if (f.id === VALOR_ENTRADA_ID && nativeEntrada) return false;
+              return true;
+            })
+            .map((f) => f.label);
+          if (missing.length > 0) map[id] = missing;
+        });
+        setNegotiationStatusMap(map);
+      } catch (err) {
+        console.error('[SalesPipeline] Error refreshing negotiation status:', err);
+      }
+    })();
+  }, [negotiationRefreshTick]);
 
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
