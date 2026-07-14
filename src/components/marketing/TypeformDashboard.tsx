@@ -317,6 +317,31 @@ export function TypeformDashboard() {
           </div>
         </CardHeader>
         <CardContent>
+          {forms.length > 0 && selectedForm && (
+            <div className="mb-5 rounded-lg border border-border/40 bg-muted/20 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">Big picture</span>
+                  <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5 text-[10px]">Typeform · lifetime · ao vivo</Badge>
+                </div>
+                {loadingBigPicture && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                  { label: 'Views', value: bigPicture?.visits?.toLocaleString('pt-BR') ?? '–' },
+                  { label: 'Starts', value: bigPicture?.starts?.toLocaleString('pt-BR') ?? '–' },
+                  { label: 'Submissions', value: bigPicture?.submissions?.toLocaleString('pt-BR') ?? '–' },
+                  { label: 'Completion rate', value: bigPicture ? `${bigPicture.completion_rate.toFixed(1)}%` : '–' },
+                  { label: 'Time to complete', value: bigPicture ? fmtTime(Math.round(bigPicture.avg_time)) : '–' },
+                ].map((m) => (
+                  <div key={m.label}>
+                    <div className="text-xs text-muted-foreground">{m.label}</div>
+                    <div className="text-2xl font-light tracking-tight tabular-nums">{m.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {!forms.length ? (
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="w-10 h-10 mx-auto mb-3 opacity-50" />
