@@ -158,6 +158,19 @@ export function ClientBusinessProfile({
       .eq("client_id", clientId)
       .order("month", { ascending: true });
     setHistory((h || []) as any);
+
+    const { data: ryka } = await supabase
+      .from("client_ryka_provisions")
+      .select("status")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!ryka) setRykaStatus("none");
+    else if (ryka.status === "success" || ryka.status === "active") setRykaStatus("active");
+    else if (ryka.status === "error" || ryka.status === "failed") setRykaStatus("error");
+    else setRykaStatus("pending");
+
     setLoading(false);
   };
 
