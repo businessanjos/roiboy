@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
     is_completed: !!fr.submitted_at,
     email, phone, full_name,
     hidden_fields: fr.hidden || {},
-    answers: fr.answers || [],
+    answers: enrichedAnswers,
     metadata: fr.metadata || {},
   };
 
