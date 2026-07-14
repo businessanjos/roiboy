@@ -148,6 +148,28 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, refresh: "started" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ----- SYNC titles only (lightweight, no responses/insights) -----
+    if (action === "sync_titles") {
+      const { data: tracked } = await supabase.from("typeform_forms")
+        .select("form_id, title").eq("account_id", accountId);
+      let updated = 0;
+      for (const f of tracked || []) {
+        try {
+          const form = await tfFetch(`/forms/${f.form_id}`, TOKEN);
+          if (form?.title && form.title !== f.title) {
+            await supabase.from("typeform_forms")
+              .update({ title: form.title })
+              .eq("account_id", accountId).eq("form_id", f.form_id);
+            updated++;
+          }
+        } catch (e) {
+          console.error(`sync_titles ${f.form_id} failed:`, e);
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, updated }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+
     // ----- GET dashboard data (funnel) -----
     if (action === "get_dashboard") {
       const { form_id, days = 30, since: sinceArg, until: untilArg, lifetime: lifetimeFlag } = body;
