@@ -294,13 +294,37 @@ export function ClientBusinessProfile({
 
   const growth = client ? growthPct(client.initial_revenue, client.current_revenue) : null;
 
+  const mentoringStart = useMemo(() => {
+    const raw =
+      client?.onboarding_started_at ||
+      client?.contract_start_date ||
+      client?.created_at ||
+      null;
+    return raw ? new Date(raw) : null;
+  }, [client]);
+
+  const mentoringStartMonth = mentoringStart ? format(mentoringStart, "yyyy-MM") : null;
+
   const revenueRecord = useMemo(() => {
     if (!history || history.length === 0) return null;
-    return history.reduce(
+    const eligible = mentoringStartMonth
+      ? history.filter((h) => h.month >= mentoringStartMonth)
+      : history;
+    const pool = eligible.length ? eligible : history;
+    return pool.reduce(
       (best, h) => (Number(h.revenue) > Number(best.revenue) ? h : best),
-      history[0]
+      pool[0]
     );
-  }, [history]);
+  }, [history, mentoringStartMonth]);
+
+  const mentoringMonths = useMemo(() => {
+    if (!mentoringStart) return null;
+    const now = new Date();
+    const months =
+      (now.getFullYear() - mentoringStart.getFullYear()) * 12 +
+      (now.getMonth() - mentoringStart.getMonth());
+    return Math.max(0, months);
+  }, [mentoringStart]);
 
   if (loading) {
     return (
