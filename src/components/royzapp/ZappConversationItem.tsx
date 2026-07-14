@@ -39,6 +39,7 @@ interface ZappConversationItemProps {
   currentAgentId: string | null;
   clientProducts: Record<string, { id: string; name: string; color?: string }[]>;
   clientResponsibles?: Record<string, { id: string; name: string }>;
+  convToClientId?: Record<string, string>;
   leadDealStages?: Record<string, { stageName: string; stageColor: string }>;
   onSelect: (assignment: ConversationAssignment) => void;
   onMarkAsRead: (zappConvId: string) => void;
