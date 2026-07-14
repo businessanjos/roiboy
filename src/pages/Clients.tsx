@@ -2342,6 +2342,7 @@ export default function Clients() {
                     <TableHead className="font-medium text-center min-w-[160px] bg-muted">Vínculo</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px] bg-muted">Área de Atuação</TableHead>
                     <TableHead className="font-medium text-center min-w-[130px] bg-muted">Formação</TableHead>
+                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Fat. Inicial</TableHead>
                     <TableHead className="font-medium text-center min-w-[130px] bg-muted">Fat. Atual</TableHead>
                     <TableHead className="font-medium text-center min-w-[110px] bg-muted">Evolução</TableHead>
                     <TableHead className="font-medium text-center min-w-[130px] bg-muted">Recorde</TableHead>
