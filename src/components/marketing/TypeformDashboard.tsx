@@ -83,6 +83,8 @@ export function TypeformDashboard() {
   const [consistency, setConsistency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingFunnel, setLoadingFunnel] = useState(false);
+  const [perFormMetrics, setPerFormMetrics] = useState<Record<string, { submissions: number; completed: number; matched: number; won: number; won_value: number } | null>>({});
+  const [loadingPerForm, setLoadingPerForm] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [availableForms, setAvailableForms] = useState<any[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
