@@ -348,6 +348,37 @@ Deno.serve(async (req) => {
   const JONATHAN_ACCOUNT_ID = "796e7970-fd93-4574-a871-6090624cace6";
   const distributionUserId = accountId === JONATHAN_ACCOUNT_ID ? JONATHAN_MARCATO_ID : null;
 
+  // ---------- Silent-failure tracker ----------
+  // Stamps typeform_responses with a status + reason and pings the
+  // distribution user so nothing gets lost between Typeform → Roy.
+  const failures: string[] = [];
+  const noteFailure = (reason: string) => { failures.push(reason); console.error(`[typeform-webhook] ${reason}`); };
+  const finalizeProcessing = async () => {
+    const status = failures.length ? "failed" : (row.is_completed ? "ok" : "pending");
+    await supabase.from("typeform_responses").update({
+      processing_status: status,
+      processing_error: failures.length ? failures.join(" | ") : null,
+      processed_at: new Date().toISOString(),
+    }).eq("form_id", formId).eq("response_id", row.response_id);
+
+    if (failures.length && distributionUserId) {
+      const details = [
+        row.email ? `email: ${row.email}` : null,
+        row.full_name ? `nome: ${row.full_name}` : null,
+        row.phone ? `tel: ${row.phone}` : null,
+      ].filter(Boolean).join(" · ");
+      await supabase.from("notifications").insert({
+        account_id: accountId,
+        user_id: distributionUserId,
+        type: "warning",
+        title: `Falha ao processar resposta Typeform${formTitle ? ` — ${formTitle}` : ""}`,
+        content: `${failures.join(" | ")}${details ? ` (${details})` : ""}`,
+        link: "/marketing/trafego-pago?tab=typeform",
+        source_type: "typeform_response",
+      });
+    }
+  };
+
   // Determine MQL once from the revenue label (also used by createLeadCore).
   const mqlOption = mqlFromRevenueLabel(bundle.revenue_range);
   const mqlLabel = mqlOption === "opt_1" ? "SIM - Acima de 30k" : "NÃO - Abaixo de 30k";
@@ -382,8 +413,12 @@ Deno.serve(async (req) => {
       leadId = result.existing_lead.id;
       method = "email";
     } else {
-      console.error("[typeform-webhook] createLeadCore failed:", result.error);
+      noteFailure(`createLeadCore falhou: ${result.error}`);
     }
+  } else if (row.is_completed && !leadId && !dealId) {
+    // Completou a ficha mas não deu match nem conseguimos criar
+    if (!email) noteFailure("Resposta completa sem e-mail — impossível criar lead");
+    else if (!full_name) noteFailure("Resposta completa sem nome — impossível criar lead");
   }
 
   // ---------- Matched lead but no deal yet → create deal (routes by MQL) ----------
@@ -409,7 +444,9 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: true })
           .limit(1)
           .maybeSingle();
-        if (pipe?.id) {
+        if (!pipe?.id) {
+          noteFailure(`Pipeline "${targetName}" não encontrado para roteamento do lead existente`);
+        } else {
           const { data: firstStage } = await supabase
             .from("deal_stages")
             .select("id")
@@ -446,16 +483,18 @@ Deno.serve(async (req) => {
               .single();
 
             if (dealErr) {
-              console.error("[typeform-webhook] deal creation on match failed:", dealErr);
+              noteFailure(`Falha ao criar deal para lead existente: ${dealErr.message}`);
             } else if (newDeal) {
               dealId = newDeal.id;
               console.log(`[typeform-webhook] Deal created on match: ${newDeal.id} → ${isMql ? "Closer" : "TP - Eternum Pass"}`);
             }
+          } else {
+            noteFailure(`Pipeline "${targetName}" sem estágio inicial`);
           }
         }
       }
-    } catch (e) {
-      console.error("[typeform-webhook] match→deal branch failed:", e);
+    } catch (e: any) {
+      noteFailure(`Erro no roteamento do lead existente: ${e?.message || e}`);
     }
   }
 
@@ -481,7 +520,7 @@ Deno.serve(async (req) => {
         canal: source && source !== "Typeform" ? source : null,
       }).eq("id", leadId).eq("account_id", accountId);
     } catch (e) {
-      console.error("[typeform-webhook] lead-field enrichment failed:", e);
+      noteFailure(`Enriquecimento de campos do lead falhou: ${(e as any)?.message || e}`);
     }
   }
 
@@ -559,7 +598,7 @@ Deno.serve(async (req) => {
         }
       }
     } catch (e) {
-      console.error("[typeform-webhook] deal-field enrichment failed:", e);
+      noteFailure(`Enriquecimento de campos do deal falhou: ${(e as any)?.message || e}`);
     }
   }
 
@@ -602,8 +641,8 @@ Deno.serve(async (req) => {
         if (!dealId) dealId = noteDealId;
       }
     }
-  } catch (e) {
-    console.error("[typeform-webhook] deal-note insert failed:", e);
+  } catch (e: any) {
+    noteFailure(`Falha ao inserir nota da ficha no deal: ${e?.message || e}`);
   }
 
   if (leadId || dealId) {
@@ -611,7 +650,9 @@ Deno.serve(async (req) => {
       .eq("form_id", formId).eq("response_id", row.response_id);
   }
 
-  return new Response(JSON.stringify({ ok: true, matched_lead_id: leadId, matched_deal_id: dealId, created: !!createdLeadId }), {
+  await finalizeProcessing();
+
+  return new Response(JSON.stringify({ ok: true, matched_lead_id: leadId, matched_deal_id: dealId, created: !!createdLeadId, failures }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
