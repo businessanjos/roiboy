@@ -185,6 +185,17 @@ export const ClientsTableRow = memo(function ClientsTableRow({
         )}
       </TableCell>
 
+      {/* Faturamento Inicial */}
+      <TableCell className="text-center">
+        {client.initial_revenue != null ? (
+          <span className="text-xs font-semibold text-muted-foreground">
+            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(client.initial_revenue))}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
+
       {/* Faturamento Atual */}
       <TableCell className="text-center">
         {client.current_revenue != null ? (
