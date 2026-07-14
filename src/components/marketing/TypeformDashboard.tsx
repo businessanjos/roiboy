@@ -827,3 +827,15 @@ function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, sour
     </div>
   );
 }
+
+function MiniMetric({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color?: string }) {
+  return (
+    <div className="flex flex-col items-end min-w-0">
+      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <Icon className={`w-3 h-3 ${color || ''}`} />
+        <span>{label}</span>
+      </div>
+      <p className={`text-sm font-semibold ${color || ''}`}>{value}</p>
+    </div>
+  );
+}
