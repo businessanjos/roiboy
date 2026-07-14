@@ -259,6 +259,8 @@ Deno.serve(async (req) => {
             const { tag, source } = parseFormTitle(
               (await supabase.from("typeform_forms").select("title").eq("account_id", accountId).eq("form_id", formId).maybeSingle()).data?.title || "",
             );
+            const baseName = leadRow?.full_name || full_name || email;
+            const dealTitle = tag ? `${tag} ${baseName}` : baseName;
             const { data: newDeal, error: dealErr } = await supabase
               .from("deals")
               .insert({
@@ -266,11 +268,12 @@ Deno.serve(async (req) => {
                 lead_id: leadId,
                 pipeline_id: pipe.id,
                 stage_id: firstStage.id,
-                title: leadRow?.full_name || full_name || email,
+                title: dealTitle,
                 contact_name: leadRow?.full_name || full_name || null,
                 contact_email: leadRow?.email || email || null,
                 contact_phone: leadRow?.phone || phone || null,
                 source,
+                tags: tag ? [tag] : [],
                 status: "open",
                 stage_changed_at: new Date().toISOString(),
               })
