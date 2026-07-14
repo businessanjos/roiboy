@@ -39,6 +39,11 @@ const VIDEO_CONTENT_TYPES_BY_EXTENSION: Record<string, string> = {
 
 const getFileExtension = (fileName: string) => fileName.split(".").pop()?.toLowerCase() || "";
 
+const isQuickTimeVideoFile = (file: File) => {
+  const extension = getFileExtension(file.name);
+  return extension === "mov" || extension === "qt" || file.type.toLowerCase() === "video/quicktime";
+};
+
 const isVideoFile = (file: File) => {
   const extension = getFileExtension(file.name);
   return file.type.startsWith("video/") || extension in VIDEO_CONTENT_TYPES_BY_EXTENSION;
@@ -46,6 +51,10 @@ const isVideoFile = (file: File) => {
 
 const resolveZappMediaType = (file: File, fallback: "image" | "document" | "video"): "image" | "document" | "video" => {
   if (file.type.startsWith("image/")) return "image";
+  // WhatsApp/Uazapi frequently reject iPhone .MOV as a native video payload.
+  // Send QuickTime files as documents so Customer Success can reliably deliver them.
+  if (isQuickTimeVideoFile(file)) return "document";
+  if (fallback === "document") return "document";
   if (isVideoFile(file)) return "video";
   return fallback;
 };
@@ -762,6 +771,7 @@ export function useZappMessaging({
         action,
         media_url: mediaUrl,
         media_type: mediaType,
+        media_mimetype: resolveUploadContentType(file),
         caption: signedCaption,
         file_name: file.name,
         sector_id: selectedSectorId || "",

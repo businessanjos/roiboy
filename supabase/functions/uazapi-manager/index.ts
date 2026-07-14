@@ -110,6 +110,28 @@ function getString(value: unknown): string | undefined {
   return trimmed || undefined;
 }
 
+function getMediaExtension(value: unknown): string | undefined {
+  const raw = getString(value);
+  if (!raw) return undefined;
+  const clean = raw.split(/[?#]/, 1)[0] || raw;
+  const match = clean.match(/\.([a-z0-9]+)$/i);
+  return match?.[1]?.toLowerCase();
+}
+
+function resolveOutboundMediaType(payload: Record<string, unknown>): string {
+  const requested = (getString(payload.media_type) || "image").toLowerCase();
+  const extension = getMediaExtension(payload.file_name) || getMediaExtension(payload.media_url);
+  const mimetype = (getString(payload.media_mimetype) || "").toLowerCase();
+
+  // iPhone/QuickTime .MOV is unreliable as native WhatsApp "video" through Uazapi.
+  // Sending it as "document" preserves the file and avoids silent provider rejection.
+  if (requested === "video" && (extension === "mov" || extension === "qt" || mimetype === "video/quicktime")) {
+    return "document";
+  }
+
+  return requested;
+}
+
 function normalizeConnectionState(value: unknown): string | undefined {
   const normalized = getString(value)?.toLowerCase();
   if (!normalized) return undefined;
@@ -955,10 +977,11 @@ Deno.serve(async (req) => {
       if (!cleanPhone || cleanPhone.length < 10) {
         return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      const outboundMediaType = resolveOutboundMediaType(payload);
       
       const mediaBody: Record<string, unknown> = { 
         number: cleanPhone, 
-        type: payload.media_type || "image",
+        type: outboundMediaType,
         file: payload.media_url,
         text: applySignature(payload.caption || "")
       };
@@ -966,7 +989,7 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await enqueueSend(token!, `send_media user=${userData.name} type=${payload.media_type}`, () =>
+      result = await enqueueSend(token!, `send_media user=${userData.name} type=${outboundMediaType}`, () =>
         uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
       );
       // 🚨 Diagnóstico: detectar respostas sem id (falha silenciosa)
@@ -975,13 +998,13 @@ Deno.serve(async (req) => {
       // 🔁 Retry automático para PTT (áudio) — uazapi às vezes devolve resposta vazia
       // enquanto faz conversão do webm/opus do navegador. Tentamos mais 2x antes de
       // marcar como falha definitiva.
-      if (!hasId && payload.media_type === "ptt") {
+      if (!hasId && outboundMediaType === "ptt") {
         for (let attempt = 1; attempt <= 2 && !hasId; attempt++) {
           const waitMs = 800 * attempt;
           console.warn(`[uazapi-manager] ⏳ PTT sem messageid, retry ${attempt}/2 em ${waitMs}ms...`);
           await new Promise((res) => setTimeout(res, waitMs));
           try {
-            result = await enqueueSend(token!, `send_media retry${attempt} user=${userData.name} type=ptt`, () =>
+            result = await enqueueSend(token!, `send_media retry${attempt} user=${userData.name} type=${outboundMediaType}`, () =>
               uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
             );
             r = result;
@@ -992,7 +1015,7 @@ Deno.serve(async (req) => {
         }
       }
       if (!hasId) {
-        console.error(`[uazapi-manager] ⚠️ /send/media sem messageid após retries! type=${payload.media_type} server=${sectorServer.source} response=${JSON.stringify(result).substring(0, 400)}`);
+        console.error(`[uazapi-manager] ⚠️ /send/media sem messageid após retries! type=${outboundMediaType} requested=${payload.media_type} server=${sectorServer.source} response=${JSON.stringify(result).substring(0, 400)}`);
       }
     
     } else if (action === "send_to_group") {
@@ -1011,10 +1034,11 @@ Deno.serve(async (req) => {
     } else if (action === "send_media_to_group") {
       // ✅ NOVO: Mídia em grupos
       const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
+      const outboundMediaType = resolveOutboundMediaType(payload);
       
       const mediaBody: Record<string, unknown> = { 
         number: jid, 
-        type: payload.media_type || "image",
+        type: outboundMediaType,
         file: payload.media_url,
         text: applySignature(payload.caption || "")
       };
@@ -1022,7 +1046,7 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await enqueueSend(token!, `send_media_to_group user=${userData.name}`, () =>
+      result = await enqueueSend(token!, `send_media_to_group user=${userData.name} type=${outboundMediaType}`, () =>
         uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
       );
       // 🔁 Retry PTT em grupos (mesma lógica de send_media): uazapi às vezes
@@ -1030,13 +1054,13 @@ Deno.serve(async (req) => {
       {
         let r: any = result;
         let hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
-        if (!hasId && payload.media_type === "ptt") {
+        if (!hasId && outboundMediaType === "ptt") {
           for (let attempt = 1; attempt <= 2 && !hasId; attempt++) {
             const waitMs = 800 * attempt;
             console.warn(`[uazapi-manager] ⏳ PTT (grupo) sem messageid, retry ${attempt}/2 em ${waitMs}ms...`);
             await new Promise((res) => setTimeout(res, waitMs));
             try {
-              result = await enqueueSend(token!, `send_media_to_group retry${attempt} user=${userData.name} type=ptt`, () =>
+              result = await enqueueSend(token!, `send_media_to_group retry${attempt} user=${userData.name} type=${outboundMediaType}`, () =>
                 uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
               );
               r = result;
@@ -1047,7 +1071,7 @@ Deno.serve(async (req) => {
           }
         }
         if (!hasId) {
-          console.error(`[uazapi-manager] ⚠️ /send/media (grupo) sem messageid após retries! type=${payload.media_type} server=${sectorServer.source} response=${JSON.stringify(result).substring(0, 400)}`);
+          console.error(`[uazapi-manager] ⚠️ /send/media (grupo) sem messageid após retries! type=${outboundMediaType} requested=${payload.media_type} server=${sectorServer.source} response=${JSON.stringify(result).substring(0, 400)}`);
         }
       }
     

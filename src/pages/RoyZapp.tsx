@@ -1392,8 +1392,8 @@ export default function RoyZapp() {
            onOpenPlaybook={() => setPlaybookDialogOpen(true)}
            filePreview={messaging.filePreview}
            onSetFilePreview={(preview) => {
-             if (preview && preview.file.size > 50 * 1024 * 1024) {
-               toast.error("Arquivo muito grande. Máximo 50MB.");
+              if (preview && preview.file.size > 70 * 1024 * 1024) {
+                toast.error("Arquivo muito grande. Máximo 70MB.");
                URL.revokeObjectURL(preview.url);
                return;
              }
