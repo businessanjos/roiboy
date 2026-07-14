@@ -2342,6 +2342,7 @@ export default function Clients() {
                     <TableHead className="font-medium text-center min-w-[160px] bg-muted">Vínculo</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px] bg-muted">Área de Atuação</TableHead>
                     <TableHead className="font-medium text-center min-w-[130px] bg-muted">Formação</TableHead>
+                    <TableHead className="font-medium text-center min-w-[130px] bg-muted">Fat. Inicial</TableHead>
                     <TableHead className="font-medium text-center min-w-[130px] bg-muted">Fat. Atual</TableHead>
                     <TableHead className="font-medium text-center min-w-[110px] bg-muted">Evolução</TableHead>
                     <TableHead className="font-medium text-center min-w-[130px] bg-muted">Recorde</TableHead>
@@ -2537,6 +2538,17 @@ export default function Clients() {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+
+                        {/* Faturamento Inicial */}
+                        <TableCell className="text-center">
+                          {client.initial_revenue != null ? (
+                            <span className="text-xs font-semibold text-muted-foreground">
+                              {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(client.initial_revenue))}
+                            </span>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
