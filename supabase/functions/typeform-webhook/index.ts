@@ -85,7 +85,13 @@ const LEAD_MQL_FIELD_ID = "e4270e93-e9b9-4d9b-9589-d614ce335bcd";
 const LEAD_CANAL_FIELD_ID = "3bcdcf47-076e-47f2-a1ab-a4dd1ec8398a";
 const LEAD_FATURAMENTO_FIELD_ID = "e352a1ca-cfbc-435a-95f7-2f53b5cac041";
 
-// Map form source → Canal option value
+// *Deal* custom fields we populate from a Typeform response.
+const DEAL_MQL_FIELD_ID = "448404cd-0344-4892-a574-2387b1c17578";
+const DEAL_FATURAMENTO_FIELD_ID = "ed5c7c0e-0740-4945-b982-70a593ffae0c";
+const DEAL_ORIGEM_FIELD_ID = "43d7d9a1-9370-45f3-803a-93717d2a6d1d";
+const DEAL_PRIMEIRO_CONTATO_FIELD_ID = "166fe351-b29b-4f08-b330-88f82c65f625";
+
+// Map form source → Canal option value (lead field)
 const CANAL_OPTION_BY_SOURCE: Record<string, string> = {
   "Tráfego Pago": "opt_2",
   "Orgânico": "opt_1",
@@ -100,6 +106,18 @@ function mqlFromRevenueLabel(label: string): "opt_1" | "opt_2" {
   if (entre && parseInt(entre[2]) <= 30) return "opt_2";
   if (/ate\s+30|até\s+30/.test(l)) return "opt_2";
   return "opt_1";
+}
+
+function normalizeLabel(s: string): string {
+  return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+/** Find the option `value` in a select/multi_select field whose label matches `raw`. */
+function resolveOptionValue(fieldOptions: any[] | null | undefined, raw: string): string | null {
+  if (!fieldOptions || !raw) return null;
+  const target = normalizeLabel(raw);
+  const hit = fieldOptions.find((o: any) => normalizeLabel(o?.label) === target);
+  return hit?.value ?? null;
 }
 
 function formatAnswerValue(a: any): string {
@@ -139,8 +157,6 @@ async function upsertLeadFieldValue(
   valueText: string | null,
 ) {
   if (!valueText) return;
-  // Delete any existing value for this (lead, field) then insert fresh — keeps
-  // things idempotent when the same Typeform response is replayed.
   await supabase
     .from("lead_field_values")
     .delete()
@@ -154,6 +170,31 @@ async function upsertLeadFieldValue(
     value_text: valueText,
   });
 }
+
+async function upsertDealFieldValue(
+  supabase: any,
+  accountId: string,
+  dealId: string,
+  fieldId: string,
+  payload: { value_text?: string | null; value_date?: string | null; value_json?: any },
+) {
+  await supabase
+    .from("deal_field_values")
+    .delete()
+    .eq("deal_id", dealId)
+    .eq("field_id", fieldId)
+    .eq("account_id", accountId);
+  await supabase.from("deal_field_values").insert({
+    deal_id: dealId,
+    field_id: fieldId,
+    account_id: accountId,
+    value_text: payload.value_text ?? null,
+    value_date: payload.value_date ?? null,
+    value_json: payload.value_json ?? null,
+  });
+}
+
+
 
 
 
@@ -397,6 +438,74 @@ Deno.serve(async (req) => {
       console.error("[typeform-webhook] lead-field enrichment failed:", e);
     }
   }
+
+  // ---------- Enrich deal custom fields (MQL / Faturamento / Origem / Data 1º contato) ----------
+  // Resolve the target deal (matched or just-created) and derive the latest deal
+  // for a matched lead if we don't have one on hand yet.
+  let enrichDealId: string | null = dealId;
+  if (!enrichDealId && leadId) {
+    const { data: latest } = await supabase
+      .from("deals")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("lead_id", leadId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    enrichDealId = latest?.id || null;
+  }
+  if (enrichDealId && row.is_completed) {
+    try {
+      const { data: dealFieldDefs } = await supabase
+        .from("custom_fields")
+        .select("id, field_type, options")
+        .in("id", [
+          DEAL_MQL_FIELD_ID,
+          DEAL_FATURAMENTO_FIELD_ID,
+          DEAL_ORIGEM_FIELD_ID,
+          DEAL_PRIMEIRO_CONTATO_FIELD_ID,
+        ]);
+      const optionsOf = (id: string) =>
+        (dealFieldDefs || []).find((f: any) => f.id === id)?.options as any[] | undefined;
+
+      // MQL — sim_acima_30k / nao_abaixo_30k
+      const dealMqlValue = mqlOption === "opt_1" ? "sim_acima_30k" : "nao_abaixo_30k";
+      await upsertDealFieldValue(supabase, accountId, enrichDealId, DEAL_MQL_FIELD_ID, {
+        value_text: dealMqlValue,
+      });
+
+      // Faturamento Atual — resolve pela label da ficha
+      if (bundle.revenue_range) {
+        const fatValue = resolveOptionValue(optionsOf(DEAL_FATURAMENTO_FIELD_ID), bundle.revenue_range);
+        if (fatValue) {
+          await upsertDealFieldValue(supabase, accountId, enrichDealId, DEAL_FATURAMENTO_FIELD_ID, {
+            value_text: fatValue,
+          });
+        }
+      }
+
+      // Origem da Venda (multi_select) — casa pela tag do formulário (ex.: [TRAF-STUDIO-EC])
+      if (tag) {
+        const origemValue = resolveOptionValue(optionsOf(DEAL_ORIGEM_FIELD_ID), tag);
+        if (origemValue) {
+          await upsertDealFieldValue(supabase, accountId, enrichDealId, DEAL_ORIGEM_FIELD_ID, {
+            value_json: [origemValue],
+          });
+        }
+      }
+
+      // Data do primeiro contato = quando o lead preencheu a ficha
+      if (fr.submitted_at) {
+        const submittedDate = String(fr.submitted_at).slice(0, 10); // YYYY-MM-DD
+        await upsertDealFieldValue(supabase, accountId, enrichDealId, DEAL_PRIMEIRO_CONTATO_FIELD_ID, {
+          value_date: submittedDate,
+        });
+      }
+    } catch (e) {
+      console.error("[typeform-webhook] deal-field enrichment failed:", e);
+    }
+  }
+
 
   // ---------- Add "Ficha Typeform" note on the deal (replaces N8N anotações) ----------
   try {
