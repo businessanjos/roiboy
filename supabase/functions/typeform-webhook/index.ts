@@ -573,7 +573,7 @@ Deno.serve(async (req) => {
       noteDealId = latestDeal?.id || null;
     }
     if (noteDealId && row.is_completed) {
-      const content = buildTypeformNote(formTitle, fr.answers || [], fr.submitted_at || null);
+      const content = buildTypeformNote(formTitle, enrichedAnswers, fr.submitted_at || null);
       // Avoid duplicating the same note if the webhook is replayed.
       const { data: existingNote } = await supabase
         .from("deal_activities")
