@@ -281,8 +281,10 @@ export default function Clients() {
   const [filterCountry, setFilterCountry] = usePersistedFilter<string>("clients", "country", "all");
   const [filterRisk, setFilterRisk] = usePersistedFilter<string>("clients", "risk", "all");
   const [filterEducation, setFilterEducation] = usePersistedFilter<string>("clients", "education", "all");
-  const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
+  const [filterArea, setFilterArea] = usePersistedFilter<string>("clients", "area", "all");
+  const [sortOrder, setSortOrder] = usePersistedFilter<string>("clients", "sortOrder", "recent");
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
+  const [areaOptions, setAreaOptions] = useState<string[]>([]);
 
   // Tab → contract filter mapping (overrides filterContract on fetch)
   const tabContractFilter: Record<string, string | null> = {
