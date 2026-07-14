@@ -490,42 +490,70 @@ Deno.serve(async (req) => {
       let funnelAvgTime = isAll ? avgTime : (stats?.average_time_seconds || 0);
       let insightsScope: "lifetime" | "period" = "lifetime";
 
-      // Period mode: Typeform Insights /summary doesn't honor from/to (always returns lifetime),
-      // so we compute period visits/starts as the DELTA between the latest cumulative snapshot
-      // inside the period and the latest snapshot strictly before the period starts.
-      // avg_time uses the most recent snapshot in the period (Typeform exposes only lifetime avg).
+      // Period mode: try Typeform Insights /summary with since/until (paralelo por form).
+      // If the API honors the range we get exact numbers for today / last 30d.
+      // Fallback: snapshot delta (legacy, imprecise) if Insights call fails.
       if (!isLifetime && scopeFormIds.length) {
+        const sinceDate = since.slice(0, 10);
+        const untilDate = (untilISO || new Date().toISOString()).slice(0, 10);
         try {
-          const sinceDate = since.slice(0, 10); // YYYY-MM-DD
-          const untilDate = (untilISO || new Date().toISOString()).slice(0, 10);
-          let pV = 0, pS = 0, pAvgW = 0, pAvgWg = 0;
-          for (const fid of scopeFormIds) {
-            const snaps = snapshotsByForm.get(fid) || []; // desc by date
-            // end = latest snapshot with date <= untilDate
-            const endSnap = snaps.find((s) => String(s.snapshot_date) <= untilDate);
-            // baseline = latest snapshot with date < sinceDate (cumulative count BEFORE period)
-            const baseSnap = snaps.find((s) => String(s.snapshot_date) < sinceDate);
-            const endV = Number(endSnap?.total_visits || 0);
-            const endS = Number(endSnap?.total_starts || 0);
-            const baseV = Number(baseSnap?.total_visits || 0);
-            const baseS = Number(baseSnap?.total_starts || 0);
-            const dV = Math.max(0, endV - baseV);
-            const dS = Math.max(0, endS - baseS);
-            pV += dV;
-            pS += dS;
-            const avg = Number(endSnap?.average_time_seconds || 0);
-            const w = dV || 1;
-            pAvgW += avg * w;
-            pAvgWg += w;
+          const results = await Promise.all(scopeFormIds.map(async (fid) => {
+            try {
+              const summary = await tfFetch(
+                `/insights/${fid}/summary?since=${sinceDate}&until=${untilDate}`,
+                TOKEN,
+              );
+              const s = summary?.form?.summary || {};
+              const fields = summary?.fields || [];
+              const firstField = fields.find((f: any) => f?.type !== "welcome_screen" && f?.type !== "thankyou_screen");
+              return {
+                ok: true,
+                visits: Number(s?.total_visits || 0),
+                starts: Number(firstField?.views || s?.unique_visits || 0),
+                avg: Number(s?.average_time || 0),
+              };
+            } catch (e) {
+              console.warn(`[typeform-manager] insights fetch failed for ${fid}:`, (e as any)?.message);
+              return { ok: false, visits: 0, starts: 0, avg: 0 };
+            }
+          }));
+          if (results.every(r => r.ok)) {
+            let pV = 0, pS = 0, pAvgW = 0, pAvgWg = 0;
+            for (const r of results) {
+              pV += r.visits;
+              pS += r.starts;
+              const w = r.visits || 1;
+              pAvgW += r.avg * w;
+              pAvgWg += w;
+            }
+            funnelVisits = pV;
+            funnelStarts = pS;
+            funnelAvgTime = pAvgWg ? Math.round(pAvgW / pAvgWg) : 0;
+            insightsScope = "period";
+          } else {
+            // Fallback: snapshot delta (legacy)
+            let pV = 0, pS = 0, pAvgW = 0, pAvgWg = 0;
+            for (const fid of scopeFormIds) {
+              const snaps = snapshotsByForm.get(fid) || [];
+              const endSnap = snaps.find((s) => String(s.snapshot_date) <= untilDate);
+              const baseSnap = snaps.find((s) => String(s.snapshot_date) < sinceDate);
+              const dV = Math.max(0, Number(endSnap?.total_visits || 0) - Number(baseSnap?.total_visits || 0));
+              const dS = Math.max(0, Number(endSnap?.total_starts || 0) - Number(baseSnap?.total_starts || 0));
+              pV += dV; pS += dS;
+              const avg = Number(endSnap?.average_time_seconds || 0);
+              const w = dV || 1;
+              pAvgW += avg * w; pAvgWg += w;
+            }
+            funnelVisits = pV;
+            funnelStarts = pS;
+            funnelAvgTime = pAvgWg ? Math.round(pAvgW / pAvgWg) : 0;
+            insightsScope = "period";
           }
-          funnelVisits = pV;
-          funnelStarts = pS;
-          funnelAvgTime = pAvgWg ? Math.round(pAvgW / pAvgWg) : 0;
-          insightsScope = "period";
         } catch (e) {
-          console.warn("[typeform-manager] period snapshot delta failed:", (e as any)?.message);
+          console.warn("[typeform-manager] period insights failed:", (e as any)?.message);
         }
       }
+
 
       const consistency = {
         ok: outOfScopeResponses.length === 0 && outOfScopeDeals === 0,
