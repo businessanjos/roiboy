@@ -2,32 +2,83 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { canonicalEmail } from "../_shared/email-normalize.ts";
 import { canonicalE164, phoneVariants, phoneCoreKey } from "../_shared/phone-normalize.ts";
+import { createLeadCore } from "../_shared/create-lead-core.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, typeform-signature",
 };
 
-function extractContact(answers: any[] = []) {
-  let email = "", phone = "", full_name = "";
+// ---------- Answer extraction (heuristics by field type + ref/title) ----------
+
+type AnswerBundle = {
+  email: string;
+  phone: string;
+  full_name: string;
+  instagram: string;
+  revenue_range: string;
+  segment: string;
+};
+
+function fieldMatches(a: any, keywords: string[]): boolean {
+  const ref = (a?.field?.ref || "").toLowerCase();
+  const title = (a?.field?.title || "").toLowerCase();
+  return keywords.some((k) => ref.includes(k) || title.includes(k));
+}
+
+function extractAnswers(answers: any[] = []): AnswerBundle {
+  let email = "", phone = "", full_name = "", instagram = "", revenue_range = "", segment = "";
   for (const a of answers) {
     const t = a?.type || a?.field?.type;
     if (!email && (t === "email" || a?.email)) email = a.email || "";
     if (!phone && (t === "phone_number" || a?.phone_number)) phone = a.phone_number || "";
-    if (!full_name) {
-      const ref = (a?.field?.ref || "").toLowerCase();
-      const title = (a?.field?.title || "").toLowerCase();
-      if ((t === "short_text" || t === "text") && (ref.includes("nome") || ref.includes("name") || title.includes("nome") || title.includes("name"))) {
-        full_name = a.text || "";
+
+    if ((t === "short_text" || t === "text") && a?.text) {
+      if (!full_name && fieldMatches(a, ["nome", "name"])) full_name = a.text;
+      else if (!instagram && fieldMatches(a, ["instagram", "insta", "@"])) instagram = a.text;
+      else if (!full_name && !fieldMatches(a, ["instagram", "insta", "@"])) {
+        // First short_text falls back to name if nothing more specific found
+        full_name ||= a.text;
+      }
+    }
+
+    if (t === "choice" && a?.choice?.label) {
+      if (!revenue_range && fieldMatches(a, ["faturamento", "fatura", "receita", "renda"])) {
+        revenue_range = a.choice.label;
+      }
+      if (!segment && fieldMatches(a, ["segmento", "nicho", "area", "área", "atua"])) {
+        segment = a.choice.label;
+      }
+    }
+    if (t === "choices" && Array.isArray(a?.choices?.labels)) {
+      if (!segment && fieldMatches(a, ["segmento", "nicho", "area", "área", "atua"])) {
+        segment = a.choices.labels[0];
       }
     }
   }
   return {
     email: canonicalEmail(email) || "",
     phone: canonicalE164(phone) || "",
-    full_name,
+    full_name: (full_name || "").trim(),
+    instagram: (instagram || "").trim(),
+    revenue_range,
+    segment,
   };
 }
+
+// ---------- Form-title derived source/tag/canal ----------
+
+function parseFormTitle(title: string): { tag: string | null; source: string; canal: string } {
+  const m = /^\[([^\]]+)\]/.exec(title || "");
+  const tag = m ? `[${m[1]}]` : null;
+  const prefix = (m?.[1] || "").toUpperCase();
+  let source = "Typeform";
+  if (prefix.startsWith("TRAF-")) source = "Tráfego Pago";
+  else if (prefix.startsWith("ORG-")) source = "Orgânico";
+  return { tag, source, canal: source };
+}
+
+// ---------- Signature ----------
 
 async function verifySig(req: Request, raw: string, secret: string) {
   const sig = req.headers.get("typeform-signature");
@@ -60,7 +111,8 @@ Deno.serve(async (req) => {
   if (!fr) return new Response("ignored", { headers: corsHeaders });
 
   const formId = fr.form_id || fr.definition?.id;
-  const { email, phone, full_name } = extractContact(fr.answers || []);
+  const bundle = extractAnswers(fr.answers || []);
+  const { email, phone, full_name } = bundle;
 
   const row = {
     account_id: accountId,
@@ -77,8 +129,8 @@ Deno.serve(async (req) => {
 
   await supabase.from("typeform_responses").upsert(row, { onConflict: "form_id,response_id" });
 
-  // Match — uses canonical email (case-insensitive) + phone variants (BR 9-digit / DDI tolerant).
-  let leadId = null, dealId = null, method = null;
+  // ---------- Match against existing leads/deals ----------
+  let leadId: string | null = null, dealId: string | null = null, method: string | null = null;
   if (email) {
     const { data: l } = await supabase.from("leads").select("id").eq("account_id", accountId).ilike("email", email).limit(1).maybeSingle();
     if (l) { leadId = l.id; method = "email"; }
@@ -91,7 +143,6 @@ Deno.serve(async (req) => {
     const variants = phoneVariants(phone);
     const coreKey = phoneCoreKey(phone);
     if (variants.length) {
-      // Try exact-variant match first (cheap).
       const { data: l } = await supabase
         .from("leads").select("id, phone")
         .eq("account_id", accountId).in("phone", variants).limit(1).maybeSingle();
@@ -103,7 +154,6 @@ Deno.serve(async (req) => {
         if (d) { dealId = d.id; method = "phone"; }
       }
     }
-    // Fallback fuzzy by core key (DDD + last 8 digits).
     if (!leadId && !dealId && coreKey) {
       const { data: l } = await supabase.from("leads").select("id, phone").eq("account_id", accountId).not("phone", "is", null).limit(200);
       const m = (l || []).find((x: any) => phoneCoreKey(x.phone) === coreKey);
@@ -116,10 +166,59 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ---------- No match + submission complete → create the lead (replaces N8N) ----------
+  let createdLeadId: string | null = null;
+  if (!leadId && !dealId && row.is_completed && email && full_name) {
+    // Look up the form to get its title so we can derive tag/source/canal.
+    const { data: formRow } = await supabase
+      .from("typeform_forms")
+      .select("title")
+      .eq("account_id", accountId)
+      .eq("form_id", formId)
+      .maybeSingle();
+
+    const { tag, source, canal } = parseFormTitle(formRow?.title || "");
+    const tags = tag ? [tag] : [];
+
+    // Basic MQL rule (matches historical N8N behavior; product-aware logic
+    // in createLeadCore may override it based on account products).
+    const rr = bundle.revenue_range.toLowerCase();
+    const isBelow30k = /abaixo\s+de\s+(\d+)/.test(rr) && parseInt(rr.match(/abaixo\s+de\s+(\d+)/)![1]) <= 30
+      || /entre\s+(\d+)\s+e\s+(\d+)/.test(rr) && parseInt(rr.match(/entre\s+(\d+)\s+e\s+(\d+)/)![2]) <= 30
+      || /ate\s+30|até\s+30/.test(rr);
+    const mql = isBelow30k ? "NÃO - Abaixo de 30k" : "SIM - Acima de 30k";
+
+    const result = await createLeadCore(supabase, accountId, {
+      full_name,
+      email,
+      phone,
+      instagram: bundle.instagram || undefined,
+      revenue_range: bundle.revenue_range || undefined,
+      segment: bundle.segment || undefined,
+      mql,
+      source,
+      canal,
+      tags,
+    });
+
+    if (result.status === "created") {
+      createdLeadId = result.lead.id;
+      leadId = createdLeadId;
+      method = "created_from_typeform";
+    } else if (result.status === "duplicate") {
+      leadId = result.existing_lead.id;
+      method = "email";
+    } else {
+      console.error("[typeform-webhook] createLeadCore failed:", result.error);
+    }
+  }
+
   if (leadId || dealId) {
     await supabase.from("typeform_responses").update({ matched_lead_id: leadId, matched_deal_id: dealId, match_method: method })
       .eq("form_id", formId).eq("response_id", row.response_id);
   }
 
-  return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ ok: true, matched_lead_id: leadId, matched_deal_id: dealId, created: !!createdLeadId }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 });
