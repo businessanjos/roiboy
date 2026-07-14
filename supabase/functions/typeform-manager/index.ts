@@ -148,6 +148,28 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, refresh: "started" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ----- SYNC titles only (lightweight, no responses/insights) -----
+    if (action === "sync_titles") {
+      const { data: tracked } = await supabase.from("typeform_forms")
+        .select("form_id, title").eq("account_id", accountId);
+      let updated = 0;
+      for (const f of tracked || []) {
+        try {
+          const form = await tfFetch(`/forms/${f.form_id}`, TOKEN);
+          if (form?.title && form.title !== f.title) {
+            await supabase.from("typeform_forms")
+              .update({ title: form.title })
+              .eq("account_id", accountId).eq("form_id", f.form_id);
+            updated++;
+          }
+        } catch (e) {
+          console.error(`sync_titles ${f.form_id} failed:`, e);
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, updated }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+
     // ----- GET dashboard data (funnel) -----
     if (action === "get_dashboard") {
       const { form_id, days = 30, since: sinceArg, until: untilArg, lifetime: lifetimeFlag } = body;
@@ -622,8 +644,21 @@ Deno.serve(async (req) => {
 });
 
 async function backfillForm(supabase: any, accountId: string, formId: string, token: string) {
+  // Sync title from Typeform (users rename their forms and expect it to reflect here)
+  try {
+    const form = await tfFetch(`/forms/${formId}`, token);
+    if (form?.title) {
+      await supabase.from("typeform_forms")
+        .update({ title: form.title })
+        .eq("account_id", accountId).eq("form_id", formId);
+    }
+  } catch (e) {
+    console.error("Title sync failed:", e);
+  }
+
   // Insights summary
   try {
+
     const summary = await tfFetch(`/insights/${formId}/summary`, token);
     // Typeform Insights returns: { fields: [...], form: { summary: {...}, platforms: [...] } }
     const formSummary = summary?.form?.summary || {};
