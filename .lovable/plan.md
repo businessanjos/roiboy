@@ -1,46 +1,85 @@
+# Replicar N8N direto no typeform-webhook
+
+## O que o N8N faz hoje
+
+Ao receber uma submissão do Typeform, o N8N:
+
+1. Lê `answers[]` do payload e extrai por tipo/ref do campo:
+   - `email`, `phone_number`, `short_text` de nome, `short_text` de @instagram
+   - `multiple_choice` de faturamento → vira `revenue_range` (label crua, ex.: "Entre 70 e 100 mil reais")
+   - Demais multiple_choices ficam guardados nas respostas (o Roy já persiste isso em `typeform_responses.answers`)
+2. Lê o **título/tag do formulário** ([TRAF-IMP-EC], [ORG-EVER] etc.) e deriva:
+   - `tags = ["[TRAF-IMP-EC]"]`
+   - `source = "Tráfego Pago"` (prefixo TRAF-*) ou `"Orgânico"` (ORG-*)
+   - `canal = mesmo do source`
+3. Calcula `mql` (regra "SIM - Acima de 30k" / "NÃO - Abaixo de 30k") pelo faturamento
+4. Chama o endpoint `create-lead` do Roy com esse payload
+5. O `create-lead` já faz o resto: cria o lead, popula custom fields (MQL, Canal, Faturamento), roda MQL avançado por produto
+
 ## O que muda
 
-Hoje, quando um deal é marcado como "ganho", um contrato é criado — mas as parcelas no financeiro só são geradas quando alguém abre o contrato, preenche parcelas/data e clica em "Gerar Parcelas". A ideia é fazer esse passo acontecer sozinho, usando os dados que o comercial já preencheu no pipeline.
+O `typeform-webhook` passa a fazer os passos 1–4 **antes** do match. Fluxo novo:
 
-## Regras de negócio
+```text
+Typeform submit
+   └──► typeform-webhook (Roy)
+          1. grava resposta em typeform_responses
+          2. tenta match (lead/deal existente por email/phone)
+          3. SE NÃO ACHOU e a resposta é completa:
+             ├── deriva source/tag/canal a partir do form.title
+             ├── extrai revenue_range e mql
+             └── chama create-lead com o payload
+          4. re-linka a resposta ao lead criado
+```
 
-Quando o deal vira "ganho" e gera contrato, calcular automaticamente:
+Nenhuma tabela nova. O N8N pode ser desligado do Typeform depois de validado.
 
-- **Valor total das parcelas** = `deals.value − deals.received_value` (ex.: 240k − 20k = 220k)
-- **Nº de parcelas** = campo customizado "Parcelas" do deal (ex.: 11)
-- **Valor por parcela** = total ÷ parcelas (ex.: 20k)
-- **Forma de pagamento** = campo customizado "Forma de Pagamento" do deal
-- **1º vencimento** = data de recebimento da entrada + 30 dias
-  - Se `received_value > 0`: usa `won_at` como referência da entrada
-  - Se `received_value = 0`: usa `won_at` mesmo (comercial ajusta manualmente depois)
-- **Ajuste manual continua disponível**: a aba "Negociação" do contrato segue permitindo editar tudo antes de gerar, e o botão "Gerar Parcelas" continua existindo pra quem precisar refazer.
+## Detalhes técnicos
 
-## Onde tocar
+### Extração de campos (heurística por ref/title)
 
-1. **`src/utils/dealToClientContractMapping.ts`**  
-   - Expandir `DealFieldValues` e `ContractDataFromDeal` para incluir `parcelas` (número) e `payment_method`.
-   - Ler o campo `PARCELAS` em `fetchDealCustomFieldValues` (parsear label "11x" → 11).
+Já temos `extractContact` para email/phone/nome. Estender com:
 
-2. **Fluxo de criação de contrato quando deal é ganho** (procurar onde `client_contracts` é criado após won — provavelmente em `SalesPipeline.tsx` ou hook relacionado):
-   - Ao criar o `client_contracts`, já gravar:
-     - `installments_count` = parcelas do deal
-     - `first_due_date` = `won_at + 30 dias`
-     - `payment_method` = forma do deal
-     - `installments_detail` = array uniforme de N parcelas (valor por parcela, `due_date` = 1º venc + i meses, `method` = forma)
-   - Em seguida, flipar `receivables_generated = true` + `receivables_generated_at` para o trigger `contract_generate_receivables` disparar e criar tudo em `financial_entries` + `installments`.
+- **Instagram**: `short_text` cujo `field.ref` ou `field.title` contenha `instagram`/`insta`/`@`
+- **Faturamento**: `multiple_choice` cujo `ref`/`title` contenha `faturamento`/`fatura`/`receita` → pega o `choice.label`
+- **Segmento/Nicho**: opcional, ref contém `segmento`/`nicho`/`area` → `business_niche`
 
-3. **Segurança**: só auto-gerar se:
-   - `deals.value > deals.received_value` (tem saldo a parcelar)
-   - Campo "Parcelas" preenchido e > 0
-   - Se qualquer condição falhar, cai no fluxo antigo (contrato criado sem parcelas, usuário preenche na aba Negociação).
+### Derivação por form.title
 
-## Fora de escopo
+Parse regex `^\[([^\]]+)\]` no título:
 
-- Não mexer no `PaymentBreakdownComposer` (mix Pix+Cheques etc.) — se o comercial escolheu forma composta, ele continua ajustando manualmente na aba Negociação; a auto-geração só roda para formas simples.
-- Não alterar entradas já existentes: se o contrato já tinha `receivables_generated = true`, não refaz nada.
+| Prefixo   | source          | canal           |
+| --------- | --------------- | --------------- |
+| `TRAF-*`  | `Tráfego Pago`  | `Tráfego Pago`  |
+| `ORG-*`   | `Orgânico`      | `Orgânico`      |
+| outros    | `Typeform`      | `Typeform`      |
 
-## Verificação
+`tags = ["[TAG-COMPLETA]"]` (o rótulo inteiro entre colchetes).
 
-- Fechar um deal de teste no pipeline com valor 240k, entrada 20k, 11 parcelas, Forma "Pix"
-- Confirmar que aparecem 11 parcelas de 20k no financeiro, 1ª vencendo 30 dias após o `won_at`
-- Fechar outro sem preencher "Parcelas": contrato criado, aba Negociação continua pedindo preenchimento manual
+### MQL (regra atual do N8N)
+
+`mql = "SIM - Acima de 30k"` se `revenue_range` NÃO for "Abaixo de 30 mil reais" / "Até 30 mil"; senão `"NÃO - Abaixo de 30k"`. O `create-lead` sobrescreve com a lógica avançada por produto quando aplicável — mantemos compatibilidade.
+
+### Chamada ao create-lead
+
+Chamada interna via `supabase.functions.invoke("create-lead", { body: payload })` usando service-role (webhook já roda com SR). Só cria se:
+
+- `is_completed = true` (submitted_at existe)
+- `email` presente
+- Match falhou (evita duplicar)
+
+### Idempotência
+
+- Reprocesso do mesmo `response_id` já é seguro (upsert). O bloco de criação de lead checa match novamente antes de chamar `create-lead`.
+- Se o N8N ainda estiver rodando em paralelo durante a transição, o segundo a rodar vai encontrar o lead do primeiro pelo email e não duplicar.
+
+## Depois de validar
+
+1. Ligar em 1 form primeiro (ex.: `[TRAF-IMP-EC]`) e comparar 24h de leads gerados vs N8N.
+2. Se bater 100%, desligar o workflow correspondente no N8N.
+3. Repetir por form até desligar todos.
+
+## Fora do escopo
+
+- Não vou tocar em `create-lead` (já faz tudo que precisamos).
+- Não vou criar UI para editar mapping por form — a heurística cobre os 5 forms atuais. Se aparecer form com layout diferente, aí sim viramos configurável.
