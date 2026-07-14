@@ -640,6 +640,36 @@ Deno.serve(async (req) => {
     const teamUsersMap = new Map();
     teamUsersResult.data?.forEach((u) => teamUsersMap.set(u.id, u));
 
+    // Ryka: latest provision per client
+    const rykaMap = new Map<string, string>();
+    rykaResult.data?.forEach((r: any) => {
+      if (!rykaMap.has(r.client_id)) {
+        let s = "pending";
+        if (r.status === "success" || r.status === "active") s = "active";
+        else if (r.status === "error" || r.status === "failed") s = "error";
+        rykaMap.set(r.client_id, s);
+      }
+    });
+
+    // Revenue record: max revenue per client (only >= mentoring start month)
+    const revenueRecordMap = new Map<string, { month: string; revenue: number }>();
+    revenueHistoryResult.data?.forEach((h: any) => {
+      const current = revenueRecordMap.get(h.client_id);
+      const rev = Number(h.revenue) || 0;
+      if (!current || rev > current.revenue) {
+        revenueRecordMap.set(h.client_id, { month: h.month, revenue: rev });
+      }
+    });
+
+    // Clinics count per client
+    const clinicsMap = new Map<string, { count: number; primary: string | null }>();
+    clinicsResult.data?.forEach((c: any) => {
+      const prev = clinicsMap.get(c.client_id) || { count: 0, primary: null };
+      prev.count += 1;
+      if (c.is_primary && !prev.primary) prev.primary = c.name;
+      clinicsMap.set(c.client_id, prev);
+    });
+
     // Enrich clients with all data
     const enrichedClients = clients?.map((client) => {
       const metrics = metricsMap.get(client.id) || {};
@@ -647,6 +677,7 @@ Deno.serve(async (req) => {
       const responsibleUser = client.responsible_user_id
         ? teamUsersMap.get(client.responsible_user_id)
         : null;
+      const clinicsInfo = clinicsMap.get(client.id) || { count: 0, primary: null };
 
       return {
         ...client,
@@ -661,6 +692,10 @@ Deno.serve(async (req) => {
         message_count: metrics.message_count || 0,
         pending_forms: pendingFormsMap.get(client.id) || [],
         responsible_user: responsibleUser,
+        ryka_status: rykaMap.get(client.id) || "none",
+        revenue_record: revenueRecordMap.get(client.id) || null,
+        clinics_count: clinicsInfo.count,
+        primary_clinic_name: clinicsInfo.primary,
       };
     }) || [];
 
