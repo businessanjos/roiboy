@@ -153,7 +153,11 @@ function buildTypeformNote(formTitle: string, answers: any[], submittedAt: strin
   const when = submittedAt ? `Recebida em: ${new Date(submittedAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : "";
   const lines = (answers || [])
     .map((a) => {
-      const label = (a?.field?.title || a?.field?.ref || a?.field?.id || "").toString().trim();
+      let label = (a?.field?.title || a?.field?.ref || a?.field?.id || "").toString().trim();
+      // Strip Typeform placeholder tokens like {{field:xxx}} and normalize punctuation
+      label = label.replace(/\{\{[^}]+\}\}/g, "").replace(/\s*,\s*\?/g, "?").replace(/\s{2,}/g, " ").replace(/[\s,:]+$/g, "").trim();
+      // Skip labels that are still bare UUIDs (definition merge failed)
+      if (/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(label)) return null;
       const value = formatAnswerValue(a).trim();
       if (!label || !value) return null;
       return `• ${label}: ${value}`;
