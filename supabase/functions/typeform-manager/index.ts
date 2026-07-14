@@ -622,8 +622,21 @@ Deno.serve(async (req) => {
 });
 
 async function backfillForm(supabase: any, accountId: string, formId: string, token: string) {
+  // Sync title from Typeform (users rename their forms and expect it to reflect here)
+  try {
+    const form = await tfFetch(`/forms/${formId}`, token);
+    if (form?.title) {
+      await supabase.from("typeform_forms")
+        .update({ title: form.title })
+        .eq("account_id", accountId).eq("form_id", formId);
+    }
+  } catch (e) {
+    console.error("Title sync failed:", e);
+  }
+
   // Insights summary
   try {
+
     const summary = await tfFetch(`/insights/${formId}/summary`, token);
     // Typeform Insights returns: { fields: [...], form: { summary: {...}, platforms: [...] } }
     const formSummary = summary?.form?.summary || {};
