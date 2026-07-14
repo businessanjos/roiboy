@@ -230,6 +230,7 @@ export default function RoyZapp() {
     loading,
     availableProducts,
     clientProducts,
+    clientResponsibles,
     leadDealStages,
     currentAgent,
     hasGlobalVisibility,
