@@ -36,14 +36,19 @@ interface Row {
   product_color: string | null;
   sales_rep: string | null;
   payment_method: string | null;
+  payment_method_raw: string | null;
   entrada: number | null;
   installments_count: number | null;
   installments_paid: number;
+  entries_count: number;
   total_received: number;
   installment_value: number | null;
   total_value: number;
   start_date: string | null;
   created_at: string | null;
+  deal_id: string | null;
+  deal_won_at: string | null;
+  installments_detail: any;
 }
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
