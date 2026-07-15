@@ -31,6 +31,8 @@ import {
   Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PayerSelector } from "@/components/financial/payers/PayerSelector";
+import { UserCircle2, AlertTriangle } from "lucide-react";
 
 interface InstallmentDetailItem {
   amount?: number | string | null;
