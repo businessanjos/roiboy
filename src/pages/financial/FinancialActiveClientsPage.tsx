@@ -713,6 +713,38 @@ export default function FinancialActiveClientsPage() {
             </div>
           </div>
 
+          {filtered.length > 0 && (() => {
+            const totalValue = filtered.reduce((s, r) => s + (r.total_value || 0), 0);
+            const totalReceived = filtered.reduce((s, r) => s + (r.total_received || 0), 0);
+            const totalPending = Math.max(0, totalValue - totalReceived);
+            const pct = totalValue > 0 ? Math.round((totalReceived / totalValue) * 100) : 0;
+            const label = productFilter !== "all" ? productFilter : "Todos os produtos";
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-lg border bg-gradient-to-br from-muted/30 to-background p-4">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Filtro</div>
+                  <div className="text-sm font-semibold mt-1 truncate">{label}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{filtered.length} contrato(s)</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total contratado</div>
+                  <div className="text-lg font-bold tabular-nums mt-1">{formatBRLPrecise(totalValue)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Já recebido</div>
+                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(totalReceived)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{pct}% do total</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-amber-700">A receber</div>
+                  <div className="text-lg font-bold tabular-nums text-amber-700 mt-1">{formatBRLPrecise(totalPending)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{100 - pct}% pendente</div>
+                </div>
+              </div>
+            );
+          })()}
+
+
           {eligibleForBatch.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed bg-muted/30 px-3 py-2">
               <div className="text-xs text-muted-foreground">
