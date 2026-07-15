@@ -287,12 +287,19 @@ export default function FinancialActiveClientsPage() {
           parcelasFromCustomField
         ) || null;
         // Recompute installment value when count came from the deal's custom field
+        // (i.e. contract has fewer installments recorded than the deal's Parcelas field)
+        const countFromCustomField =
+          parcelasFromCustomField > Math.max(contractCount, detailCount, agg?.count || 0);
+        const totalValue = Number(c.value || 0);
+        const baseForParcel = Math.max(0, totalValue - (finalEntrada ?? 0));
         const finalInstallmentValue =
-          installmentValue != null
-            ? installmentValue
-            : installmentsCount && installmentsCount > 0
-              ? Number(c.value || 0) / installmentsCount
-              : null;
+          countFromCustomField && installmentsCount && installmentsCount > 0
+            ? baseForParcel / installmentsCount
+            : installmentValue != null
+              ? installmentValue
+              : installmentsCount && installmentsCount > 0
+                ? baseForParcel / installmentsCount
+                : null;
         return {
           contract_id: c.id,
           client_id: c.client_id,
