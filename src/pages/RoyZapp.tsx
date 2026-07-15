@@ -509,10 +509,23 @@ export default function RoyZapp() {
       a => a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId
     );
     if (assignment) {
+      // Bloqueio: conversa atribuída a outro atendente
+      if (assignment.agent_id && currentAgent?.id && assignment.agent_id !== currentAgent.id) {
+        const agent = agents.find(a => a.id === assignment.agent_id);
+        const name = agent?.user?.name || "outro atendente";
+        toast.warning(`Esta conversa está atribuída a ${name}.`, {
+          description: "Peça a transferência para conseguir abrir.",
+        });
+        return;
+      }
       setSelectedConversation(assignment);
       setInboxTab(assignment.agent_id === currentAgent?.id ? "mine" : "queue");
+      return;
     }
-  }, [assignments, currentAgent?.id]);
+    // Não está na lista atual — deixa o efeito de URL processar (ele troca setor/instância)
+    setSearchParams(prev => { prev.set("conversation", conversationId); return prev; }, { replace: true });
+    setUrlParamsProcessed(false);
+  }, [assignments, currentAgent?.id, agents, setSearchParams]);
 
   // Notification hook
   const { 
@@ -746,6 +759,9 @@ export default function RoyZapp() {
     getContactInfo,
   });
 
+  // Ref para garantir que o lookup async da conversa alvo rode só uma vez
+  const conversationLookupRef = useRef<string | null>(null);
+
   // Handle URL parameters for auto-selecting or creating conversations
   useEffect(() => {
     if (urlParamsProcessed || loading || !currentUser?.account_id) return;
@@ -756,13 +772,84 @@ export default function RoyZapp() {
     const leadId = searchParams.get('leadId');
     const clientId = searchParams.get('clientId');
     
-    if (conversationId && assignments.length > 0) {
-      const assignment = assignments.find(a => a.zapp_conversation_id === conversationId);
+    if (conversationId) {
+      // 1. Tenta encontrar na lista atual
+      const assignment = assignments.find(
+        a => a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId
+      );
       if (assignment) {
+        // Bloqueio: atribuída a outro atendente
+        if (assignment.agent_id && currentAgent?.id && assignment.agent_id !== currentAgent.id) {
+          const agent = agents.find(a => a.id === assignment.agent_id);
+          const name = agent?.user?.name || "outro atendente";
+          toast.warning(`Esta conversa está atribuída a ${name}.`, {
+            description: "Peça a transferência para conseguir abrir.",
+          });
+          setSearchParams(prev => { prev.delete('conversation'); return prev; }, { replace: true });
+          setUrlParamsProcessed(true);
+          return;
+        }
         setSelectedConversation(assignment);
+        setInboxTab(assignment.agent_id === currentAgent?.id ? "mine" : "queue");
+        setSearchParams(prev => { prev.delete('conversation'); return prev; }, { replace: true });
         setUrlParamsProcessed(true);
         return;
       }
+      
+      // 2. Não está na lista — busca metadados no DB (apenas uma vez por id)
+      if (conversationLookupRef.current !== conversationId && currentAgent?.id) {
+        conversationLookupRef.current = conversationId;
+        (async () => {
+          const { data, error } = await supabase
+            .from("zapp_conversation_assignments")
+            .select("agent_id, zapp_conversation:zapp_conversations!inner(sector_id, integration_id)")
+            .eq("zapp_conversation_id", conversationId)
+            .maybeSingle();
+          
+          if (error || !data) {
+            toast.error("Conversa não encontrada.");
+            setSearchParams(prev => { prev.delete('conversation'); return prev; }, { replace: true });
+            setUrlParamsProcessed(true);
+            return;
+          }
+          
+          // Atribuída a outro? Avisa e não abre.
+          if (data.agent_id && data.agent_id !== currentAgent.id) {
+            const { data: agentRow } = await supabase
+              .from("zapp_agents")
+              .select("user:users(name)")
+              .eq("id", data.agent_id)
+              .maybeSingle();
+            const name = (agentRow as any)?.user?.name || "outro atendente";
+            toast.warning(`Esta conversa está atribuída a ${name}.`, {
+              description: "Peça a transferência para conseguir abrir.",
+            });
+            setSearchParams(prev => { prev.delete('conversation'); return prev; }, { replace: true });
+            setUrlParamsProcessed(true);
+            return;
+          }
+          
+          // Fila (ou sua) — troca setor/instância pra carregar a conversa
+          const convSector = (data.zapp_conversation as any)?.sector_id as SectorId | undefined;
+          const convIntegration = (data.zapp_conversation as any)?.integration_id as string | undefined;
+          let switched = false;
+          if (convSector && convSector !== selectedSectorId) {
+            setSelectedSectorId(convSector);
+            switched = true;
+          }
+          if (convIntegration && convIntegration !== selectedIntegrationId) {
+            setSelectedIntegrationId(convIntegration);
+            switched = true;
+          }
+          if (!switched) {
+            toast.info("Conversa não visível no filtro atual. Ajuste os filtros para encontrá-la.");
+            setSearchParams(prev => { prev.delete('conversation'); return prev; }, { replace: true });
+            setUrlParamsProcessed(true);
+          }
+          // Se trocou contexto, o efeito re-executa quando os assignments recarregarem
+        })();
+      }
+      return;
     }
     
     if (newPhone && currentAgent && !conversationId) {
@@ -777,7 +864,7 @@ export default function RoyZapp() {
         contactOps.createConversationFromUrl(contact, !!leadId);
       }
     }
-  }, [assignments, loading, currentUser?.account_id, currentAgent, searchParams, urlParamsProcessed, contactOps]);
+  }, [assignments, loading, currentUser?.account_id, currentAgent, agents, searchParams, urlParamsProcessed, contactOps, selectedSectorId, selectedIntegrationId, setSearchParams]);
 
   const getAgentName = (agentId: string | null) => {
     if (!agentId) return null;
