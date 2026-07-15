@@ -876,7 +876,24 @@ export default function FinancialActiveClientsPage() {
                         {r.installment_value != null ? formatBRLPrecise(r.installment_value) : "—"}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-emerald-700">
-                        {r.total_received > 0 ? formatBRLPrecise(r.total_received) : <span className="text-muted-foreground">—</span>}
+                        {(() => {
+                          const received = (r.total_received || 0) + (r.entrada || 0);
+                          return received > 0 ? (
+                            <div>
+                              <div>{formatBRLPrecise(received)}</div>
+                              {(r.entrada || 0) > 0 && (r.total_received || 0) > 0 && (
+                                <div className="text-[10px] text-muted-foreground font-normal">
+                                  entrada {formatBRLPrecise(r.entrada || 0)} + parcelas {formatBRLPrecise(r.total_received)}
+                                </div>
+                              )}
+                              {(r.entrada || 0) > 0 && (r.total_received || 0) === 0 && (
+                                <div className="text-[10px] text-muted-foreground font-normal">só entrada</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-amber-700">
                         {(() => {
