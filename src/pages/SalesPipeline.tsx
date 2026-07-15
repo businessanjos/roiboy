@@ -1656,7 +1656,31 @@ export default function SalesPipeline() {
         
         // Get contract data from deal custom fields
         const contractDataFromDeal = await getContractDataFromDealFields(dealFieldValues);
-        
+
+        // === Validação: "Item da Venda" precisa resolver para um produto real ===
+        const rawItemVenda = (dealFieldValues.itemVenda ?? "").toString().trim();
+        if (!rawItemVenda) {
+          toast.error(
+            "Este negócio não tem 'Item da Venda' preenchido. Volte ao card do negócio, escolha o produto vendido e tente novamente.",
+            { duration: 8000 }
+          );
+          return;
+        }
+        if (!contractDataFromDeal.product_id) {
+          const proceed = window.confirm(
+            `Não consegui mapear "${rawItemVenda}" para um produto ativo no catálogo.\n\n` +
+            `• Verifique se o produto existe em Configurações → Produtos e está ativo.\n` +
+            `• Se o nome/label mudou, atualize o mapeamento ou renomeie o produto exatamente igual.\n\n` +
+            `Continuar mesmo assim criará um contrato SEM produto vinculado (comissão, dashboards por produto e badges não vão funcionar).\n\n` +
+            `Deseja continuar assim mesmo?`
+          );
+          if (!proceed) {
+            toast.error("Ganho cancelado. Corrija o Item da Venda antes de continuar.");
+            return;
+          }
+          toast.warning(`Contrato será criado sem produto vinculado (Item da Venda: "${rawItemVenda}")`, { duration: 8000 });
+        }
+
         const contractData = {
           client_id: clientId,
           account_id: currentUser.account_id,
@@ -1672,6 +1696,7 @@ export default function SalesPipeline() {
           payment_method: contractDataFromDeal.payment_method || null,
           negotiation_description: contractDataFromDeal.negotiation_description || null,
         };
+
 
         // Anti-duplicate check: verify no contract exists for this deal
         const { data: existingContract } = await supabase
