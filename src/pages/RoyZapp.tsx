@@ -509,10 +509,23 @@ export default function RoyZapp() {
       a => a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId
     );
     if (assignment) {
+      // Bloqueio: conversa atribuída a outro atendente
+      if (assignment.agent_id && currentAgent?.id && assignment.agent_id !== currentAgent.id) {
+        const agent = agents.find(a => a.id === assignment.agent_id);
+        const name = agent?.user?.name || "outro atendente";
+        toast.warning(`Esta conversa está atribuída a ${name}.`, {
+          description: "Peça a transferência para conseguir abrir.",
+        });
+        return;
+      }
       setSelectedConversation(assignment);
       setInboxTab(assignment.agent_id === currentAgent?.id ? "mine" : "queue");
+      return;
     }
-  }, [assignments, currentAgent?.id]);
+    // Não está na lista atual — deixa o efeito de URL processar (ele troca setor/instância)
+    setSearchParams(prev => { prev.set("conversation", conversationId); return prev; }, { replace: true });
+    setUrlParamsProcessed(false);
+  }, [assignments, currentAgent?.id, agents, setSearchParams]);
 
   // Notification hook
   const { 
