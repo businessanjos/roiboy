@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import fixWebmDuration from "fix-webm-duration";
+// fix-webm-duration removed: was corrupting EBML container and causing
+// uazapi FFmpeg transcode to fail (exit status 183) when converting to OGG.
+
 import * as tus from "tus-js-client";
 import { Message } from "@/hooks/useZappData";
 import { ConversationAssignment, getContactInfo } from "@/components/royzapp/types";
