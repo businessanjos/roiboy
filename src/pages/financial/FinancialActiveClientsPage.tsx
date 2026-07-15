@@ -880,7 +880,7 @@ export default function FinancialActiveClientsPage() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-amber-700">
                         {(() => {
-                          const pending = Math.max(0, (r.total_value || 0) - (r.total_received || 0));
+                          const pending = Math.max(0, (r.total_value || 0) - (r.total_received || 0) - (r.entrada || 0));
                           return pending > 0 ? formatBRLPrecise(pending) : <span className="text-muted-foreground">—</span>;
                         })()}
                       </TableCell>
