@@ -129,8 +129,9 @@ export default function FinancialActiveClientsPage() {
 
       // Custom field IDs (see src/utils/dealToClientContractMapping.ts)
       const VALOR_ENTRADA_FIELD_ID = "86c93211-5013-48a6-affe-e53d81931cb6";
+      const PARCELAS_FIELD_ID = "069ee7f8-befd-482d-990d-13048b17180c";
 
-      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes, entriesRes, entradaFieldRes] = await Promise.all([
+      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes, entriesRes, entradaFieldRes, parcelasFieldRes] = await Promise.all([
         clientIds.length
           ? supabase.from("clients").select("id, full_name, company_name, sales_user_id").in("id", clientIds as string[])
           : Promise.resolve({ data: [], error: null } as any),
