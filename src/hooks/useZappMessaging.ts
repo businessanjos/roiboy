@@ -928,7 +928,11 @@ export function useZappMessaging({
         }
       };
       
-      mediaRecorder.start(100);
+      // No timeslice: request a single final blob at stop().
+      // Using start(100) produced fragmented WebM clusters that uazapi's
+      // FFmpeg could not remux to OGG (exit status 183).
+      mediaRecorder.start();
+
       setIsRecording(true);
       setRecordingDuration(0);
       recordingStartTimeRef.current = Date.now();
@@ -1045,7 +1049,8 @@ export function useZappMessaging({
           media_url: mediaUrl,
           media_type: "audio",
           media_mimetype: audioBlob.type,
-          media_filename: `audio_${Date.now()}.webm`,
+          media_filename: `audio_${Date.now()}.${extension}`,
+
           audio_duration_sec: duration || null,
           media_download_status: "completed",
           sent_at: now,
@@ -1073,7 +1078,8 @@ export function useZappMessaging({
             media_url: mediaUrl,
             media_type: "audio",
             media_mimetype: audioBlob.type,
-            media_filename: `audio_${Date.now()}.webm`,
+            media_filename: `audio_${Date.now()}.${extension}`,
+
             audio_duration_sec: duration || null,
             sender_name: null,
             delivery_status: "pending",
