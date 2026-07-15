@@ -475,34 +475,84 @@ export default function FinancialActiveClientsPage() {
       const missing = count - alreadyExisting;
       if (missing <= 0) continue;
 
-      const firstDue = resolveFirstDueDate(r);
-      const amount = r.installment_value!;
       const productLabel = r.product_name || "Contrato";
-      const rows = [];
-      for (let i = 0; i < missing; i++) {
-        const installmentNumber = alreadyExisting + i + 1;
-        // Offset from the FIRST parcel date so we respect what was agreed on the deal.
-        const due = addMonths(firstDue, installmentNumber - 1);
-        rows.push({
-          account_id: accountId,
-          entry_type: "receivable",
-          description: `${productLabel} - Parcela ${installmentNumber}/${count} - ${r.client_name}`,
-          amount,
-          due_date: format(due, "yyyy-MM-dd"),
-          status: "pending",
-          client_id: r.client_id,
-          contract_id: r.contract_id,
-          deal_id: r.deal_id,
-          installment_number: installmentNumber,
-          total_installments: count,
-          currency: "BRL",
-          source: "manual",
-          is_recurring: false,
-          is_conciliated: false,
-          created_by: currentUser?.id ?? null,
-        });
+      const rows: any[] = [];
+
+      // Prefer explicit installments_detail from the negotiation (respects amount,
+      // due_date, method AND payment groups like Cartão A / Cartão B).
+      const detailArr: any[] = Array.isArray(r.installments_detail) ? r.installments_detail : [];
+      const hasRichDetail =
+        detailArr.length === count &&
+        detailArr.every((d) => d && d.due_date && Number(d.amount ?? d.value ?? 0) > 0);
+
+      // Cache group_id -> uuid so all installments of the same group share it in DB
+      const groupUuidCache = new Map<string, string>();
+      const uuid = () =>
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      if (hasRichDetail) {
+        for (let i = 0; i < detailArr.length; i++) {
+          if (i < alreadyExisting) continue;
+          const d = detailArr[i];
+          const installmentNumber = i + 1;
+          const groupKey = d.group_id || d.method_label || null;
+          let groupUuid: string | null = null;
+          if (groupKey) {
+            if (!groupUuidCache.has(groupKey)) groupUuidCache.set(groupKey, uuid());
+            groupUuid = groupUuidCache.get(groupKey)!;
+          }
+          const label = d.group_label || d.method_label;
+          rows.push({
+            account_id: accountId,
+            entry_type: "receivable",
+            description: `${productLabel} - Parcela ${installmentNumber}/${count}${label ? ` - ${label}` : ""} - ${r.client_name}`,
+            amount: Number(d.amount ?? d.value ?? 0),
+            due_date: d.due_date,
+            status: "pending",
+            payment_method: d.method || null,
+            client_id: r.client_id,
+            contract_id: r.contract_id,
+            deal_id: r.deal_id,
+            installment_number: installmentNumber,
+            total_installments: count,
+            installment_group_id: groupUuid,
+            currency: "BRL",
+            source: "manual",
+            is_recurring: false,
+            is_conciliated: false,
+            created_by: currentUser?.id ?? null,
+          });
+        }
+      } else {
+        const firstDue = resolveFirstDueDate(r);
+        const amount = r.installment_value!;
+        for (let i = 0; i < missing; i++) {
+          const installmentNumber = alreadyExisting + i + 1;
+          const due = addMonths(firstDue, installmentNumber - 1);
+          rows.push({
+            account_id: accountId,
+            entry_type: "receivable",
+            description: `${productLabel} - Parcela ${installmentNumber}/${count} - ${r.client_name}`,
+            amount,
+            due_date: format(due, "yyyy-MM-dd"),
+            status: "pending",
+            client_id: r.client_id,
+            contract_id: r.contract_id,
+            deal_id: r.deal_id,
+            installment_number: installmentNumber,
+            total_installments: count,
+            currency: "BRL",
+            source: "manual",
+            is_recurring: false,
+            is_conciliated: false,
+            created_by: currentUser?.id ?? null,
+          });
+        }
       }
 
+      if (rows.length === 0) continue;
       const { error } = await supabase.from("financial_entries").insert(rows);
       if (error) {
         failures.push(`${r.client_name}: ${error.message}`);

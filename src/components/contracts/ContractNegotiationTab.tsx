@@ -40,6 +40,17 @@ interface InstallmentDetailItem {
   due_date?: string | null;
   method?: string | null;
   method_label?: string | null;
+  group_id?: string | null;
+  group_label?: string | null;
+}
+
+interface PaymentGroup {
+  id: string;
+  label: string;
+  method: string;
+  amount: number;
+  count: number;
+  first_due_date: string;
 }
 
 interface ContractNegotiationTabProps {
@@ -139,7 +150,14 @@ export function ContractNegotiationTab({
 
 
   // Editable installments detail (source of truth for what's saved / generated)
-  type EditableInstallment = { amount: number; due_date: string; method: string };
+  type EditableInstallment = {
+    amount: number;
+    due_date: string;
+    method: string;
+    method_label?: string | null;
+    group_id?: string | null;
+    group_label?: string | null;
+  };
   const buildDetail = (
     count: number,
     startDate: string,
@@ -157,6 +175,66 @@ export function ContractNegotiationTab({
     }));
   };
 
+  // ---- Payment groups (tranches: ex. R$100k Cartão A + R$100k Cartão B) ----
+  const genGroupId = () =>
+    (typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `g_${Math.random().toString(36).slice(2, 10)}`);
+
+  // Detect pre-existing groups from installments_detail
+  const detectedGroups: PaymentGroup[] = (() => {
+    if (!hasSalesBreakdown) return [];
+    const byGroup = new Map<string, InstallmentDetailItem[]>();
+    for (const d of salesBreakdown) {
+      const key = (d.group_id || "") as string;
+      if (!key) continue;
+      const arr = byGroup.get(key) ?? [];
+      arr.push(d);
+      byGroup.set(key, arr);
+    }
+    if (byGroup.size < 2) return [];
+    const result: PaymentGroup[] = [];
+    byGroup.forEach((items, id) => {
+      const dates = items
+        .map((i) => i.due_date)
+        .filter((s): s is string => !!s)
+        .sort();
+      result.push({
+        id,
+        label: (items[0]?.group_label as string) || (items[0]?.method_label as string) || "Grupo",
+        method: (items[0]?.method as string) || "pix",
+        amount: items.reduce((s, i) => s + Number(i.amount ?? i.value ?? 0), 0),
+        count: items.length,
+        first_due_date: dates[0] || format(new Date(), "yyyy-MM-dd"),
+      });
+    });
+    return result;
+  })();
+
+  const [groups, setGroups] = useState<PaymentGroup[]>(detectedGroups);
+  const usingGroups = groups.length > 0;
+
+  const buildDetailFromGroups = (gs: PaymentGroup[]): EditableInstallment[] => {
+    const out: EditableInstallment[] = [];
+    for (const g of gs) {
+      const safeCount = Math.max(1, Math.floor(g.count || 1));
+      const base = Math.floor((g.amount / safeCount) * 100) / 100;
+      const remainder = Math.round((g.amount - base * safeCount) * 100) / 100;
+      const startD = g.first_due_date ? parseISO(g.first_due_date) : new Date();
+      for (let i = 0; i < safeCount; i++) {
+        out.push({
+          amount: i === 0 ? Math.round((base + remainder) * 100) / 100 : base,
+          due_date: format(addMonths(startD, i), "yyyy-MM-dd"),
+          method: g.method || "pix",
+          method_label: g.label,
+          group_id: g.id,
+          group_label: g.label,
+        });
+      }
+    }
+    return out;
+  };
+
   const initialEditable: EditableInstallment[] = hasSalesBreakdown
     ? salesBreakdown.map((d, i) => ({
         amount: Number(d.amount ?? d.value ?? 0),
@@ -164,6 +242,9 @@ export function ContractNegotiationTab({
           d.due_date ||
           format(addMonths(parseISO(initialDueDate || format(new Date(), "yyyy-MM-dd")), i), "yyyy-MM-dd"),
         method: d.method || initialMethod || "pix",
+        method_label: (d.method_label as string) || null,
+        group_id: (d.group_id as string) || null,
+        group_label: (d.group_label as string) || null,
       }))
     : buildDetail(
         initialInstallments || 1,
@@ -199,10 +280,57 @@ export function ContractNegotiationTab({
 
   // Auto-recalculate detail when inputs change, unless the user has manually edited
   useEffect(() => {
+    if (usingGroups) {
+      setDetail(buildDetailFromGroups(groups));
+      setDetailDirty(false);
+      return;
+    }
     if (detailDirty) return;
     setDetail(buildDetail(installments, firstDueDate, paymentMethod, contractValue));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [installments, firstDueDate, paymentMethod, contractValue]);
+  }, [installments, firstDueDate, paymentMethod, contractValue, groups, usingGroups]);
+
+  const groupsTotal = useMemo(
+    () => Math.round(groups.reduce((s, g) => s + (Number(g.amount) || 0), 0) * 100) / 100,
+    [groups]
+  );
+  const groupsBalanced = Math.abs(groupsTotal - contractValue) < 0.01;
+
+  const addGroup = () => {
+    const remaining = Math.max(0, Math.round((contractValue - groupsTotal) * 100) / 100);
+    const nextIdx = groups.length + 1;
+    const label = `Cartão ${String.fromCharCode(64 + nextIdx)}`; // A, B, C...
+    const newGroup: PaymentGroup = {
+      id: genGroupId(),
+      label,
+      method: "cartao",
+      amount: remaining > 0 ? remaining : Math.round((contractValue / 2) * 100) / 100,
+      count: installments || 10,
+      first_due_date: firstDueDate || format(new Date(), "yyyy-MM-dd"),
+    };
+    setGroups((prev) => [...prev, newGroup]);
+  };
+
+  const updateGroup = (id: string, patch: Partial<PaymentGroup>) => {
+    setGroups((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
+  };
+
+  const removeGroup = (id: string) => {
+    setGroups((prev) => prev.filter((g) => g.id !== id));
+  };
+
+  const serializeDetail = () =>
+    detail.map((d, i) => ({
+      number: i + 1,
+      amount: Number(d.amount) || 0,
+      due_date: d.due_date,
+      method: d.method,
+      method_label: d.method_label ?? d.group_label ?? null,
+      group_id: d.group_id ?? null,
+      group_label: d.group_label ?? null,
+    }));
+
+
 
   const detailTotal = useMemo(
     () => Math.round(detail.reduce((s, d) => s + (Number(d.amount) || 0), 0) * 100) / 100,
@@ -272,12 +400,7 @@ export function ContractNegotiationTab({
         updateData.payment_method = paymentMethod;
         updateData.installments_count = detail.length || installments;
         updateData.first_due_date = detail[0]?.due_date || firstDueDate;
-        updateData.installments_detail = detail.map((d, i) => ({
-          number: i + 1,
-          amount: Number(d.amount) || 0,
-          due_date: d.due_date,
-          method: d.method,
-        }));
+        updateData.installments_detail = serializeDetail();
       }
 
       const { error } = await supabase
@@ -303,8 +426,14 @@ export function ContractNegotiationTab({
       return;
     }
 
-    if (!paymentMethod) {
+    if (!usingGroups && !paymentMethod) {
       toast.error("Selecione uma forma de pagamento");
+      return;
+    }
+    if (usingGroups && !groupsBalanced) {
+      toast.error(
+        `A soma dos grupos (${formatCurrency(groupsTotal)}) precisa fechar com o total do contrato (${formatCurrency(contractValue)}).`
+      );
       return;
     }
 
@@ -329,16 +458,11 @@ export function ContractNegotiationTab({
         return;
       }
       const updatePayload: Record<string, any> = {
-        payment_method: paymentMethod,
+        payment_method: usingGroups ? (groups.length > 1 ? "misto" : groups[0]?.method || paymentMethod) : paymentMethod,
         installments_count: detail.length || installments,
         first_due_date: detail[0]?.due_date || firstDueDate,
         negotiation_type: negotiationType,
-        installments_detail: detail.map((d, i) => ({
-          number: i + 1,
-          amount: Number(d.amount) || 0,
-          due_date: d.due_date,
-          method: d.method,
-        })),
+        installments_detail: serializeDetail(),
       };
 
       const { error: prepError } = await supabase
@@ -406,12 +530,7 @@ export function ContractNegotiationTab({
           payment_method: paymentMethod,
           installments_count: detail.length,
           first_due_date: detail[0]?.due_date || firstDueDate,
-          installments_detail: detail.map((d, i) => ({
-            number: i + 1,
-            amount: Number(d.amount) || 0,
-            due_date: d.due_date,
-            method: d.method,
-          })),
+          installments_detail: serializeDetail(),
         })
         .eq("id", contractId);
       if (upErr) throw upErr;
@@ -505,60 +624,167 @@ export function ContractNegotiationTab({
         </div>
       )}
 
-      {/* Standard Negotiation */}
       {negotiationType === "standard" && (
         <div className="space-y-4">
-          {/* Payment Method */}
-          <div className="space-y-3">
-            <Label>Forma de Pagamento</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {PAYMENT_METHODS.map((method) => {
-                const Icon = method.icon;
-                return (
-                  <Button
-                    key={method.value}
-                    type="button"
-                    variant={paymentMethod === method.value ? "default" : "outline"}
-                    className="h-auto py-3 justify-start gap-2"
-                    onClick={() => setPaymentMethod(method.value)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {method.label}
-                  </Button>
-                );
-              })}
+          {/* Payment Groups (tranches) — ex.: R$100k em 10x Cartão A + R$100k em 10x Cartão B */}
+          <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-medium">Grupos de Pagamento</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use quando a venda foi dividida em mais de uma forma/cartão (ex.: Cartão A + Cartão B).
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={addGroup}>
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Adicionar grupo
+              </Button>
             </div>
-          </div>
 
-          {/* Installments */}
-          <div className="space-y-3">
-            <Label>Número de Parcelas</Label>
-            <Select
-              value={String(installments)}
-              onValueChange={(v) => setInstallments(Number(v))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {INSTALLMENT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={String(option.value)}>
-                    {option.label}
-                  </SelectItem>
+            {groups.length > 0 && (
+              <div className="space-y-2">
+                {groups.map((g) => (
+                  <div key={g.id} className="rounded-md border bg-background p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={g.label}
+                        onChange={(e) => updateGroup(g.id, { label: e.target.value })}
+                        placeholder="Rótulo (ex.: Cartão A)"
+                        className="h-8 text-sm flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeGroup(g.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground uppercase">Valor</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={g.amount}
+                          onChange={(e) => updateGroup(g.id, { amount: parseFloat(e.target.value) || 0 })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground uppercase">Nº parcelas</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={g.count}
+                          onChange={(e) => updateGroup(g.id, { count: parseInt(e.target.value, 10) || 1 })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground uppercase">Forma</Label>
+                        <Select
+                          value={g.method}
+                          onValueChange={(v) => updateGroup(g.id, { method: v })}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PAYMENT_METHODS.map((m) => (
+                              <SelectItem key={m.value} value={m.value}>
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="transferencia">Transferência</SelectItem>
+                            <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground uppercase">1º vencimento</Label>
+                        <Input
+                          type="date"
+                          value={g.first_due_date}
+                          onChange={(e) => updateGroup(g.id, { first_due_date: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <span className="text-muted-foreground">Soma dos grupos:</span>
+                  <span className={cn("font-semibold tabular-nums", groupsBalanced ? "text-primary" : "text-destructive")}>
+                    {formatCurrency(groupsTotal)}
+                    {!groupsBalanced && (
+                      <span className="ml-2 font-normal">(diferença {formatCurrency(groupsTotal - contractValue)})</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* First Due Date */}
-          <div className="space-y-3">
-            <Label>Data do 1º Vencimento</Label>
-            <Input
-              type="date"
-              value={firstDueDate}
-              onChange={(e) => setFirstDueDate(e.target.value)}
-            />
-          </div>
+          {!usingGroups && (
+            <>
+              {/* Payment Method */}
+              <div className="space-y-3">
+                <Label>Forma de Pagamento</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PAYMENT_METHODS.map((method) => {
+                    const Icon = method.icon;
+                    return (
+                      <Button
+                        key={method.value}
+                        type="button"
+                        variant={paymentMethod === method.value ? "default" : "outline"}
+                        className="h-auto py-3 justify-start gap-2"
+                        onClick={() => setPaymentMethod(method.value)}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {method.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Installments */}
+              <div className="space-y-3">
+                <Label>Número de Parcelas</Label>
+                <Select
+                  value={String(installments)}
+                  onValueChange={(v) => setInstallments(Number(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INSTALLMENT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={String(option.value)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* First Due Date */}
+              <div className="space-y-3">
+                <Label>Data do 1º Vencimento</Label>
+                <Input
+                  type="date"
+                  value={firstDueDate}
+                  onChange={(e) => setFirstDueDate(e.target.value)}
+                />
+              </div>
+            </>
+          )}
 
           {/* Summary Card */}
           <Card className="bg-muted/50">
@@ -640,8 +866,13 @@ export function ContractNegotiationTab({
                   key={idx}
                   className="grid grid-cols-[32px_1fr_140px_140px_32px] gap-2 px-3 py-2 items-center"
                 >
-                  <span className="text-xs text-muted-foreground tabular-nums">
+                  <span className="text-xs text-muted-foreground tabular-nums flex items-center gap-1">
                     {idx + 1}
+                    {d.group_label && (
+                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                        {d.group_label}
+                      </Badge>
+                    )}
                   </span>
                   <Input
                     type="number"
@@ -769,7 +1000,7 @@ export function ContractNegotiationTab({
           ) : (
             <Button
               onClick={handleGenerateReceivables}
-              disabled={generating || !paymentMethod || !detailBalanced || !payerId}
+              disabled={generating || (!usingGroups && !paymentMethod) || !detailBalanced || !payerId}
               className="w-full"
               size="lg"
             >
