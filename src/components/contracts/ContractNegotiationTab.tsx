@@ -711,6 +711,32 @@ export function ContractNegotiationTab({
           </div>
 
 
+          {/* Payer (CPF/CNPJ) — obrigatório revisar antes de gerar */}
+          <div className="space-y-2 rounded-lg border p-3 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <UserCircle2 className="h-4 w-4 text-primary" />
+              <Label className="text-base font-medium">Pagador (CPF/CNPJ)</Label>
+              {receivablesGenerated && (
+                <Badge variant="outline" className="text-[10px]">Travado após geração</Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O pagador definido aqui vai para a invoice, parcelas e futura NF-e. Se estiver vazio, use "Usar dados do cliente" ou cadastre um novo.
+            </p>
+            <PayerSelector
+              value={payerId}
+              onChange={handlePayerChange}
+              clientId={clientId}
+              disabled={savingPayer || receivablesGenerated}
+            />
+            {!payerId && !receivablesGenerated && (
+              <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Selecione ou crie o pagador antes de gerar as parcelas.
+              </div>
+            )}
+          </div>
+
           {/* Generate / Regenerate Receivables Button */}
           {receivablesGenerated ? (
             <div className="space-y-2">
