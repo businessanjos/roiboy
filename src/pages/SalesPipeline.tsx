@@ -1857,7 +1857,19 @@ export default function SalesPipeline() {
                   }
                 }
               } else {
-                console.log("[MarkAsWon] Skipping auto-installments: no breakdown or parcelas");
+                console.log("[MarkAsWon] Sem breakdown/parcelas — disparando geração de recebíveis a partir do valor do contrato");
+                const { error: fallbackFlagErr } = await supabase
+                  .from("client_contracts")
+                  .update({
+                    receivables_generated: true,
+                    receivables_generated_at: new Date().toISOString(),
+                  })
+                  .eq("id", newContract.id);
+                if (fallbackFlagErr) {
+                  console.error("[MarkAsWon] Fallback receivables flag error:", fallbackFlagErr);
+                } else {
+                  toast.success("Recebíveis do contrato gerados automaticamente no financeiro");
+                }
               }
             } catch (autoErr) {
               console.error("[MarkAsWon] Error auto-generating installments:", autoErr);
