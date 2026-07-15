@@ -40,6 +40,17 @@ interface InstallmentDetailItem {
   due_date?: string | null;
   method?: string | null;
   method_label?: string | null;
+  group_id?: string | null;
+  group_label?: string | null;
+}
+
+interface PaymentGroup {
+  id: string;
+  label: string;
+  method: string;
+  amount: number;
+  count: number;
+  first_due_date: string;
 }
 
 interface ContractNegotiationTabProps {
