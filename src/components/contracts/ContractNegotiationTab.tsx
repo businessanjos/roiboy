@@ -112,6 +112,31 @@ export function ContractNegotiationTab({
     initialDueDate || (hasSalesBreakdown ? salesBreakdown[0]?.due_date : null) || format(new Date(), "yyyy-MM-dd")
   );
   const [receivablesGenerated, setReceivablesGenerated] = useState(initialReceivablesGenerated);
+  const [payerId, setPayerId] = useState<string | null>(initialPayerId ?? null);
+  const [savingPayer, setSavingPayer] = useState(false);
+
+  useEffect(() => { setPayerId(initialPayerId ?? null); }, [initialPayerId]);
+
+  const handlePayerChange = async (newPayerId: string | null) => {
+    setPayerId(newPayerId);
+    setSavingPayer(true);
+    try {
+      const { error } = await supabase
+        .from("client_contracts")
+        .update({ payer_id: newPayerId })
+        .eq("id", contractId);
+      if (error) throw error;
+      toast.success("Pagador atualizado no contrato");
+      onUpdate();
+    } catch (e: any) {
+      console.error("Error updating payer:", e);
+      toast.error(e?.message || "Erro ao salvar pagador");
+    } finally {
+      setSavingPayer(false);
+    }
+  };
+
+
 
   // Editable installments detail (source of truth for what's saved / generated)
   type EditableInstallment = { amount: number; due_date: string; method: string };
