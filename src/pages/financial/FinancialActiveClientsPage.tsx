@@ -563,6 +563,7 @@ export default function FinancialActiveClientsPage() {
           const due = addMonths(firstDue, installmentNumber - 1);
           rows.push({
             account_id: accountId,
+            category_id: categoryId,
             entry_type: "receivable",
             description: `${productLabel} - Parcela ${installmentNumber}/${count} - ${r.client_name}`,
             amount,
