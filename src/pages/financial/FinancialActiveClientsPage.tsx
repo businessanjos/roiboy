@@ -279,11 +279,20 @@ export default function FinancialActiveClientsPage() {
         const agg = aggByContract.get(c.id);
         const contractCount = Number(c.installments_count) || 0;
         const detailCount = Array.isArray(c.installments_detail) ? c.installments_detail.length : 0;
+        const parcelasFromCustomField = c.deal_id ? parcelasByDealId.get(c.deal_id) ?? 0 : 0;
         const installmentsCount = Math.max(
           contractCount,
           detailCount,
-          agg?.count || 0
+          agg?.count || 0,
+          parcelasFromCustomField
         ) || null;
+        // Recompute installment value when count came from the deal's custom field
+        const finalInstallmentValue =
+          installmentValue != null
+            ? installmentValue
+            : installmentsCount && installmentsCount > 0
+              ? Number(c.value || 0) / installmentsCount
+              : null;
         return {
           contract_id: c.id,
           client_id: c.client_id,
@@ -297,7 +306,7 @@ export default function FinancialActiveClientsPage() {
           installments_count: installmentsCount,
           installments_paid: agg?.paid || 0,
           total_received: agg?.received || 0,
-          installment_value: installmentValue,
+          installment_value: finalInstallmentValue,
           total_value: Number(c.value || 0),
           start_date: c.start_date || null,
           created_at: c.created_at || null,
