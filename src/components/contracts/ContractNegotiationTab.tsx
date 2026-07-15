@@ -88,6 +88,7 @@ export function ContractNegotiationTab({
   firstDueDate: initialDueDate,
   installmentsDetail: initialDetail,
   receivablesGenerated: initialReceivablesGenerated,
+  payerId: initialPayerId,
   onUpdate,
 }: ContractNegotiationTabProps) {
   const salesBreakdown: InstallmentDetailItem[] = Array.isArray(initialDetail)
