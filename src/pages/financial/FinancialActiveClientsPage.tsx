@@ -789,7 +789,8 @@ export default function FinancialActiveClientsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
