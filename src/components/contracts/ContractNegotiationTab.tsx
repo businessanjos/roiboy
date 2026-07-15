@@ -400,12 +400,7 @@ export function ContractNegotiationTab({
         updateData.payment_method = paymentMethod;
         updateData.installments_count = detail.length || installments;
         updateData.first_due_date = detail[0]?.due_date || firstDueDate;
-        updateData.installments_detail = detail.map((d, i) => ({
-          number: i + 1,
-          amount: Number(d.amount) || 0,
-          due_date: d.due_date,
-          method: d.method,
-        }));
+        updateData.installments_detail = serializeDetail();
       }
 
       const { error } = await supabase
