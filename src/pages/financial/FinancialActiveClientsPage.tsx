@@ -675,13 +675,10 @@ export default function FinancialActiveClientsPage() {
                   <TableRow>
                     <TableHead className="w-8">
                       <Checkbox
-                        checked={
-                          eligibleForBatch.length > 0 &&
-                          selected.size === eligibleForBatch.length
-                        }
+                        checked={allFilteredSelected}
                         onCheckedChange={toggleAll}
-                        disabled={eligibleForBatch.length === 0}
-                        aria-label="Selecionar todos com parcelas faltando"
+                        disabled={filtered.length === 0}
+                        aria-label="Selecionar todos"
                       />
                     </TableHead>
                     <TableHead>Cliente</TableHead>
