@@ -431,11 +431,13 @@ export default function FinancialActiveClientsPage() {
     });
   };
 
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((r) => selected.has(r.contract_id));
   const toggleAll = () => {
-    if (selected.size === eligibleForBatch.length && eligibleForBatch.length > 0) {
+    if (allFilteredSelected) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(eligibleForBatch.map((r) => r.contract_id)));
+      setSelected(new Set(filtered.map((r) => r.contract_id)));
     }
   };
 
@@ -634,8 +636,8 @@ export default function FinancialActiveClientsPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed bg-muted/30 px-3 py-2">
               <div className="text-xs text-muted-foreground">
                 {selected.size > 0
-                  ? `${selected.size} contrato(s) selecionado(s) para gerar recebíveis.`
-                  : `${eligibleForBatch.length} contrato(s) com parcelas faltando. Selecione para gerar em lote.`}
+                  ? `${selected.size} selecionado(s) · ${selectedRows.length} com parcelas a gerar.`
+                  : `${eligibleForBatch.length} contrato(s) com parcelas faltando. Marque o cabeçalho para selecionar todos.`}
                 <span className="ml-1">
                   As datas seguem o que consta na negociação (data da entrada), com uma parcela por mês.
                 </span>
@@ -650,7 +652,7 @@ export default function FinancialActiveClientsPage() {
                 ) : (
                   <Wand2 className="h-4 w-4 mr-2" />
                 )}
-                Gerar recebíveis em lote
+                Gerar recebíveis em lote ({selectedRows.length})
               </Button>
             </div>
           )}
@@ -673,13 +675,10 @@ export default function FinancialActiveClientsPage() {
                   <TableRow>
                     <TableHead className="w-8">
                       <Checkbox
-                        checked={
-                          eligibleForBatch.length > 0 &&
-                          selected.size === eligibleForBatch.length
-                        }
+                        checked={allFilteredSelected}
                         onCheckedChange={toggleAll}
-                        disabled={eligibleForBatch.length === 0}
-                        aria-label="Selecionar todos com parcelas faltando"
+                        disabled={filtered.length === 0}
+                        aria-label="Selecionar todos"
                       />
                     </TableHead>
                     <TableHead>Cliente</TableHead>
@@ -708,7 +707,6 @@ export default function FinancialActiveClientsPage() {
                         <Checkbox
                           checked={selected.has(r.contract_id)}
                           onCheckedChange={() => toggleRow(r.contract_id)}
-                          disabled={!isEligible}
                           aria-label={`Selecionar ${r.client_name}`}
                         />
                       </TableCell>
