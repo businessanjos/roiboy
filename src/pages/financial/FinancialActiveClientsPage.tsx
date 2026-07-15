@@ -715,12 +715,14 @@ export default function FinancialActiveClientsPage() {
 
           {filtered.length > 0 && (() => {
             const totalValue = filtered.reduce((s, r) => s + (r.total_value || 0), 0);
-            const totalReceived = filtered.reduce((s, r) => s + (r.total_received || 0), 0);
+            const installmentsReceived = filtered.reduce((s, r) => s + (r.total_received || 0), 0);
+            const entradasReceived = filtered.reduce((s, r) => s + (r.entrada || 0), 0);
+            const totalReceived = installmentsReceived + entradasReceived;
             const totalPending = Math.max(0, totalValue - totalReceived);
             const pct = totalValue > 0 ? Math.round((totalReceived / totalValue) * 100) : 0;
             const label = productFilter !== "all" ? productFilter : "Todos os produtos";
             return (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-lg border bg-gradient-to-br from-muted/30 to-background p-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 rounded-lg border bg-gradient-to-br from-muted/30 to-background p-4">
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Filtro</div>
                   <div className="text-sm font-semibold mt-1 truncate">{label}</div>
@@ -731,9 +733,16 @@ export default function FinancialActiveClientsPage() {
                   <div className="text-lg font-bold tabular-nums mt-1">{formatBRLPrecise(totalValue)}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Já recebido</div>
-                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(totalReceived)}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">{pct}% do total</div>
+                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Entradas recebidas</div>
+                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(entradasReceived)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">soma da coluna Entrada</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Parcelas pagas</div>
+                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(installmentsReceived)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    Recebido total: <span className="font-semibold">{formatBRLPrecise(totalReceived)}</span> ({pct}%)
+                  </div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-amber-700">A receber</div>
@@ -743,6 +752,7 @@ export default function FinancialActiveClientsPage() {
               </div>
             );
           })()}
+
 
 
           {eligibleForBatch.length > 0 && (
