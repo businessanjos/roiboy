@@ -308,6 +308,12 @@ export function ContractNegotiationTab({
       return;
     }
 
+    if (!payerId) {
+      toast.error("Revise o pagador (CPF/CNPJ) antes de gerar as parcelas.");
+      return;
+    }
+
+
     // Mark immediately BEFORE any async operation
     generatedRef.current = true;
     setGenerating(true);
