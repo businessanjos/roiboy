@@ -1847,6 +1847,7 @@ export type Database = {
           negotiation_type: string | null
           notes: string | null
           parent_contract_id: string | null
+          payer_id: string | null
           payment_method: string | null
           payment_option: string | null
           payment_status: string
@@ -1886,6 +1887,7 @@ export type Database = {
           negotiation_type?: string | null
           notes?: string | null
           parent_contract_id?: string | null
+          payer_id?: string | null
           payment_method?: string | null
           payment_option?: string | null
           payment_status?: string
@@ -1925,6 +1927,7 @@ export type Database = {
           negotiation_type?: string | null
           notes?: string | null
           parent_contract_id?: string | null
+          payer_id?: string | null
           payment_method?: string | null
           payment_option?: string | null
           payment_status?: string
@@ -1973,6 +1976,13 @@ export type Database = {
             columns: ["parent_contract_id"]
             isOneToOne: false
             referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
             referencedColumns: ["id"]
           },
           {

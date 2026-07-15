@@ -31,6 +31,8 @@ import {
   Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PayerSelector } from "@/components/financial/payers/PayerSelector";
+import { UserCircle2, AlertTriangle } from "lucide-react";
 
 interface InstallmentDetailItem {
   amount?: number | string | null;
@@ -52,6 +54,7 @@ interface ContractNegotiationTabProps {
   firstDueDate: string | null;
   installmentsDetail?: InstallmentDetailItem[] | any;
   receivablesGenerated: boolean;
+  payerId?: string | null;
   onUpdate: () => void;
 }
 
@@ -85,6 +88,7 @@ export function ContractNegotiationTab({
   firstDueDate: initialDueDate,
   installmentsDetail: initialDetail,
   receivablesGenerated: initialReceivablesGenerated,
+  payerId: initialPayerId,
   onUpdate,
 }: ContractNegotiationTabProps) {
   const salesBreakdown: InstallmentDetailItem[] = Array.isArray(initialDetail)
@@ -108,6 +112,31 @@ export function ContractNegotiationTab({
     initialDueDate || (hasSalesBreakdown ? salesBreakdown[0]?.due_date : null) || format(new Date(), "yyyy-MM-dd")
   );
   const [receivablesGenerated, setReceivablesGenerated] = useState(initialReceivablesGenerated);
+  const [payerId, setPayerId] = useState<string | null>(initialPayerId ?? null);
+  const [savingPayer, setSavingPayer] = useState(false);
+
+  useEffect(() => { setPayerId(initialPayerId ?? null); }, [initialPayerId]);
+
+  const handlePayerChange = async (newPayerId: string | null) => {
+    setPayerId(newPayerId);
+    setSavingPayer(true);
+    try {
+      const { error } = await supabase
+        .from("client_contracts")
+        .update({ payer_id: newPayerId })
+        .eq("id", contractId);
+      if (error) throw error;
+      toast.success("Pagador atualizado no contrato");
+      onUpdate();
+    } catch (e: any) {
+      console.error("Error updating payer:", e);
+      toast.error(e?.message || "Erro ao salvar pagador");
+    } finally {
+      setSavingPayer(false);
+    }
+  };
+
+
 
   // Editable installments detail (source of truth for what's saved / generated)
   type EditableInstallment = { amount: number; due_date: string; method: string };
@@ -278,6 +307,12 @@ export function ContractNegotiationTab({
       toast.error("Selecione uma forma de pagamento");
       return;
     }
+
+    if (!payerId) {
+      toast.error("Revise o pagador (CPF/CNPJ) antes de gerar as parcelas.");
+      return;
+    }
+
 
     // Mark immediately BEFORE any async operation
     generatedRef.current = true;
@@ -676,6 +711,32 @@ export function ContractNegotiationTab({
           </div>
 
 
+          {/* Payer (CPF/CNPJ) — obrigatório revisar antes de gerar */}
+          <div className="space-y-2 rounded-lg border p-3 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <UserCircle2 className="h-4 w-4 text-primary" />
+              <Label className="text-base font-medium">Pagador (CPF/CNPJ)</Label>
+              {receivablesGenerated && (
+                <Badge variant="outline" className="text-[10px]">Travado após geração</Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O pagador definido aqui vai para a invoice, parcelas e futura NF-e. Se estiver vazio, use "Usar dados do cliente" ou cadastre um novo.
+            </p>
+            <PayerSelector
+              value={payerId}
+              onChange={handlePayerChange}
+              clientId={clientId}
+              disabled={savingPayer || receivablesGenerated}
+            />
+            {!payerId && !receivablesGenerated && (
+              <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Selecione ou crie o pagador antes de gerar as parcelas.
+              </div>
+            )}
+          </div>
+
           {/* Generate / Regenerate Receivables Button */}
           {receivablesGenerated ? (
             <div className="space-y-2">
@@ -708,7 +769,7 @@ export function ContractNegotiationTab({
           ) : (
             <Button
               onClick={handleGenerateReceivables}
-              disabled={generating || !paymentMethod || !detailBalanced}
+              disabled={generating || !paymentMethod || !detailBalanced || !payerId}
               className="w-full"
               size="lg"
             >

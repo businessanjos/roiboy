@@ -76,6 +76,7 @@ interface Contract {
   first_due_date?: string | null;
   installments_detail?: any;
   receivables_generated?: boolean;
+  payer_id?: string | null;
   client?: {
     id: string;
     full_name: string;
@@ -750,6 +751,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
               firstDueDate={contract.first_due_date || null}
               installmentsDetail={contract.installments_detail ?? null}
               receivablesGenerated={contract.receivables_generated || false}
+              payerId={contract.payer_id ?? null}
               onUpdate={onUpdate}
             />
           </TabsContent>
