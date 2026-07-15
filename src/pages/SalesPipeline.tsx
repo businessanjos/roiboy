@@ -1665,8 +1665,8 @@ export default function SalesPipeline() {
           value: deal.value || 0,
           contract_type: 'Compra',
           status: 'active',
-          receivables_generated: true, // Auto-gera parcelas/recebíveis via trigger tg_contract_generate_receivables
-          receivables_generated_at: new Date().toISOString(),
+          receivables_generated: false, // será marcado true logo abaixo após preparar installments_detail (ou fallback)
+
           notes: `Contrato gerado automaticamente do negócio: ${deal.title}`,
           product_id: contractDataFromDeal.product_id || null,
           payment_method: contractDataFromDeal.payment_method || null,
