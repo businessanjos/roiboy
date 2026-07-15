@@ -7,20 +7,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, ExternalLink, CalendarIcon, Eye, Ban } from "lucide-react";
+import { Users, Search, ExternalLink, CalendarIcon, Eye, Ban, Wand2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import { formatBRLPrecise } from "@/lib/financial-format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, startOfMonth, startOfQuarter, startOfYear, endOfMonth, endOfQuarter, endOfYear } from "date-fns";
+import { format, startOfMonth, startOfQuarter, startOfYear, endOfMonth, endOfQuarter, endOfYear, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { ActiveClientContractSheet } from "@/components/financial/ActiveClientContractSheet";
 import { CancelDelinquentDialog } from "@/components/financial/CancelDelinquentDialog";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
+import { parseLocalDate } from "@/lib/dateUtils";
 
 type DatePreset = "recent" | "month" | "quarter" | "year" | "custom";
 
@@ -33,14 +36,19 @@ interface Row {
   product_color: string | null;
   sales_rep: string | null;
   payment_method: string | null;
+  payment_method_raw: string | null;
   entrada: number | null;
   installments_count: number | null;
   installments_paid: number;
+  entries_count: number;
   total_received: number;
   installment_value: number | null;
   total_value: number;
   start_date: string | null;
   created_at: string | null;
+  deal_id: string | null;
+  deal_won_at: string | null;
+  installments_detail: any;
 }
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -107,6 +115,8 @@ export default function FinancialActiveClientsPage() {
   const [productFilter, setProductFilter] = useState<string>("all");
   const [detailRow, setDetailRow] = useState<Row | null>(null);
   const [cancelRow, setCancelRow] = useState<Row | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [generating, setGenerating] = useState(false);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -309,14 +319,19 @@ export default function FinancialActiveClientsPage() {
           product_color: product?.color || null,
           sales_rep: salesRep,
           payment_method: c.payment_method ? labelPayment(c.payment_method, pmMap) : null,
+          payment_method_raw: c.payment_method || null,
           entrada: finalEntrada,
           installments_count: installmentsCount,
           installments_paid: agg?.paid || 0,
+          entries_count: agg?.count || 0,
           total_received: agg?.received || 0,
           installment_value: finalInstallmentValue,
           total_value: Number(c.value || 0),
           start_date: c.start_date || null,
           created_at: c.created_at || null,
+          deal_id: c.deal_id || null,
+          deal_won_at: fallbackDeal?.won_at || null,
+          installments_detail: c.installments_detail || null,
         };
       });
 
@@ -389,6 +404,132 @@ export default function FinancialActiveClientsPage() {
     });
     return rows;
   }, [data, search, dateRange, productFilter]);
+
+  const eligibleForBatch = useMemo(
+    () =>
+      filtered.filter(
+        (r) =>
+          r.installments_count != null &&
+          r.installments_count > r.entries_count &&
+          r.installment_value != null &&
+          r.installment_value > 0,
+      ),
+    [filtered],
+  );
+
+  const selectedRows = useMemo(
+    () => eligibleForBatch.filter((r) => selected.has(r.contract_id)),
+    [eligibleForBatch, selected],
+  );
+
+  const toggleRow = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === eligibleForBatch.length && eligibleForBatch.length > 0) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(eligibleForBatch.map((r) => r.contract_id)));
+    }
+  };
+
+  /**
+   * Determines the first due date for a contract's receivables using the deal data.
+   * Priority: installments_detail[first pending].due_date > installments_detail[0].due_date
+   *           > contract.start_date > deal.won_at > today.
+   */
+  const resolveFirstDueDate = (r: Row): Date => {
+    const det = Array.isArray(r.installments_detail) ? r.installments_detail : [];
+    // Prefer the earliest due_date in the detail (deal wizard usually orders them)
+    const detDates = det
+      .map((d: any) => d?.due_date)
+      .filter((d: any): d is string => typeof d === "string" && d.length > 0)
+      .map((s) => parseLocalDate(s))
+      .filter((d): d is Date => !!d)
+      .sort((a, b) => a.getTime() - b.getTime());
+    if (detDates.length > 0) return detDates[0];
+    const start = parseLocalDate(r.start_date);
+    if (start) return start;
+    if (r.deal_won_at) return new Date(r.deal_won_at);
+    return new Date();
+  };
+
+  const handleGenerateBatch = async () => {
+    if (!accountId || selectedRows.length === 0) return;
+    setGenerating(true);
+    let totalCreated = 0;
+    let contractsTouched = 0;
+    const failures: string[] = [];
+
+    for (const r of selectedRows) {
+      const count = r.installments_count!;
+      const alreadyExisting = r.entries_count;
+      const missing = count - alreadyExisting;
+      if (missing <= 0) continue;
+
+      const firstDue = resolveFirstDueDate(r);
+      const amount = r.installment_value!;
+      const productLabel = r.product_name || "Contrato";
+      const rows = [];
+      for (let i = 0; i < missing; i++) {
+        const installmentNumber = alreadyExisting + i + 1;
+        // Offset from the FIRST parcel date so we respect what was agreed on the deal.
+        const due = addMonths(firstDue, installmentNumber - 1);
+        rows.push({
+          account_id: accountId,
+          entry_type: "receivable",
+          description: `${productLabel} - Parcela ${installmentNumber}/${count} - ${r.client_name}`,
+          amount,
+          due_date: format(due, "yyyy-MM-dd"),
+          status: "pending",
+          client_id: r.client_id,
+          contract_id: r.contract_id,
+          deal_id: r.deal_id,
+          installment_number: installmentNumber,
+          total_installments: count,
+          currency: "BRL",
+          source: "manual",
+          is_recurring: false,
+          is_conciliated: false,
+          created_by: currentUser?.id ?? null,
+        });
+      }
+
+      const { error } = await supabase.from("financial_entries").insert(rows);
+      if (error) {
+        failures.push(`${r.client_name}: ${error.message}`);
+      } else {
+        totalCreated += rows.length;
+        contractsTouched += 1;
+      }
+    }
+
+    setGenerating(false);
+    setSelected(new Set());
+    queryClient.invalidateQueries({ queryKey: ["financial-active-clients"] });
+    queryClient.invalidateQueries({ queryKey: ["clients-financial-status-batch"] });
+
+    if (failures.length > 0) {
+      toast({
+        title: `Gerado com erros`,
+        description: `${totalCreated} recebíveis em ${contractsTouched} contrato(s). Falhas: ${failures.slice(0, 3).join(" | ")}`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Recebíveis gerados",
+        description: `${totalCreated} recebíveis criados em ${contractsTouched} contrato(s).`,
+      });
+    }
+  };
+
+
 
   return (
     <div className="space-y-4">
@@ -489,6 +630,32 @@ export default function FinancialActiveClientsPage() {
             </div>
           </div>
 
+          {eligibleForBatch.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed bg-muted/30 px-3 py-2">
+              <div className="text-xs text-muted-foreground">
+                {selected.size > 0
+                  ? `${selected.size} contrato(s) selecionado(s) para gerar recebíveis.`
+                  : `${eligibleForBatch.length} contrato(s) com parcelas faltando. Selecione para gerar em lote.`}
+                <span className="ml-1">
+                  As datas seguem o que consta na negociação (data da entrada), com uma parcela por mês.
+                </span>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleGenerateBatch}
+                disabled={generating || selectedRows.length === 0}
+              >
+                {generating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4 mr-2" />
+                )}
+                Gerar recebíveis em lote
+              </Button>
+            </div>
+          )}
+
+
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3, 4].map((i) => (
@@ -504,6 +671,17 @@ export default function FinancialActiveClientsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      <Checkbox
+                        checked={
+                          eligibleForBatch.length > 0 &&
+                          selected.size === eligibleForBatch.length
+                        }
+                        onCheckedChange={toggleAll}
+                        disabled={eligibleForBatch.length === 0}
+                        aria-label="Selecionar todos com parcelas faltando"
+                      />
+                    </TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead>Vendedor</TableHead>
@@ -518,14 +696,29 @@ export default function FinancialActiveClientsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => (
+                  {filtered.map((r) => {
+                    const isEligible =
+                      r.installments_count != null &&
+                      r.installments_count > r.entries_count &&
+                      r.installment_value != null &&
+                      r.installment_value > 0;
+                    return (
                     <TableRow key={r.contract_id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selected.has(r.contract_id)}
+                          onCheckedChange={() => toggleRow(r.contract_id)}
+                          disabled={!isEligible}
+                          aria-label={`Selecionar ${r.client_name}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="font-medium">{r.client_name}</div>
                         {r.company_name && (
                           <div className="text-xs text-muted-foreground">{r.company_name}</div>
                         )}
                       </TableCell>
+
                       <TableCell>
                         {r.product_name ? (
                           <Badge
@@ -596,7 +789,8 @@ export default function FinancialActiveClientsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
