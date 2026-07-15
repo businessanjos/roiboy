@@ -1667,8 +1667,11 @@ export default function SalesPipeline() {
           return;
         }
         if (!contractDataFromDeal.product_id) {
+          const detail = contractDataFromDeal.product_mapping_error
+            ? `\nMotivo: ${contractDataFromDeal.product_mapping_error}\n`
+            : "";
           const proceed = window.confirm(
-            `Não consegui mapear "${rawItemVenda}" para um produto ativo no catálogo.\n\n` +
+            `Não consegui mapear "${rawItemVenda}" para um produto ativo no catálogo.${detail}\n` +
             `• Verifique se o produto existe em Configurações → Produtos e está ativo.\n` +
             `• Se o nome/label mudou, atualize o mapeamento ou renomeie o produto exatamente igual.\n\n` +
             `Continuar mesmo assim criará um contrato SEM produto vinculado (comissão, dashboards por produto e badges não vão funcionar).\n\n` +
@@ -1680,6 +1683,7 @@ export default function SalesPipeline() {
           }
           toast.warning(`Contrato será criado sem produto vinculado (Item da Venda: "${rawItemVenda}")`, { duration: 8000 });
         }
+
 
         const contractData = {
           client_id: clientId,
