@@ -187,6 +187,17 @@ export default function FinancialActiveClientsPage() {
         if (!Number.isNaN(n) && n > 0 && row.deal_id) entradaByDealId.set(row.deal_id, n);
       });
 
+      // Map deal_id -> Parcelas (custom field), preferring value_number
+      const parcelasByDealId = new Map<string, number>();
+      (parcelasFieldRes.data || []).forEach((row: any) => {
+        const n = row.value_number != null
+          ? Number(row.value_number)
+          : row.value_text != null
+            ? parseInt(String(row.value_text).replace(/[^\d]/g, ""), 10)
+            : NaN;
+        if (!Number.isNaN(n) && n > 0 && row.deal_id) parcelasByDealId.set(row.deal_id, n);
+      });
+
       // Aggregate receivable entries per contract
       type Agg = { count: number; paid: number; received: number };
       const aggByContract = new Map<string, Agg>();
