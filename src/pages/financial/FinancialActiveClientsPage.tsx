@@ -167,6 +167,13 @@ export default function FinancialActiveClientsPage() {
               .in("deal_id", dealIds as string[])
               .eq("field_id", VALOR_ENTRADA_FIELD_ID)
           : Promise.resolve({ data: [], error: null } as any),
+        dealIds.length
+          ? supabase
+              .from("deal_field_values")
+              .select("deal_id, value_number, value_text")
+              .in("deal_id", dealIds as string[])
+              .eq("field_id", PARCELAS_FIELD_ID)
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
 
       // Map deal_id -> Valor de Entrada (custom field), preferring value_number
