@@ -751,6 +751,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
               firstDueDate={contract.first_due_date || null}
               installmentsDetail={contract.installments_detail ?? null}
               receivablesGenerated={contract.receivables_generated || false}
+              payerId={contract.payer_id ?? null}
               onUpdate={onUpdate}
             />
           </TabsContent>
