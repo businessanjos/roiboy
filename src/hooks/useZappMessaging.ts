@@ -913,14 +913,13 @@ export function useZappMessaging({
           const elapsedMs = Date.now() - recordingStartTimeRef.current;
           const elapsedSec = Math.max(1, Math.round(elapsedMs / 1000));
           
-          // Fix WebM duration metadata (Chrome records without it)
-          if (actualMimeType.includes('webm')) {
-            try {
-              audioBlob = await fixWebmDuration(audioBlob, elapsedMs, { logger: false });
-            } catch (e) {
-              console.warn("[AudioRecorder] fixWebmDuration failed, using raw blob:", e);
-            }
-          }
+          // NOTE: We intentionally do NOT run fixWebmDuration here.
+          // The provider (uazapi) transcodes the audio to OGG via FFmpeg, and
+          // rewriting the EBML container to inject duration was causing
+          // "FFmpeg failed on attempt 3: exit status 183" on outbound audios.
+          // We already send audio_duration_sec separately, so the WhatsApp
+          // client shows the correct duration without needing container metadata.
+
           
           const audioUrl = URL.createObjectURL(audioBlob);
           setAudioPreview({ blob: audioBlob, url: audioUrl, duration: elapsedSec });
