@@ -54,6 +54,7 @@ interface ContractNegotiationTabProps {
   firstDueDate: string | null;
   installmentsDetail?: InstallmentDetailItem[] | any;
   receivablesGenerated: boolean;
+  payerId?: string | null;
   onUpdate: () => void;
 }
 
