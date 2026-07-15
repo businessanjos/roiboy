@@ -618,60 +618,167 @@ export function ContractNegotiationTab({
         </div>
       )}
 
-      {/* Standard Negotiation */}
       {negotiationType === "standard" && (
         <div className="space-y-4">
-          {/* Payment Method */}
-          <div className="space-y-3">
-            <Label>Forma de Pagamento</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {PAYMENT_METHODS.map((method) => {
-                const Icon = method.icon;
-                return (
-                  <Button
-                    key={method.value}
-                    type="button"
-                    variant={paymentMethod === method.value ? "default" : "outline"}
-                    className="h-auto py-3 justify-start gap-2"
-                    onClick={() => setPaymentMethod(method.value)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {method.label}
-                  </Button>
-                );
-              })}
+          {/* Payment Groups (tranches) — ex.: R$100k em 10x Cartão A + R$100k em 10x Cartão B */}
+          <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-medium">Grupos de Pagamento</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use quando a venda foi dividida em mais de uma forma/cartão (ex.: Cartão A + Cartão B).
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={addGroup}>
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Adicionar grupo
+              </Button>
             </div>
-          </div>
 
-          {/* Installments */}
-          <div className="space-y-3">
-            <Label>Número de Parcelas</Label>
-            <Select
-              value={String(installments)}
-              onValueChange={(v) => setInstallments(Number(v))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {INSTALLMENT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={String(option.value)}>
-                    {option.label}
-                  </SelectItem>
+            {groups.length > 0 && (
+              <div className="space-y-2">
+                {groups.map((g) => (
+                  <div key={g.id} className="rounded-md border bg-background p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={g.label}
+                        onChange={(e) => updateGroup(g.id, { label: e.target.value })}
+                        placeholder="Rótulo (ex.: Cartão A)"
+                        className="h-8 text-sm flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeGroup(g.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground uppercase">Valor</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={g.amount}
+                          onChange={(e) => updateGroup(g.id, { amount: parseFloat(e.target.value) || 0 })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground uppercase">Nº parcelas</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={g.count}
+                          onChange={(e) => updateGroup(g.id, { count: parseInt(e.target.value, 10) || 1 })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground uppercase">Forma</Label>
+                        <Select
+                          value={g.method}
+                          onValueChange={(v) => updateGroup(g.id, { method: v })}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PAYMENT_METHODS.map((m) => (
+                              <SelectItem key={m.value} value={m.value}>
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="transferencia">Transferência</SelectItem>
+                            <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground uppercase">1º vencimento</Label>
+                        <Input
+                          type="date"
+                          value={g.first_due_date}
+                          onChange={(e) => updateGroup(g.id, { first_due_date: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <span className="text-muted-foreground">Soma dos grupos:</span>
+                  <span className={cn("font-semibold tabular-nums", groupsBalanced ? "text-primary" : "text-destructive")}>
+                    {formatCurrency(groupsTotal)}
+                    {!groupsBalanced && (
+                      <span className="ml-2 font-normal">(diferença {formatCurrency(groupsTotal - contractValue)})</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* First Due Date */}
-          <div className="space-y-3">
-            <Label>Data do 1º Vencimento</Label>
-            <Input
-              type="date"
-              value={firstDueDate}
-              onChange={(e) => setFirstDueDate(e.target.value)}
-            />
-          </div>
+          {!usingGroups && (
+            <>
+              {/* Payment Method */}
+              <div className="space-y-3">
+                <Label>Forma de Pagamento</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PAYMENT_METHODS.map((method) => {
+                    const Icon = method.icon;
+                    return (
+                      <Button
+                        key={method.value}
+                        type="button"
+                        variant={paymentMethod === method.value ? "default" : "outline"}
+                        className="h-auto py-3 justify-start gap-2"
+                        onClick={() => setPaymentMethod(method.value)}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {method.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Installments */}
+              <div className="space-y-3">
+                <Label>Número de Parcelas</Label>
+                <Select
+                  value={String(installments)}
+                  onValueChange={(v) => setInstallments(Number(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INSTALLMENT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={String(option.value)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* First Due Date */}
+              <div className="space-y-3">
+                <Label>Data do 1º Vencimento</Label>
+                <Input
+                  type="date"
+                  value={firstDueDate}
+                  onChange={(e) => setFirstDueDate(e.target.value)}
+                />
+              </div>
+            </>
+          )}
 
           {/* Summary Card */}
           <Card className="bg-muted/50">
