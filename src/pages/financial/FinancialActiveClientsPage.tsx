@@ -504,6 +504,7 @@ export default function FinancialActiveClientsPage() {
       if (missing <= 0) continue;
 
       const productLabel = r.product_name || "Contrato";
+      const categoryId = resolveCategoryId(r.product_name);
       const rows: any[] = [];
 
       // Prefer explicit installments_detail from the negotiation (respects amount,
