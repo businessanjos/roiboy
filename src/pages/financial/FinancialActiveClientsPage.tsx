@@ -836,6 +836,12 @@ export default function FinancialActiveClientsPage() {
                       <TableCell className="text-right tabular-nums text-emerald-700">
                         {r.total_received > 0 ? formatBRLPrecise(r.total_received) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
+                      <TableCell className="text-right tabular-nums text-amber-700">
+                        {(() => {
+                          const pending = Math.max(0, (r.total_value || 0) - (r.total_received || 0));
+                          return pending > 0 ? formatBRLPrecise(pending) : <span className="text-muted-foreground">—</span>;
+                        })()}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
                         {formatBRLPrecise(r.total_value)}
                       </TableCell>
