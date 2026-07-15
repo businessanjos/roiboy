@@ -458,7 +458,7 @@ export function ContractNegotiationTab({
         return;
       }
       const updatePayload: Record<string, any> = {
-        payment_method: paymentMethod,
+        payment_method: usingGroups ? (groups.length > 1 ? "misto" : groups[0]?.method || paymentMethod) : paymentMethod,
         installments_count: detail.length || installments,
         first_due_date: detail[0]?.due_date || firstDueDate,
         negotiation_type: negotiationType,
