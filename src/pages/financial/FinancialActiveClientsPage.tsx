@@ -469,6 +469,34 @@ export default function FinancialActiveClientsPage() {
     let contractsTouched = 0;
     const failures: string[] = [];
 
+    // Load income categories once to auto-classify each entry (required by DB trigger).
+    const { data: catData } = await supabase
+      .from("financial_categories")
+      .select("id, name")
+      .eq("account_id", accountId)
+      .eq("type", "income");
+    const categories = catData ?? [];
+    const resolveCategoryId = (productName: string | null): string | null => {
+      const name = (productName || "").toLowerCase();
+      // Priority: brand-specific "Vendas à Prazo - X"
+      const brandKeys = ["eternum", "private", "ryka", "conselho de anjo"];
+      for (const key of brandKeys) {
+        if (name.includes(key)) {
+          const match = categories.find(
+            (c) => c.name.toLowerCase().includes("vendas à prazo") && c.name.toLowerCase().includes(key)
+          );
+          if (match) return match.id;
+        }
+      }
+      // Fallback: any "Vendas à Prazo" category
+      const fallback =
+        categories.find((c) => c.name.toLowerCase().includes("vendas à prazo")) ??
+        categories.find((c) => c.name.toLowerCase().includes("prestação de serviços")) ??
+        categories[0];
+      return fallback?.id ?? null;
+    };
+
+
     for (const r of selectedRows) {
       const count = r.installments_count!;
       const alreadyExisting = r.entries_count;
@@ -476,6 +504,7 @@ export default function FinancialActiveClientsPage() {
       if (missing <= 0) continue;
 
       const productLabel = r.product_name || "Contrato";
+      const categoryId = resolveCategoryId(r.product_name);
       const rows: any[] = [];
 
       // Prefer explicit installments_detail from the negotiation (respects amount,
@@ -506,6 +535,7 @@ export default function FinancialActiveClientsPage() {
           const label = d.group_label || d.method_label;
           rows.push({
             account_id: accountId,
+            category_id: categoryId,
             entry_type: "receivable",
             description: `${productLabel} - Parcela ${installmentNumber}/${count}${label ? ` - ${label}` : ""} - ${r.client_name}`,
             amount: Number(d.amount ?? d.value ?? 0),
@@ -533,6 +563,7 @@ export default function FinancialActiveClientsPage() {
           const due = addMonths(firstDue, installmentNumber - 1);
           rows.push({
             account_id: accountId,
+            category_id: categoryId,
             entry_type: "receivable",
             description: `${productLabel} - Parcela ${installmentNumber}/${count} - ${r.client_name}`,
             amount,
