@@ -1821,7 +1821,7 @@ Deno.serve(async (req) => {
                       body: mediaType && mediaType !== "text" 
                         ? `${mediaType === "audio" ? "🎤 Áudio" : mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : mediaType === "document" ? "📄 Documento" : "📎 Mídia"}${content ? ": " + content.substring(0, 80) : ""}`
                         : (content || "Nova mensagem").substring(0, 120),
-                      url: "/royzapp",
+                      url: `/roy-zapp?conversation=${zappConversationId}`,
                       tag: `zapp-${zappConversationId}-${Date.now()}`,
                       category: "zapp_messages",
                       sector_id: sectorId || null,
