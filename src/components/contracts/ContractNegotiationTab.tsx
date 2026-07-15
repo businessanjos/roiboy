@@ -150,7 +150,14 @@ export function ContractNegotiationTab({
 
 
   // Editable installments detail (source of truth for what's saved / generated)
-  type EditableInstallment = { amount: number; due_date: string; method: string };
+  type EditableInstallment = {
+    amount: number;
+    due_date: string;
+    method: string;
+    method_label?: string | null;
+    group_id?: string | null;
+    group_label?: string | null;
+  };
   const buildDetail = (
     count: number,
     startDate: string,
@@ -168,6 +175,66 @@ export function ContractNegotiationTab({
     }));
   };
 
+  // ---- Payment groups (tranches: ex. R$100k Cartão A + R$100k Cartão B) ----
+  const genGroupId = () =>
+    (typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `g_${Math.random().toString(36).slice(2, 10)}`);
+
+  // Detect pre-existing groups from installments_detail
+  const detectedGroups: PaymentGroup[] = (() => {
+    if (!hasSalesBreakdown) return [];
+    const byGroup = new Map<string, InstallmentDetailItem[]>();
+    for (const d of salesBreakdown) {
+      const key = (d.group_id || "") as string;
+      if (!key) continue;
+      const arr = byGroup.get(key) ?? [];
+      arr.push(d);
+      byGroup.set(key, arr);
+    }
+    if (byGroup.size < 2) return [];
+    const result: PaymentGroup[] = [];
+    byGroup.forEach((items, id) => {
+      const dates = items
+        .map((i) => i.due_date)
+        .filter((s): s is string => !!s)
+        .sort();
+      result.push({
+        id,
+        label: (items[0]?.group_label as string) || (items[0]?.method_label as string) || "Grupo",
+        method: (items[0]?.method as string) || "pix",
+        amount: items.reduce((s, i) => s + Number(i.amount ?? i.value ?? 0), 0),
+        count: items.length,
+        first_due_date: dates[0] || format(new Date(), "yyyy-MM-dd"),
+      });
+    });
+    return result;
+  })();
+
+  const [groups, setGroups] = useState<PaymentGroup[]>(detectedGroups);
+  const usingGroups = groups.length > 0;
+
+  const buildDetailFromGroups = (gs: PaymentGroup[]): EditableInstallment[] => {
+    const out: EditableInstallment[] = [];
+    for (const g of gs) {
+      const safeCount = Math.max(1, Math.floor(g.count || 1));
+      const base = Math.floor((g.amount / safeCount) * 100) / 100;
+      const remainder = Math.round((g.amount - base * safeCount) * 100) / 100;
+      const startD = g.first_due_date ? parseISO(g.first_due_date) : new Date();
+      for (let i = 0; i < safeCount; i++) {
+        out.push({
+          amount: i === 0 ? Math.round((base + remainder) * 100) / 100 : base,
+          due_date: format(addMonths(startD, i), "yyyy-MM-dd"),
+          method: g.method || "pix",
+          method_label: g.label,
+          group_id: g.id,
+          group_label: g.label,
+        });
+      }
+    }
+    return out;
+  };
+
   const initialEditable: EditableInstallment[] = hasSalesBreakdown
     ? salesBreakdown.map((d, i) => ({
         amount: Number(d.amount ?? d.value ?? 0),
@@ -175,6 +242,9 @@ export function ContractNegotiationTab({
           d.due_date ||
           format(addMonths(parseISO(initialDueDate || format(new Date(), "yyyy-MM-dd")), i), "yyyy-MM-dd"),
         method: d.method || initialMethod || "pix",
+        method_label: (d.method_label as string) || null,
+        group_id: (d.group_id as string) || null,
+        group_label: (d.group_label as string) || null,
       }))
     : buildDetail(
         initialInstallments || 1,
