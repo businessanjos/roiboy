@@ -636,8 +636,8 @@ export default function FinancialActiveClientsPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed bg-muted/30 px-3 py-2">
               <div className="text-xs text-muted-foreground">
                 {selected.size > 0
-                  ? `${selected.size} contrato(s) selecionado(s) para gerar recebíveis.`
-                  : `${eligibleForBatch.length} contrato(s) com parcelas faltando. Selecione para gerar em lote.`}
+                  ? `${selected.size} selecionado(s) · ${selectedRows.length} com parcelas a gerar.`
+                  : `${eligibleForBatch.length} contrato(s) com parcelas faltando. Marque o cabeçalho para selecionar todos.`}
                 <span className="ml-1">
                   As datas seguem o que consta na negociação (data da entrada), com uma parcela por mês.
                 </span>
@@ -652,7 +652,7 @@ export default function FinancialActiveClientsPage() {
                 ) : (
                   <Wand2 className="h-4 w-4 mr-2" />
                 )}
-                Gerar recebíveis em lote
+                Gerar recebíveis em lote ({selectedRows.length})
               </Button>
             </div>
           )}
