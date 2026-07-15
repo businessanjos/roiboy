@@ -866,8 +866,13 @@ export function ContractNegotiationTab({
                   key={idx}
                   className="grid grid-cols-[32px_1fr_140px_140px_32px] gap-2 px-3 py-2 items-center"
                 >
-                  <span className="text-xs text-muted-foreground tabular-nums">
+                  <span className="text-xs text-muted-foreground tabular-nums flex items-center gap-1">
                     {idx + 1}
+                    {d.group_label && (
+                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                        {d.group_label}
+                      </Badge>
+                    )}
                   </span>
                   <Input
                     type="number"
