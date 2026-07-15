@@ -7,20 +7,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, ExternalLink, CalendarIcon, Eye, Ban } from "lucide-react";
+import { Users, Search, ExternalLink, CalendarIcon, Eye, Ban, Wand2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import { formatBRLPrecise } from "@/lib/financial-format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, startOfMonth, startOfQuarter, startOfYear, endOfMonth, endOfQuarter, endOfYear } from "date-fns";
+import { format, startOfMonth, startOfQuarter, startOfYear, endOfMonth, endOfQuarter, endOfYear, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { ActiveClientContractSheet } from "@/components/financial/ActiveClientContractSheet";
 import { CancelDelinquentDialog } from "@/components/financial/CancelDelinquentDialog";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
+import { parseLocalDate } from "@/lib/dateUtils";
 
 type DatePreset = "recent" | "month" | "quarter" | "year" | "custom";
 
