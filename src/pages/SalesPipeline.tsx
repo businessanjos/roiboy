@@ -1665,7 +1665,8 @@ export default function SalesPipeline() {
           value: deal.value || 0,
           contract_type: 'Compra',
           status: 'active',
-          receivables_generated: false, // Ensures it goes to reconciliation queue
+          receivables_generated: false, // será marcado true logo abaixo após preparar installments_detail (ou fallback)
+
           notes: `Contrato gerado automaticamente do negócio: ${deal.title}`,
           product_id: contractDataFromDeal.product_id || null,
           payment_method: contractDataFromDeal.payment_method || null,
@@ -1856,7 +1857,19 @@ export default function SalesPipeline() {
                   }
                 }
               } else {
-                console.log("[MarkAsWon] Skipping auto-installments: no breakdown or parcelas");
+                console.log("[MarkAsWon] Sem breakdown/parcelas — disparando geração de recebíveis a partir do valor do contrato");
+                const { error: fallbackFlagErr } = await supabase
+                  .from("client_contracts")
+                  .update({
+                    receivables_generated: true,
+                    receivables_generated_at: new Date().toISOString(),
+                  })
+                  .eq("id", newContract.id);
+                if (fallbackFlagErr) {
+                  console.error("[MarkAsWon] Fallback receivables flag error:", fallbackFlagErr);
+                } else {
+                  toast.success("Recebíveis do contrato gerados automaticamente no financeiro");
+                }
               }
             } catch (autoErr) {
               console.error("[MarkAsWon] Error auto-generating installments:", autoErr);
