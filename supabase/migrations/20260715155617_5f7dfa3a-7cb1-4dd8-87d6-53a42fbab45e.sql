@@ -1,0 +1,4 @@
+UPDATE public.users SET zapp_signature = 'Consultora Andréia | Eternum', zapp_signature_enabled = true WHERE id = 'e0017d78-21d4-413a-befc-5197df7ad666';
+UPDATE public.users SET zapp_signature = 'Consultora Camila | Eternum',  zapp_signature_enabled = true WHERE id = '95828516-4536-45ab-93a2-4aa278081d33';
+UPDATE public.users SET zapp_signature = 'Consultora Jessica | Eternum', zapp_signature_enabled = true WHERE id = 'a1625047-8b72-4b1b-a42c-24bbdc9fd143';
+UPDATE public.users SET zapp_signature = 'Consultora Maria | Eternum',   zapp_signature_enabled = true WHERE id = '0a9f7f34-cce9-4687-9f94-51f84f7324ea';
