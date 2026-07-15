@@ -319,6 +319,18 @@ export function ContractNegotiationTab({
     setGroups((prev) => prev.filter((g) => g.id !== id));
   };
 
+  const serializeDetail = () =>
+    detail.map((d, i) => ({
+      number: i + 1,
+      amount: Number(d.amount) || 0,
+      due_date: d.due_date,
+      method: d.method,
+      method_label: d.method_label ?? d.group_label ?? null,
+      group_id: d.group_id ?? null,
+      group_label: d.group_label ?? null,
+    }));
+
+
 
   const detailTotal = useMemo(
     () => Math.round(detail.reduce((s, d) => s + (Number(d.amount) || 0), 0) * 100) / 100,
