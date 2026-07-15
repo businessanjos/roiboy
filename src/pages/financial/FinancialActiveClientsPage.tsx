@@ -405,6 +405,132 @@ export default function FinancialActiveClientsPage() {
     return rows;
   }, [data, search, dateRange, productFilter]);
 
+  const eligibleForBatch = useMemo(
+    () =>
+      filtered.filter(
+        (r) =>
+          r.installments_count != null &&
+          r.installments_count > r.entries_count &&
+          r.installment_value != null &&
+          r.installment_value > 0,
+      ),
+    [filtered],
+  );
+
+  const selectedRows = useMemo(
+    () => eligibleForBatch.filter((r) => selected.has(r.contract_id)),
+    [eligibleForBatch, selected],
+  );
+
+  const toggleRow = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === eligibleForBatch.length && eligibleForBatch.length > 0) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(eligibleForBatch.map((r) => r.contract_id)));
+    }
+  };
+
+  /**
+   * Determines the first due date for a contract's receivables using the deal data.
+   * Priority: installments_detail[first pending].due_date > installments_detail[0].due_date
+   *           > contract.start_date > deal.won_at > today.
+   */
+  const resolveFirstDueDate = (r: Row): Date => {
+    const det = Array.isArray(r.installments_detail) ? r.installments_detail : [];
+    // Prefer the earliest due_date in the detail (deal wizard usually orders them)
+    const detDates = det
+      .map((d: any) => d?.due_date)
+      .filter((d: any): d is string => typeof d === "string" && d.length > 0)
+      .map((s) => parseLocalDate(s))
+      .filter((d): d is Date => !!d)
+      .sort((a, b) => a.getTime() - b.getTime());
+    if (detDates.length > 0) return detDates[0];
+    const start = parseLocalDate(r.start_date);
+    if (start) return start;
+    if (r.deal_won_at) return new Date(r.deal_won_at);
+    return new Date();
+  };
+
+  const handleGenerateBatch = async () => {
+    if (!accountId || selectedRows.length === 0) return;
+    setGenerating(true);
+    let totalCreated = 0;
+    let contractsTouched = 0;
+    const failures: string[] = [];
+
+    for (const r of selectedRows) {
+      const count = r.installments_count!;
+      const alreadyExisting = r.entries_count;
+      const missing = count - alreadyExisting;
+      if (missing <= 0) continue;
+
+      const firstDue = resolveFirstDueDate(r);
+      const amount = r.installment_value!;
+      const productLabel = r.product_name || "Contrato";
+      const rows = [];
+      for (let i = 0; i < missing; i++) {
+        const installmentNumber = alreadyExisting + i + 1;
+        // Offset from the FIRST parcel date so we respect what was agreed on the deal.
+        const due = addMonths(firstDue, installmentNumber - 1);
+        rows.push({
+          account_id: accountId,
+          entry_type: "receivable",
+          description: `${productLabel} - Parcela ${installmentNumber}/${count} - ${r.client_name}`,
+          amount,
+          due_date: format(due, "yyyy-MM-dd"),
+          status: "pending",
+          client_id: r.client_id,
+          contract_id: r.contract_id,
+          deal_id: r.deal_id,
+          installment_number: installmentNumber,
+          total_installments: count,
+          currency: "BRL",
+          source: "manual",
+          is_recurring: false,
+          is_conciliated: false,
+          created_by: currentUser?.id ?? null,
+        });
+      }
+
+      const { error } = await supabase.from("financial_entries").insert(rows);
+      if (error) {
+        failures.push(`${r.client_name}: ${error.message}`);
+      } else {
+        totalCreated += rows.length;
+        contractsTouched += 1;
+      }
+    }
+
+    setGenerating(false);
+    setSelected(new Set());
+    queryClient.invalidateQueries({ queryKey: ["financial-active-clients"] });
+    queryClient.invalidateQueries({ queryKey: ["clients-financial-status-batch"] });
+
+    if (failures.length > 0) {
+      toast({
+        title: `Gerado com erros`,
+        description: `${totalCreated} recebíveis em ${contractsTouched} contrato(s). Falhas: ${failures.slice(0, 3).join(" | ")}`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Recebíveis gerados",
+        description: `${totalCreated} recebíveis criados em ${contractsTouched} contrato(s).`,
+      });
+    }
+  };
+
+
+
   return (
     <div className="space-y-4">
       <Card>
