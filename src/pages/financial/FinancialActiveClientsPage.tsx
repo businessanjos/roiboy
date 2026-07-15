@@ -129,8 +129,9 @@ export default function FinancialActiveClientsPage() {
 
       // Custom field IDs (see src/utils/dealToClientContractMapping.ts)
       const VALOR_ENTRADA_FIELD_ID = "86c93211-5013-48a6-affe-e53d81931cb6";
+      const PARCELAS_FIELD_ID = "069ee7f8-befd-482d-990d-13048b17180c";
 
-      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes, entriesRes, entradaFieldRes] = await Promise.all([
+      const [clientsRes, productsRes, dealsRes, paymentMethodsRes, dealsByClientRes, entriesRes, entradaFieldRes, parcelasFieldRes] = await Promise.all([
         clientIds.length
           ? supabase.from("clients").select("id, full_name, company_name, sales_user_id").in("id", clientIds as string[])
           : Promise.resolve({ data: [], error: null } as any),
@@ -166,6 +167,13 @@ export default function FinancialActiveClientsPage() {
               .in("deal_id", dealIds as string[])
               .eq("field_id", VALOR_ENTRADA_FIELD_ID)
           : Promise.resolve({ data: [], error: null } as any),
+        dealIds.length
+          ? supabase
+              .from("deal_field_values")
+              .select("deal_id, value_number, value_text")
+              .in("deal_id", dealIds as string[])
+              .eq("field_id", PARCELAS_FIELD_ID)
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
 
       // Map deal_id -> Valor de Entrada (custom field), preferring value_number
@@ -177,6 +185,17 @@ export default function FinancialActiveClientsPage() {
             ? Number(String(row.value_text).replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", "."))
             : NaN;
         if (!Number.isNaN(n) && n > 0 && row.deal_id) entradaByDealId.set(row.deal_id, n);
+      });
+
+      // Map deal_id -> Parcelas (custom field), preferring value_number
+      const parcelasByDealId = new Map<string, number>();
+      (parcelasFieldRes.data || []).forEach((row: any) => {
+        const n = row.value_number != null
+          ? Number(row.value_number)
+          : row.value_text != null
+            ? parseInt(String(row.value_text).replace(/[^\d]/g, ""), 10)
+            : NaN;
+        if (!Number.isNaN(n) && n > 0 && row.deal_id) parcelasByDealId.set(row.deal_id, n);
       });
 
       // Aggregate receivable entries per contract
@@ -260,11 +279,20 @@ export default function FinancialActiveClientsPage() {
         const agg = aggByContract.get(c.id);
         const contractCount = Number(c.installments_count) || 0;
         const detailCount = Array.isArray(c.installments_detail) ? c.installments_detail.length : 0;
+        const parcelasFromCustomField = c.deal_id ? parcelasByDealId.get(c.deal_id) ?? 0 : 0;
         const installmentsCount = Math.max(
           contractCount,
           detailCount,
-          agg?.count || 0
+          agg?.count || 0,
+          parcelasFromCustomField
         ) || null;
+        // Recompute installment value when count came from the deal's custom field
+        const finalInstallmentValue =
+          installmentValue != null
+            ? installmentValue
+            : installmentsCount && installmentsCount > 0
+              ? Number(c.value || 0) / installmentsCount
+              : null;
         return {
           contract_id: c.id,
           client_id: c.client_id,
@@ -278,7 +306,7 @@ export default function FinancialActiveClientsPage() {
           installments_count: installmentsCount,
           installments_paid: agg?.paid || 0,
           total_received: agg?.received || 0,
-          installment_value: installmentValue,
+          installment_value: finalInstallmentValue,
           total_value: Number(c.value || 0),
           start_date: c.start_date || null,
           created_at: c.created_at || null,
