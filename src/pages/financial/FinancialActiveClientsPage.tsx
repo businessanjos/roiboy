@@ -535,6 +535,7 @@ export default function FinancialActiveClientsPage() {
           const label = d.group_label || d.method_label;
           rows.push({
             account_id: accountId,
+            category_id: categoryId,
             entry_type: "receivable",
             description: `${productLabel} - Parcela ${installmentNumber}/${count}${label ? ` - ${label}` : ""} - ${r.client_name}`,
             amount: Number(d.amount ?? d.value ?? 0),
