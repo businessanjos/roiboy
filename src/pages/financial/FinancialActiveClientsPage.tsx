@@ -115,6 +115,8 @@ export default function FinancialActiveClientsPage() {
   const [productFilter, setProductFilter] = useState<string>("all");
   const [detailRow, setDetailRow] = useState<Row | null>(null);
   const [cancelRow, setCancelRow] = useState<Row | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [generating, setGenerating] = useState(false);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
