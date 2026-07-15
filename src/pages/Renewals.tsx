@@ -54,6 +54,7 @@ const RENEWALS_FULL_ACCESS_USER_IDS = [
   "a1625047-8b72-4b1b-a42c-24bbdc9fd143", // Jéssica Campos
   "c064c5d5-cdb5-47cc-99ce-ad416b6407b1", // Jéssica Marcato
   "b625a448-23e6-40bf-a503-d876a9a701db", // Bruna
+  "0a9f7f34-cce9-4687-9f94-51f84f7324ea", // Maria (Suporte Anjos)
 ];
 
 export default function Renewals() {
