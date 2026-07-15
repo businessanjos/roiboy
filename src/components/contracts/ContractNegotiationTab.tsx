@@ -769,7 +769,7 @@ export function ContractNegotiationTab({
           ) : (
             <Button
               onClick={handleGenerateReceivables}
-              disabled={generating || !paymentMethod || !detailBalanced}
+              disabled={generating || !paymentMethod || !detailBalanced || !payerId}
               className="w-full"
               size="lg"
             >
