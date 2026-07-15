@@ -352,39 +352,57 @@ export interface ContractDataFromDeal {
   product_id?: string | null;
   payment_method?: string | null;
   negotiation_description?: string | null;
+  /** Motivo detalhado quando o mapeamento do Item da Venda não resolveu para um produto. */
+  product_mapping_error?: string | null;
+  /** Valor bruto do Item da Venda que veio do deal, para exibir em mensagens de erro. */
+  raw_item_venda?: string | null;
 }
 
 export async function getContractDataFromDealFields(
   dealFieldValues: DealFieldValues
 ): Promise<ContractDataFromDeal> {
   const result: ContractDataFromDeal = {};
-  
-  // Map Item da Venda to product_id
-  if (dealFieldValues.itemVenda) {
-    console.log('[DealMapping] Getting contract data - itemVenda:', dealFieldValues.itemVenda);
-    result.product_id = await mapItemVendaToProductId(dealFieldValues.itemVenda);
-    
-    if (!result.product_id) {
-      console.error('[DealMapping] CRITICAL: Failed to map itemVenda to product:', dealFieldValues.itemVenda);
+
+  const rawItemVenda = (dealFieldValues.itemVenda ?? "").toString().trim();
+  result.raw_item_venda = rawItemVenda || null;
+
+  if (rawItemVenda) {
+    console.log('[DealMapping] Getting contract data - itemVenda:', rawItemVenda);
+    try {
+      result.product_id = await mapItemVendaToProductId(rawItemVenda);
+    } catch (err: any) {
+      result.product_id = null;
+      result.product_mapping_error = `Erro ao consultar produtos: ${err?.message ?? err}`;
+      console.error('[DealMapping] Exception mapping itemVenda:', err);
+    }
+
+    if (!result.product_id && !result.product_mapping_error) {
+      const label = await getItemVendaLabel(rawItemVenda).catch(() => null);
+      result.product_mapping_error =
+        `Não foi possível mapear "${label ?? rawItemVenda}" para um produto ativo. ` +
+        `Verifique se o produto existe em Configurações → Produtos e se o nome bate exatamente.`;
+      console.error('[DealMapping] CRITICAL: Failed to map itemVenda to product:', rawItemVenda);
     }
   } else {
+    result.product_mapping_error = "Item da Venda não preenchido no negócio.";
     console.warn('[DealMapping] No itemVenda in deal field values');
   }
-  
+
   // Map Forma de Pagamento
   if (dealFieldValues.formaPagamento) {
     result.payment_method = dealFieldValues.formaPagamento;
   }
-  
+
   // Map Descrição da Negociação
   if (dealFieldValues.descricaoNegociacao) {
     result.negotiation_description = dealFieldValues.descricaoNegociacao;
   }
-  
+
   console.log('[DealMapping] Contract data result:', result);
-  
+
   return result;
 }
+
 
 // Helper function to format field values for timeline display
 function formatFieldValueForTimeline(
