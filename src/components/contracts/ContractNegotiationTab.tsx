@@ -426,8 +426,14 @@ export function ContractNegotiationTab({
       return;
     }
 
-    if (!paymentMethod) {
+    if (!usingGroups && !paymentMethod) {
       toast.error("Selecione uma forma de pagamento");
+      return;
+    }
+    if (usingGroups && !groupsBalanced) {
+      toast.error(
+        `A soma dos grupos (${formatCurrency(groupsTotal)}) precisa fechar com o total do contrato (${formatCurrency(contractValue)}).`
+      );
       return;
     }
 
