@@ -456,12 +456,7 @@ export function ContractNegotiationTab({
         installments_count: detail.length || installments,
         first_due_date: detail[0]?.due_date || firstDueDate,
         negotiation_type: negotiationType,
-        installments_detail: detail.map((d, i) => ({
-          number: i + 1,
-          amount: Number(d.amount) || 0,
-          due_date: d.due_date,
-          method: d.method,
-        })),
+        installments_detail: serializeDetail(),
       };
 
       const { error: prepError } = await supabase
