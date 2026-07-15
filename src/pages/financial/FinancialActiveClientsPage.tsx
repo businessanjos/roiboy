@@ -707,7 +707,6 @@ export default function FinancialActiveClientsPage() {
                         <Checkbox
                           checked={selected.has(r.contract_id)}
                           onCheckedChange={() => toggleRow(r.contract_id)}
-                          disabled={!isEligible}
                           aria-label={`Selecionar ${r.client_name}`}
                         />
                       </TableCell>
