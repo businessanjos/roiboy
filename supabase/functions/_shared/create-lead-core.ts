@@ -203,90 +203,21 @@ export async function createLeadCore(
     }))
     .filter((m) => m.value_text !== null);
 
-  // Product-aware MQL override
+  // MQL simples: qualquer faturamento > 30k = MQL (opt_1). Regra product-aware
+  // desativada em 07/2026 a pedido do time (gerava divergência entre badge e roteamento).
   const MQL_FIELD_ID = "e4270e93-e9b9-4d9b-9589-d614ce335bcd";
-  const FATURAMENTO_FIELD_ID = "e352a1ca-cfbc-435a-95f7-2f53b5cac041";
   const rawRevenue = payload.revenue_range?.trim() || "";
   if (rawRevenue) {
-    const normalizedRaw = normalize(rawRevenue);
-    const faturamentoField = customFields?.find((f: any) => f.id === FATURAMENTO_FIELD_ID);
-    const matchedOption = (faturamentoField?.options as any[])?.find(
-      (opt: any) => normalize(opt.label) === normalizedRaw || opt.value === rawRevenue,
-    );
-    const resolvedFatValue = matchedOption?.value || rawRevenue;
-    const labelToAnalyze = matchedOption ? normalize(matchedOption.label) : normalizedRaw;
-
-    const { data: productsWithCriteria } = await supabase
-      .from("products")
-      .select("id, name, mql_criteria")
-      .eq("account_id", accountId)
-      .eq("is_active", true)
-      .not("mql_criteria", "is", null);
-
-    let mqlDetermined = false;
-    let mqlValue = "opt_1";
-
-    if (productsWithCriteria && productsWithCriteria.length > 0) {
-      const leadSegment = payload.segment?.trim() || "";
-      const leadSpecialty = payload.specialty?.trim() || "";
-      const normalizedLeadSegment = leadSegment ? normalize(leadSegment) : "";
-      const normalizedLeadSpecialty = leadSpecialty ? normalize(leadSpecialty) : "";
-
-      const KNOWN_SEGMENTS = [
-        "clinica de estetica",
-        "esteticista autonoma",
-        "biomedica",
-        "medico",
-        "dentista",
-      ];
-
-      const resolvedLeadSegment = normalizedLeadSegment
-        ? (KNOWN_SEGMENTS.includes(normalizedLeadSegment) ? normalizedLeadSegment : "outros")
-        : "";
-
-      const matchesAnyProduct = productsWithCriteria.some((prod: any) => {
-        const criteria = prod.mql_criteria;
-        if (!criteria) return false;
-
-        const hasRevenueCriteria = criteria.revenue_ranges && criteria.revenue_ranges.length > 0;
-        let revenueMatches = true;
-        if (hasRevenueCriteria) {
-          const revenueKey = resolveRevenueKey(labelToAnalyze, resolvedFatValue);
-          revenueMatches = criteria.revenue_ranges.includes(revenueKey);
-        }
-        if (!revenueMatches) return false;
-
-        const hasSegmentCriteria = criteria.segments && criteria.segments.length > 0;
-        if (hasSegmentCriteria && resolvedLeadSegment) {
-          const normalizedCriteriaSegments = criteria.segments.map((s: string) => normalize(s));
-          const segmentMatches = normalizedCriteriaSegments.includes(resolvedLeadSegment);
-          if (!segmentMatches) return false;
-        }
-
-        const hasSpecialtyCriteria = criteria.specialties && criteria.specialties.length > 0;
-        if (hasSpecialtyCriteria && normalizedLeadSpecialty && normalizedLeadSegment === "medico") {
-          const normalizedCriteriaSpecialties = criteria.specialties.map((s: string) => normalize(s));
-          const specialtyMatches = normalizedCriteriaSpecialties.includes(normalizedLeadSpecialty);
-          if (!specialtyMatches) return false;
-        }
-
-        return true;
-      });
-
-      mqlValue = matchesAnyProduct ? "opt_1" : "opt_2";
-      mqlDetermined = true;
-    }
-
-    if (!mqlDetermined) {
-      const isBelow30k = (() => {
-        const abaixoMatch = labelToAnalyze.match(/abaixo\s+de\s+(\d+)/);
-        if (abaixoMatch && parseInt(abaixoMatch[1]) <= 30) return true;
-        const entreMatch = labelToAnalyze.match(/entre\s+(\d+)\s+e\s+(\d+)/);
-        if (entreMatch && parseInt(entreMatch[2]) <= 30) return true;
-        return false;
-      })();
-      mqlValue = isBelow30k ? "opt_2" : "opt_1";
-    }
+    const labelToAnalyze = normalize(rawRevenue);
+    const isBelow30k = (() => {
+      const abaixoMatch = labelToAnalyze.match(/abaixo\s+de\s+(\d+)/);
+      if (abaixoMatch && parseInt(abaixoMatch[1]) <= 30) return true;
+      const entreMatch = labelToAnalyze.match(/entre\s+(\d+)\s+e\s+(\d+)/);
+      if (entreMatch && parseInt(entreMatch[2]) <= 30) return true;
+      if (/ate\s+30|até\s+30/.test(labelToAnalyze)) return true;
+      return false;
+    })();
+    const mqlValue = isBelow30k ? "opt_2" : "opt_1";
 
     const existingMql = fieldInserts.findIndex((f) => f.field_id === MQL_FIELD_ID);
     if (existingMql >= 0) {
@@ -298,6 +229,12 @@ export async function createLeadCore(
         account_id: accountId,
         value_text: mqlValue,
       });
+    }
+
+    // Mantém leads.mql sincronizado com a regra do roteamento
+    const mqlLabel = mqlValue === "opt_1" ? "SIM - Acima de 30k" : "NÃO - Abaixo de 30k";
+    if ((payload.mql || "").trim() !== mqlLabel) {
+      await supabase.from("leads").update({ mql: mqlLabel }).eq("id", newLead.id);
     }
   }
 
