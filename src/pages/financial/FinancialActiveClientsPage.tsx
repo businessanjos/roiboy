@@ -431,11 +431,13 @@ export default function FinancialActiveClientsPage() {
     });
   };
 
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((r) => selected.has(r.contract_id));
   const toggleAll = () => {
-    if (selected.size === eligibleForBatch.length && eligibleForBatch.length > 0) {
+    if (allFilteredSelected) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(eligibleForBatch.map((r) => r.contract_id)));
+      setSelected(new Set(filtered.map((r) => r.contract_id)));
     }
   };
 
