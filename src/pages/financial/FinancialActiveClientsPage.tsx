@@ -317,14 +317,19 @@ export default function FinancialActiveClientsPage() {
           product_color: product?.color || null,
           sales_rep: salesRep,
           payment_method: c.payment_method ? labelPayment(c.payment_method, pmMap) : null,
+          payment_method_raw: c.payment_method || null,
           entrada: finalEntrada,
           installments_count: installmentsCount,
           installments_paid: agg?.paid || 0,
+          entries_count: agg?.count || 0,
           total_received: agg?.received || 0,
           installment_value: finalInstallmentValue,
           total_value: Number(c.value || 0),
           start_date: c.start_date || null,
           created_at: c.created_at || null,
+          deal_id: c.deal_id || null,
+          deal_won_at: fallbackDeal?.won_at || null,
+          installments_detail: c.installments_detail || null,
         };
       });
 
