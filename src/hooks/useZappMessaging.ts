@@ -1049,7 +1049,8 @@ export function useZappMessaging({
           media_url: mediaUrl,
           media_type: "audio",
           media_mimetype: audioBlob.type,
-          media_filename: `audio_${Date.now()}.webm`,
+          media_filename: `audio_${Date.now()}.${extension}`,
+
           audio_duration_sec: duration || null,
           media_download_status: "completed",
           sent_at: now,
