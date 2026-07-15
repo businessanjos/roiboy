@@ -280,10 +280,45 @@ export function ContractNegotiationTab({
 
   // Auto-recalculate detail when inputs change, unless the user has manually edited
   useEffect(() => {
+    if (usingGroups) {
+      setDetail(buildDetailFromGroups(groups));
+      setDetailDirty(false);
+      return;
+    }
     if (detailDirty) return;
     setDetail(buildDetail(installments, firstDueDate, paymentMethod, contractValue));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [installments, firstDueDate, paymentMethod, contractValue]);
+  }, [installments, firstDueDate, paymentMethod, contractValue, groups, usingGroups]);
+
+  const groupsTotal = useMemo(
+    () => Math.round(groups.reduce((s, g) => s + (Number(g.amount) || 0), 0) * 100) / 100,
+    [groups]
+  );
+  const groupsBalanced = Math.abs(groupsTotal - contractValue) < 0.01;
+
+  const addGroup = () => {
+    const remaining = Math.max(0, Math.round((contractValue - groupsTotal) * 100) / 100);
+    const nextIdx = groups.length + 1;
+    const label = `Cartão ${String.fromCharCode(64 + nextIdx)}`; // A, B, C...
+    const newGroup: PaymentGroup = {
+      id: genGroupId(),
+      label,
+      method: "cartao",
+      amount: remaining > 0 ? remaining : Math.round((contractValue / 2) * 100) / 100,
+      count: installments || 10,
+      first_due_date: firstDueDate || format(new Date(), "yyyy-MM-dd"),
+    };
+    setGroups((prev) => [...prev, newGroup]);
+  };
+
+  const updateGroup = (id: string, patch: Partial<PaymentGroup>) => {
+    setGroups((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
+  };
+
+  const removeGroup = (id: string) => {
+    setGroups((prev) => prev.filter((g) => g.id !== id));
+  };
+
 
   const detailTotal = useMemo(
     () => Math.round(detail.reduce((s, d) => s + (Number(d.amount) || 0), 0) * 100) / 100,
