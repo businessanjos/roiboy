@@ -928,7 +928,11 @@ export function useZappMessaging({
         }
       };
       
-      mediaRecorder.start(100);
+      // No timeslice: request a single final blob at stop().
+      // Using start(100) produced fragmented WebM clusters that uazapi's
+      // FFmpeg could not remux to OGG (exit status 183).
+      mediaRecorder.start();
+
       setIsRecording(true);
       setRecordingDuration(0);
       recordingStartTimeRef.current = Date.now();
