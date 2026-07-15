@@ -671,6 +671,17 @@ export default function FinancialActiveClientsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      <Checkbox
+                        checked={
+                          eligibleForBatch.length > 0 &&
+                          selected.size === eligibleForBatch.length
+                        }
+                        onCheckedChange={toggleAll}
+                        disabled={eligibleForBatch.length === 0}
+                        aria-label="Selecionar todos com parcelas faltando"
+                      />
+                    </TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead>Vendedor</TableHead>
@@ -685,14 +696,29 @@ export default function FinancialActiveClientsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => (
+                  {filtered.map((r) => {
+                    const isEligible =
+                      r.installments_count != null &&
+                      r.installments_count > r.entries_count &&
+                      r.installment_value != null &&
+                      r.installment_value > 0;
+                    return (
                     <TableRow key={r.contract_id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selected.has(r.contract_id)}
+                          onCheckedChange={() => toggleRow(r.contract_id)}
+                          disabled={!isEligible}
+                          aria-label={`Selecionar ${r.client_name}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="font-medium">{r.client_name}</div>
                         {r.company_name && (
                           <div className="text-xs text-muted-foreground">{r.company_name}</div>
                         )}
                       </TableCell>
+
                       <TableCell>
                         {r.product_name ? (
                           <Badge
