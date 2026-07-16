@@ -650,10 +650,10 @@ export default function FinancialActiveClientsPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed bg-muted/30 px-3 py-2">
               <div className="text-xs text-muted-foreground">
                 {selected.size > 0
-                  ? `${selected.size} selecionado(s) · ${selectedRows.length} com parcelas a gerar.`
-                  : `${eligibleForBatch.length} contrato(s) com parcelas faltando. Marque o cabeçalho para selecionar todos.`}
+                  ? `${selected.size} selecionado(s) · ${selectedRows.length} contrato(s) para gerar fatura.`
+                  : `${eligibleForBatch.length} contrato(s) sem fatura ainda. Marque o cabeçalho para selecionar todos.`}
                 <span className="ml-1">
-                  As datas seguem o que consta na negociação (data da entrada), com uma parcela por mês.
+                  Cria fatura + parcelas oficiais (aparecem em Financeiro › Parcelas). Idempotente: pula contratos que já têm fatura.
                 </span>
               </div>
               <Button
@@ -666,10 +666,11 @@ export default function FinancialActiveClientsPage() {
                 ) : (
                   <Wand2 className="h-4 w-4 mr-2" />
                 )}
-                Gerar recebíveis em lote ({selectedRows.length})
+                Gerar faturas em lote ({selectedRows.length})
               </Button>
             </div>
           )}
+
 
 
           {isLoading ? (
