@@ -465,152 +465,43 @@ export default function FinancialActiveClientsPage() {
   const handleGenerateBatch = async () => {
     if (!accountId || selectedRows.length === 0) return;
     setGenerating(true);
-    let totalCreated = 0;
-    let contractsTouched = 0;
+    let invoicesCreated = 0;
+    let skipped = 0;
     const failures: string[] = [];
 
-    // Load income categories once to auto-classify each entry (required by DB trigger).
-    const { data: catData } = await supabase
-      .from("financial_categories")
-      .select("id, name")
-      .eq("account_id", accountId)
-      .eq("type", "income");
-    const categories = catData ?? [];
-    const resolveCategoryId = (productName: string | null): string | null => {
-      const name = (productName || "").toLowerCase();
-      // Priority: brand-specific "Vendas à Prazo - X"
-      const brandKeys = ["eternum", "private", "ryka", "conselho de anjo"];
-      for (const key of brandKeys) {
-        if (name.includes(key)) {
-          const match = categories.find(
-            (c) => c.name.toLowerCase().includes("vendas à prazo") && c.name.toLowerCase().includes(key)
-          );
-          if (match) return match.id;
-        }
-      }
-      // Fallback: any "Vendas à Prazo" category
-      const fallback =
-        categories.find((c) => c.name.toLowerCase().includes("vendas à prazo")) ??
-        categories.find((c) => c.name.toLowerCase().includes("prestação de serviços")) ??
-        categories[0];
-      return fallback?.id ?? null;
-    };
-
-
     for (const r of selectedRows) {
-      const count = r.installments_count!;
-      const alreadyExisting = r.entries_count;
-      const missing = count - alreadyExisting;
-      if (missing <= 0) continue;
-
-      const productLabel = r.product_name || "Contrato";
-      const categoryId = resolveCategoryId(r.product_name);
-      const rows: any[] = [];
-
-      // Prefer explicit installments_detail from the negotiation (respects amount,
-      // due_date, method AND payment groups like Cartão A / Cartão B).
-      const detailArr: any[] = Array.isArray(r.installments_detail) ? r.installments_detail : [];
-      const hasRichDetail =
-        detailArr.length === count &&
-        detailArr.every((d) => d && d.due_date && Number(d.amount ?? d.value ?? 0) > 0);
-
-      // Cache group_id -> uuid so all installments of the same group share it in DB
-      const groupUuidCache = new Map<string, string>();
-      const uuid = () =>
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-      if (hasRichDetail) {
-        for (let i = 0; i < detailArr.length; i++) {
-          if (i < alreadyExisting) continue;
-          const d = detailArr[i];
-          const installmentNumber = i + 1;
-          const groupKey = d.group_id || d.method_label || null;
-          let groupUuid: string | null = null;
-          if (groupKey) {
-            if (!groupUuidCache.has(groupKey)) groupUuidCache.set(groupKey, uuid());
-            groupUuid = groupUuidCache.get(groupKey)!;
-          }
-          const label = d.group_label || d.method_label;
-          rows.push({
-            account_id: accountId,
-            category_id: categoryId,
-            entry_type: "receivable",
-            description: `${productLabel} - Parcela ${installmentNumber}/${count}${label ? ` - ${label}` : ""} - ${r.client_name}`,
-            amount: Number(d.amount ?? d.value ?? 0),
-            due_date: d.due_date,
-            status: "pending",
-            payment_method: d.method || null,
-            client_id: r.client_id,
-            contract_id: r.contract_id,
-            deal_id: r.deal_id,
-            installment_number: installmentNumber,
-            total_installments: count,
-            installment_group_id: groupUuid,
-            currency: "BRL",
-            source: "manual",
-            is_recurring: false,
-            is_conciliated: false,
-            created_by: currentUser?.id ?? null,
-          });
-        }
-      } else {
-        const firstDue = resolveFirstDueDate(r);
-        const amount = r.installment_value!;
-        for (let i = 0; i < missing; i++) {
-          const installmentNumber = alreadyExisting + i + 1;
-          const due = addMonths(firstDue, installmentNumber - 1);
-          rows.push({
-            account_id: accountId,
-            category_id: categoryId,
-            entry_type: "receivable",
-            description: `${productLabel} - Parcela ${installmentNumber}/${count} - ${r.client_name}`,
-            amount,
-            due_date: format(due, "yyyy-MM-dd"),
-            status: "pending",
-            client_id: r.client_id,
-            contract_id: r.contract_id,
-            deal_id: r.deal_id,
-            installment_number: installmentNumber,
-            total_installments: count,
-            currency: "BRL",
-            source: "manual",
-            is_recurring: false,
-            is_conciliated: false,
-            created_by: currentUser?.id ?? null,
-          });
-        }
-      }
-
-      if (rows.length === 0) continue;
-      const { error } = await supabase.from("financial_entries").insert(rows);
+      const { data, error } = await supabase.rpc("generate_contract_installments", {
+        _contract_id: r.contract_id,
+      });
       if (error) {
         failures.push(`${r.client_name}: ${error.message}`);
-      } else {
-        totalCreated += rows.length;
-        contractsTouched += 1;
+        continue;
       }
+      const payload = (data ?? {}) as { skipped?: boolean; created?: number };
+      if (payload.skipped) skipped += 1;
+      else invoicesCreated += 1;
     }
 
     setGenerating(false);
     setSelected(new Set());
     queryClient.invalidateQueries({ queryKey: ["financial-active-clients"] });
+    queryClient.invalidateQueries({ queryKey: ["financial-installments"] });
     queryClient.invalidateQueries({ queryKey: ["clients-financial-status-batch"] });
 
     if (failures.length > 0) {
       toast({
-        title: `Gerado com erros`,
-        description: `${totalCreated} recebíveis em ${contractsTouched} contrato(s). Falhas: ${failures.slice(0, 3).join(" | ")}`,
+        title: "Gerado com erros",
+        description: `${invoicesCreated} fatura(s) criada(s), ${skipped} já existia(m). Falhas: ${failures.slice(0, 3).join(" | ")}`,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Recebíveis gerados",
-        description: `${totalCreated} recebíveis criados em ${contractsTouched} contrato(s).`,
+        title: "Faturas geradas",
+        description: `${invoicesCreated} fatura(s) criada(s)${skipped > 0 ? `, ${skipped} já existia(m)` : ""}. Veja em Financeiro › Parcelas.`,
       });
     }
   };
+
 
 
 
@@ -759,10 +650,10 @@ export default function FinancialActiveClientsPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed bg-muted/30 px-3 py-2">
               <div className="text-xs text-muted-foreground">
                 {selected.size > 0
-                  ? `${selected.size} selecionado(s) · ${selectedRows.length} com parcelas a gerar.`
-                  : `${eligibleForBatch.length} contrato(s) com parcelas faltando. Marque o cabeçalho para selecionar todos.`}
+                  ? `${selected.size} selecionado(s) · ${selectedRows.length} contrato(s) para gerar fatura.`
+                  : `${eligibleForBatch.length} contrato(s) sem fatura ainda. Marque o cabeçalho para selecionar todos.`}
                 <span className="ml-1">
-                  As datas seguem o que consta na negociação (data da entrada), com uma parcela por mês.
+                  Cria fatura + parcelas oficiais (aparecem em Financeiro › Parcelas). Idempotente: pula contratos que já têm fatura.
                 </span>
               </div>
               <Button
@@ -775,10 +666,11 @@ export default function FinancialActiveClientsPage() {
                 ) : (
                   <Wand2 className="h-4 w-4 mr-2" />
                 )}
-                Gerar recebíveis em lote ({selectedRows.length})
+                Gerar faturas em lote ({selectedRows.length})
               </Button>
             </div>
           )}
+
 
 
           {isLoading ? (
