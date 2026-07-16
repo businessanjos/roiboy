@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, ExternalLink, CalendarIcon, Eye, Ban, Wand2, Loader2 } from "lucide-react";
+import { Users, Search, ExternalLink, CalendarIcon, Eye, Ban, Wand2, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
@@ -502,6 +502,104 @@ export default function FinancialActiveClientsPage() {
     }
   };
 
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+
+  const formatBRL = (v: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
+  const handleRegenerateFromEntries = async (r: Row) => {
+    if (!accountId) return;
+    setRegeneratingId(r.contract_id);
+    try {
+      // Dry-run to preview the change
+      const { data: preview, error: previewError } = await supabase.rpc(
+        "regenerate_invoice_from_entries",
+        { _contract_id: r.contract_id, _dry_run: true }
+      );
+      if (previewError) throw previewError;
+
+      const p = (preview ?? {}) as {
+        status?: string;
+        from_count?: number;
+        from_total?: number;
+        to_count?: number;
+        to_total?: number;
+        paid_count?: number;
+        message?: string;
+        installments?: number;
+        total?: number;
+      };
+
+      if (p.status === "no_entries") {
+        toast({
+          title: "Sem histórico",
+          description: "Este contrato não tem lançamentos originais em Financial Entries para reconstruir.",
+        });
+        return;
+      }
+
+      if (p.status === "already_matches") {
+        toast({
+          title: "Nada a fazer",
+          description: `Fatura atual já bate com o histórico (${p.installments}x totalizando ${formatBRL(Number(p.total || 0))}).`,
+        });
+        return;
+      }
+
+      if (p.status === "has_paid") {
+        toast({
+          title: "Regeneração bloqueada",
+          description:
+            p.message ||
+            `A fatura atual tem ${p.paid_count} parcela(s) já paga(s). Não é possível regenerar sem perder dados de pagamento.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const summary =
+        p.status === "would_regenerate"
+          ? `Substituir fatura atual (${p.from_count}x totalizando ${formatBRL(
+              Number(p.from_total || 0)
+            )}) por ${p.to_count}x totalizando ${formatBRL(Number(p.to_total || 0))}?`
+          : `Criar fatura com ${p.to_count} parcelas totalizando ${formatBRL(
+              Number(p.to_total || 0)
+            )} a partir do histórico?`;
+
+      const ok = window.confirm(
+        `${r.client_name}\n\n${summary}\n\nEsta ação apaga a fatura vazia atual (nenhum pagamento registrado) e recria com os valores e datas dos lançamentos originais.`
+      );
+      if (!ok) return;
+
+      const { data: result, error: runError } = await supabase.rpc(
+        "regenerate_invoice_from_entries",
+        { _contract_id: r.contract_id, _dry_run: false }
+      );
+      if (runError) throw runError;
+
+      const rr = (result ?? {}) as { status?: string; installments?: number; total?: number };
+      toast({
+        title: "Fatura regenerada",
+        description: `${rr.installments}x totalizando ${formatBRL(Number(rr.total || 0))} recriada a partir do histórico.`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["financial-active-clients"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-installments"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-financial-status-batch"] });
+    } catch (e: any) {
+      toast({
+        title: "Erro ao regenerar",
+        description: e?.message || "Falha desconhecida.",
+        variant: "destructive",
+      });
+    } finally {
+      setRegeneratingId(null);
+    }
+  };
+
+
+
+
 
 
 
@@ -817,12 +915,26 @@ export default function FinancialActiveClientsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleRegenerateFromEntries(r)}
+                            disabled={regeneratingId === r.contract_id}
+                            title="Regenerar fatura a partir do histórico de lançamentos"
+                          >
+                            {regeneratingId === r.contract_id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => setCancelRow(r)}
                             title="Cancelar por inadimplência / Renegociar"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
                           >
                             <Ban className="h-4 w-4" />
                           </Button>
+
                         </div>
                       </TableCell>
                     </TableRow>
