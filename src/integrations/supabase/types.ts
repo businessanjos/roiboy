@@ -25413,6 +25413,10 @@ export type Database = {
         Args: { _contract_id: string }
         Returns: number
       }
+      regenerate_invoice_from_entries: {
+        Args: { _contract_id: string; _dry_run?: boolean }
+        Returns: Json
+      }
       register_for_event: {
         Args: {
           p_code: string
