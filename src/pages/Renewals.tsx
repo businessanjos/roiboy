@@ -115,13 +115,17 @@ export default function Renewals() {
     const existing = outcomeMap[contract.id];
     try {
       if (existing) {
-        await supabase
+        const { data, error } = await supabase
           .from("renewal_outcomes")
           .update({ outcome: newOutcome, resolved_at: new Date().toISOString(), resolved_by: currentUser.id })
-          .eq("id", existing.id);
+          .eq("id", existing.id)
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error("Nenhuma linha atualizada (verifique permissões)");
         setOutcomeMap(prev => ({ ...prev, [contract.id]: { ...existing, outcome: newOutcome } }));
       } else {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("renewal_outcomes")
           .insert({
             account_id: currentUser.account_id,
@@ -134,6 +138,7 @@ export default function Renewals() {
           })
           .select("id")
           .single();
+        if (error) throw error;
         if (data) {
           setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: data.id, outcome: newOutcome } }));
         }
@@ -144,9 +149,9 @@ export default function Renewals() {
       if (newOutcome === "lost") {
         setContracts(prev => prev.filter(c => c.id !== contract.id));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving outcome:", err);
-      toast.error("Erro ao salvar status");
+      toast.error("Erro ao salvar status: " + (err?.message || "desconhecido"));
     }
   }, [currentUser, outcomeMap, financialStatusBatch.data, isAdmin]);
 
