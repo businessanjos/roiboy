@@ -915,12 +915,26 @@ export default function FinancialActiveClientsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleRegenerateFromEntries(r)}
+                            disabled={regeneratingId === r.contract_id}
+                            title="Regenerar fatura a partir do histórico de lançamentos"
+                          >
+                            {regeneratingId === r.contract_id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => setCancelRow(r)}
                             title="Cancelar por inadimplência / Renegociar"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
                           >
                             <Ban className="h-4 w-4" />
                           </Button>
+
                         </div>
                       </TableCell>
                     </TableRow>
