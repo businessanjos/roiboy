@@ -52,7 +52,18 @@ export const brazilianBanks: BrazilianBank[] = [
   { code: "383", name: "Juno", fullName: "Juno Pagamentos", logo: "https://logo.clearbit.com/juno.com.br" },
   { code: "332", name: "Acesso", fullName: "Acesso Soluções de Pagamento S.A.", logo: "https://logo.clearbit.com/acessobank.com.br" },
   { code: "280", name: "Avista", fullName: "Avista S.A. Crédito, Financiamento e Investimento" },
-  { code: "000", name: "Outro", fullName: "Outro banco não listado" },
+  // Administradoras de cartão / adquirentes
+  { code: "C01", name: "Cielo", fullName: "Cielo S.A. (Administradora de Cartões)", logo: "https://logo.clearbit.com/cielo.com.br" },
+  { code: "C02", name: "Rede", fullName: "Rede S.A. (Administradora de Cartões)", logo: "https://logo.clearbit.com/userede.com.br" },
+  { code: "C03", name: "Stone", fullName: "Stone Pagamentos S.A.", logo: "https://logo.clearbit.com/stone.com.br" },
+  { code: "C04", name: "Getnet", fullName: "Getnet Adquirência e Serviços para Meios de Pagamento S.A.", logo: "https://logo.clearbit.com/getnet.com.br" },
+  { code: "C05", name: "SumUp", fullName: "SumUp Pagamentos", logo: "https://logo.clearbit.com/sumup.com.br" },
+  { code: "C06", name: "Ton", fullName: "Ton (Stone)", logo: "https://logo.clearbit.com/ton.com.br" },
+  { code: "C07", name: "InfinitePay", fullName: "InfinitePay (CloudWalk)", logo: "https://logo.clearbit.com/infinitepay.io" },
+  { code: "C08", name: "Adyen", fullName: "Adyen do Brasil Ltda.", logo: "https://logo.clearbit.com/adyen.com" },
+  { code: "C09", name: "Vindi", fullName: "Vindi Tecnologia e Marketing S.A.", logo: "https://logo.clearbit.com/vindi.com.br" },
+  { code: "C10", name: "Pagar.me", fullName: "Pagar.me Pagamentos S.A.", logo: "https://logo.clearbit.com/pagar.me" },
+  { code: "000", name: "Outro", fullName: "Outro banco/administradora não listado" },
 ];
 
 export function findBankByCode(code: string): BrazilianBank | undefined {
