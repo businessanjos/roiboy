@@ -63,6 +63,7 @@ export const brazilianBanks: BrazilianBank[] = [
   { code: "C08", name: "Adyen", fullName: "Adyen do Brasil Ltda.", logo: "https://logo.clearbit.com/adyen.com" },
   { code: "C09", name: "Vindi", fullName: "Vindi Tecnologia e Marketing S.A.", logo: "https://logo.clearbit.com/vindi.com.br" },
   { code: "C10", name: "Pagar.me", fullName: "Pagar.me Pagamentos S.A.", logo: "https://logo.clearbit.com/pagar.me" },
+  { code: "C11", name: "Stripe", fullName: "Stripe Payments do Brasil", logo: "https://logo.clearbit.com/stripe.com" },
   { code: "000", name: "Outro", fullName: "Outro banco/administradora não listado" },
 ];
 
