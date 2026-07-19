@@ -42,6 +42,9 @@ interface Row {
   installments_paid: number;
   entries_count: number;
   total_received: number;
+  total_pending_installments: number;
+  pending_undefined: number;
+  pending_groups: Array<{ label: string; amount: number; method: string | null }>;
   installment_value: number | null;
   total_value: number;
   start_date: string | null;
@@ -50,6 +53,7 @@ interface Row {
   deal_won_at: string | null;
   installments_detail: any;
 }
+
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   credit_card: "Cartão de Crédito",
