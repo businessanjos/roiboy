@@ -25073,6 +25073,7 @@ export type Database = {
         Args: { _data: Json; _doc_id: string; _token: string }
         Returns: boolean
       }
+      contract_is_mvp: { Args: { _contract_id: string }; Returns: boolean }
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
       delete_account_cascade: { Args: { p_account_id: string }; Returns: Json }
       delete_admission_doc_attachment: {
