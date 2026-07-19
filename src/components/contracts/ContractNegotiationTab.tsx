@@ -42,7 +42,10 @@ interface InstallmentDetailItem {
   method_label?: string | null;
   group_id?: string | null;
   group_label?: string | null;
+  group_status?: PaymentGroupStatus | null;
 }
+
+type PaymentGroupStatus = "confirmed" | "pending";
 
 interface PaymentGroup {
   id: string;
@@ -51,6 +54,8 @@ interface PaymentGroup {
   amount: number;
   count: number;
   first_due_date: string;
+  status: PaymentGroupStatus;
+  notes?: string | null;
 }
 
 interface ContractNegotiationTabProps {
@@ -64,6 +69,7 @@ interface ContractNegotiationTabProps {
   installmentsCount: number | null;
   firstDueDate: string | null;
   installmentsDetail?: InstallmentDetailItem[] | any;
+  paymentGroups?: PaymentGroup[] | any;
   receivablesGenerated: boolean;
   payerId?: string | null;
   onUpdate: () => void;
