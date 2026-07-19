@@ -170,11 +170,12 @@ export default function FinancialActiveClientsPage() {
         contractIds.length
           ? supabase
               .from("financial_entries")
-              .select("id, contract_id, amount, status")
+              .select("id, contract_id, amount, status, due_date")
               .in("contract_id", contractIds as string[])
               .eq("entry_type", "receivable")
               .neq("status", "cancelled")
           : Promise.resolve({ data: [], error: null } as any),
+
         dealIds.length
           ? supabase
               .from("deal_field_values")
