@@ -213,18 +213,23 @@ export default function FinancialActiveClientsPage() {
         if (!Number.isNaN(n) && n > 0 && row.deal_id) parcelasByDealId.set(row.deal_id, n);
       });
 
-      // Aggregate receivable entries per contract
+      // Aggregate installments per contract (source of truth for paid status,
+      // including MVP credit_card installments that are born as 'paid').
       type Agg = { count: number; paid: number; received: number; pending: number };
       const aggByContract = new Map<string, Agg>();
       (entriesRes.data || []).forEach((e: any) => {
-        const cid = e.contract_id as string;
+        const cid = e.invoices?.contract_id as string | undefined;
         if (!cid) return;
         const cur = aggByContract.get(cid) || { count: 0, paid: 0, received: 0, pending: 0 };
         cur.count += 1;
         const amt = Number(e.amount) || 0;
-        if (e.status === "paid" || e.status === "partially_paid") {
+        const paidAmt = Number(e.paid_amount) || 0;
+        if (e.status === "paid" || e.status === "written_off") {
           cur.paid += 1;
           cur.received += amt;
+        } else if (e.status === "partially_paid") {
+          cur.paid += 1;
+          cur.received += paidAmt || amt;
         } else {
           // pending / overdue / scheduled → still owed
           cur.pending += amt;
