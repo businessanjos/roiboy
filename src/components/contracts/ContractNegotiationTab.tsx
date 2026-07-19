@@ -333,9 +333,25 @@ export function ContractNegotiationTab({
       amount: remaining > 0 ? remaining : Math.round((contractValue / 2) * 100) / 100,
       count: installments || 10,
       first_due_date: firstDueDate || format(new Date(), "yyyy-MM-dd"),
+      status: "confirmed",
     };
     setGroups((prev) => [...prev, newGroup]);
   };
+
+  const addPendingGroup = () => {
+    const remaining = Math.max(0, Math.round((contractValue - groupsTotal) * 100) / 100);
+    const nextIdx = groups.length + 1;
+    const label = `Grupo ${String.fromCharCode(64 + nextIdx)} (a definir)`;
+    const newGroup: PaymentGroup = {
+      id: genGroupId(),
+      label,
+      method: "a_definir",
+      amount: remaining > 0 ? remaining : 0,
+      count: 1,
+      first_due_date: firstDueDate || format(new Date(), "yyyy-MM-dd"),
+      status: "pending",
+    };
+    setGroups((prev) => [...prev, newGroup]);
 
   const updateGroup = (id: string, patch: Partial<PaymentGroup>) => {
     setGroups((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
