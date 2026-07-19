@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, FileText, Link2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, FileText, Info, Link2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -72,6 +72,22 @@ export function ActiveClientContractSheet({
     .reduce((s, e) => s + Number(e.amount || 0), 0);
   const conciliated = (data?.entries || []).filter((e) => e.is_conciliated).length;
 
+  // ---- Balance audit: contract.value vs financial entries ----
+  const contractValue = Number(data?.contract?.value || 0);
+  const entriesSum = (data?.entries || []).reduce(
+    (s, e) => s + (e.status === "cancelled" ? 0 : Number(e.amount || 0)),
+    0
+  );
+  const paymentGroups = Array.isArray(data?.contract?.payment_groups)
+    ? (data!.contract!.payment_groups as any[])
+    : [];
+  const pendingGroupsSum = paymentGroups
+    .filter((g) => g && g.status === "pending")
+    .reduce((s, g) => s + Number(g.amount || 0), 0);
+  const expectedInEntries = contractValue - pendingGroupsSum;
+  const balanceDiff = Number((entriesSum - expectedInEntries).toFixed(2));
+  const hasDivergence = data?.contract && Math.abs(balanceDiff) > 0.01;
+
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
@@ -115,6 +131,49 @@ export function ActiveClientContractSheet({
               <SummaryTile label="Recebido" value={formatBRLPrecise(totalReceived)} tone="ok" />
               <SummaryTile label="A receber" value={formatBRLPrecise(totalPending)} tone="warn" />
             </div>
+
+            {/* Auditoria de saldo — flag para revisão antes de aprovar pagamento */}
+            {data?.contract && data.entries.length > 0 && (
+              hasDivergence ? (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 flex gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                  <div className="text-sm space-y-1">
+                    <p className="font-semibold text-red-700">
+                      Divergência de {formatBRLPrecise(Math.abs(balanceDiff))} — revisar antes de aprovar pagamento
+                    </p>
+                    <p className="text-xs text-red-700/80">
+                      Contrato: {formatBRLPrecise(contractValue)}
+                      {pendingGroupsSum > 0 && ` · Grupos pendentes: ${formatBRLPrecise(pendingGroupsSum)}`}
+                      {` · Esperado nas parcelas: ${formatBRLPrecise(expectedInEntries)}`}
+                      {` · Soma atual: ${formatBRLPrecise(entriesSum)}`}
+                      {` · Diferença: ${balanceDiff > 0 ? "+" : ""}${formatBRLPrecise(balanceDiff)}`}
+                    </p>
+                    <p className="text-xs text-red-700/80">
+                      Use o botão <strong>Regenerar (🔄)</strong> em Clientes Ativos ou revise os grupos de pagamento na aba Negociação.
+                    </p>
+                  </div>
+                </div>
+              ) : pendingGroupsSum > 0 ? (
+                <div className="rounded-lg border border-blue-500/40 bg-blue-500/10 p-3 flex gap-3">
+                  <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-blue-700">
+                      {formatBRLPrecise(pendingGroupsSum)} pendente de definição em grupos de pagamento
+                    </p>
+                    <p className="text-xs text-blue-700/80">
+                      Parcelas confirmadas ({formatBRLPrecise(entriesSum)}) batem com o esperado. Feche o grupo pendente na aba Negociação para gerar o restante.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 flex gap-2 items-center">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <p className="text-xs text-emerald-700">
+                    Saldo conferido: parcelas somam exatamente {formatBRLPrecise(contractValue)}.
+                  </p>
+                </div>
+              )
+            )}
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               <InfoRow label="Início">
