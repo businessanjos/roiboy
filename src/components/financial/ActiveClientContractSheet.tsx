@@ -72,6 +72,22 @@ export function ActiveClientContractSheet({
     .reduce((s, e) => s + Number(e.amount || 0), 0);
   const conciliated = (data?.entries || []).filter((e) => e.is_conciliated).length;
 
+  // ---- Balance audit: contract.value vs financial entries ----
+  const contractValue = Number(data?.contract?.value || 0);
+  const entriesSum = (data?.entries || []).reduce(
+    (s, e) => s + (e.status === "cancelled" ? 0 : Number(e.amount || 0)),
+    0
+  );
+  const paymentGroups = Array.isArray(data?.contract?.payment_groups)
+    ? (data!.contract!.payment_groups as any[])
+    : [];
+  const pendingGroupsSum = paymentGroups
+    .filter((g) => g && g.status === "pending")
+    .reduce((s, g) => s + Number(g.amount || 0), 0);
+  const expectedInEntries = contractValue - pendingGroupsSum;
+  const balanceDiff = Number((entriesSum - expectedInEntries).toFixed(2));
+  const hasDivergence = data?.contract && Math.abs(balanceDiff) > 0.01;
+
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
