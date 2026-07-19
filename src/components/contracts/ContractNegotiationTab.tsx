@@ -320,7 +320,27 @@ export function ContractNegotiationTab({
     () => Math.round(groups.reduce((s, g) => s + (Number(g.amount) || 0), 0) * 100) / 100,
     [groups]
   );
+  const confirmedTotal = useMemo(
+    () => Math.round(confirmedGroups.reduce((s, g) => s + (Number(g.amount) || 0), 0) * 100) / 100,
+    [confirmedGroups]
+  );
+  const pendingTotal = useMemo(
+    () => Math.round(pendingGroups.reduce((s, g) => s + (Number(g.amount) || 0), 0) * 100) / 100,
+    [pendingGroups]
+  );
   const groupsBalanced = Math.abs(groupsTotal - contractValue) < 0.01;
+
+  const serializePaymentGroups = () =>
+    groups.map((g) => ({
+      id: g.id,
+      label: g.label,
+      method: g.method,
+      amount: Number(g.amount) || 0,
+      count: Math.max(1, Math.floor(g.count || 1)),
+      first_due_date: g.first_due_date,
+      status: g.status,
+      notes: g.notes ?? null,
+    }));
 
   const addGroup = () => {
     const remaining = Math.max(0, Math.round((contractValue - groupsTotal) * 100) / 100);
