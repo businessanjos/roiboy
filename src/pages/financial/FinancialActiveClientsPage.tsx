@@ -213,8 +213,9 @@ export default function FinancialActiveClientsPage() {
         if (!Number.isNaN(n) && n > 0 && row.deal_id) parcelasByDealId.set(row.deal_id, n);
       });
 
-      // Aggregate installments per contract (source of truth for paid status,
-      // including MVP credit_card installments that are born as 'paid').
+        // Aggregate installments per contract. Paid installments are one source of
+        // "Recebido", but the deal/contract entry amount also counts as received.
+        // Written-off installments are not cash received.
       type Agg = { count: number; paid: number; received: number; pending: number };
       const aggByContract = new Map<string, Agg>();
       (entriesRes.data || []).forEach((e: any) => {
@@ -224,13 +225,14 @@ export default function FinancialActiveClientsPage() {
         cur.count += 1;
         const amt = Number(e.amount) || 0;
         const paidAmt = Number(e.paid_amount) || 0;
-        if (e.status === "paid" || e.status === "written_off") {
+        if (e.status === "paid") {
           cur.paid += 1;
-          cur.received += amt;
+          cur.received += paidAmt || amt;
         } else if (e.status === "partially_paid") {
           cur.paid += 1;
           cur.received += paidAmt || amt;
-        } else {
+          cur.pending += Math.max(0, amt - (paidAmt || 0));
+        } else if (e.status !== "written_off") {
           // pending / overdue / scheduled → still owed
           cur.pending += amt;
         }
@@ -336,6 +338,10 @@ export default function FinancialActiveClientsPage() {
           }))
           .filter((g: any) => g.amount > 0);
         const pendingUndefined = pendingGroups.reduce((s: number, g: any) => s + g.amount, 0);
+        const installmentReceived = agg?.received || 0;
+        const receivedTotal = Math.max(installmentReceived, finalEntrada ?? 0);
+        const remainingAfterReceivedAndUndefined = Math.max(0, totalValue - receivedTotal - pendingUndefined);
+        const pendingInstallments = Math.min(agg?.pending || 0, remainingAfterReceivedAndUndefined);
         return {
           contract_id: c.id,
           client_id: c.client_id,
@@ -350,8 +356,8 @@ export default function FinancialActiveClientsPage() {
           installments_count: installmentsCount,
           installments_paid: agg?.paid || 0,
           entries_count: agg?.count || 0,
-          total_received: agg?.received || 0,
-          total_pending_installments: agg?.pending || 0,
+          total_received: receivedTotal,
+          total_pending_installments: pendingInstallments,
           pending_undefined: pendingUndefined,
           pending_groups: pendingGroups,
           installment_value: finalInstallmentValue,
@@ -734,7 +740,8 @@ export default function FinancialActiveClientsPage() {
 
           {filtered.length > 0 && (() => {
             const totalValue = filtered.reduce((s, r) => s + (r.total_value || 0), 0);
-            // Fonte da verdade: financial_entries pagas (parcelas já cobradas/pagas)
+            // Recebido = entrada registrada ou parcelas pagas, sem duplicar quando
+            // a entrada foi parcelada no cartão.
             const totalReceived = filtered.reduce((s, r) => s + (r.total_received || 0), 0);
             // "A receber" = parcelas emitidas ainda em aberto (pending/overdue)
             const totalPendingInstallments = filtered.reduce((s, r) => s + (r.total_pending_installments || 0), 0);
@@ -756,7 +763,7 @@ export default function FinancialActiveClientsPage() {
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-emerald-700">Recebido</div>
                   <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(totalReceived)}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">parcelas pagas · {pct}% do contratado</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">entradas + parcelas pagas · {pct}% do contratado</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-amber-700">A receber</div>
@@ -900,8 +907,8 @@ export default function FinancialActiveClientsPage() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-emerald-700">
                         {(() => {
-                          // Fonte da verdade: financial_entries. Se parcelas já estão pagas
-                          // (ex.: cartão pago no ato para MVP), aparecem aqui — sem somar entrada.
+                          // Entrada registrada também é dinheiro recebido. Usamos o maior
+                          // valor entre entrada e parcelas pagas para não duplicar cartão parcelado.
                           const received = r.total_received || 0;
                           if (received <= 0) return <span className="text-muted-foreground">—</span>;
                           const isFullyPaid =
