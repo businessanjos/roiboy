@@ -389,7 +389,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate, in
           </div>
         </div>
 
-        <Tabs defaultValue="details" className="mt-4">
+        <Tabs key={`${contract?.id}-${initialTab}`} defaultValue={initialTab} className="mt-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="details" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
