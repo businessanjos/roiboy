@@ -598,6 +598,7 @@ export function ContractNegotiationTab({
           installments_count: detail.length,
           first_due_date: detail[0]?.due_date || firstDueDate,
           installments_detail: serializeDetail(),
+          payment_groups: serializePaymentGroups(),
         })
         .eq("id", contractId);
       if (upErr) throw upErr;
