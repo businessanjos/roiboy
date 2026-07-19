@@ -23,7 +23,8 @@ import {
   Award,
   Lock,
   PlusCircle,
-  X
+  X,
+  Copy
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { toast } from "sonner";
