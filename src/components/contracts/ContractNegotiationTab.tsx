@@ -104,6 +104,7 @@ export function ContractNegotiationTab({
   installmentsCount: initialInstallments,
   firstDueDate: initialDueDate,
   installmentsDetail: initialDetail,
+  paymentGroups: initialPaymentGroups,
   receivablesGenerated: initialReceivablesGenerated,
   payerId: initialPayerId,
   onUpdate,
