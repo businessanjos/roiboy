@@ -751,6 +751,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
               installmentsCount={contract.installments_count || null}
               firstDueDate={contract.first_due_date || null}
               installmentsDetail={contract.installments_detail ?? null}
+              paymentGroups={contract.payment_groups ?? null}
               receivablesGenerated={contract.receivables_generated || false}
               payerId={contract.payer_id ?? null}
               onUpdate={onUpdate}
