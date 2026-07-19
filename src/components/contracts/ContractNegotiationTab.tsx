@@ -352,6 +352,9 @@ export function ContractNegotiationTab({
       status: "pending",
     };
     setGroups((prev) => [...prev, newGroup]);
+  };
+
+
 
   const updateGroup = (id: string, patch: Partial<PaymentGroup>) => {
     setGroups((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
