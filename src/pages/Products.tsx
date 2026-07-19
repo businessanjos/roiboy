@@ -23,7 +23,8 @@ import {
   Award,
   Lock,
   PlusCircle,
-  X
+  X,
+  Copy
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { toast } from "sonner";
@@ -398,6 +399,39 @@ export default function Products() {
       fetchProducts();
     } catch (error: any) {
       toast.error(error.message || "Erro ao excluir produto");
+    }
+  };
+
+  const handleDuplicate = async (product: Product) => {
+    if (!currentUser?.account_id) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      return;
+    }
+    try {
+      // Find next available "(N)" suffix so duplicating twice doesn't collide.
+      const baseName = product.name.replace(/\s*\(\d+\)\s*$/, "");
+      const existing = new Set(products.map((p) => p.name));
+      let suffix = 1;
+      let newName = `${baseName} (${suffix})`;
+      while (existing.has(newName)) {
+        suffix += 1;
+        newName = `${baseName} (${suffix})`;
+      }
+
+      const { id, created_at, updated_at, ...rest } = product as any;
+      const payload = {
+        ...rest,
+        account_id: currentUser.account_id,
+        name: newName,
+      };
+
+      const { error } = await supabase.from("products").insert([payload]);
+      if (error) throw error;
+      toast.success(`Produto duplicado como "${newName}"`);
+      fetchProducts();
+    } catch (error: any) {
+      console.error("Error duplicating product:", error);
+      toast.error(error.message || "Erro ao duplicar produto");
     }
   };
 
@@ -1081,8 +1115,18 @@ export default function Products() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => openEditDialog(product)}
+                      title="Editar"
                     >
                       <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDuplicate(product)}
+                      title="Duplicar"
+                    >
+                      <Copy className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
