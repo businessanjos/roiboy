@@ -466,6 +466,7 @@ export function ContractNegotiationTab({
         updateData.installments_count = detail.length || installments;
         updateData.first_due_date = detail[0]?.due_date || firstDueDate;
         updateData.installments_detail = serializeDetail();
+        updateData.payment_groups = serializePaymentGroups();
       }
 
       const { error } = await supabase
