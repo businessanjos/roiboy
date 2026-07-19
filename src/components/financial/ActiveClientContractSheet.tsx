@@ -132,6 +132,49 @@ export function ActiveClientContractSheet({
               <SummaryTile label="A receber" value={formatBRLPrecise(totalPending)} tone="warn" />
             </div>
 
+            {/* Auditoria de saldo — flag para revisão antes de aprovar pagamento */}
+            {data?.contract && data.entries.length > 0 && (
+              hasDivergence ? (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 flex gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                  <div className="text-sm space-y-1">
+                    <p className="font-semibold text-red-700">
+                      Divergência de {formatBRLPrecise(Math.abs(balanceDiff))} — revisar antes de aprovar pagamento
+                    </p>
+                    <p className="text-xs text-red-700/80">
+                      Contrato: {formatBRLPrecise(contractValue)}
+                      {pendingGroupsSum > 0 && ` · Grupos pendentes: ${formatBRLPrecise(pendingGroupsSum)}`}
+                      {` · Esperado nas parcelas: ${formatBRLPrecise(expectedInEntries)}`}
+                      {` · Soma atual: ${formatBRLPrecise(entriesSum)}`}
+                      {` · Diferença: ${balanceDiff > 0 ? "+" : ""}${formatBRLPrecise(balanceDiff)}`}
+                    </p>
+                    <p className="text-xs text-red-700/80">
+                      Use o botão <strong>Regenerar (🔄)</strong> em Clientes Ativos ou revise os grupos de pagamento na aba Negociação.
+                    </p>
+                  </div>
+                </div>
+              ) : pendingGroupsSum > 0 ? (
+                <div className="rounded-lg border border-blue-500/40 bg-blue-500/10 p-3 flex gap-3">
+                  <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-blue-700">
+                      {formatBRLPrecise(pendingGroupsSum)} pendente de definição em grupos de pagamento
+                    </p>
+                    <p className="text-xs text-blue-700/80">
+                      Parcelas confirmadas ({formatBRLPrecise(entriesSum)}) batem com o esperado. Feche o grupo pendente na aba Negociação para gerar o restante.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 flex gap-2 items-center">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <p className="text-xs text-emerald-700">
+                    Saldo conferido: parcelas somam exatamente {formatBRLPrecise(contractValue)}.
+                  </p>
+                </div>
+              )
+            )}
+
             <div className="grid grid-cols-2 gap-3 text-sm">
               <InfoRow label="Início">
                 {data?.contract?.start_date
