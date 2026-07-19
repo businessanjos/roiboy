@@ -730,10 +730,12 @@ export default function FinancialActiveClientsPage() {
 
           {filtered.length > 0 && (() => {
             const totalValue = filtered.reduce((s, r) => s + (r.total_value || 0), 0);
-            const installmentsReceived = filtered.reduce((s, r) => s + (r.total_received || 0), 0);
-            const entradasReceived = filtered.reduce((s, r) => s + (r.entrada || 0), 0);
-            const totalReceived = installmentsReceived + entradasReceived;
-            const totalPending = Math.max(0, totalValue - totalReceived);
+            // Fonte da verdade: financial_entries pagas (parcelas já cobradas/pagas)
+            const totalReceived = filtered.reduce((s, r) => s + (r.total_received || 0), 0);
+            // "A receber" = parcelas emitidas ainda em aberto (pending/overdue)
+            const totalPendingInstallments = filtered.reduce((s, r) => s + (r.total_pending_installments || 0), 0);
+            // "A definir" = grupos de pagamento sem parcelas geradas (tranches pendentes)
+            const totalUndefined = filtered.reduce((s, r) => s + (r.pending_undefined || 0), 0);
             const pct = totalValue > 0 ? Math.round((totalReceived / totalValue) * 100) : 0;
             const label = productFilter !== "all" ? productFilter : "Todos os produtos";
             return (
@@ -748,25 +750,24 @@ export default function FinancialActiveClientsPage() {
                   <div className="text-lg font-bold tabular-nums mt-1">{formatBRLPrecise(totalValue)}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Entradas recebidas</div>
-                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(entradasReceived)}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">soma da coluna Entrada</div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Parcelas pagas</div>
-                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(installmentsReceived)}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">
-                    Recebido total: <span className="font-semibold">{formatBRLPrecise(totalReceived)}</span> ({pct}%)
-                  </div>
+                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Recebido</div>
+                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(totalReceived)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">parcelas pagas · {pct}% do contratado</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-amber-700">A receber</div>
-                  <div className="text-lg font-bold tabular-nums text-amber-700 mt-1">{formatBRLPrecise(totalPending)}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">{100 - pct}% pendente</div>
+                  <div className="text-lg font-bold tabular-nums text-amber-700 mt-1">{formatBRLPrecise(totalPendingInstallments)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">parcelas emitidas em aberto</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-sky-700">A definir</div>
+                  <div className="text-lg font-bold tabular-nums text-sky-700 mt-1">{formatBRLPrecise(totalUndefined)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">grupos de pagamento pendentes</div>
                 </div>
               </div>
             );
           })()}
+
 
 
 
