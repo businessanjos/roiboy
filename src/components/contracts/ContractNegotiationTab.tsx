@@ -188,7 +188,7 @@ export function ContractNegotiationTab({
       ? crypto.randomUUID()
       : `g_${Math.random().toString(36).slice(2, 10)}`);
 
-  // Detect pre-existing groups from installments_detail
+  // Detect pre-existing groups from installments_detail (legacy fallback)
   const detectedGroups: PaymentGroup[] = (() => {
     if (!hasSalesBreakdown) return [];
     const byGroup = new Map<string, InstallmentDetailItem[]>();
@@ -213,13 +213,30 @@ export function ContractNegotiationTab({
         amount: items.reduce((s, i) => s + Number(i.amount ?? i.value ?? 0), 0),
         count: items.length,
         first_due_date: dates[0] || format(new Date(), "yyyy-MM-dd"),
+        status: ((items[0]?.group_status as PaymentGroupStatus) || "confirmed"),
       });
     });
     return result;
   })();
 
-  const [groups, setGroups] = useState<PaymentGroup[]>(detectedGroups);
+  // Preferir payment_groups (fonte de verdade), fallback ao detectado
+  const seedGroups: PaymentGroup[] = Array.isArray(initialPaymentGroups) && initialPaymentGroups.length > 0
+    ? (initialPaymentGroups as any[]).map((g) => ({
+        id: g.id || genGroupId(),
+        label: g.label || "Grupo",
+        method: g.method || "cartao",
+        amount: Number(g.amount) || 0,
+        count: Math.max(1, Number(g.count) || 1),
+        first_due_date: g.first_due_date || format(new Date(), "yyyy-MM-dd"),
+        status: (g.status as PaymentGroupStatus) || "confirmed",
+        notes: g.notes ?? null,
+      }))
+    : detectedGroups;
+
+  const [groups, setGroups] = useState<PaymentGroup[]>(seedGroups);
   const usingGroups = groups.length > 0;
+  const confirmedGroups = useMemo(() => groups.filter((g) => g.status !== "pending"), [groups]);
+  const pendingGroups = useMemo(() => groups.filter((g) => g.status === "pending"), [groups]);
 
   const buildDetailFromGroups = (gs: PaymentGroup[]): EditableInstallment[] => {
     const out: EditableInstallment[] = [];
