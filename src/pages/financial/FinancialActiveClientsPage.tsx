@@ -215,19 +215,24 @@ export default function FinancialActiveClientsPage() {
       });
 
       // Aggregate receivable entries per contract
-      type Agg = { count: number; paid: number; received: number };
+      type Agg = { count: number; paid: number; received: number; pending: number };
       const aggByContract = new Map<string, Agg>();
       (entriesRes.data || []).forEach((e: any) => {
         const cid = e.contract_id as string;
         if (!cid) return;
-        const cur = aggByContract.get(cid) || { count: 0, paid: 0, received: 0 };
+        const cur = aggByContract.get(cid) || { count: 0, paid: 0, received: 0, pending: 0 };
         cur.count += 1;
+        const amt = Number(e.amount) || 0;
         if (e.status === "paid" || e.status === "partially_paid") {
           cur.paid += 1;
-          cur.received += Number(e.amount) || 0;
+          cur.received += amt;
+        } else {
+          // pending / overdue / scheduled → still owed
+          cur.pending += amt;
         }
         aggByContract.set(cid, cur);
       });
+
 
       // Build best-deal-per-client map from dealsByClientRes (prefer won, else latest)
       const bestDealByClient = new Map<string, any>();
