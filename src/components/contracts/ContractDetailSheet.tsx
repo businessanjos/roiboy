@@ -184,7 +184,7 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: ContractDetailSheetProps) {
+export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate, initialTab = "details" }: ContractDetailSheetProps) {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
