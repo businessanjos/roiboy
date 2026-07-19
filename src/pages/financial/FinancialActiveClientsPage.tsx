@@ -321,6 +321,17 @@ export default function FinancialActiveClientsPage() {
               : installmentsCount && installmentsCount > 0
                 ? baseForParcel / installmentsCount
                 : null;
+        // Parse payment_groups from contract to surface "A definir" (pending) tranches
+        const groupsRaw = Array.isArray(c.payment_groups) ? c.payment_groups : [];
+        const pendingGroups = groupsRaw
+          .filter((g: any) => g && (g.status === "pending" || g.method === "a_definir"))
+          .map((g: any) => ({
+            label: String(g.label || "A definir"),
+            amount: Number(g.amount) || 0,
+            method: g.method ?? null,
+          }))
+          .filter((g: any) => g.amount > 0);
+        const pendingUndefined = pendingGroups.reduce((s: number, g: any) => s + g.amount, 0);
         return {
           contract_id: c.id,
           client_id: c.client_id,
@@ -336,6 +347,9 @@ export default function FinancialActiveClientsPage() {
           installments_paid: agg?.paid || 0,
           entries_count: agg?.count || 0,
           total_received: agg?.received || 0,
+          total_pending_installments: agg?.pending || 0,
+          pending_undefined: pendingUndefined,
+          pending_groups: pendingGroups,
           installment_value: finalInstallmentValue,
           total_value: Number(c.value || 0),
           start_date: c.start_date || null,
@@ -343,6 +357,7 @@ export default function FinancialActiveClientsPage() {
           deal_id: c.deal_id || null,
           deal_won_at: fallbackDeal?.won_at || null,
           installments_detail: c.installments_detail || null,
+
         };
       });
 
