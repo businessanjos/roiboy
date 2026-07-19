@@ -437,6 +437,7 @@ export default function Contracts() {
   // Contract detail sheet state
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
+  const [detailInitialTab, setDetailInitialTab] = useState<"details" | "negotiation">("details");
 
   // Delete contract state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
