@@ -698,30 +698,66 @@ export function ContractNegotiationTab({
         <div className="space-y-4">
           {/* Payment Groups (tranches) — ex.: R$100k em 10x Cartão A + R$100k em 10x Cartão B */}
           <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <div>
                 <Label className="text-base font-medium">Grupos de Pagamento</Label>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Use quando a venda foi dividida em mais de uma forma/cartão (ex.: Cartão A + Cartão B).
+                  Divida a venda em mais de uma forma/cartão. Marque um grupo como <b>Pendente</b> para registrar valores ainda a definir sem gerar cobrança.
                 </p>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={addGroup}>
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Adicionar grupo
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={addPendingGroup}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Grupo pendente
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={addGroup}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Adicionar grupo
+                </Button>
+              </div>
             </div>
 
             {groups.length > 0 && (
               <div className="space-y-2">
-                {groups.map((g) => (
-                  <div key={g.id} className="rounded-md border bg-background p-3 space-y-2">
-                    <div className="flex items-center gap-2">
+                {groups.map((g) => {
+                  const isPending = g.status === "pending";
+                  return (
+                  <div
+                    key={g.id}
+                    className={cn(
+                      "rounded-md border bg-background p-3 space-y-2",
+                      isPending && "border-amber-300 bg-amber-50/40"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Input
                         value={g.label}
                         onChange={(e) => updateGroup(g.id, { label: e.target.value })}
                         placeholder="Rótulo (ex.: Cartão A)"
-                        className="h-8 text-sm flex-1"
+                        className="h-8 text-sm flex-1 min-w-[140px]"
                       />
+                      <Select
+                        value={g.status}
+                        onValueChange={(v) =>
+                          updateGroup(g.id, {
+                            status: v as PaymentGroupStatus,
+                            method: v === "pending" ? "a_definir" : g.method === "a_definir" ? "cartao" : g.method,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs w-[160px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="confirmed">Confirmado</SelectItem>
+                          <SelectItem value="pending">Pendente (a definir)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {isPending && (
+                        <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-100">
+                          Não gera parcelas
+                        </Badge>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"
@@ -753,6 +789,7 @@ export function ContractNegotiationTab({
                           value={g.count}
                           onChange={(e) => updateGroup(g.id, { count: parseInt(e.target.value, 10) || 1 })}
                           className="h-8 text-sm"
+                          disabled={isPending}
                         />
                       </div>
                       <div className="space-y-1">
@@ -765,6 +802,7 @@ export function ContractNegotiationTab({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="a_definir">A definir</SelectItem>
                             {PAYMENT_METHODS.map((m) => (
                               <SelectItem key={m.value} value={m.value}>
                                 {m.label}
@@ -782,19 +820,33 @@ export function ContractNegotiationTab({
                           value={g.first_due_date}
                           onChange={(e) => updateGroup(g.id, { first_due_date: e.target.value })}
                           className="h-8 text-sm"
+                          disabled={isPending}
                         />
                       </div>
                     </div>
                   </div>
-                ))}
-                <div className="flex items-center justify-between text-xs pt-1">
-                  <span className="text-muted-foreground">Soma dos grupos:</span>
-                  <span className={cn("font-semibold tabular-nums", groupsBalanced ? "text-primary" : "text-destructive")}>
-                    {formatCurrency(groupsTotal)}
-                    {!groupsBalanced && (
-                      <span className="ml-2 font-normal">(diferença {formatCurrency(groupsTotal - contractValue)})</span>
-                    )}
-                  </span>
+                  );
+                })}
+                <div className="space-y-1 pt-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Confirmado (gera parcelas):</span>
+                    <span className="font-semibold tabular-nums text-primary">{formatCurrency(confirmedTotal)}</span>
+                  </div>
+                  {pendingGroups.length > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-amber-700">Pendente (a definir):</span>
+                      <span className="font-semibold tabular-nums text-amber-700">{formatCurrency(pendingTotal)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-t pt-1">
+                    <span className="text-muted-foreground">Soma dos grupos:</span>
+                    <span className={cn("font-semibold tabular-nums", groupsBalanced ? "text-primary" : "text-destructive")}>
+                      {formatCurrency(groupsTotal)}
+                      {!groupsBalanced && (
+                        <span className="ml-2 font-normal">(diferença {formatCurrency(groupsTotal - contractValue)})</span>
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
