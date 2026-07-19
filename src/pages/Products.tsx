@@ -1115,8 +1115,18 @@ export default function Products() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => openEditDialog(product)}
+                      title="Editar"
                     >
                       <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDuplicate(product)}
+                      title="Duplicar"
+                    >
+                      <Copy className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
