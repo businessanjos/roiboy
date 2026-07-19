@@ -94,6 +94,7 @@ interface ContractDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: () => void;
+  initialTab?: "details" | "negotiation";
 }
 
 const CONTRACT_STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; className: string }> = {
