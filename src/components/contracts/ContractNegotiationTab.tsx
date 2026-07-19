@@ -240,7 +240,9 @@ export function ContractNegotiationTab({
 
   const buildDetailFromGroups = (gs: PaymentGroup[]): EditableInstallment[] => {
     const out: EditableInstallment[] = [];
-    for (const g of gs) {
+    // Somente grupos confirmados geram parcelas no financeiro.
+    // Grupos pendentes ficam registrados no contrato como intenção de venda.
+    for (const g of gs.filter((x) => x.status !== "pending")) {
       const safeCount = Math.max(1, Math.floor(g.count || 1));
       const base = Math.floor((g.amount / safeCount) * 100) / 100;
       const remainder = Math.round((g.amount - base * safeCount) * 100) / 100;
