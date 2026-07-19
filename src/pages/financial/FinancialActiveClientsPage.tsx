@@ -82,9 +82,36 @@ function labelPayment(m: string | null, pmMap: Map<string, string>) {
   return PAYMENT_METHOD_LABELS[m] ?? m;
 }
 
-/** Extract entrada from installments_detail if the first installment is larger than the rest. */
+/** Extract entrada (cash-collect) from installments_detail.
+ *  Rules, applied in order:
+ *   1. Sum every item flagged as "Entrada" (via group_label / method_label). This is
+ *      the tranche já paga no ato — cash collect — mesmo quando parcelada no cartão.
+ *   2. Otherwise, se a primeira parcela é maior que o restante (uniforme), trata-a como entrada.
+ *   3. Caso contrário, apenas devolve o valor médio da parcela.
+ */
 function extractEntrada(detail: any, installmentsCount: number | null, value: number): { entrada: number | null; installmentValue: number | null } {
   if (Array.isArray(detail) && detail.length > 0) {
+    const isEntrada = (d: any) => {
+      const gl = String(d?.group_label ?? "").toLowerCase();
+      const ml = String(d?.method_label ?? "").toLowerCase();
+      return gl.includes("entrada") || ml.includes("entrada");
+    };
+    const entradaItems = detail.filter(isEntrada);
+    if (entradaItems.length > 0) {
+      const entradaSum = entradaItems.reduce(
+        (s: number, d: any) => s + (Number(d?.amount ?? d?.value ?? 0) || 0),
+        0
+      );
+      const restItems = detail.filter((d: any) => !isEntrada(d));
+      const restAmounts = restItems
+        .map((d: any) => Number(d?.amount ?? d?.value ?? 0))
+        .filter((n: number) => n > 0);
+      const restAvg = restAmounts.length
+        ? restAmounts.reduce((s: number, n: number) => s + n, 0) / restAmounts.length
+        : null;
+      if (entradaSum > 0) return { entrada: entradaSum, installmentValue: restAvg };
+    }
+
     const amounts = detail
       .map((d: any) => Number(d?.amount ?? d?.value ?? 0))
       .filter((n) => n > 0);
@@ -96,7 +123,6 @@ function extractEntrada(detail: any, installmentsCount: number | null, value: nu
       if (uniform && Math.abs(first - restAvg) > 0.01) {
         return { entrada: first, installmentValue: restAvg };
       }
-      // uniform (including first)
       return { entrada: null, installmentValue: amounts[0] };
     }
     if (amounts.length === 1) {
