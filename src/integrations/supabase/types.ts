@@ -1848,6 +1848,7 @@ export type Database = {
           notes: string | null
           parent_contract_id: string | null
           payer_id: string | null
+          payment_groups: Json
           payment_method: string | null
           payment_option: string | null
           payment_status: string
@@ -1888,6 +1889,7 @@ export type Database = {
           notes?: string | null
           parent_contract_id?: string | null
           payer_id?: string | null
+          payment_groups?: Json
           payment_method?: string | null
           payment_option?: string | null
           payment_status?: string
@@ -1928,6 +1930,7 @@ export type Database = {
           notes?: string | null
           parent_contract_id?: string | null
           payer_id?: string | null
+          payment_groups?: Json
           payment_method?: string | null
           payment_option?: string | null
           payment_status?: string

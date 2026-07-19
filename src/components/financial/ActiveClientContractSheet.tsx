@@ -47,7 +47,7 @@ export function ActiveClientContractSheet({
       const { data: contract } = await supabase
         .from("client_contracts")
         .select(
-          "id, value, status, start_date, end_date, payment_method, installments_count, installments_detail, receivables_generated, receivables_generated_at, deal_id, product_id, notes"
+          "id, value, status, start_date, end_date, payment_method, installments_count, installments_detail, payment_groups, receivables_generated, receivables_generated_at, deal_id, product_id, notes"
         )
         .eq("id", contractId!)
         .maybeSingle();
