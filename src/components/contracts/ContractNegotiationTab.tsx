@@ -524,11 +524,12 @@ export function ContractNegotiationTab({
         return;
       }
       const updatePayload: Record<string, any> = {
-        payment_method: usingGroups ? (groups.length > 1 ? "misto" : groups[0]?.method || paymentMethod) : paymentMethod,
+        payment_method: usingGroups ? (confirmedGroups.length > 1 ? "misto" : confirmedGroups[0]?.method || paymentMethod) : paymentMethod,
         installments_count: detail.length || installments,
         first_due_date: detail[0]?.due_date || firstDueDate,
         negotiation_type: negotiationType,
         installments_detail: serializeDetail(),
+        payment_groups: serializePaymentGroups(),
       };
 
       const { error: prepError } = await supabase
