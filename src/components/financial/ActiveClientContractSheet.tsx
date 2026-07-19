@@ -225,12 +225,19 @@ export function ActiveClientContractSheet({
 
             <div className="flex flex-wrap gap-2 pt-2">
               <Button
+                size="sm"
+                onClick={() => navigate(`/contracts?open=${contractId}&tab=negociacao`)}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Editar grupos de pagamento (Negociação)
+              </Button>
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={() => clientId && navigate(`/clients/${clientId}?tab=contracts`)}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                Abrir contrato na ficha do cliente
+                Abrir na ficha do cliente
               </Button>
               <Button
                 variant="ghost"
