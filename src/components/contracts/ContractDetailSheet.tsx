@@ -94,6 +94,7 @@ interface ContractDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: () => void;
+  initialTab?: "details" | "negotiation";
 }
 
 const CONTRACT_STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; className: string }> = {
@@ -183,7 +184,7 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: ContractDetailSheetProps) {
+export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate, initialTab = "details" }: ContractDetailSheetProps) {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -388,7 +389,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
           </div>
         </div>
 
-        <Tabs defaultValue="details" className="mt-4">
+        <Tabs key={`${contract?.id}-${initialTab}`} defaultValue={initialTab} className="mt-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="details" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
