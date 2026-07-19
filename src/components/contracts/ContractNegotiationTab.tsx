@@ -401,7 +401,9 @@ export function ContractNegotiationTab({
     () => Math.round(detail.reduce((s, d) => s + (Number(d.amount) || 0), 0) * 100) / 100,
     [detail]
   );
-  const detailBalanced = Math.abs(detailTotal - contractValue) < 0.01;
+  // Quando existem grupos pendentes, o detalhamento (parcelas geradas) só cobre a parte confirmada.
+  const detailTarget = usingGroups && pendingGroups.length > 0 ? confirmedTotal : contractValue;
+  const detailBalanced = Math.abs(detailTotal - detailTarget) < 0.01;
 
   const updateInstallmentAt = (idx: number, patch: Partial<EditableInstallment>) => {
     setDetailDirty(true);
