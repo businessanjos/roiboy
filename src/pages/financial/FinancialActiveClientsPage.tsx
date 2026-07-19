@@ -42,6 +42,9 @@ interface Row {
   installments_paid: number;
   entries_count: number;
   total_received: number;
+  total_pending_installments: number;
+  pending_undefined: number;
+  pending_groups: Array<{ label: string; amount: number; method: string | null }>;
   installment_value: number | null;
   total_value: number;
   start_date: string | null;
@@ -50,6 +53,7 @@ interface Row {
   deal_won_at: string | null;
   installments_detail: any;
 }
+
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   credit_card: "Cartão de Crédito",
@@ -126,10 +130,11 @@ export default function FinancialActiveClientsPage() {
       const { data: contracts, error } = await supabase
         .from("client_contracts")
         .select(
-          "id, client_id, value, payment_method, installments_count, installments_detail, product_id, deal_id, status, start_date, created_at"
+          "id, client_id, value, payment_method, installments_count, installments_detail, payment_groups, product_id, deal_id, status, start_date, created_at"
         )
         .eq("account_id", accountId)
         .eq("status", "active");
+
       if (error) throw error;
 
       const clientIds = [...new Set((contracts || []).map((c) => c.client_id).filter(Boolean))];
@@ -165,11 +170,12 @@ export default function FinancialActiveClientsPage() {
         contractIds.length
           ? supabase
               .from("financial_entries")
-              .select("id, contract_id, amount, status")
+              .select("id, contract_id, amount, status, due_date")
               .in("contract_id", contractIds as string[])
               .eq("entry_type", "receivable")
               .neq("status", "cancelled")
           : Promise.resolve({ data: [], error: null } as any),
+
         dealIds.length
           ? supabase
               .from("deal_field_values")
@@ -209,19 +215,24 @@ export default function FinancialActiveClientsPage() {
       });
 
       // Aggregate receivable entries per contract
-      type Agg = { count: number; paid: number; received: number };
+      type Agg = { count: number; paid: number; received: number; pending: number };
       const aggByContract = new Map<string, Agg>();
       (entriesRes.data || []).forEach((e: any) => {
         const cid = e.contract_id as string;
         if (!cid) return;
-        const cur = aggByContract.get(cid) || { count: 0, paid: 0, received: 0 };
+        const cur = aggByContract.get(cid) || { count: 0, paid: 0, received: 0, pending: 0 };
         cur.count += 1;
+        const amt = Number(e.amount) || 0;
         if (e.status === "paid" || e.status === "partially_paid") {
           cur.paid += 1;
-          cur.received += Number(e.amount) || 0;
+          cur.received += amt;
+        } else {
+          // pending / overdue / scheduled → still owed
+          cur.pending += amt;
         }
         aggByContract.set(cid, cur);
       });
+
 
       // Build best-deal-per-client map from dealsByClientRes (prefer won, else latest)
       const bestDealByClient = new Map<string, any>();
@@ -310,6 +321,17 @@ export default function FinancialActiveClientsPage() {
               : installmentsCount && installmentsCount > 0
                 ? baseForParcel / installmentsCount
                 : null;
+        // Parse payment_groups from contract to surface "A definir" (pending) tranches
+        const groupsRaw = Array.isArray(c.payment_groups) ? c.payment_groups : [];
+        const pendingGroups = groupsRaw
+          .filter((g: any) => g && (g.status === "pending" || g.method === "a_definir"))
+          .map((g: any) => ({
+            label: String(g.label || "A definir"),
+            amount: Number(g.amount) || 0,
+            method: g.method ?? null,
+          }))
+          .filter((g: any) => g.amount > 0);
+        const pendingUndefined = pendingGroups.reduce((s: number, g: any) => s + g.amount, 0);
         return {
           contract_id: c.id,
           client_id: c.client_id,
@@ -325,6 +347,9 @@ export default function FinancialActiveClientsPage() {
           installments_paid: agg?.paid || 0,
           entries_count: agg?.count || 0,
           total_received: agg?.received || 0,
+          total_pending_installments: agg?.pending || 0,
+          pending_undefined: pendingUndefined,
+          pending_groups: pendingGroups,
           installment_value: finalInstallmentValue,
           total_value: Number(c.value || 0),
           start_date: c.start_date || null,
@@ -332,6 +357,7 @@ export default function FinancialActiveClientsPage() {
           deal_id: c.deal_id || null,
           deal_won_at: fallbackDeal?.won_at || null,
           installments_detail: c.installments_detail || null,
+
         };
       });
 
@@ -704,10 +730,12 @@ export default function FinancialActiveClientsPage() {
 
           {filtered.length > 0 && (() => {
             const totalValue = filtered.reduce((s, r) => s + (r.total_value || 0), 0);
-            const installmentsReceived = filtered.reduce((s, r) => s + (r.total_received || 0), 0);
-            const entradasReceived = filtered.reduce((s, r) => s + (r.entrada || 0), 0);
-            const totalReceived = installmentsReceived + entradasReceived;
-            const totalPending = Math.max(0, totalValue - totalReceived);
+            // Fonte da verdade: financial_entries pagas (parcelas já cobradas/pagas)
+            const totalReceived = filtered.reduce((s, r) => s + (r.total_received || 0), 0);
+            // "A receber" = parcelas emitidas ainda em aberto (pending/overdue)
+            const totalPendingInstallments = filtered.reduce((s, r) => s + (r.total_pending_installments || 0), 0);
+            // "A definir" = grupos de pagamento sem parcelas geradas (tranches pendentes)
+            const totalUndefined = filtered.reduce((s, r) => s + (r.pending_undefined || 0), 0);
             const pct = totalValue > 0 ? Math.round((totalReceived / totalValue) * 100) : 0;
             const label = productFilter !== "all" ? productFilter : "Todos os produtos";
             return (
@@ -722,25 +750,24 @@ export default function FinancialActiveClientsPage() {
                   <div className="text-lg font-bold tabular-nums mt-1">{formatBRLPrecise(totalValue)}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Entradas recebidas</div>
-                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(entradasReceived)}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">soma da coluna Entrada</div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Parcelas pagas</div>
-                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(installmentsReceived)}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">
-                    Recebido total: <span className="font-semibold">{formatBRLPrecise(totalReceived)}</span> ({pct}%)
-                  </div>
+                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Recebido</div>
+                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(totalReceived)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">parcelas pagas · {pct}% do contratado</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-amber-700">A receber</div>
-                  <div className="text-lg font-bold tabular-nums text-amber-700 mt-1">{formatBRLPrecise(totalPending)}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">{100 - pct}% pendente</div>
+                  <div className="text-lg font-bold tabular-nums text-amber-700 mt-1">{formatBRLPrecise(totalPendingInstallments)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">parcelas emitidas em aberto</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-sky-700">A definir</div>
+                  <div className="text-lg font-bold tabular-nums text-sky-700 mt-1">{formatBRLPrecise(totalUndefined)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">grupos de pagamento pendentes</div>
                 </div>
               </div>
             );
           })()}
+
 
 
 
@@ -804,7 +831,9 @@ export default function FinancialActiveClientsPage() {
                     <TableHead className="text-right">Valor da Parcela</TableHead>
                     <TableHead className="text-right">Recebido</TableHead>
                     <TableHead className="text-right">A Receber</TableHead>
+                    <TableHead className="text-right">A Definir</TableHead>
                     <TableHead className="text-right">Total</TableHead>
+
                     <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
@@ -867,33 +896,49 @@ export default function FinancialActiveClientsPage() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-emerald-700">
                         {(() => {
-                          const received = (r.total_received || 0) + (r.entrada || 0);
-                          return received > 0 ? (
+                          // Fonte da verdade: financial_entries. Se parcelas já estão pagas
+                          // (ex.: cartão pago no ato para MVP), aparecem aqui — sem somar entrada.
+                          const received = r.total_received || 0;
+                          if (received <= 0) return <span className="text-muted-foreground">—</span>;
+                          const isFullyPaid =
+                            r.installments_count != null &&
+                            r.installments_paid >= r.installments_count &&
+                            r.pending_undefined <= 0;
+                          return (
                             <div>
                               <div>{formatBRLPrecise(received)}</div>
-                              {(r.entrada || 0) > 0 && (r.total_received || 0) > 0 && (
-                                <div className="text-[10px] text-muted-foreground font-normal">
-                                  entrada {formatBRLPrecise(r.entrada || 0)} + parcelas {formatBRLPrecise(r.total_received)}
-                                </div>
-                              )}
-                              {(r.entrada || 0) > 0 && (r.total_received || 0) === 0 && (
-                                <div className="text-[10px] text-muted-foreground font-normal">só entrada</div>
+                              {isFullyPaid && (
+                                <div className="text-[10px] text-emerald-600 font-normal">✓ pago integralmente</div>
                               )}
                             </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
                           );
                         })()}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-amber-700">
                         {(() => {
-                          const pending = Math.max(0, (r.total_value || 0) - (r.total_received || 0) - (r.entrada || 0));
+                          // Parcelas emitidas em aberto (pending/overdue nas financial_entries)
+                          const pending = r.total_pending_installments || 0;
                           return pending > 0 ? formatBRLPrecise(pending) : <span className="text-muted-foreground">—</span>;
                         })()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-sky-700">
+                        {r.pending_undefined > 0 ? (
+                          <div>
+                            <div>{formatBRLPrecise(r.pending_undefined)}</div>
+                            {r.pending_groups.length > 0 && (
+                              <div className="text-[10px] text-muted-foreground font-normal truncate max-w-[140px]">
+                                {r.pending_groups.map((g) => g.label).join(", ")}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
                         {formatBRLPrecise(r.total_value)}
                       </TableCell>
+
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Button
