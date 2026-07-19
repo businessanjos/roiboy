@@ -2783,6 +2783,7 @@ export default function Contracts() {
         open={detailSheetOpen}
         onOpenChange={setDetailSheetOpen}
         onUpdate={fetchContracts}
+        initialTab={detailInitialTab}
       />
 
       {/* Delete Contract Dialog */}
