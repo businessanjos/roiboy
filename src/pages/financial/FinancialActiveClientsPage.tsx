@@ -896,33 +896,49 @@ export default function FinancialActiveClientsPage() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-emerald-700">
                         {(() => {
-                          const received = (r.total_received || 0) + (r.entrada || 0);
-                          return received > 0 ? (
+                          // Fonte da verdade: financial_entries. Se parcelas já estão pagas
+                          // (ex.: cartão pago no ato para MVP), aparecem aqui — sem somar entrada.
+                          const received = r.total_received || 0;
+                          if (received <= 0) return <span className="text-muted-foreground">—</span>;
+                          const isFullyPaid =
+                            r.installments_count != null &&
+                            r.installments_paid >= r.installments_count &&
+                            r.pending_undefined <= 0;
+                          return (
                             <div>
                               <div>{formatBRLPrecise(received)}</div>
-                              {(r.entrada || 0) > 0 && (r.total_received || 0) > 0 && (
-                                <div className="text-[10px] text-muted-foreground font-normal">
-                                  entrada {formatBRLPrecise(r.entrada || 0)} + parcelas {formatBRLPrecise(r.total_received)}
-                                </div>
-                              )}
-                              {(r.entrada || 0) > 0 && (r.total_received || 0) === 0 && (
-                                <div className="text-[10px] text-muted-foreground font-normal">só entrada</div>
+                              {isFullyPaid && (
+                                <div className="text-[10px] text-emerald-600 font-normal">✓ pago integralmente</div>
                               )}
                             </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
                           );
                         })()}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-amber-700">
                         {(() => {
-                          const pending = Math.max(0, (r.total_value || 0) - (r.total_received || 0) - (r.entrada || 0));
+                          // Parcelas emitidas em aberto (pending/overdue nas financial_entries)
+                          const pending = r.total_pending_installments || 0;
                           return pending > 0 ? formatBRLPrecise(pending) : <span className="text-muted-foreground">—</span>;
                         })()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-sky-700">
+                        {r.pending_undefined > 0 ? (
+                          <div>
+                            <div>{formatBRLPrecise(r.pending_undefined)}</div>
+                            {r.pending_groups.length > 0 && (
+                              <div className="text-[10px] text-muted-foreground font-normal truncate max-w-[140px]">
+                                {r.pending_groups.map((g) => g.label).join(", ")}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
                         {formatBRLPrecise(r.total_value)}
                       </TableCell>
+
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Button
