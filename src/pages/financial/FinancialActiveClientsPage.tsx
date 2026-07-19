@@ -57,7 +57,9 @@ interface Row {
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   credit_card: "Cartão de Crédito",
+  cartao: "Cartão de Crédito",
   cartao_credito: "Cartão de Crédito",
+  cartão: "Cartão de Crédito",
   debit_card: "Cartão de Débito",
   cartao_debito: "Cartão de Débito",
   boleto: "Boleto",
@@ -82,6 +84,32 @@ function labelPayment(m: string | null, pmMap: Map<string, string>) {
   return PAYMENT_METHOD_LABELS[m] ?? m;
 }
 
+const isEntradaLike = (d: any) => {
+  const gl = String(d?.group_label ?? d?.label ?? "").toLowerCase();
+  const ml = String(d?.method_label ?? "").toLowerCase();
+  return gl.includes("entrada") || ml.includes("entrada");
+};
+
+const isCardMethod = (method: any) => {
+  const m = String(method ?? "").toLowerCase();
+  return ["credit_card", "cartao_credito", "cartao", "cartão", "card", "recurring_card"].includes(m);
+};
+
+function countPaidCardCashCollectInstallments(detail: any, paymentGroups: any): number {
+  if (!Array.isArray(detail) || detail.length === 0) return 0;
+  const confirmedCardEntryGroupIds = new Set(
+    (Array.isArray(paymentGroups) ? paymentGroups : [])
+      .filter((g: any) => isEntradaLike(g) && g?.status !== "pending" && isCardMethod(g?.method))
+      .map((g: any) => g?.id)
+      .filter(Boolean)
+  );
+
+  return detail.filter((d: any) => {
+    const belongsToConfirmedEntryGroup = d?.group_id && confirmedCardEntryGroupIds.has(d.group_id);
+    return (isEntradaLike(d) || belongsToConfirmedEntryGroup) && isCardMethod(d?.method);
+  }).length;
+}
+
 /** Extract entrada (cash-collect) from installments_detail.
  *  Rules, applied in order:
  *   1. Sum every item flagged as "Entrada" (via group_label / method_label). This is
@@ -91,18 +119,13 @@ function labelPayment(m: string | null, pmMap: Map<string, string>) {
  */
 function extractEntrada(detail: any, installmentsCount: number | null, value: number): { entrada: number | null; installmentValue: number | null } {
   if (Array.isArray(detail) && detail.length > 0) {
-    const isEntrada = (d: any) => {
-      const gl = String(d?.group_label ?? "").toLowerCase();
-      const ml = String(d?.method_label ?? "").toLowerCase();
-      return gl.includes("entrada") || ml.includes("entrada");
-    };
-    const entradaItems = detail.filter(isEntrada);
+    const entradaItems = detail.filter(isEntradaLike);
     if (entradaItems.length > 0) {
       const entradaSum = entradaItems.reduce(
         (s: number, d: any) => s + (Number(d?.amount ?? d?.value ?? 0) || 0),
         0
       );
-      const restItems = detail.filter((d: any) => !isEntrada(d));
+      const restItems = detail.filter((d: any) => !isEntradaLike(d));
       const restAmounts = restItems
         .map((d: any) => Number(d?.amount ?? d?.value ?? 0))
         .filter((n: number) => n > 0);
@@ -333,6 +356,10 @@ export default function FinancialActiveClientsPage() {
         const contractCount = Number(c.installments_count) || 0;
         const detailCount = Array.isArray(c.installments_detail) ? c.installments_detail.length : 0;
         const parcelasFromCustomField = c.deal_id ? parcelasByDealId.get(c.deal_id) ?? 0 : 0;
+        const paidCardCashCollectInstallments = countPaidCardCashCollectInstallments(
+          c.installments_detail,
+          c.payment_groups
+        );
         const installmentsCount = Math.max(
           contractCount,
           detailCount,
@@ -366,6 +393,7 @@ export default function FinancialActiveClientsPage() {
         const pendingUndefined = pendingGroups.reduce((s: number, g: any) => s + g.amount, 0);
         const installmentReceived = agg?.received || 0;
         const receivedTotal = Math.max(installmentReceived, finalEntrada ?? 0);
+        const installmentsPaid = Math.max(agg?.paid || 0, paidCardCashCollectInstallments);
         const remainingAfterReceivedAndUndefined = Math.max(0, totalValue - receivedTotal - pendingUndefined);
         const pendingInstallments = Math.min(agg?.pending || 0, remainingAfterReceivedAndUndefined);
         return {
@@ -380,7 +408,7 @@ export default function FinancialActiveClientsPage() {
           payment_method_raw: c.payment_method || null,
           entrada: finalEntrada,
           installments_count: installmentsCount,
-          installments_paid: agg?.paid || 0,
+          installments_paid: installmentsPaid,
           entries_count: agg?.count || 0,
           total_received: receivedTotal,
           total_pending_installments: pendingInstallments,
