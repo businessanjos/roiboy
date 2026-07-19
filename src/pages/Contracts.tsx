@@ -553,7 +553,20 @@ export default function Contracts() {
         setSearchParams({});
       }
     }
-  }, [searchParams, clients]);
+
+    // Deep-link: /contracts?open={contractId}&tab=negociacao
+    const openId = searchParams.get('open');
+    const tabParam = searchParams.get('tab');
+    if (openId && contracts.length > 0) {
+      const found = contracts.find((c) => c.id === openId);
+      if (found) {
+        setSelectedContract(found);
+        setDetailInitialTab(tabParam === 'negociacao' || tabParam === 'negotiation' ? 'negotiation' : 'details');
+        setDetailSheetOpen(true);
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, clients, contracts]);
 
   const fetchFinancialData = async () => {
     try {
