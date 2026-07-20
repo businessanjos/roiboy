@@ -896,7 +896,6 @@ export default function FinancialActiveClientsPage() {
                     <TableHead className="text-right">Valor da Parcela</TableHead>
                     <TableHead className="text-right">Recebido</TableHead>
                     <TableHead className="text-right">A Receber</TableHead>
-                    <TableHead className="text-right">A Definir</TableHead>
                     <TableHead className="text-right">Total</TableHead>
 
                     <TableHead className="w-10" />
