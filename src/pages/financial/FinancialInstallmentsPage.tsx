@@ -489,6 +489,31 @@ export default function FinancialInstallmentsPage() {
     });
   }, [rows, search, statusFilter, paymentMethodFilter, productFilter, billingFilter, dateInterval]);
 
+  const sorted = useMemo(() => {
+    if (!sort) return filtered;
+    const mult = sort.dir === "asc" ? 1 : -1;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let av: number | string;
+      let bv: number | string;
+      if (sort.key === "number") {
+        av = Number(a.number || 0);
+        bv = Number(b.number || 0);
+      } else if (sort.key === "amount") {
+        av = Number(a.amount || 0);
+        bv = Number(b.amount || 0);
+      } else {
+        av = formatPaymentMethod(a.payment_method).toLowerCase();
+        bv = formatPaymentMethod(b.payment_method).toLowerCase();
+      }
+      if (av < bv) return -1 * mult;
+      if (av > bv) return 1 * mult;
+      return 0;
+    });
+    return arr;
+  }, [filtered, sort]);
+
+
 
   const totals = useMemo(() => {
     return filtered.reduce(
