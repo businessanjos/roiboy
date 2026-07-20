@@ -118,25 +118,48 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   pix: "Pix",
   boleto: "Boleto",
   boletos: "Boleto",
+  boleto_bancario: "Boleto bancário",
   cartao: "Cartão",
   card: "Cartão",
   credit_card: "Cartão de crédito",
+  creditcard: "Cartão de crédito",
+  "credit-card": "Cartão de crédito",
+  credito: "Cartão de crédito",
   cartao_credito: "Cartão de crédito",
+  cartao_de_credito: "Cartão de crédito",
   "cartão": "Cartão de crédito",
+  "cartão de crédito": "Cartão de crédito",
   "cartão_credito": "Cartão de crédito",
+  "cartão_de_crédito": "Cartão de crédito",
   debit_card: "Cartão de débito",
+  debitcard: "Cartão de débito",
+  debito: "Cartão de débito",
   cartao_debito: "Cartão de débito",
+  cartao_de_debito: "Cartão de débito",
+  "cartão de débito": "Cartão de débito",
   recurring_card: "Cartão recorrência",
+  recurring: "Cartão recorrência",
   cartao_recorrencia: "Cartão recorrência",
   cheque: "Cheque",
   check: "Cheque",
   cheques: "Cheques",
+  checks: "Cheques",
   dinheiro: "Dinheiro",
   cash: "Dinheiro",
+  especie: "Dinheiro",
+  "espécie": "Dinheiro",
   transferencia: "Transferência",
+  "transferência": "Transferência",
   transfer: "Transferência",
+  bank_transfer: "Transferência bancária",
   ted: "TED",
   doc: "DOC",
+  permuta: "Permuta",
+  barter: "Permuta",
+  outro: "Outro",
+  outros: "Outros",
+  other: "Outro",
+  others: "Outros",
   pix_cheques: "Pix + Cheques",
   pix_cartao_cheques: "Pix + Cartão + Cheques",
   pix_boleto_parcelado: "Pix + Boleto parcelado",
@@ -146,10 +169,15 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 
 function formatPaymentMethod(value: string | null): string {
   if (!value) return "—";
-  const key = value.toLowerCase().trim();
-  if (PAYMENT_METHOD_LABELS[key]) return PAYMENT_METHOD_LABELS[key];
-  // Capitalize first letter as fallback
-  return key.charAt(0).toUpperCase() + key.slice(1);
+  const raw = value.toLowerCase().trim();
+  if (PAYMENT_METHOD_LABELS[raw]) return PAYMENT_METHOD_LABELS[raw];
+  const normalized = raw.replace(/[\s-]+/g, "_");
+  if (PAYMENT_METHOD_LABELS[normalized]) return PAYMENT_METHOD_LABELS[normalized];
+  const noAccents = normalized.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (PAYMENT_METHOD_LABELS[noAccents]) return PAYMENT_METHOD_LABELS[noAccents];
+  // Capitalize first letter as fallback (sem underscores)
+  const pretty = raw.replace(/_/g, " ");
+  return pretty.charAt(0).toUpperCase() + pretty.slice(1);
 }
 
 function formatCnpj(cnpj: string): string {
