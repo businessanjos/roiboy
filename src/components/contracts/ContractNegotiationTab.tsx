@@ -477,7 +477,34 @@ export function ContractNegotiationTab({
         .eq("id", contractId);
 
       if (error) throw error;
-      toast.success("Negociação salva com sucesso");
+
+      // If receivables were already generated, keep installments/invoices in sync
+      // with the new negotiation (dates, methods, splits) by regenerating open items.
+      // Paid installments are preserved by the RPC.
+      let regeneratedCount: number | null = null;
+      if (receivablesGenerated && negotiationType !== "custom" && detailBalanced) {
+        try {
+          const { data: regenData, error: regenError } = await supabase.rpc(
+            "regenerate_contract_receivables",
+            { _contract_id: contractId },
+          );
+          if (regenError) throw regenError;
+          regeneratedCount = (regenData as number) ?? null;
+        } catch (regenErr: any) {
+          console.error("Auto-regenerate after save failed:", regenErr);
+          toast.warning(
+            "Negociação salva, mas não foi possível ressincronizar as parcelas automaticamente. Use o botão Regenerar.",
+          );
+        }
+      }
+
+      if (regeneratedCount !== null) {
+        toast.success(
+          `Negociação salva. ${regeneratedCount} parcela(s) ressincronizada(s) no financeiro.`,
+        );
+      } else {
+        toast.success("Negociação salva com sucesso");
+      }
       onUpdate();
     } catch (error) {
       console.error("Error saving negotiation:", error);
