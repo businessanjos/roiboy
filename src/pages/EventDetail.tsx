@@ -598,6 +598,7 @@ export default function EventDetail() {
             eventId={event.id} 
             accountId={accountId}
             maxCapacity={event.max_capacity}
+            eventScheduledAt={event.scheduled_at}
             onUpdate={fetchStats}
             isLocked={isLocked}
           />

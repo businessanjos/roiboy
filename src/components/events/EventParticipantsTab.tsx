@@ -102,6 +102,7 @@ interface EventParticipantsTabProps {
   eventId: string;
   accountId: string | null;
   maxCapacity?: number | null;
+  eventScheduledAt?: string | null;
   onUpdate?: () => void;
   isLocked?: boolean;
 }
@@ -119,6 +120,7 @@ export default function EventParticipantsTab({
   eventId, 
   accountId, 
   maxCapacity,
+  eventScheduledAt,
   onUpdate,
   isLocked
 }: EventParticipantsTabProps) {
@@ -301,7 +303,7 @@ export default function EventParticipantsTab({
   };
 
   const exportCSV = () => {
-    const headers = ["Nome", "Email", "Telefone", "Status", "Data Convite", "Notas"];
+    const headers = ["Nome", "Email", "Telefone", "Status", "Data do Evento", "Notas"];
     const rows = participants.map(p => {
       const clientEmails = p.clients?.emails;
       const emailValue = Array.isArray(clientEmails) && clientEmails.length > 0 && typeof clientEmails[0] === 'object'
@@ -312,7 +314,7 @@ export default function EventParticipantsTab({
         emailValue,
         p.clients?.phone_e164 || p.guest_phone || "",
         rsvpStatusConfig[p.rsvp_status].label,
-        p.invited_at ? format(new Date(p.invited_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "",
+        eventScheduledAt ? format(new Date(eventScheduledAt), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "",
         p.notes || ""
       ];
     });
@@ -578,7 +580,7 @@ export default function EventParticipantsTab({
                   <TableHead>Participante</TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead title="Data em que o convite foi enviado (não é a data do evento)">Convidado em</TableHead>
+                  <TableHead>Data do evento</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -637,7 +639,7 @@ export default function EventParticipantsTab({
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {p.invited_at && format(new Date(p.invited_at), "dd/MM/yy", { locale: ptBR })}
+                        {eventScheduledAt ? format(new Date(eventScheduledAt), "dd/MM/yy", { locale: ptBR }) : "—"}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
