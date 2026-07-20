@@ -896,7 +896,6 @@ export default function FinancialActiveClientsPage() {
                     <TableHead className="text-right">Valor da Parcela</TableHead>
                     <TableHead className="text-right">Recebido</TableHead>
                     <TableHead className="text-right">A Receber</TableHead>
-                    <TableHead className="text-right">A Definir</TableHead>
                     <TableHead className="text-right">Total</TableHead>
 
                     <TableHead className="w-10" />
@@ -979,26 +978,26 @@ export default function FinancialActiveClientsPage() {
                           );
                         })()}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-amber-700">
+                      <TableCell className="text-right tabular-nums">
                         {(() => {
-                          // Parcelas emitidas em aberto (pending/overdue nas financial_entries)
                           const pending = r.total_pending_installments || 0;
-                          return pending > 0 ? formatBRLPrecise(pending) : <span className="text-muted-foreground">—</span>;
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-sky-700">
-                        {r.pending_undefined > 0 ? (
-                          <div>
-                            <div>{formatBRLPrecise(r.pending_undefined)}</div>
-                            {r.pending_groups.length > 0 && (
-                              <div className="text-[10px] text-muted-foreground font-normal truncate max-w-[140px]">
-                                {r.pending_groups.map((g) => g.label).join(", ")}
+                          const undef = r.pending_undefined || 0;
+                          const total = pending + undef;
+                          if (total <= 0) return <span className="text-muted-foreground">—</span>;
+                          return (
+                            <div>
+                              <div className={pending > 0 ? "text-amber-700" : "text-sky-700"}>
+                                {formatBRLPrecise(total)}
                               </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                              {undef > 0 && (
+                                <div className="text-[10px] text-muted-foreground font-normal truncate max-w-[160px]">
+                                  {formatBRLPrecise(undef)} a definir
+                                  {r.pending_groups.length > 0 && ` · ${r.pending_groups.map((g) => g.label).join(", ")}`}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
                         {formatBRLPrecise(r.total_value)}
