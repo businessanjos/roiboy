@@ -95,19 +95,43 @@ const isCardMethod = (method: any) => {
   return ["credit_card", "cartao_credito", "cartao", "cartão", "card", "recurring_card"].includes(m);
 };
 
+/**
+ * Cash-collect no cartão: quando a entrada foi passada no cartão, TODAS as parcelas
+ * geradas dessa tranche já são consideradas pagas na visão de "Pagas" da UI, pois o
+ * valor foi coletado no ato pelo lojista (mesmo que a operadora vá liquidar em N meses).
+ *
+ * Retorna a contagem de parcelas que devem ser contadas como pagas por essa regra.
+ * Cobre 3 fontes possíveis:
+ *   (a) itens de `installments_detail` marcados como Entrada + método cartão
+ *   (b) itens de `installments_detail` cujo `group_id` bate com um payment_group
+ *       de Entrada no cartão que NÃO está explicitamente "pending"
+ *   (c) fallback: quando não há `installments_detail`, usa o `installments` (nº de
+ *       parcelas) do próprio payment_group de Entrada no cartão confirmado.
+ */
 function countPaidCardCashCollectInstallments(detail: any, paymentGroups: any): number {
-  if (!Array.isArray(detail) || detail.length === 0) return 0;
+  const groups = Array.isArray(paymentGroups) ? paymentGroups : [];
+  const confirmedCardEntryGroups = groups.filter(
+    (g: any) => isEntradaLike(g) && g?.status !== "pending" && isCardMethod(g?.method),
+  );
   const confirmedCardEntryGroupIds = new Set(
-    (Array.isArray(paymentGroups) ? paymentGroups : [])
-      .filter((g: any) => isEntradaLike(g) && g?.status !== "pending" && isCardMethod(g?.method))
-      .map((g: any) => g?.id)
-      .filter(Boolean)
+    confirmedCardEntryGroups.map((g: any) => g?.id).filter(Boolean),
   );
 
-  return detail.filter((d: any) => {
-    const belongsToConfirmedEntryGroup = d?.group_id && confirmedCardEntryGroupIds.has(d.group_id);
-    return (isEntradaLike(d) || belongsToConfirmedEntryGroup) && isCardMethod(d?.method);
-  }).length;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const fromDetail = detail.filter((d: any) => {
+      const belongsToConfirmedEntryGroup =
+        d?.group_id && confirmedCardEntryGroupIds.has(d.group_id);
+      const isEntradaCard = isEntradaLike(d) && isCardMethod(d?.method);
+      return isEntradaCard || belongsToConfirmedEntryGroup;
+    }).length;
+    if (fromDetail > 0) return fromDetail;
+  }
+
+  // Fallback (c): sem detail ou detail não representa a entrada — usa o count declarado no grupo
+  return confirmedCardEntryGroups.reduce(
+    (s: number, g: any) => s + (Number(g?.installments) || 0),
+    0,
+  );
 }
 
 /** Extract entrada (cash-collect) from installments_detail.
