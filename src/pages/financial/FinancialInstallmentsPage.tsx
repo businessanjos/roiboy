@@ -599,9 +599,25 @@ export default function FinancialInstallmentsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="open">Em aberto (não pagas)</SelectItem>
             {Object.entries(STATUS_META).map(([k, v]) => (
               <SelectItem key={k} value={k}>
                 {v.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+          <SelectTrigger className="w-52">
+            <SelectValue placeholder="Forma de pagamento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as formas</SelectItem>
+            <SelectItem value="none">Sem forma definida</SelectItem>
+            {paymentMethodOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
               </SelectItem>
             ))}
           </SelectContent>
