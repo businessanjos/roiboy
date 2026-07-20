@@ -380,9 +380,36 @@ export default function FinancialInstallmentsPage() {
     }
   }, [datePreset, customRange]);
 
+  // Distinct payment methods present in the current dataset, for the filter dropdown.
+  const paymentMethodOptions = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => {
+      const raw = (r.payment_method || "").toLowerCase().trim();
+      if (raw) set.add(raw);
+    });
+    return Array.from(set)
+      .map((k) => ({ value: k, label: formatPaymentMethod(k) }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }, [rows]);
+
   const filtered = useMemo(() => {
     return rows.filter((r) => {
-      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (statusFilter !== "all") {
+        if (statusFilter === "open") {
+          if (r.status === "paid") return false;
+        } else if (r.status !== statusFilter) {
+          return false;
+        }
+      }
+
+      if (paymentMethodFilter !== "all") {
+        const raw = (r.payment_method || "").toLowerCase().trim();
+        if (paymentMethodFilter === "none") {
+          if (raw) return false;
+        } else if (raw !== paymentMethodFilter) {
+          return false;
+        }
+      }
 
       if (productFilter !== "all") {
         if (productFilter === "none") {
@@ -412,12 +439,15 @@ export default function FinancialInstallmentsPage() {
         const client = r.invoices?.clients;
         const hay = [
           r.invoice_id,
+          r.invoices?.contract_id,
           String(r.number),
           client?.full_name,
           client?.company_name,
           client?.cpf,
           client?.cnpj,
           r.invoices?.product?.name,
+          r.invoices?.nf_number,
+          formatPaymentMethod(r.payment_method),
         ]
           .filter(Boolean)
           .join(" ")
@@ -426,7 +456,7 @@ export default function FinancialInstallmentsPage() {
       }
       return true;
     });
-  }, [rows, search, statusFilter, productFilter, billingFilter, dateInterval]);
+  }, [rows, search, statusFilter, paymentMethodFilter, productFilter, billingFilter, dateInterval]);
 
 
   const totals = useMemo(() => {
