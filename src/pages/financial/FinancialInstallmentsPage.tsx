@@ -232,7 +232,7 @@ export default function FinancialInstallmentsPage() {
   const accountId = currentUser?.account_id;
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("open");
   const [productFilter, setProductFilter] = useState<string>("all");
   const [billingFilter, setBillingFilter] = useState<string>("all"); // all | cnpj | cpf
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
@@ -279,6 +279,8 @@ export default function FinancialInstallmentsPage() {
         .select(
           "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, contract_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
         )
+        .neq("status", "written_off")
+        .neq("invoices.status", "written_off")
         .order("due_date", { ascending: true })
         .limit(3000);
 
