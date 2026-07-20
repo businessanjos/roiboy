@@ -211,6 +211,34 @@ export default function FinancialInstallmentsPage() {
   const [nfInvoice, setNfInvoice] = useState<InstallmentRow["invoices"] | null>(null);
   const [nfOpen, setNfOpen] = useState(false);
 
+  // Sorting — persisted in localStorage so it survives navigation/reload.
+  type SortKey = "number" | "amount" | "payment_method";
+  type SortDir = "asc" | "desc";
+  const SORT_STORAGE_KEY = "financial-installments:sort";
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir } | null>(() => {
+    try {
+      const raw = localStorage.getItem(SORT_STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as { key: SortKey; dir: SortDir }) : null;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    try {
+      if (sort) localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(sort));
+      else localStorage.removeItem(SORT_STORAGE_KEY);
+    } catch {}
+  }, [sort]);
+
+  const toggleSort = (key: SortKey) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "asc" };
+      if (prev.dir === "asc") return { key, dir: "desc" };
+      return null; // third click clears
+    });
+  };
+
+
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["financial-installments", accountId, currentCompanyId],
