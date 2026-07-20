@@ -244,10 +244,8 @@ export default function FinancialInstallmentsPage() {
   const [nfOpen, setNfOpen] = useState(false);
 
   // Sorting — persisted in localStorage so it survives navigation/reload.
-  type SortKey = "number" | "amount" | "payment_method";
-  type SortDir = "asc" | "desc";
   const SORT_STORAGE_KEY = "financial-installments:sort";
-  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir } | null>(() => {
+  const [sort, setSort] = useState<SortState>(() => {
     try {
       const raw = localStorage.getItem(SORT_STORAGE_KEY);
       return raw ? (JSON.parse(raw) as { key: SortKey; dir: SortDir }) : null;
