@@ -578,7 +578,7 @@ export default function EventParticipantsTab({
                   <TableHead>Participante</TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead title="Data em que o convite foi enviado (não é a data do evento)">Convidado em</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
