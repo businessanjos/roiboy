@@ -1,0 +1,1 @@
+SELECT public.regenerate_contract_receivables('60874364-2b15-4db7-9435-ad4b7ce1bb3a'::uuid);

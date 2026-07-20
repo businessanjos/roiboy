@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -22,6 +22,9 @@ import {
   RefreshCw,
   XCircle,
   Gavel,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -191,6 +194,38 @@ function formatCurrency(value: number) {
 }
 
 
+type SortKey = "number" | "amount" | "payment_method";
+type SortDir = "asc" | "desc";
+type SortState = { key: SortKey; dir: SortDir } | null;
+
+function SortHeader({
+  label,
+  sortKey,
+  sort,
+  onToggle,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortState;
+  onToggle: (key: SortKey) => void;
+}) {
+  const active = sort?.key === sortKey;
+  const Icon = !active ? ArrowUpDown : sort!.dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(sortKey)}
+      className={cn(
+        "inline-flex items-center gap-1 hover:text-foreground transition-colors",
+        active ? "text-foreground font-medium" : "text-muted-foreground"
+      )}
+    >
+      {label}
+      <Icon className="h-3 w-3 opacity-70" />
+    </button>
+  );
+}
+
 export default function FinancialInstallmentsPage() {
   const { currentUser } = useCurrentUser();
   const { currentCompanyId } = useCompany();
@@ -207,6 +242,32 @@ export default function FinancialInstallmentsPage() {
   const [open, setOpen] = useState(false);
   const [nfInvoice, setNfInvoice] = useState<InstallmentRow["invoices"] | null>(null);
   const [nfOpen, setNfOpen] = useState(false);
+
+  // Sorting — persisted in localStorage so it survives navigation/reload.
+  const SORT_STORAGE_KEY = "financial-installments:sort";
+  const [sort, setSort] = useState<SortState>(() => {
+    try {
+      const raw = localStorage.getItem(SORT_STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as NonNullable<SortState>) : null;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    try {
+      if (sort) localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(sort));
+      else localStorage.removeItem(SORT_STORAGE_KEY);
+    } catch {}
+  }, [sort]);
+
+  const toggleSort = (key: SortKey) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "asc" };
+      if (prev.dir === "asc") return { key, dir: "desc" };
+      return null; // third click clears
+    });
+  };
+
 
 
   const { data: rows = [], isLoading } = useQuery({
@@ -458,6 +519,31 @@ export default function FinancialInstallmentsPage() {
     });
   }, [rows, search, statusFilter, paymentMethodFilter, productFilter, billingFilter, dateInterval]);
 
+  const sorted = useMemo(() => {
+    if (!sort) return filtered;
+    const mult = sort.dir === "asc" ? 1 : -1;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let av: number | string;
+      let bv: number | string;
+      if (sort.key === "number") {
+        av = Number(a.number || 0);
+        bv = Number(b.number || 0);
+      } else if (sort.key === "amount") {
+        av = Number(a.amount || 0);
+        bv = Number(b.amount || 0);
+      } else {
+        av = formatPaymentMethod(a.payment_method).toLowerCase();
+        bv = formatPaymentMethod(b.payment_method).toLowerCase();
+      }
+      if (av < bv) return -1 * mult;
+      if (av > bv) return 1 * mult;
+      return 0;
+    });
+    return arr;
+  }, [filtered, sort]);
+
+
 
   const totals = useMemo(() => {
     return filtered.reduce(
@@ -630,14 +716,20 @@ export default function FinancialInstallmentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16" title="Número da parcela dentro da fatura (ex: 1/12, 2/12)">Parcela</TableHead>
+                <TableHead className="w-16" title="Número da parcela dentro da fatura (ex: 1/12, 2/12)">
+                  <SortHeader label="Parcela" sortKey="number" sort={sort} onToggle={toggleSort} />
+                </TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Faturamento</TableHead>
                 <TableHead>CNPJ</TableHead>
                 <TableHead>Vencimento</TableHead>
-                <TableHead>Valor</TableHead>
+                <TableHead>
+                  <SortHeader label="Valor" sortKey="amount" sort={sort} onToggle={toggleSort} />
+                </TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Forma de pagamento</TableHead>
+                <TableHead>
+                  <SortHeader label="Forma de pagamento" sortKey="payment_method" sort={sort} onToggle={toggleSort} />
+                </TableHead>
                 <TableHead>NF Fiscal</TableHead>
                 <TableHead className="text-right">Histórico</TableHead>
               </TableRow>
@@ -658,7 +750,7 @@ export default function FinancialInstallmentsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((r) => {
+                sorted.map((r) => {
                   const meta = STATUS_META[r.status] ?? STATUS_META.pending;
                   const Icon = meta.icon;
                   const client = r.invoices?.clients;
