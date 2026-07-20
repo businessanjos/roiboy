@@ -714,7 +714,7 @@ export default function FinancialInstallmentsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((r) => {
+                sorted.map((r) => {
                   const meta = STATUS_META[r.status] ?? STATUS_META.pending;
                   const Icon = meta.icon;
                   const client = r.invoices?.clients;
