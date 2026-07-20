@@ -200,6 +200,7 @@ export default function FinancialInstallmentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
   const [billingFilter, setBillingFilter] = useState<string>("all"); // all | cnpj | cpf
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const [datePreset, setDatePreset] = useState<string>("all"); // all | month | quarter | year | custom
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -379,9 +380,36 @@ export default function FinancialInstallmentsPage() {
     }
   }, [datePreset, customRange]);
 
+  // Distinct payment methods present in the current dataset, for the filter dropdown.
+  const paymentMethodOptions = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => {
+      const raw = (r.payment_method || "").toLowerCase().trim();
+      if (raw) set.add(raw);
+    });
+    return Array.from(set)
+      .map((k) => ({ value: k, label: formatPaymentMethod(k) }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }, [rows]);
+
   const filtered = useMemo(() => {
     return rows.filter((r) => {
-      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (statusFilter !== "all") {
+        if (statusFilter === "open") {
+          if (r.status === "paid") return false;
+        } else if (r.status !== statusFilter) {
+          return false;
+        }
+      }
+
+      if (paymentMethodFilter !== "all") {
+        const raw = (r.payment_method || "").toLowerCase().trim();
+        if (paymentMethodFilter === "none") {
+          if (raw) return false;
+        } else if (raw !== paymentMethodFilter) {
+          return false;
+        }
+      }
 
       if (productFilter !== "all") {
         if (productFilter === "none") {
@@ -411,12 +439,15 @@ export default function FinancialInstallmentsPage() {
         const client = r.invoices?.clients;
         const hay = [
           r.invoice_id,
+          r.invoices?.contract_id,
           String(r.number),
           client?.full_name,
           client?.company_name,
           client?.cpf,
           client?.cnpj,
           r.invoices?.product?.name,
+          r.invoices?.nf_number,
+          formatPaymentMethod(r.payment_method),
         ]
           .filter(Boolean)
           .join(" ")
@@ -425,7 +456,7 @@ export default function FinancialInstallmentsPage() {
       }
       return true;
     });
-  }, [rows, search, statusFilter, productFilter, billingFilter, dateInterval]);
+  }, [rows, search, statusFilter, paymentMethodFilter, productFilter, billingFilter, dateInterval]);
 
 
   const totals = useMemo(() => {
@@ -478,7 +509,7 @@ export default function FinancialInstallmentsPage() {
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por cliente, CPF/CNPJ, produto, nº ou fatura..."
+            placeholder="Buscar por cliente, CPF/CNPJ, produto, contrato, fatura, NF ou forma de pagamento..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -568,9 +599,25 @@ export default function FinancialInstallmentsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="open">Em aberto (não pagas)</SelectItem>
             {Object.entries(STATUS_META).map(([k, v]) => (
               <SelectItem key={k} value={k}>
                 {v.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+          <SelectTrigger className="w-52">
+            <SelectValue placeholder="Forma de pagamento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as formas</SelectItem>
+            <SelectItem value="none">Sem forma definida</SelectItem>
+            {paymentMethodOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
               </SelectItem>
             ))}
           </SelectContent>
