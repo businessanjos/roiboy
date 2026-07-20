@@ -117,15 +117,24 @@ const STATUS_META: Record<string, { label: string; className: string; icon: any 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   pix: "Pix",
   boleto: "Boleto",
+  boletos: "Boleto",
   cartao: "Cartão",
+  card: "Cartão",
+  credit_card: "Cartão de crédito",
   cartao_credito: "Cartão de crédito",
+  "cartão": "Cartão de crédito",
+  "cartão_credito": "Cartão de crédito",
+  debit_card: "Cartão de débito",
   cartao_debito: "Cartão de débito",
+  recurring_card: "Cartão recorrência",
   cartao_recorrencia: "Cartão recorrência",
   cheque: "Cheque",
   check: "Cheque",
   cheques: "Cheques",
   dinheiro: "Dinheiro",
+  cash: "Dinheiro",
   transferencia: "Transferência",
+  transfer: "Transferência",
   ted: "TED",
   doc: "DOC",
   pix_cheques: "Pix + Cheques",
@@ -546,7 +555,7 @@ export default function FinancialInstallmentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">#</TableHead>
+                <TableHead className="w-16" title="Número da parcela dentro da fatura (ex: 1/12, 2/12)">Parcela</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Faturamento</TableHead>
                 <TableHead>CNPJ</TableHead>
