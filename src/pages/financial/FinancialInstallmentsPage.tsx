@@ -194,6 +194,38 @@ function formatCurrency(value: number) {
 }
 
 
+type SortKey = "number" | "amount" | "payment_method";
+type SortDir = "asc" | "desc";
+type SortState = { key: SortKey; dir: SortDir } | null;
+
+function SortHeader({
+  label,
+  sortKey,
+  sort,
+  onToggle,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortState;
+  onToggle: (key: SortKey) => void;
+}) {
+  const active = sort?.key === sortKey;
+  const Icon = !active ? ArrowUpDown : sort!.dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(sortKey)}
+      className={cn(
+        "inline-flex items-center gap-1 hover:text-foreground transition-colors",
+        active ? "text-foreground font-medium" : "text-muted-foreground"
+      )}
+    >
+      {label}
+      <Icon className="h-3 w-3 opacity-70" />
+    </button>
+  );
+}
+
 export default function FinancialInstallmentsPage() {
   const { currentUser } = useCurrentUser();
   const { currentCompanyId } = useCompany();
