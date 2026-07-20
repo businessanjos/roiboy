@@ -686,14 +686,20 @@ export default function FinancialInstallmentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16" title="Número da parcela dentro da fatura (ex: 1/12, 2/12)">Parcela</TableHead>
+                <TableHead className="w-16" title="Número da parcela dentro da fatura (ex: 1/12, 2/12)">
+                  <SortHeader label="Parcela" sortKey="number" sort={sort} onToggle={toggleSort} />
+                </TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Faturamento</TableHead>
                 <TableHead>CNPJ</TableHead>
                 <TableHead>Vencimento</TableHead>
-                <TableHead>Valor</TableHead>
+                <TableHead>
+                  <SortHeader label="Valor" sortKey="amount" sort={sort} onToggle={toggleSort} />
+                </TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Forma de pagamento</TableHead>
+                <TableHead>
+                  <SortHeader label="Forma de pagamento" sortKey="payment_method" sort={sort} onToggle={toggleSort} />
+                </TableHead>
                 <TableHead>NF Fiscal</TableHead>
                 <TableHead className="text-right">Histórico</TableHead>
               </TableRow>
