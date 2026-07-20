@@ -248,7 +248,7 @@ export default function FinancialInstallmentsPage() {
   const [sort, setSort] = useState<SortState>(() => {
     try {
       const raw = localStorage.getItem(SORT_STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as { key: SortKey; dir: SortDir }) : null;
+      return raw ? (JSON.parse(raw) as NonNullable<SortState>) : null;
     } catch {
       return null;
     }
