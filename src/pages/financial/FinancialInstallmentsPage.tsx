@@ -555,7 +555,7 @@ export default function FinancialInstallmentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">#</TableHead>
+                <TableHead className="w-16" title="Número da parcela dentro da fatura (ex: 1/12, 2/12)">Parcela</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Faturamento</TableHead>
                 <TableHead>CNPJ</TableHead>
