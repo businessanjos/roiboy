@@ -200,6 +200,7 @@ export default function FinancialInstallmentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
   const [billingFilter, setBillingFilter] = useState<string>("all"); // all | cnpj | cpf
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const [datePreset, setDatePreset] = useState<string>("all"); // all | month | quarter | year | custom
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [selectedId, setSelectedId] = useState<string | null>(null);
