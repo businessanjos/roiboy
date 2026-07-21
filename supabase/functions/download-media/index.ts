@@ -144,14 +144,17 @@ Deno.serve(async (req) => {
       // Process batch in parallel
       const batchResults = await Promise.all(batch.map(async (msg: any) => {
         try {
-          // Mark as downloading
+          // Mark as downloading + bump attempt counter
           await supabase
             .from("zapp_messages")
-            .update({ 
+            .update({
               media_download_status: "downloading",
+              media_download_attempts: ((msg.media_download_attempts as number) || 0) + 1,
+              media_last_attempt_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
             .eq("id", msg.id);
+
 
           console.log(`Downloading media for message ${msg.id}...`);
 
