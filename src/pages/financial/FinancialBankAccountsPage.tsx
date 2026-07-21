@@ -147,6 +147,32 @@ const brazilianStates = [
   "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
+const isCardAdminInstitution = (code: string) => code.startsWith("C");
+
+const getInstitutionOptions = (accountType: string) => {
+  if (accountType === "card_admin") {
+    return brazilianBanks.filter((bank) => isCardAdminInstitution(bank.code) || bank.code === "000");
+  }
+
+  return brazilianBanks;
+};
+
+const getInstitutionSearchCopy = (accountType: string) => {
+  if (accountType === "card_admin") {
+    return {
+      trigger: "Selecione uma administradora...",
+      input: "Buscar administradora...",
+      empty: "Nenhuma administradora encontrada.",
+    };
+  }
+
+  return {
+    trigger: "Selecione um banco...",
+    input: "Buscar banco...",
+    empty: "Nenhum banco encontrado.",
+  };
+};
+
 export default function FinancialBankAccountsPage() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
@@ -411,6 +437,8 @@ export default function FinancialBankAccountsPage() {
 
   // Get other accounts for linked account selector (excluding current account being edited)
   const availableLinkedAccounts = bankAccounts.filter(a => a.id !== editingAccount?.id);
+  const institutionOptions = getInstitutionOptions(formData.account_type);
+  const institutionCopy = getInstitutionSearchCopy(formData.account_type);
 
   return (
     <div className="p-6 space-y-6">
@@ -584,7 +612,17 @@ export default function FinancialBankAccountsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo de Conta *</Label>
-                <Select value={formData.account_type} onValueChange={(v) => setFormData({ ...formData, account_type: v })}>
+                <Select
+                  value={formData.account_type}
+                  onValueChange={(v) => {
+                    const selectedInstitutionIsInvalid = v === "card_admin" && formData.bank_code && !isCardAdminInstitution(formData.bank_code);
+                    setFormData({
+                      ...formData,
+                      account_type: v,
+                      ...(selectedInstitutionIsInvalid ? { bank_name: "", bank_code: "" } : {}),
+                    });
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -605,17 +643,17 @@ export default function FinancialBankAccountsPage() {
                       aria-expanded={bankPopoverOpen}
                       className="w-full justify-between font-normal"
                     >
-                      {formData.bank_name || "Selecione um banco..."}
+                      {formData.bank_name || institutionCopy.trigger}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0" align="start">
                     <Command>
-                      <CommandInput placeholder="Buscar banco..." />
+                      <CommandInput placeholder={institutionCopy.input} />
                       <CommandList>
-                        <CommandEmpty>Nenhum banco encontrado.</CommandEmpty>
+                        <CommandEmpty>{institutionCopy.empty}</CommandEmpty>
                         <CommandGroup>
-                          {brazilianBanks.map((bank) => (
+                          {institutionOptions.map((bank) => (
                             <CommandItem
                               key={bank.code}
                               value={`${bank.name} ${bank.code}`}
