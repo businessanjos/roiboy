@@ -73,7 +73,7 @@ function useActiveClientsGeo() {
         const batch = idsAll.slice(i, i + BATCH);
         const { data, error } = await supabase
           .from("clients")
-          .select("id, city, state, country, gender")
+          .select("id, name, city, state, country, gender")
           .eq("account_id", accountId!)
           .in("id", batch);
         if (error) throw error;
