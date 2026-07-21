@@ -162,7 +162,7 @@ function ProfileGrid({
           icon={Users}
           label="Contratos"
           value={profile.headcount.toString()}
-          hint={variant === "icp" ? "vigentes" : "encerrados/cancelados"}
+          hint={variant === "icp" ? "status = active" : "encerrados/cancelados"}
           accent={iconColor}
         />
         <StatCard
