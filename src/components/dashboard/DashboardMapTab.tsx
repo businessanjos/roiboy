@@ -108,6 +108,7 @@ function useActiveClientsGeo() {
       return {
         clients: clients.map(c => ({
           id: c.id,
+          name: c.name,
           city: c.city,
           state: c.state,
           country: c.country,
