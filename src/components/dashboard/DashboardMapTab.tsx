@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Link } from "react-router-dom";
 import { MapPin, Globe, Users, Filter } from "lucide-react";
 import {
   BR_UFS, BR_REGIONS, UF_BY_CODE, COUNTRY_GEO, CONTINENTS,
