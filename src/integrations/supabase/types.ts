@@ -3517,6 +3517,7 @@ export type Database = {
           emails: Json | null
           full_name: string
           full_name_normalized: string | null
+          gender: string | null
           id: string
           initial_revenue: number | null
           instagram: string | null
@@ -3588,6 +3589,7 @@ export type Database = {
           emails?: Json | null
           full_name: string
           full_name_normalized?: string | null
+          gender?: string | null
           id?: string
           initial_revenue?: number | null
           instagram?: string | null
@@ -3659,6 +3661,7 @@ export type Database = {
           emails?: Json | null
           full_name?: string
           full_name_normalized?: string | null
+          gender?: string | null
           id?: string
           initial_revenue?: number | null
           instagram?: string | null
