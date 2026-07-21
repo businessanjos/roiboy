@@ -676,7 +676,7 @@ export default function Dashboard() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="gestao" className="space-y-4 sm:space-y-6">
+      <Tabs value={dashboardTab} onValueChange={setDashboardTab} className="space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
           <TabsList className="grid w-full grid-cols-3 max-w-md sm:max-w-lg h-9 sm:h-10">
             <TabsTrigger value="gestao" className="gap-1.5 text-xs sm:text-sm">
@@ -693,7 +693,8 @@ export default function Dashboard() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Filters - aligned with tabs */}
+          {/* Filters - aligned with tabs (hidden on Mapa which has its own filters) */}
+          {dashboardTab !== "mapa" && (
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto overflow-x-auto pb-1 scrollbar-thin">
             <div className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0">
               <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
