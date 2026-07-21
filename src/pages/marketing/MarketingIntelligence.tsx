@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import CompetitorsTab from "@/components/marketing/intelligence/CompetitorsTab";
+import { Swords } from "lucide-react";
 
 type DistItem = { label: string; count: number; pct: number };
 type Distribution = { total: number; items: DistItem[] };
@@ -417,7 +419,11 @@ export default function MarketingIntelligence() {
               <TabsTrigger value="signals" className="gap-2">
                 <AlertTriangle className="h-3.5 w-3.5" /> Sinais de Risco
               </TabsTrigger>
+              <TabsTrigger value="competitors" className="gap-2">
+                <Swords className="h-3.5 w-3.5" /> Concorrentes
+              </TabsTrigger>
             </TabsList>
+
 
             <TabsContent value="icp" className="space-y-4 mt-6">
               <Card>
@@ -507,7 +513,12 @@ export default function MarketingIntelligence() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            <TabsContent value="competitors" className="space-y-4 mt-6">
+              <CompetitorsTab />
+            </TabsContent>
           </Tabs>
+
 
           <p className="text-xs text-muted-foreground text-right">
             Atualizado em{" "}

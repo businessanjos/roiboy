@@ -17525,6 +17525,86 @@ export type Database = {
         }
         Relationships: []
       }
+      mi_competitor_snapshots: {
+        Row: {
+          account_id: string
+          ai_analysis: Json | null
+          competitor_id: string
+          id: string
+          markdown: string | null
+          scanned_at: string
+          source_url: string | null
+          summary: string | null
+        }
+        Insert: {
+          account_id: string
+          ai_analysis?: Json | null
+          competitor_id: string
+          id?: string
+          markdown?: string | null
+          scanned_at?: string
+          source_url?: string | null
+          summary?: string | null
+        }
+        Update: {
+          account_id?: string
+          ai_analysis?: Json | null
+          competitor_id?: string
+          id?: string
+          markdown?: string | null
+          scanned_at?: string
+          source_url?: string | null
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mi_competitor_snapshots_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "mi_competitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mi_competitors: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          last_scanned_at: string | null
+          name: string
+          notes: string | null
+          tags: string[] | null
+          updated_at: string
+          website: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_scanned_at?: string | null
+          name: string
+          notes?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          website: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_scanned_at?: string | null
+          name?: string
+          notes?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          website?: string
+        }
+        Relationships: []
+      }
       nfse_issuances: {
         Row: {
           account_id: string
