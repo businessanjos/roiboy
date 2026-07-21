@@ -1468,7 +1468,15 @@ export default function Clients() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-        <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
+          <span className="inline-flex items-baseline gap-1.5 text-sm text-muted-foreground">
+            <span className="inline-flex items-center justify-center min-w-[1.75rem] h-6 px-2 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-sm font-semibold">
+              {tabCounts.active ?? 0}
+            </span>
+            <span>ativos</span>
+          </span>
+        </div>
         <div className="flex gap-2 flex-wrap">
           {/* View Mode Toggle */}
           <div className="flex items-center border rounded-lg overflow-hidden">
