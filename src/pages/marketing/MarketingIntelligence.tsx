@@ -419,7 +419,11 @@ export default function MarketingIntelligence() {
               <TabsTrigger value="signals" className="gap-2">
                 <AlertTriangle className="h-3.5 w-3.5" /> Sinais de Risco
               </TabsTrigger>
+              <TabsTrigger value="competitors" className="gap-2">
+                <Swords className="h-3.5 w-3.5" /> Concorrentes
+              </TabsTrigger>
             </TabsList>
+
 
             <TabsContent value="icp" className="space-y-4 mt-6">
               <Card>
