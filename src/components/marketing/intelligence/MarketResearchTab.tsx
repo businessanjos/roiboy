@@ -69,7 +69,7 @@ export default function MarketResearchTab() {
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
-      return data as ResearchRow[];
+      return (data ?? []) as unknown as ResearchRow[];
     },
     enabled: !!currentUser?.account_id,
   });
