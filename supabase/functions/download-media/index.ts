@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     // Fetch ALL requested messages (no media_encrypted_url filter) to handle auto-correction
     let messagesQuery = supabase
       .from("zapp_messages")
-      .select("id, account_id, media_type, media_url, media_encrypted_url, media_key, media_mimetype, zapp_conversation_id, media_download_status, updated_at")
+      .select("id, account_id, media_type, media_url, media_encrypted_url, media_key, media_mimetype, zapp_conversation_id, media_download_status, media_download_attempts, updated_at")
       .in("id", idsToProcess);
     
     // SECURITY: If account_id provided, filter to prevent cross-account access
