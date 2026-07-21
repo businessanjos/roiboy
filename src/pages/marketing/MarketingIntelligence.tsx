@@ -285,17 +285,17 @@ function ProfileGrid({
 }
 
 export default function MarketingIntelligence() {
-  const { user } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
   const [tab, setTab] = useState("icp");
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: ["mi-icp-analysis", user?.account_id],
+    queryKey: ["mi-icp-analysis", currentUser?.account_id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("mi-icp-analysis");
       if (error) throw error;
       return data as Analysis;
     },
-    enabled: !!user?.account_id,
+    enabled: !!currentUser?.account_id,
     staleTime: 5 * 60 * 1000,
   });
 
