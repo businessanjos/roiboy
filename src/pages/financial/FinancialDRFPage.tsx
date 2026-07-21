@@ -93,7 +93,7 @@ export default function FinancialDRFPage() {
             dre_group
           )
         `)
-        .neq("status", "cancelled")
+        .not("status", "in", "(cancelled,renegotiated)")
         .gte("due_date", startDate)
         .lte("due_date", endDate);
 
