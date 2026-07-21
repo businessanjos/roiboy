@@ -279,6 +279,12 @@ export function DashboardMapTab() {
   const totalActive = clients.length;
   const withLocation = clients.filter(c => (c.country && String(c.country).trim()) || (c.state && String(c.state).trim()) || (c.city && String(c.city).trim())).length;
   const coveragePct = totalActive > 0 ? Math.round((withLocation / totalActive) * 100) : 0;
+  const missingClients = useMemo(
+    () => clients
+      .filter(c => !((c.country && String(c.country).trim()) || (c.state && String(c.state).trim()) || (c.city && String(c.city).trim())))
+      .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt-BR")),
+    [clients],
+  );
 
   return (
     <div className="space-y-6">
@@ -299,12 +305,45 @@ export function DashboardMapTab() {
             </Badge>
           </div>
           {coveragePct < 100 && (
-            <span className="text-xs text-muted-foreground ml-auto">
+            <button
+              type="button"
+              onClick={() => setMissingOpen(true)}
+              className="text-xs text-muted-foreground ml-auto underline decoration-dotted underline-offset-4 hover:text-foreground transition-colors"
+            >
               {totalActive - withLocation} sem endereço — mapa reflete apenas os {withLocation} mapeados.
-            </span>
+            </button>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={missingOpen} onOpenChange={setMissingOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Mentorados sem endereço</DialogTitle>
+            <DialogDescription>
+              {missingClients.length} {missingClients.length === 1 ? "cliente ativo" : "clientes ativos"} sem cidade, estado ou país preenchido.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto rounded-md border divide-y">
+            {missingClients.length === 0 ? (
+              <div className="p-4 text-sm text-muted-foreground">Todos os clientes ativos possuem endereço.</div>
+            ) : (
+              missingClients.map((c) => (
+                <Link
+                  key={c.id}
+                  to={`/clients/${c.id}`}
+                  onClick={() => setMissingOpen(false)}
+                  className="flex items-center justify-between px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+                >
+                  <span className="truncate">{c.name || "(Sem nome)"}</span>
+                  <span className="text-xs text-muted-foreground">Abrir →</span>
+                </Link>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       <Card>
         <CardContent className="p-4">
