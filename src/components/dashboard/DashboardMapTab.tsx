@@ -255,7 +255,30 @@ export function DashboardMapTab() {
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
+      {/* Coverage banner */}
+      <Card className={coveragePct < 60 ? "border-amber-500/40 bg-amber-500/5" : ""}>
+        <CardContent className="p-4 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <MapPin className={`h-4 w-4 ${coveragePct < 60 ? "text-amber-600" : "text-primary"}`} />
+            <span className="text-sm font-medium">Cobertura de localização</span>
+          </div>
+          <div className="text-sm">
+            <span className="font-semibold">{withLocation}</span>
+            <span className="text-muted-foreground"> de </span>
+            <span className="font-semibold">{totalActive}</span>
+            <span className="text-muted-foreground"> mentorados ativos com localização preenchida</span>
+            <Badge variant={coveragePct < 60 ? "outline" : "secondary"} className="ml-2">
+              {coveragePct}%
+            </Badge>
+          </div>
+          {coveragePct < 100 && (
+            <span className="text-xs text-muted-foreground ml-auto">
+              {totalActive - withLocation} sem endereço — mapa reflete apenas os {withLocation} mapeados.
+            </span>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-3">
