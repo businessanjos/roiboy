@@ -1283,6 +1283,20 @@ export type Database = {
             foreignKeyName: "bank_webhook_events_installment_id_fkey"
             columns: ["installment_id"]
             isOneToOne: false
+            referencedRelation: "financial_sync_issues"
+            referencedColumns: ["installment_id"]
+          },
+          {
+            foreignKeyName: "bank_webhook_events_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues_active"
+            referencedColumns: ["installment_id"]
+          },
+          {
+            foreignKeyName: "bank_webhook_events_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
             referencedRelation: "installments"
             referencedColumns: ["id"]
           },
@@ -1432,6 +1446,20 @@ export type Database = {
             foreignKeyName: "billing_reminder_sends_installment_id_fkey"
             columns: ["installment_id"]
             isOneToOne: false
+            referencedRelation: "financial_sync_issues"
+            referencedColumns: ["installment_id"]
+          },
+          {
+            foreignKeyName: "billing_reminder_sends_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues_active"
+            referencedColumns: ["installment_id"]
+          },
+          {
+            foreignKeyName: "billing_reminder_sends_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
             referencedRelation: "installments"
             referencedColumns: ["id"]
           },
@@ -1567,6 +1595,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "financial_entries"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boletos_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "boletos_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues_active"
+            referencedColumns: ["entry_id"]
           },
         ]
       }
@@ -7176,6 +7218,20 @@ export type Database = {
             foreignKeyName: "dunning_cases_installment_id_fkey"
             columns: ["installment_id"]
             isOneToOne: true
+            referencedRelation: "financial_sync_issues"
+            referencedColumns: ["installment_id"]
+          },
+          {
+            foreignKeyName: "dunning_cases_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: true
+            referencedRelation: "financial_sync_issues_active"
+            referencedColumns: ["installment_id"]
+          },
+          {
+            foreignKeyName: "dunning_cases_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: true
             referencedRelation: "installments"
             referencedColumns: ["id"]
           },
@@ -9667,6 +9723,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "financial_entries_parent_entry_id_fkey"
+            columns: ["parent_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "financial_entries_parent_entry_id_fkey"
+            columns: ["parent_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues_active"
+            referencedColumns: ["entry_id"]
+          },
+          {
             foreignKeyName: "financial_entries_seller_id_fkey"
             columns: ["seller_id"]
             isOneToOne: false
@@ -9917,6 +9987,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "financial_import_batches"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_import_rows_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues"
+            referencedColumns: ["installment_id"]
+          },
+          {
+            foreignKeyName: "financial_import_rows_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues_active"
+            referencedColumns: ["installment_id"]
           },
           {
             foreignKeyName: "financial_import_rows_installment_id_fkey"
@@ -13636,6 +13720,20 @@ export type Database = {
             foreignKeyName: "installment_events_installment_id_fkey"
             columns: ["installment_id"]
             isOneToOne: false
+            referencedRelation: "financial_sync_issues"
+            referencedColumns: ["installment_id"]
+          },
+          {
+            foreignKeyName: "installment_events_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues_active"
+            referencedColumns: ["installment_id"]
+          },
+          {
+            foreignKeyName: "installment_events_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
             referencedRelation: "installments"
             referencedColumns: ["id"]
           },
@@ -13758,6 +13856,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installments_renegotiated_from_id_fkey"
+            columns: ["renegotiated_from_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues"
+            referencedColumns: ["installment_id"]
+          },
+          {
+            foreignKeyName: "installments_renegotiated_from_id_fkey"
+            columns: ["renegotiated_from_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues_active"
+            referencedColumns: ["installment_id"]
           },
           {
             foreignKeyName: "installments_renegotiated_from_id_fkey"
@@ -17587,6 +17699,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "financial_entries"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_fiscais_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "notas_fiscais_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_sync_issues_active"
+            referencedColumns: ["entry_id"]
           },
         ]
       }
@@ -25012,6 +25138,86 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_sync_issues: {
+        Row: {
+          account_id: string | null
+          client_id: string | null
+          contract_id: string | null
+          due_date: string | null
+          entry_amount: number | null
+          entry_id: string | null
+          entry_status: string | null
+          installment_amount: number | null
+          installment_id: string | null
+          installment_number: number | null
+          installment_status: string | null
+          invoice_id: string | null
+          issue_type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_sync_issues_active: {
+        Row: {
+          account_id: string | null
+          client_id: string | null
+          contract_id: string | null
+          due_date: string | null
+          entry_amount: number | null
+          entry_id: string | null
+          entry_status: string | null
+          installment_amount: number | null
+          installment_id: string | null
+          installment_number: number | null
+          installment_status: string | null
+          invoice_id: string | null
+          issue_type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
