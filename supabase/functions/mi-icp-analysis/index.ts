@@ -138,7 +138,10 @@ Deno.serve(async (req) => {
 
     if (contractsError) throw contractsError;
 
-    const activeStatuses = new Set(["active", "paused", "suspended", "suspended_bonus"]);
+    // Alinhado com a área de Customer Success: "ativo" = apenas status 'active'.
+    // paused/suspended/suspended_bonus são contabilizados separadamente em `onHold`.
+    const activeStatuses = new Set(["active"]);
+    const onHoldStatuses = new Set(["paused", "suspended", "suspended_bonus"]);
     const churnedStatuses = new Set([
       "cancelled", "dismissed", "dropout_7d", "dismissal_termination", "ended",
     ]);
@@ -166,10 +169,15 @@ Deno.serve(async (req) => {
     const active = rows.filter((r) => activeStatuses.has(r.status));
     const churned = rows.filter((r) => churnedStatuses.has(r.status));
 
+    const onHold = rows.filter((r) => onHoldStatuses.has(r.status));
+
     // Distinct clients for headline counts
     const activeClientIds = new Set(active.map((r) => r.client_id));
+    const onHoldClientIds = new Set(
+      onHold.filter((r) => !activeClientIds.has(r.client_id)).map((r) => r.client_id)
+    );
     const churnedClientIds = new Set(
-      churned.filter((r) => !activeClientIds.has(r.client_id)).map((r) => r.client_id)
+      churned.filter((r) => !activeClientIds.has(r.client_id) && !onHoldClientIds.has(r.client_id)).map((r) => r.client_id)
     );
 
     const buildProfile = (list: Row[]) => {
@@ -252,6 +260,9 @@ Deno.serve(async (req) => {
         generated_at: new Date().toISOString(),
         summary: {
           active_clients: activeClientIds.size,
+          active_contracts: active.length,
+          on_hold_clients: onHoldClientIds.size,
+          on_hold_contracts: onHold.length,
           churned_clients: churnedClientIds.size,
           churn_rate:
             activeClientIds.size + churnedClientIds.size > 0

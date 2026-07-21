@@ -57,6 +57,9 @@ type Analysis = {
   generated_at: string;
   summary: {
     active_clients: number;
+    active_contracts?: number;
+    on_hold_clients?: number;
+    on_hold_contracts?: number;
     churned_clients: number;
     churn_rate: number;
   };
@@ -159,7 +162,7 @@ function ProfileGrid({
           icon={Users}
           label="Contratos"
           value={profile.headcount.toString()}
-          hint={variant === "icp" ? "vigentes" : "encerrados/cancelados"}
+          hint={variant === "icp" ? "status = active" : "encerrados/cancelados"}
           accent={iconColor}
         />
         <StatCard
@@ -353,9 +356,9 @@ export default function MarketingIntelligence() {
           <div className="grid gap-4 md:grid-cols-4">
             <StatCard
               icon={Users}
-              label="Base ativa"
+              label="Clientes ativos"
               value={data.summary.active_clients.toString()}
-              hint="contratos vigentes"
+              hint={`${data.summary.active_contracts ?? data.summary.active_clients} contratos active${data.summary.on_hold_clients ? ` · +${data.summary.on_hold_clients} em hold` : ""}`}
               accent="text-emerald-600"
             />
             <StatCard
@@ -380,6 +383,13 @@ export default function MarketingIntelligence() {
               accent="text-blue-600"
             />
           </div>
+
+          <Card className="border-blue-500/30 bg-blue-500/5">
+            <CardContent className="pt-3 pb-3 text-xs text-muted-foreground">
+              <strong className="text-foreground">Régua de contagem:</strong> "Clientes ativos" usa a mesma definição da área de Customer Success — apenas contratos com status <code>active</code>. Contratos <code>paused</code>, <code>suspended</code> e <code>suspended_bonus</code> aparecem como "em hold" e não entram no ICP. Encerrados/cancelados entram no Anti-ICP.
+            </CardContent>
+          </Card>
+
 
           {(data.coverage.with_gender === 0 || data.coverage.with_specialty === 0) && (
             <Card className="border-amber-500/30 bg-amber-500/5">
