@@ -333,15 +333,15 @@ export function DashboardMapTab() {
               <div className="p-4 text-sm text-muted-foreground">Todos os clientes ativos possuem endereço.</div>
             ) : (
               missingClients.map((c) => (
-                <Link
+                <MissingClientRow
                   key={c.id}
-                  to={`/clients/${c.id}`}
-                  onClick={() => setMissingOpen(false)}
-                  className="flex items-center justify-between px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
-                >
-                  <span className="truncate">{c.name || "(Sem nome)"}</span>
-                  <span className="text-xs text-muted-foreground">Abrir →</span>
-                </Link>
+                  client={c}
+                  onSaved={async () => {
+                    await refetch();
+                    queryClient.invalidateQueries({ queryKey: ["client-business-profile"] });
+                    queryClient.invalidateQueries({ queryKey: ["client", c.id] });
+                  }}
+                />
               ))
             )}
           </div>
