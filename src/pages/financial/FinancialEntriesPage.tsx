@@ -226,6 +226,30 @@ export default function FinancialEntriesPage() {
     else setCurrentMonth(addMonths(currentMonth, dir));
   };
 
+  // Realtime auto-refresh: sem F5 quando algo muda no financial_entries desta conta
+  useEffect(() => {
+    if (!accountId) return;
+    const channel = supabase
+      .channel(`financial-entries-${accountId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "financial_entries",
+          filter: `account_id=eq.${accountId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
+          queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [accountId, queryClient]);
+
   // Fetch entries
   const { data: entries = [], isLoading: entriesLoading } = useQuery({
     queryKey: ["financial-entries", accountId, activeTab, startDate, endDate],
