@@ -10131,6 +10131,101 @@ export type Database = {
           },
         ]
       }
+      financial_reconciliation_log: {
+        Row: {
+          account_id: string | null
+          action: string
+          after: Json | null
+          before: Json | null
+          contract_id: string | null
+          created_at: string
+          entry_id: string | null
+          error: string | null
+          id: string
+          installment_id: string | null
+          issue_type: string
+          run_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          action: string
+          after?: Json | null
+          before?: Json | null
+          contract_id?: string | null
+          created_at?: string
+          entry_id?: string | null
+          error?: string | null
+          id?: string
+          installment_id?: string | null
+          issue_type: string
+          run_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          action?: string
+          after?: Json | null
+          before?: Json | null
+          contract_id?: string | null
+          created_at?: string
+          entry_id?: string | null
+          error?: string | null
+          id?: string
+          installment_id?: string | null
+          issue_type?: string
+          run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_reconciliation_log_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "financial_reconciliation_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_reconciliation_runs: {
+        Row: {
+          created_at: string
+          dry_run: boolean
+          error_message: string | null
+          errors: number
+          finished_at: string | null
+          fixed: number
+          id: string
+          issues_found: number
+          skipped: number
+          started_at: string
+          triggered_by: string
+        }
+        Insert: {
+          created_at?: string
+          dry_run?: boolean
+          error_message?: string | null
+          errors?: number
+          finished_at?: string | null
+          fixed?: number
+          id?: string
+          issues_found?: number
+          skipped?: number
+          started_at?: string
+          triggered_by?: string
+        }
+        Update: {
+          created_at?: string
+          dry_run?: boolean
+          error_message?: string | null
+          errors?: number
+          finished_at?: string | null
+          fixed?: number
+          id?: string
+          issues_found?: number
+          skipped?: number
+          started_at?: string
+          triggered_by?: string
+        }
+        Relationships: []
+      }
       followup_reactions: {
         Row: {
           account_id: string
@@ -25616,6 +25711,10 @@ export type Database = {
           processed: number
           target_year: number
         }[]
+      }
+      reconcile_installments_and_entries: {
+        Args: { p_dry_run?: boolean; p_triggered_by?: string }
+        Returns: string
       }
       record_login_attempt: {
         Args: {
