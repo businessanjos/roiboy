@@ -15,6 +15,7 @@ import {
 
 interface ClientRow {
   id: string;
+  name: string | null;
   city: string | null;
   state: string | null;
   country: string | null;
