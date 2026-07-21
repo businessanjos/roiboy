@@ -80,6 +80,12 @@ interface ClientRow {
   city: string | null;
   state: string | null;
   country: string | null;
+  zip_code: string | null;
+  business_zip_code: string | null;
+  business_city: string | null;
+  business_state: string | null;
+  cpf: string | null;
+  cnpj: string | null;
 }
 
 interface HistoryRow {
@@ -148,7 +154,7 @@ export function ClientBusinessProfile({
     const { data: c, error: cErr } = await supabase
       .from("clients")
       .select(
-        "id, account_id, initial_revenue, current_revenue, current_revenue_month, differential, method_name, education, education_specialty, business_niche, onboarding_started_at, contract_start_date, created_at, city, state, country"
+        "id, account_id, initial_revenue, current_revenue, current_revenue_month, differential, method_name, education, education_specialty, business_niche, onboarding_started_at, contract_start_date, created_at, city, state, country, zip_code, business_zip_code, business_city, business_state, cpf, cnpj"
       )
       .eq("id", clientId)
       .single();
@@ -570,6 +576,12 @@ export function ClientBusinessProfile({
             city={client.city}
             state={client.state}
             country={client.country}
+            hints={{
+              zip: client.zip_code || client.business_zip_code || null,
+              city: client.city || client.business_city || null,
+              state: client.state || client.business_state || null,
+              hasBrDoc: !!(client.cpf || client.cnpj),
+            }}
             onSave={async (patch) => {
               await saveField(patch as any);
             }}
@@ -924,13 +936,66 @@ function LocationCard({
   city,
   state,
   country,
+  hints,
   onSave,
 }: {
   city: string | null;
   state: string | null;
   country: string | null;
+  hints?: {
+    zip: string | null;
+    city: string | null;
+    state: string | null;
+    hasBrDoc: boolean;
+  };
   onSave: (patch: { city: string | null; state: string | null; country: string | null }) => Promise<void>;
 }) {
+  const [autofilling, setAutofilling] = useState(false);
+
+  const autofill = async () => {
+    if (!hints) return;
+    setAutofilling(true);
+    try {
+      const zipDigits = (hints.zip || "").replace(/\D/g, "");
+      // 1) Brazilian CEP → ViaCEP (deterministic, free, no key)
+      if (zipDigits.length === 8) {
+        try {
+          const res = await fetch(`https://viacep.com.br/ws/${zipDigits}/json/`);
+          const data = await res.json();
+          if (data && !data.erro && data.localidade && data.uf) {
+            await onSave({
+              country: "Brasil",
+              state: String(data.uf).toUpperCase(),
+              city: data.localidade,
+            });
+            toast.success(`Preenchido via CEP: ${data.localidade}/${data.uf}`);
+            return;
+          }
+        } catch (err) {
+          console.warn("ViaCEP falhou", err);
+        }
+      }
+      // 2) Fallback: usar cidade/estado já cadastrados + inferir país por documento
+      if (hints.city || hints.state) {
+        const inferredCountry = hints.hasBrDoc || (hints.state && hints.state.length === 2)
+          ? "Brasil"
+          : null;
+        await onSave({
+          country: inferredCountry,
+          state: hints.state ? String(hints.state).toUpperCase() : null,
+          city: hints.city || null,
+        });
+        toast.success("Preenchido com base no cadastro");
+        return;
+      }
+      toast.error("Sem dados suficientes (CEP/cidade/estado) para inferir");
+    } finally {
+      setAutofilling(false);
+    }
+  };
+
+  const canAutofill = !!(hints && (hints.zip || hints.city || hints.state));
+
   const initial = useMemo<LocationFields>(() => {
     const countryMatch = country
       ? COUNTRIES.find(
@@ -998,12 +1063,25 @@ function LocationCard({
         <div className="p-1.5 rounded-md bg-primary/10 text-primary">
           <MapPin className="h-4 w-4" />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold">Localização</div>
           <div className="text-[11px] text-muted-foreground">
             Cidade, estado e país do cliente (cobertura global)
           </div>
         </div>
+        {canAutofill && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={autofill}
+            disabled={autofilling}
+            className="h-7 text-[11px] gap-1"
+          >
+            {autofilling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+            Preencher automaticamente
+          </Button>
+        )}
       </div>
       <div
         className="grid grid-cols-1 sm:grid-cols-2 gap-3"
