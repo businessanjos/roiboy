@@ -576,6 +576,12 @@ export function ClientBusinessProfile({
             city={client.city}
             state={client.state}
             country={client.country}
+            hints={{
+              zip: client.zip_code || client.business_zip_code || null,
+              city: client.city || client.business_city || null,
+              state: client.state || client.business_state || null,
+              hasBrDoc: !!(client.cpf || client.cnpj),
+            }}
             onSave={async (patch) => {
               await saveField(patch as any);
             }}
