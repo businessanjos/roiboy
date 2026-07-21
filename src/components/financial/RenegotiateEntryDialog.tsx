@@ -177,11 +177,11 @@ export function RenegotiateEntryDialog({
       const full = await fetchFullEntry(entry.id);
       if (!full) throw new Error("Lançamento original não encontrado");
 
-      // 1) Cancel original entry
+      // 1) Mark original entry as renegotiated (preserves history, distinct from cancellation)
       const { error: cancelErr } = await supabase
         .from("financial_entries")
         .update({
-          status: "cancelled",
+          status: "renegotiated",
           notes: (entry.notes ?? "") + historyNote,
         })
         .eq("id", entry.id);
@@ -256,7 +256,7 @@ export function RenegotiateEntryDialog({
             Renegociar lançamento
           </DialogTitle>
           <DialogDescription>
-            O lançamento original será marcado como <strong>Cancelado</strong> (com histórico da renegociação) e novos
+            O lançamento original será marcado como <strong>Renegociado</strong> (com histórico preservado) e novos
             lançamentos serão criados com o plano abaixo.
           </DialogDescription>
         </DialogHeader>

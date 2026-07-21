@@ -95,7 +95,7 @@ interface FinancialEntry {
   amount: number;
   due_date: string;
   payment_date: string | null;
-  status: "pending" | "paid" | "overdue" | "cancelled" | "partially_paid";
+  status: "pending" | "paid" | "overdue" | "cancelled" | "partially_paid" | "renegotiated";
   category_id: string | null;
   bank_account_id: string | null;
   client_id: string | null;
@@ -138,6 +138,7 @@ const statusConfig = {
   overdue: { label: "Atrasado", color: "bg-red-100 text-red-800", icon: AlertCircle },
   cancelled: { label: "Cancelado", color: "bg-gray-100 text-gray-800", icon: XCircle },
   partially_paid: { label: "Parcial", color: "bg-blue-100 text-blue-800", icon: DollarSign },
+  renegotiated: { label: "Renegociado", color: "bg-orange-100 text-orange-800", icon: RefreshCw },
 };
 
 const recurrenceLabels: Record<string, string> = {
@@ -691,6 +692,7 @@ export default function FinancialEntriesPage() {
                 <SelectItem value="paid">Pago</SelectItem>
                 <SelectItem value="overdue">Atrasado</SelectItem>
                 <SelectItem value="cancelled">Cancelado</SelectItem>
+                <SelectItem value="renegotiated">Renegociado</SelectItem>
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
