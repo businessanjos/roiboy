@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Link } from "react-router-dom";
 import { MapPin, Globe, Users, Filter } from "lucide-react";
 import {
   BR_UFS, BR_REGIONS, UF_BY_CODE, COUNTRY_GEO, CONTINENTS,
@@ -15,6 +17,7 @@ import {
 
 interface ClientRow {
   id: string;
+  name: string | null;
   city: string | null;
   state: string | null;
   country: string | null;
@@ -72,7 +75,7 @@ function useActiveClientsGeo() {
         const batch = idsAll.slice(i, i + BATCH);
         const { data, error } = await supabase
           .from("clients")
-          .select("id, city, state, country, gender")
+          .select("id, name, city, state, country, gender")
           .eq("account_id", accountId!)
           .in("id", batch);
         if (error) throw error;
@@ -107,6 +110,7 @@ function useActiveClientsGeo() {
       return {
         clients: clients.map(c => ({
           id: c.id,
+          name: c.name,
           city: c.city,
           state: c.state,
           country: c.country,
@@ -176,6 +180,7 @@ export function DashboardMapTab() {
   const [productFilter, setProductFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [regionFilter, setRegionFilter] = useState<string>("all"); // continent OR "BR:Sudeste"
+  const [missingOpen, setMissingOpen] = useState(false);
 
   const clients = data?.clients ?? [];
   const products = data?.products ?? [];
@@ -274,6 +279,12 @@ export function DashboardMapTab() {
   const totalActive = clients.length;
   const withLocation = clients.filter(c => (c.country && String(c.country).trim()) || (c.state && String(c.state).trim()) || (c.city && String(c.city).trim())).length;
   const coveragePct = totalActive > 0 ? Math.round((withLocation / totalActive) * 100) : 0;
+  const missingClients = useMemo(
+    () => clients
+      .filter(c => !((c.country && String(c.country).trim()) || (c.state && String(c.state).trim()) || (c.city && String(c.city).trim())))
+      .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt-BR")),
+    [clients],
+  );
 
   return (
     <div className="space-y-6">
@@ -294,12 +305,45 @@ export function DashboardMapTab() {
             </Badge>
           </div>
           {coveragePct < 100 && (
-            <span className="text-xs text-muted-foreground ml-auto">
+            <button
+              type="button"
+              onClick={() => setMissingOpen(true)}
+              className="text-xs text-muted-foreground ml-auto underline decoration-dotted underline-offset-4 hover:text-foreground transition-colors"
+            >
               {totalActive - withLocation} sem endereço — mapa reflete apenas os {withLocation} mapeados.
-            </span>
+            </button>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={missingOpen} onOpenChange={setMissingOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Mentorados sem endereço</DialogTitle>
+            <DialogDescription>
+              {missingClients.length} {missingClients.length === 1 ? "cliente ativo" : "clientes ativos"} sem cidade, estado ou país preenchido.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto rounded-md border divide-y">
+            {missingClients.length === 0 ? (
+              <div className="p-4 text-sm text-muted-foreground">Todos os clientes ativos possuem endereço.</div>
+            ) : (
+              missingClients.map((c) => (
+                <Link
+                  key={c.id}
+                  to={`/clients/${c.id}`}
+                  onClick={() => setMissingOpen(false)}
+                  className="flex items-center justify-between px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+                >
+                  <span className="truncate">{c.name || "(Sem nome)"}</span>
+                  <span className="text-xs text-muted-foreground">Abrir →</span>
+                </Link>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       <Card>
         <CardContent className="p-4">
