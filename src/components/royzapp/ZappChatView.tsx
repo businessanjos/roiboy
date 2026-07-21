@@ -201,16 +201,23 @@ export function ZappChatView({
     setSearchCurrentIndex(q.trim() ? 1 : 0);
   }, []);
 
-  // AI Message Assistant hook (spelling correction only)
+  // AI Message Assistant hook (spelling + reply suggestions for commercial)
   const {
     correction,
     isCheckingSpelling,
     applyCorrection,
     dismissCorrection,
+    suggestions,
+    isLoadingSuggestions,
+    refreshSuggestions,
+    dismissSuggestions,
+    suggestionsAvailable,
   } = useMessageAssistant({
     messageInput,
     sectorId: sectorId || "operacoes",
     spellingEnabled,
+    messages,
+    conversationId: selectedConversation?.zapp_conversation?.id ?? selectedConversation?.id ?? null,
   });
 
   // Handle applying correction
@@ -220,6 +227,13 @@ export function ZappChatView({
       applyCorrection();
     }
   };
+
+  const handleSelectSuggestion = useCallback((text: string) => {
+    onMessageChange(text);
+    dismissSuggestions();
+    messageInputRef.current?.focus();
+  }, [onMessageChange, dismissSuggestions, messageInputRef]);
+
 
   // 3C Plus call handler
   const handleCall = useCallback(async () => {
@@ -341,14 +355,21 @@ export function ZappChatView({
         searchFocusId={searchMatchIds.length > 0 && searchCurrentIndex > 0 ? searchMatchIds[searchCurrentIndex - 1] : null}
       />
 
-      {/* AI Assist Bar - spelling correction only */}
+      {/* AI Assist Bar - spelling + reply suggestions */}
       <ZappAIAssistBar
         correction={correction}
         isCheckingSpelling={isCheckingSpelling}
         onApplyCorrection={handleApplyCorrection}
         onDismissCorrection={dismissCorrection}
         spellingEnabled={spellingEnabled}
+        suggestions={suggestions}
+        isLoadingSuggestions={isLoadingSuggestions}
+        suggestionsAvailable={suggestionsAvailable}
+        onSelectSuggestion={handleSelectSuggestion}
+        onRefreshSuggestions={refreshSuggestions}
+        onDismissSuggestions={dismissSuggestions}
       />
+
 
       {/* Message input */}
       <ZappMessageInput
