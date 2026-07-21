@@ -74,6 +74,9 @@ interface ClientRow {
   onboarding_started_at: string | null;
   contract_start_date: string | null;
   created_at: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
 }
 
 interface HistoryRow {
