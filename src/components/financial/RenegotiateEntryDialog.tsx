@@ -177,11 +177,11 @@ export function RenegotiateEntryDialog({
       const full = await fetchFullEntry(entry.id);
       if (!full) throw new Error("Lançamento original não encontrado");
 
-      // 1) Cancel original entry
+      // 1) Mark original entry as renegotiated (preserves history, distinct from cancellation)
       const { error: cancelErr } = await supabase
         .from("financial_entries")
         .update({
-          status: "cancelled",
+          status: "renegotiated",
           notes: (entry.notes ?? "") + historyNote,
         })
         .eq("id", entry.id);
