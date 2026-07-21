@@ -214,11 +214,9 @@ export function RenegotiateEntryDialog({
 
     setSaving(true);
     try {
-      const stamp = format(new Date(), "dd/MM/yyyy HH:mm");
-      const historyNote = `\n\n[Renegociado em ${stamp}] Motivo: ${reason.trim()}`;
-
       const full = await fetchFullEntry(entry.id);
       if (!full) throw new Error("Lançamento original não encontrado");
+
 
       // === CAMINHO A: entry veio de contrato → delega à RPC oficial ===
       // A RPC renegotiate_installment já: marca installment original como renegotiated,
