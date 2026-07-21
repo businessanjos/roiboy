@@ -1,231 +1,513 @@
-import { Telescope, TrendingUp, Heart, AlertTriangle, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Telescope,
+  Users,
+  AlertTriangle,
+  MapPin,
+  Package,
+  DollarSign,
+  Clock,
+  TrendingDown,
+  TrendingUp,
+  Sparkles,
+  Loader2,
+  Info,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  BarChart,
-  Bar,
-} from "recharts";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-const roiTrend = [
-  { month: "Jan", roi: 2.1 },
-  { month: "Fev", roi: 2.4 },
-  { month: "Mar", roi: 2.8 },
-  { month: "Abr", roi: 3.1 },
-  { month: "Mai", roi: 3.0 },
-  { month: "Jun", roi: 3.4 },
-  { month: "Jul", roi: 3.7 },
-];
+type DistItem = { label: string; count: number; pct: number };
+type Distribution = { total: number; items: DistItem[] };
 
-const engagementByChannel = [
-  { channel: "Instagram", value: 78 },
-  { channel: "YouTube", value: 64 },
-  { channel: "TikTok", value: 71 },
-  { channel: "WhatsApp", value: 88 },
-  { channel: "Email", value: 42 },
-];
-
-const churnSignals = [
-  { label: "Frustração em atendimento", score: 72, level: "high" as const },
-  { label: "Queda de interação (30d)", score: 58, level: "medium" as const },
-  { label: "Menções negativas públicas", score: 41, level: "medium" as const },
-  { label: "Reclamações financeiras", score: 24, level: "low" as const },
-];
-
-const levelStyles: Record<"high" | "medium" | "low", string> = {
-  high: "bg-red-500/10 text-red-600 border-red-500/30",
-  medium: "bg-amber-500/10 text-amber-600 border-amber-500/30",
-  low: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+type Profile = {
+  headcount: number;
+  avgTicket: number;
+  medianTicket: number;
+  totalValue: number;
+  avgTenureDays: number;
+  medianTenureDays: number;
+  byProduct: Distribution;
+  byRegion: Distribution;
+  byState: Distribution;
+  byCity: Distribution;
+  byCountry: Distribution;
+  byGender: Distribution;
+  byEducation: Distribution;
+  bySpecialty: Distribution;
+  byTicketBand: Distribution;
+  byCancellationReason: Distribution;
 };
 
-function KpiCard({
+type RiskSignal = {
+  dimension: string;
+  label: string;
+  activePct: number;
+  churnPct: number;
+  delta: number;
+};
+
+type Analysis = {
+  generated_at: string;
+  summary: {
+    active_clients: number;
+    churned_clients: number;
+    churn_rate: number;
+  };
+  icp: Profile;
+  antiIcp: Profile;
+  riskSignals: RiskSignal[];
+  coverage: {
+    total_clients_sampled: number;
+    with_city: number;
+    with_state: number;
+    with_gender: number;
+    with_specialty: number;
+    with_revenue: number;
+  };
+};
+
+const brl = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
+function DistBar({
+  data,
+  color = "bg-primary",
+  emptyLabel = "Sem dados suficientes",
+}: {
+  data: Distribution;
+  color?: string;
+  emptyLabel?: string;
+}) {
+  if (!data.items.length) {
+    return (
+      <p className="text-sm text-muted-foreground italic py-4 text-center">{emptyLabel}</p>
+    );
+  }
+  const max = Math.max(...data.items.map((i) => i.pct), 1);
+  return (
+    <div className="space-y-2">
+      {data.items.map((i) => (
+        <div key={i.label} className="space-y-1">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium truncate pr-2">{i.label}</span>
+            <span className="text-muted-foreground tabular-nums">
+              {i.count} <span className="text-xs">({i.pct}%)</span>
+            </span>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className={`h-full ${color} rounded-full transition-all`}
+              style={{ width: `${(i.pct / max) * 100}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StatCard({
   icon: Icon,
   label,
   value,
-  delta,
-  positive,
   hint,
-  accent,
+  accent = "text-primary",
 }: {
-  icon: typeof TrendingUp;
+  icon: typeof Users;
   label: string;
   value: string;
-  delta: string;
-  positive: boolean;
-  hint: string;
-  accent: string;
+  hint?: string;
+  accent?: string;
 }) {
   return (
-    <Card className="relative overflow-hidden">
-      <div className={`absolute inset-x-0 top-0 h-1 ${accent}`} />
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {label}
-        </CardTitle>
-        <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${accent} bg-opacity-20`}>
-          <Icon className="h-4 w-4 text-foreground" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold tracking-tight">{value}</div>
-        <div className="mt-2 flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className={
-              positive
-                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-                : "bg-red-500/10 text-red-600 border-red-500/30"
-            }
-          >
-            {positive ? (
-              <ArrowUpRight className="h-3 w-3 mr-1" />
-            ) : (
-              <ArrowDownRight className="h-3 w-3 mr-1" />
-            )}
-            {delta}
-          </Badge>
-          <span className="text-xs text-muted-foreground">{hint}</span>
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+            <p className="text-2xl font-bold mt-1">{value}</p>
+            {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
+          </div>
+          <Icon className={`h-5 w-5 ${accent}`} />
         </div>
       </CardContent>
     </Card>
   );
 }
 
-export default function MarketingIntelligence() {
-  return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-          <Telescope className="h-5 w-5 text-purple-600" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Market Intelligence</h1>
-          <p className="text-muted-foreground">
-            Painel de indicadores estratégicos de mercado, engajamento e retenção emocional
-          </p>
-        </div>
-      </div>
+function ProfileGrid({
+  profile,
+  variant,
+}: {
+  profile: Profile;
+  variant: "icp" | "anti";
+}) {
+  const color = variant === "icp" ? "bg-emerald-500" : "bg-red-500";
+  const iconColor = variant === "icp" ? "text-emerald-600" : "text-red-600";
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <KpiCard
-          icon={TrendingUp}
-          label="ROI estimado"
-          value="3.7x"
-          delta="+18% vs mês anterior"
-          positive
-          hint="baseado em faturamento x investimento"
-          accent="bg-emerald-500"
+  return (
+    <>
+      <div className="grid gap-4 md:grid-cols-4">
+        <StatCard
+          icon={Users}
+          label="Contratos"
+          value={profile.headcount.toString()}
+          hint={variant === "icp" ? "vigentes" : "encerrados/cancelados"}
+          accent={iconColor}
         />
-        <KpiCard
-          icon={Heart}
-          label="Engajamento médio"
-          value="72%"
-          delta="+6 pts"
-          positive
-          hint="média ponderada dos canais"
-          accent="bg-purple-500"
+        <StatCard
+          icon={DollarSign}
+          label="Ticket médio"
+          value={brl(profile.avgTicket)}
+          hint={`mediana ${brl(profile.medianTicket)}`}
+          accent={iconColor}
         />
-        <KpiCard
-          icon={AlertTriangle}
-          label="Risco de churn emocional"
-          value="Médio"
-          delta="+4 pts"
-          positive={false}
-          hint="14 mentorados em alerta"
-          accent="bg-amber-500"
+        <StatCard
+          icon={DollarSign}
+          label="Volume total"
+          value={brl(profile.totalValue)}
+          accent={iconColor}
+        />
+        <StatCard
+          icon={Clock}
+          label={variant === "icp" ? "Tempo de casa" : "Tempo até saída"}
+          value={`${Math.round(profile.avgTenureDays)} dias`}
+          hint={`mediana ${Math.round(profile.medianTenureDays)} dias`}
+          accent={iconColor}
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Evolução do ROI (últimos 7 meses)</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className={`h-4 w-4 ${iconColor}`} /> Produto contratado
+            </CardTitle>
           </CardHeader>
-          <CardContent className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={roiTrend}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="month" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: 8,
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="roi"
-                  stroke="hsl(160 84% 39%)"
-                  strokeWidth={2.5}
-                  dot={{ r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <CardContent>
+            <DistBar data={profile.byProduct} color={color} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Engajamento por canal</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <DollarSign className={`h-4 w-4 ${iconColor}`} /> Faixa de ticket
+            </CardTitle>
           </CardHeader>
-          <CardContent className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={engagementByChannel}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="channel" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: 8,
-                  }}
-                />
-                <Bar dataKey="value" fill="hsl(270 70% 60%)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent>
+            <DistBar data={profile.byTicketBand} color={color} />
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className={`h-4 w-4 ${iconColor}`} /> Região
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DistBar data={profile.byRegion} color={color} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className={`h-4 w-4 ${iconColor}`} /> Estado (top 15)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DistBar data={profile.byState} color={color} />
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className={`h-4 w-4 ${iconColor}`} /> Cidades (top 15)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DistBar data={profile.byCity} color={color} />
+          </CardContent>
+        </Card>
+
+        {variant === "anti" && profile.byCancellationReason.items.length > 0 && (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-600" /> Motivos de saída
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DistBar data={profile.byCancellationReason} color="bg-red-500" />
+            </CardContent>
+          </Card>
+        )}
+
+        {(profile.byGender.items.length > 0 ||
+          profile.bySpecialty.items.length > 0 ||
+          profile.byEducation.items.length > 0) && (
+          <>
+            {profile.byGender.items.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Gênero</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <DistBar data={profile.byGender} color={color} />
+                </CardContent>
+              </Card>
+            )}
+            {profile.bySpecialty.items.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Especialidade</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <DistBar data={profile.bySpecialty} color={color} />
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+export default function MarketingIntelligence() {
+  const { currentUser } = useCurrentUser();
+  const [tab, setTab] = useState("icp");
+
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: ["mi-icp-analysis", currentUser?.account_id],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("mi-icp-analysis");
+      if (error) throw error;
+      return data as Analysis;
+    },
+    enabled: !!currentUser?.account_id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const coveragePct = useMemo(() => {
+    if (!data) return 0;
+    const t = data.coverage.total_clients_sampled || 1;
+    return Math.round((data.coverage.with_state / t) * 100);
+  }, [data]);
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+            <Telescope className="h-5 w-5 text-purple-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Market Intelligence</h1>
+            <p className="text-muted-foreground text-sm">
+              Fase 1 · Inteligência sobre a base de mentorados: ICP real x Anti-ICP
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          disabled={isFetching}
+        >
+          {isFetching && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
+          Recalcular
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Sinais de risco de churn emocional</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {churnSignals.map((signal) => (
-            <div key={signal.label} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{signal.label}</span>
-                  <Badge variant="outline" className={levelStyles[signal.level]}>
-                    {signal.level === "high"
-                      ? "Alto"
-                      : signal.level === "medium"
-                      ? "Médio"
-                      : "Baixo"}
-                  </Badge>
+      {isLoading && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+      )}
+
+      {error && (
+        <Card className="border-red-500/30 bg-red-500/5">
+          <CardContent className="pt-6">
+            <p className="text-sm text-red-600">
+              Erro ao carregar análise: {(error as Error).message}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {data && (
+        <>
+          <div className="grid gap-4 md:grid-cols-4">
+            <StatCard
+              icon={Users}
+              label="Base ativa"
+              value={data.summary.active_clients.toString()}
+              hint="contratos vigentes"
+              accent="text-emerald-600"
+            />
+            <StatCard
+              icon={TrendingDown}
+              label="Perdidos"
+              value={data.summary.churned_clients.toString()}
+              hint="clientes que já saíram"
+              accent="text-red-600"
+            />
+            <StatCard
+              icon={AlertTriangle}
+              label="Taxa de churn histórica"
+              value={`${data.summary.churn_rate}%`}
+              hint="perdidos / (ativos + perdidos)"
+              accent="text-amber-600"
+            />
+            <StatCard
+              icon={Info}
+              label="Cobertura geográfica"
+              value={`${coveragePct}%`}
+              hint={`${data.coverage.with_state}/${data.coverage.total_clients_sampled} com estado`}
+              accent="text-blue-600"
+            />
+          </div>
+
+          {(data.coverage.with_gender === 0 || data.coverage.with_specialty === 0) && (
+            <Card className="border-amber-500/30 bg-amber-500/5">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-start gap-2">
+                  <Info className="h-4 w-4 text-amber-600 mt-0.5" />
+                  <div className="text-xs text-amber-900 dark:text-amber-200">
+                    <strong>Baixa cobertura de perfil:</strong> gênero, especialidade e faturamento
+                    dos mentorados estão pouco preenchidos. Isso limita a profundidade da análise
+                    de ICP. Considere um mutirão de enriquecimento na ficha dos clientes ativos.
+                  </div>
                 </div>
-                <span className="text-sm text-muted-foreground">{signal.score}/100</span>
-              </div>
-              <Progress value={signal.score} className="h-2" />
-            </div>
-          ))}
-          <p className="text-xs text-muted-foreground pt-2">
-            Indicadores calculados a partir de sinais de conversas, atendimento e menções.
-            Este painel usa dados de referência enquanto a coleta automatizada é integrada.
+              </CardContent>
+            </Card>
+          )}
+
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList>
+              <TabsTrigger value="icp" className="gap-2">
+                <Sparkles className="h-3.5 w-3.5" /> ICP Real
+              </TabsTrigger>
+              <TabsTrigger value="anti" className="gap-2">
+                <TrendingDown className="h-3.5 w-3.5" /> Anti-ICP (Churn)
+              </TabsTrigger>
+              <TabsTrigger value="signals" className="gap-2">
+                <AlertTriangle className="h-3.5 w-3.5" /> Sinais de Risco
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="icp" className="space-y-4 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Quem realmente performa</CardTitle>
+                  <CardDescription>
+                    Perfil consolidado dos mentorados que estão hoje na base ativa. Use para calibrar
+                    qualificação, segmentação de marketing e roteiros de vendas.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <ProfileGrid profile={data.icp} variant="icp" />
+            </TabsContent>
+
+            <TabsContent value="anti" className="space-y-4 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Perfil dos que cancelaram</CardTitle>
+                  <CardDescription>
+                    Retrato dos contratos encerrados, cancelados ou desligados. Use para identificar
+                    padrões de risco antes de fechar novos deals parecidos.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <ProfileGrid profile={data.antiIcp} variant="anti" />
+            </TabsContent>
+
+            <TabsContent value="signals" className="space-y-4 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Onde o churn diverge do ICP</CardTitle>
+                  <CardDescription>
+                    Diferenças percentuais entre o perfil dos clientes ativos e o dos que saíram.
+                    Delta positivo = super-representado no churn (risco). Delta negativo =
+                    sub-representado no churn (protetor).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {data.riskSignals.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      Sem sinais estatisticamente relevantes ainda.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {data.riskSignals.map((s, i) => {
+                        const risky = s.delta > 0;
+                        return (
+                          <div
+                            key={`${s.dimension}-${s.label}-${i}`}
+                            className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline" className="text-xs">
+                                {s.dimension}
+                              </Badge>
+                              <span className="font-medium text-sm">{s.label}</span>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs">
+                              <span className="text-muted-foreground">
+                                ICP <span className="font-medium text-foreground">{s.activePct}%</span>
+                              </span>
+                              <span className="text-muted-foreground">
+                                Churn <span className="font-medium text-foreground">{s.churnPct}%</span>
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  risky
+                                    ? "bg-red-500/10 text-red-600 border-red-500/30"
+                                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                                }
+                              >
+                                {risky ? (
+                                  <TrendingUp className="h-3 w-3 mr-1" />
+                                ) : (
+                                  <TrendingDown className="h-3 w-3 mr-1" />
+                                )}
+                                {risky ? "+" : ""}
+                                {s.delta} pts
+                              </Badge>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          <p className="text-xs text-muted-foreground text-right">
+            Atualizado em{" "}
+            {new Date(data.generated_at).toLocaleString("pt-BR", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })}
           </p>
-        </CardContent>
-      </Card>
+        </>
+      )}
     </div>
   );
 }
