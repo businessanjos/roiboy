@@ -201,16 +201,23 @@ export function ZappChatView({
     setSearchCurrentIndex(q.trim() ? 1 : 0);
   }, []);
 
-  // AI Message Assistant hook (spelling correction only)
+  // AI Message Assistant hook (spelling + reply suggestions for commercial)
   const {
     correction,
     isCheckingSpelling,
     applyCorrection,
     dismissCorrection,
+    suggestions,
+    isLoadingSuggestions,
+    refreshSuggestions,
+    dismissSuggestions,
+    suggestionsAvailable,
   } = useMessageAssistant({
     messageInput,
     sectorId: sectorId || "operacoes",
     spellingEnabled,
+    messages,
+    conversationId: selectedConversation?.zapp_conversation?.id ?? selectedConversation?.id ?? null,
   });
 
   // Handle applying correction
@@ -220,6 +227,13 @@ export function ZappChatView({
       applyCorrection();
     }
   };
+
+  const handleSelectSuggestion = useCallback((text: string) => {
+    onMessageChange(text);
+    dismissSuggestions();
+    messageInputRef.current?.focus();
+  }, [onMessageChange, dismissSuggestions, messageInputRef]);
+
 
   // 3C Plus call handler
   const handleCall = useCallback(async () => {
