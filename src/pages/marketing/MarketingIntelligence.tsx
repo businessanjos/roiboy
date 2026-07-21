@@ -423,6 +423,9 @@ export default function MarketingIntelligence() {
               <TabsTrigger value="competitors" className="gap-2">
                 <Swords className="h-3.5 w-3.5" /> Concorrentes
               </TabsTrigger>
+              <TabsTrigger value="research" className="gap-2">
+                <SearchIcon className="h-3.5 w-3.5" /> Pesquisa de mercado
+              </TabsTrigger>
             </TabsList>
 
 
