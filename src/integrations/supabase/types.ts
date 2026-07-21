@@ -17605,6 +17605,45 @@ export type Database = {
         }
         Relationships: []
       }
+      mi_market_research: {
+        Row: {
+          account_id: string
+          answer: string
+          citations: Json
+          created_at: string
+          created_by: string | null
+          focus: string | null
+          id: string
+          model: string | null
+          query: string
+          recency: string | null
+        }
+        Insert: {
+          account_id: string
+          answer: string
+          citations?: Json
+          created_at?: string
+          created_by?: string | null
+          focus?: string | null
+          id?: string
+          model?: string | null
+          query: string
+          recency?: string | null
+        }
+        Update: {
+          account_id?: string
+          answer?: string
+          citations?: Json
+          created_at?: string
+          created_by?: string | null
+          focus?: string | null
+          id?: string
+          model?: string | null
+          query?: string
+          recency?: string | null
+        }
+        Relationships: []
+      }
       nfse_issuances: {
         Row: {
           account_id: string
