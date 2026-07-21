@@ -919,3 +919,108 @@ function InlineTextField({
     </div>
   );
 }
+
+function LocationCard({
+  city,
+  state,
+  country,
+  onSave,
+}: {
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  onSave: (patch: { city: string | null; state: string | null; country: string | null }) => Promise<void>;
+}) {
+  const initial = useMemo<LocationFields>(() => {
+    const countryMatch = country
+      ? COUNTRIES.find(
+          (c) =>
+            c.name.toLowerCase() === country.toLowerCase() ||
+            c.code.toLowerCase() === country.toLowerCase(),
+        )
+      : undefined;
+    const code = countryMatch?.code || "";
+    const isBR = code === "BR";
+    let estado_uf = "";
+    let estado = state || "";
+    if (isBR && state) {
+      const s = BRAZIL_STATES.find(
+        (st) =>
+          st.uf.toLowerCase() === state.toLowerCase() ||
+          st.name.toLowerCase() === state.toLowerCase(),
+      );
+      if (s) {
+        estado_uf = s.uf;
+        estado = s.name;
+      } else if (state.length === 2) {
+        estado_uf = state.toUpperCase();
+      }
+    }
+    return {
+      pais: countryMatch?.name || country || "",
+      pais_codigo: code,
+      estado,
+      estado_uf,
+      cidade: city || "",
+    };
+  }, [city, state, country]);
+
+  const [value, setValue] = useState<LocationFields>(initial);
+  useEffect(() => setValue(initial), [initial]);
+
+  const persist = async (next: LocationFields) => {
+    const isBR = (next.pais_codigo || "").toUpperCase() === "BR";
+    await onSave({
+      country: next.pais || null,
+      state: isBR ? next.estado_uf || null : next.estado || null,
+      city: next.cidade || null,
+    });
+  };
+
+  const handleChange = (next: LocationFields) => {
+    setValue(next);
+    // Persist immediately on country/state selection; city persists on blur below
+    if (
+      next.pais_codigo !== value.pais_codigo ||
+      next.estado_uf !== value.estado_uf ||
+      (next.estado !== value.estado && (next.pais_codigo || "").toUpperCase() !== "BR" && next.cidade === value.cidade)
+    ) {
+      // Only persist when city didn't change (city changes debounce via blur)
+      if (next.cidade === value.cidade) {
+        void persist(next);
+      }
+    }
+  };
+
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="p-1.5 rounded-md bg-primary/10 text-primary">
+          <MapPin className="h-4 w-4" />
+        </div>
+        <div>
+          <div className="text-sm font-semibold">Localização</div>
+          <div className="text-[11px] text-muted-foreground">
+            Cidade, estado e país do cliente (cobertura global)
+          </div>
+        </div>
+      </div>
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+        onBlur={() => {
+          // Commit any pending city text on blur
+          if (
+            value.cidade !== (city || "") ||
+            value.pais !== (initial.pais || "") ||
+            value.estado !== (initial.estado || "") ||
+            value.estado_uf !== (initial.estado_uf || "")
+          ) {
+            void persist(value);
+          }
+        }}
+      >
+        <CountryStateCity value={value} onChange={handleChange} />
+      </div>
+    </div>
+  );
+}
