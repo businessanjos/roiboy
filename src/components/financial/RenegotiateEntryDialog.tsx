@@ -220,7 +220,49 @@ export function RenegotiateEntryDialog({
       const full = await fetchFullEntry(entry.id);
       if (!full) throw new Error("Lançamento original não encontrado");
 
-      // 1) Mark original entry as renegotiated (preserves history, distinct from cancellation)
+      // === CAMINHO A: entry veio de contrato → delega à RPC oficial ===
+      // A RPC renegotiate_installment já: marca installment original como renegotiated,
+      // cria novas installments, cancela financial_entries antigos e cria novos entries.
+      const linkedInstallmentId = await findLinkedInstallmentId(full);
+
+      if (linkedInstallmentId) {
+        const newInstallments: any[] = [];
+        if ((Number(downPayment) || 0) > 0) {
+          newInstallments.push({
+            due_date: downPaymentDate,
+            amount: Number(downPayment),
+            payment_method: mapMethodToInstallment(method),
+          });
+        }
+        items.forEach((it) => {
+          newInstallments.push({
+            due_date: it.due_date,
+            amount: Number(it.amount) || 0,
+            payment_method: mapMethodToInstallment(it.payment_method),
+          });
+        });
+
+        const { error: rpcErr } = await supabase.rpc("renegotiate_installment", {
+          p_installment_id: linkedInstallmentId,
+          p_reason: reason.trim(),
+          p_new_installments: newInstallments,
+        });
+        if (rpcErr) throw rpcErr;
+
+        toast.success("Renegociação concluída (sincronizada com Parcelas)", {
+          description: `A parcela e o lançamento originais foram marcados como "Renegociado". ${newInstallments.length} nova(s) parcela(s) e lançamento(s) gerados.`,
+          duration: 6000,
+        });
+        onRenegotiated?.();
+        onOpenChange(false);
+        return;
+      }
+
+      // === CAMINHO B: entry avulso (source='manual' ou sem installment) ===
+      // Fluxo original: apenas mexe em financial_entries.
+      const stamp = format(new Date(), "dd/MM/yyyy HH:mm");
+      const historyNote = `\n\n[Renegociado em ${stamp}] Motivo: ${reason.trim()}`;
+
       const { error: cancelErr } = await supabase
         .from("financial_entries")
         .update({
@@ -230,7 +272,6 @@ export function RenegotiateEntryDialog({
         .eq("id", entry.id);
       if (cancelErr) throw cancelErr;
 
-      // 2) Build new entries (copy scoping fields from original)
       const baseNew: Record<string, any> = {
         account_id: full.account_id,
         company_id: full.company_id,
