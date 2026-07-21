@@ -248,7 +248,10 @@ export function DashboardMapTab() {
   }, [byCity]);
 
   const totalOnMap = filtered.length;
-  const untracked = filtered.filter(c => !c.country && !c.state && !c.city).length;
+  const untracked = filtered.filter(c => !c.country || !String(c.country).trim()).length;
+  const totalActive = clients.length;
+  const withLocation = clients.filter(c => (c.country && String(c.country).trim()) || (c.state && String(c.state).trim()) || (c.city && String(c.city).trim())).length;
+  const coveragePct = totalActive > 0 ? Math.round((withLocation / totalActive) * 100) : 0;
 
   return (
     <div className="space-y-6">
