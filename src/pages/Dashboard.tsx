@@ -191,6 +191,7 @@ export default function Dashboard() {
   });
   
   const [searchQuery, setSearchQuery] = useState("");
+  const [dashboardTab, setDashboardTab] = useState("gestao");
   const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
   const [lostValueModalOpen, setLostValueModalOpen] = useState(false);
   const showCancellationAnalytics = canAccessCancellationAnalytics(currentUser?.id);
