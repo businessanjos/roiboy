@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTablePagination } from "@/hooks/useTablePagination";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -225,6 +225,30 @@ export default function FinancialEntriesPage() {
     else if (periodFilter === "year") setCurrentMonth(addYears(currentMonth, dir));
     else setCurrentMonth(addMonths(currentMonth, dir));
   };
+
+  // Realtime auto-refresh: sem F5 quando algo muda no financial_entries desta conta
+  useEffect(() => {
+    if (!accountId) return;
+    const channel = supabase
+      .channel(`financial-entries-${accountId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "financial_entries",
+          filter: `account_id=eq.${accountId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
+          queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [accountId, queryClient]);
 
   // Fetch entries
   const { data: entries = [], isLoading: entriesLoading } = useQuery({
@@ -878,7 +902,7 @@ export default function FinancialEntriesPage() {
                                   <Edit2 className="h-4 w-4 mr-2" />
                                   Editar
                                 </DropdownMenuItem>
-                                {entry.status !== "cancelled" && (
+                                {entry.status !== "renegotiated" && (
                                   <DropdownMenuItem onClick={() => setRenegotiatingEntry(entry)}>
                                     <RefreshCw className="h-4 w-4 mr-2" />
                                     Renegociar
