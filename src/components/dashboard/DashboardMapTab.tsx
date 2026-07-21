@@ -179,7 +179,8 @@ function BubbleMap({
 
 // -- Main --------------------------------------------------------------------
 export function DashboardMapTab() {
-  const { data, isLoading } = useActiveClientsGeo();
+  const { data, isLoading, refetch } = useActiveClientsGeo();
+  const queryClient = useQueryClient();
   const [productFilter, setProductFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [regionFilter, setRegionFilter] = useState<string>("all"); // continent OR "BR:Sudeste"
