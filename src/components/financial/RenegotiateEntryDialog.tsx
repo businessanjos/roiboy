@@ -54,11 +54,54 @@ async function fetchFullEntry(id: string) {
   const { data } = await supabase
     .from("financial_entries")
     .select(
-      "id, account_id, company_id, cost_center_id, supplier_id, seller_id, project_id, deal_id, entry_type, category_id, bank_account_id, client_id, contract_id, currency, notes, description"
+      "id, account_id, company_id, cost_center_id, supplier_id, seller_id, project_id, deal_id, entry_type, category_id, bank_account_id, client_id, contract_id, currency, notes, description, source, source_id, installment_number"
     )
     .eq("id", id)
     .maybeSingle();
   return data as any;
+}
+
+/**
+ * Se o lançamento veio de um contrato (source='contract' + installment_number),
+ * localiza a installment correspondente para permitir usar a RPC oficial
+ * `renegotiate_installment`, que sincroniza os dois lados.
+ */
+async function findLinkedInstallmentId(full: any): Promise<string | null> {
+  if (!full || full.source !== "contract" || !full.source_id || !full.installment_number) {
+    return null;
+  }
+  const { data: invoices } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("contract_id", full.source_id);
+  const invoiceIds = (invoices ?? []).map((i: any) => i.id);
+  if (invoiceIds.length === 0) return null;
+
+  const { data: inst } = await supabase
+    .from("installments")
+    .select("id, status")
+    .in("invoice_id", invoiceIds)
+    .eq("number", full.installment_number)
+    .neq("status", "renegotiated")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return (inst as any)?.id ?? null;
+}
+
+function mapMethodToInstallment(m: string): string {
+  // Mapeia rótulos da UI de entries → nomenclatura de installments/payment_breakdown
+  switch (m) {
+    case "cartao":
+    case "cartao_recorrencia":
+      return "credit_card";
+    case "transferencia":
+      return "bank_transfer";
+    case "dinheiro":
+      return "cash";
+    default:
+      return m; // pix, boleto, cheque já batem
+  }
 }
 
 export function RenegotiateEntryDialog({
@@ -171,13 +214,53 @@ export function RenegotiateEntryDialog({
 
     setSaving(true);
     try {
-      const stamp = format(new Date(), "dd/MM/yyyy HH:mm");
-      const historyNote = `\n\n[Renegociado em ${stamp}] Motivo: ${reason.trim()}`;
-
       const full = await fetchFullEntry(entry.id);
       if (!full) throw new Error("Lançamento original não encontrado");
 
-      // 1) Mark original entry as renegotiated (preserves history, distinct from cancellation)
+
+      // === CAMINHO A: entry veio de contrato → delega à RPC oficial ===
+      // A RPC renegotiate_installment já: marca installment original como renegotiated,
+      // cria novas installments, cancela financial_entries antigos e cria novos entries.
+      const linkedInstallmentId = await findLinkedInstallmentId(full);
+
+      if (linkedInstallmentId) {
+        const newInstallments: any[] = [];
+        if ((Number(downPayment) || 0) > 0) {
+          newInstallments.push({
+            due_date: downPaymentDate,
+            amount: Number(downPayment),
+            payment_method: mapMethodToInstallment(method),
+          });
+        }
+        items.forEach((it) => {
+          newInstallments.push({
+            due_date: it.due_date,
+            amount: Number(it.amount) || 0,
+            payment_method: mapMethodToInstallment(it.payment_method),
+          });
+        });
+
+        const { error: rpcErr } = await supabase.rpc("renegotiate_installment", {
+          p_installment_id: linkedInstallmentId,
+          p_reason: reason.trim(),
+          p_new_installments: newInstallments,
+        });
+        if (rpcErr) throw rpcErr;
+
+        toast.success("Renegociação concluída (sincronizada com Parcelas)", {
+          description: `A parcela e o lançamento originais foram marcados como "Renegociado". ${newInstallments.length} nova(s) parcela(s) e lançamento(s) gerados.`,
+          duration: 6000,
+        });
+        onRenegotiated?.();
+        onOpenChange(false);
+        return;
+      }
+
+      // === CAMINHO B: entry avulso (source='manual' ou sem installment) ===
+      // Fluxo original: apenas mexe em financial_entries.
+      const stamp = format(new Date(), "dd/MM/yyyy HH:mm");
+      const historyNote = `\n\n[Renegociado em ${stamp}] Motivo: ${reason.trim()}`;
+
       const { error: cancelErr } = await supabase
         .from("financial_entries")
         .update({
@@ -187,7 +270,6 @@ export function RenegotiateEntryDialog({
         .eq("id", entry.id);
       if (cancelErr) throw cancelErr;
 
-      // 2) Build new entries (copy scoping fields from original)
       const baseNew: Record<string, any> = {
         account_id: full.account_id,
         company_id: full.company_id,
