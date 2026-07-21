@@ -180,6 +180,7 @@ export function DashboardMapTab() {
   const [productFilter, setProductFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [regionFilter, setRegionFilter] = useState<string>("all"); // continent OR "BR:Sudeste"
+  const [missingOpen, setMissingOpen] = useState(false);
 
   const clients = data?.clients ?? [];
   const products = data?.products ?? [];
