@@ -67,6 +67,7 @@ import {
   
   type LucideIcon,
   Stethoscope,
+  Telescope,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
 
