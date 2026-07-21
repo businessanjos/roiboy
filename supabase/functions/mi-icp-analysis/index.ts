@@ -260,6 +260,9 @@ Deno.serve(async (req) => {
         generated_at: new Date().toISOString(),
         summary: {
           active_clients: activeClientIds.size,
+          active_contracts: active.length,
+          on_hold_clients: onHoldClientIds.size,
+          on_hold_contracts: onHold.length,
           churned_clients: churnedClientIds.size,
           churn_rate:
             activeClientIds.size + churnedClientIds.size > 0
