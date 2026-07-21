@@ -271,9 +271,10 @@ Deno.serve(async (req) => {
             // Update message with permanent URL
             await supabase
               .from("zapp_messages")
-              .update({ 
+              .update({
                 media_url: permanentUrl,
                 media_download_status: "completed",
+                media_last_error: null,
                 updated_at: new Date().toISOString()
               })
               .eq("id", msg.id);
@@ -285,20 +286,26 @@ Deno.serve(async (req) => {
           }
 
         } catch (error) {
-          console.error(`Error processing message ${msg.id}:`, error);
-          
-          // Mark as failed
+          const errMsg = String(error);
+          console.error(`Error processing message ${msg.id}:`, errMsg);
+
+          const nextAttempts = ((msg.media_download_attempts as number) || 0) + 1;
+          const MAX_ATTEMPTS = 10;
+          const finalStatus = nextAttempts >= MAX_ATTEMPTS ? "abandoned" : "failed";
+
           await supabase
             .from("zapp_messages")
-            .update({ 
-              media_download_status: "failed",
+            .update({
+              media_download_status: finalStatus,
+              media_last_error: errMsg.slice(0, 500),
               updated_at: new Date().toISOString()
             })
             .eq("id", msg.id);
 
-          return { id: msg.id, success: false, error: String(error) };
+          return { id: msg.id, success: false, error: errMsg };
         }
       }));
+
       
       results.push(...batchResults);
     }
