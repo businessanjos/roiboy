@@ -138,7 +138,10 @@ Deno.serve(async (req) => {
 
     if (contractsError) throw contractsError;
 
-    const activeStatuses = new Set(["active", "paused", "suspended", "suspended_bonus"]);
+    // Alinhado com a área de Customer Success: "ativo" = apenas status 'active'.
+    // paused/suspended/suspended_bonus são contabilizados separadamente em `onHold`.
+    const activeStatuses = new Set(["active"]);
+    const onHoldStatuses = new Set(["paused", "suspended", "suspended_bonus"]);
     const churnedStatuses = new Set([
       "cancelled", "dismissed", "dropout_7d", "dismissal_termination", "ended",
     ]);
