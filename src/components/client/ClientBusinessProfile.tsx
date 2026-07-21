@@ -936,13 +936,66 @@ function LocationCard({
   city,
   state,
   country,
+  hints,
   onSave,
 }: {
   city: string | null;
   state: string | null;
   country: string | null;
+  hints?: {
+    zip: string | null;
+    city: string | null;
+    state: string | null;
+    hasBrDoc: boolean;
+  };
   onSave: (patch: { city: string | null; state: string | null; country: string | null }) => Promise<void>;
 }) {
+  const [autofilling, setAutofilling] = useState(false);
+
+  const autofill = async () => {
+    if (!hints) return;
+    setAutofilling(true);
+    try {
+      const zipDigits = (hints.zip || "").replace(/\D/g, "");
+      // 1) Brazilian CEP → ViaCEP (deterministic, free, no key)
+      if (zipDigits.length === 8) {
+        try {
+          const res = await fetch(`https://viacep.com.br/ws/${zipDigits}/json/`);
+          const data = await res.json();
+          if (data && !data.erro && data.localidade && data.uf) {
+            await onSave({
+              country: "Brasil",
+              state: String(data.uf).toUpperCase(),
+              city: data.localidade,
+            });
+            toast.success(`Preenchido via CEP: ${data.localidade}/${data.uf}`);
+            return;
+          }
+        } catch (err) {
+          console.warn("ViaCEP falhou", err);
+        }
+      }
+      // 2) Fallback: usar cidade/estado já cadastrados + inferir país por documento
+      if (hints.city || hints.state) {
+        const inferredCountry = hints.hasBrDoc || (hints.state && hints.state.length === 2)
+          ? "Brasil"
+          : null;
+        await onSave({
+          country: inferredCountry,
+          state: hints.state ? String(hints.state).toUpperCase() : null,
+          city: hints.city || null,
+        });
+        toast.success("Preenchido com base no cadastro");
+        return;
+      }
+      toast.error("Sem dados suficientes (CEP/cidade/estado) para inferir");
+    } finally {
+      setAutofilling(false);
+    }
+  };
+
+  const canAutofill = !!(hints && (hints.zip || hints.city || hints.state));
+
   const initial = useMemo<LocationFields>(() => {
     const countryMatch = country
       ? COUNTRIES.find(
