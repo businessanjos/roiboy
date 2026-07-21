@@ -95,7 +95,7 @@ interface FinancialEntry {
   amount: number;
   due_date: string;
   payment_date: string | null;
-  status: "pending" | "paid" | "overdue" | "cancelled" | "partially_paid";
+  status: "pending" | "paid" | "overdue" | "cancelled" | "partially_paid" | "renegotiated";
   category_id: string | null;
   bank_account_id: string | null;
   client_id: string | null;
