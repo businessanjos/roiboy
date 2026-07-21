@@ -76,7 +76,7 @@ export function ActiveClientContractSheet({
   // ---- Balance audit: contract.value vs financial entries ----
   const contractValue = Number(data?.contract?.value || 0);
   const entriesSum = (data?.entries || []).reduce(
-    (s, e) => s + (e.status === "cancelled" ? 0 : Number(e.amount || 0)),
+    (s, e) => s + (e.status === "cancelled" || e.status === "renegotiated" ? 0 : Number(e.amount || 0)),
     0
   );
   const paymentGroups = Array.isArray(data?.contract?.payment_groups)
