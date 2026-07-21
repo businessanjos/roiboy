@@ -3,13 +3,16 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
-import { MapPin, Globe, Users, Filter } from "lucide-react";
+import { MapPin, Globe, Users, Filter, ChevronDown, ChevronRight, ExternalLink, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   BR_UFS, BR_REGIONS, UF_BY_CODE, COUNTRY_GEO, CONTINENTS,
   normalizeCountry, type BRRegion, type Continent,
