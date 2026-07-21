@@ -424,11 +424,13 @@ Deno.serve(async (req) => {
         if (searchTerms.length === 1) {
           const term = searchTerms[0];
           q = q.or(
-            `full_name_normalized.ilike.%${term}%,phone_e164.ilike.%${term}%,company_name_normalized.ilike.%${term}%`
+            `full_name_normalized.ilike.%${term}%,phone_e164.ilike.%${term}%,company_name_normalized.ilike.%${term}%,city.ilike.%${term}%`
           );
         } else {
           for (const term of searchTerms) {
-            q = q.ilike("full_name_normalized", `%${term}%`);
+            q = q.or(
+              `full_name_normalized.ilike.%${term}%,city.ilike.%${term}%`
+            );
           }
         }
       }
