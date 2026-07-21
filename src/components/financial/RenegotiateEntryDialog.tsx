@@ -256,7 +256,7 @@ export function RenegotiateEntryDialog({
             Renegociar lançamento
           </DialogTitle>
           <DialogDescription>
-            O lançamento original será marcado como <strong>Cancelado</strong> (com histórico da renegociação) e novos
+            O lançamento original será marcado como <strong>Renegociado</strong> (com histórico preservado) e novos
             lançamentos serão criados com o plano abaixo.
           </DialogDescription>
         </DialogHeader>
