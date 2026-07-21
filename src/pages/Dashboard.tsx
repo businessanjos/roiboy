@@ -799,7 +799,9 @@ export default function Dashboard() {
               </Button>
             )}
           </div>
+          )}
         </div>
+
 
         <TabsContent value="cx" className="space-y-6">
           {/* CX Stats Card */}
