@@ -39,6 +39,7 @@ import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 
 import { FinancialPageHeader, FinancialKpiCard, FinancialEmptyState } from "@/components/financial/_shared";
+import { FinancialSyncIssuesAlert } from "@/components/financial/FinancialSyncIssuesAlert";
 import { formatBRL, formatBRLCompact, formatAxisBRL, formatPct } from "@/lib/financial-format";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -143,7 +144,8 @@ export default function FinancialDashboardPage() {
         description={`Visão consolidada do mês — ${format(new Date(), "dd 'de' MMMM, yyyy", { locale: ptBR })}`}
       />
 
-      
+      <FinancialSyncIssuesAlert />
+
 
       {/* ===== Seção 1 — Saúde do mês ===== */}
       <section className="space-y-3">
