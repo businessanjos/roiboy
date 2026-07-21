@@ -23,7 +23,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import CompetitorsTab from "@/components/marketing/intelligence/CompetitorsTab";
-import { Swords } from "lucide-react";
+import MarketResearchTab from "@/components/marketing/intelligence/MarketResearchTab";
+import { Swords, Search as SearchIcon } from "lucide-react";
 
 type DistItem = { label: string; count: number; pct: number };
 type Distribution = { total: number; items: DistItem[] };
