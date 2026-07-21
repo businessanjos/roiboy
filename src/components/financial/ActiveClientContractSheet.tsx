@@ -27,6 +27,7 @@ const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   overdue: { label: "Vencido", className: "bg-red-500/15 text-red-700 border-red-500/30" },
   partially_paid: { label: "Parcial", className: "bg-amber-500/15 text-amber-700 border-amber-500/30" },
   cancelled: { label: "Cancelado", className: "bg-muted text-muted-foreground border-border" },
+  renegotiated: { label: "Renegociado", className: "bg-orange-100 text-orange-800 border-orange-200" },
 };
 
 export function ActiveClientContractSheet({
