@@ -21,6 +21,7 @@ import {
   X,
   Trophy,
   Activity,
+  MapPin,
 } from "lucide-react";
 import { ClientClinicsManager } from "./ClientClinicsManager";
 import { CountryStateCity, type LocationFields } from "@/components/operations/CountryStateCity";
