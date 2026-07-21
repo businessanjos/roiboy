@@ -54,11 +54,54 @@ async function fetchFullEntry(id: string) {
   const { data } = await supabase
     .from("financial_entries")
     .select(
-      "id, account_id, company_id, cost_center_id, supplier_id, seller_id, project_id, deal_id, entry_type, category_id, bank_account_id, client_id, contract_id, currency, notes, description"
+      "id, account_id, company_id, cost_center_id, supplier_id, seller_id, project_id, deal_id, entry_type, category_id, bank_account_id, client_id, contract_id, currency, notes, description, source, source_id, installment_number"
     )
     .eq("id", id)
     .maybeSingle();
   return data as any;
+}
+
+/**
+ * Se o lançamento veio de um contrato (source='contract' + installment_number),
+ * localiza a installment correspondente para permitir usar a RPC oficial
+ * `renegotiate_installment`, que sincroniza os dois lados.
+ */
+async function findLinkedInstallmentId(full: any): Promise<string | null> {
+  if (!full || full.source !== "contract" || !full.source_id || !full.installment_number) {
+    return null;
+  }
+  const { data: invoices } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("contract_id", full.source_id);
+  const invoiceIds = (invoices ?? []).map((i: any) => i.id);
+  if (invoiceIds.length === 0) return null;
+
+  const { data: inst } = await supabase
+    .from("installments")
+    .select("id, status")
+    .in("invoice_id", invoiceIds)
+    .eq("number", full.installment_number)
+    .neq("status", "renegotiated")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return (inst as any)?.id ?? null;
+}
+
+function mapMethodToInstallment(m: string): string {
+  // Mapeia rótulos da UI de entries → nomenclatura de installments/payment_breakdown
+  switch (m) {
+    case "cartao":
+    case "cartao_recorrencia":
+      return "credit_card";
+    case "transferencia":
+      return "bank_transfer";
+    case "dinheiro":
+      return "cash";
+    default:
+      return m; // pix, boleto, cheque já batem
+  }
 }
 
 export function RenegotiateEntryDialog({
