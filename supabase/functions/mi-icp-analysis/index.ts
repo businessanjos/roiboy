@@ -169,10 +169,15 @@ Deno.serve(async (req) => {
     const active = rows.filter((r) => activeStatuses.has(r.status));
     const churned = rows.filter((r) => churnedStatuses.has(r.status));
 
+    const onHold = rows.filter((r) => onHoldStatuses.has(r.status));
+
     // Distinct clients for headline counts
     const activeClientIds = new Set(active.map((r) => r.client_id));
+    const onHoldClientIds = new Set(
+      onHold.filter((r) => !activeClientIds.has(r.client_id)).map((r) => r.client_id)
+    );
     const churnedClientIds = new Set(
-      churned.filter((r) => !activeClientIds.has(r.client_id)).map((r) => r.client_id)
+      churned.filter((r) => !activeClientIds.has(r.client_id) && !onHoldClientIds.has(r.client_id)).map((r) => r.client_id)
     );
 
     const buildProfile = (list: Row[]) => {
