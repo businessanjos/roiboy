@@ -1810,6 +1810,22 @@ Deno.serve(async (req) => {
               } else {
                 insertedMessageDbId = insertedMsg?.id || null;
                 console.log(`Zapp message saved! Media: ${mediaType || 'none'}, LazyDownload: ${encryptedMediaUrl ? 'pending' : 'no'}`);
+
+                // EAGER MEDIA DOWNLOAD: kick off download immediately (fire-and-forget)
+                // so audios/images don't sit as "Carregando mídia..." until a user opens the chat.
+                if (insertedMessageDbId && encryptedMediaUrl && !permanentMediaUrl && mediaType && mediaType !== "sticker") {
+                  const dlUrl = `${supabaseUrl}/functions/v1/download-media`;
+                  fetch(dlUrl, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "Authorization": `Bearer ${supabaseKey}`,
+                    },
+                    body: JSON.stringify({ message_ids: [insertedMessageDbId], account_id: accountId }),
+                  }).catch((e) => console.error("[EAGER-DL] Error triggering download-media:", e));
+                  console.log(`[EAGER-DL] Triggered download-media for ${insertedMessageDbId} (${mediaType})`);
+                }
+                
                 
                 // PUSH NOTIFICATION: Send to all subscribed users in the account
                 if (direction === "inbound") {
