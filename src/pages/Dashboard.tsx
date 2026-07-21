@@ -50,6 +50,7 @@ import {
   Eye,
   EyeOff,
   Filter,
+  MapPin,
   Video,
   Maximize2,
   Minimize2,
@@ -71,6 +72,7 @@ import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakd
 import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttendanceCard";
 import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
 import { EditableGoal } from "@/components/dashboard/EditableGoal";
+import { DashboardMapTab } from "@/components/dashboard/DashboardMapTab";
 
 
 
@@ -1461,6 +1463,9 @@ export default function Dashboard() {
         {/* Contratos Tab */}
         <TabsContent value="contratos" className="space-y-6">
           <ContractsDashboard contracts={dashboardContracts} />
+        </TabsContent>
+        <TabsContent value="mapa" className="space-y-6">
+          <DashboardMapTab />
         </TabsContent>
       </Tabs>
 
