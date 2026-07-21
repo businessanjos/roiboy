@@ -80,6 +80,12 @@ interface ClientRow {
   city: string | null;
   state: string | null;
   country: string | null;
+  zip_code: string | null;
+  business_zip_code: string | null;
+  business_city: string | null;
+  business_state: string | null;
+  cpf: string | null;
+  cnpj: string | null;
 }
 
 interface HistoryRow {
