@@ -57,6 +57,9 @@ type Analysis = {
   generated_at: string;
   summary: {
     active_clients: number;
+    active_contracts?: number;
+    on_hold_clients?: number;
+    on_hold_contracts?: number;
     churned_clients: number;
     churn_rate: number;
   };
