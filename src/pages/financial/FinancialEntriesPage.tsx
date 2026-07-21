@@ -138,6 +138,7 @@ const statusConfig = {
   overdue: { label: "Atrasado", color: "bg-red-100 text-red-800", icon: AlertCircle },
   cancelled: { label: "Cancelado", color: "bg-gray-100 text-gray-800", icon: XCircle },
   partially_paid: { label: "Parcial", color: "bg-blue-100 text-blue-800", icon: DollarSign },
+  renegotiated: { label: "Renegociado", color: "bg-orange-100 text-orange-800", icon: RefreshCw },
 };
 
 const recurrenceLabels: Record<string, string> = {
