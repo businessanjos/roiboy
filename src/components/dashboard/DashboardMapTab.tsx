@@ -489,7 +489,7 @@ export function DashboardMapTab() {
             {cityRanking.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">Sem dados</p>
             ) : (
-              <div className="max-h-[520px] overflow-auto">
+              <div className="max-h-[1200px] overflow-auto">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-card">
                     <tr className="border-b border-border text-xs text-muted-foreground">
