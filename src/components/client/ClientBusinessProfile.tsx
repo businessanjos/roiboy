@@ -564,6 +564,16 @@ export function ClientBusinessProfile({
               )}
             </div>
           </div>
+
+          {/* Localização */}
+          <LocationCard
+            city={client.city}
+            state={client.state}
+            country={client.country}
+            onSave={async (patch) => {
+              await saveField(patch as any);
+            }}
+          />
         </CardContent>
       </Card>
 
