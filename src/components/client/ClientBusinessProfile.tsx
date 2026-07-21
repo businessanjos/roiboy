@@ -1063,12 +1063,25 @@ function LocationCard({
         <div className="p-1.5 rounded-md bg-primary/10 text-primary">
           <MapPin className="h-4 w-4" />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold">Localização</div>
           <div className="text-[11px] text-muted-foreground">
             Cidade, estado e país do cliente (cobertura global)
           </div>
         </div>
+        {canAutofill && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={autofill}
+            disabled={autofilling}
+            className="h-7 text-[11px] gap-1"
+          >
+            {autofilling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+            Preencher automaticamente
+          </Button>
+        )}
       </div>
       <div
         className="grid grid-cols-1 sm:grid-cols-2 gap-3"
