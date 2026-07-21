@@ -656,7 +656,7 @@ export default function FinancialBankAccountsPage() {
                           {institutionOptions.map((bank) => (
                             <CommandItem
                               key={bank.code}
-                              value={`${bank.name} ${bank.code}`}
+                              value={`${bank.name} ${bank.fullName ?? ""} ${bank.code}`}
                               onSelect={() => {
                                 setFormData({ 
                                   ...formData, 
