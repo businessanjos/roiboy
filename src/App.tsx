@@ -159,6 +159,7 @@ const MarketingAgencies = lazyRetry(() => import("./pages/marketing/MarketingAge
 const MarketingAgencyDetail = lazyRetry(() => import("./pages/marketing/MarketingAgencyDetail"));
 const MarketingAgenciesCompare = lazyRetry(() => import("./pages/marketing/MarketingAgenciesCompare"));
 const MarketingAgencyPortal = lazyRetry(() => import("./pages/marketing/MarketingAgencyPortal"));
+const MarketingIntelligence = lazyRetry(() => import("./pages/marketing/MarketingIntelligence"));
 
 const Insights = lazyRetry(() => import("./pages/Insights"));
 const RHDashboard = lazyRetry(() => import("./pages/RHDashboard"));
@@ -392,6 +393,7 @@ const App = () => (
                             <Route path="/marketing/agencias/comparativo" element={<MarketingAgenciesCompare />} />
                             <Route path="/marketing/agencias/:id" element={<MarketingAgencyDetail />} />
                             <Route path="/marketing/portal-agencia" element={<MarketingAgencyPortal />} />
+                            <Route path="/marketing/market-intelligence" element={<MarketingIntelligence />} />
                             <Route path="/insights" element={<Insights />} />
                             <Route path="/insights/:dashboardId" element={<Insights />} />
                             

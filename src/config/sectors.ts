@@ -67,6 +67,7 @@ import {
   
   type LucideIcon,
   Stethoscope,
+  Telescope,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
 
@@ -256,6 +257,7 @@ export const sectors: Sector[] = [
       { to: "/marketing-tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/marketing/rebranding", icon: Sparkles, label: "Rebranding" },
       { to: "/marketing-insights", icon: BarChart3, label: "Insights" },
+      { to: "/marketing/market-intelligence", icon: Telescope, label: "Market Intelligence" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },

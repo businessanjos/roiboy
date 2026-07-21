@@ -183,6 +183,11 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       sectorItems = sectorItems.filter(item => item.to !== "/sales-dashboard");
     }
 
+    // Market Intelligence: restrito a m.quintana@me.com por enquanto
+    if (userEmail !== "m.quintana@me.com") {
+      sectorItems = sectorItems.filter(item => item.to !== "/marketing/market-intelligence");
+    }
+
     // Admins can see all sector items. Everyone else must pass explicit permissions.
     if (showAllItems) return sectorItems;
     
