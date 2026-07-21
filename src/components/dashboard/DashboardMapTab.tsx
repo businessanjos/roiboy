@@ -532,3 +532,130 @@ function EmptyMap({ message, height }: { message: string; height: number }) {
     </div>
   );
 }
+
+// -- Inline editor for clients missing address -------------------------------
+function MissingClientRow({
+  client,
+  onSaved,
+}: {
+  client: ClientRow;
+  onSaved: () => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [city, setCity] = useState(client.city || "");
+  const [state, setState] = useState(client.state || "");
+  const [country, setCountry] = useState(client.country || "Brasil");
+  const [cep, setCep] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
+
+  const isBR = country.trim().toLowerCase() === "brasil";
+
+  async function lookupCep(raw: string) {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (!data?.erro) {
+        setCountry("Brasil");
+        if (data.uf) setState(String(data.uf).toUpperCase());
+        if (data.localidade) setCity(data.localidade);
+      }
+    } catch (_) {
+      // silent
+    } finally {
+      setCepLoading(false);
+    }
+  }
+
+  async function save() {
+    if (!city.trim() && !state.trim() && !country.trim()) {
+      toast.error("Preencha ao menos cidade, estado ou país.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .update({
+          city: city.trim() || null,
+          state: state.trim() ? state.trim().toUpperCase() : null,
+          country: country.trim() || null,
+        })
+        .eq("id", client.id);
+      if (error) throw error;
+      toast.success("Endereço atualizado.");
+      setOpen(false);
+      await onSaved();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar endereço.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="text-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-3 py-2 hover:bg-muted/50 transition-colors text-left"
+      >
+        <span className="flex items-center gap-2 truncate">
+          {open ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+          <span className="truncate">{client.name || "(Sem nome)"}</span>
+        </span>
+        <Link
+          to={`/clients/${client.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+        >
+          Ficha <ExternalLink className="h-3 w-3" />
+        </Link>
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 pt-1 space-y-2 bg-muted/20">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="col-span-2">
+              <label className="text-[11px] text-muted-foreground">CEP (opcional, autopreenche)</label>
+              <div className="relative">
+                <Input
+                  value={cep}
+                  onChange={(e) => {
+                    setCep(e.target.value);
+                    if (e.target.value.replace(/\D/g, "").length === 8) lookupCep(e.target.value);
+                  }}
+                  placeholder="00000-000"
+                  className="h-8"
+                />
+                {cepLoading && <Loader2 className="absolute right-2 top-1.5 h-4 w-4 animate-spin text-muted-foreground" />}
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] text-muted-foreground">Cidade</label>
+              <Input value={city} onChange={(e) => setCity(e.target.value)} className="h-8" />
+            </div>
+            <div>
+              <label className="text-[11px] text-muted-foreground">Estado {isBR && "(UF)"}</label>
+              <Input value={state} onChange={(e) => setState(e.target.value)} maxLength={isBR ? 2 : undefined} className="h-8" />
+            </div>
+            <div className="col-span-2">
+              <label className="text-[11px] text-muted-foreground">País</label>
+              <Input value={country} onChange={(e) => setCountry(e.target.value)} className="h-8" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button size="sm" onClick={save} disabled={saving}>
+              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+              Salvar
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
