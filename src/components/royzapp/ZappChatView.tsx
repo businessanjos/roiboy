@@ -355,14 +355,21 @@ export function ZappChatView({
         searchFocusId={searchMatchIds.length > 0 && searchCurrentIndex > 0 ? searchMatchIds[searchCurrentIndex - 1] : null}
       />
 
-      {/* AI Assist Bar - spelling correction only */}
+      {/* AI Assist Bar - spelling + reply suggestions */}
       <ZappAIAssistBar
         correction={correction}
         isCheckingSpelling={isCheckingSpelling}
         onApplyCorrection={handleApplyCorrection}
         onDismissCorrection={dismissCorrection}
         spellingEnabled={spellingEnabled}
+        suggestions={suggestions}
+        isLoadingSuggestions={isLoadingSuggestions}
+        suggestionsAvailable={suggestionsAvailable}
+        onSelectSuggestion={handleSelectSuggestion}
+        onRefreshSuggestions={refreshSuggestions}
+        onDismissSuggestions={dismissSuggestions}
       />
+
 
       {/* Message input */}
       <ZappMessageInput
