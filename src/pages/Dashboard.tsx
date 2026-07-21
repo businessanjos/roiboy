@@ -676,7 +676,7 @@ export default function Dashboard() {
       {/* Tabs */}
       <Tabs defaultValue="gestao" className="space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-          <TabsList className="grid w-full grid-cols-2 max-w-sm sm:max-w-md h-9 sm:h-10">
+          <TabsList className="grid w-full grid-cols-3 max-w-md sm:max-w-lg h-9 sm:h-10">
             <TabsTrigger value="gestao" className="gap-1.5 text-xs sm:text-sm">
               <Settings2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Gestão</span>
@@ -684,6 +684,10 @@ export default function Dashboard() {
             <TabsTrigger value="cx" className="gap-1.5 text-xs sm:text-sm">
               <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>CX</span>
+            </TabsTrigger>
+            <TabsTrigger value="mapa" className="gap-1.5 text-xs sm:text-sm">
+              <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Mapa</span>
             </TabsTrigger>
           </TabsList>
 
