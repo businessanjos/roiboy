@@ -237,7 +237,10 @@ export function RenegotiateEntryDialog({
         if (insErr) throw insErr;
       }
 
-      toast.success(`Renegociação registrada em ${rows.length} lançamento(s)`);
+      toast.success("Renegociação concluída", {
+        description: `A parcela original agora aparece como "Renegociado" (não como Cancelado). ${rows.length} novo(s) lançamento(s) criado(s).`,
+        duration: 6000,
+      });
       onRenegotiated?.();
       onOpenChange(false);
     } catch (e: any) {
