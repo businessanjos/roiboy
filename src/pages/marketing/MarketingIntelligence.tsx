@@ -513,7 +513,12 @@ export default function MarketingIntelligence() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            <TabsContent value="competitors" className="space-y-4 mt-6">
+              <CompetitorsTab />
+            </TabsContent>
           </Tabs>
+
 
           <p className="text-xs text-muted-foreground text-right">
             Atualizado em{" "}
