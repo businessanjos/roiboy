@@ -145,7 +145,7 @@ export function ClientBusinessProfile({
     const { data: c, error: cErr } = await supabase
       .from("clients")
       .select(
-        "id, account_id, initial_revenue, current_revenue, current_revenue_month, differential, method_name, education, education_specialty, business_niche, onboarding_started_at, contract_start_date, created_at"
+        "id, account_id, initial_revenue, current_revenue, current_revenue_month, differential, method_name, education, education_specialty, business_niche, onboarding_started_at, contract_start_date, created_at, city, state, country"
       )
       .eq("id", clientId)
       .single();
