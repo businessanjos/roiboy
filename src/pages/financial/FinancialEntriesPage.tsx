@@ -692,6 +692,7 @@ export default function FinancialEntriesPage() {
                 <SelectItem value="paid">Pago</SelectItem>
                 <SelectItem value="overdue">Atrasado</SelectItem>
                 <SelectItem value="cancelled">Cancelado</SelectItem>
+                <SelectItem value="renegotiated">Renegociado</SelectItem>
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
