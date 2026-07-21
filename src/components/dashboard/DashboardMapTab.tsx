@@ -317,7 +317,7 @@ export function DashboardMapTab() {
       </Card>
 
       <Dialog open={missingOpen} onOpenChange={setMissingOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg z-[10000]">
           <DialogHeader>
             <DialogTitle>Mentorados sem endereço</DialogTitle>
             <DialogDescription>
