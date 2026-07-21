@@ -902,7 +902,7 @@ export default function FinancialEntriesPage() {
                                   <Edit2 className="h-4 w-4 mr-2" />
                                   Editar
                                 </DropdownMenuItem>
-                                {entry.status !== "cancelled" && (
+                                {entry.status !== "renegotiated" && (
                                   <DropdownMenuItem onClick={() => setRenegotiatingEntry(entry)}>
                                     <RefreshCw className="h-4 w-4 mr-2" />
                                     Renegociar
