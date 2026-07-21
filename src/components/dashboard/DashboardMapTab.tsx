@@ -41,22 +41,44 @@ function useActiveClientsGeo() {
     enabled: !!accountId,
     staleTime: 120_000,
     queryFn: async (): Promise<{ clients: ClientRow[]; products: ProductOption[] }> => {
-      // Fetch active clients paginated
+      // Step 1: fetch client_ids that have an ACTIVE contract in this account
+      const activeClientIds = new Set<string>();
+      {
+        let from = 0;
+        const pageSize = 1000;
+        while (true) {
+          const { data, error } = await supabase
+            .from("client_contracts")
+            .select("client_id")
+            .eq("account_id", accountId!)
+            .eq("status", "active")
+            .range(from, from + pageSize - 1);
+          if (error) throw error;
+          for (const row of data || []) activeClientIds.add(row.client_id);
+          if (!data || data.length < pageSize) break;
+          from += pageSize;
+        }
+      }
+
+      if (activeClientIds.size === 0) {
+        return { clients: [], products: [] };
+      }
+
+      // Step 2: fetch those clients in batches
+      const idsAll = [...activeClientIds];
       let clients: any[] = [];
-      let from = 0;
-      const pageSize = 1000;
-      while (true) {
+      const BATCH = 200;
+      for (let i = 0; i < idsAll.length; i += BATCH) {
+        const batch = idsAll.slice(i, i + BATCH);
         const { data, error } = await supabase
           .from("clients")
           .select("id, city, state, country, gender")
           .eq("account_id", accountId!)
-          .eq("status", "active")
-          .range(from, from + pageSize - 1);
+          .in("id", batch);
         if (error) throw error;
         clients = clients.concat(data || []);
-        if (!data || data.length < pageSize) break;
-        from += pageSize;
       }
+
 
       const ids = clients.map(c => c.id);
       const cpMap = new Map<string, string[]>();
