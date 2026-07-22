@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Loader2, Search, ExternalLink, ChevronDown, Sparkles, Trash2, Clock } from "lucide-react";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { MarketResearchAnswer } from "./MarketResearchAnswer";
+import { benchmarkQueries } from "./marketBenchmarks";
 
 type Citation = { index: number; url: string; title: string | null };
 
