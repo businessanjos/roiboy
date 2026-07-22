@@ -176,6 +176,73 @@ Traga:
 
 interface Props {
   onOpenDetail?: (query: string) => void;
+  currentMetrics?: {
+    activeClients: number;
+    avgTicket: number;
+    annualRevenue: number;
+    churnRate?: number;
+  };
+}
+
+// Extrai a primeira magnitude em R$ associada explicitamente ao tier
+// (ex.: "TAM em R$", "SAM em R$", "Receita capturável em 12 meses (R$)").
+function parseBRL(text: string | undefined, tierKey: "tam" | "sam" | "som"): number | null {
+  if (!text) return null;
+  const anchors: Record<typeof tierKey, RegExp[]> = {
+    tam: [/TAM\s+em\s+R\$[^R]*?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i, /TAM[^\n]{0,120}?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i],
+    sam: [/SAM\s+em\s+R\$[^R]*?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i, /SAM[^\n]{0,120}?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i],
+    som: [/Receita\s+capt[^R]*?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i, /SOM[^\n]{0,120}?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i],
+  } as any;
+  for (const re of anchors[tierKey]) {
+    const m = text.match(re);
+    if (m) {
+      const raw = parseFloat(m[1].replace(/\./g, "").replace(",", "."));
+      if (isNaN(raw)) continue;
+      const u = (m[2] || "").toLowerCase();
+      if (/bi|bilh/.test(u)) return raw * 1e9;
+      if (/mi(?!l)|milh/.test(u)) return raw * 1e6;
+      if (/mil|k/.test(u)) return raw * 1e3;
+      return raw;
+    }
+  }
+  return null;
+}
+
+// Extrai número de profissionais/clientes do primeiro trecho útil.
+function parsePeople(text: string | undefined, tierKey: "tam" | "sam" | "som"): number | null {
+  if (!text) return null;
+  const keyword = tierKey === "som"
+    ? /clientes?\s+capt[^\n]{0,80}?([\d.,]+)\s*(mil|milh[õo]es|k)?/i
+    : /(profissionais|cl[íi]nicas|total)[^\n]{0,80}?([\d.,]+)\s*(mil|milh[õo]es|k)?/i;
+  const m = text.match(keyword);
+  if (!m) return null;
+  const numStr = tierKey === "som" ? m[1] : m[2];
+  const unit = ((tierKey === "som" ? m[2] : m[3]) || "").toLowerCase();
+  const raw = parseFloat(numStr.replace(/\./g, "").replace(",", "."));
+  if (isNaN(raw)) return null;
+  if (/milh/.test(unit)) return raw * 1e6;
+  if (/mil|k/.test(unit)) return raw * 1e3;
+  return raw;
+}
+
+function fmtBigBRL(n: number): string {
+  if (n >= 1e9) return `R$ ${(n / 1e9).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} bi`;
+  if (n >= 1e6) return `R$ ${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
+  if (n >= 1e3) return `R$ ${(n / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
+  return `R$ ${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+}
+
+function fmtBigNum(n: number): string {
+  if (n >= 1e6) return `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
+  if (n >= 1e3) return `${(n / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
+  return n.toLocaleString("pt-BR");
+}
+
+function fmtPct(n: number): string {
+  if (n < 0.001) return `${(n * 100).toFixed(4)}%`;
+  if (n < 0.01) return `${(n * 100).toFixed(3)}%`;
+  if (n < 1) return `${(n * 100).toFixed(2)}%`;
+  return `${n.toFixed(1)}%`;
 }
 
 function loadBands(): Band[] {
@@ -192,7 +259,7 @@ function loadBands(): Band[] {
   return DEFAULT_BANDS;
 }
 
-export function TamSamSomCards({ onOpenDetail }: Props) {
+export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
   const { currentUser } = useCurrentUser();
   const qc = useQueryClient();
   const [running, setRunning] = useState<string | null>(null);
@@ -456,6 +523,14 @@ export function TamSamSomCards({ onOpenDetail }: Props) {
         })}
       </div>
 
+      <CurrentVsMarketPanel
+        currentMetrics={currentMetrics}
+        latestByQuery={latestByQuery}
+        queries={queries}
+      />
+
+
+
       <DetailSheet
         open={!!detail}
         onOpenChange={(o) => !o && setDetail(null)}
@@ -636,5 +711,238 @@ function DetailSheet({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Comparativo visual: TAM/SAM/SOM vs meus dados atuais
+// ─────────────────────────────────────────────────────────────
+function CurrentVsMarketPanel({
+  currentMetrics,
+  latestByQuery,
+  queries,
+}: {
+  currentMetrics?: Props["currentMetrics"];
+  latestByQuery: Map<string, Row>;
+  queries: { tier: Tier; query: string }[];
+}) {
+  if (!currentMetrics) return null;
+
+  const parsed = queries.map(({ tier, query }) => {
+    const row = latestByQuery.get(query);
+    return {
+      tier,
+      revenue: parseBRL(row?.answer, tier.key),
+      people: parsePeople(row?.answer, tier.key),
+    };
+  });
+
+  const hasAny = parsed.some((p) => p.revenue || p.people);
+  const { activeClients, avgTicket, annualRevenue, churnRate } = currentMetrics;
+
+  if (!hasAny) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="p-5 text-center text-sm text-muted-foreground">
+          Calcule TAM, SAM e SOM acima para desbloquear o comparativo com sua operação atual.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const tamRev = parsed.find((p) => p.tier.key === "tam")?.revenue ?? null;
+  const samRev = parsed.find((p) => p.tier.key === "sam")?.revenue ?? null;
+  const somRev = parsed.find((p) => p.tier.key === "som")?.revenue ?? null;
+
+  const tamPpl = parsed.find((p) => p.tier.key === "tam")?.people ?? null;
+  const samPpl = parsed.find((p) => p.tier.key === "sam")?.people ?? null;
+  const somPpl = parsed.find((p) => p.tier.key === "som")?.people ?? null;
+
+  const maxRev = Math.max(tamRev ?? 0, samRev ?? 0, somRev ?? 0, annualRevenue);
+  const maxPpl = Math.max(tamPpl ?? 0, samPpl ?? 0, somPpl ?? 0, activeClients);
+
+  const revenueBars = [
+    { label: "TAM", value: tamRev, color: "bg-purple-500", text: "text-purple-700" },
+    { label: "SAM", value: samRev, color: "bg-blue-500", text: "text-blue-700" },
+    { label: "SOM (12m)", value: somRev, color: "bg-emerald-500", text: "text-emerald-700" },
+    { label: "Você (anualizado)", value: annualRevenue, color: "bg-amber-500", text: "text-amber-700", isSelf: true },
+  ];
+
+  const peopleBars = [
+    { label: "TAM", value: tamPpl, color: "bg-purple-500", text: "text-purple-700" },
+    { label: "SAM", value: samPpl, color: "bg-blue-500", text: "text-blue-700" },
+    { label: "SOM (12m)", value: somPpl, color: "bg-emerald-500", text: "text-emerald-700" },
+    { label: "Você (clientes ativos)", value: activeClients, color: "bg-amber-500", text: "text-amber-700", isSelf: true },
+  ];
+
+  // Penetração da operação em cada tier
+  const penR = {
+    tam: tamRev ? annualRevenue / tamRev : null,
+    sam: samRev ? annualRevenue / samRev : null,
+    som: somRev ? annualRevenue / somRev : null,
+  };
+  const penP = {
+    tam: tamPpl ? activeClients / tamPpl : null,
+    sam: samPpl ? activeClients / samPpl : null,
+    som: somPpl ? activeClients / somPpl : null,
+  };
+
+  const gapSomRev = somRev ? somRev - annualRevenue : null;
+  const gapSomPpl = somPpl ? somPpl - activeClients : null;
+
+  return (
+    <Card className="ring-1 ring-amber-500/20 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent">
+      <CardContent className="p-5 space-y-5">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Crosshair className="h-4 w-4 text-amber-600" />
+              Você × Mercado — onde estão seus pontos cegos
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Sua operação atual comparada ao TAM/SAM/SOM calculados acima.
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <MetricPill label="Clientes ativos" value={activeClients.toLocaleString("pt-BR")} />
+            <MetricPill label="Ticket médio" value={fmtBigBRL(avgTicket)} />
+            <MetricPill label="Receita anualizada" value={fmtBigBRL(annualRevenue)} />
+            {typeof churnRate === "number" && (
+              <MetricPill label="Churn" value={`${(churnRate * 100).toFixed(1)}%`} />
+            )}
+          </div>
+        </div>
+
+        {/* Receita R$ */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Receita anual (R$)
+            </p>
+            {penR.som !== null && (
+              <span className="text-[11px] text-muted-foreground">
+                Penetração SOM: <strong className="text-amber-700">{fmtPct(penR.som)}</strong>
+                {penR.sam !== null && <> · SAM: <strong>{fmtPct(penR.sam)}</strong></>}
+                {penR.tam !== null && <> · TAM: <strong>{fmtPct(penR.tam)}</strong></>}
+              </span>
+            )}
+          </div>
+          <div className="space-y-2">
+            {revenueBars.map((b) => (
+              <BarRow
+                key={b.label}
+                label={b.label}
+                value={b.value}
+                max={maxRev}
+                color={b.color}
+                text={b.text}
+                isSelf={b.isSelf}
+                format={fmtBigBRL}
+              />
+            ))}
+          </div>
+          {gapSomRev !== null && gapSomRev > 0 && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              💡 Gap para atingir o SOM em 12 meses:{" "}
+              <strong className="text-emerald-700">{fmtBigBRL(gapSomRev)}</strong> — equivalente a{" "}
+              {avgTicket > 0 ? Math.ceil(gapSomRev / avgTicket).toLocaleString("pt-BR") : "?"} contratos
+              no seu ticket médio atual.
+            </p>
+          )}
+        </div>
+
+        {/* Clientes */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Clientes / profissionais
+            </p>
+            {penP.som !== null && (
+              <span className="text-[11px] text-muted-foreground">
+                Penetração SOM: <strong className="text-amber-700">{fmtPct(penP.som)}</strong>
+                {penP.sam !== null && <> · SAM: <strong>{fmtPct(penP.sam)}</strong></>}
+                {penP.tam !== null && <> · TAM: <strong>{fmtPct(penP.tam)}</strong></>}
+              </span>
+            )}
+          </div>
+          <div className="space-y-2">
+            {peopleBars.map((b) => (
+              <BarRow
+                key={b.label}
+                label={b.label}
+                value={b.value}
+                max={maxPpl}
+                color={b.color}
+                text={b.text}
+                isSelf={b.isSelf}
+                format={fmtBigNum}
+              />
+            ))}
+          </div>
+          {gapSomPpl !== null && gapSomPpl > 0 && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              💡 Faltam <strong className="text-emerald-700">{fmtBigNum(gapSomPpl)}</strong>{" "}
+              clientes para capturar todo o SOM projetado.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-md border bg-background/60 p-3 text-[11px] leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Como ler:</strong> se sua penetração no SOM já passa de
+          10%, o teto de curto prazo está próximo — o próximo salto vem de expandir SAM (novas faixas
+          de ticket ou novo perfil). Se está abaixo de 1%, existe espaço enorme para escalar sem
+          mudar produto. Ajuste as faixas no topo e recalcule para testar cenários.
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MetricPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-background px-2.5 py-1">
+      <p className="text-[9px] uppercase tracking-wide text-muted-foreground leading-none">{label}</p>
+      <p className="text-sm font-semibold tabular-nums leading-tight">{value}</p>
+    </div>
+  );
+}
+
+function BarRow({
+  label,
+  value,
+  max,
+  color,
+  text,
+  isSelf,
+  format,
+}: {
+  label: string;
+  value: number | null;
+  max: number;
+  color: string;
+  text: string;
+  isSelf?: boolean;
+  format: (n: number) => string;
+}) {
+  const pct = value && max > 0 ? Math.max(1, (value / max) * 100) : 0;
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs mb-1">
+        <span className={`font-medium ${isSelf ? text : "text-foreground"}`}>
+          {isSelf && "▸ "}{label}
+        </span>
+        <span className={`tabular-nums font-semibold ${isSelf ? text : "text-muted-foreground"}`}>
+          {value ? format(value) : "—"}
+        </span>
+      </div>
+      <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+        {value ? (
+          <div
+            className={`h-full ${color} ${isSelf ? "ring-2 ring-amber-500/40" : ""} transition-all`}
+            style={{ width: `${pct}%` }}
+          />
+        ) : null}
+      </div>
+    </div>
   );
 }
