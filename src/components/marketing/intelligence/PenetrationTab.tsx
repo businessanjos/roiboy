@@ -157,6 +157,15 @@ export default function PenetrationTab() {
   const [selectedUf, setSelectedUf] = useState<string | null>(null);
   const [regionFilter, setRegionFilter] = useState<string>("all");
   const [includeChurnRisk, setIncludeChurnRisk] = useState(false);
+  const drilldownRef = useRef<HTMLDivElement | null>(null);
+
+  const openDrilldown = (uf: string) => {
+    setSelectedUf(uf);
+    // aguarda render antes de rolar
+    setTimeout(() => {
+      drilldownRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
 
   // Busca ativos + churn_risk (relevante para penetração histórica).
   // Filtro final é aplicado em memória via toggle.
