@@ -529,7 +529,7 @@ export default function PenetrationTab() {
               <div
                 key={r.uf}
                 className="flex items-center justify-between p-2 rounded-md border bg-card hover:bg-muted/50 cursor-pointer"
-                onClick={() => setSelectedUf(r.uf)}
+                onClick={() => openDrilldown(r.uf)}
               >
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">{i + 1}º</Badge>
