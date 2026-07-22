@@ -684,7 +684,7 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
       <div className="grid gap-3 md:grid-cols-3">
         {queries.map(({ tier, query }) => {
           const Icon = tier.icon;
-          const latest = latestByQuery.get(query);
+          const latest = findLatestForTier(tier, query);
           const { value, snippet } = extractHeadline(latest?.answer);
           const isRunning = running === tier.key;
 
