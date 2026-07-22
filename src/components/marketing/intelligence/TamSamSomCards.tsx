@@ -259,7 +259,7 @@ function loadBands(): Band[] {
   return DEFAULT_BANDS;
 }
 
-export function TamSamSomCards({ onOpenDetail }: Props) {
+export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
   const { currentUser } = useCurrentUser();
   const qc = useQueryClient();
   const [running, setRunning] = useState<string | null>(null);
