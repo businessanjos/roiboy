@@ -323,8 +323,10 @@ export default function MarketResearchTab() {
               </CardHeader>
               <CollapsibleContent>
                 <CardContent className="pt-0 space-y-3">
-                  <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                    {stripCitationMarkers(r.answer)}
+                  <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {stripCitationMarkers(r.answer)}
+                    </ReactMarkdown>
                   </div>
                   {r.citations && r.citations.length > 0 && (
                     <div className="pt-3 border-t">
