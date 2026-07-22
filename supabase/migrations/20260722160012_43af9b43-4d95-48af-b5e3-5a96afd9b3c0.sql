@@ -1,0 +1,1 @@
+DELETE FROM public.mi_market_research WHERE query ILIKE '%clínicas de estética%' OR query ILIKE '%redes de franquia%' OR query ILIKE '%clínicas independentes%';
