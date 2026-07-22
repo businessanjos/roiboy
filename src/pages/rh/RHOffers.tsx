@@ -277,20 +277,48 @@ export default function RHOffers() {
                   </p>
 
                   <div className="flex items-center gap-1 pt-2 border-t">
-                    <Button size="sm" variant="ghost" onClick={() => copyLink(o.public_token)} className="gap-1.5 flex-1">
-                      <Copy className="h-3.5 w-3.5" /> Copiar link
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild>
-                      <a href={`${getPublicOrigin()}/oferta/${o.public_token}`} target="_blank" rel="noreferrer">
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link to={`/rh/offers/${o.id}/edit`}><FileText className="h-3.5 w-3.5" /></Link>
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setDeleteId(o.id)} className="text-rose-600 hover:text-rose-700">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" onClick={() => copyLink(o.public_token)} className="gap-1.5 flex-1">
+                          <Copy className="h-3.5 w-3.5" /> Copiar link
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copiar link público da offer</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" onClick={() => duplicateOffer(o.id)}>
+                          <CopyPlus className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Duplicar offer</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" asChild>
+                          <a href={`${getPublicOrigin()}/oferta/${o.public_token}`} target="_blank" rel="noreferrer">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Abrir link público</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link to={`/rh/offers/${o.id}/edit`}><FileText className="h-3.5 w-3.5" /></Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Editar offer</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" onClick={() => setDeleteId(o.id)} className="text-rose-600 hover:text-rose-700">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Excluir offer</TooltipContent>
+                    </Tooltip>
                   </div>
                 </CardContent>
               </Card>
