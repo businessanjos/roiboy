@@ -9,16 +9,18 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Target, Zap, TrendingUp, ArrowLeft, Info } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { MapPin, Target, Zap, TrendingUp, ArrowLeft, Info, AlertTriangle } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 // ============================================================
 // Base assumptions — mercado de ESTÉTICA AVANÇADA/MÉDICA BR
-// TAM total default = 50.000 clínicas (fração do CNAE 9602-5/02
-// que faz procedimento avançado). Usuário pode ajustar no slider.
-// Distribuição por UF: mix de população, renda per capita e
-// concentração conhecida do setor de estética avançada.
-// Fontes: IBGE/Sebrae/ABF (proporções qualitativas).
+// TAM default = 50.000 clínicas (fração do CNAE 9602-5/02 que
+// faz procedimento avançado — não confundir com o universo bruto
+// de ~115k do CNAE que inclui salão de beleza).
+// Distribuição por UF: mix população, renda per capita e
+// concentração conhecida do setor (Sebrae/ABF/IBGE — qualitativo).
 // ============================================================
 const UF_META: Record<string, { name: string; region: string; weight: number }> = {
   SP: { name: "São Paulo", region: "Sudeste", weight: 0.305 },
@@ -71,19 +73,26 @@ const normalizeUf = (s: string | null | undefined): string | null => {
   if (!s) return null;
   const up = s.trim().toUpperCase();
   if (UF_META[up]) return up;
-  // full name → uf
   for (const [uf, meta] of Object.entries(UF_META)) {
     if (meta.name.toUpperCase() === up) return uf;
   }
   return null;
 };
 
+// Robustez: só considera "55" prefixo de país quando o número tem
+// tamanho compatível (12–13 dígitos). Evita que um número local
+// com DDD 55 (RS) seja interpretado como country code.
 const ufFromPhone = (phone: string | null | undefined): string | null => {
   if (!phone) return null;
-  const digits = phone.replace(/\D/g, "");
-  // strip country code
-  const local = digits.startsWith("55") ? digits.slice(2) : digits;
-  const ddd = local.slice(0, 2);
+  let digits = phone.replace(/\D/g, "");
+  if (!digits) return null;
+  // remove zero de operadora prefixado (raro, mas ocorre)
+  if (digits.startsWith("0")) digits = digits.replace(/^0+/, "");
+  // country code 55 só se número tiver 12–13 dígitos (55 + DDD + 8/9)
+  if (digits.length >= 12 && digits.startsWith("55")) {
+    digits = digits.slice(2);
+  }
+  const ddd = digits.slice(0, 2);
   return DDD_TO_UF[ddd] || null;
 };
 
@@ -98,8 +107,8 @@ type Row = {
   clients: number;
   leads: number;
   penetrationPct: number;
-  opportunity: number; // TAM - clients (whitespace absoluto)
-  score: number; // priority score
+  opportunity: number;
+  score: number;
 };
 
 type CityRow = {
@@ -113,9 +122,12 @@ export default function PenetrationTab() {
   const [totalTam, setTotalTam] = useState(50000);
   const [selectedUf, setSelectedUf] = useState<string | null>(null);
   const [regionFilter, setRegionFilter] = useState<string>("all");
+  const [includeChurnRisk, setIncludeChurnRisk] = useState(false);
 
+  // Busca ativos + churn_risk (relevante para penetração histórica).
+  // Filtro final é aplicado em memória via toggle.
   const { data: clients = [], isLoading: loadingClients } = useQuery({
-    queryKey: ["mi-pen-clients", currentUser?.account_id],
+    queryKey: ["mi-pen-clients-v2", currentUser?.account_id],
     queryFn: async () => {
       const all: any[] = [];
       let from = 0;
@@ -124,7 +136,7 @@ export default function PenetrationTab() {
         const { data, error } = await supabase
           .from("clients")
           .select("id, state, city, status")
-          .eq("status", "active")
+          .in("status", ["active", "churn_risk"])
           .range(from, from + size - 1);
         if (error) throw error;
         all.push(...(data || []));
@@ -138,7 +150,7 @@ export default function PenetrationTab() {
   });
 
   const { data: leads = [], isLoading: loadingLeads } = useQuery({
-    queryKey: ["mi-pen-leads", currentUser?.account_id],
+    queryKey: ["mi-pen-leads-v2", currentUser?.account_id],
     queryFn: async () => {
       const all: any[] = [];
       let from = 0;
@@ -160,15 +172,44 @@ export default function PenetrationTab() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Base considerada (respeita toggle churn_risk)
+  const consideredClients = useMemo(
+    () => clients.filter((c) => includeChurnRisk || c.status === "active"),
+    [clients, includeChurnRisk]
+  );
+
+  // Métricas de cobertura de dados (transparência)
+  const coverage = useMemo(() => {
+    const totalActive = clients.filter((c) => c.status === "active").length;
+    const totalChurnRisk = clients.filter((c) => c.status === "churn_risk").length;
+    const clientsNoUf = consideredClients.filter((c) => !normalizeUf(c.state)).length;
+    const leadsNoSignal = leads.filter(
+      (l) =>
+        !normalizeUf(l.business_state) &&
+        !normalizeUf(l.state) &&
+        !ufFromPhone(l.phone)
+    ).length;
+    return {
+      totalActive,
+      totalChurnRisk,
+      totalConsidered: consideredClients.length,
+      clientsNoUf,
+      clientsCoveragePct: consideredClients.length
+        ? ((consideredClients.length - clientsNoUf) / consideredClients.length) * 100
+        : 0,
+      totalLeads: leads.length,
+      leadsNoSignal,
+      leadsCoveragePct: leads.length ? ((leads.length - leadsNoSignal) / leads.length) * 100 : 0,
+    };
+  }, [clients, consideredClients, leads]);
+
   const rows: Row[] = useMemo(() => {
-    // count clients per UF
     const clientsByUf = new Map<string, number>();
-    for (const c of clients) {
+    for (const c of consideredClients) {
       const uf = normalizeUf(c.state);
       if (!uf) continue;
       clientsByUf.set(uf, (clientsByUf.get(uf) || 0) + 1);
     }
-    // count MQL leads per UF (fallback: DDD do telefone)
     const leadsByUf = new Map<string, number>();
     for (const l of leads) {
       const uf =
@@ -185,9 +226,7 @@ export default function PenetrationTab() {
       const l = leadsByUf.get(uf) || 0;
       const pen = tam ? (c / tam) * 100 : 0;
       const opportunity = Math.max(tam - c, 0);
-      // Score: prioriza UFs com TAM grande, baixa penetração e sinal de demanda (leads)
-      // score = (1 - penetration_norm) * log(TAM) * (1 + leads_boost)
-      const penNorm = Math.min(pen / 5, 1); // 5% = considerado "saturado"
+      const penNorm = Math.min(pen / 5, 1);
       const leadsBoost = Math.log10(1 + l);
       const score = (1 - penNorm) * Math.log10(1 + tam) * (1 + leadsBoost);
       return {
@@ -202,7 +241,7 @@ export default function PenetrationTab() {
         score,
       };
     });
-  }, [clients, leads, totalTam]);
+  }, [consideredClients, leads, totalTam]);
 
   const filteredRows = useMemo(() => {
     if (regionFilter === "all") return rows;
@@ -210,19 +249,18 @@ export default function PenetrationTab() {
   }, [rows, regionFilter]);
 
   const totals = useMemo(() => {
-    const totalClients = clients.length;
-    const totalLeads = leads.length;
     const withUf = rows.reduce((s, r) => s + r.clients, 0);
+    const mqlsWithSignal = rows.reduce((s, r) => s + r.leads, 0);
     const penNacional = totalTam ? (withUf / totalTam) * 100 : 0;
-    return { totalClients, totalLeads, penNacional, withUf };
-  }, [clients, leads, rows, totalTam]);
+    return { penNacional, withUf, mqlsWithSignal };
+  }, [rows, totalTam]);
 
   const cityRows: CityRow[] = useMemo(() => {
     if (!selectedUf) return [];
     const byCity = new Map<string, { clients: number; leads: number }>();
-    for (const c of clients) {
+    for (const c of consideredClients) {
       if (normalizeUf(c.state) !== selectedUf) continue;
-      const city = normalizeCity(c.city) || "Sem cidade";
+      const city = normalizeCity(c.city) || "(sem cidade)";
       const cur = byCity.get(city) || { clients: 0, leads: 0 };
       cur.clients += 1;
       byCity.set(city, cur);
@@ -241,7 +279,7 @@ export default function PenetrationTab() {
     return Array.from(byCity.entries())
       .map(([city, v]) => ({ city, ...v }))
       .sort((a, b) => b.clients + b.leads * 0.3 - (a.clients + a.leads * 0.3));
-  }, [selectedUf, clients, leads]);
+  }, [selectedUf, consideredClients, leads]);
 
   const loading = loadingClients || loadingLeads;
 
@@ -260,8 +298,30 @@ export default function PenetrationTab() {
     );
   }
 
+  const dataQualityLow = coverage.clientsCoveragePct < 50 || coverage.leadsCoveragePct < 50;
+
   return (
     <div className="space-y-6">
+      {/* Alerta de qualidade dos dados */}
+      {dataQualityLow && (
+        <Alert variant="default" className="border-amber-500/40 bg-amber-500/5">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-sm">Cobertura de dados limitada</AlertTitle>
+          <AlertDescription className="text-xs space-y-1">
+            <div>
+              <strong>{coverage.clientsNoUf}</strong> de {coverage.totalConsidered} clientes considerados
+              estão <strong>sem UF cadastrada</strong> ({coverage.clientsCoveragePct.toFixed(0)}% de cobertura).
+              Esses clientes não aparecem no mapeamento por estado.
+            </div>
+            <div>
+              <strong>{coverage.leadsNoSignal}</strong> de {coverage.totalLeads} MQLs sem UF nem DDD válido
+              ({coverage.leadsCoveragePct.toFixed(0)}% de cobertura). Preencher cidade/estado ou telefone
+              melhora a análise.
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Cabeçalho + configuração TAM */}
       <Card>
         <CardHeader>
@@ -301,41 +361,62 @@ export default function PenetrationTab() {
                 Faixa útil: 45k–60k (estética avançada) · 100k+ inclui salão/beleza (não é seu ICP).
               </p>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Filtrar por região</Label>
-              <div className="flex flex-wrap gap-2">
-                {["all", "Sudeste", "Sul", "Nordeste", "Centro-Oeste", "Norte"].map((r) => (
-                  <Button
-                    key={r}
-                    size="sm"
-                    variant={regionFilter === r ? "default" : "outline"}
-                    onClick={() => setRegionFilter(r)}
-                  >
-                    {r === "all" ? "Todas" : r}
-                  </Button>
-                ))}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Filtrar por região</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {["all", "Sudeste", "Sul", "Nordeste", "Centro-Oeste", "Norte"].map((r) => (
+                    <Button
+                      key={r}
+                      size="sm"
+                      variant={regionFilter === r ? "default" : "outline"}
+                      onClick={() => setRegionFilter(r)}
+                    >
+                      {r === "all" ? "Todas" : r}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Switch
+                  id="include-churn"
+                  checked={includeChurnRisk}
+                  onCheckedChange={setIncludeChurnRisk}
+                />
+                <Label htmlFor="include-churn" className="text-xs cursor-pointer">
+                  Incluir clientes em <strong>churn_risk</strong> ({coverage.totalChurnRisk}) —
+                  útil para ver penetração histórica.
+                </Label>
               </div>
             </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-4">
-            <MetricMini label="Ativos com UF" value={totals.withUf.toString()} hint={`${totals.totalClients} ativos totais`} />
             <MetricMini
-              label="MQLs mapeados"
-              value={totals.totalLeads.toString()}
-              hint="via UF direta ou DDD do telefone"
+              label="Base considerada"
+              value={coverage.totalConsidered.toString()}
+              hint={
+                includeChurnRisk
+                  ? `${coverage.totalActive} ativos + ${coverage.totalChurnRisk} risco`
+                  : `${coverage.totalActive} ativos`
+              }
+            />
+            <MetricMini
+              label="Com UF mapeada"
+              value={totals.withUf.toString()}
+              hint={`${coverage.clientsCoveragePct.toFixed(0)}% de cobertura`}
+              accent={coverage.clientsCoveragePct < 50 ? "text-amber-600" : "text-foreground"}
+            />
+            <MetricMini
+              label="MQLs com sinal geo"
+              value={totals.mqlsWithSignal.toString()}
+              hint={`${coverage.totalLeads} MQLs · ${coverage.leadsCoveragePct.toFixed(0)}% via UF/DDD`}
             />
             <MetricMini
               label="Penetração nacional"
               value={`${totals.penNacional.toFixed(2)}%`}
-              hint="clientes / TAM"
+              hint={`${totals.withUf} / ${totalTam.toLocaleString("pt-BR")} (só UFs mapeadas)`}
               accent="text-primary"
-            />
-            <MetricMini
-              label="Whitespace"
-              value={(totalTam - totals.withUf).toLocaleString("pt-BR")}
-              hint="clínicas ainda fora da base"
-              accent="text-emerald-600"
             />
           </div>
         </CardContent>
@@ -383,6 +464,11 @@ export default function PenetrationTab() {
             <CardDescription>Onde já temos share alto — foco em retenção, upsell e defesa da posição.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
+            {topSaturated.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">
+                Nenhum estado com cliente mapeado no filtro atual.
+              </p>
+            )}
             {topSaturated.map((r, i) => (
               <div
                 key={r.uf}
@@ -520,11 +606,22 @@ export default function PenetrationTab() {
       <Card className="border-blue-500/30 bg-blue-500/5">
         <CardContent className="pt-3 pb-3 text-xs text-muted-foreground flex items-start gap-2">
           <Info className="h-4 w-4 mt-0.5 text-blue-600 shrink-0" />
-          <div>
-            <strong className="text-foreground">Como o score é calculado:</strong>{" "}
-            <code>(1 − penetração/5%) × log₁₀(1+TAM) × (1 + log₁₀(1+MQL))</code>. Penetração acima de 5% pesa como "maduro".
-            MQL entra como sinal de demanda ativa. Ajuste o TAM total para reflexo diferente do recorte de mercado.
-            UF dos leads é inferida do DDD quando o campo <code>state</code> não está preenchido.
+          <div className="space-y-1">
+            <div>
+              <strong className="text-foreground">Como o score é calculado:</strong>{" "}
+              <code>(1 − penetração/5%) × log₁₀(1+TAM) × (1 + log₁₀(1+MQL))</code>. Penetração acima de 5% pesa como "maduro".
+            </div>
+            <div>
+              <strong className="text-foreground">Fontes dos dados:</strong> ativos e churn_risk da base
+              <code> clients</code>; MQLs = <code>leads</code> com <code>mql ILIKE 'SIM%'</code> (cobre
+              "Sim" legado e "SIM - Acima de 30k"). UF do lead é inferida do DDD quando <code>state</code>/
+              <code>business_state</code> vazios. TAM por UF é distribuído por peso qualitativo (Sebrae/ABF/IBGE).
+            </div>
+            <div>
+              <strong className="text-foreground">Limitações conhecidas:</strong> a penetração nacional só
+              considera clientes com UF preenchida — clientes sem UF não entram no denominador de estado.
+              Preencher o cadastro melhora diretamente a acurácia.
+            </div>
           </div>
         </CardContent>
       </Card>
