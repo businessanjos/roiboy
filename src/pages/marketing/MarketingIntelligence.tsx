@@ -26,7 +26,8 @@ import CompetitorsTab from "@/components/marketing/intelligence/CompetitorsTab";
 import MarketResearchTab from "@/components/marketing/intelligence/MarketResearchTab";
 import { MarketSnapshotCards } from "@/components/marketing/intelligence/MarketSnapshotCards";
 import { TamSamSomCards } from "@/components/marketing/intelligence/TamSamSomCards";
-import { Swords, Search as SearchIcon } from "lucide-react";
+import { Swords, Search as SearchIcon, Target } from "lucide-react";
+import PenetrationTab from "@/components/marketing/intelligence/PenetrationTab";
 
 type DistItem = { label: string; count: number; pct: number };
 type Distribution = { total: number; items: DistItem[] };
@@ -437,6 +438,9 @@ export default function MarketingIntelligence() {
               <TabsTrigger value="competitors" className="gap-2">
                 <Swords className="h-3.5 w-3.5" /> Concorrentes
               </TabsTrigger>
+              <TabsTrigger value="penetration" className="gap-2">
+                <Target className="h-3.5 w-3.5" /> Penetração
+              </TabsTrigger>
               <TabsTrigger value="research" className="gap-2">
                 <SearchIcon className="h-3.5 w-3.5" /> Pesquisa de mercado
               </TabsTrigger>
@@ -534,6 +538,10 @@ export default function MarketingIntelligence() {
 
             <TabsContent value="competitors" className="space-y-4 mt-6">
               <CompetitorsTab />
+            </TabsContent>
+
+            <TabsContent value="penetration" className="space-y-4 mt-6">
+              <PenetrationTab />
             </TabsContent>
 
             <TabsContent value="research" className="space-y-4 mt-6">
