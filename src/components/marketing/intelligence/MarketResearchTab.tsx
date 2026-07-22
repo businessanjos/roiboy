@@ -106,6 +106,32 @@ export default function MarketResearchTab() {
     onError: (e: any) => toast.error(e?.message || "Erro na pesquisa"),
   });
 
+  const [batchRunning, setBatchRunning] = useState<string | null>(null);
+
+  async function runBenchmarkOne(item: typeof benchmarkQueries[number]) {
+    setBatchRunning(item.label);
+    try {
+      const { data, error } = await supabase.functions.invoke("mi-market-research", {
+        body: { query: item.query, focus: item.focus, recency: "year" },
+      });
+      if (error) throw new Error(await extractEdgeFunctionError(error, "Falha na pesquisa"));
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success(`✓ ${item.label}`);
+      qc.invalidateQueries({ queryKey: ["mi-market-research", currentUser?.account_id] });
+    } catch (e: any) {
+      toast.error(`${item.label}: ${e?.message || "erro"}`);
+    } finally {
+      setBatchRunning(null);
+    }
+  }
+
+  async function runBenchmarkAll() {
+    for (const item of benchmarkQueries) {
+      await runBenchmarkOne(item);
+    }
+    toast.success("Benchmark Eternum concluído");
+  }
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("mi_market_research").delete().eq("id", id);
@@ -117,6 +143,7 @@ export default function MarketResearchTab() {
     },
     onError: (e: any) => toast.error(e?.message || "Erro ao remover"),
   });
+
 
   const isRunning = runMutation.isPending;
 
