@@ -386,6 +386,26 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
     return map;
   }, [data]);
 
+  // Match tolerante: se o prompt exato não estiver no banco (usuário editou
+  // faixas do cenário), procura a última resposta do mesmo tier + recorte
+  // (geo + categoria + canal). Assim editar bandas não "some" com o cálculo.
+  function findLatestForTier(tier: Tier, exactQuery: string): Row | undefined {
+    const exact = latestByQuery.get(exactQuery);
+    if (exact) return exact;
+    const rows = data ?? [];
+    const tierPrefix = `Calcule o ${tier.short}`;
+    const geoLine = `Geografia: ${active.geo}`;
+    const catLine = `Categoria/nicho: ${active.category}`;
+    const chLine = `Canal de aquisição avaliado: ${active.channel}`;
+    return rows.find(
+      (r) =>
+        r.query?.startsWith(tierPrefix) &&
+        r.query.includes(geoLine) &&
+        r.query.includes(catLine) &&
+        r.query.includes(chLine),
+    );
+  }
+
   async function runOne(tier: Tier, query: string) {
     setRunning(tier.key);
     try {
