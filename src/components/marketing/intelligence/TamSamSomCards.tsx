@@ -291,18 +291,40 @@ function fmtPct(n: number): string {
   return `${n.toFixed(1)}%`;
 }
 
-function loadBands(): Band[] {
+function loadScenarios(): { scenarios: Scenario[]; activeId: string } {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_BANDS;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.every((b) => typeof b?.min === "number" && typeof b?.max === "number")) {
-      return parsed as Band[];
+    const raw = localStorage.getItem(SCENARIOS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length && parsed.every((s) => s?.id && Array.isArray(s?.bands))) {
+        // Preenche campos novos em cenários legados
+        const migrated: Scenario[] = parsed.map((s: any) => ({
+          id: s.id,
+          name: s.name || "Cenário",
+          bands: s.bands,
+          geo: s.geo || DEFAULT_GEO,
+          category: s.category || DEFAULT_CATEGORY,
+          channel: s.channel || DEFAULT_CHANNEL,
+        }));
+        const activeIdRaw = localStorage.getItem(ACTIVE_SCENARIO_KEY);
+        const activeId = migrated.find((s) => s.id === activeIdRaw)?.id ?? migrated[0].id;
+        return { scenarios: migrated, activeId };
+      }
+    }
+    // Migração de bands legadas → cenário Padrão
+    const legacy = localStorage.getItem(LEGACY_BANDS_KEY);
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      if (Array.isArray(parsed) && parsed.every((b: any) => typeof b?.min === "number")) {
+        const s = makeDefaultScenario({ bands: parsed as Band[] });
+        return { scenarios: [s], activeId: s.id };
+      }
     }
   } catch {
     /* noop */
   }
-  return DEFAULT_BANDS;
+  const s = makeDefaultScenario();
+  return { scenarios: [s], activeId: s.id };
 }
 
 export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
@@ -310,18 +332,27 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
   const qc = useQueryClient();
   const [running, setRunning] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [bands, setBands] = useState<Band[]>(() => loadBands());
+  const [showCompare, setShowCompare] = useState(false);
+  const initial = useMemo(loadScenarios, []);
+  const [scenarios, setScenarios] = useState<Scenario[]>(initial.scenarios);
+  const [activeId, setActiveId] = useState<string>(initial.activeId);
   const [detail, setDetail] = useState<{ tier: Tier; query: string; row: Row } | null>(null);
+
+  const active = scenarios.find((s) => s.id === activeId) ?? scenarios[0];
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(bands));
+      localStorage.setItem(SCENARIOS_KEY, JSON.stringify(scenarios));
+      localStorage.setItem(ACTIVE_SCENARIO_KEY, activeId);
     } catch {
       /* noop */
     }
-  }, [bands]);
+  }, [scenarios, activeId]);
 
-  const queries = useMemo(() => tiers.map((t) => ({ tier: t, query: t.buildQuery(bands) })), [bands]);
+  const queries = useMemo(
+    () => tiers.map((t) => ({ tier: t, query: t.buildQuery(active) })),
+    [active],
+  );
 
   const { data, isLoading } = useQuery({
     queryKey: ["mi-tsm-cards", currentUser?.account_id],
@@ -330,7 +361,7 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
         .from("mi_market_research")
         .select("id, query, answer, created_at, citations")
         .order("created_at", { ascending: false })
-        .limit(300);
+        .limit(500);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
@@ -376,21 +407,55 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
     }
   }
 
+  function patchActive(patch: Partial<Scenario>) {
+    setScenarios((prev) => prev.map((s) => (s.id === activeId ? { ...s, ...patch } : s)));
+  }
+
   function updateBand(idx: number, patch: Partial<Band>) {
-    setBands((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)));
+    patchActive({ bands: active.bands.map((b, i) => (i === idx ? { ...b, ...patch } : b)) });
   }
 
   function removeBand(idx: number) {
-    setBands((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)));
+    if (active.bands.length <= 1) return;
+    patchActive({ bands: active.bands.filter((_, i) => i !== idx) });
   }
 
   function addBand() {
-    setBands((prev) => {
-      const last = prev[prev.length - 1];
-      const newMin = last ? last.max : 1000;
-      return [...prev, { label: `Faixa ${prev.length + 1}`, min: newMin, max: newMin * 2 }];
+    const last = active.bands[active.bands.length - 1];
+    const newMin = last ? last.max : 1000;
+    patchActive({
+      bands: [...active.bands, { label: `Faixa ${active.bands.length + 1}`, min: newMin, max: newMin * 2 }],
     });
   }
+
+  function createScenario() {
+    const s = makeDefaultScenario({ name: `Cenário ${scenarios.length + 1}` });
+    setScenarios((prev) => [...prev, s]);
+    setActiveId(s.id);
+    setShowConfig(true);
+    toast.success("Novo cenário criado — ajuste o recorte e recalcule.");
+  }
+
+  function duplicateScenario() {
+    if (!active) return;
+    const s: Scenario = { ...active, id: newId(), bands: active.bands.map((b) => ({ ...b })), name: `${active.name} (cópia)` };
+    setScenarios((prev) => [...prev, s]);
+    setActiveId(s.id);
+    toast.success("Cenário duplicado.");
+  }
+
+  function deleteScenario() {
+    if (scenarios.length <= 1) {
+      toast.error("Mantenha pelo menos um cenário.");
+      return;
+    }
+    if (!confirm(`Excluir "${active.name}"?`)) return;
+    const remaining = scenarios.filter((s) => s.id !== activeId);
+    setScenarios(remaining);
+    setActiveId(remaining[0].id);
+  }
+
+
 
   return (
     <div className="space-y-3">
