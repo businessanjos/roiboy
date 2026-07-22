@@ -47,11 +47,11 @@ function fmtBRL(n: number): string {
   return `R$ ${n.toLocaleString("pt-BR")}`;
 }
 
-function bandsBlock(bands: Band[]): string {
+function bandsBlock(bands: Band[]) {
   const lines = bands.map((b) => `   - ${b.label}: ${fmtBRL(b.min)} – ${fmtBRL(b.max)}/ano`).join("\n");
   const minTicket = Math.min(...bands.map((b) => b.min));
   const maxTicket = Math.max(...bands.map((b) => b.max));
-  return { lines, minTicket, maxTicket } as any;
+  return { lines, minTicket, maxTicket };
 }
 
 function buildPortfolio(bands: Band[]): string {
