@@ -713,3 +713,236 @@ function DetailSheet({
     </Sheet>
   );
 }
+
+// ─────────────────────────────────────────────────────────────
+// Comparativo visual: TAM/SAM/SOM vs meus dados atuais
+// ─────────────────────────────────────────────────────────────
+function CurrentVsMarketPanel({
+  currentMetrics,
+  latestByQuery,
+  queries,
+}: {
+  currentMetrics?: Props["currentMetrics"];
+  latestByQuery: Map<string, Row>;
+  queries: { tier: Tier; query: string }[];
+}) {
+  if (!currentMetrics) return null;
+
+  const parsed = queries.map(({ tier, query }) => {
+    const row = latestByQuery.get(query);
+    return {
+      tier,
+      revenue: parseBRL(row?.answer, tier.key),
+      people: parsePeople(row?.answer, tier.key),
+    };
+  });
+
+  const hasAny = parsed.some((p) => p.revenue || p.people);
+  const { activeClients, avgTicket, annualRevenue, churnRate } = currentMetrics;
+
+  if (!hasAny) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="p-5 text-center text-sm text-muted-foreground">
+          Calcule TAM, SAM e SOM acima para desbloquear o comparativo com sua operação atual.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const tamRev = parsed.find((p) => p.tier.key === "tam")?.revenue ?? null;
+  const samRev = parsed.find((p) => p.tier.key === "sam")?.revenue ?? null;
+  const somRev = parsed.find((p) => p.tier.key === "som")?.revenue ?? null;
+
+  const tamPpl = parsed.find((p) => p.tier.key === "tam")?.people ?? null;
+  const samPpl = parsed.find((p) => p.tier.key === "sam")?.people ?? null;
+  const somPpl = parsed.find((p) => p.tier.key === "som")?.people ?? null;
+
+  const maxRev = Math.max(tamRev ?? 0, samRev ?? 0, somRev ?? 0, annualRevenue);
+  const maxPpl = Math.max(tamPpl ?? 0, samPpl ?? 0, somPpl ?? 0, activeClients);
+
+  const revenueBars = [
+    { label: "TAM", value: tamRev, color: "bg-purple-500", text: "text-purple-700" },
+    { label: "SAM", value: samRev, color: "bg-blue-500", text: "text-blue-700" },
+    { label: "SOM (12m)", value: somRev, color: "bg-emerald-500", text: "text-emerald-700" },
+    { label: "Você (anualizado)", value: annualRevenue, color: "bg-amber-500", text: "text-amber-700", isSelf: true },
+  ];
+
+  const peopleBars = [
+    { label: "TAM", value: tamPpl, color: "bg-purple-500", text: "text-purple-700" },
+    { label: "SAM", value: samPpl, color: "bg-blue-500", text: "text-blue-700" },
+    { label: "SOM (12m)", value: somPpl, color: "bg-emerald-500", text: "text-emerald-700" },
+    { label: "Você (clientes ativos)", value: activeClients, color: "bg-amber-500", text: "text-amber-700", isSelf: true },
+  ];
+
+  // Penetração da operação em cada tier
+  const penR = {
+    tam: tamRev ? annualRevenue / tamRev : null,
+    sam: samRev ? annualRevenue / samRev : null,
+    som: somRev ? annualRevenue / somRev : null,
+  };
+  const penP = {
+    tam: tamPpl ? activeClients / tamPpl : null,
+    sam: samPpl ? activeClients / samPpl : null,
+    som: somPpl ? activeClients / somPpl : null,
+  };
+
+  const gapSomRev = somRev ? somRev - annualRevenue : null;
+  const gapSomPpl = somPpl ? somPpl - activeClients : null;
+
+  return (
+    <Card className="ring-1 ring-amber-500/20 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent">
+      <CardContent className="p-5 space-y-5">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Crosshair className="h-4 w-4 text-amber-600" />
+              Você × Mercado — onde estão seus pontos cegos
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Sua operação atual comparada ao TAM/SAM/SOM calculados acima.
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <MetricPill label="Clientes ativos" value={activeClients.toLocaleString("pt-BR")} />
+            <MetricPill label="Ticket médio" value={fmtBigBRL(avgTicket)} />
+            <MetricPill label="Receita anualizada" value={fmtBigBRL(annualRevenue)} />
+            {typeof churnRate === "number" && (
+              <MetricPill label="Churn" value={`${(churnRate * 100).toFixed(1)}%`} />
+            )}
+          </div>
+        </div>
+
+        {/* Receita R$ */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Receita anual (R$)
+            </p>
+            {penR.som !== null && (
+              <span className="text-[11px] text-muted-foreground">
+                Penetração SOM: <strong className="text-amber-700">{fmtPct(penR.som)}</strong>
+                {penR.sam !== null && <> · SAM: <strong>{fmtPct(penR.sam)}</strong></>}
+                {penR.tam !== null && <> · TAM: <strong>{fmtPct(penR.tam)}</strong></>}
+              </span>
+            )}
+          </div>
+          <div className="space-y-2">
+            {revenueBars.map((b) => (
+              <BarRow
+                key={b.label}
+                label={b.label}
+                value={b.value}
+                max={maxRev}
+                color={b.color}
+                text={b.text}
+                isSelf={b.isSelf}
+                format={fmtBigBRL}
+              />
+            ))}
+          </div>
+          {gapSomRev !== null && gapSomRev > 0 && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              💡 Gap para atingir o SOM em 12 meses:{" "}
+              <strong className="text-emerald-700">{fmtBigBRL(gapSomRev)}</strong> — equivalente a{" "}
+              {avgTicket > 0 ? Math.ceil(gapSomRev / avgTicket).toLocaleString("pt-BR") : "?"} contratos
+              no seu ticket médio atual.
+            </p>
+          )}
+        </div>
+
+        {/* Clientes */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Clientes / profissionais
+            </p>
+            {penP.som !== null && (
+              <span className="text-[11px] text-muted-foreground">
+                Penetração SOM: <strong className="text-amber-700">{fmtPct(penP.som)}</strong>
+                {penP.sam !== null && <> · SAM: <strong>{fmtPct(penP.sam)}</strong></>}
+                {penP.tam !== null && <> · TAM: <strong>{fmtPct(penP.tam)}</strong></>}
+              </span>
+            )}
+          </div>
+          <div className="space-y-2">
+            {peopleBars.map((b) => (
+              <BarRow
+                key={b.label}
+                label={b.label}
+                value={b.value}
+                max={maxPpl}
+                color={b.color}
+                text={b.text}
+                isSelf={b.isSelf}
+                format={fmtBigNum}
+              />
+            ))}
+          </div>
+          {gapSomPpl !== null && gapSomPpl > 0 && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              💡 Faltam <strong className="text-emerald-700">{fmtBigNum(gapSomPpl)}</strong>{" "}
+              clientes para capturar todo o SOM projetado.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-md border bg-background/60 p-3 text-[11px] leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Como ler:</strong> se sua penetração no SOM já passa de
+          10%, o teto de curto prazo está próximo — o próximo salto vem de expandir SAM (novas faixas
+          de ticket ou novo perfil). Se está abaixo de 1%, existe espaço enorme para escalar sem
+          mudar produto. Ajuste as faixas no topo e recalcule para testar cenários.
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MetricPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-background px-2.5 py-1">
+      <p className="text-[9px] uppercase tracking-wide text-muted-foreground leading-none">{label}</p>
+      <p className="text-sm font-semibold tabular-nums leading-tight">{value}</p>
+    </div>
+  );
+}
+
+function BarRow({
+  label,
+  value,
+  max,
+  color,
+  text,
+  isSelf,
+  format,
+}: {
+  label: string;
+  value: number | null;
+  max: number;
+  color: string;
+  text: string;
+  isSelf?: boolean;
+  format: (n: number) => string;
+}) {
+  const pct = value && max > 0 ? Math.max(1, (value / max) * 100) : 0;
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs mb-1">
+        <span className={`font-medium ${isSelf ? text : "text-foreground"}`}>
+          {isSelf && "▸ "}{label}
+        </span>
+        <span className={`tabular-nums font-semibold ${isSelf ? text : "text-muted-foreground"}`}>
+          {value ? format(value) : "—"}
+        </span>
+      </div>
+      <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+        {value ? (
+          <div
+            className={`h-full ${color} ${isSelf ? "ring-2 ring-amber-500/40" : ""} transition-all`}
+            style={{ width: `${pct}%` }}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
