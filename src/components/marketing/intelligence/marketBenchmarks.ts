@@ -80,10 +80,13 @@ export function extractHeadline(answer: string | null | undefined): {
   const clean = answer.replace(/\[\d+(,\s*\d+)*\]/g, "").trim();
   const firstPara = clean.split(/\n\s*\n/)[0] ?? clean;
 
-  // Só aceita como headline algo que tenha unidade explícita (R$, %, mil/milhões/bi/bilhões).
-  // Um "12" solto (ex.: "12 meses") não pode virar o número gigante do card.
-  const hasUnit = (s: string) =>
-    /R\$|%|\b(mil|milh[ãa]o|milh[õo]es|bi|bilh[ãa]o|bilh[õo]es)\b/i.test(s);
+  // Aceita: (a) valor monetário/percentual (R$, %, mil, bi, mi) OU
+  // (b) contagem de entidades do domínio (redes, unidades, clínicas, profissionais,
+  //     dermatologistas, dentistas, médicos, especialistas, franquias, estabelecimentos).
+  // Um "12" solto (ex.: "12 meses") continua descartado.
+  const MONEY_UNIT = /R\$|%|\b(mil|milh[ãa]o|milh[õo]es|bi|bilh[ãa]o|bilh[õo]es)\b/i;
+  const ENTITY_UNIT = /\b(redes?|unidades?|cl[íi]nicas?|profissionais|dermatologistas?|dentistas?|m[ée]dicos?|especialistas?|franquias?|estabelecimentos?)\b/i;
+  const hasUnit = (s: string) => MONEY_UNIT.test(s) || ENTITY_UNIT.test(s);
 
   // 1) primeiro **texto em negrito** que tenha número + unidade
   const boldMatches = firstPara.match(/\*\*([^*]+)\*\*/g) ?? [];
@@ -94,13 +97,21 @@ export function extractHeadline(answer: string | null | undefined): {
     }
   }
 
-  // 2) padrão numérico com unidade obrigatória
-  const numMatch = firstPara.match(
+  // 2) padrão numérico + unidade monetária
+  const moneyMatch = firstPara.match(
     /(R\$\s*)?(\d[\d.,]*(?:\s*[–-]\s*\d[\d.,]*)?)\s*(mil|milh[õo]es|milh[ãa]o|bi|bilh[õo]es|bilh[ãa]o|%)/i,
   );
-  if (numMatch) {
-    const val = `${numMatch[1] ?? ""}${numMatch[2].trim()}${numMatch[3] ? " " + numMatch[3] : ""}`.trim();
+  if (moneyMatch) {
+    const val = `${moneyMatch[1] ?? ""}${moneyMatch[2].trim()}${moneyMatch[3] ? " " + moneyMatch[3] : ""}`.trim();
     return { value: val, snippet: stripMd(firstPara) };
+  }
+
+  // 3) padrão numérico + entidade do domínio (ex.: "10 redes", "800 unidades")
+  const entityMatch = firstPara.match(
+    /(\d[\d.,]*(?:\s*[–-]\s*\d[\d.,]*)?)\s+(redes?|unidades?|cl[íi]nicas?|profissionais|dermatologistas?|dentistas?|m[ée]dicos?|especialistas?|franquias?|estabelecimentos?)/i,
+  );
+  if (entityMatch) {
+    return { value: `${entityMatch[1].trim()} ${entityMatch[2]}`, snippet: stripMd(firstPara) };
   }
 
   return { value: null, snippet: stripMd(firstPara) };
