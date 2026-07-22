@@ -130,22 +130,24 @@ const tiers: Tier[] = [
     text: "text-purple-600",
     bg: "bg-purple-500/10",
     helper: "Universo TOTAL de profissionais da estética avançada no Brasil, sem nenhum filtro além de estarem no setor.",
-    buildQuery: (bands) => {
-      const { lines } = bandsBlock(bands);
+    buildQuery: (scenario) => {
+      const { lines } = bandsBlock(scenario.bands);
       return `Calcule o TAM (Total Addressable Market) do universo de ESTÉTICA AVANÇADA/MÉDICA no Brasil considerando TODOS os profissionais e clínicas do setor, sem filtro por ticket ou faturamento.
 
 ${EXCLUSAO}
 
-${buildPortfolio(bands)}
+${recorteBlock(scenario)}
+
+${buildPortfolio(scenario.bands)}
 
 Faixas de ticket a considerar na análise:
 ${lines}
 
 Traga:
-1. **Número total** de profissionais + clínicas do setor no Brasil (soma consolidada, com fonte).
-2. **Faturamento anual estimado do setor** (R$ bilhões, com CAGR dos últimos 3 anos).
-3. **Composição**: quantos são médicos (dermato + outras especialidades), quantos dentistas com HOF, quantos biomédicos estetas, quantos esteticistas com formação avançada, quantas clínicas PJ.
-4. **TAM em R$** = faturamento potencial se 100% do universo consumisse produtos de educação/mentoria/comunidade dentro das faixas acima (estime uma média ponderada realista distribuindo o universo pelas faixas).
+1. **Número total** de profissionais + clínicas do setor DENTRO DO RECORTE (soma consolidada, com fonte).
+2. **Faturamento anual estimado do setor no recorte** (R$, com CAGR dos últimos 3 anos).
+3. **Composição** dentro do recorte: quantos médicos (dermato + outras), dentistas com HOF, biomédicos, esteticistas com formação avançada, clínicas PJ.
+4. **TAM em R$** = faturamento potencial se 100% do universo do recorte consumisse produtos de educação/mentoria/comunidade dentro das faixas acima (média ponderada realista).
 
 Cite fontes oficiais (SBD, CFM, CFO, CFBM, ABIHPEC, Sebrae, IBGE, Euromonitor, ABEDV).`;
     },
