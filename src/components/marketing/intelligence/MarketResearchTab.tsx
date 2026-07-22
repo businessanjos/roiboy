@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Loader2, Search, ExternalLink, ChevronDown, Sparkles, Trash2, Clock } from "lucide-react";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { MarketResearchAnswer } from "./MarketResearchAnswer";
+import { benchmarkQueries } from "./marketBenchmarks";
 
 type Citation = { index: number; url: string; title: string | null };
 
@@ -50,16 +51,7 @@ const suggestions = [
   "Quais tendências regulatórias da ANVISA impactam o mercado de procedimentos injetáveis em 2026?",
 ];
 
-// Benchmark Eternum: perguntas fixas para comparar com o momento atual da empresa.
-// Cada item define o foco ideal para a Perplexity.
-const benchmarkQueries: { query: string; focus: string; label: string }[] = [
-  { label: "Clínicas de estética no Brasil", focus: "tam", query: "Quantas clínicas de estética existem no Brasil hoje? Traga número total, fonte oficial (Sebrae, ABIHPEC, Receita Federal/CNAE 8690-9/04, IBGE) e recorte por região se possível." },
-  { label: "Redes de franquia de estética", focus: "concorrentes", query: "Quantas redes de franquia de clínicas de estética existem no Brasil? Liste as principais redes (ex.: Onodera, Sóbrancelhas, Espaçolaser, Bio Ritmo Estética, Ella Clínica, etc.), com nome, ano de fundação e posicionamento." },
-  { label: "Unidades por rede de franquia", focus: "concorrentes", query: "Para as principais redes de franquia de clínicas de estética no Brasil, informe o número de unidades por rede (últimos dados disponíveis) e o total agregado. Cite fonte (ABF, sites oficiais das redes)." },
-  { label: "Clínicas individuais (não-rede)", focus: "tam", query: "Do total de clínicas de estética no Brasil, quantas são independentes/individuais (não pertencem a redes de franquia)? Traga estimativa, metodologia e fonte." },
-  { label: "Médicos dermatologistas", focus: "publico", query: "Quantos médicos dermatologistas com título de especialista pela SBD (Sociedade Brasileira de Dermatologia) e/ou registro no CFM/RQE existem no Brasil? Traga número, ano de referência e fonte oficial." },
-  { label: "Especialistas em HOF", focus: "publico", query: "Quantos profissionais especialistas em Harmonização Orofacial (HOF) atuam no Brasil hoje, considerando dentistas com especialização reconhecida pelo CFO e médicos com formação em HOF? Traga números separados por categoria (dentista vs médico) e fonte oficial (CFO, CFM, associações)." },
-];
+// Benchmark Eternum: importado de marketBenchmarks.ts (fonte única).
 
 
 
