@@ -251,9 +251,13 @@ export default function PenetrationTab() {
   const totals = useMemo(() => {
     const withUf = rows.reduce((s, r) => s + r.clients, 0);
     const mqlsWithSignal = rows.reduce((s, r) => s + r.leads, 0);
-    const penNacional = totalTam ? (withUf / totalTam) * 100 : 0;
+    // Penetração nacional usa a base considerada INTEIRA (com ou sem UF).
+    // Faz sentido porque o cliente existe no mercado mesmo sem estado cadastrado —
+    // só não conseguimos alocá-lo no mapa por UF. Usar apenas os com UF
+    // subestimaria a penetração real.
+    const penNacional = totalTam ? (consideredClients.length / totalTam) * 100 : 0;
     return { penNacional, withUf, mqlsWithSignal };
-  }, [rows, totalTam]);
+  }, [rows, totalTam, consideredClients]);
 
   const cityRows: CityRow[] = useMemo(() => {
     if (!selectedUf) return [];
