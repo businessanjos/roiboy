@@ -149,7 +149,55 @@ export default function MarketResearchTab() {
 
   return (
     <div className="space-y-4">
+      <Card className="border-purple-200 bg-purple-50/30 dark:bg-purple-950/10">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                🎯 Benchmark Eternum — Panorama do mercado
+              </CardTitle>
+              <CardDescription>
+                Perguntas fixas para dimensionar o mercado brasileiro de estética e comparar com o momento atual da empresa. Rode uma a uma ou tudo de uma vez.
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={runBenchmarkAll}
+              disabled={!!batchRunning || isRunning}
+            >
+              {batchRunning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              Rodar tudo
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {benchmarkQueries.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => runBenchmarkOne(item)}
+                disabled={!!batchRunning || isRunning}
+                className="flex items-center justify-between gap-2 text-left rounded-md border bg-background hover:bg-muted/60 transition-colors px-3 py-2 disabled:opacity-50"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{item.label}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-1">{item.query}</div>
+                </div>
+                {batchRunning === item.label ? (
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                ) : (
+                  <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
+
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-purple-600" /> Pesquisa de mercado ao vivo
