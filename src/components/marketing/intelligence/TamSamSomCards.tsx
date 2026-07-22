@@ -162,19 +162,21 @@ Cite fontes oficiais (SBD, CFM, CFO, CFBM, ABIHPEC, Sebrae, IBGE, Euromonitor, A
     text: "text-blue-600",
     bg: "bg-blue-500/10",
     helper: "Fatia do TAM que efetivamente entra no perfil dos produtos Eternum.",
-    buildQuery: (bands) => {
-      const { lines, minTicket } = bandsBlock(bands);
+    buildQuery: (scenario) => {
+      const { lines, minTicket } = bandsBlock(scenario.bands);
       return `Calcule o SAM (Serviceable Addressable Market) para a Eternum Mentoring Club no Brasil.
 
 ${EXCLUSAO}
 
-${buildPortfolio(bands)}
+${recorteBlock(scenario)}
+
+${buildPortfolio(scenario.bands)}
 
 Perfil Eternum: profissional de estética avançada JÁ EM OPERAÇÃO (não iniciante puro), buscando escalar clínica/autoridade/faturamento.
 
 Traga:
-1. **Número de profissionais + clínicas** que se encaixam nesse perfil (excluir estudantes, aposentados, quem faturou menos que o suficiente para investir ${fmtBRL(minTicket)}/ano em educação).
-2. **Segmentação por capacidade de investimento anual em educação/mentoria** (use EXATAMENTE estas faixas — quantidade estimada em cada uma):
+1. **Número de profissionais + clínicas** que se encaixam nesse perfil DENTRO DO RECORTE (excluir estudantes, aposentados, quem faturou menos que o suficiente para investir ${fmtBRL(minTicket)}/ano em educação).
+2. **Segmentação por capacidade de investimento anual em educação/mentoria** (use EXATAMENTE estas faixas — quantidade estimada em cada uma dentro do recorte):
 ${lines}
 3. **SAM em R$** = soma do potencial anual dessas faixas (nº de profissionais × ticket médio da faixa).
 4. Fontes (Sebrae — perfil do empreendedor de estética, associações do setor, pesquisas de mercado brasileiro de educação executiva).`;
