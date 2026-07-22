@@ -442,6 +442,9 @@ export default function MarketingIntelligence() {
               <TabsTrigger value="penetration" className="gap-2">
                 <Target className="h-3.5 w-3.5" /> Penetração
               </TabsTrigger>
+              <TabsTrigger value="events" className="gap-2">
+                <CalendarIcon className="h-3.5 w-3.5" /> Eventos
+              </TabsTrigger>
               <TabsTrigger value="research" className="gap-2">
                 <SearchIcon className="h-3.5 w-3.5" /> Pesquisa de mercado
               </TabsTrigger>
