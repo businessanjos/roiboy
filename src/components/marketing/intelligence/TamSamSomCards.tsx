@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 import {
   Loader2,
   RefreshCw,
@@ -20,13 +22,19 @@ import {
   Plus,
   Trash2,
   RotateCcw,
+  BookOpen,
+  ListChecks,
+  Ban,
+  ExternalLink,
 } from "lucide-react";
 import { extractHeadline } from "./marketBenchmarks";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
-import { formatDistanceToNow } from "date-fns";
+import { MarketResearchAnswer } from "./MarketResearchAnswer";
+import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-type Row = { id: string; query: string; answer: string; created_at: string };
+type Citation = { index?: number; url: string; title?: string | null };
+type Row = { id: string; query: string; answer: string; created_at: string; citations: Citation[] | null };
 
 type Band = { label: string; min: number; max: number };
 
