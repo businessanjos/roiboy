@@ -590,7 +590,7 @@ Deno.serve(async (req) => {
             .from("zapp_messages")
             .select("id")
             .eq("account_id", accountId)
-            .eq("external_id", msg.id)
+            .eq("external_message_id", msg.id)
             .limit(1);
           
           if (existingOutbound && existingOutbound.length > 0) {
@@ -1560,9 +1560,10 @@ Deno.serve(async (req) => {
             }
 
             // Layer 3: Content-based dedup (same content, different external_message_id, within 2 min)
-            // IMPORTANT: Skip for media messages (image, video, sticker) since their content is often
-            // empty/null, which would cause multiple distinct media messages to be falsely deduplicated.
-            const isMediaMessage = mediaType && ["image", "video", "sticker"].includes(mediaType);
+            // IMPORTANT: Skip for ALL media messages because audio/image/video/document content is often
+            // empty/null. Otherwise two distinct audios sent from WhatsApp with empty content can be
+            // falsely deduplicated: the conversation preview updates, but the new audio row is never saved.
+            const isMediaMessage = !!mediaType;
             if (!skipInsert && !isEditedMessage && !isMediaMessage) {
               const contentMatch = msgs.find(m =>
                 m.content === content && m.external_message_id && m.external_message_id !== messageId

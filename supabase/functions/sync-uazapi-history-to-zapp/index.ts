@@ -2,7 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -57,17 +58,31 @@ function normalizePhone(raw?: string | null): string {
   if (!digits) return "";
   if (digits.length === 12 && digits.startsWith("55")) {
     const ddd = Number(digits.slice(2, 4));
-    if (ddd >= 11 && ddd <= 99) digits = digits.slice(0, 4) + "9" + digits.slice(4);
+    if (ddd >= 11 && ddd <= 99)
+      digits = digits.slice(0, 4) + "9" + digits.slice(4);
   }
   if (digits.length < 8 || digits.length > 15) return "";
   return `+${digits}`;
 }
 
 function phoneWithoutBrazilNinth(phone: string): string | null {
-  return phone.startsWith("+55") && phone.length === 14 ? phone.slice(0, 5) + phone.slice(6) : null;
+  return phone.startsWith("+55") && phone.length === 14
+    ? phone.slice(0, 5) + phone.slice(6)
+    : null;
 }
 
-function extractContent(m: UazMessage): { content: string; messageType: string; mediaUrl: string | null; mediaType: string | null } {
+function normalizeUazTimestampMs(raw?: number | string | null): number {
+  const value = Number(raw || 0);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return value < 10_000_000_000 ? value * 1000 : value;
+}
+
+function extractContent(m: UazMessage): {
+  content: string;
+  messageType: string;
+  mediaUrl: string | null;
+  mediaType: string | null;
+} {
   const c = m.content as Record<string, unknown> | null;
   let content = typeof m.text === "string" ? m.text : "";
   if (!content && typeof m.content === "string") content = m.content;
@@ -77,18 +92,24 @@ function extractContent(m: UazMessage): { content: string; messageType: string; 
   const rawType = String(m.messageType || "").toLowerCase();
   let mediaType: string | null = null;
   if (rawType.includes("image")) mediaType = "image";
-  else if (rawType.includes("audio") || rawType.includes("ptt")) mediaType = "audio";
+  else if (rawType.includes("audio") || rawType.includes("ptt"))
+    mediaType = "audio";
   else if (rawType.includes("video")) mediaType = "video";
   else if (rawType.includes("document")) mediaType = "document";
   else if (rawType.includes("sticker")) mediaType = "sticker";
 
-  const mediaUrl = m.fileURL || (c && typeof c.URL === "string" ? c.URL : null) || (c && typeof c.url === "string" ? c.url : null) || null;
+  const mediaUrl =
+    m.fileURL ||
+    (c && typeof c.URL === "string" ? c.URL : null) ||
+    (c && typeof c.url === "string" ? c.url : null) ||
+    null;
   if (!content && mediaType === "image") content = "📷 Imagem";
   if (!content && mediaType === "audio") content = "🎤 Áudio";
   if (!content && mediaType === "video") content = "🎬 Vídeo";
   if (!content && mediaType === "document") content = "📄 Documento";
   if (!content && mediaType === "sticker") content = "🎨 Figurinha";
-  if (!content && rawType.includes("reaction")) content = String(m.text || "[reação]");
+  if (!content && rawType.includes("reaction"))
+    content = String(m.text || "[reação]");
 
   return { content, messageType: mediaType || "text", mediaUrl, mediaType };
 }
@@ -99,18 +120,25 @@ function quotedId(raw: UazMessage["quoted"]): string | null {
   return String(raw.id || raw.messageid || raw.stanzaID || "") || null;
 }
 
-async function uazFetch(host: string, token: string, path: string, body: Record<string, unknown>) {
+async function uazFetch(
+  host: string,
+  token: string,
+  path: string,
+  body: Record<string, unknown>,
+) {
   const res = await fetch(`${host}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", token },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`UAZAPI ${path} ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`UAZAPI ${path} ${res.status}: ${await res.text()}`);
   return await res.json();
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   try {
@@ -122,7 +150,9 @@ Deno.serve(async (req) => {
     const maxMessagesPerChat = Number(body.max_messages_per_chat || 10000);
     const targetPhoneRaw = body.target_phone ? String(body.target_phone) : "";
     const targetPhone = targetPhoneRaw ? normalizePhone(targetPhoneRaw) : "";
-    const targetPhoneAlt = targetPhone ? phoneWithoutBrazilNinth(targetPhone) : null;
+    const targetPhoneAlt = targetPhone
+      ? phoneWithoutBrazilNinth(targetPhone)
+      : null;
 
     if (!integrationId || Number.isNaN(startMs) || Number.isNaN(endMs)) {
       return json(400, { error: "integration_id, start/end inválidos" });
@@ -138,11 +168,15 @@ Deno.serve(async (req) => {
       .eq("id", integrationId)
       .single<Integration>();
 
-    if (integrationError || !integration) return json(404, { error: "Integração não encontrada" });
+    if (integrationError || !integration)
+      return json(404, { error: "Integração não encontrada" });
 
-    const host = String(integration.config?.host_url || "").replace(/\/$/, "");
+    const host = String(
+      integration.config?.host_url || Deno.env.get("UAZAPI_URL") || "",
+    ).replace(/\/$/, "");
     const token = String(integration.config?.instance_token || "");
-    if (!host || !token) return json(400, { error: "Integração sem host/token UAZAPI" });
+    if (!host || !token)
+      return json(400, { error: "Integração sem host/token UAZAPI" });
 
     const { data: dept } = await supabase
       .from("zapp_departments")
@@ -183,7 +217,7 @@ Deno.serve(async (req) => {
 
       for (const chat of chats) {
         stats.chatsScanned++;
-        const lastTs = Number(chat.wa_lastMsgTimestamp || 0);
+        const lastTs = normalizeUazTimestampMs(chat.wa_lastMsgTimestamp || 0);
         if (lastTs && lastTs < startMs) continue;
         if (lastTs && lastTs > endMs) {
           // still sync: message-level filter will apply
@@ -193,12 +227,16 @@ Deno.serve(async (req) => {
         if (!chatId) continue;
         const isGroup = !!chat.wa_isGroup || chatId.includes("@g.us");
         const groupName = chat.wa_name || chat.name || "Grupo";
-        const directPhone = !isGroup ? normalizePhone(chat.phone || chatId) : "";
+        const directPhone = !isGroup
+          ? normalizePhone(chat.phone || chatId)
+          : "";
 
         // If filtering to a specific phone, skip groups and any chat that doesn't match
         if (targetPhone) {
           if (isGroup) continue;
-          const matches = directPhone === targetPhone || (targetPhoneAlt && directPhone === targetPhoneAlt);
+          const matches =
+            directPhone === targetPhone ||
+            (targetPhoneAlt && directPhone === targetPhoneAlt);
           if (!matches) continue;
         }
 
@@ -211,13 +249,13 @@ Deno.serve(async (req) => {
             limit: 500,
             offset: msgOffset,
             chatid: chatId,
-            messageTimestamp: { $gte: startMs },
+            messageTimestamp: { $gte: Math.floor(startMs / 1000) },
           });
           const messages = (msgResult.messages || []) as UazMessage[];
           if (!messages.length) break;
 
           const filtered = messages.filter((m) => {
-            const ts = Number(m.messageTimestamp || 0);
+            const ts = normalizeUazTimestampMs(m.messageTimestamp || 0);
             return ts >= startMs && ts <= endMs;
           });
 
@@ -249,7 +287,9 @@ Deno.serve(async (req) => {
                     contact_name: groupName,
                     channel: "whatsapp",
                     external_thread_id: chatId,
-                    last_message_at: new Date(Number(latest.messageTimestamp)).toISOString(),
+                    last_message_at: new Date(
+                      normalizeUazTimestampMs(latest.messageTimestamp),
+                    ).toISOString(),
                     last_message_preview: preview,
                     unread_count: 0,
                     is_group: true,
@@ -276,13 +316,20 @@ Deno.serve(async (req) => {
                 .eq("account_id", integration.account_id)
                 .eq("integration_id", integration.id)
                 .eq("is_group", false);
-              query = phoneAlt ? query.in("phone_e164", [phoneForConversation, phoneAlt]) : query.eq("phone_e164", phoneForConversation);
-              const { data: existing } = await query.order("last_message_at", { ascending: false }).limit(1).maybeSingle();
+              query = phoneAlt
+                ? query.in("phone_e164", [phoneForConversation, phoneAlt])
+                : query.eq("phone_e164", phoneForConversation);
+              const { data: existing } = await query
+                .order("last_message_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
               conversationId = existing?.id || null;
               clientId = existing?.client_id || null;
 
               if (!clientId) {
-                const phones = phoneAlt ? [phoneForConversation, phoneAlt] : [phoneForConversation];
+                const phones = phoneAlt
+                  ? [phoneForConversation, phoneAlt]
+                  : [phoneForConversation];
                 const { data: client } = await supabase
                   .from("clients")
                   .select("id")
@@ -305,7 +352,9 @@ Deno.serve(async (req) => {
                     contact_name: chat.name || phoneForConversation,
                     channel: "whatsapp",
                     external_thread_id: chatId,
-                    last_message_at: new Date(Number(latest.messageTimestamp)).toISOString(),
+                    last_message_at: new Date(
+                      normalizeUazTimestampMs(latest.messageTimestamp),
+                    ).toISOString(),
                     last_message_preview: preview,
                     unread_count: 0,
                     is_group: false,
@@ -323,13 +372,17 @@ Deno.serve(async (req) => {
 
             if (!conversationId) break;
 
-            const externalIds = filtered.map((m) => String(m.id || `${m.chatid}:${m.messageid}`)).filter(Boolean);
+            const externalIds = filtered
+              .map((m) => String(m.id || `${m.chatid}:${m.messageid}`))
+              .filter(Boolean);
             const { data: existingMessages } = await supabase
               .from("zapp_messages")
               .select("external_message_id")
               .eq("zapp_conversation_id", conversationId)
               .in("external_message_id", externalIds);
-            const existingSet = new Set((existingMessages || []).map((m) => m.external_message_id));
+            const existingSet = new Set(
+              (existingMessages || []).map((m) => m.external_message_id),
+            );
 
             const rows = [];
             for (const m of filtered.reverse()) {
@@ -343,7 +396,9 @@ Deno.serve(async (req) => {
                 stats.skippedNoContent++;
                 continue;
               }
-              const senderPhone = isGroup ? (normalizePhone(m.sender_pn) || normalizePhone(m.sender)) : null;
+              const senderPhone = isGroup
+                ? normalizePhone(m.sender_pn) || normalizePhone(m.sender)
+                : null;
               rows.push({
                 account_id: integration.account_id,
                 zapp_conversation_id: conversationId,
@@ -351,9 +406,11 @@ Deno.serve(async (req) => {
                 content: extracted.content,
                 message_type: extracted.messageType,
                 external_message_id: externalId,
-                sent_at: new Date(Number(m.messageTimestamp)).toISOString(),
+                sent_at: new Date(
+                  normalizeUazTimestampMs(m.messageTimestamp),
+                ).toISOString(),
                 sender_phone: isGroup ? senderPhone : null,
-                sender_name: isGroup ? (m.senderName || null) : null,
+                sender_name: isGroup ? m.senderName || null : null,
                 media_url: extracted.mediaUrl,
                 media_type: extracted.mediaType,
                 media_mimetype: m.mimetype || null,
@@ -364,19 +421,31 @@ Deno.serve(async (req) => {
             }
 
             if (rows.length) {
-              const { error: insertError } = await supabase.from("zapp_messages").insert(rows);
+              const { error: insertError } = await supabase
+                .from("zapp_messages")
+                .insert(rows);
               if (insertError) throw insertError;
               stats.messagesInserted += rows.length;
               syncedThisChat = true;
-              stats.oldestSynced = rows[0].sent_at < (stats.oldestSynced || rows[0].sent_at) ? rows[0].sent_at : stats.oldestSynced || rows[0].sent_at;
-              stats.newestSynced = rows[rows.length - 1].sent_at > (stats.newestSynced || rows[rows.length - 1].sent_at) ? rows[rows.length - 1].sent_at : stats.newestSynced || rows[rows.length - 1].sent_at;
+              stats.oldestSynced =
+                rows[0].sent_at < (stats.oldestSynced || rows[0].sent_at)
+                  ? rows[0].sent_at
+                  : stats.oldestSynced || rows[0].sent_at;
+              stats.newestSynced =
+                rows[rows.length - 1].sent_at >
+                (stats.newestSynced || rows[rows.length - 1].sent_at)
+                  ? rows[rows.length - 1].sent_at
+                  : stats.newestSynced || rows[rows.length - 1].sent_at;
 
               const latestRow = rows[rows.length - 1];
               await supabase
                 .from("zapp_conversations")
                 .update({
                   last_message_at: latestRow.sent_at,
-                  last_message_preview: latestRow.direction === "outbound" ? `Você: ${latestRow.content.slice(0, 80)}` : latestRow.content.slice(0, 100),
+                  last_message_preview:
+                    latestRow.direction === "outbound"
+                      ? `Você: ${latestRow.content.slice(0, 80)}`
+                      : latestRow.content.slice(0, 100),
                   updated_at: new Date().toISOString(),
                 })
                 .eq("id", conversationId);
@@ -389,12 +458,21 @@ Deno.serve(async (req) => {
                 .limit(1)
                 .maybeSingle();
               if (!assignment) {
-                const { error } = await supabase.from("zapp_conversation_assignments").upsert({
-                  account_id: integration.account_id,
-                  zapp_conversation_id: conversationId,
-                  status: "triage",
-                  department_id: departmentId,
-                }, { onConflict: "account_id,zapp_conversation_id,department_id", ignoreDuplicates: true });
+                const { error } = await supabase
+                  .from("zapp_conversation_assignments")
+                  .upsert(
+                    {
+                      account_id: integration.account_id,
+                      zapp_conversation_id: conversationId,
+                      status: "triage",
+                      department_id: departmentId,
+                    },
+                    {
+                      onConflict:
+                        "account_id,zapp_conversation_id,department_id",
+                      ignoreDuplicates: true,
+                    },
+                  );
                 if (!error) stats.assignmentsCreated++;
               }
             }
@@ -402,7 +480,9 @@ Deno.serve(async (req) => {
 
           stats.messagesFetched += messages.length;
           if (messages.length < 500) break;
-          const lastTs = Number(messages[messages.length - 1].messageTimestamp || 0);
+          const lastTs = normalizeUazTimestampMs(
+            messages[messages.length - 1].messageTimestamp || 0,
+          );
           if (lastTs && lastTs < startMs) break;
           msgOffset += messages.length;
         }
@@ -413,9 +493,15 @@ Deno.serve(async (req) => {
       chatOffset += chats.length;
     }
 
-    return json(200, { success: true, integration: integration.display_name, stats });
+    return json(200, {
+      success: true,
+      integration: integration.display_name,
+      stats,
+    });
   } catch (error) {
     console.error("sync-uazapi-history-to-zapp error", error);
-    return json(500, { error: error instanceof Error ? error.message : "Unknown error" });
+    return json(500, {
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 });
