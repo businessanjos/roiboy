@@ -6,7 +6,7 @@ export type BenchmarkQuery = {
   focus: string;
   query: string;
   hint?: string;
-  icon: "clinics" | "franchise" | "units" | "solo" | "derm" | "hof";
+  icon: "universe" | "clinics" | "core" | "franchise" | "units" | "solo" | "derm" | "hof";
 };
 
 // IMPORTANTE: Eternum atende CLÍNICAS DE ESTÉTICA AVANÇADA / MÉDICA (procedimentos
@@ -17,12 +17,28 @@ const EXCLUSAO = "IMPORTANTE: considere apenas clínicas de estética avançada/
 
 export const benchmarkQueries: BenchmarkQuery[] = [
   {
+    key: "universo-beleza",
+    label: "Universo beleza (referência — NÃO é TAM)",
+    focus: "tam",
+    icon: "universe",
+    hint: "CNAE 9602-5/02 completo — inclui salão, manicure, depilação. Serve só como número bruto de referência.",
+    query: `Quantos estabelecimentos ativos existem no Brasil sob o CNAE 9602-5/02 ("atividades de estética e outros serviços de cuidados com a beleza") somados aos CNAEs correlatos (8690-9/04 atividades de atenção à saúde humana não especificadas anteriormente na fração de estética; 8630-5/07 atividades de atenção ambulatorial não especificadas anteriormente)? Este é o "universo beleza" completo — INCLUI salão de beleza, cabeleireiro, barbearia, manicure, pedicure, depilação simples, estética capilar, SPA de relaxamento E clínicas de estética avançada misturadas. Traga: (1) número total bruto do CNAE (fonte: IBGE Cempre / Data Sebrae / Receita Federal com ano de referência); (2) deixe EXPLÍCITO que este número NÃO é o mercado endereçável da Eternum — é apenas o teto do universo beleza usado como referência para diferenciar dos recortes mais restritos.`,
+  },
+  {
     key: "clinicas-estetica",
-    label: "Clínicas de estética avançada (BR)",
+    label: "Clínicas de estética avançada (endereçável)",
     focus: "tam",
     icon: "clinics",
-    hint: "Somente clínicas com procedimentos estéticos/médicos",
-    query: `Quantas CLÍNICAS DE ESTÉTICA AVANÇADA existem no Brasil hoje (estabelecimentos que realizam procedimentos estéticos, injetáveis, laser, tecnologias, harmonização facial/corporal)? ${EXCLUSAO} Traga número total, metodologia, recorte por CNAE relevante (ex.: 8690-9/04 atividades de atenção à saúde humana; 9602-5/02 atividades de estetica e outros serviços de cuidados com a beleza — considere APENAS a fração que executa procedimentos avançados) e fonte oficial (Sebrae, IBGE, Receita Federal, associações do setor).`,
+    hint: "Fração do CNAE que executa procedimentos estéticos/médicos — este é o TAM real",
+    query: `Do universo total de estabelecimentos no CNAE 9602-5/02 e correlatos no Brasil, qual a FRAÇÃO estimada que de fato executa PROCEDIMENTOS ESTÉTICOS AVANÇADOS/MÉDICOS (injetáveis como toxina/preenchedor/bioestimulador, laser, tecnologias como RF/ultrassom microfocado/criolipólise, harmonização facial e corporal, dermato estética, HOF)? ${EXCLUSAO} Traga: (1) número absoluto estimado (faixa aceitável); (2) percentual que essa fração representa sobre o universo beleza total; (3) metodologia de recorte usada (ex.: cruzamento CNAE + registro sanitário na ANVISA/Vigilância Sanitária, presença de responsável técnico registrado, oferta de procedimentos invasivos, faturamento mínimo); (4) fonte (Sebrae setorial, ABF, associações do setor, estudos de mercado). NÃO devolva o número bruto do CNAE — devolva especificamente a fatia estética avançada.`,
+  },
+  {
+    key: "nucleo-duro",
+    label: "Núcleo duro: injetável/laser com médico RT",
+    focus: "tam",
+    icon: "core",
+    hint: "Clínicas com médico responsável técnico executando procedimento invasivo",
+    query: `Quantas clínicas de estética no Brasil possuem MÉDICO RESPONSÁVEL TÉCNICO (RT) registrado no CRM e executam procedimentos INVASIVOS/INJETÁVEIS (toxina botulínica, preenchedores com ácido hialurônico, bioestimuladores de colágeno, fios de sustentação, lasers ablativos, harmonização facial médica)? ${EXCLUSAO} Este é o "núcleo duro" do mercado — clínicas com responsabilidade técnica médica formal, não estúdios de estética capilar ou biomedicina sem médico RT. Traga: (1) número absoluto estimado; (2) metodologia (ex.: registros CFM/CRM por especialidade, licenças sanitárias com RT médico, dados da SBD/SBCP/SBME); (3) percentual sobre o total de clínicas de estética avançada; (4) fonte oficial (CFM, SBD, SBCP, ANVISA).`,
   },
   {
     key: "redes-franquia",
