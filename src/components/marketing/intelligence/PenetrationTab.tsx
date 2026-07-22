@@ -629,7 +629,10 @@ export default function PenetrationTab() {
                     <tr className="border-b text-xs text-muted-foreground uppercase">
                       <th className="text-left py-2">Cidade</th>
                       <th className="text-right py-2">Clientes ativos</th>
-                      <th className="text-right py-2">MQL</th>
+                      <th className="text-right py-2">MQL cadastrado</th>
+                      <th className="text-right py-2" title="MQLs cuja cidade foi inferida a partir do DDD do telefone">
+                        MQL inferido (DDD)
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -638,6 +641,9 @@ export default function PenetrationTab() {
                         <td className="py-2">{c.city}</td>
                         <td className="py-2 text-right tabular-nums">{c.clients}</td>
                         <td className="py-2 text-right tabular-nums">{c.leads}</td>
+                        <td className="py-2 text-right tabular-nums text-muted-foreground italic">
+                          {c.leadsInferred || ""}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
