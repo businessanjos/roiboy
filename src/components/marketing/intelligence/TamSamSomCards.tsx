@@ -198,6 +198,7 @@ export function TamSamSomCards({ onOpenDetail }: Props) {
   const [running, setRunning] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [bands, setBands] = useState<Band[]>(() => loadBands());
+  const [detail, setDetail] = useState<{ tier: Tier; query: string; row: Row } | null>(null);
 
   useEffect(() => {
     try {
