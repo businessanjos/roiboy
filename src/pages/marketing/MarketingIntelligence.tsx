@@ -540,6 +540,10 @@ export default function MarketingIntelligence() {
               <CompetitorsTab />
             </TabsContent>
 
+            <TabsContent value="penetration" className="space-y-4 mt-6">
+              <PenetrationTab />
+            </TabsContent>
+
             <TabsContent value="research" className="space-y-4 mt-6">
               <MarketResearchTab />
             </TabsContent>
