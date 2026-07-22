@@ -740,7 +740,7 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
         open={!!detail}
         onOpenChange={(o) => !o && setDetail(null)}
         detail={detail}
-        bands={bands}
+        bands={active.bands}
         onOpenExternal={onOpenDetail}
       />
     </div>
