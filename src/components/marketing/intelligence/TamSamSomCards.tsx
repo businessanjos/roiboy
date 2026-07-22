@@ -728,11 +728,6 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
         })}
       </div>
 
-      <CurrentVsMarketPanel
-        currentMetrics={currentMetrics}
-        latestByQuery={latestByQuery}
-        queries={queries}
-      />
 
 
 
