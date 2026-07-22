@@ -426,7 +426,7 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
 
   async function runAllMissing() {
     for (const { tier, query } of queries) {
-      if (latestByQuery.has(query)) continue;
+      if (findLatestForTier(tier, query)) continue;
       await runOne(tier, query);
     }
   }
