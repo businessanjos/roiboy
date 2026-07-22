@@ -192,19 +192,22 @@ export function MarketResearchAnswer({ answer }: { answer: string }) {
         </div>
       )}
 
-      {rest && sections.length === 0 && !tldr && (
-        // Fallback: sem estrutura reconhecida, renderiza markdown puro
-        <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{rest}</ReactMarkdown>
-        </div>
+      {rest && sections.length === 0 && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-strong:text-foreground">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{rest}</ReactMarkdown>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {rest && (sections.length > 0 || stats.length > 0) && rest.length > 40 && (
+      {rest && sections.length > 0 && rest.length > 40 && (
         <details className="text-xs text-muted-foreground">
           <summary className="cursor-pointer hover:text-foreground select-none">
             Ver contexto adicional
           </summary>
-          <div className="mt-2 prose prose-sm max-w-none dark:prose-invert prose-p:my-1.5 prose-ul:my-1.5">
+          <div className="mt-2 prose prose-sm max-w-none dark:prose-invert prose-p:my-1.5 prose-ul:my-1.5 prose-strong:text-foreground">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{rest}</ReactMarkdown>
           </div>
         </details>
