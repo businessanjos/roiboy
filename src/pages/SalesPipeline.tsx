@@ -1019,6 +1019,14 @@ export default function SalesPipeline() {
     return m;
   }, [activityStatusMap]);
 
+  const dealPendingCountMap = useMemo(() => {
+    const m: Record<string, number> = {};
+    Object.entries(activityStatusMap).forEach(([id, s]) => {
+      m[id] = s?.pendingCount ?? 0;
+    });
+    return m;
+  }, [activityStatusMap]);
+
   // Range de datas para filtro do pipeline aberto (criação do negócio)
   const openDateRange = useMemo<{ start: Date; end: Date } | null>(() => {
     const now = new Date();
