@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Loader2, Search, ExternalLink, ChevronDown, Sparkles, Trash2, Clock } from "lucide-react";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Citation = { index: number; url: string; title: string | null };
 
