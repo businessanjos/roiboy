@@ -18,52 +18,53 @@ export async function createClientOnboardingTasks({
 }: OnboardingAutomationParams): Promise<void> {
   console.log("[OnboardingAutomation] Starting for client:", clientId);
 
-  // STEP 1: Fetch activity_types for tasks
+  // IDEMPOTÊNCIA: se já existirem tarefas com esses títulos pro cliente, não recriar.
+  const AUTO_TITLES = [
+    "Implementação da Clínica Ryka",
+    "Apresentação do Plano de Ação",
+  ];
+  const { data: existing } = await supabase
+    .from("internal_tasks")
+    .select("title")
+    .eq("client_id", clientId)
+    .in("title", AUTO_TITLES);
+
+  const existingTitles = new Set((existing || []).map((t) => t.title));
+  const missingTitles = AUTO_TITLES.filter((t) => !existingTitles.has(t));
+
+  if (missingTitles.length === 0) {
+    console.log("[OnboardingAutomation] Tasks já existem, pulando criação:", clientId);
+    return;
+  }
+
+  // STEP 1: Fetch activity_types apenas para os títulos que faltam
   const { data: activityTypes } = await supabase
     .from("activity_types")
     .select("id, name")
     .eq("account_id", accountId)
-    .in("name", ["Implementação da Clínica Ryka", "Apresentação do Plano de Ação"]);
+    .in("name", missingTitles);
 
-  const implementacaoType = activityTypes?.find(
-    (at) => at.name === "Implementação da Clínica Ryka"
-  );
-  const apresentacaoType = activityTypes?.find(
-    (at) => at.name === "Apresentação do Plano de Ação"
-  );
+  const typeByName = new Map((activityTypes || []).map((at) => [at.name, at.id]));
 
-  console.log("[OnboardingAutomation] Activity types found:", {
-    implementacao: implementacaoType?.id,
-    apresentacao: apresentacaoType?.id,
-  });
-
-  // STEP 2: Create tasks
-  const tasksToInsert = [
-    {
-      account_id: accountId,
-      client_id: clientId,
-      title: "Implementação da Clínica Ryka",
-      description: null,
-      activity_type_id: implementacaoType?.id || null,
-      assigned_to: null, // Empty - to be filled manually
-      due_date: null, // Empty - to be filled manually
-      priority: "medium" as const,
-      status: "pending" as const,
-      created_by: userId,
-    },
-    {
-      account_id: accountId,
-      client_id: clientId,
-      title: "Apresentação do Plano de Ação",
+  const TASK_TEMPLATES: Record<string, { description: string | null }> = {
+    "Implementação da Clínica Ryka": { description: null },
+    "Apresentação do Plano de Ação": {
       description: "Reunião para apresenta o Plano de Ação e tirar dúvidas.",
-      activity_type_id: apresentacaoType?.id || null,
-      assigned_to: null, // Empty - to be filled manually
-      due_date: null, // Empty - to be filled manually
-      priority: "medium" as const,
-      status: "pending" as const,
-      created_by: userId,
     },
-  ];
+  };
+
+  const tasksToInsert = missingTitles.map((title) => ({
+    account_id: accountId,
+    client_id: clientId,
+    title,
+    description: TASK_TEMPLATES[title]?.description ?? null,
+    activity_type_id: typeByName.get(title) || null,
+    assigned_to: null,
+    due_date: null,
+    priority: "medium" as const,
+    status: "pending" as const,
+    created_by: userId,
+  }));
 
   const { error: tasksError } = await supabase
     .from("internal_tasks")
@@ -74,5 +75,6 @@ export async function createClientOnboardingTasks({
     throw tasksError;
   }
 
-  console.log("[OnboardingAutomation] Tasks created successfully for client:", clientId);
+  console.log("[OnboardingAutomation] Tasks created:", missingTitles, "para", clientId);
+
 }
