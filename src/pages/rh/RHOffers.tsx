@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Copy, ExternalLink, Trash2, Mail, CheckCircle2, XCircle, Eye, FileText, Send, Sparkles, FilePlus2, LayoutTemplate } from "lucide-react";
+import { Plus, Copy, CopyPlus, ExternalLink, Trash2, Mail, CheckCircle2, XCircle, Eye, FileText, Send, Sparkles, FilePlus2, LayoutTemplate } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getPublicOrigin } from "@/lib/publicLink";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
