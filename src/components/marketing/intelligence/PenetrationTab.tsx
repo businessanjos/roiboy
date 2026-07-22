@@ -579,7 +579,7 @@ export default function PenetrationTab() {
                   <tr
                     key={r.uf}
                     className="border-b hover:bg-muted/40 cursor-pointer"
-                    onClick={() => setSelectedUf(r.uf)}
+                    onClick={() => openDrilldown(r.uf)}
                   >
                     <td className="py-2 pr-2 font-medium">{r.uf}</td>
                     <td className="py-2 pr-2 text-muted-foreground">{r.name}</td>
