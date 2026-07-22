@@ -69,6 +69,31 @@ const DDD_TO_UF: Record<string, string> = {
   "95": "RR", "96": "AP", "98": "MA", "99": "MA",
 };
 
+// DDD → cidade principal (capital ou maior cidade da área).
+// Usado APENAS como fallback quando o lead não tem cidade cadastrada.
+// Marcamos claramente como "(inferido)" na UI.
+const DDD_TO_CITY: Record<string, string> = {
+  "11": "São Paulo", "12": "São José dos Campos", "13": "Santos", "14": "Bauru",
+  "15": "Sorocaba", "16": "Ribeirão Preto", "17": "São José do Rio Preto",
+  "18": "Presidente Prudente", "19": "Campinas",
+  "21": "Rio de Janeiro", "22": "Campos dos Goytacazes", "24": "Petrópolis",
+  "27": "Vitória", "28": "Cachoeiro de Itapemirim",
+  "31": "Belo Horizonte", "32": "Juiz de Fora", "33": "Governador Valadares",
+  "34": "Uberlândia", "35": "Poços de Caldas", "37": "Divinópolis", "38": "Montes Claros",
+  "41": "Curitiba", "42": "Ponta Grossa", "43": "Londrina", "44": "Maringá",
+  "45": "Cascavel", "46": "Francisco Beltrão",
+  "47": "Joinville", "48": "Florianópolis", "49": "Chapecó",
+  "51": "Porto Alegre", "53": "Pelotas", "54": "Caxias do Sul", "55": "Santa Maria",
+  "61": "Brasília", "62": "Goiânia", "63": "Palmas", "64": "Rio Verde",
+  "65": "Cuiabá", "66": "Rondonópolis", "67": "Campo Grande",
+  "68": "Rio Branco", "69": "Porto Velho",
+  "71": "Salvador", "73": "Ilhéus", "74": "Juazeiro", "75": "Feira de Santana", "77": "Vitória da Conquista",
+  "79": "Aracaju", "81": "Recife", "82": "Maceió", "83": "João Pessoa", "84": "Natal",
+  "85": "Fortaleza", "86": "Teresina", "87": "Petrolina", "88": "Juazeiro do Norte",
+  "89": "Picos", "91": "Belém", "92": "Manaus", "93": "Santarém", "94": "Marabá",
+  "95": "Boa Vista", "96": "Macapá", "97": "Tefé", "98": "São Luís", "99": "Imperatriz",
+};
+
 const normalizeUf = (s: string | null | undefined): string | null => {
   if (!s) return null;
   const up = s.trim().toUpperCase();
@@ -79,21 +104,29 @@ const normalizeUf = (s: string | null | undefined): string | null => {
   return null;
 };
 
-// Robustez: só considera "55" prefixo de país quando o número tem
-// tamanho compatível (12–13 dígitos). Evita que um número local
-// com DDD 55 (RS) seja interpretado como country code.
-const ufFromPhone = (phone: string | null | undefined): string | null => {
+const dddFromPhone = (phone: string | null | undefined): string | null => {
   if (!phone) return null;
   let digits = phone.replace(/\D/g, "");
   if (!digits) return null;
-  // remove zero de operadora prefixado (raro, mas ocorre)
   if (digits.startsWith("0")) digits = digits.replace(/^0+/, "");
-  // country code 55 só se número tiver 12–13 dígitos (55 + DDD + 8/9)
   if (digits.length >= 12 && digits.startsWith("55")) {
     digits = digits.slice(2);
   }
   const ddd = digits.slice(0, 2);
-  return DDD_TO_UF[ddd] || null;
+  return ddd.length === 2 ? ddd : null;
+};
+
+// Robustez: só considera "55" prefixo de país quando o número tem
+// tamanho compatível (12–13 dígitos). Evita que um número local
+// com DDD 55 (RS) seja interpretado como country code.
+const ufFromPhone = (phone: string | null | undefined): string | null => {
+  const ddd = dddFromPhone(phone);
+  return ddd ? DDD_TO_UF[ddd] || null : null;
+};
+
+const cityFromPhone = (phone: string | null | undefined): string | null => {
+  const ddd = dddFromPhone(phone);
+  return ddd ? DDD_TO_CITY[ddd] || null : null;
 };
 
 const normalizeCity = (s: string | null | undefined) =>
@@ -115,6 +148,7 @@ type CityRow = {
   city: string;
   clients: number;
   leads: number;
+  leadsInferred: number; // MQLs cuja cidade veio do DDD (não do cadastro)
 };
 
 export default function PenetrationTab() {
@@ -261,13 +295,15 @@ export default function PenetrationTab() {
 
   const cityRows: CityRow[] = useMemo(() => {
     if (!selectedUf) return [];
-    const byCity = new Map<string, { clients: number; leads: number }>();
+    const byCity = new Map<string, { clients: number; leads: number; leadsInferred: number }>();
+    const bump = (city: string, key: "clients" | "leads" | "leadsInferred") => {
+      const cur = byCity.get(city) || { clients: 0, leads: 0, leadsInferred: 0 };
+      cur[key] += 1;
+      byCity.set(city, cur);
+    };
     for (const c of consideredClients) {
       if (normalizeUf(c.state) !== selectedUf) continue;
-      const city = normalizeCity(c.city) || "(sem cidade)";
-      const cur = byCity.get(city) || { clients: 0, leads: 0 };
-      cur.clients += 1;
-      byCity.set(city, cur);
+      bump(normalizeCity(c.city) || "(sem cidade)", "clients");
     }
     for (const l of leads) {
       const uf =
@@ -275,14 +311,21 @@ export default function PenetrationTab() {
         normalizeUf(l.state) ||
         ufFromPhone(l.phone);
       if (uf !== selectedUf) continue;
-      const city = normalizeCity(l.business_city || l.city) || "(sem cidade)";
-      const cur = byCity.get(city) || { clients: 0, leads: 0 };
-      cur.leads += 1;
-      byCity.set(city, cur);
+      const cadastro = normalizeCity(l.business_city || l.city);
+      if (cadastro) {
+        bump(cadastro, "leads");
+      } else {
+        const inferida = cityFromPhone(l.phone);
+        bump(inferida ? `${inferida} (inferido)` : "(sem cidade)", "leadsInferred");
+      }
     }
     return Array.from(byCity.entries())
       .map(([city, v]) => ({ city, ...v }))
-      .sort((a, b) => b.clients + b.leads * 0.3 - (a.clients + a.leads * 0.3));
+      .sort(
+        (a, b) =>
+          b.clients + (b.leads + b.leadsInferred) * 0.3 -
+          (a.clients + (a.leads + a.leadsInferred) * 0.3)
+      );
   }, [selectedUf, consideredClients, leads]);
 
   const loading = loadingClients || loadingLeads;
@@ -586,7 +629,10 @@ export default function PenetrationTab() {
                     <tr className="border-b text-xs text-muted-foreground uppercase">
                       <th className="text-left py-2">Cidade</th>
                       <th className="text-right py-2">Clientes ativos</th>
-                      <th className="text-right py-2">MQL</th>
+                      <th className="text-right py-2">MQL cadastrado</th>
+                      <th className="text-right py-2" title="MQLs cuja cidade foi inferida a partir do DDD do telefone">
+                        MQL inferido (DDD)
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -595,6 +641,9 @@ export default function PenetrationTab() {
                         <td className="py-2">{c.city}</td>
                         <td className="py-2 text-right tabular-nums">{c.clients}</td>
                         <td className="py-2 text-right tabular-nums">{c.leads}</td>
+                        <td className="py-2 text-right tabular-nums text-muted-foreground italic">
+                          {c.leadsInferred || ""}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
