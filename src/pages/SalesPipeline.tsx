@@ -1019,6 +1019,14 @@ export default function SalesPipeline() {
     return m;
   }, [activityStatusMap]);
 
+  const dealPendingCountMap = useMemo(() => {
+    const m: Record<string, number> = {};
+    Object.entries(activityStatusMap).forEach(([id, s]) => {
+      m[id] = s?.pendingCount ?? 0;
+    });
+    return m;
+  }, [activityStatusMap]);
+
   // Range de datas para filtro do pipeline aberto (criação do negócio)
   const openDateRange = useMemo<{ start: Date; end: Date } | null>(() => {
     const now = new Date();
@@ -1054,14 +1062,14 @@ export default function SalesPipeline() {
   // Deals após aplicar filtro do vendedor/busca/data (mas antes do filtro de origem).
   // Usado como base para as opções do filtro de origem e como base do filtro final.
   const dealsBeforeTagFilter = useMemo(() => {
-    const base = applyFilterToDeals(openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap);
+    const base = applyFilterToDeals(openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap, dealPendingCountMap);
     if (!openDateRange) return base;
     return base.filter(d => {
       if (!d.created_at) return false;
       const created = new Date(d.created_at);
       return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
     });
-  }, [openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, openDateRange, searchOptions]);
+  }, [openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, openDateRange, searchOptions]);
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);

@@ -238,7 +238,8 @@ export function applyFilterToDeals(
   dealCustomFieldValues?: Record<string, Record<string, string>>,
   dealNextActivityMap?: Record<string, string | null>,
   searchOptions?: { mode?: DealSearchMode; blobs?: Record<string, string> },
-  dealTaskCountMap?: Record<string, number>
+  dealTaskCountMap?: Record<string, number>,
+  dealPendingCountMap?: Record<string, number>
 ): Deal[] {
   if (!activeFilter && !searchTerm?.trim()) return deals;
 
@@ -317,7 +318,7 @@ export function applyFilterToDeals(
   if (conditions.length === 0) return filtered;
 
   return filtered.filter(deal => {
-    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap));
+    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap));
     if (matchType === 'all') return results.every(Boolean);
     return results.some(Boolean);
   });
@@ -330,7 +331,7 @@ function toArray(value: any): any[] {
   return [value];
 }
 
-function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>, dealNextActivityMap?: Record<string, string | null>, dealTaskCountMap?: Record<string, number>): boolean {
+function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>, dealNextActivityMap?: Record<string, string | null>, dealTaskCountMap?: Record<string, number>, dealPendingCountMap?: Record<string, number>): boolean {
   const { field, operator, value, include_empty } = condition;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -431,9 +432,12 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
 
     case 'next_activity_date': {
       const nextDue = dealNextActivityMap?.[deal.id] ?? null;
-      if (!nextDue) return operator === 'is_empty';
-      if (operator === 'is_empty') return false;
-      if (operator === 'is_not_empty') return true;
+      const pending = dealPendingCountMap?.[deal.id] ?? 0;
+      // is_empty / is_not_empty se referem à existência de tarefa pendente,
+      // independentemente de a tarefa ter due_date preenchida.
+      if (operator === 'is_empty') return pending === 0;
+      if (operator === 'is_not_empty') return pending > 0;
+      if (!nextDue) return false;
       return evaluateDateCondition(nextDue, operator, value, today);
     }
 
