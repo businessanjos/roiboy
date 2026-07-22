@@ -11,8 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Loader2, Search, ExternalLink, ChevronDown, Sparkles, Trash2, Clock } from "lucide-react";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarketResearchAnswer } from "./MarketResearchAnswer";
 
 type Citation = { index: number; url: string; title: string | null };
 
@@ -63,9 +62,6 @@ const benchmarkQueries: { query: string; focus: string; label: string }[] = [
 ];
 
 
-function stripCitationMarkers(text: string): string {
-  return text.replace(/\[\d+(,\s*\d+)*\]/g, "").replace(/\s{2,}/g, " ").trim();
-}
 
 export default function MarketResearchTab() {
   const { currentUser } = useCurrentUser();
@@ -323,11 +319,7 @@ export default function MarketResearchTab() {
               </CardHeader>
               <CollapsibleContent>
                 <CardContent className="pt-0 space-y-3">
-                  <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {stripCitationMarkers(r.answer)}
-                    </ReactMarkdown>
-                  </div>
+                  <MarketResearchAnswer answer={r.answer} />
                   {r.citations && r.citations.length > 0 && (
                     <div className="pt-3 border-t">
                       <p className="text-xs font-medium text-muted-foreground mb-2">Fontes citadas</p>
