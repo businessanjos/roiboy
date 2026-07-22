@@ -699,9 +699,9 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
                 </div>
 
                 {snippet ? (
-                  <p className="mt-2 text-xs text-muted-foreground line-clamp-3 leading-relaxed">{snippet}</p>
+                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{snippet}</p>
                 ) : (
-                  <p className="mt-2 text-xs text-muted-foreground line-clamp-3 leading-relaxed">{tier.helper}</p>
+                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{tier.helper}</p>
                 )}
 
                 <div className="mt-3 flex items-center justify-between gap-2">
