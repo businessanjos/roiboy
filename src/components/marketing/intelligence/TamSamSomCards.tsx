@@ -386,6 +386,26 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
     return map;
   }, [data]);
 
+  // Match tolerante: se o prompt exato não estiver no banco (usuário editou
+  // faixas do cenário), procura a última resposta do mesmo tier + recorte
+  // (geo + categoria + canal). Assim editar bandas não "some" com o cálculo.
+  function findLatestForTier(tier: Tier, exactQuery: string): Row | undefined {
+    const exact = latestByQuery.get(exactQuery);
+    if (exact) return exact;
+    const rows = data ?? [];
+    const tierPrefix = `Calcule o ${tier.short}`;
+    const geoLine = `Geografia: ${active.geo}`;
+    const catLine = `Categoria/nicho: ${active.category}`;
+    const chLine = `Canal de aquisição avaliado: ${active.channel}`;
+    return rows.find(
+      (r) =>
+        r.query?.startsWith(tierPrefix) &&
+        r.query.includes(geoLine) &&
+        r.query.includes(catLine) &&
+        r.query.includes(chLine),
+    );
+  }
+
   async function runOne(tier: Tier, query: string) {
     setRunning(tier.key);
     try {
@@ -406,7 +426,7 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
 
   async function runAllMissing() {
     for (const { tier, query } of queries) {
-      if (latestByQuery.has(query)) continue;
+      if (findLatestForTier(tier, query)) continue;
       await runOne(tier, query);
     }
   }
@@ -664,7 +684,7 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
       <div className="grid gap-3 md:grid-cols-3">
         {queries.map(({ tier, query }) => {
           const Icon = tier.icon;
-          const latest = latestByQuery.get(query);
+          const latest = findLatestForTier(tier, query);
           const { value, snippet } = extractHeadline(latest?.answer);
           const isRunning = running === tier.key;
 
