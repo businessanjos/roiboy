@@ -122,6 +122,8 @@ function stripMd(s: string): string {
   return s
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/[*_`]/g, "")
+    // Remove prefixo "TL;DR" (com variações TLDR, TL:DR, com/sem dois-pontos/traço)
+    .replace(/^\s*TL\s*[;:]?\s*DR\s*[:：\-—–]?\s*/i, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
