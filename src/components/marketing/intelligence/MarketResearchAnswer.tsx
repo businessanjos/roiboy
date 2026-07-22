@@ -138,7 +138,9 @@ export function MarketResearchAnswer({ answer }: { answer: string }) {
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300 mb-1">
                   Resumo executivo
                 </div>
-                <p className="text-sm leading-relaxed text-foreground">{tldr}</p>
+                <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-0 prose-strong:text-foreground text-sm leading-relaxed text-foreground">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{tldr}</ReactMarkdown>
+                </div>
               </div>
             </div>
           </CardContent>
