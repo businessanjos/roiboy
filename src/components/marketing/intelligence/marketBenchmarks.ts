@@ -6,7 +6,7 @@ export type BenchmarkQuery = {
   focus: string;
   query: string;
   hint?: string;
-  icon: "clinics" | "franchise" | "units" | "solo" | "derm" | "hof";
+  icon: "universe" | "clinics" | "core" | "franchise" | "units" | "solo" | "derm" | "hof";
 };
 
 // IMPORTANTE: Eternum atende CLÍNICAS DE ESTÉTICA AVANÇADA / MÉDICA (procedimentos
