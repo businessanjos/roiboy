@@ -192,13 +192,15 @@ ${lines}
     text: "text-emerald-600",
     bg: "bg-emerald-500/10",
     helper: "Recorte realista que a Eternum consegue converter nos próximos 12 meses com a operação atual.",
-    buildQuery: (bands) => {
-      const { lines } = bandsBlock(bands);
+    buildQuery: (scenario) => {
+      const { lines } = bandsBlock(scenario.bands);
       return `Calcule o SOM (Serviceable Obtainable Market) da Eternum Mentoring Club para os PRÓXIMOS 12 MESES no Brasil.
 
 ${EXCLUSAO}
 
-${buildPortfolio(bands)}
+${recorteBlock(scenario)}
+
+${buildPortfolio(scenario.bands)}
 
 Faixas de ticket definidas pelo usuário:
 ${lines}
@@ -207,12 +209,13 @@ Considere benchmarks de conversão realistas para negócios de educação/mentor
 - Penetração típica de líderes de nicho em mercados fragmentados: 0,5% a 3% do SAM em 12 meses.
 - High-ticket (>R$ 40k/ano) exige alta autoridade e tráfego qualificado — normalmente <0,3% do SAM/ano.
 - Produtos de entrada escalam mais rápido — 1% a 5% do SAM/ano é plausível para marca consolidada.
+- Ajuste as taxas em função do CANAL do recorte (ex.: eventos → CAC mais alto, conversão maior; digital direto → escala maior, conversão menor).
 
 Traga:
-1. **Número de clientes capturáveis em 12 meses**, quebrado por CADA faixa acima.
+1. **Número de clientes capturáveis em 12 meses**, quebrado por CADA faixa acima e considerando o recorte de geografia/categoria/canal.
 2. **Receita capturável em 12 meses (R$)** — soma das faixas.
-3. **Premissas explícitas** por faixa (% conversão sobre SAM, CAC assumido, comparativos com players como Fernando Kimura, Mentoria Kaizen, iCEV, Faculdade Inspirar, Instituto BWS).
-4. **Pontos cegos** — quais faixas estão SUBEXPLORADAS ou não atendidas hoje pela operação, e quanto de receita a Eternum está deixando na mesa por não ter produto/canal para elas.`;
+3. **Premissas explícitas** por faixa (% conversão sobre SAM, CAC assumido para o canal do recorte, comparativos com players como Fernando Kimura, Mentoria Kaizen, iCEV, Faculdade Inspirar, Instituto BWS).
+4. **Pontos cegos** — faixas SUBEXPLORADAS neste recorte específico e quanto de receita a Eternum está deixando na mesa por não ter produto/canal para elas.`;
     },
   },
 ];
