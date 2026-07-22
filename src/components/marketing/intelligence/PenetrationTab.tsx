@@ -419,7 +419,7 @@ export default function PenetrationTab() {
             <MetricMini
               label="Penetração nacional"
               value={`${totals.penNacional.toFixed(2)}%`}
-              hint={`${totals.withUf} / ${totalTam.toLocaleString("pt-BR")} (só UFs mapeadas)`}
+              hint={`${coverage.totalConsidered} / ${totalTam.toLocaleString("pt-BR")} (base total, com ou sem UF)`}
               accent="text-primary"
             />
           </div>
