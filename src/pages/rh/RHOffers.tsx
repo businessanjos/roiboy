@@ -426,5 +426,6 @@ export default function RHOffers() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </TooltipProvider>
   );
 }
