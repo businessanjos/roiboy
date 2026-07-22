@@ -9,7 +9,12 @@ const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const ETERNUM_CONTEXT = `Contexto do solicitante: Eternum Mentoring Club — clube de mentoria premium para médicos e profissionais da estética avançada no Brasil (dermato, HOF, harmonização, procedimentos injetáveis). Produtos: Rykas, Conselho, Eternum, MVP. Ticket típico R$ 40k–R$ 200k. Persona: profissional já em operação querendo escalar clínica, autoridade e faturamento.`;
+const ETERNUM_CONTEXT = `Contexto do solicitante: Eternum Mentoring Club — clube de mentoria premium para MÉDICOS E PROFISSIONAIS DE ESTÉTICA AVANÇADA / MÉDICA no Brasil (dermato, HOF, harmonização facial/corporal, procedimentos injetáveis, laser, tecnologias estéticas). Produtos: Rykas, Conselho, Eternum, MVP. Ticket típico R$ 40k–R$ 200k. Persona: profissional já em operação querendo escalar clínica, autoridade e faturamento.
+
+ESCOPO DE MERCADO — obrigatório em toda análise:
+- CONSIDERE apenas CLÍNICAS DE ESTÉTICA AVANÇADA/MÉDICA (procedimentos estéticos, injetáveis, laser, tecnologias, harmonização, dermato).
+- EXCLUA salões de beleza, barbearias, cabeleireiros, manicure/pedicure, depilação simples/laser puro, estética capilar, SPAs de relaxamento e centros de bem-estar sem procedimentos estéticos.
+- Se a fonte disponível misturar os dois universos, DIGA isso explicitamente e traga a fração estimada só de estética avançada — não devolva o número total sem ressalva.`;
 
 const SYSTEM_PROMPT = `Você é um analista sênior de inteligência de mercado especializado no setor de estética avançada, saúde e educação médica no Brasil. Sempre responda em PT-BR com dados reais, atuais e citando fontes. NUNCA invente números — se não houver fonte confiável, diga explicitamente. NÃO use marcadores numéricos de citação como [1] no meio do texto; as fontes aparecerão separadamente.
 
