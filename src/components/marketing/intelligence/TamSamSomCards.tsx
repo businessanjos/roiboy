@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 import {
   Loader2,
   RefreshCw,
@@ -20,13 +22,19 @@ import {
   Plus,
   Trash2,
   RotateCcw,
+  BookOpen,
+  ListChecks,
+  Ban,
+  ExternalLink,
 } from "lucide-react";
 import { extractHeadline } from "./marketBenchmarks";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
-import { formatDistanceToNow } from "date-fns";
+import { MarketResearchAnswer } from "./MarketResearchAnswer";
+import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-type Row = { id: string; query: string; answer: string; created_at: string };
+type Citation = { index?: number; url: string; title?: string | null };
+type Row = { id: string; query: string; answer: string; created_at: string; citations: Citation[] | null };
 
 type Band = { label: string; min: number; max: number };
 
@@ -190,6 +198,7 @@ export function TamSamSomCards({ onOpenDetail }: Props) {
   const [running, setRunning] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [bands, setBands] = useState<Band[]>(() => loadBands());
+  const [detail, setDetail] = useState<{ tier: Tier; query: string; row: Row } | null>(null);
 
   useEffect(() => {
     try {
@@ -206,7 +215,7 @@ export function TamSamSomCards({ onOpenDetail }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("mi_market_research")
-        .select("id, query, answer, created_at")
+        .select("id, query, answer, created_at, citations")
         .order("created_at", { ascending: false })
         .limit(300);
       if (error) throw error;
@@ -431,13 +440,13 @@ export function TamSamSomCards({ onOpenDetail }: Props) {
                   ) : (
                     <span className="text-[10px] text-muted-foreground">Recalcule para estas faixas</span>
                   )}
-                  {latest && onOpenDetail && (
+                  {latest && (
                     <button
                       type="button"
-                      onClick={() => onOpenDetail(query)}
+                      onClick={() => setDetail({ tier, query, row: latest })}
                       className="text-[11px] text-primary hover:underline inline-flex items-center gap-0.5"
                     >
-                      Ver memória de cálculo <ChevronRight className="h-3 w-3" />
+                      Ver análise <ChevronRight className="h-3 w-3" />
                     </button>
                   )}
                 </div>
@@ -446,6 +455,186 @@ export function TamSamSomCards({ onOpenDetail }: Props) {
           );
         })}
       </div>
+
+      <DetailSheet
+        open={!!detail}
+        onOpenChange={(o) => !o && setDetail(null)}
+        detail={detail}
+        bands={bands}
+        onOpenExternal={onOpenDetail}
+      />
     </div>
+  );
+}
+
+function DetailSheet({
+  open,
+  onOpenChange,
+  detail,
+  bands,
+  onOpenExternal,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  detail: { tier: Tier; query: string; row: Row } | null;
+  bands: Band[];
+  onOpenExternal?: (query: string) => void;
+}) {
+  if (!detail) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent />
+      </Sheet>
+    );
+  }
+
+  const { tier, query, row } = detail;
+  const Icon = tier.icon;
+  const citations = Array.isArray(row.citations) ? row.citations : [];
+
+  // Extrai o bloco "Traga:" do prompt como critérios pedidos ao modelo
+  const criteriosMatch = query.match(/Traga:\s*([\s\S]+?)(?=\n\nCite|$)/);
+  const criterios = criteriosMatch ? criteriosMatch[1].trim() : "";
+
+  // Fontes oficiais mencionadas no prompt
+  const fontesMatch = query.match(/Cite fontes[^.]*\(([^)]+)\)/i) || query.match(/Fontes[^(]*\(([^)]+)\)/i);
+  const fontesOficiaisSugeridas = fontesMatch ? fontesMatch[1].split(/,\s*/) : [];
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className={`p-2 rounded-lg ${tier.bg}`}>
+              <Icon className={`h-5 w-5 ${tier.text}`} />
+            </div>
+            <div>
+              <p className={`text-[11px] font-bold tracking-widest uppercase ${tier.text}`}>{tier.short}</p>
+              <SheetTitle className="text-base leading-tight">{tier.label}</SheetTitle>
+            </div>
+          </div>
+          <SheetDescription className="text-xs">
+            Calculado em {format(new Date(row.created_at), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })} ·
+            {" "}última execução via Perplexity (sonar-pro)
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-6">
+          {/* Faixas usadas */}
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <ListChecks className="h-4 w-4 text-blue-600" />
+              <h3 className="text-sm font-semibold">Faixas de ticket usadas neste cálculo</h3>
+            </div>
+            <div className="rounded-md border bg-muted/30 p-3 space-y-1">
+              {bands.map((b, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span className="font-medium">{b.label}</span>
+                  <span className="tabular-nums text-muted-foreground">
+                    {fmtBRL(b.min)} – {fmtBRL(b.max)}/ano
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Ajuste em "Configurar faixas" e clique em Recalcular para atualizar.
+            </p>
+          </section>
+
+          {/* Critérios de recorte */}
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <Ban className="h-4 w-4 text-red-600" />
+              <h3 className="text-sm font-semibold">Critério de recorte (exclusões obrigatórias)</h3>
+            </div>
+            <div className="rounded-md border bg-red-500/5 border-red-500/20 p-3 text-xs leading-relaxed text-muted-foreground">
+              Considera <strong>apenas</strong> profissionais e clínicas de estética avançada/médica —
+              procedimentos estéticos, injetáveis, laser, tecnologias, harmonização facial/corporal, dermato, HOF.
+              <br />
+              <br />
+              <strong className="text-red-600">Exclui:</strong> salões de beleza, barbearias, cabeleireiros,
+              manicure/pedicure, depilação simples, estética capilar, SPAs de relaxamento e centros de bem-estar
+              sem procedimentos estéticos.
+            </div>
+          </section>
+
+          {/* Suposições / pedido ao modelo */}
+          {criterios && (
+            <section>
+              <div className="flex items-center gap-2 mb-2">
+                <BookOpen className="h-4 w-4 text-purple-600" />
+                <h3 className="text-sm font-semibold">O que foi pedido ao modelo</h3>
+              </div>
+              <div className="rounded-md border bg-muted/30 p-3 text-xs leading-relaxed whitespace-pre-wrap">
+                {criterios}
+              </div>
+            </section>
+          )}
+
+          {/* Fontes oficiais sugeridas no prompt */}
+          {fontesOficiaisSugeridas.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold mb-2">Fontes oficiais orientadas ao modelo</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {fontesOficiaisSugeridas.map((f, i) => (
+                  <Badge key={i} variant="secondary" className="text-[10px] font-normal">
+                    {f.trim()}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <Separator />
+
+          {/* Resposta */}
+          <section>
+            <h3 className="text-sm font-semibold mb-2">Análise completa</h3>
+            <MarketResearchAnswer answer={row.answer} />
+          </section>
+
+          {/* Citações reais retornadas */}
+          <section>
+            <h3 className="text-sm font-semibold mb-2">
+              Fontes citadas pelo modelo{" "}
+              <span className="text-xs font-normal text-muted-foreground">({citations.length})</span>
+            </h3>
+            {citations.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">Nenhuma citação foi retornada nesta execução.</p>
+            ) : (
+              <ol className="space-y-1.5">
+                {citations.map((c, i) => (
+                  <li key={i} className="text-xs">
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-primary hover:underline inline-flex items-start gap-1"
+                    >
+                      <span className="tabular-nums text-muted-foreground min-w-[1.5rem]">
+                        [{c.index ?? i + 1}]
+                      </span>
+                      <span className="flex-1">
+                        {c.title || c.url}
+                        <ExternalLink className="inline h-3 w-3 ml-1 opacity-60" />
+                      </span>
+                    </a>
+                    {c.title && <div className="text-[10px] text-muted-foreground pl-7 truncate">{c.url}</div>}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+
+          {onOpenExternal && (
+            <div className="pt-2 border-t">
+              <Button size="sm" variant="ghost" onClick={() => onOpenExternal(query)}>
+                Abrir na aba Pesquisa de Mercado <ChevronRight className="h-3 w-3 ml-1" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
