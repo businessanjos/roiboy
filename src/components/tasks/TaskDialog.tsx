@@ -270,11 +270,20 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   };
 
   const fetchClients = async () => {
-    const { data } = await supabase
-      .from("clients")
-      .select("id, full_name")
-      .order("full_name");
-    if (data) setClients(data);
+    // Paginate to bypass the default PostgREST 1000-row limit
+    const pageSize = 1000;
+    const all: Client[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, full_name")
+        .order("full_name")
+        .range(from, from + pageSize - 1);
+      if (error || !data || data.length === 0) break;
+      all.push(...(data as Client[]));
+      if (data.length < pageSize) break;
+    }
+    setClients(all);
   };
 
   const fetchDeals = async () => {
