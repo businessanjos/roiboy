@@ -80,26 +80,32 @@ export function extractHeadline(answer: string | null | undefined): {
   const clean = answer.replace(/\[\d+(,\s*\d+)*\]/g, "").trim();
   const firstPara = clean.split(/\n\s*\n/)[0] ?? clean;
 
-  // 1) primeiro **texto** que tenha dígito ou %
+  // Só aceita como headline algo que tenha unidade explícita (R$, %, mil/milhões/bi/bilhões).
+  // Um "12" solto (ex.: "12 meses") não pode virar o número gigante do card.
+  const hasUnit = (s: string) =>
+    /R\$|%|\b(mil|milh[ãa]o|milh[õo]es|bi|bilh[ãa]o|bilh[õo]es)\b/i.test(s);
+
+  // 1) primeiro **texto em negrito** que tenha número + unidade
   const boldMatches = firstPara.match(/\*\*([^*]+)\*\*/g) ?? [];
   for (const raw of boldMatches) {
     const inner = raw.replace(/\*\*/g, "").trim();
-    if (/\d/.test(inner) && inner.length <= 60) {
+    if (/\d/.test(inner) && hasUnit(inner) && inner.length <= 60) {
       return { value: inner, snippet: stripMd(firstPara) };
     }
   }
 
-  // 2) padrão numérico com unidade
+  // 2) padrão numérico com unidade obrigatória
   const numMatch = firstPara.match(
-    /(cerca de\s+|aproximadamente\s+|~\s*)?(\d[\d.\,]*\s*[–-]?\s*\d*[\d.\,]*)\s*(mil|milhões?|milhão|bi|bilhões?|%)?/i,
+    /(R\$\s*)?(\d[\d.,]*(?:\s*[–-]\s*\d[\d.,]*)?)\s*(mil|milh[õo]es|milh[ãa]o|bi|bilh[õo]es|bilh[ãa]o|%)/i,
   );
   if (numMatch) {
-    const val = `${numMatch[2].trim()}${numMatch[3] ? " " + numMatch[3] : ""}`.trim();
+    const val = `${numMatch[1] ?? ""}${numMatch[2].trim()}${numMatch[3] ? " " + numMatch[3] : ""}`.trim();
     return { value: val, snippet: stripMd(firstPara) };
   }
 
   return { value: null, snippet: stripMd(firstPara) };
 }
+
 
 function stripMd(s: string): string {
   return s
