@@ -33,7 +33,7 @@ import CollaboratorPayroll from "./components/CollaboratorPayroll";
 import CollaboratorAuditLog from "./components/CollaboratorAuditLog";
 import { Wallet, History } from "lucide-react";
 
-const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com"];
+const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com"];
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Ativo" },
