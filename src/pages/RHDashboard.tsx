@@ -17,7 +17,7 @@ import {
 const RH_ALLOWED_EMAILS = [
   "m.quintana@me.com", "coachevertonsantos@gmail.com",
   "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com",
-  "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com",
+  "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com",
 ];
 
 const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#ec4899", "#84cc16"];
