@@ -38,6 +38,15 @@ type Row = { id: string; query: string; answer: string; created_at: string; cita
 
 type Band = { label: string; min: number; max: number };
 
+type Scenario = {
+  id: string;
+  name: string;
+  bands: Band[];
+  geo: string;      // ex.: "Brasil (nacional)", "Sudeste", "SP capital"
+  category: string; // ex.: "Todos", "Injetáveis", "HOF", "Laser + tecnologias"
+  channel: string;  // ex.: "Todos", "Digital direto", "Indicação", "Eventos"
+};
+
 const DEFAULT_BANDS: Band[] = [
   { label: "Entrada", min: 997, max: 5000 },
   { label: "Intermediário", min: 5000, max: 40000 },
@@ -45,10 +54,40 @@ const DEFAULT_BANDS: Band[] = [
   { label: "Conselho / High-ticket", min: 200000, max: 500000 },
 ];
 
-const STORAGE_KEY = "mi_tsm_bands_v1";
+const DEFAULT_GEO = "Brasil (nacional)";
+const DEFAULT_CATEGORY = "Todos os procedimentos";
+const DEFAULT_CHANNEL = "Todos os canais";
+
+const LEGACY_BANDS_KEY = "mi_tsm_bands_v1";
+const SCENARIOS_KEY = "mi_tsm_scenarios_v1";
+const ACTIVE_SCENARIO_KEY = "mi_tsm_active_scenario_v1";
+
+function newId() {
+  return `sc_${Math.random().toString(36).slice(2, 9)}${Date.now().toString(36).slice(-4)}`;
+}
+
+function makeDefaultScenario(overrides: Partial<Scenario> = {}): Scenario {
+  return {
+    id: newId(),
+    name: "Padrão — Brasil, todos os canais",
+    bands: DEFAULT_BANDS,
+    geo: DEFAULT_GEO,
+    category: DEFAULT_CATEGORY,
+    channel: DEFAULT_CHANNEL,
+    ...overrides,
+  };
+}
 
 const EXCLUSAO =
   "IMPORTANTE: considere APENAS profissionais e clínicas de ESTÉTICA AVANÇADA/MÉDICA (procedimentos estéticos, injetáveis, laser, tecnologias, harmonização facial/corporal, dermato, HOF). EXCLUA salões de beleza, barbearias, cabeleireiros, manicure/pedicure, depilação simples, estética capilar, SPAs de relaxamento e centros de bem-estar sem procedimentos estéticos.";
+
+function recorteBlock(s: Scenario): string {
+  return `RECORTE DESTE CENÁRIO (aplique de forma consistente em todos os cálculos e fontes):
+- Geografia: ${s.geo}
+- Categoria/nicho: ${s.category}
+- Canal de aquisição avaliado: ${s.channel}
+Se o recorte reduzir o universo, ajuste TODOS os números (profissionais, clínicas, R$) proporcionalmente e diga explicitamente o fator de recorte usado.`;
+}
 
 function fmtBRL(n: number): string {
   if (n >= 1000) return `R$ ${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
@@ -77,7 +116,7 @@ type Tier = {
   text: string;
   bg: string;
   helper: string;
-  buildQuery: (bands: Band[]) => string;
+  buildQuery: (scenario: Scenario) => string;
 };
 
 const tiers: Tier[] = [
@@ -91,22 +130,24 @@ const tiers: Tier[] = [
     text: "text-purple-600",
     bg: "bg-purple-500/10",
     helper: "Universo TOTAL de profissionais da estética avançada no Brasil, sem nenhum filtro além de estarem no setor.",
-    buildQuery: (bands) => {
-      const { lines } = bandsBlock(bands);
+    buildQuery: (scenario) => {
+      const { lines } = bandsBlock(scenario.bands);
       return `Calcule o TAM (Total Addressable Market) do universo de ESTÉTICA AVANÇADA/MÉDICA no Brasil considerando TODOS os profissionais e clínicas do setor, sem filtro por ticket ou faturamento.
 
 ${EXCLUSAO}
 
-${buildPortfolio(bands)}
+${recorteBlock(scenario)}
+
+${buildPortfolio(scenario.bands)}
 
 Faixas de ticket a considerar na análise:
 ${lines}
 
 Traga:
-1. **Número total** de profissionais + clínicas do setor no Brasil (soma consolidada, com fonte).
-2. **Faturamento anual estimado do setor** (R$ bilhões, com CAGR dos últimos 3 anos).
-3. **Composição**: quantos são médicos (dermato + outras especialidades), quantos dentistas com HOF, quantos biomédicos estetas, quantos esteticistas com formação avançada, quantas clínicas PJ.
-4. **TAM em R$** = faturamento potencial se 100% do universo consumisse produtos de educação/mentoria/comunidade dentro das faixas acima (estime uma média ponderada realista distribuindo o universo pelas faixas).
+1. **Número total** de profissionais + clínicas do setor DENTRO DO RECORTE (soma consolidada, com fonte).
+2. **Faturamento anual estimado do setor no recorte** (R$, com CAGR dos últimos 3 anos).
+3. **Composição** dentro do recorte: quantos médicos (dermato + outras), dentistas com HOF, biomédicos, esteticistas com formação avançada, clínicas PJ.
+4. **TAM em R$** = faturamento potencial se 100% do universo do recorte consumisse produtos de educação/mentoria/comunidade dentro das faixas acima (média ponderada realista).
 
 Cite fontes oficiais (SBD, CFM, CFO, CFBM, ABIHPEC, Sebrae, IBGE, Euromonitor, ABEDV).`;
     },
@@ -121,19 +162,21 @@ Cite fontes oficiais (SBD, CFM, CFO, CFBM, ABIHPEC, Sebrae, IBGE, Euromonitor, A
     text: "text-blue-600",
     bg: "bg-blue-500/10",
     helper: "Fatia do TAM que efetivamente entra no perfil dos produtos Eternum.",
-    buildQuery: (bands) => {
-      const { lines, minTicket } = bandsBlock(bands);
+    buildQuery: (scenario) => {
+      const { lines, minTicket } = bandsBlock(scenario.bands);
       return `Calcule o SAM (Serviceable Addressable Market) para a Eternum Mentoring Club no Brasil.
 
 ${EXCLUSAO}
 
-${buildPortfolio(bands)}
+${recorteBlock(scenario)}
+
+${buildPortfolio(scenario.bands)}
 
 Perfil Eternum: profissional de estética avançada JÁ EM OPERAÇÃO (não iniciante puro), buscando escalar clínica/autoridade/faturamento.
 
 Traga:
-1. **Número de profissionais + clínicas** que se encaixam nesse perfil (excluir estudantes, aposentados, quem faturou menos que o suficiente para investir ${fmtBRL(minTicket)}/ano em educação).
-2. **Segmentação por capacidade de investimento anual em educação/mentoria** (use EXATAMENTE estas faixas — quantidade estimada em cada uma):
+1. **Número de profissionais + clínicas** que se encaixam nesse perfil DENTRO DO RECORTE (excluir estudantes, aposentados, quem faturou menos que o suficiente para investir ${fmtBRL(minTicket)}/ano em educação).
+2. **Segmentação por capacidade de investimento anual em educação/mentoria** (use EXATAMENTE estas faixas — quantidade estimada em cada uma dentro do recorte):
 ${lines}
 3. **SAM em R$** = soma do potencial anual dessas faixas (nº de profissionais × ticket médio da faixa).
 4. Fontes (Sebrae — perfil do empreendedor de estética, associações do setor, pesquisas de mercado brasileiro de educação executiva).`;
@@ -149,13 +192,15 @@ ${lines}
     text: "text-emerald-600",
     bg: "bg-emerald-500/10",
     helper: "Recorte realista que a Eternum consegue converter nos próximos 12 meses com a operação atual.",
-    buildQuery: (bands) => {
-      const { lines } = bandsBlock(bands);
+    buildQuery: (scenario) => {
+      const { lines } = bandsBlock(scenario.bands);
       return `Calcule o SOM (Serviceable Obtainable Market) da Eternum Mentoring Club para os PRÓXIMOS 12 MESES no Brasil.
 
 ${EXCLUSAO}
 
-${buildPortfolio(bands)}
+${recorteBlock(scenario)}
+
+${buildPortfolio(scenario.bands)}
 
 Faixas de ticket definidas pelo usuário:
 ${lines}
@@ -164,12 +209,13 @@ Considere benchmarks de conversão realistas para negócios de educação/mentor
 - Penetração típica de líderes de nicho em mercados fragmentados: 0,5% a 3% do SAM em 12 meses.
 - High-ticket (>R$ 40k/ano) exige alta autoridade e tráfego qualificado — normalmente <0,3% do SAM/ano.
 - Produtos de entrada escalam mais rápido — 1% a 5% do SAM/ano é plausível para marca consolidada.
+- Ajuste as taxas em função do CANAL do recorte (ex.: eventos → CAC mais alto, conversão maior; digital direto → escala maior, conversão menor).
 
 Traga:
-1. **Número de clientes capturáveis em 12 meses**, quebrado por CADA faixa acima.
+1. **Número de clientes capturáveis em 12 meses**, quebrado por CADA faixa acima e considerando o recorte de geografia/categoria/canal.
 2. **Receita capturável em 12 meses (R$)** — soma das faixas.
-3. **Premissas explícitas** por faixa (% conversão sobre SAM, CAC assumido, comparativos com players como Fernando Kimura, Mentoria Kaizen, iCEV, Faculdade Inspirar, Instituto BWS).
-4. **Pontos cegos** — quais faixas estão SUBEXPLORADAS ou não atendidas hoje pela operação, e quanto de receita a Eternum está deixando na mesa por não ter produto/canal para elas.`;
+3. **Premissas explícitas** por faixa (% conversão sobre SAM, CAC assumido para o canal do recorte, comparativos com players como Fernando Kimura, Mentoria Kaizen, iCEV, Faculdade Inspirar, Instituto BWS).
+4. **Pontos cegos** — faixas SUBEXPLORADAS neste recorte específico e quanto de receita a Eternum está deixando na mesa por não ter produto/canal para elas.`;
     },
   },
 ];
@@ -245,18 +291,40 @@ function fmtPct(n: number): string {
   return `${n.toFixed(1)}%`;
 }
 
-function loadBands(): Band[] {
+function loadScenarios(): { scenarios: Scenario[]; activeId: string } {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_BANDS;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.every((b) => typeof b?.min === "number" && typeof b?.max === "number")) {
-      return parsed as Band[];
+    const raw = localStorage.getItem(SCENARIOS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length && parsed.every((s) => s?.id && Array.isArray(s?.bands))) {
+        // Preenche campos novos em cenários legados
+        const migrated: Scenario[] = parsed.map((s: any) => ({
+          id: s.id,
+          name: s.name || "Cenário",
+          bands: s.bands,
+          geo: s.geo || DEFAULT_GEO,
+          category: s.category || DEFAULT_CATEGORY,
+          channel: s.channel || DEFAULT_CHANNEL,
+        }));
+        const activeIdRaw = localStorage.getItem(ACTIVE_SCENARIO_KEY);
+        const activeId = migrated.find((s) => s.id === activeIdRaw)?.id ?? migrated[0].id;
+        return { scenarios: migrated, activeId };
+      }
+    }
+    // Migração de bands legadas → cenário Padrão
+    const legacy = localStorage.getItem(LEGACY_BANDS_KEY);
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      if (Array.isArray(parsed) && parsed.every((b: any) => typeof b?.min === "number")) {
+        const s = makeDefaultScenario({ bands: parsed as Band[] });
+        return { scenarios: [s], activeId: s.id };
+      }
     }
   } catch {
     /* noop */
   }
-  return DEFAULT_BANDS;
+  const s = makeDefaultScenario();
+  return { scenarios: [s], activeId: s.id };
 }
 
 export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
@@ -264,18 +332,27 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
   const qc = useQueryClient();
   const [running, setRunning] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [bands, setBands] = useState<Band[]>(() => loadBands());
+  const [showCompare, setShowCompare] = useState(false);
+  const initial = useMemo(loadScenarios, []);
+  const [scenarios, setScenarios] = useState<Scenario[]>(initial.scenarios);
+  const [activeId, setActiveId] = useState<string>(initial.activeId);
   const [detail, setDetail] = useState<{ tier: Tier; query: string; row: Row } | null>(null);
+
+  const active = scenarios.find((s) => s.id === activeId) ?? scenarios[0];
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(bands));
+      localStorage.setItem(SCENARIOS_KEY, JSON.stringify(scenarios));
+      localStorage.setItem(ACTIVE_SCENARIO_KEY, activeId);
     } catch {
       /* noop */
     }
-  }, [bands]);
+  }, [scenarios, activeId]);
 
-  const queries = useMemo(() => tiers.map((t) => ({ tier: t, query: t.buildQuery(bands) })), [bands]);
+  const queries = useMemo(
+    () => tiers.map((t) => ({ tier: t, query: t.buildQuery(active) })),
+    [active],
+  );
 
   const { data, isLoading } = useQuery({
     queryKey: ["mi-tsm-cards", currentUser?.account_id],
@@ -284,7 +361,7 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
         .from("mi_market_research")
         .select("id, query, answer, created_at, citations")
         .order("created_at", { ascending: false })
-        .limit(300);
+        .limit(500);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
@@ -330,21 +407,55 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
     }
   }
 
+  function patchActive(patch: Partial<Scenario>) {
+    setScenarios((prev) => prev.map((s) => (s.id === activeId ? { ...s, ...patch } : s)));
+  }
+
   function updateBand(idx: number, patch: Partial<Band>) {
-    setBands((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)));
+    patchActive({ bands: active.bands.map((b, i) => (i === idx ? { ...b, ...patch } : b)) });
   }
 
   function removeBand(idx: number) {
-    setBands((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)));
+    if (active.bands.length <= 1) return;
+    patchActive({ bands: active.bands.filter((_, i) => i !== idx) });
   }
 
   function addBand() {
-    setBands((prev) => {
-      const last = prev[prev.length - 1];
-      const newMin = last ? last.max : 1000;
-      return [...prev, { label: `Faixa ${prev.length + 1}`, min: newMin, max: newMin * 2 }];
+    const last = active.bands[active.bands.length - 1];
+    const newMin = last ? last.max : 1000;
+    patchActive({
+      bands: [...active.bands, { label: `Faixa ${active.bands.length + 1}`, min: newMin, max: newMin * 2 }],
     });
   }
+
+  function createScenario() {
+    const s = makeDefaultScenario({ name: `Cenário ${scenarios.length + 1}` });
+    setScenarios((prev) => [...prev, s]);
+    setActiveId(s.id);
+    setShowConfig(true);
+    toast.success("Novo cenário criado — ajuste o recorte e recalcule.");
+  }
+
+  function duplicateScenario() {
+    if (!active) return;
+    const s: Scenario = { ...active, id: newId(), bands: active.bands.map((b) => ({ ...b })), name: `${active.name} (cópia)` };
+    setScenarios((prev) => [...prev, s]);
+    setActiveId(s.id);
+    toast.success("Cenário duplicado.");
+  }
+
+  function deleteScenario() {
+    if (scenarios.length <= 1) {
+      toast.error("Mantenha pelo menos um cenário.");
+      return;
+    }
+    if (!confirm(`Excluir "${active.name}"?`)) return;
+    const remaining = scenarios.filter((s) => s.id !== activeId);
+    setScenarios(remaining);
+    setActiveId(remaining[0].id);
+  }
+
+
 
   return (
     <div className="space-y-3">
@@ -354,13 +465,17 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
             <Target className="h-4 w-4 text-blue-600" /> TAM · SAM · SOM
           </h2>
           <p className="text-xs text-muted-foreground">
-            Ajuste as faixas de ticket e recalcule para revelar seus pontos cegos.
+            Salve cenários (geografia, categoria, canal, faixas) e compare qual maximiza o SOM.
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setShowCompare((s) => !s)}>
+            <ListChecks className="h-3.5 w-3.5 mr-1.5" />
+            {showCompare ? "Fechar comparativo" : "Comparar cenários"}
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => setShowConfig((s) => !s)}>
             <Settings2 className="h-3.5 w-3.5 mr-1.5" />
-            {showConfig ? "Fechar faixas" : "Configurar faixas"}
+            {showConfig ? "Fechar cenário" : "Configurar cenário"}
           </Button>
           <Button size="sm" variant="outline" onClick={runAllMissing} disabled={!!running}>
             {running ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-2" />}
@@ -373,78 +488,168 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
         </div>
       </div>
 
+      {/* Barra de cenário ativo */}
+      <Card className="border-dashed">
+        <CardContent className="p-3 flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Cenário ativo</span>
+          <select
+            value={activeId}
+            onChange={(e) => setActiveId(e.target.value)}
+            className="h-8 rounded-md border bg-background px-2 text-sm min-w-[220px]"
+          >
+            {scenarios.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+          <Input
+            value={active.name}
+            onChange={(e) => patchActive({ name: e.target.value })}
+            className="h-8 text-sm max-w-[260px]"
+            placeholder="Nome do cenário"
+          />
+          <Button size="sm" variant="ghost" onClick={createScenario} title="Novo cenário">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Novo
+          </Button>
+          <Button size="sm" variant="ghost" onClick={duplicateScenario} title="Duplicar">
+            <Sparkles className="h-3.5 w-3.5 mr-1" /> Duplicar
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={deleteScenario}
+            disabled={scenarios.length <= 1}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+          </Button>
+          <div className="ml-auto flex flex-wrap gap-1.5">
+            <Badge variant="secondary" className="text-[10px] font-normal">📍 {active.geo}</Badge>
+            <Badge variant="secondary" className="text-[10px] font-normal">🎯 {active.category}</Badge>
+            <Badge variant="secondary" className="text-[10px] font-normal">📣 {active.channel}</Badge>
+          </div>
+        </CardContent>
+      </Card>
+
       {showConfig && (
         <Card className="border-dashed">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">Faixas de ticket (R$/ano)</p>
-                <p className="text-xs text-muted-foreground">
-                  Essas faixas alimentam os prompts de TAM, SAM e SOM. Salvo automaticamente neste navegador.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="ghost" onClick={() => setBands(DEFAULT_BANDS)}>
-                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Padrão
-                </Button>
-                <Button size="sm" variant="outline" onClick={addBand}>
-                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar faixa
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {bands.map((b, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-end">
-                  <div className="col-span-4">
-                    {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Rótulo</Label>}
-                    <Input
-                      value={b.label}
-                      onChange={(e) => updateBand(idx, { label: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Mín (R$)</Label>}
-                    <Input
-                      type="number"
-                      min={0}
-                      value={b.min}
-                      onChange={(e) => updateBand(idx, { min: Number(e.target.value) || 0 })}
-                      className="h-8 text-sm tabular-nums"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Máx (R$)</Label>}
-                    <Input
-                      type="number"
-                      min={0}
-                      value={b.max}
-                      onChange={(e) => updateBand(idx, { max: Number(e.target.value) || 0 })}
-                      className="h-8 text-sm tabular-nums"
-                    />
-                  </div>
-                  <div className="col-span-2 flex justify-end">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => removeBand(idx)}
-                      disabled={bands.length <= 1}
-                      className="h-8 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+          <CardContent className="p-4 space-y-4">
+            {/* Recorte de cenário */}
+            <div>
+              <p className="text-sm font-semibold mb-2">Recorte do cenário</p>
+              <div className="grid gap-2 md:grid-cols-3">
+                <div>
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Geografia</Label>
+                  <Input
+                    value={active.geo}
+                    onChange={(e) => patchActive({ geo: e.target.value })}
+                    className="h-8 text-sm"
+                    placeholder="Ex.: Sudeste, SP capital, Nordeste…"
+                  />
                 </div>
-              ))}
+                <div>
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Categoria / nicho</Label>
+                  <Input
+                    value={active.category}
+                    onChange={(e) => patchActive({ category: e.target.value })}
+                    className="h-8 text-sm"
+                    placeholder="Ex.: Injetáveis, HOF, Laser…"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Canal de aquisição</Label>
+                  <Input
+                    value={active.channel}
+                    onChange={(e) => patchActive({ channel: e.target.value })}
+                    className="h-8 text-sm"
+                    placeholder="Ex.: Digital direto, Eventos, Indicação…"
+                  />
+                </div>
+              </div>
             </div>
 
-            <p className="text-[11px] text-muted-foreground">
-              Após ajustar, clique em <strong>Recalcular tudo</strong> — as respostas ficam vinculadas às faixas atuais.
-            </p>
+            {/* Faixas */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-semibold">Faixas de ticket (R$/ano) — linhas de produto</p>
+                  <p className="text-xs text-muted-foreground">
+                    Cada faixa vira uma linha de produto no cálculo de SAM/SOM deste cenário.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => patchActive({ bands: DEFAULT_BANDS })}>
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Padrão
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={addBand}>
+                    <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar faixa
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {active.bands.map((b, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-end">
+                    <div className="col-span-4">
+                      {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Rótulo</Label>}
+                      <Input
+                        value={b.label}
+                        onChange={(e) => updateBand(idx, { label: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Mín (R$)</Label>}
+                      <Input
+                        type="number"
+                        min={0}
+                        value={b.min}
+                        onChange={(e) => updateBand(idx, { min: Number(e.target.value) || 0 })}
+                        className="h-8 text-sm tabular-nums"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Máx (R$)</Label>}
+                      <Input
+                        type="number"
+                        min={0}
+                        value={b.max}
+                        onChange={(e) => updateBand(idx, { max: Number(e.target.value) || 0 })}
+                        className="h-8 text-sm tabular-nums"
+                      />
+                    </div>
+                    <div className="col-span-2 flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeBand(idx)}
+                        disabled={active.bands.length <= 1}
+                        className="h-8 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Após ajustar, clique em <strong>Recalcular tudo</strong> — as respostas ficam vinculadas ao recorte + faixas deste cenário.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
+
+      {showCompare && (
+        <ScenarioComparePanel
+          scenarios={scenarios}
+          activeId={activeId}
+          onSelect={setActiveId}
+          latestByQuery={latestByQuery}
+        />
+      )}
+
+
 
       <div className="grid gap-3 md:grid-cols-3">
         {queries.map(({ tier, query }) => {
@@ -535,7 +740,7 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
         open={!!detail}
         onOpenChange={(o) => !o && setDetail(null)}
         detail={detail}
-        bands={bands}
+        bands={active.bands}
         onOpenExternal={onOpenDetail}
       />
     </div>
@@ -944,5 +1149,164 @@ function BarRow({
         ) : null}
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Comparativo entre cenários salvos — qual maximiza SOM
+// ─────────────────────────────────────────────────────────────
+function ScenarioComparePanel({
+  scenarios,
+  activeId,
+  onSelect,
+  latestByQuery,
+}: {
+  scenarios: Scenario[];
+  activeId: string;
+  onSelect: (id: string) => void;
+  latestByQuery: Map<string, Row>;
+}) {
+  type ScenarioRollup = {
+    scenario: Scenario;
+    tam: number | null;
+    sam: number | null;
+    som: number | null;
+    somPeople: number | null;
+    lastCalc: string | null;
+    missing: number;
+  };
+
+  const rollups: ScenarioRollup[] = scenarios.map((s) => {
+    let tam: number | null = null;
+    let sam: number | null = null;
+    let som: number | null = null;
+    let somPeople: number | null = null;
+    let lastCalc: string | null = null;
+    let missing = 0;
+    tiers.forEach((t) => {
+      const q = t.buildQuery(s);
+      const row = latestByQuery.get(q);
+      if (!row) { missing++; return; }
+      if (!lastCalc || row.created_at > lastCalc) lastCalc = row.created_at;
+      const rev = parseBRL(row.answer, t.key);
+      if (t.key === "tam") tam = rev;
+      if (t.key === "sam") sam = rev;
+      if (t.key === "som") {
+        som = rev;
+        somPeople = parsePeople(row.answer, "som");
+      }
+    });
+    return { scenario: s, tam, sam, som, somPeople, lastCalc, missing };
+  });
+
+  const bestSomRev = Math.max(0, ...rollups.map((r) => r.som ?? 0));
+
+  return (
+    <Card className="ring-1 ring-blue-500/20 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent">
+      <CardContent className="p-5 space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <ListChecks className="h-4 w-4 text-blue-600" />
+            Comparativo de cenários — qual maximiza SOM
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Cada linha é um cenário salvo. O melhor SOM em R$ ganha destaque; recortes ainda não calculados
+            aparecem como <em>—</em>.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto -mx-2">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wide text-muted-foreground border-b">
+                <th className="text-left px-2 py-2 font-semibold">Cenário</th>
+                <th className="text-left px-2 py-2 font-semibold">Recorte</th>
+                <th className="text-right px-2 py-2 font-semibold">TAM (R$)</th>
+                <th className="text-right px-2 py-2 font-semibold">SAM (R$)</th>
+                <th className="text-right px-2 py-2 font-semibold">SOM (R$)</th>
+                <th className="text-right px-2 py-2 font-semibold">Clientes 12m</th>
+                <th className="text-right px-2 py-2 font-semibold">Faixas</th>
+                <th className="text-right px-2 py-2 font-semibold">Última análise</th>
+                <th className="text-right px-2 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rollups.map((r) => {
+                const isBest = r.som !== null && r.som === bestSomRev && bestSomRev > 0;
+                const isActive = r.scenario.id === activeId;
+                return (
+                  <tr
+                    key={r.scenario.id}
+                    className={`border-b last:border-0 ${isBest ? "bg-emerald-500/5" : ""} ${isActive ? "ring-1 ring-inset ring-blue-500/30" : ""}`}
+                  >
+                    <td className="px-2 py-2 align-top">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-foreground">{r.scenario.name}</span>
+                        {isBest && (
+                          <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[9px] px-1.5 py-0">
+                            melhor SOM
+                          </Badge>
+                        )}
+                        {isActive && !isBest && (
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0">ativo</Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-2 py-2 align-top text-muted-foreground">
+                      <div>📍 {r.scenario.geo}</div>
+                      <div>🎯 {r.scenario.category}</div>
+                      <div>📣 {r.scenario.channel}</div>
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums align-top">
+                      {r.tam !== null ? fmtBigBRL(r.tam) : "—"}
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums align-top">
+                      {r.sam !== null ? fmtBigBRL(r.sam) : "—"}
+                    </td>
+                    <td className={`px-2 py-2 text-right tabular-nums align-top ${isBest ? "text-emerald-700 font-bold" : "font-semibold"}`}>
+                      {r.som !== null ? fmtBigBRL(r.som) : "—"}
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums align-top">
+                      {r.somPeople !== null ? fmtBigNum(r.somPeople) : "—"}
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums align-top text-muted-foreground">
+                      {r.scenario.bands.length}
+                    </td>
+                    <td className="px-2 py-2 text-right align-top text-muted-foreground text-[11px]">
+                      {r.lastCalc
+                        ? formatDistanceToNow(new Date(r.lastCalc), { addSuffix: true, locale: ptBR })
+                        : "—"}
+                      {r.missing > 0 && (
+                        <div className="text-amber-600 text-[10px]">
+                          {r.missing} tier(s) pendente(s)
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-2 py-2 text-right align-top">
+                      {!isActive && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => onSelect(r.scenario.id)}
+                        >
+                          Ativar <ChevronRight className="h-3 w-3 ml-0.5" />
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground">
+          💡 Para preencher uma linha, ative o cenário e clique em <strong>Recalcular tudo</strong>.
+          Compare recortes (ex.: Sudeste × Nordeste, HOF × Injetáveis, Eventos × Digital direto) para
+          descobrir qual combinação de linha de produto + canal captura mais receita em 12 meses.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
