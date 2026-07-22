@@ -357,7 +357,10 @@ export default function MarketingIntelligence() {
 
       {data && (
         <>
+          <MarketSnapshotCards onOpenDetail={() => setTab("research")} />
+
           <div className="grid gap-4 md:grid-cols-4">
+
             <StatCard
               icon={Users}
               label="Clientes ativos"
