@@ -89,6 +89,40 @@ export default function RHOffers() {
     setDeleteId(null);
   };
 
+  const duplicateOffer = async (id: string) => {
+    const { data: src, error: fetchErr } = await supabase
+      .from("hr_job_offers")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (fetchErr || !src) {
+      toast({ title: "Erro ao duplicar", description: fetchErr?.message ?? "Offer não encontrada", variant: "destructive" });
+      return;
+    }
+    const {
+      id: _id, public_token: _t, created_at: _c, updated_at: _u,
+      sent_at: _s, responded_at: _r, view_count: _v, status: _st,
+      ...rest
+    } = src as any;
+    const payload = {
+      ...rest,
+      status: "draft",
+      view_count: 0,
+      sent_at: null,
+      responded_at: null,
+      is_template: false,
+      template_name: null,
+      candidate_name: `${src.candidate_name} (cópia)`,
+    };
+    const { error } = await supabase.from("hr_job_offers").insert(payload);
+    if (error) {
+      toast({ title: "Erro ao duplicar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Offer duplicada" });
+    load();
+  };
+
   const startBlank = () => {
     setNewDialogOpen(false);
     navigate("/rh/offers/new");
