@@ -187,15 +187,30 @@ export default function RHOffers() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1 pt-2 border-t border-amber-200/40">
-                    <Button size="sm" variant="default" onClick={() => startFromTemplate(t.id)} className="gap-1.5 flex-1 bg-amber-600 hover:bg-amber-700">
-                      <FilePlus2 className="h-3.5 w-3.5" /> Usar modelo
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link to={`/rh/offers/${t.id}/edit`}><FileText className="h-3.5 w-3.5" /></Link>
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setDeleteId(t.id)} className="text-rose-600 hover:text-rose-700">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="default" onClick={() => startFromTemplate(t.id)} className="gap-1.5 flex-1 bg-amber-600 hover:bg-amber-700">
+                          <FilePlus2 className="h-3.5 w-3.5" /> Usar modelo
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Criar nova offer a partir deste modelo</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link to={`/rh/offers/${t.id}/edit`}><FileText className="h-3.5 w-3.5" /></Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Editar modelo</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" onClick={() => setDeleteId(t.id)} className="text-rose-600 hover:text-rose-700">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Excluir modelo</TooltipContent>
+                    </Tooltip>
                   </div>
                 </CardContent>
               </Card>
