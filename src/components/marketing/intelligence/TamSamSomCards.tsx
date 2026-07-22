@@ -119,7 +119,7 @@ Se a fonte misturar (ex.: CNAE 9602-5/02, universo "beleza & estética"), NUNCA 
 const CONSISTENCY_GUARDRAIL = `REGRAS DE CONSISTÊNCIA (não violar):
 - Baseline TAM Brasil de estética AVANÇADA/MÉDICA (ajustado, sem salão de beleza): ~R$ 40–60 bi/ano, ~120–150 mil clínicas, ~450–600 mil profissionais habilitados. Use esta ordem de grandeza como âncora — se sua fonte disser mais que isso, é porque incluiu "beleza" (barbearia/salão) e precisa ser ajustada para baixo.
 - SAM SEMPRE ≤ TAM. SOM SEMPRE ≤ SAM. Se o recorte for "Brasil (nacional) / todos os canais / todos os procedimentos", SAM = TAM (repita o mesmo valor). Nunca devolva SAM ou SOM maior que o TAM.
-- O TL;DR DEVE ser um único valor em R$ (ex.: "R$ 48 bi/ano") ou uma faixa estreita com unidade explícita (ex.: "R$ 45–55 bi/ano"). Nunca devolva número solto sem unidade (ex.: "12"). Se não houver dado confiável, escreva "sem estimativa confiável" no TL;DR.
+- A primeira linha da resposta DEVE ser um único valor em R$ (ex.: "R$ 48 bi/ano") ou uma faixa estreita com unidade explícita (ex.: "R$ 45–55 bi/ano"). Nunca devolva número solto sem unidade (ex.: "12"). Se não houver dado confiável, escreva "sem estimativa confiável". NUNCA prefixe a resposta com "TL;DR", "TLDR", "TL:DR", "Resumo:" ou rótulos similares — comece direto pelo valor.
 - Não use marcadores de citação [1], [2] no texto.`;
 
 
