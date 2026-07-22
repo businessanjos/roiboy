@@ -465,13 +465,17 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
             <Target className="h-4 w-4 text-blue-600" /> TAM · SAM · SOM
           </h2>
           <p className="text-xs text-muted-foreground">
-            Ajuste as faixas de ticket e recalcule para revelar seus pontos cegos.
+            Salve cenários (geografia, categoria, canal, faixas) e compare qual maximiza o SOM.
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setShowCompare((s) => !s)}>
+            <ListChecks className="h-3.5 w-3.5 mr-1.5" />
+            {showCompare ? "Fechar comparativo" : "Comparar cenários"}
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => setShowConfig((s) => !s)}>
             <Settings2 className="h-3.5 w-3.5 mr-1.5" />
-            {showConfig ? "Fechar faixas" : "Configurar faixas"}
+            {showConfig ? "Fechar cenário" : "Configurar cenário"}
           </Button>
           <Button size="sm" variant="outline" onClick={runAllMissing} disabled={!!running}>
             {running ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-2" />}
@@ -484,78 +488,168 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
         </div>
       </div>
 
+      {/* Barra de cenário ativo */}
+      <Card className="border-dashed">
+        <CardContent className="p-3 flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Cenário ativo</span>
+          <select
+            value={activeId}
+            onChange={(e) => setActiveId(e.target.value)}
+            className="h-8 rounded-md border bg-background px-2 text-sm min-w-[220px]"
+          >
+            {scenarios.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+          <Input
+            value={active.name}
+            onChange={(e) => patchActive({ name: e.target.value })}
+            className="h-8 text-sm max-w-[260px]"
+            placeholder="Nome do cenário"
+          />
+          <Button size="sm" variant="ghost" onClick={createScenario} title="Novo cenário">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Novo
+          </Button>
+          <Button size="sm" variant="ghost" onClick={duplicateScenario} title="Duplicar">
+            <Sparkles className="h-3.5 w-3.5 mr-1" /> Duplicar
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={deleteScenario}
+            disabled={scenarios.length <= 1}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+          </Button>
+          <div className="ml-auto flex flex-wrap gap-1.5">
+            <Badge variant="secondary" className="text-[10px] font-normal">📍 {active.geo}</Badge>
+            <Badge variant="secondary" className="text-[10px] font-normal">🎯 {active.category}</Badge>
+            <Badge variant="secondary" className="text-[10px] font-normal">📣 {active.channel}</Badge>
+          </div>
+        </CardContent>
+      </Card>
+
       {showConfig && (
         <Card className="border-dashed">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">Faixas de ticket (R$/ano)</p>
-                <p className="text-xs text-muted-foreground">
-                  Essas faixas alimentam os prompts de TAM, SAM e SOM. Salvo automaticamente neste navegador.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="ghost" onClick={() => setBands(DEFAULT_BANDS)}>
-                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Padrão
-                </Button>
-                <Button size="sm" variant="outline" onClick={addBand}>
-                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar faixa
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {bands.map((b, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-end">
-                  <div className="col-span-4">
-                    {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Rótulo</Label>}
-                    <Input
-                      value={b.label}
-                      onChange={(e) => updateBand(idx, { label: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Mín (R$)</Label>}
-                    <Input
-                      type="number"
-                      min={0}
-                      value={b.min}
-                      onChange={(e) => updateBand(idx, { min: Number(e.target.value) || 0 })}
-                      className="h-8 text-sm tabular-nums"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Máx (R$)</Label>}
-                    <Input
-                      type="number"
-                      min={0}
-                      value={b.max}
-                      onChange={(e) => updateBand(idx, { max: Number(e.target.value) || 0 })}
-                      className="h-8 text-sm tabular-nums"
-                    />
-                  </div>
-                  <div className="col-span-2 flex justify-end">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => removeBand(idx)}
-                      disabled={bands.length <= 1}
-                      className="h-8 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+          <CardContent className="p-4 space-y-4">
+            {/* Recorte de cenário */}
+            <div>
+              <p className="text-sm font-semibold mb-2">Recorte do cenário</p>
+              <div className="grid gap-2 md:grid-cols-3">
+                <div>
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Geografia</Label>
+                  <Input
+                    value={active.geo}
+                    onChange={(e) => patchActive({ geo: e.target.value })}
+                    className="h-8 text-sm"
+                    placeholder="Ex.: Sudeste, SP capital, Nordeste…"
+                  />
                 </div>
-              ))}
+                <div>
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Categoria / nicho</Label>
+                  <Input
+                    value={active.category}
+                    onChange={(e) => patchActive({ category: e.target.value })}
+                    className="h-8 text-sm"
+                    placeholder="Ex.: Injetáveis, HOF, Laser…"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Canal de aquisição</Label>
+                  <Input
+                    value={active.channel}
+                    onChange={(e) => patchActive({ channel: e.target.value })}
+                    className="h-8 text-sm"
+                    placeholder="Ex.: Digital direto, Eventos, Indicação…"
+                  />
+                </div>
+              </div>
             </div>
 
-            <p className="text-[11px] text-muted-foreground">
-              Após ajustar, clique em <strong>Recalcular tudo</strong> — as respostas ficam vinculadas às faixas atuais.
-            </p>
+            {/* Faixas */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-semibold">Faixas de ticket (R$/ano) — linhas de produto</p>
+                  <p className="text-xs text-muted-foreground">
+                    Cada faixa vira uma linha de produto no cálculo de SAM/SOM deste cenário.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => patchActive({ bands: DEFAULT_BANDS })}>
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Padrão
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={addBand}>
+                    <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar faixa
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {active.bands.map((b, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-end">
+                    <div className="col-span-4">
+                      {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Rótulo</Label>}
+                      <Input
+                        value={b.label}
+                        onChange={(e) => updateBand(idx, { label: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Mín (R$)</Label>}
+                      <Input
+                        type="number"
+                        min={0}
+                        value={b.min}
+                        onChange={(e) => updateBand(idx, { min: Number(e.target.value) || 0 })}
+                        className="h-8 text-sm tabular-nums"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      {idx === 0 && <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Máx (R$)</Label>}
+                      <Input
+                        type="number"
+                        min={0}
+                        value={b.max}
+                        onChange={(e) => updateBand(idx, { max: Number(e.target.value) || 0 })}
+                        className="h-8 text-sm tabular-nums"
+                      />
+                    </div>
+                    <div className="col-span-2 flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeBand(idx)}
+                        disabled={active.bands.length <= 1}
+                        className="h-8 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Após ajustar, clique em <strong>Recalcular tudo</strong> — as respostas ficam vinculadas ao recorte + faixas deste cenário.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
+
+      {showCompare && (
+        <ScenarioComparePanel
+          scenarios={scenarios}
+          activeId={activeId}
+          onSelect={setActiveId}
+          latestByQuery={latestByQuery}
+        />
+      )}
+
+
 
       <div className="grid gap-3 md:grid-cols-3">
         {queries.map(({ tier, query }) => {
