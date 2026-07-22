@@ -101,10 +101,17 @@ function bandsBlock(bands: Band[]) {
   return { lines, minTicket, maxTicket };
 }
 
-function buildPortfolio(bands: Band[]): string {
-  const { minTicket, maxTicket } = bandsBlock(bands);
-  return `Portfolio Eternum: produtos vão de ${fmtBRL(minTicket)} (entrada) até ${fmtBRL(maxTicket)} (high-ticket). Qualquer profissional de estética avançada/médica com capacidade de investir a partir de ${fmtBRL(minTicket)}/ano faz parte do TAM — não filtre só por high-ticket.`;
+function clinicSizeBlock(bands: Band[]): string {
+  const lines = bands
+    .map((b) => `   - ${b.label}: clínicas faturando ${fmtBRL(b.min)} – ${fmtBRL(b.max)}/ano`)
+    .join("\n");
+  return `Faixas de PORTE DE CLÍNICA (use para segmentar o mercado — não são preços de produto):\n${lines}`;
 }
+
+const MARKET_SCOPE_INLINE = `OBJETO da análise: MERCADO DE ESTÉTICA AVANÇADA/MÉDICA NO BRASIL (clínicas, profissionais, faturamento, procedimentos). NÃO calcule mercado de mentoria/educação — o leitor é uma mentoria B2B, mas a resposta deve ser sobre o mercado de estética em si.
+INCLUIR: clínicas de procedimentos injetáveis, laser, tecnologias (RF, ultrassom microfocado, criolipólise), harmonização facial/corporal, dermato estética, HOF odontológica, biomedicina estética, medicina estética.
+EXCLUIR: salões de beleza, barbearias, cabeleireiros, manicure/pedicure, depilação simples, estética capilar, SPAs de relaxamento.
+Se a fonte misturar (ex.: CNAE 9602-5/02), traga a fração estimada só de estética avançada.`;
 
 type Tier = {
   key: "tam" | "sam" | "som";
@@ -122,100 +129,87 @@ type Tier = {
 const tiers: Tier[] = [
   {
     key: "tam",
-    label: "TAM — Mercado total endereçável",
+    label: "TAM — Mercado total de estética no Brasil",
     short: "TAM",
     icon: Globe2,
     gradient: "from-purple-500/10 via-purple-500/5 to-transparent",
     ring: "ring-purple-500/20",
     text: "text-purple-600",
     bg: "bg-purple-500/10",
-    helper: "Universo TOTAL de profissionais da estética avançada no Brasil, sem nenhum filtro além de estarem no setor.",
+    helper: "Tamanho TOTAL do mercado de estética avançada/médica no Brasil — clínicas, profissionais, procedimentos e faturamento do setor.",
     buildQuery: (scenario) => {
-      const { lines } = bandsBlock(scenario.bands);
-      return `Calcule o TAM (Total Addressable Market) do universo de ESTÉTICA AVANÇADA/MÉDICA no Brasil considerando TODOS os profissionais e clínicas do setor, sem filtro por ticket ou faturamento.
+      return `Calcule o TAM (Total Addressable Market) do MERCADO DE ESTÉTICA AVANÇADA/MÉDICA NO BRASIL.
 
-${EXCLUSAO}
+${MARKET_SCOPE_INLINE}
 
 ${recorteBlock(scenario)}
 
-${buildPortfolio(scenario.bands)}
+${clinicSizeBlock(scenario.bands)}
 
-Faixas de ticket a considerar na análise:
-${lines}
-
-Traga:
-1. **Número total** de profissionais + clínicas do setor DENTRO DO RECORTE (soma consolidada, com fonte).
-2. **Faturamento anual estimado do setor no recorte** (R$, com CAGR dos últimos 3 anos).
-3. **Composição** dentro do recorte: quantos médicos (dermato + outras), dentistas com HOF, biomédicos, esteticistas com formação avançada, clínicas PJ.
-4. **TAM em R$** = faturamento potencial se 100% do universo do recorte consumisse produtos de educação/mentoria/comunidade dentro das faixas acima (média ponderada realista).
-
-Cite fontes oficiais (SBD, CFM, CFO, CFBM, ABIHPEC, Sebrae, IBGE, Euromonitor, ABEDV).`;
+Traga OBRIGATORIAMENTE:
+1. **Nº total de clínicas** de estética avançada/médica no Brasil dentro do recorte (com fonte — Sebrae, IBGE/CNAE, associações do setor). Se a base disponível misturar salões, traga o número bruto e o número ajustado só para estética avançada.
+2. **Nº total de profissionais habilitados** dentro do recorte: dermatologistas (SBD/CFM), médicos com pós em estética, dentistas com HOF (CFO), biomédicos estetas (CFBM), esteticistas com formação avançada (ABEDV).
+3. **Faturamento anual total do setor no Brasil** dentro do recorte (R$), com CAGR dos últimos 3 anos. Fontes: Euromonitor, ABIHPEC, Sebrae, ABDL, relatórios setoriais.
+4. **Volume de procedimentos estéticos/ano** no Brasil dentro do recorte (ISAPS/SBCP para cirúrgicos e minimamente invasivos, quando disponível).
+5. **Segmentação por porte de clínica** usando as faixas de faturamento acima — quantas clínicas em cada faixa.
+6. **TAM em R$** = faturamento anual total consolidado do setor no recorte.`;
     },
   },
   {
     key: "sam",
-    label: "SAM — Mercado que Eternum atende",
+    label: "SAM — Mercado de estética no recorte",
     short: "SAM",
     icon: Target,
     gradient: "from-blue-500/10 via-blue-500/5 to-transparent",
     ring: "ring-blue-500/20",
     text: "text-blue-600",
     bg: "bg-blue-500/10",
-    helper: "Fatia do TAM que efetivamente entra no perfil dos produtos Eternum.",
+    helper: "Fatia do mercado de estética dentro do recorte específico (geografia, nicho, canal).",
     buildQuery: (scenario) => {
-      const { lines, minTicket } = bandsBlock(scenario.bands);
-      return `Calcule o SAM (Serviceable Addressable Market) para a Eternum Mentoring Club no Brasil.
+      return `Calcule o SAM (Serviceable Addressable Market) do MERCADO DE ESTÉTICA AVANÇADA/MÉDICA NO BRASIL restrito ao recorte abaixo.
 
-${EXCLUSAO}
+${MARKET_SCOPE_INLINE}
 
 ${recorteBlock(scenario)}
 
-${buildPortfolio(scenario.bands)}
-
-Perfil Eternum: profissional de estética avançada JÁ EM OPERAÇÃO (não iniciante puro), buscando escalar clínica/autoridade/faturamento.
+${clinicSizeBlock(scenario.bands)}
 
 Traga:
-1. **Número de profissionais + clínicas** que se encaixam nesse perfil DENTRO DO RECORTE (excluir estudantes, aposentados, quem faturou menos que o suficiente para investir ${fmtBRL(minTicket)}/ano em educação).
-2. **Segmentação por capacidade de investimento anual em educação/mentoria** (use EXATAMENTE estas faixas — quantidade estimada em cada uma dentro do recorte):
-${lines}
-3. **SAM em R$** = soma do potencial anual dessas faixas (nº de profissionais × ticket médio da faixa).
-4. Fontes (Sebrae — perfil do empreendedor de estética, associações do setor, pesquisas de mercado brasileiro de educação executiva).`;
+1. **Nº de clínicas dentro do recorte** (região + nicho + canal), consolidando fontes públicas.
+2. **Nº de profissionais habilitados** no recorte.
+3. **Faturamento anual do setor no recorte** (R$).
+4. **Distribuição por porte** — quantas clínicas em cada faixa de faturamento acima e qual a receita agregada de cada faixa.
+5. **SAM em R$** = faturamento anual do setor de estética avançada dentro do recorte.
+6. Concentração geográfica dentro do recorte (top cidades/UFs) e principais associações regionais.`;
     },
   },
   {
     key: "som",
-    label: "SOM — Mercado capturável em 12 meses",
+    label: "SOM — Mercado prospectável em 12 meses",
     short: "SOM",
     icon: Crosshair,
     gradient: "from-emerald-500/10 via-emerald-500/5 to-transparent",
     ring: "ring-emerald-500/20",
     text: "text-emerald-600",
     bg: "bg-emerald-500/10",
-    helper: "Recorte realista que a Eternum consegue converter nos próximos 12 meses com a operação atual.",
+    helper: "Fatia do SAM realisticamente alcançável em 12 meses — clínicas ativas, endereçáveis, sem barreira estrutural.",
     buildQuery: (scenario) => {
-      const { lines } = bandsBlock(scenario.bands);
-      return `Calcule o SOM (Serviceable Obtainable Market) da Eternum Mentoring Club para os PRÓXIMOS 12 MESES no Brasil.
+      return `Calcule o SOM (Serviceable Obtainable Market) do MERCADO DE ESTÉTICA AVANÇADA/MÉDICA NO BRASIL no recorte abaixo, para uma janela de 12 MESES.
 
-${EXCLUSAO}
+${MARKET_SCOPE_INLINE}
 
 ${recorteBlock(scenario)}
 
-${buildPortfolio(scenario.bands)}
+${clinicSizeBlock(scenario.bands)}
 
-Faixas de ticket definidas pelo usuário:
-${lines}
-
-Considere benchmarks de conversão realistas para negócios de educação/mentoria B2P no Brasil:
-- Penetração típica de líderes de nicho em mercados fragmentados: 0,5% a 3% do SAM em 12 meses.
-- High-ticket (>R$ 40k/ano) exige alta autoridade e tráfego qualificado — normalmente <0,3% do SAM/ano.
-- Produtos de entrada escalam mais rápido — 1% a 5% do SAM/ano é plausível para marca consolidada.
-- Ajuste as taxas em função do CANAL do recorte (ex.: eventos → CAC mais alto, conversão maior; digital direto → escala maior, conversão menor).
+Defina SOM como a fatia do SAM efetivamente alcançável por prospecção B2B em 12 meses — clínicas ATIVAS, com CNPJ vigente, canal de contato público (site/Instagram/WhatsApp comercial), operando no recorte, e não travadas por barreiras estruturais (contrato de exclusividade com grande rede, franquias fechadas, etc.).
 
 Traga:
-1. **Número de clientes capturáveis em 12 meses**, quebrado por CADA faixa acima e considerando o recorte de geografia/categoria/canal.
-2. **Receita capturável em 12 meses (R$)** — soma das faixas.
-3. **Premissas explícitas** por faixa (% conversão sobre SAM, CAC assumido para o canal do recorte, comparativos com players como Fernando Kimura, Mentoria Kaizen, iCEV, Faculdade Inspirar, Instituto BWS).
-4. **Pontos cegos** — faixas SUBEXPLORADAS neste recorte específico e quanto de receita a Eternum está deixando na mesa por não ter produto/canal para elas.`;
+1. **Nº de clínicas prospectáveis em 12 meses** no recorte, quebrado por faixa de faturamento das faixas acima.
+2. **Faturamento anual agregado dessas clínicas (R$)** — este é o SOM em R$.
+3. **Concentração geográfica** — top 10 cidades onde essas clínicas estão.
+4. **Praças/nichos SUBEXPLORADOS dentro do recorte** — regiões e segmentos com muitas clínicas ativas mas pouca cobertura por grandes players (redes, franquias, consultorias). Estas são as PORTAS ABERTAS.
+5. **Premissas explícitas** — taxa de "clínica ativa e endereçável" sobre o SAM, fontes usadas para identificar barreiras.`;
     },
   },
 ];

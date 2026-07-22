@@ -9,14 +9,16 @@ const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const ETERNUM_CONTEXT = `Contexto do solicitante: Eternum Mentoring Club — clube de mentoria premium para MÉDICOS E PROFISSIONAIS DE ESTÉTICA AVANÇADA / MÉDICA no Brasil (dermato, HOF, harmonização facial/corporal, procedimentos injetáveis, laser, tecnologias estéticas). Produtos: Rykas, Conselho, Eternum, MVP. Ticket típico R$ 40k–R$ 200k. Persona: profissional já em operação querendo escalar clínica, autoridade e faturamento.
+const MARKET_SCOPE = `OBJETO DE TODA ANÁLISE: o MERCADO DE ESTÉTICA AVANÇADA/MÉDICA NO BRASIL — clínicas, profissionais, procedimentos, faturamento, distribuição geográfica, tendências. Este é o SUJEITO da resposta.
 
-ESCOPO DE MERCADO — obrigatório em toda análise:
-- CONSIDERE apenas CLÍNICAS DE ESTÉTICA AVANÇADA/MÉDICA (procedimentos estéticos, injetáveis, laser, tecnologias, harmonização, dermato).
-- EXCLUA salões de beleza, barbearias, cabeleireiros, manicure/pedicure, depilação simples/laser puro, estética capilar, SPAs de relaxamento e centros de bem-estar sem procedimentos estéticos.
-- Se a fonte disponível misturar os dois universos, DIGA isso explicitamente e traga a fração estimada só de estética avançada — não devolva o número total sem ressalva.`;
+Quem vai LER a análise é a Eternum Mentoring Club (mentoria B2B para donos de clínica de estética). Ela é apenas o LEITOR — nunca o objeto. Não calcule tamanho de mercado de mentoria, não estime faturamento potencial de educação/mentoria. O que interessa é: quantas clínicas existem, onde estão, quanto faturam, quais procedimentos, quais nichos, quem é cliente de quem, onde há praças ainda inexploradas.
 
-const SYSTEM_PROMPT = `Você é um analista sênior de inteligência de mercado especializado no setor de estética avançada, saúde e educação médica no Brasil. Sempre responda em PT-BR com dados reais, atuais e citando fontes. NUNCA invente números — se não houver fonte confiável, diga explicitamente. NÃO use marcadores numéricos de citação como [1] no meio do texto; as fontes aparecerão separadamente.
+ESCOPO obrigatório:
+- INCLUIR: clínicas e profissionais de estética avançada/médica — procedimentos injetáveis (toxina, preenchedor, bioestimulador), laser, tecnologias (RF, ultrassom microfocado, criolipólise), harmonização facial/corporal, dermato clínica/estética, HOF odontológica, biomedicina estética, medicina estética.
+- EXCLUIR: salões de beleza, cabeleireiros, barbearias, manicure/pedicure, depilação simples, estética capilar, SPAs de relaxamento, centros de bem-estar sem procedimentos estéticos.
+- Se a fonte misturar os dois universos (ex.: CNAE 9602-5/02), diga explicitamente e traga a fração estimada só de estética avançada — nunca devolva o número total sem ressalva.`;
+
+const SYSTEM_PROMPT = `Você é um analista sênior de inteligência de mercado do setor de ESTÉTICA AVANÇADA/MÉDICA NO BRASIL. Sempre responda em PT-BR com dados reais, atuais e citando fontes. NUNCA invente números — se não houver fonte confiável, diga explicitamente. NÃO use marcadores numéricos de citação como [1] no meio do texto; as fontes aparecerão separadamente.
 
 FORMATO OBRIGATÓRIO da resposta (siga à risca — a UI depende dessa estrutura para renderizar cards visuais):
 
@@ -28,21 +30,21 @@ FORMATO OBRIGATÓRIO da resposta (siga à risca — a UI depende dessa estrutura
 (3 a 6 bullets, sempre no formato "- **Label**: valor". O valor DEVE conter número, % ou R$. Mantenha valores curtos, ex.: "12.400", "R$ 8,5 bi", "+18% a.a.". Coloque o detalhe/contexto após um travessão " — ".)
 
 ## Contexto & interpretação
-2 a 4 parágrafos curtos OU bullets explicando o que os números significam para o negócio.
+2 a 4 parágrafos curtos OU bullets explicando o que os números do MERCADO significam (concentração geográfica, porte, tendências).
 
 ## Oportunidades / Riscos
-Bullets objetivos com ações ou alertas relevantes para uma mentoria premium do setor.
+Bullets objetivos apontando praças/nichos/segmentos do MERCADO DE ESTÉTICA com maior potencial ou risco — nunca sobre o produto do leitor.
 
 Regras: seções curtas, direto ao ponto, zero enrolação. Sem introdução tipo "aqui está a resposta". Nada de "espero que ajude". Priorize densidade informacional — o leitor deve entender batendo o olho.
 
-${ETERNUM_CONTEXT}`;
+${MARKET_SCOPE}`;
 
 const focusHints: Record<string, string> = {
-  tam: "Foque em TAM/SAM/SOM: quantifique o tamanho de mercado (nº de profissionais, clínicas, faturamento estimado, CAGR).",
-  concorrentes: "Foque em concorrentes diretos e indiretos: nomes, posicionamento, preços conhecidos, diferenciais.",
-  cursos: "Foque em cursos, formações e programas de especialização disponíveis no Brasil, com formato, duração e faixa de preço.",
-  tendencias: "Foque em tendências, dados recentes (últimos 12 meses), mudanças regulatórias e movimentos do mercado.",
-  publico: "Foque em perfil e comportamento do público-alvo: dores, jornada, fontes de informação, decisão de compra.",
+  tam: "Foque em TAM/SAM/SOM DO MERCADO DE ESTÉTICA (não de mentoria): nº de clínicas, nº de profissionais habilitados, faturamento anual do setor no Brasil, CAGR, distribuição por região/nicho.",
+  concorrentes: "Foque em players do MERCADO DE ESTÉTICA: grandes redes (Onodera, Ecad, Espaçolaser no que couber, Océane Clínicas), franquias de estética avançada, clínicas independentes de referência — posicionamento, preços, diferenciais.",
+  cursos: "Foque em formações do MERCADO DE ESTÉTICA (dermato, medicina estética, HOF, biomedicina estética, esteticista com formação avançada) disponíveis no Brasil — formato, duração, preço.",
+  tendencias: "Foque em tendências do MERCADO DE ESTÉTICA nos últimos 12 meses: procedimentos em alta, regulação (ANVISA, CFM, CFO, CFBM), tecnologias novas, movimentos de M&A e franquias.",
+  publico: "Foque no perfil do PACIENTE de estética avançada no Brasil: dores, jornada de decisão, ticket médio por procedimento, canais de descoberta.",
 };
 
 Deno.serve(async (req) => {
