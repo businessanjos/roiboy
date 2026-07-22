@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -157,6 +157,15 @@ export default function PenetrationTab() {
   const [selectedUf, setSelectedUf] = useState<string | null>(null);
   const [regionFilter, setRegionFilter] = useState<string>("all");
   const [includeChurnRisk, setIncludeChurnRisk] = useState(false);
+  const drilldownRef = useRef<HTMLDivElement | null>(null);
+
+  const openDrilldown = (uf: string) => {
+    setSelectedUf(uf);
+    // aguarda render antes de rolar
+    setTimeout(() => {
+      drilldownRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
 
   // Busca ativos + churn_risk (relevante para penetração histórica).
   // Filtro final é aplicado em memória via toggle.
@@ -483,7 +492,7 @@ export default function PenetrationTab() {
               <div
                 key={r.uf}
                 className="flex items-center justify-between p-2 rounded-md border bg-card hover:bg-muted/50 cursor-pointer"
-                onClick={() => setSelectedUf(r.uf)}
+                onClick={() => openDrilldown(r.uf)}
               >
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">{i + 1}º</Badge>
@@ -520,7 +529,7 @@ export default function PenetrationTab() {
               <div
                 key={r.uf}
                 className="flex items-center justify-between p-2 rounded-md border bg-card hover:bg-muted/50 cursor-pointer"
-                onClick={() => setSelectedUf(r.uf)}
+                onClick={() => openDrilldown(r.uf)}
               >
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">{i + 1}º</Badge>
@@ -570,7 +579,7 @@ export default function PenetrationTab() {
                   <tr
                     key={r.uf}
                     className="border-b hover:bg-muted/40 cursor-pointer"
-                    onClick={() => setSelectedUf(r.uf)}
+                    onClick={() => openDrilldown(r.uf)}
                   >
                     <td className="py-2 pr-2 font-medium">{r.uf}</td>
                     <td className="py-2 pr-2 text-muted-foreground">{r.name}</td>
@@ -603,7 +612,7 @@ export default function PenetrationTab() {
 
       {/* Drilldown cidade */}
       {selectedUf && (
-        <Card className="border-primary/30">
+        <Card ref={drilldownRef} className="border-primary/30 scroll-mt-4">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
