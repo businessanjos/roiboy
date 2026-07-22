@@ -1151,3 +1151,162 @@ function BarRow({
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────
+// Comparativo entre cenários salvos — qual maximiza SOM
+// ─────────────────────────────────────────────────────────────
+function ScenarioComparePanel({
+  scenarios,
+  activeId,
+  onSelect,
+  latestByQuery,
+}: {
+  scenarios: Scenario[];
+  activeId: string;
+  onSelect: (id: string) => void;
+  latestByQuery: Map<string, Row>;
+}) {
+  type ScenarioRollup = {
+    scenario: Scenario;
+    tam: number | null;
+    sam: number | null;
+    som: number | null;
+    somPeople: number | null;
+    lastCalc: string | null;
+    missing: number;
+  };
+
+  const rollups: ScenarioRollup[] = scenarios.map((s) => {
+    let tam: number | null = null;
+    let sam: number | null = null;
+    let som: number | null = null;
+    let somPeople: number | null = null;
+    let lastCalc: string | null = null;
+    let missing = 0;
+    tiers.forEach((t) => {
+      const q = t.buildQuery(s);
+      const row = latestByQuery.get(q);
+      if (!row) { missing++; return; }
+      if (!lastCalc || row.created_at > lastCalc) lastCalc = row.created_at;
+      const rev = parseBRL(row.answer, t.key);
+      if (t.key === "tam") tam = rev;
+      if (t.key === "sam") sam = rev;
+      if (t.key === "som") {
+        som = rev;
+        somPeople = parsePeople(row.answer, "som");
+      }
+    });
+    return { scenario: s, tam, sam, som, somPeople, lastCalc, missing };
+  });
+
+  const bestSomRev = Math.max(0, ...rollups.map((r) => r.som ?? 0));
+
+  return (
+    <Card className="ring-1 ring-blue-500/20 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent">
+      <CardContent className="p-5 space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <ListChecks className="h-4 w-4 text-blue-600" />
+            Comparativo de cenários — qual maximiza SOM
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Cada linha é um cenário salvo. O melhor SOM em R$ ganha destaque; recortes ainda não calculados
+            aparecem como <em>—</em>.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto -mx-2">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wide text-muted-foreground border-b">
+                <th className="text-left px-2 py-2 font-semibold">Cenário</th>
+                <th className="text-left px-2 py-2 font-semibold">Recorte</th>
+                <th className="text-right px-2 py-2 font-semibold">TAM (R$)</th>
+                <th className="text-right px-2 py-2 font-semibold">SAM (R$)</th>
+                <th className="text-right px-2 py-2 font-semibold">SOM (R$)</th>
+                <th className="text-right px-2 py-2 font-semibold">Clientes 12m</th>
+                <th className="text-right px-2 py-2 font-semibold">Faixas</th>
+                <th className="text-right px-2 py-2 font-semibold">Última análise</th>
+                <th className="text-right px-2 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rollups.map((r) => {
+                const isBest = r.som !== null && r.som === bestSomRev && bestSomRev > 0;
+                const isActive = r.scenario.id === activeId;
+                return (
+                  <tr
+                    key={r.scenario.id}
+                    className={`border-b last:border-0 ${isBest ? "bg-emerald-500/5" : ""} ${isActive ? "ring-1 ring-inset ring-blue-500/30" : ""}`}
+                  >
+                    <td className="px-2 py-2 align-top">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-foreground">{r.scenario.name}</span>
+                        {isBest && (
+                          <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[9px] px-1.5 py-0">
+                            melhor SOM
+                          </Badge>
+                        )}
+                        {isActive && !isBest && (
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0">ativo</Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-2 py-2 align-top text-muted-foreground">
+                      <div>📍 {r.scenario.geo}</div>
+                      <div>🎯 {r.scenario.category}</div>
+                      <div>📣 {r.scenario.channel}</div>
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums align-top">
+                      {r.tam !== null ? fmtBigBRL(r.tam) : "—"}
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums align-top">
+                      {r.sam !== null ? fmtBigBRL(r.sam) : "—"}
+                    </td>
+                    <td className={`px-2 py-2 text-right tabular-nums align-top ${isBest ? "text-emerald-700 font-bold" : "font-semibold"}`}>
+                      {r.som !== null ? fmtBigBRL(r.som) : "—"}
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums align-top">
+                      {r.somPeople !== null ? fmtBigNum(r.somPeople) : "—"}
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums align-top text-muted-foreground">
+                      {r.scenario.bands.length}
+                    </td>
+                    <td className="px-2 py-2 text-right align-top text-muted-foreground text-[11px]">
+                      {r.lastCalc
+                        ? formatDistanceToNow(new Date(r.lastCalc), { addSuffix: true, locale: ptBR })
+                        : "—"}
+                      {r.missing > 0 && (
+                        <div className="text-amber-600 text-[10px]">
+                          {r.missing} tier(s) pendente(s)
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-2 py-2 text-right align-top">
+                      {!isActive && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => onSelect(r.scenario.id)}
+                        >
+                          Ativar <ChevronRight className="h-3 w-3 ml-0.5" />
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground">
+          💡 Para preencher uma linha, ative o cenário e clique em <strong>Recalcular tudo</strong>.
+          Compare recortes (ex.: Sudeste × Nordeste, HOF × Injetáveis, Eventos × Digital direto) para
+          descobrir qual combinação de linha de produto + canal captura mais receita em 12 meses.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
