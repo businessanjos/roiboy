@@ -116,7 +116,7 @@ type Tier = {
   text: string;
   bg: string;
   helper: string;
-  buildQuery: (bands: Band[]) => string;
+  buildQuery: (scenario: Scenario) => string;
 };
 
 const tiers: Tier[] = [
