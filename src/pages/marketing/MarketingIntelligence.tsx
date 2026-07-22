@@ -358,6 +358,7 @@ export default function MarketingIntelligence() {
 
       {data && (
         <>
+          <TamSamSomCards onOpenDetail={() => setTab("research")} />
           <MarketSnapshotCards onOpenDetail={() => setTab("research")} />
 
           <div className="grid gap-4 md:grid-cols-4">
