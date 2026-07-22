@@ -622,9 +622,10 @@ export default function PenetrationTab() {
               <code>business_state</code> vazios. TAM por UF é distribuído por peso qualitativo (Sebrae/ABF/IBGE).
             </div>
             <div>
-              <strong className="text-foreground">Limitações conhecidas:</strong> a penetração nacional só
-              considera clientes com UF preenchida — clientes sem UF não entram no denominador de estado.
-              Preencher o cadastro melhora diretamente a acurácia.
+              <strong className="text-foreground">Numerador da penetração:</strong> o KPI
+              <em> nacional </em> usa a base considerada inteira (cliente existe no mercado mesmo sem UF).
+              Já o <em>ranking por UF</em> só conta clientes com estado preenchido — por isso a soma das
+              linhas pode ser menor que a base total. Preencher o cadastro melhora a acurácia do mapa.
             </div>
           </div>
         </CardContent>
