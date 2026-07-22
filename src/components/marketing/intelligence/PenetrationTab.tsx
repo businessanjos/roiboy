@@ -251,9 +251,13 @@ export default function PenetrationTab() {
   const totals = useMemo(() => {
     const withUf = rows.reduce((s, r) => s + r.clients, 0);
     const mqlsWithSignal = rows.reduce((s, r) => s + r.leads, 0);
-    const penNacional = totalTam ? (withUf / totalTam) * 100 : 0;
+    // Penetração nacional usa a base considerada INTEIRA (com ou sem UF).
+    // Faz sentido porque o cliente existe no mercado mesmo sem estado cadastrado —
+    // só não conseguimos alocá-lo no mapa por UF. Usar apenas os com UF
+    // subestimaria a penetração real.
+    const penNacional = totalTam ? (consideredClients.length / totalTam) * 100 : 0;
     return { penNacional, withUf, mqlsWithSignal };
-  }, [rows, totalTam]);
+  }, [rows, totalTam, consideredClients]);
 
   const cityRows: CityRow[] = useMemo(() => {
     if (!selectedUf) return [];
@@ -415,7 +419,7 @@ export default function PenetrationTab() {
             <MetricMini
               label="Penetração nacional"
               value={`${totals.penNacional.toFixed(2)}%`}
-              hint={`${totals.withUf} / ${totalTam.toLocaleString("pt-BR")} (só UFs mapeadas)`}
+              hint={`${coverage.totalConsidered} / ${totalTam.toLocaleString("pt-BR")} (base total, com ou sem UF)`}
               accent="text-primary"
             />
           </div>
@@ -618,9 +622,10 @@ export default function PenetrationTab() {
               <code>business_state</code> vazios. TAM por UF é distribuído por peso qualitativo (Sebrae/ABF/IBGE).
             </div>
             <div>
-              <strong className="text-foreground">Limitações conhecidas:</strong> a penetração nacional só
-              considera clientes com UF preenchida — clientes sem UF não entram no denominador de estado.
-              Preencher o cadastro melhora diretamente a acurácia.
+              <strong className="text-foreground">Numerador da penetração:</strong> o KPI
+              <em> nacional </em> usa a base considerada inteira (cliente existe no mercado mesmo sem UF).
+              Já o <em>ranking por UF</em> só conta clientes com estado preenchido — por isso a soma das
+              linhas pode ser menor que a base total. Preencher o cadastro melhora a acurácia do mapa.
             </div>
           </div>
         </CardContent>
