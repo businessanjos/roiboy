@@ -358,7 +358,15 @@ export default function MarketingIntelligence() {
 
       {data && (
         <>
-          <TamSamSomCards onOpenDetail={() => setTab("research")} />
+          <TamSamSomCards
+            onOpenDetail={() => setTab("research")}
+            currentMetrics={{
+              activeClients: data.summary.active_clients,
+              avgTicket: data.icp.avgTicket,
+              annualRevenue: data.icp.totalValue,
+              churnRate: data.summary.churn_rate,
+            }}
+          />
           <MarketSnapshotCards onOpenDetail={() => setTab("research")} />
 
           <div className="grid gap-4 md:grid-cols-4">
