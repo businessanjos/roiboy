@@ -9,60 +9,62 @@ export type BenchmarkQuery = {
   icon: "clinics" | "franchise" | "units" | "solo" | "derm" | "hof";
 };
 
+// IMPORTANTE: Eternum atende CLÍNICAS DE ESTÉTICA AVANÇADA / MÉDICA (procedimentos
+// estéticos, injetáveis, laser, HOF, dermato). NÃO atende salões de beleza, barbearias,
+// cabeleireiros, manicure, depilação simples ou estética capilar. Toda pergunta abaixo
+// precisa deixar isso EXPLÍCITO para a Perplexity não devolver o universo "beleza".
+const EXCLUSAO = "IMPORTANTE: considere apenas clínicas de estética avançada/médica (procedimentos estéticos, injetáveis, laser, tecnologias, harmonização, dermato). EXCLUA salões de beleza, barbearias, cabeleireiros, manicure/pedicure, depilação simples, estética capilar, SPAs de relaxamento e centros de bem-estar sem procedimentos estéticos.";
+
 export const benchmarkQueries: BenchmarkQuery[] = [
   {
     key: "clinicas-estetica",
-    label: "Clínicas de estética no Brasil",
+    label: "Clínicas de estética avançada (BR)",
     focus: "tam",
     icon: "clinics",
-    hint: "Total de estabelecimentos (Sebrae / CNAE / IBGE)",
-    query:
-      "Quantas clínicas de estética existem no Brasil hoje? Traga número total, fonte oficial (Sebrae, ABIHPEC, Receita Federal/CNAE 8690-9/04, IBGE) e recorte por região se possível.",
+    hint: "Somente clínicas com procedimentos estéticos/médicos",
+    query: `Quantas CLÍNICAS DE ESTÉTICA AVANÇADA existem no Brasil hoje (estabelecimentos que realizam procedimentos estéticos, injetáveis, laser, tecnologias, harmonização facial/corporal)? ${EXCLUSAO} Traga número total, metodologia, recorte por CNAE relevante (ex.: 8690-9/04 atividades de atenção à saúde humana; 9602-5/02 atividades de estetica e outros serviços de cuidados com a beleza — considere APENAS a fração que executa procedimentos avançados) e fonte oficial (Sebrae, IBGE, Receita Federal, associações do setor).`,
   },
   {
     key: "redes-franquia",
-    label: "Redes de franquia de estética",
+    label: "Redes de franquia de estética avançada",
     focus: "concorrentes",
     icon: "franchise",
-    hint: "Principais redes (Onodera, Espaçolaser, etc.)",
-    query:
-      "Quantas redes de franquia de clínicas de estética existem no Brasil? Liste as principais redes (ex.: Onodera, Sóbrancelhas, Espaçolaser, Bio Ritmo Estética, Ella Clínica, etc.), com nome, ano de fundação e posicionamento.",
+    hint: "Redes com procedimentos estéticos (não salões)",
+    query: `Quantas redes de franquia de CLÍNICAS DE ESTÉTICA AVANÇADA existem no Brasil? ${EXCLUSAO} Liste as principais redes que operam clínicas com procedimentos estéticos/injetáveis/laser (ex.: Onodera Estética, Bio Ritmo Estética, Ella Clínica, Clínica Leger e similares) com nome, ano de fundação e posicionamento. NÃO inclua Espaçolaser (depilação a laser pura), Sóbrancelhas, redes de cabeleireiro ou barbearia.`,
   },
   {
     key: "unidades-franquia",
-    label: "Unidades por rede de franquia",
+    label: "Unidades das redes de estética",
     focus: "concorrentes",
     icon: "units",
-    hint: "Total agregado de unidades (ABF)",
-    query:
-      "Para as principais redes de franquia de clínicas de estética no Brasil, informe o número de unidades por rede (últimos dados disponíveis) e o total agregado. Cite fonte (ABF, sites oficiais das redes).",
+    hint: "Total agregado de unidades das redes de estética avançada",
+    query: `Para as principais REDES DE FRANQUIA DE CLÍNICAS DE ESTÉTICA AVANÇADA no Brasil (procedimentos estéticos/injetáveis/laser), informe o número de unidades por rede (últimos dados disponíveis) e o total agregado. ${EXCLUSAO} Cite fonte (ABF, sites oficiais das redes).`,
   },
   {
     key: "clinicas-individuais",
-    label: "Clínicas independentes",
+    label: "Clínicas independentes (não-rede)",
     focus: "tam",
     icon: "solo",
-    hint: "Clínicas fora de redes de franquia",
-    query:
-      "Do total de clínicas de estética no Brasil, quantas são independentes/individuais (não pertencem a redes de franquia)? Traga estimativa, metodologia e fonte.",
+    hint: "Clínicas de estética avançada fora de franquias",
+    query: `Do total de CLÍNICAS DE ESTÉTICA AVANÇADA no Brasil (procedimentos estéticos/injetáveis/laser/harmonização), quantas são independentes/individuais (não pertencem a redes de franquia)? ${EXCLUSAO} Traga estimativa, metodologia e fonte.`,
   },
   {
     key: "dermatologistas",
     label: "Médicos dermatologistas",
     focus: "publico",
     icon: "derm",
-    hint: "Especialistas com título SBD/RQE",
+    hint: "Especialistas com título SBD e/ou RQE no CFM",
     query:
-      "Quantos médicos dermatologistas com título de especialista pela SBD (Sociedade Brasileira de Dermatologia) e/ou registro no CFM/RQE existem no Brasil? Traga número, ano de referência e fonte oficial.",
+      "Quantos médicos dermatologistas com título de especialista pela SBD (Sociedade Brasileira de Dermatologia) e/ou registro no CFM/RQE existem no Brasil? Traga número, ano de referência e fonte oficial (SBD, CFM, Demografia Médica).",
   },
   {
     key: "hof",
     label: "Especialistas em HOF",
     focus: "publico",
     icon: "hof",
-    hint: "Dentistas + médicos com formação em HOF",
+    hint: "Dentistas (CFO) + médicos com formação em HOF",
     query:
-      "Quantos profissionais especialistas em Harmonização Orofacial (HOF) atuam no Brasil hoje, considerando dentistas com especialização reconhecida pelo CFO e médicos com formação em HOF? Traga números separados por categoria (dentista vs médico) e fonte oficial (CFO, CFM, associações).",
+      "Quantos profissionais especialistas em Harmonização Orofacial (HOF) atuam no Brasil hoje, considerando dentistas com especialização reconhecida pelo CFO e médicos com formação em HOF? Traga números SEPARADOS por categoria (dentista vs médico) e fonte oficial (CFO, CFM, associações).",
   },
 ];
 
