@@ -548,6 +548,10 @@ export default function MarketingIntelligence() {
               <PenetrationTab />
             </TabsContent>
 
+            <TabsContent value="events" className="space-y-4 mt-6">
+              <EventsTab />
+            </TabsContent>
+
             <TabsContent value="research" className="space-y-4 mt-6">
               <MarketResearchTab />
             </TabsContent>
