@@ -432,11 +432,11 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
 
     case 'next_activity_date': {
       const nextDue = dealNextActivityMap?.[deal.id] ?? null;
-      const pending = dealPendingCountMap?.[deal.id] ?? 0;
-      // is_empty / is_not_empty se referem à existência de tarefa pendente,
-      // independentemente de a tarefa ter due_date preenchida.
-      if (operator === 'is_empty') return pending === 0;
-      if (operator === 'is_not_empty') return pending > 0;
+      const totalTasks = dealTaskCountMap?.[deal.id] ?? 0;
+      // is_empty / is_not_empty = deal sem NENHUMA atividade cadastrada
+      // (nem pendente nem concluída). Vendedor não fez nada com o lead.
+      if (operator === 'is_empty') return totalTasks === 0;
+      if (operator === 'is_not_empty') return totalTasks > 0;
       if (!nextDue) return false;
       return evaluateDateCondition(nextDue, operator, value, today);
     }
