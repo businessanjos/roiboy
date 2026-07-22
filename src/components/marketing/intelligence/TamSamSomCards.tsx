@@ -38,6 +38,15 @@ type Row = { id: string; query: string; answer: string; created_at: string; cita
 
 type Band = { label: string; min: number; max: number };
 
+type Scenario = {
+  id: string;
+  name: string;
+  bands: Band[];
+  geo: string;      // ex.: "Brasil (nacional)", "Sudeste", "SP capital"
+  category: string; // ex.: "Todos", "Injetáveis", "HOF", "Laser + tecnologias"
+  channel: string;  // ex.: "Todos", "Digital direto", "Indicação", "Eventos"
+};
+
 const DEFAULT_BANDS: Band[] = [
   { label: "Entrada", min: 997, max: 5000 },
   { label: "Intermediário", min: 5000, max: 40000 },
@@ -45,10 +54,40 @@ const DEFAULT_BANDS: Band[] = [
   { label: "Conselho / High-ticket", min: 200000, max: 500000 },
 ];
 
-const STORAGE_KEY = "mi_tsm_bands_v1";
+const DEFAULT_GEO = "Brasil (nacional)";
+const DEFAULT_CATEGORY = "Todos os procedimentos";
+const DEFAULT_CHANNEL = "Todos os canais";
+
+const LEGACY_BANDS_KEY = "mi_tsm_bands_v1";
+const SCENARIOS_KEY = "mi_tsm_scenarios_v1";
+const ACTIVE_SCENARIO_KEY = "mi_tsm_active_scenario_v1";
+
+function newId() {
+  return `sc_${Math.random().toString(36).slice(2, 9)}${Date.now().toString(36).slice(-4)}`;
+}
+
+function makeDefaultScenario(overrides: Partial<Scenario> = {}): Scenario {
+  return {
+    id: newId(),
+    name: "Padrão — Brasil, todos os canais",
+    bands: DEFAULT_BANDS,
+    geo: DEFAULT_GEO,
+    category: DEFAULT_CATEGORY,
+    channel: DEFAULT_CHANNEL,
+    ...overrides,
+  };
+}
 
 const EXCLUSAO =
   "IMPORTANTE: considere APENAS profissionais e clínicas de ESTÉTICA AVANÇADA/MÉDICA (procedimentos estéticos, injetáveis, laser, tecnologias, harmonização facial/corporal, dermato, HOF). EXCLUA salões de beleza, barbearias, cabeleireiros, manicure/pedicure, depilação simples, estética capilar, SPAs de relaxamento e centros de bem-estar sem procedimentos estéticos.";
+
+function recorteBlock(s: Scenario): string {
+  return `RECORTE DESTE CENÁRIO (aplique de forma consistente em todos os cálculos e fontes):
+- Geografia: ${s.geo}
+- Categoria/nicho: ${s.category}
+- Canal de aquisição avaliado: ${s.channel}
+Se o recorte reduzir o universo, ajuste TODOS os números (profissionais, clínicas, R$) proporcionalmente e diga explicitamente o fator de recorte usado.`;
+}
 
 function fmtBRL(n: number): string {
   if (n >= 1000) return `R$ ${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
