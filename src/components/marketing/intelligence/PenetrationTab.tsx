@@ -148,6 +148,7 @@ type CityRow = {
   city: string;
   clients: number;
   leads: number;
+  leadsInferred: number; // MQLs cuja cidade veio do DDD (não do cadastro)
 };
 
 export default function PenetrationTab() {
