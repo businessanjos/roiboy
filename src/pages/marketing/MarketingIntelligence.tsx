@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import CompetitorsTab from "@/components/marketing/intelligence/CompetitorsTab";
 import MarketResearchTab from "@/components/marketing/intelligence/MarketResearchTab";
+import { MarketSnapshotCards } from "@/components/marketing/intelligence/MarketSnapshotCards";
 import { Swords, Search as SearchIcon } from "lucide-react";
 
 type DistItem = { label: string; count: number; pct: number };
