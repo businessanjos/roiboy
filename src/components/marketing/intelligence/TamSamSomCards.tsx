@@ -152,6 +152,8 @@ const tiers: Tier[] = [
 
 ${MARKET_SCOPE_INLINE}
 
+${CONSISTENCY_GUARDRAIL}
+
 ${recorteBlock(scenario)}
 
 ${clinicSizeBlock(scenario.bands)}
@@ -180,6 +182,8 @@ Traga OBRIGATORIAMENTE:
 
 ${MARKET_SCOPE_INLINE}
 
+${CONSISTENCY_GUARDRAIL}
+
 ${recorteBlock(scenario)}
 
 ${clinicSizeBlock(scenario.bands)}
@@ -207,6 +211,8 @@ Traga:
       return `Calcule o SOM (Serviceable Obtainable Market) do MERCADO DE ESTÉTICA AVANÇADA/MÉDICA NO BRASIL no recorte abaixo, para uma janela de 12 MESES.
 
 ${MARKET_SCOPE_INLINE}
+
+${CONSISTENCY_GUARDRAIL}
 
 ${recorteBlock(scenario)}
 
