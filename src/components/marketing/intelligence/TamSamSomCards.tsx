@@ -111,7 +111,17 @@ function clinicSizeBlock(bands: Band[]): string {
 const MARKET_SCOPE_INLINE = `OBJETO da análise: MERCADO DE ESTÉTICA AVANÇADA/MÉDICA NO BRASIL (clínicas, profissionais, faturamento, procedimentos). NÃO calcule mercado de mentoria/educação — o leitor é uma mentoria B2B, mas a resposta deve ser sobre o mercado de estética em si.
 INCLUIR: clínicas de procedimentos injetáveis, laser, tecnologias (RF, ultrassom microfocado, criolipólise), harmonização facial/corporal, dermato estética, HOF odontológica, biomedicina estética, medicina estética.
 EXCLUIR: salões de beleza, barbearias, cabeleireiros, manicure/pedicure, depilação simples, estética capilar, SPAs de relaxamento.
-Se a fonte misturar (ex.: CNAE 9602-5/02), traga a fração estimada só de estética avançada.`;
+Se a fonte misturar (ex.: CNAE 9602-5/02, universo "beleza & estética"), NUNCA devolva o número bruto misturado como resposta — traga apenas a fração AJUSTADA para estética avançada/médica e explique o fator de ajuste.`;
+
+// Guardrail de consistência aplicado em todos os tiers.
+// Sem isso o modelo mistura o universo "beleza" (R$ 200bi+) com estética avançada
+// e devolve SAM > TAM, quebrando a lógica do funil.
+const CONSISTENCY_GUARDRAIL = `REGRAS DE CONSISTÊNCIA (não violar):
+- Baseline TAM Brasil de estética AVANÇADA/MÉDICA (ajustado, sem salão de beleza): ~R$ 40–60 bi/ano, ~120–150 mil clínicas, ~450–600 mil profissionais habilitados. Use esta ordem de grandeza como âncora — se sua fonte disser mais que isso, é porque incluiu "beleza" (barbearia/salão) e precisa ser ajustada para baixo.
+- SAM SEMPRE ≤ TAM. SOM SEMPRE ≤ SAM. Se o recorte for "Brasil (nacional) / todos os canais / todos os procedimentos", SAM = TAM (repita o mesmo valor). Nunca devolva SAM ou SOM maior que o TAM.
+- O TL;DR DEVE ser um único valor em R$ (ex.: "R$ 48 bi/ano") ou uma faixa estreita com unidade explícita (ex.: "R$ 45–55 bi/ano"). Nunca devolva número solto sem unidade (ex.: "12"). Se não houver dado confiável, escreva "sem estimativa confiável" no TL;DR.
+- Não use marcadores de citação [1], [2] no texto.`;
+
 
 type Tier = {
   key: "tam" | "sam" | "som";
