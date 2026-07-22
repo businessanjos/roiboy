@@ -612,7 +612,7 @@ export default function PenetrationTab() {
 
       {/* Drilldown cidade */}
       {selectedUf && (
-        <Card className="border-primary/30">
+        <Card ref={drilldownRef} className="border-primary/30 scroll-mt-4">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
