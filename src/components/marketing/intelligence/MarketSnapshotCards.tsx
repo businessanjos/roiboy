@@ -17,6 +17,8 @@ import {
   Stethoscope,
   Smile,
   ChevronRight,
+  Globe2,
+  Syringe,
 } from "lucide-react";
 import { benchmarkQueries, extractHeadline, type BenchmarkQuery } from "./marketBenchmarks";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
@@ -24,7 +26,9 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const iconMap = {
+  universe: Globe2,
   clinics: Building2,
+  core: Syringe,
   franchise: Store,
   units: Boxes,
   solo: Home,
@@ -33,7 +37,9 @@ const iconMap = {
 } as const;
 
 const accentMap = {
+  universe: { bg: "bg-slate-500/10", text: "text-slate-600", border: "border-slate-500/20" },
   clinics: { bg: "bg-purple-500/10", text: "text-purple-600", border: "border-purple-500/20" },
+  core: { bg: "bg-fuchsia-500/10", text: "text-fuchsia-600", border: "border-fuchsia-500/20" },
   franchise: { bg: "bg-blue-500/10", text: "text-blue-600", border: "border-blue-500/20" },
   units: { bg: "bg-cyan-500/10", text: "text-cyan-600", border: "border-cyan-500/20" },
   solo: { bg: "bg-emerald-500/10", text: "text-emerald-600", border: "border-emerald-500/20" },
