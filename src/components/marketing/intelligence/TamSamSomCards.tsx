@@ -176,6 +176,73 @@ Traga:
 
 interface Props {
   onOpenDetail?: (query: string) => void;
+  currentMetrics?: {
+    activeClients: number;
+    avgTicket: number;
+    annualRevenue: number;
+    churnRate?: number;
+  };
+}
+
+// Extrai a primeira magnitude em R$ associada explicitamente ao tier
+// (ex.: "TAM em R$", "SAM em R$", "Receita capturável em 12 meses (R$)").
+function parseBRL(text: string | undefined, tierKey: "tam" | "sam" | "som"): number | null {
+  if (!text) return null;
+  const anchors: Record<typeof tierKey, RegExp[]> = {
+    tam: [/TAM\s+em\s+R\$[^R]*?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i, /TAM[^\n]{0,120}?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i],
+    sam: [/SAM\s+em\s+R\$[^R]*?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i, /SAM[^\n]{0,120}?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i],
+    som: [/Receita\s+capt[^R]*?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i, /SOM[^\n]{0,120}?R\$\s*([\d.,]+)\s*(bilh[õo]es|bi|milh[õo]es|mi|mil|k)?/i],
+  } as any;
+  for (const re of anchors[tierKey]) {
+    const m = text.match(re);
+    if (m) {
+      const raw = parseFloat(m[1].replace(/\./g, "").replace(",", "."));
+      if (isNaN(raw)) continue;
+      const u = (m[2] || "").toLowerCase();
+      if (/bi|bilh/.test(u)) return raw * 1e9;
+      if (/mi(?!l)|milh/.test(u)) return raw * 1e6;
+      if (/mil|k/.test(u)) return raw * 1e3;
+      return raw;
+    }
+  }
+  return null;
+}
+
+// Extrai número de profissionais/clientes do primeiro trecho útil.
+function parsePeople(text: string | undefined, tierKey: "tam" | "sam" | "som"): number | null {
+  if (!text) return null;
+  const keyword = tierKey === "som"
+    ? /clientes?\s+capt[^\n]{0,80}?([\d.,]+)\s*(mil|milh[õo]es|k)?/i
+    : /(profissionais|cl[íi]nicas|total)[^\n]{0,80}?([\d.,]+)\s*(mil|milh[õo]es|k)?/i;
+  const m = text.match(keyword);
+  if (!m) return null;
+  const numStr = tierKey === "som" ? m[1] : m[2];
+  const unit = ((tierKey === "som" ? m[2] : m[3]) || "").toLowerCase();
+  const raw = parseFloat(numStr.replace(/\./g, "").replace(",", "."));
+  if (isNaN(raw)) return null;
+  if (/milh/.test(unit)) return raw * 1e6;
+  if (/mil|k/.test(unit)) return raw * 1e3;
+  return raw;
+}
+
+function fmtBigBRL(n: number): string {
+  if (n >= 1e9) return `R$ ${(n / 1e9).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} bi`;
+  if (n >= 1e6) return `R$ ${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
+  if (n >= 1e3) return `R$ ${(n / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
+  return `R$ ${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+}
+
+function fmtBigNum(n: number): string {
+  if (n >= 1e6) return `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
+  if (n >= 1e3) return `${(n / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
+  return n.toLocaleString("pt-BR");
+}
+
+function fmtPct(n: number): string {
+  if (n < 0.001) return `${(n * 100).toFixed(4)}%`;
+  if (n < 0.01) return `${(n * 100).toFixed(3)}%`;
+  if (n < 1) return `${(n * 100).toFixed(2)}%`;
+  return `${n.toFixed(1)}%`;
 }
 
 function loadBands(): Band[] {
