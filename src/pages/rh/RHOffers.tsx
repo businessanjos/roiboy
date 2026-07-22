@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Copy, ExternalLink, Trash2, Mail, CheckCircle2, XCircle, Eye, FileText, Send, Sparkles, FilePlus2, LayoutTemplate } from "lucide-react";
+import { Plus, Copy, CopyPlus, ExternalLink, Trash2, Mail, CheckCircle2, XCircle, Eye, FileText, Send, Sparkles, FilePlus2, LayoutTemplate } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getPublicOrigin } from "@/lib/publicLink";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -88,6 +89,40 @@ export default function RHOffers() {
     setDeleteId(null);
   };
 
+  const duplicateOffer = async (id: string) => {
+    const { data: src, error: fetchErr } = await supabase
+      .from("hr_job_offers")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (fetchErr || !src) {
+      toast({ title: "Erro ao duplicar", description: fetchErr?.message ?? "Offer não encontrada", variant: "destructive" });
+      return;
+    }
+    const {
+      id: _id, public_token: _t, created_at: _c, updated_at: _u,
+      sent_at: _s, responded_at: _r, view_count: _v, status: _st,
+      ...rest
+    } = src as any;
+    const payload = {
+      ...rest,
+      status: "draft",
+      view_count: 0,
+      sent_at: null,
+      responded_at: null,
+      is_template: false,
+      template_name: null,
+      candidate_name: `${src.candidate_name} (cópia)`,
+    };
+    const { error } = await supabase.from("hr_job_offers").insert(payload);
+    if (error) {
+      toast({ title: "Erro ao duplicar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Offer duplicada" });
+    load();
+  };
+
   const startBlank = () => {
     setNewDialogOpen(false);
     navigate("/rh/offers/new");
@@ -99,6 +134,7 @@ export default function RHOffers() {
   };
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -152,15 +188,30 @@ export default function RHOffers() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1 pt-2 border-t border-amber-200/40">
-                    <Button size="sm" variant="default" onClick={() => startFromTemplate(t.id)} className="gap-1.5 flex-1 bg-amber-600 hover:bg-amber-700">
-                      <FilePlus2 className="h-3.5 w-3.5" /> Usar modelo
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link to={`/rh/offers/${t.id}/edit`}><FileText className="h-3.5 w-3.5" /></Link>
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setDeleteId(t.id)} className="text-rose-600 hover:text-rose-700">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="default" onClick={() => startFromTemplate(t.id)} className="gap-1.5 flex-1 bg-amber-600 hover:bg-amber-700">
+                          <FilePlus2 className="h-3.5 w-3.5" /> Usar modelo
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Criar nova offer a partir deste modelo</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link to={`/rh/offers/${t.id}/edit`}><FileText className="h-3.5 w-3.5" /></Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Editar modelo</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" onClick={() => setDeleteId(t.id)} className="text-rose-600 hover:text-rose-700">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Excluir modelo</TooltipContent>
+                    </Tooltip>
                   </div>
                 </CardContent>
               </Card>
@@ -242,20 +293,48 @@ export default function RHOffers() {
                   </p>
 
                   <div className="flex items-center gap-1 pt-2 border-t">
-                    <Button size="sm" variant="ghost" onClick={() => copyLink(o.public_token)} className="gap-1.5 flex-1">
-                      <Copy className="h-3.5 w-3.5" /> Copiar link
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild>
-                      <a href={`${getPublicOrigin()}/oferta/${o.public_token}`} target="_blank" rel="noreferrer">
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link to={`/rh/offers/${o.id}/edit`}><FileText className="h-3.5 w-3.5" /></Link>
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setDeleteId(o.id)} className="text-rose-600 hover:text-rose-700">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" onClick={() => copyLink(o.public_token)} className="gap-1.5 flex-1">
+                          <Copy className="h-3.5 w-3.5" /> Copiar link
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copiar link público da offer</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" onClick={() => duplicateOffer(o.id)}>
+                          <CopyPlus className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Duplicar offer</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" asChild>
+                          <a href={`${getPublicOrigin()}/oferta/${o.public_token}`} target="_blank" rel="noreferrer">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Abrir link público</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link to={`/rh/offers/${o.id}/edit`}><FileText className="h-3.5 w-3.5" /></Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Editar offer</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" onClick={() => setDeleteId(o.id)} className="text-rose-600 hover:text-rose-700">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Excluir offer</TooltipContent>
+                    </Tooltip>
                   </div>
                 </CardContent>
               </Card>
@@ -347,5 +426,6 @@ export default function RHOffers() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </TooltipProvider>
   );
 }
