@@ -214,7 +214,7 @@ export function TamSamSomCards({ onOpenDetail }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("mi_market_research")
-        .select("id, query, answer, created_at")
+        .select("id, query, answer, created_at, citations")
         .order("created_at", { ascending: false })
         .limit(300);
       if (error) throw error;
