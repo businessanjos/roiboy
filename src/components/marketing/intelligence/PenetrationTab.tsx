@@ -295,13 +295,15 @@ export default function PenetrationTab() {
 
   const cityRows: CityRow[] = useMemo(() => {
     if (!selectedUf) return [];
-    const byCity = new Map<string, { clients: number; leads: number }>();
+    const byCity = new Map<string, { clients: number; leads: number; leadsInferred: number }>();
+    const bump = (city: string, key: "clients" | "leads" | "leadsInferred") => {
+      const cur = byCity.get(city) || { clients: 0, leads: 0, leadsInferred: 0 };
+      cur[key] += 1;
+      byCity.set(city, cur);
+    };
     for (const c of consideredClients) {
       if (normalizeUf(c.state) !== selectedUf) continue;
-      const city = normalizeCity(c.city) || "(sem cidade)";
-      const cur = byCity.get(city) || { clients: 0, leads: 0 };
-      cur.clients += 1;
-      byCity.set(city, cur);
+      bump(normalizeCity(c.city) || "(sem cidade)", "clients");
     }
     for (const l of leads) {
       const uf =
@@ -309,14 +311,21 @@ export default function PenetrationTab() {
         normalizeUf(l.state) ||
         ufFromPhone(l.phone);
       if (uf !== selectedUf) continue;
-      const city = normalizeCity(l.business_city || l.city) || "(sem cidade)";
-      const cur = byCity.get(city) || { clients: 0, leads: 0 };
-      cur.leads += 1;
-      byCity.set(city, cur);
+      const cadastro = normalizeCity(l.business_city || l.city);
+      if (cadastro) {
+        bump(cadastro, "leads");
+      } else {
+        const inferida = cityFromPhone(l.phone);
+        bump(inferida ? `${inferida} (inferido)` : "(sem cidade)", "leadsInferred");
+      }
     }
     return Array.from(byCity.entries())
       .map(([city, v]) => ({ city, ...v }))
-      .sort((a, b) => b.clients + b.leads * 0.3 - (a.clients + a.leads * 0.3));
+      .sort(
+        (a, b) =>
+          b.clients + (b.leads + b.leadsInferred) * 0.3 -
+          (a.clients + (a.leads + a.leadsInferred) * 0.3)
+      );
   }, [selectedUf, consideredClients, leads]);
 
   const loading = loadingClients || loadingLeads;
