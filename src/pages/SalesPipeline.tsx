@@ -188,6 +188,7 @@ export default function SalesPipeline() {
   }, [searchTerm]);
   const [dealSearchCustomBlobs, setDealSearchCustomBlobs] = useState<Record<string, string>>({});
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
+  const [activitySort, setActivitySort] = usePersistedFilter<'none' | 'pending_desc' | 'pending_asc' | 'total_desc' | 'total_asc'>("salesPipeline", "activitySort", "none");
   const [titleTagFilter, setTitleTagFilter] = usePersistedFilter<string[]>("salesPipeline", "titleTagFilter", []);
   const [openDatePreset, setOpenDatePreset] = usePersistedFilter<string>("salesPipeline", "openDatePreset", "all");
   const [openDateStart, setOpenDateStart] = usePersistedFilter<string>("salesPipeline", "openDateStart", "");
@@ -1028,10 +1029,11 @@ export default function SalesPipeline() {
   }, [activityStatusMap]);
 
   const activeFilterNeedsActivityCounts = useMemo(() => {
+    if (activitySort !== 'none') return true;
     return (activeFilter?.conditions || []).some((condition) =>
       condition.field === 'next_activity_date' || condition.field === 'total_tasks' || condition.field === 'pending_tasks'
     );
-  }, [activeFilter]);
+  }, [activeFilter, activitySort]);
 
   // Range de datas para filtro do pipeline aberto (criação do negócio)
   const openDateRange = useMemo<{ start: Date; end: Date } | null>(() => {
@@ -1090,6 +1092,24 @@ export default function SalesPipeline() {
       return info ? selected.has(info.key) : false;
     });
   }, [dealsBeforeTagFilter, titleTagFilter]);
+
+  // Sort by activity metrics when the user chose a non-default option.
+  // Kanban preserves stage grouping — sorting only reorders cards inside each column.
+  const sortedOpenDeals = useMemo(() => {
+    if (activitySort === 'none') return filteredOpenDeals;
+    const pendingOf = (id: string) => dealPendingCountMap[id] ?? 0;
+    const totalOf = (id: string) => dealTaskCountMap[id] ?? 0;
+    const cmp = (a: Deal, b: Deal) => {
+      switch (activitySort) {
+        case 'pending_desc': return pendingOf(b.id) - pendingOf(a.id);
+        case 'pending_asc':  return pendingOf(a.id) - pendingOf(b.id);
+        case 'total_desc':   return totalOf(b.id) - totalOf(a.id);
+        case 'total_asc':    return totalOf(a.id) - totalOf(b.id);
+        default: return 0;
+      }
+    };
+    return [...filteredOpenDeals].sort(cmp);
+  }, [filteredOpenDeals, activitySort, dealPendingCountMap, dealTaskCountMap]);
 
   const filteredOpenTotalValue = useMemo(
     () => filteredOpenDeals.reduce((sum, deal) => sum + (deal.value || 0), 0),
@@ -2182,6 +2202,23 @@ export default function SalesPipeline() {
                         </div>
                       </div>
                     )}
+                    {activeTab === 'open' && (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Ordenar por atividade</label>
+                        <Select value={activitySort} onValueChange={(v) => setActivitySort(v as typeof activitySort)}>
+                          <SelectTrigger className={cn("h-10 w-full sm:w-[240px]", activitySort !== 'none' && "border-primary/60 text-primary")}>
+                            <SelectValue placeholder="Padrão" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Padrão (sem ordenação)</SelectItem>
+                            <SelectItem value="pending_desc">Atividades pendentes (maior → menor)</SelectItem>
+                            <SelectItem value="pending_asc">Atividades pendentes (menor → maior)</SelectItem>
+                            <SelectItem value="total_desc">Total de atividades (maior → menor)</SelectItem>
+                            <SelectItem value="total_asc">Total de atividades (menor → maior)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     {activeTab === 'open' && titleTagOptions.length > 0 && (
                       <MultiSelectFilter
                         label="Origem"
@@ -2534,14 +2571,14 @@ export default function SalesPipeline() {
                 {viewMode === 'kanban' ? (
                   <DealKanban
                     stages={stages}
-                    deals={filteredOpenDeals}
+                    deals={sortedOpenDeals}
                     onDealClick={handleDealClick}
                     onDealMove={handleDealMove}
                     showActivityCounts={activeFilterNeedsActivityCounts}
                   />
                 ) : (
                   <DealListView 
-                    deals={filteredOpenDeals} 
+                    deals={sortedOpenDeals} 
                     stages={stages}
                     onDealClick={handleDealClick} 
                   />
