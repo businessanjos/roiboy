@@ -188,6 +188,7 @@ export default function SalesPipeline() {
   }, [searchTerm]);
   const [dealSearchCustomBlobs, setDealSearchCustomBlobs] = useState<Record<string, string>>({});
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
+  const [activitySort, setActivitySort] = usePersistedFilter<'none' | 'pending_desc' | 'pending_asc' | 'total_desc' | 'total_asc'>("salesPipeline", "activitySort", "none");
   const [titleTagFilter, setTitleTagFilter] = usePersistedFilter<string[]>("salesPipeline", "titleTagFilter", []);
   const [openDatePreset, setOpenDatePreset] = usePersistedFilter<string>("salesPipeline", "openDatePreset", "all");
   const [openDateStart, setOpenDateStart] = usePersistedFilter<string>("salesPipeline", "openDateStart", "");
