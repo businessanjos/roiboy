@@ -2157,14 +2157,21 @@ export default function SalesPipeline() {
                     {activeTab === 'open' && (
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Avançado</label>
-                        <PipelineFilterButton
-                          salesUsers={salesUsers}
-                          stages={stages}
-                          activeFilter={activeFilter}
-                          onFilterChange={setActiveFilter}
-                          availableTags={availableTags}
-                          products={pipelineProducts}
-                        />
+                        <div className="flex items-center gap-2">
+                          <PipelineFilterButton
+                            salesUsers={salesUsers}
+                            stages={stages}
+                            activeFilter={activeFilter}
+                            onFilterChange={setActiveFilter}
+                            availableTags={availableTags}
+                            products={pipelineProducts}
+                          />
+                          <PipelineDebugDialog
+                            deals={openDeals}
+                            activityStatusMap={activityStatusMap}
+                            isLoading={activityStatusLoading}
+                          />
+                        </div>
                       </div>
                     )}
                     {activeTab === 'open' && titleTagOptions.length > 0 && (
