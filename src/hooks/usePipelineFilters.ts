@@ -85,14 +85,14 @@ export const RECOMMENDED_FILTERS = [
   {
     id: 'never_contacted',
     name: '🔴 Nunca contatado (sem nenhum registro)',
-    description: 'Leads sem NENHUMA atividade humana registrada (totalActivities === 0): zero tarefas em internal_tasks e zero registros em deal_activities (notas, ligações, WhatsApp, e-mails, reuniões, arquivos). Logs de sistema não contam. Mede falha de prospecção — o SDR nunca entrou na régua com esse lead.',
+    description: 'Leads sem NENHUMA atividade humana registrada (totalActivities === 0): zero atividades em internal_tasks e zero registros em deal_activities (notas, ligações, WhatsApp, e-mails, reuniões, arquivos). Logs de sistema não contam. Mede falha de prospecção — o SDR nunca entrou na régua com esse lead.',
     conditions: [{ field: 'total_tasks', operator: 'equals', value: 0 }],
     match_type: 'all' as const
   },
   {
     id: 'no_next_activity',
     name: '🟡 Sem próximo passo agendado',
-    description: 'Leads que têm histórico de contato, mas nenhuma tarefa/atividade em aberto no futuro (pendingCount === 0). Espelha o "0 pendentes" exibido no card. Mede falha de cadência — o vendedor tocou o lead, mas não agendou o próximo passo.',
+    description: 'Leads que têm histórico de contato, mas nenhuma atividade em aberto no futuro (pendingCount === 0). Espelha o "0 pendentes" exibido no card. Mede falha de cadência — o vendedor tocou o lead, mas não agendou o próximo passo.',
     conditions: [{ field: 'next_activity_date', operator: 'is_empty', value: null }],
     match_type: 'all' as const
   },
@@ -257,8 +257,8 @@ export function explainDealActivityFilters(ctx: DealDebugContext): DealFilterExp
       filterName: '🔴 Nunca contatado (sem nenhum registro)',
       matches: neverContactedMatches,
       reason: neverContactedMatches
-        ? `APARECE — totalActivities = 0 (nenhuma tarefa em internal_tasks e nenhum registro humano em deal_activities).`
-        : `NÃO aparece — totalActivities = ${totalActivities} (há tarefas ou registros manuais como nota/ligação/WhatsApp/e-mail/reunião/arquivo). Precisa ser 0 para o lead aparecer neste filtro.`,
+        ? `APARECE — totalActivities = 0 (nenhuma atividade em internal_tasks e nenhum registro humano em deal_activities).`
+        : `NÃO aparece — totalActivities = ${totalActivities} (há atividades ou registros manuais como nota/ligação/WhatsApp/e-mail/reunião/arquivo). Precisa ser 0 para o lead aparecer neste filtro.`,
     },
     {
       filterId: 'no_next_activity',
@@ -266,9 +266,9 @@ export function explainDealActivityFilters(ctx: DealDebugContext): DealFilterExp
       matches: noNextStepMatches,
       reason: noNextStepMatches
         ? `APARECE — pendingCount = 0${
-            totalActivities > 0 ? ` (o lead tem ${totalActivities} atividade(s) histórica(s), mas nenhuma tarefa em aberto).` : ' (nenhuma tarefa em aberto).'
+            totalActivities > 0 ? ` (o lead tem ${totalActivities} atividade(s) histórica(s), mas nenhuma atividade em aberto).` : ' (nenhuma atividade em aberto).'
           }`
-        : `NÃO aparece — pendingCount = ${pendingCount} (há tarefa(s) em aberto${
+        : `NÃO aparece — pendingCount = ${pendingCount} (há atividade(s) em aberto${
             nextDueDate ? `, próxima em ${nextDueDate}` : ''
           }${hasOverdue ? ', com pelo menos uma vencida' : ''}). Precisa ser 0 para o lead aparecer neste filtro.`,
     },
@@ -489,7 +489,7 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
     case 'next_activity_date': {
       const nextDue = dealNextActivityMap?.[deal.id] ?? null;
       const pendingCount = dealPendingCountMap?.[deal.id] ?? 0;
-      // is_empty / is_not_empty = deal SEM tarefa/atividade em aberto (pendente).
+      // is_empty / is_not_empty = deal SEM atividade em aberto (pendente).
       // Espelha o "X pendentes" mostrado no card: 0 pendentes ⇒ aparece no filtro.
       // Atividades já concluídas (Follow Up marcado, ligações registradas, etc.)
       // NÃO impedem o card de entrar, pois não há próximo passo agendado.

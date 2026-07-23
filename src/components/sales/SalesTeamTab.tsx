@@ -275,7 +275,7 @@ export function SalesTeamTab() {
               <div className="min-w-0">
                 <p className="text-lg sm:text-xl font-bold">{totals.completed_tasks}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                  Tarefas concluídas
+                  Atividades concluídas
                 </p>
               </div>
             </div>
@@ -324,7 +324,7 @@ export function SalesTeamTab() {
             <Users className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
             <p className="font-medium text-sm sm:text-base">Nenhuma atividade no período</p>
             <p className="text-xs sm:text-sm mt-1">
-              Os vendedores aparecerão aqui quando tiverem ligações, negócios ou tarefas registradas.
+              Os vendedores aparecerão aqui quando tiverem ligações, negócios ou atividades registradas.
             </p>
           </CardContent>
         </Card>
@@ -338,7 +338,7 @@ export function SalesTeamTab() {
                   <TableHead className="font-medium text-center min-w-[100px]">Ligações</TableHead>
                   <TableHead className="font-medium text-center min-w-[100px]">Pipeline</TableHead>
                   <TableHead className="font-medium text-center min-w-[120px]">Ganhos</TableHead>
-                  <TableHead className="font-medium text-center min-w-[90px]">Tarefas</TableHead>
+                  <TableHead className="font-medium text-center min-w-[90px]">Atividades</TableHead>
                   <TableHead className="font-medium text-center min-w-[90px]">Agend.</TableHead>
                   <TableHead className="font-medium text-center min-w-[80px]">Leads</TableHead>
                   <TableHead className="w-8" />

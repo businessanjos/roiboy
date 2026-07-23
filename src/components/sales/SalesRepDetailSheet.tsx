@@ -204,7 +204,7 @@ export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailShee
             <CardContent className="p-3 text-center">
               <CheckCircle2 className="h-4 w-4 text-amber-500 mx-auto mb-1" />
               <p className="text-lg font-bold text-amber-600">{rep.completed_tasks}</p>
-              <p className="text-[10px] text-muted-foreground">Tarefas</p>
+              <p className="text-[10px] text-muted-foreground">Atividades</p>
             </CardContent>
           </Card>
         </div>
@@ -222,7 +222,7 @@ export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailShee
             </TabsTrigger>
             <TabsTrigger value="tasks" className="gap-1.5">
               <CheckCircle2 className="h-4 w-4" />
-              Tarefas
+              Atividades
             </TabsTrigger>
           </TabsList>
 
@@ -354,7 +354,7 @@ export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailShee
                   {tasks.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>Nenhuma tarefa no período</p>
+                      <p>Nenhuma atividade no período</p>
                     </div>
                   ) : (
                     tasks.map((task) => (

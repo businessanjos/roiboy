@@ -246,7 +246,7 @@ export function CommissionDashboard({
                       <TableHead className="text-right">Valor Ganho</TableHead>
                       <TableHead className="text-center">Ligações</TableHead>
                       <TableHead className="text-center">Conversão</TableHead>
-                      <TableHead className="text-center">Tarefas</TableHead>
+                      <TableHead className="text-center">Atividades</TableHead>
                       <TableHead className="text-center">Gatilhos</TableHead>
                       <TableHead className="text-right">Comissão</TableHead>
                       <TableHead className="text-center">Status</TableHead>
