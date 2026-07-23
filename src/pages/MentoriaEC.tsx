@@ -273,7 +273,9 @@ export default function MentoriaEC() {
     const total = members.length;
     const never = members.filter((m) => !m.lastAttendance).length;
     const attended = total - never;
-    return { total, never, attended };
+    const ec = members.filter((m) => m.program === "EC").length;
+    const rm = members.filter((m) => m.program === "RM").length;
+    return { total, never, attended, ec, rm };
   }, [members]);
 
   return (
@@ -326,11 +328,11 @@ export default function MentoriaEC() {
             </SelectContent>
           </Select>
           <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as ProgramFilter)}>
-            <SelectTrigger className="w-[190px]"><SelectValue placeholder="Programa" /></SelectTrigger>
+            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Programa" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os programas</SelectItem>
-              <SelectItem value="EC">Eternum Club</SelectItem>
-              <SelectItem value="RM">Rykas Mentoring</SelectItem>
+              <SelectItem value="all">Todos os programas ({totals.total})</SelectItem>
+              <SelectItem value="EC">Eternum Club ({totals.ec})</SelectItem>
+              <SelectItem value="RM">Rykas Mentoring ({totals.rm})</SelectItem>
             </SelectContent>
           </Select>
           <Select value={mentorshipFilter} onValueChange={(v) => setMentorshipFilter(v as MentorshipStatusFilter)}>
