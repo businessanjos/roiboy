@@ -281,7 +281,7 @@ export default function RHOfferWizard() {
       success_metrics: form.success_metrics.filter(m => m.label.trim()),
       start_date: form.start_date || null,
       offer_expires_at: form.offer_expires_at || null,
-      work_schedule: form.work_schedule && form.work_schedule.days?.length ? form.work_schedule : null,
+      work_schedule: form.work_schedule?.rules?.some((r) => r.days?.length) ? form.work_schedule : null,
       hero_headline: form.hero_headline || null,
       company_intro: form.company_intro || DEFAULT_COMPANY_INTRO,
       role_pitch: form.role_pitch || null,
