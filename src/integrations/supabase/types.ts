@@ -11732,6 +11732,7 @@ export type Database = {
           accent_color: string
           account_id: string
           application_id: string | null
+          benefit_values: Json
           benefits: string[]
           candidate_email: string | null
           candidate_name: string
@@ -11778,6 +11779,7 @@ export type Database = {
           accent_color?: string
           account_id: string
           application_id?: string | null
+          benefit_values?: Json
           benefits?: string[]
           candidate_email?: string | null
           candidate_name: string
@@ -11824,6 +11826,7 @@ export type Database = {
           accent_color?: string
           account_id?: string
           application_id?: string | null
+          benefit_values?: Json
           benefits?: string[]
           candidate_email?: string | null
           candidate_name?: string
