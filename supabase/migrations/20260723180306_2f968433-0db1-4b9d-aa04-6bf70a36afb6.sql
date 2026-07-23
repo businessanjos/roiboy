@@ -1,0 +1,1 @@
+ALTER TABLE public.hr_job_offers ADD COLUMN IF NOT EXISTS benefit_values JSONB NOT NULL DEFAULT '{}'::jsonb;

@@ -30,6 +30,7 @@ type Offer = {
   salary_note: string | null;
   variable_compensation: string | null;
   benefits: string[];
+  benefit_values: Record<string, number | string> | null;
   perks: { title: string; description: string }[];
   success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string | null;
@@ -396,21 +397,34 @@ export default function PublicJobOffer() {
           <section>
             <SectionLabel>O que oferecemos</SectionLabel>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {offer.benefits.map((b) => (
-                <div
-                  key={b}
-                  className="flex items-center gap-3 px-5 py-4 rounded-sm transition-transform hover:translate-x-1"
-                  style={{ background: CARD, color: TEXT_DARK, boxShadow: `inset 0 0 0 1px ${GOLD}30` }}
-                >
+              {offer.benefits.map((b) => {
+                const rawVal = offer.benefit_values?.[b];
+                const num = rawVal != null && rawVal !== "" ? Number(rawVal) : NaN;
+                const hasValue = Number.isFinite(num) && num > 0;
+                return (
                   <div
-                    className="flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center"
-                    style={{ background: `${GOLD}25`, color: TEXT_DARK }}
+                    key={b}
+                    className="flex items-center gap-3 px-5 py-4 rounded-sm transition-transform hover:translate-x-1"
+                    style={{ background: CARD, color: TEXT_DARK, boxShadow: `inset 0 0 0 1px ${GOLD}30` }}
                   >
-                    <CheckCircle2 className="h-4 w-4" />
+                    <div
+                      className="flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center"
+                      style={{ background: `${GOLD}25`, color: TEXT_DARK }}
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium truncate">{b}</span>
+                      {hasValue && (
+                        <span className="text-sm font-semibold whitespace-nowrap" style={{ color: TEXT_DARK }}>
+                          {num.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}
+                          <span className="text-[11px] font-normal opacity-70">/mês</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-sm font-medium">{b}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

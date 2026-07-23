@@ -49,6 +49,7 @@ type Form = {
   salary_note: string;
   variable_compensation: string;
   benefits: string[];
+  benefit_values: Record<string, string>;
   perks: { title: string; description: string }[];
   success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string;
@@ -71,7 +72,7 @@ const EMPTY: Form = {
   position_title: "", department: "Customer Success", seniority: "", work_model: "",
   contract_type: "clt", unit: "", reports_to: "",
   salary_amount: "", salary_currency: "BRL", salary_note: "", variable_compensation: "",
-  benefits: [], perks: [], success_metrics: [],
+  benefits: [], benefit_values: {}, perks: [], success_metrics: [],
   start_date: "", offer_expires_at: "",
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
   signer_name: "", signer_role: "",
@@ -148,6 +149,7 @@ export default function RHOfferWizard() {
         salary_note: data.salary_note || "",
         variable_compensation: data.variable_compensation || "",
         benefits: data.benefits || [],
+        benefit_values: ((data as any).benefit_values as Record<string, string>) || {},
         perks: (data.perks as any) || [],
         success_metrics: ((data as any).success_metrics as any) || [],
         start_date: cloning ? "" : (data.start_date || ""),
@@ -181,7 +183,20 @@ export default function RHOfferWizard() {
   }, [isEdit]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const toggleBenefit = (b: string) => set("benefits", form.benefits.includes(b) ? form.benefits.filter(x => x !== b) : [...form.benefits, b]);
+  const toggleBenefit = (b: string) => {
+    const isOn = form.benefits.includes(b);
+    set("benefits", isOn ? form.benefits.filter(x => x !== b) : [...form.benefits, b]);
+    if (isOn) {
+      const next = { ...form.benefit_values };
+      delete next[b];
+      set("benefit_values", next);
+    }
+  };
+  const setBenefitValue = (b: string, v: string) => {
+    const next = { ...form.benefit_values };
+    if (v.trim()) next[b] = v; else delete next[b];
+    set("benefit_values", next);
+  };
   const addPerk = () => set("perks", [...form.perks, { title: "", description: "" }]);
   const removePerk = (i: number) => set("perks", form.perks.filter((_, idx) => idx !== i));
   const updatePerk = (i: number, key: "title" | "description", v: string) =>
@@ -253,6 +268,7 @@ export default function RHOfferWizard() {
       salary_note: form.salary_note || null,
       variable_compensation: form.variable_compensation || null,
       benefits: form.benefits,
+      benefit_values: Object.fromEntries(Object.entries(form.benefit_values).filter(([k]) => form.benefits.includes(k))),
       perks: form.perks.filter(p => p.title.trim()),
       success_metrics: form.success_metrics.filter(m => m.label.trim()),
       start_date: form.start_date || null,
@@ -565,6 +581,32 @@ export default function RHOfferWizard() {
                     </label>
                   ))}
                 </div>
+                {form.benefits.length > 0 && (
+                  <div className="mt-4 space-y-2 rounded-lg border bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">
+                      Informe o valor mensal (opcional) de cada benefício. Deixe em branco para não exibir valor na carta.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {form.benefits.map((b) => (
+                        <div key={b} className="flex items-center gap-2">
+                          <Label className="text-xs w-40 shrink-0 truncate" title={b}>{b}</Label>
+                          <div className="relative flex-1">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              className="pl-8 h-8"
+                              placeholder="0,00"
+                              value={form.benefit_values[b] ?? ""}
+                              onChange={(e) => setBenefitValue(b, e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
