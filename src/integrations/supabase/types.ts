@@ -25601,6 +25601,16 @@ export type Database = {
         Args: { p_account_id: string }
         Returns: Json
       }
+      get_deal_activity_stats: {
+        Args: { p_deal_ids: string[] }
+        Returns: {
+          deal_id: string
+          has_overdue: boolean
+          next_due_date: string
+          pending_count: number
+          total_activities: number
+        }[]
+      }
       get_default_reassignment_user: {
         Args: { _inactive_user_id: string }
         Returns: string
