@@ -74,6 +74,8 @@ export function PipelineFilterButton({
   previewNextActivityMap,
   previewTaskCountMap,
   previewPendingCountMap,
+  previewPendingTypesMap,
+  previewPendingStatusesMap,
 }: PipelineFilterButtonProps) {
   const { currentUser } = useCurrentUser();
   const { filters, fetchFilters, createFilter, updateFilter, deleteFilter } = usePipelineFilters();
@@ -83,6 +85,9 @@ export function PipelineFilterButton({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFilter, setEditingFilter] = useState<PipelineFilter | null>(null);
   const [customFields, setCustomFields] = useState<CustomFieldOption[]>([]);
+  const [activityTypes, setActivityTypes] = useState<Array<{ id: string; name: string }>>([]);
+  const [taskStatuses, setTaskStatuses] = useState<Array<{ id: string; name: string }>>([]);
+
 
   useEffect(() => {
     fetchFilters();
