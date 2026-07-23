@@ -1,14 +1,41 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Calendar, MapPin, ExternalLink, Search, Loader2, Sparkles, Globe, Flag } from "lucide-react";
+import { Calendar, MapPin, ExternalLink, Search, Loader2, Sparkles, Globe, Flag, Plus, Trash2, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+const MONTH_TO_INDEX: Record<string, number> = {
+  Jan: 0, Fev: 1, Mar: 2, Abr: 3, Mai: 4, Jun: 5,
+  Jul: 6, Ago: 7, Set: 8, Out: 9, Nov: 10, Dez: 11,
+};
+
+const LS_KEY = "mi:events:userAdded:v1";
+
+function loadUserEvents(): EventItem[] {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((e) => e && e.name && e.month);
+  } catch {
+    return [];
+  }
+}
+function saveUserEvents(list: EventItem[]) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(list));
+  } catch {}
+}
 
 type EventItem = {
   name: string;
