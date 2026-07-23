@@ -342,6 +342,33 @@ export function PipelineFilterDialog({
       );
     }
 
+    // Activity types / task statuses multi-select (case-insensitive labels are the values)
+    if (fieldType === 'activity_types' || fieldType === 'activity_statuses') {
+      const src = fieldType === 'activity_types' ? activityTypes : taskStatuses;
+      const seen = new Set<string>();
+      const opts = src
+        .map(o => o.name?.trim())
+        .filter((n): n is string => !!n)
+        .filter(n => {
+          const k = n.toLowerCase();
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        })
+        .map(n => ({ value: n.toLowerCase(), label: n }));
+      return (
+        <MultiCheckCombobox
+          options={opts}
+          value={condition.value}
+          onChange={(vals) => updateCondition(index, { value: vals })}
+          placeholder={fieldType === 'activity_types' ? 'Selecione tipos...' : 'Selecione status...'}
+          className="w-[220px]"
+        />
+      );
+    }
+
+
+
 
 
     // Number input
