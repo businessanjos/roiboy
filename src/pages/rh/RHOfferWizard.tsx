@@ -581,32 +581,53 @@ export default function RHOfferWizard() {
                     </label>
                   ))}
                 </div>
-                {form.benefits.length > 0 && (
-                  <div className="mt-4 space-y-2 rounded-lg border bg-muted/30 p-3">
-                    <p className="text-xs text-muted-foreground">
-                      Informe o valor mensal (opcional) de cada benefício. Deixe em branco para não exibir valor na carta.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {form.benefits.map((b) => (
-                        <div key={b} className="flex items-center gap-2">
-                          <Label className="text-xs w-40 shrink-0 truncate" title={b}>{b}</Label>
-                          <div className="relative flex-1">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min={0}
-                              className="pl-8 h-8"
-                              placeholder="0,00"
-                              value={form.benefit_values[b] ?? ""}
-                              onChange={(e) => setBenefitValue(b, e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                {(() => {
+                  const inputKind = (b: string): "money" | "text" | "none" => {
+                    if (/plano de saúde|plano odontológico/i.test(b)) return "text";
+                    if (/seguro de vida|day off|banco de horas|horário flexível|home office(?! )/i.test(b)) return "none";
+                    return "money";
+                  };
+                  const editable = form.benefits.filter((b) => inputKind(b) !== "none");
+                  if (editable.length === 0) return null;
+                  return (
+                    <div className="mt-4 space-y-2 rounded-lg border bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">
+                        Preencha as informações abaixo (opcional). Deixe em branco para não exibir na carta.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {editable.map((b) => {
+                          const kind = inputKind(b);
+                          return (
+                            <div key={b} className="flex items-center gap-2">
+                              <Label className="text-xs w-40 shrink-0 truncate" title={b}>{b}</Label>
+                              {kind === "money" ? (
+                                <div className="relative flex-1">
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min={0}
+                                    className="pl-8 h-8"
+                                    placeholder="0,00"
+                                    value={form.benefit_values[b] ?? ""}
+                                    onChange={(e) => setBenefitValue(b, e.target.value)}
+                                  />
+                                </div>
+                              ) : (
+                                <Input
+                                  className="h-8 flex-1"
+                                  placeholder="Ex.: Unimed Nacional"
+                                  value={form.benefit_values[b] ?? ""}
+                                  onChange={(e) => setBenefitValue(b, e.target.value)}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
