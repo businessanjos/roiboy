@@ -21,6 +21,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { LeadDetailSheet } from "@/components/leads/LeadDetailSheet";
+import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
 import {
   DropdownMenu,
   DropdownMenuContent,
