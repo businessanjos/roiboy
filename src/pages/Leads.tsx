@@ -377,6 +377,7 @@ export default function Leads() {
       email: lead.email || "",
       source: lead.source || "",
       notes: lead.notes || "",
+      business_segment: (lead as any).business_segment || "",
       additional_phones: formattedPhones,
       emails: (lead.emails as string[]) || [],
     });
