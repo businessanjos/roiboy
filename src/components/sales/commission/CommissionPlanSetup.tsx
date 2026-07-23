@@ -125,7 +125,7 @@ const DEFAULT_TRIGGERS: CommissionTrigger[] = [
   { trigger_type: "min_calls", trigger_value: 50, description: "Mínimo de ligações no mês", is_active: true },
   { trigger_type: "min_conversion_rate", trigger_value: 20, description: "Taxa de conversão mínima (%)", is_active: true },
   { trigger_type: "no_delinquency", trigger_value: null, description: "Sem inadimplência de clientes", is_active: true },
-  { trigger_type: "tasks_completed", trigger_value: 100, description: "% de tarefas concluídas", is_active: true },
+  { trigger_type: "tasks_completed", trigger_value: 100, description: "% de atividades concluídas", is_active: true },
 ];
 
 const DEFAULT_TIERS: CommissionTier[] = [
