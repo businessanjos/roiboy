@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { CheckCircle2, XCircle, MapPin, Briefcase, Calendar, Gift, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { CheckCircle2, XCircle, MapPin, Briefcase, Calendar, Gift, ArrowRight, Loader2, Sparkles, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +13,7 @@ import letreiro from "@/assets/eternum/letreiro.png.asset.json";
 import everBru from "@/assets/eternum/ever-bru.png.asset.json";
 import clientesFoto from "@/assets/eternum/clientes.jpg.asset.json";
 import { renderOfferRichInline } from "@/components/rh/offers/OfferRichTextarea";
+import { computeWeeklyHours, formatWeeklyHours, summarizeSchedule } from "@/components/rh/offers/WorkScheduleField";
 
 type Offer = {
   id: string;
@@ -35,6 +36,7 @@ type Offer = {
   success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string | null;
   offer_expires_at: string | null;
+  work_schedule: { days: string[]; start_time: string; end_time: string; lunch_minutes: number } | null;
   hero_headline: string | null;
   company_intro: string | null;
   role_pitch: string | null;
@@ -345,6 +347,13 @@ export default function PublicJobOffer() {
             {offer.reports_to && <DetailCard icon={<Briefcase className="h-4 w-4" />} label="Reporta-se a" value={offer.reports_to} />}
             {offer.start_date && <DetailCard icon={<Calendar className="h-4 w-4" />} label="Início previsto" value={format(new Date(offer.start_date + "T00:00:00"), "dd 'de' MMMM, yyyy", { locale: ptBR })} />}
             {offer.offer_expires_at && <DetailCard icon={<Calendar className="h-4 w-4" />} label="Validade da proposta" value={format(new Date(offer.offer_expires_at + "T00:00:00"), "dd 'de' MMMM, yyyy", { locale: ptBR })} />}
+            {offer.work_schedule && offer.work_schedule.days?.length > 0 && (
+              <DetailCard
+                icon={<Clock className="h-4 w-4" />}
+                label={`Jornada • ${formatWeeklyHours(computeWeeklyHours(offer.work_schedule))}/semana`}
+                value={summarizeSchedule(offer.work_schedule)}
+              />
+            )}
           </div>
         </section>
 

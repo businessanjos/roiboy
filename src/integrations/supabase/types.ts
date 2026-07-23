@@ -11774,6 +11774,7 @@ export type Database = {
           variable_compensation: string | null
           view_count: number
           work_model: string | null
+          work_schedule: Json | null
         }
         Insert: {
           accent_color?: string
@@ -11821,6 +11822,7 @@ export type Database = {
           variable_compensation?: string | null
           view_count?: number
           work_model?: string | null
+          work_schedule?: Json | null
         }
         Update: {
           accent_color?: string
@@ -11868,6 +11870,7 @@ export type Database = {
           variable_compensation?: string | null
           view_count?: number
           work_model?: string | null
+          work_schedule?: Json | null
         }
         Relationships: [
           {
