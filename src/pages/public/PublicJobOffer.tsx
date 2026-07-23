@@ -347,6 +347,13 @@ export default function PublicJobOffer() {
             {offer.reports_to && <DetailCard icon={<Briefcase className="h-4 w-4" />} label="Reporta-se a" value={offer.reports_to} />}
             {offer.start_date && <DetailCard icon={<Calendar className="h-4 w-4" />} label="Início previsto" value={format(new Date(offer.start_date + "T00:00:00"), "dd 'de' MMMM, yyyy", { locale: ptBR })} />}
             {offer.offer_expires_at && <DetailCard icon={<Calendar className="h-4 w-4" />} label="Validade da proposta" value={format(new Date(offer.offer_expires_at + "T00:00:00"), "dd 'de' MMMM, yyyy", { locale: ptBR })} />}
+            {offer.work_schedule && offer.work_schedule.days?.length > 0 && (
+              <DetailCard
+                icon={<Clock className="h-4 w-4" />}
+                label={`Jornada • ${formatWeeklyHours(computeWeeklyHours(offer.work_schedule))}/semana`}
+                value={summarizeSchedule(offer.work_schedule)}
+              />
+            )}
           </div>
         </section>
 
