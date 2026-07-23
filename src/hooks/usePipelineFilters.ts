@@ -92,7 +92,7 @@ export const RECOMMENDED_FILTERS = [
   {
     id: 'no_next_activity',
     name: '🟡 Sem próximo passo agendado',
-    description: 'Leads que têm histórico de contato, mas nenhuma tarefa/atividade em aberto no futuro (pendingCount === 0). Espelha o "0 pendentes" exibido no card. Mede falha de cadência — o vendedor tocou o lead, mas não agendou o próximo passo.',
+    description: 'Leads que têm histórico de contato, mas nenhuma atividade em aberto no futuro (pendingCount === 0). Espelha o "0 pendentes" exibido no card. Mede falha de cadência — o vendedor tocou o lead, mas não agendou o próximo passo.',
     conditions: [{ field: 'next_activity_date', operator: 'is_empty', value: null }],
     match_type: 'all' as const
   },
