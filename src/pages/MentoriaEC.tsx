@@ -76,6 +76,7 @@ export default function MentoriaEC() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [mentorshipFilter, setMentorshipFilter] = useState<MentorshipStatusFilter>("all");
+  const [programFilter, setProgramFilter] = useState<ProgramFilter>("all");
   const [recordingFor, setRecordingFor] = useState<EcMember | null>(null);
   const [sessionDate, setSessionDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [sessionNotes, setSessionNotes] = useState("");
