@@ -23,11 +23,12 @@ interface DealCardProps {
   itemVendaLabel?: string;
   itemVendaColor?: string | null;
   activityStatus?: ActivityStatus;
+  showActivityCounts?: boolean;
 }
 
 const DEFAULT_ACTIVITY_STATUS: ActivityStatus = { pendingCount: 0, hasOverdue: false, totalActivities: 0, nextDueDate: null };
 
-export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, itemVendaColor, activityStatus = DEFAULT_ACTIVITY_STATUS }: DealCardProps) {
+export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, itemVendaColor, activityStatus = DEFAULT_ACTIVITY_STATUS, showActivityCounts = false }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
   
   const { openZappConversation, loading: zappLoading } = useZappNavigationContext();
