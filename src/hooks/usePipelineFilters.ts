@@ -84,7 +84,7 @@ export const RECOMMENDED_FILTERS = [
   },
   {
     id: 'no_next_activity',
-    name: 'Sem tarefa/atividade cadastrada',
+    name: 'Sem próxima atividade agendada',
     conditions: [{ field: 'next_activity_date', operator: 'is_empty', value: null }],
     match_type: 'all' as const
   },
