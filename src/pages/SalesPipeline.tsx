@@ -1127,14 +1127,15 @@ export default function SalesPipeline() {
   // Usado como base para as opções do filtro de origem e como base do filtro final.
   const dealsBeforeTagFilter = useMemo(() => {
     if (activityStatusLoading && activeFilterNeedsActivityCounts) return [];
-    const base = applyFilterToDeals(openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap, dealPendingCountMap);
+    const base = applyFilterToDeals(openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap);
     if (!openDateRange) return base;
     return base.filter(d => {
       if (!d.created_at) return false;
       const created = new Date(d.created_at);
       return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
     });
-  }, [activityStatusLoading, activeFilterNeedsActivityCounts, openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, openDateRange, searchOptions]);
+  }, [activityStatusLoading, activeFilterNeedsActivityCounts, openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap, openDateRange, searchOptions]);
+
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);
