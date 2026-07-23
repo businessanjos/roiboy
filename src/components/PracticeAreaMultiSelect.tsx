@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import { ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -124,11 +125,10 @@ export function PracticeAreaMultiSelect({
                     value={`${a.label} ${a.slug}`}
                     onSelect={() => toggle(a.label)}
                   >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        isSelected ? "opacity-100" : "opacity-0",
-                      )}
+                    <Checkbox
+                      checked={isSelected}
+                      className="mr-2 pointer-events-none"
+                      tabIndex={-1}
                     />
                     {a.label}
                   </CommandItem>
