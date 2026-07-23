@@ -6,8 +6,6 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
   RefreshCw,
@@ -24,8 +22,9 @@ import {
 } from "lucide-react";
 import { benchmarkQueries, extractHeadline, type BenchmarkQuery } from "./marketBenchmarks";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MiAnalysisSheet, type MiAnalysisTone } from "./MiAnalysisSheet";
 
 const iconMap = {
   universe: Globe2,
