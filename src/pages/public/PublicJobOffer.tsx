@@ -30,6 +30,7 @@ type Offer = {
   salary_note: string | null;
   variable_compensation: string | null;
   benefits: string[];
+  benefit_values: Record<string, number | string> | null;
   perks: { title: string; description: string }[];
   success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string | null;
