@@ -195,6 +195,7 @@ export function DealActivitiesDialog({
       toast.error("Erro ao concluir atividade");
     } else {
       toast.success("Atividade concluída!");
+      queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
       queryClient.invalidateQueries({ queryKey: ["deal-activity-status", dealId] });
       queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
     }
