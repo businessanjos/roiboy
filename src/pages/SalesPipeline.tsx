@@ -2166,11 +2166,13 @@ export default function SalesPipeline() {
                             availableTags={availableTags}
                             products={pipelineProducts}
                           />
-                          <PipelineDebugDialog
-                            deals={openDeals}
-                            activityStatusMap={activityStatusMap}
-                            isLoading={activityStatusLoading}
-                          />
+                          {canSeeDeleted && (
+                            <PipelineDebugDialog
+                              deals={openDeals}
+                              activityStatusMap={activityStatusMap}
+                              isLoading={activityStatusLoading}
+                            />
+                          )}
                         </div>
                       </div>
                     )}
