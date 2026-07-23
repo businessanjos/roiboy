@@ -558,6 +558,8 @@ export function PipelineFilterButton({
         salesUsers={salesUsers}
         availableTags={availableTags}
         customFields={customFields}
+        activityTypes={activityTypes}
+        taskStatuses={taskStatuses}
         computePreview={
           previewDeals
             ? (conditions: FilterCondition[], matchType: 'all' | 'any') => {
@@ -577,12 +579,15 @@ export function PipelineFilterButton({
                   undefined,
                   previewTaskCountMap,
                   previewPendingCountMap,
+                  previewPendingTypesMap,
+                  previewPendingStatusesMap,
                 );
                 return { matched: matched.length, total: previewDeals.length };
               }
             : undefined
         }
       />
+
     </>
   );
 }
