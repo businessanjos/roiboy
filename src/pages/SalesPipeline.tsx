@@ -2554,14 +2554,14 @@ export default function SalesPipeline() {
                 {viewMode === 'kanban' ? (
                   <DealKanban
                     stages={stages}
-                    deals={filteredOpenDeals}
+                    deals={sortedOpenDeals}
                     onDealClick={handleDealClick}
                     onDealMove={handleDealMove}
                     showActivityCounts={activeFilterNeedsActivityCounts}
                   />
                 ) : (
                   <DealListView 
-                    deals={filteredOpenDeals} 
+                    deals={sortedOpenDeals} 
                     stages={stages}
                     onDealClick={handleDealClick} 
                   />
