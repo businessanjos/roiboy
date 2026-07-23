@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
   RefreshCw,
@@ -22,7 +24,7 @@ import {
 } from "lucide-react";
 import { benchmarkQueries, extractHeadline, type BenchmarkQuery } from "./marketBenchmarks";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const iconMap = {
@@ -57,6 +59,7 @@ export function MarketSnapshotCards({ onOpenDetail }: Props) {
   const { currentUser } = useCurrentUser();
   const qc = useQueryClient();
   const [running, setRunning] = useState<string | null>(null);
+  const [detail, setDetail] = useState<{ item: BenchmarkQuery; row: Row } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["mi-market-snapshot", currentUser?.account_id],
@@ -206,10 +209,13 @@ export function MarketSnapshotCards({ onOpenDetail }: Props) {
                       Aguardando coleta
                     </Badge>
                   )}
-                  {latest && onOpenDetail && (
+                  {latest && (
                     <button
                       type="button"
-                      onClick={() => onOpenDetail(item.query)}
+                      onClick={() => {
+                        setDetail({ item, row: latest });
+                        onOpenDetail?.(item.query);
+                      }}
                       className="text-[11px] text-primary hover:underline inline-flex items-center gap-0.5"
                     >
                       Ver análise <ChevronRight className="h-3 w-3" />
@@ -221,6 +227,63 @@ export function MarketSnapshotCards({ onOpenDetail }: Props) {
           );
         })}
       </div>
+
+      <Sheet open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <SheetContent className="w-full sm:max-w-xl overflow-hidden flex flex-col">
+          {detail && (() => {
+            const Icon = iconMap[detail.item.icon];
+            const accent = accentMap[detail.item.icon];
+            const { value } = extractHeadline(detail.row.answer);
+            return (
+              <>
+                <SheetHeader className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${accent.bg}`}>
+                      <Icon className={`h-5 w-5 ${accent.text}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <SheetTitle className="text-base leading-tight">{detail.item.label}</SheetTitle>
+                      <SheetDescription className="text-xs">
+                        Coletado em {format(new Date(detail.row.created_at), "dd 'de' MMM yyyy, HH:mm", { locale: ptBR })}
+                      </SheetDescription>
+                    </div>
+                  </div>
+                  {value && (
+                    <div className={`rounded-lg border ${accent.border} ${accent.bg} px-4 py-3`}>
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Headline</p>
+                      <p className={`text-2xl font-bold tabular-nums ${accent.text}`}>{value}</p>
+                    </div>
+                  )}
+                </SheetHeader>
+                <ScrollArea className="flex-1 mt-4 -mx-6 px-6">
+                  <div className="space-y-3 pb-6">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Consulta</p>
+                    <p className="text-xs text-muted-foreground italic">"{detail.item.query}"</p>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground pt-2">Análise completa</p>
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+                      {detail.row.answer || "—"}
+                    </div>
+                  </div>
+                </ScrollArea>
+                <div className="pt-3 border-t flex justify-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const it = detail.item;
+                      setDetail(null);
+                      runOne(it);
+                    }}
+                    disabled={!!running}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 mr-2" /> Atualizar dado
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
