@@ -188,6 +188,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
       await fetchTasks();
       // Invalidate global cache to sync with Tasks page and DealCard status
       queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
       queryClient.invalidateQueries({ queryKey: ["deal-activity-status", dealId] });
       
       if (!isCurrentlyCompleted) {

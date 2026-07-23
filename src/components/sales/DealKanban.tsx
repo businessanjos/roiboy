@@ -46,8 +46,8 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
   const [itemVendaMap, setItemVendaMap] = useState<Record<string, { name: string; color: string | null }>>({});
 
   // Batch fetch activity statuses for ALL deals in a single query
-  const dealIds = useMemo(() => deals.map(d => d.id), [deals]);
-  const { getStatus: getActivityStatus } = useBatchDealActivityStatus(dealIds);
+  const dealActivityRefs = useMemo(() => deals.map(d => ({ id: d.id, lead_id: d.lead_id, client_id: d.client_id })), [deals]);
+  const { getStatus: getActivityStatus } = useBatchDealActivityStatus(dealActivityRefs);
 
   const FATURAMENTO_FIELD_ID = 'ed5c7c0e-0740-4945-b982-70a593ffae0c';
   const ITEM_VENDA_FIELD_ID = '033b91fb-3add-4c96-aec9-567fefbd0fb2';

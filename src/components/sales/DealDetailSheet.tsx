@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   parseReceivedInput,
   formatReceivedDraft,
@@ -222,6 +223,7 @@ export function DealDetailSheet({
   processingWonDealId,
 }: DealDetailSheetProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeDetailTab, setActiveDetailTab] = useState("history");
   const [activities, setActivities] = useState<DealActivity[]>([]);
@@ -731,6 +733,7 @@ export function DealDetailSheet({
       setNewNote("");
       setEventType("note");
       fetchActivities();
+      queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
       toast.success("Atividade registrada!");
     } catch (error: any) {
       console.error("Error adding activity:", error);
@@ -787,6 +790,7 @@ export function DealDetailSheet({
       if (error) throw error;
 
       fetchActivities();
+      queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
       toast.success(type === "image" ? "Imagem anexada!" : "Documento anexado!");
     } catch (error: any) {
       console.error("Error uploading file:", error);
@@ -836,6 +840,7 @@ export function DealDetailSheet({
       if (error) throw error;
 
       fetchActivities();
+      queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
       toast.success("Anotação excluída!");
     } catch (error: any) {
       console.error("Error deleting activity:", error);

@@ -1001,7 +1001,7 @@ export default function SalesPipeline() {
 
   // Batch activity statuses to support "Próxima atividade em" and "Sem atividades" filters.
   // Pass lead_id too, because tasks can be linked to the lead instead of directly to the deal.
-  const dealActivityRefs = useMemo(() => deals.map(d => ({ id: d.id, lead_id: d.lead_id })), [deals]);
+  const dealActivityRefs = useMemo(() => deals.map(d => ({ id: d.id, lead_id: d.lead_id, client_id: d.client_id })), [deals]);
   const { statusMap: activityStatusMap, isLoading: activityStatusLoading } = useBatchDealActivityStatus(dealActivityRefs);
 
   const dealNextActivityMap = useMemo(() => {
