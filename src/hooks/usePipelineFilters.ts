@@ -295,7 +295,10 @@ export function applyFilterToDeals(
   dealNextActivityMap?: Record<string, string | null>,
   searchOptions?: { mode?: DealSearchMode; blobs?: Record<string, string> },
   dealTaskCountMap?: Record<string, number>,
-  dealPendingCountMap?: Record<string, number>
+  dealPendingCountMap?: Record<string, number>,
+  dealPendingTypesMap?: Record<string, string[]>,
+  dealPendingStatusesMap?: Record<string, string[]>,
+
 ): Deal[] {
   if (!activeFilter && !searchTerm?.trim()) return deals;
 
