@@ -275,7 +275,7 @@ export function SalesTeamTab() {
               <div className="min-w-0">
                 <p className="text-lg sm:text-xl font-bold">{totals.completed_tasks}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                  Tarefas concluídas
+                  Atividades concluídas
                 </p>
               </div>
             </div>
