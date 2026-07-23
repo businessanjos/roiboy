@@ -63,6 +63,17 @@ export function summarizeSchedule(s: WorkSchedule | null | undefined): string {
   return `${dayLabels} • ${s.start_time}–${s.end_time}${lunch}`;
 }
 
+const WEEK = ["mon","tue","wed","thu","fri"];
+const WEEK_SAT = [...WEEK, "sat"];
+
+export const SCHEDULE_PRESETS: { id: string; label: string; hint: string; schedule: WorkSchedule }[] = [
+  { id: "clt-44", label: "44h — 5x2 + sábado", hint: "Seg–Sex 08:00–18:00 (1h almoço) + Sáb 08:00–12:00", schedule: { days: WEEK_SAT, start_time: "08:00", end_time: "18:00", lunch_minutes: 60 } },
+  { id: "comercial-40", label: "40h — 5x2 comercial", hint: "Seg–Sex 09:00–18:00 (1h almoço)", schedule: { days: WEEK, start_time: "09:00", end_time: "18:00", lunch_minutes: 60 } },
+  { id: "comercial-44", label: "44h — 5x2 estendido", hint: "Seg–Sex 08:00–18:12 (1h almoço)", schedule: { days: WEEK, start_time: "08:00", end_time: "18:12", lunch_minutes: 60 } },
+  { id: "36h-6x1", label: "36h — 6x1", hint: "Seg–Sáb 08:00–14:00 (sem almoço)", schedule: { days: WEEK_SAT, start_time: "08:00", end_time: "14:00", lunch_minutes: 0 } },
+  { id: "meio-periodo", label: "30h — meio período", hint: "Seg–Sex 08:00–14:00 (sem almoço)", schedule: { days: WEEK, start_time: "08:00", end_time: "14:00", lunch_minutes: 0 } },
+];
+
 interface Props {
   value: WorkSchedule;
   onChange: (v: WorkSchedule) => void;
@@ -77,6 +88,13 @@ export default function WorkScheduleField({ value, onChange }: Props) {
   };
   const weekly = computeWeeklyHours(value);
   const error = validateSchedule(value);
+  const activePreset = SCHEDULE_PRESETS.find((p) =>
+    p.schedule.start_time === value.start_time &&
+    p.schedule.end_time === value.end_time &&
+    p.schedule.lunch_minutes === value.lunch_minutes &&
+    p.schedule.days.length === value.days.length &&
+    p.schedule.days.every((d) => value.days.includes(d))
+  );
   return (
     <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
       <div className="flex items-center gap-2">
@@ -84,6 +102,28 @@ export default function WorkScheduleField({ value, onChange }: Props) {
         <Label className="text-sm font-medium">Horário de trabalho</Label>
       </div>
       <div>
+        <Label className="text-xs text-muted-foreground mb-2 block">Presets</Label>
+        <div className="flex flex-wrap gap-2">
+          {SCHEDULE_PRESETS.map((p) => {
+            const on = activePreset?.id === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                title={p.hint}
+                onClick={() => onChange({ ...p.schedule })}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  on ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-accent"
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div>
+
         <Label className="text-xs text-muted-foreground mb-2 block">Dias da semana</Label>
         <div className="flex flex-wrap gap-2">
           {DAYS.map((d) => {
