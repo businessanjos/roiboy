@@ -13,10 +13,16 @@ import {
   Sparkles,
   Loader2,
   Info,
+  Ruler,
+  BarChart3,
+  Calendar as CalendarIcon,
+  Search as SearchIcon,
+  Compass,
+  Swords,
+  Target,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,9 +32,10 @@ import CompetitorsTab from "@/components/marketing/intelligence/CompetitorsTab";
 import MarketResearchTab from "@/components/marketing/intelligence/MarketResearchTab";
 import { MarketSnapshotCards } from "@/components/marketing/intelligence/MarketSnapshotCards";
 import { TamSamSomCards } from "@/components/marketing/intelligence/TamSamSomCards";
-import { Swords, Search as SearchIcon, Target, Calendar as CalendarIcon } from "lucide-react";
 import PenetrationTab from "@/components/marketing/intelligence/PenetrationTab";
 import EventsTab from "@/components/marketing/intelligence/EventsTab";
+import { MiKpiCard } from "@/components/marketing/intelligence/MiKpiCard";
+import { MiSectionHeader } from "@/components/marketing/intelligence/MiSectionHeader";
 
 type DistItem = { label: string; count: number; pct: number };
 type Distribution = { total: number; items: DistItem[] };
