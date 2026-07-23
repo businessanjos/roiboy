@@ -76,6 +76,7 @@ export default function WorkScheduleField({ value, onChange }: Props) {
     onChange({ ...value, days: ordered });
   };
   const weekly = computeWeeklyHours(value);
+  const error = validateSchedule(value);
   return (
     <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
       <div className="flex items-center gap-2">
@@ -131,9 +132,16 @@ export default function WorkScheduleField({ value, onChange }: Props) {
           />
         </div>
       </div>
+      {error && (
+        <div className="text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2">
+          {error}
+        </div>
+      )}
       <div className="flex items-center justify-between rounded-md bg-background border px-3 py-2">
         <span className="text-xs text-muted-foreground">Carga horária semanal</span>
-        <span className="text-sm font-semibold">{formatWeeklyHours(weekly)}</span>
+        <span className={`text-sm font-semibold ${error ? "text-muted-foreground" : ""}`}>
+          {formatWeeklyHours(weekly)}
+        </span>
       </div>
     </div>
   );
