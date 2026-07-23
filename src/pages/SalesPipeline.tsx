@@ -2531,6 +2531,7 @@ export default function SalesPipeline() {
                     deals={filteredOpenDeals}
                     onDealClick={handleDealClick}
                     onDealMove={handleDealMove}
+                    showActivityCounts={activeFilterNeedsActivityCounts}
                   />
                 ) : (
                   <DealListView 
