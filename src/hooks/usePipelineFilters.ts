@@ -531,8 +531,29 @@ function evaluateTextCondition(fieldValue: string | null | undefined, operator: 
   }
 }
 
-function evaluateNumberCondition(fieldValue: number, operator: string, value: any): boolean {
-  const numValue = Number(value) || 0;
+function evaluateNumberCondition(
+  fieldValue: number | null | undefined,
+  operator: string,
+  value: any,
+  opts: { treatZeroAsEmpty?: boolean } = {},
+): boolean {
+  // is_empty / is_not_empty don't need a value input.
+  if (operator === 'is_empty') {
+    if (fieldValue === null || fieldValue === undefined) return true;
+    return opts.treatZeroAsEmpty ? fieldValue === 0 : false;
+  }
+  if (operator === 'is_not_empty') {
+    if (fieldValue === null || fieldValue === undefined) return false;
+    return opts.treatZeroAsEmpty ? fieldValue !== 0 : true;
+  }
+
+  // For comparison operators, require a valid numeric input; otherwise skip (no match).
+  if (value === '' || value === null || value === undefined) return false;
+  const numValue = Number(value);
+  if (Number.isNaN(numValue)) return false;
+
+  // A null/undefined field cannot satisfy numeric comparisons.
+  if (fieldValue === null || fieldValue === undefined) return false;
 
   switch (operator) {
     case 'equals': return fieldValue === numValue;
@@ -541,8 +562,6 @@ function evaluateNumberCondition(fieldValue: number, operator: string, value: an
     case 'less_than': return fieldValue < numValue;
     case 'greater_or_equal': return fieldValue >= numValue;
     case 'less_or_equal': return fieldValue <= numValue;
-    case 'is_empty': return fieldValue === 0 || fieldValue === null;
-    case 'is_not_empty': return fieldValue !== 0 && fieldValue !== null;
     default: return true;
   }
 }
