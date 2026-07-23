@@ -85,7 +85,7 @@ export const RECOMMENDED_FILTERS = [
   {
     id: 'never_contacted',
     name: '🔴 Nunca contatado (sem nenhum registro)',
-    description: 'Leads sem NENHUMA atividade humana registrada (totalActivities === 0): zero tarefas em internal_tasks e zero registros em deal_activities (notas, ligações, WhatsApp, e-mails, reuniões, arquivos). Logs de sistema não contam. Mede falha de prospecção — o SDR nunca entrou na régua com esse lead.',
+    description: 'Leads sem NENHUMA atividade humana registrada (totalActivities === 0): zero atividades em internal_tasks e zero registros em deal_activities (notas, ligações, WhatsApp, e-mails, reuniões, arquivos). Logs de sistema não contam. Mede falha de prospecção — o SDR nunca entrou na régua com esse lead.',
     conditions: [{ field: 'total_tasks', operator: 'equals', value: 0 }],
     match_type: 'all' as const
   },
