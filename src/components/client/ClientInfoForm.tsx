@@ -33,6 +33,7 @@ import {
   detectCountryFromPhone
 } from "@/lib/validators";
 import { MLS_LEVELS } from "@/lib/mls-utils";
+import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
 
 export interface PixKeyData {
   type: string;
@@ -1134,11 +1135,10 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Segmento</Label>
-                <Input
+                <Label className="text-sm font-medium">Área de Atuação</Label>
+                <PracticeAreaSelect
                   value={data.business_segment}
-                  onChange={(e) => updateField("business_segment", e.target.value)}
-                  placeholder="Ex: Saúde & Estética"
+                  onChange={(v) => updateField("business_segment", v)}
                   className="h-9"
                 />
                 <p className="text-[11px] text-muted-foreground">Área principal do negócio</p>
