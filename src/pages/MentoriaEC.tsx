@@ -366,16 +366,23 @@ export default function MentoriaEC() {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      {m.lastAttendance ? (
-                        <div className="text-sm">
-                          {format(parseISO(m.lastAttendance), "dd/MM/yyyy", { locale: ptBR })}
-                          {m.attendanceCount > 1 && (
-                            <span className="text-muted-foreground text-xs ml-1">({m.attendanceCount}x)</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">Nunca participou</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="date"
+                          value={m.lastAttendance ?? ""}
+                          max={format(new Date(), "yyyy-MM-dd")}
+                          onChange={(e) => {
+                            const date = e.target.value;
+                            if (!date) return;
+                            if (date === m.lastAttendance) return;
+                            recordMutation.mutate({ clientId: m.clientId, date, notes: "" });
+                          }}
+                          className="h-8 w-[150px] text-xs"
+                        />
+                        {m.attendanceCount > 0 && (
+                          <span className="text-muted-foreground text-xs">({m.attendanceCount}x)</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {m.lastAttendance ? (
