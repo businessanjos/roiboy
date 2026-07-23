@@ -24,6 +24,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { ClientClinicsManager } from "./ClientClinicsManager";
+import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
 import { CountryStateCity, type LocationFields } from "@/components/operations/CountryStateCity";
 import { COUNTRIES, BRAZIL_STATES } from "@/lib/countries";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
