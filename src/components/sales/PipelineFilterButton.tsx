@@ -392,20 +392,34 @@ export function PipelineFilterButton({
             <TabsContent value="recomendados" className="m-0">
               <ScrollArea className="h-[280px]">
                 <div className="p-2 space-y-1">
-                  {filteredRecommended.map((filter) => (
-                    <button
-                      key={filter.id}
-                      onClick={() => handleSelectRecommended(filter)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-accent transition-colors text-left ${
-                        activeFilter?.type === "recommended" && activeFilter?.id === filter.id
-                          ? "bg-accent"
-                          : ""
-                      }`}
-                    >
-                      <Star className="h-4 w-4 text-amber-500 shrink-0" />
-                      <span className="text-sm">{filter.name}</span>
-                    </button>
-                  ))}
+                  {filteredRecommended.map((filter) => {
+                    const btn = (
+                      <button
+                        key={filter.id}
+                        onClick={() => handleSelectRecommended(filter)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-accent transition-colors text-left ${
+                          activeFilter?.type === "recommended" && activeFilter?.id === filter.id
+                            ? "bg-accent"
+                            : ""
+                        }`}
+                      >
+                        <Star className="h-4 w-4 text-amber-500 shrink-0" />
+                        <span className="text-sm">{filter.name}</span>
+                      </button>
+                    );
+                    const description = (filter as { description?: string }).description;
+                    if (!description) return btn;
+                    return (
+                      <TooltipProvider key={filter.id} delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>{btn}</TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed">
+                            {description}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
 
                   {filteredRecommended.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-8">
