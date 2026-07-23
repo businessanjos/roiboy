@@ -309,7 +309,7 @@ export default function MentoriaEC() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Atuação</TableHead>
                 <TableHead>Fim do contrato</TableHead>
-                <TableHead className="w-[280px]">Status da mentoria</TableHead>
+                <TableHead className="w-[280px]">Status</TableHead>
                 <TableHead>Última participação</TableHead>
                 <TableHead>Participação</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
