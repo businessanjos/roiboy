@@ -42,7 +42,7 @@ const getStageIcon = (stageName: string, color: string) => {
   return <Users className={iconClass} style={{ color }} />;
 };
 
-export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false, activityStatusGetter }: DealKanbanColumnProps) {
+export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false, activityStatusGetter, showActivityCounts = false }: DealKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
