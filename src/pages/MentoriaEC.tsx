@@ -20,11 +20,17 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-// Both Eternum Club product ids (novo + renovação)
-const EC_PRODUCT_IDS = [
-  "b8c50eca-6fd9-41ac-a1d3-f78086daaea7",
-  "6f74bb43-a1be-410f-a708-6abab066bb38",
+// Produtos elegíveis para a mentoria ao vivo (Eternum Club + Rykas Mentoring)
+const MENTORING_PRODUCTS: { id: string; label: string; program: "EC" | "RM"; className: string }[] = [
+  { id: "b8c50eca-6fd9-41ac-a1d3-f78086daaea7", label: "Eternum Club", program: "EC", className: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300" },
+  { id: "6f74bb43-a1be-410f-a708-6abab066bb38", label: "Eternum Club", program: "EC", className: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300" },
+  { id: "8d3e9bb6-054b-44b3-952f-5920e0ed8775", label: "Rykas Mentoring", program: "RM", className: "bg-pink-500/15 text-pink-700 border-pink-500/30 dark:text-pink-300" },
+  { id: "eae406e9-6076-41eb-96ed-df0ab187a11c", label: "Rykas Mentoring", program: "RM", className: "bg-pink-500/15 text-pink-700 border-pink-500/30 dark:text-pink-300" },
 ];
+const MENTORING_PRODUCT_IDS = MENTORING_PRODUCTS.map((p) => p.id);
+const PRODUCT_META = new Map(MENTORING_PRODUCTS.map((p) => [p.id, p]));
+
+type ProgramFilter = "all" | "EC" | "RM";
 
 type MentorshipStatus =
   | "novata"
@@ -46,6 +52,9 @@ interface EcMember {
   lastAttendance: string | null;
   attendanceCount: number;
   mentorshipStatus: MentorshipStatus | null;
+  productId: string | null;
+  program: "EC" | "RM" | null;
+  productLabel: string | null;
 }
 
 const MENTORSHIP_STATUS_OPTIONS: { value: MentorshipStatus; label: string; className: string }[] = [
@@ -67,6 +76,7 @@ export default function MentoriaEC() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [mentorshipFilter, setMentorshipFilter] = useState<MentorshipStatusFilter>("all");
+  const [programFilter, setProgramFilter] = useState<ProgramFilter>("all");
   const [recordingFor, setRecordingFor] = useState<EcMember | null>(null);
   const [sessionDate, setSessionDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [sessionNotes, setSessionNotes] = useState("");
@@ -78,17 +88,17 @@ export default function MentoriaEC() {
       // Active EC contracts
       const { data: contracts, error: cErr } = await supabase
         .from("client_contracts")
-        .select("client_id, end_date, status")
+        .select("client_id, end_date, status, product_id")
         .eq("account_id", accountId!)
-        .in("product_id", EC_PRODUCT_IDS)
+        .in("product_id", MENTORING_PRODUCT_IDS)
         .eq("status", "active");
       if (cErr) throw cErr;
 
-      const byClient = new Map<string, string | null>();
-      (contracts || []).forEach((c) => {
+      const byClient = new Map<string, { endDate: string | null; productId: string }>();
+      (contracts || []).forEach((c: any) => {
         const prev = byClient.get(c.client_id);
-        if (!prev || (c.end_date && (!prev || c.end_date > prev))) {
-          byClient.set(c.client_id, c.end_date);
+        if (!prev || (c.end_date && (!prev.endDate || c.end_date > prev.endDate))) {
+          byClient.set(c.client_id, { endDate: c.end_date, productId: c.product_id });
         }
       });
 
@@ -133,17 +143,21 @@ export default function MentoriaEC() {
       (statuses || []).forEach((s: any) => statusMap.set(s.client_id, s.status as MentorshipStatus));
 
       return (clients || []).map((c) => {
-        const contractEnd = byClient.get(c.id) ?? null;
+        const info = byClient.get(c.id);
         const att = attMap.get(c.id);
+        const meta = info?.productId ? PRODUCT_META.get(info.productId) : null;
         return {
           clientId: c.id,
           fullName: c.full_name || "Sem nome",
           logoUrl: c.logo_url,
           businessSegment: c.business_segment,
-          contractEnd,
+          contractEnd: info?.endDate ?? null,
           lastAttendance: att?.last ?? null,
           attendanceCount: att?.count ?? 0,
           mentorshipStatus: statusMap.get(c.id) ?? null,
+          productId: info?.productId ?? null,
+          program: meta?.program ?? null,
+          productLabel: meta?.label ?? null,
         };
       });
     },
@@ -221,6 +235,7 @@ export default function MentoriaEC() {
         if (q && !m.fullName.toLowerCase().includes(q) && !(m.businessSegment ?? "").toLowerCase().includes(q))
           return false;
         if (mentorshipFilter !== "all" && m.mentorshipStatus !== mentorshipFilter) return false;
+        if (programFilter !== "all" && m.program !== programFilter) return false;
         if (statusFilter === "never" && m.lastAttendance) return false;
         if (statusFilter === "attended" && !m.lastAttendance) return false;
         if (statusFilter === "recent") {
@@ -231,7 +246,7 @@ export default function MentoriaEC() {
         return true;
       })
       .sort((a, b) => a.fullName.localeCompare(b.fullName, "pt-BR"));
-  }, [members, search, statusFilter, mentorshipFilter]);
+  }, [members, search, statusFilter, mentorshipFilter, programFilter]);
 
   const totals = useMemo(() => {
     const total = members.length;
@@ -246,10 +261,10 @@ export default function MentoriaEC() {
         <div>
           <div className="flex items-center gap-2">
             <GraduationCap className="h-6 w-6 text-amber-600" />
-            <h1 className="text-2xl font-semibold">Mentoria Eternum Club</h1>
+            <h1 className="text-2xl font-semibold">Mentoria Ao Vivo</h1>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            Membros ativos do Eternum Club e o histórico de participação nas mentorias ao vivo (segundas e quintas, 7h).
+            Membros ativos do Eternum Club e do Rykas Mentoring, com o histórico de participação nas mentorias ao vivo (segundas e quintas, 7h).
           </p>
         </div>
       </div>
@@ -289,6 +304,14 @@ export default function MentoriaEC() {
               <SelectItem value="recent">Últimos 30 dias</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as ProgramFilter)}>
+            <SelectTrigger className="w-[190px]"><SelectValue placeholder="Programa" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os programas</SelectItem>
+              <SelectItem value="EC">Eternum Club</SelectItem>
+              <SelectItem value="RM">Rykas Mentoring</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={mentorshipFilter} onValueChange={(v) => setMentorshipFilter(v as MentorshipStatusFilter)}>
             <SelectTrigger className="w-[240px]"><SelectValue placeholder="Status da mentoria" /></SelectTrigger>
             <SelectContent>
@@ -307,6 +330,7 @@ export default function MentoriaEC() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead>Nome</TableHead>
+                <TableHead>Programa</TableHead>
                 <TableHead>Atuação</TableHead>
                 <TableHead>Fim do contrato</TableHead>
                 <TableHead className="w-[280px]">Status</TableHead>
@@ -317,10 +341,10 @@ export default function MentoriaEC() {
             </TableHeader>
             <TableBody>
               {membersQuery.isLoading && (
-                <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
               )}
               {!membersQuery.isLoading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Nenhum membro encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Nenhum membro encontrado</TableCell></TableRow>
               )}
               {filtered.map((m) => {
                 const currentStatus = m.mentorshipStatus ? STATUS_MAP.get(m.mentorshipStatus) : null;
@@ -334,6 +358,15 @@ export default function MentoriaEC() {
                         </Avatar>
                         <span className="font-medium">{m.fullName}</span>
                       </Link>
+                    </TableCell>
+                    <TableCell>
+                      {m.productLabel ? (
+                        <Badge variant="outline" className={cn("text-xs", PRODUCT_META.get(m.productId ?? "")?.className)}>
+                          {m.productLabel}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {m.businessSegment ? (
