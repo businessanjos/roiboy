@@ -521,10 +521,15 @@ function FieldCombobox({ value, label, isCustom, standardFields, customFields, o
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[260px] p-0" align="start">
+      <PopoverContent
+        className="w-[260px] p-0"
+        align="start"
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+      >
         <Command>
           <CommandInput placeholder="Buscar campo..." />
-          <CommandList className="max-h-[300px]">
+          <CommandList className="max-h-[300px] overflow-y-auto overflow-x-hidden overscroll-contain">
             <CommandEmpty>Nenhum campo encontrado.</CommandEmpty>
             <CommandGroup heading="Campos padrão">
               {standardFields.map((f) => (
