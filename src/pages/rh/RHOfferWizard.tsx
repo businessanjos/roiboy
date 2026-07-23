@@ -17,7 +17,7 @@ import { suggestKpis, type KpiSuggestion } from "@/constants/kpiSuggestions";
 import { getPublicOrigin } from "@/lib/publicLink";
 import { cn } from "@/lib/utils";
 import { OfferRichTextarea } from "@/components/rh/offers/OfferRichTextarea";
-import WorkScheduleField from "@/components/rh/offers/WorkScheduleField";
+import WorkScheduleField, { validateSchedule } from "@/components/rh/offers/WorkScheduleField";
 
 const STEPS = [
   { id: 1, title: "Candidato" },
@@ -247,7 +247,11 @@ export default function RHOfferWizard() {
 
   const canNext = () => {
     if (step === 1) return form.candidate_name.trim().length > 1;
-    if (step === 2) return form.position_title.trim().length > 1;
+    if (step === 2) {
+      if (form.position_title.trim().length <= 1) return false;
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      return validateSchedule(form.work_schedule) === null;
+    }
     return true;
   };
 
