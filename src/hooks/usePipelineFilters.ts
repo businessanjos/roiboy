@@ -85,12 +85,14 @@ export const RECOMMENDED_FILTERS = [
   {
     id: 'never_contacted',
     name: '🔴 Nunca contatado (sem nenhum registro)',
+    description: 'Leads sem NENHUMA atividade humana registrada (totalActivities === 0): zero tarefas em internal_tasks e zero registros em deal_activities (notas, ligações, WhatsApp, e-mails, reuniões, arquivos). Logs de sistema não contam. Mede falha de prospecção — o SDR nunca entrou na régua com esse lead.',
     conditions: [{ field: 'total_tasks', operator: 'equals', value: 0 }],
     match_type: 'all' as const
   },
   {
     id: 'no_next_activity',
     name: '🟡 Sem próximo passo agendado',
+    description: 'Leads que têm histórico de contato, mas nenhuma tarefa/atividade em aberto no futuro (pendingCount === 0). Espelha o "0 pendentes" exibido no card. Mede falha de cadência — o vendedor tocou o lead, mas não agendou o próximo passo.',
     conditions: [{ field: 'next_activity_date', operator: 'is_empty', value: null }],
     match_type: 'all' as const
   },
