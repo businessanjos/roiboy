@@ -36,7 +36,7 @@ type Offer = {
   success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string | null;
   offer_expires_at: string | null;
-  work_schedule: { days: string[]; start_time: string; end_time: string; lunch_minutes: number } | null;
+  work_schedule: any | null;
   hero_headline: string | null;
   company_intro: string | null;
   role_pitch: string | null;
