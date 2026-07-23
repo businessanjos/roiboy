@@ -355,6 +355,18 @@ export default function MentoriaEC() {
               <SelectItem value="RM">Rykas Mentoring ({totals.rm})</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={practiceFilter} onValueChange={setPracticeFilter}>
+            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Atuação" /></SelectTrigger>
+            <SelectContent className="max-h-[320px]">
+              <SelectItem value="all">Todas as atuações ({totals.total})</SelectItem>
+              {practiceOptions.noneCount > 0 && (
+                <SelectItem value="__none__">Sem atuação ({practiceOptions.noneCount})</SelectItem>
+              )}
+              {practiceOptions.list.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label} ({o.count})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={mentorshipFilter} onValueChange={(v) => setMentorshipFilter(v as MentorshipStatusFilter)}>
             <SelectTrigger className="w-[240px]"><SelectValue placeholder="Status da mentoria" /></SelectTrigger>
             <SelectContent>
