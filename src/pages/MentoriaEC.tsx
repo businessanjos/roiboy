@@ -26,9 +26,16 @@ const EC_PRODUCT_IDS = [
   "6f74bb43-a1be-410f-a708-6abab066bb38",
 ];
 
-type Priority = "alta" | "media" | "baixa";
+type MentorshipStatus =
+  | "novata"
+  | "agendado"
+  | "realizada_agendar_proxima"
+  | "remarcar"
+  | "nao_quer_agendar"
+  | "nao_respondeu";
+
 type StatusFilter = "all" | "never" | "attended" | "recent";
-type PriorityFilter = "all" | Priority;
+type MentorshipStatusFilter = "all" | MentorshipStatus;
 
 interface EcMember {
   clientId: string;
@@ -38,33 +45,19 @@ interface EcMember {
   contractEnd: string | null;
   lastAttendance: string | null;
   attendanceCount: number;
-  priority: Priority;
+  mentorshipStatus: MentorshipStatus | null;
 }
 
-function computePriority(contractEnd: string | null, lastAttendance: string | null): Priority {
-  const daysToEnd = contractEnd
-    ? differenceInCalendarDays(parseISO(contractEnd), new Date())
-    : null;
-  if (!lastAttendance) {
-    if (daysToEnd !== null && daysToEnd <= 90) return "alta";
-    return "media";
-  }
-  const daysSince = differenceInCalendarDays(new Date(), parseISO(lastAttendance));
-  if (daysSince > 120) return "media";
-  return "baixa";
-}
+const MENTORSHIP_STATUS_OPTIONS: { value: MentorshipStatus; label: string; className: string }[] = [
+  { value: "novata", label: "Novata", className: "bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-300" },
+  { value: "agendado", label: "Agendado", className: "bg-violet-500/10 text-violet-700 border-violet-500/30 dark:text-violet-300" },
+  { value: "realizada_agendar_proxima", label: "Realizada – Agendar a próxima", className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300" },
+  { value: "remarcar", label: "Remarcar", className: "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300" },
+  { value: "nao_quer_agendar", label: "Não quer agendar", className: "bg-red-500/10 text-red-700 border-red-500/30 dark:text-red-300" },
+  { value: "nao_respondeu", label: "Não respondeu", className: "bg-gray-500/10 text-gray-700 border-gray-500/30 dark:text-gray-300" },
+];
 
-const PRIORITY_STYLE: Record<Priority, string> = {
-  alta: "bg-red-500/10 text-red-700 border-red-500/30 dark:text-red-300",
-  media: "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300",
-  baixa: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300",
-};
-
-const PRIORITY_LABEL: Record<Priority, string> = {
-  alta: "Alta",
-  media: "Média",
-  baixa: "Baixa",
-};
+const STATUS_MAP = new Map(MENTORSHIP_STATUS_OPTIONS.map((o) => [o.value, o]));
 
 export default function MentoriaEC() {
   const { currentUser } = useCurrentUser();
@@ -73,7 +66,7 @@ export default function MentoriaEC() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
+  const [mentorshipFilter, setMentorshipFilter] = useState<MentorshipStatusFilter>("all");
   const [recordingFor, setRecordingFor] = useState<EcMember | null>(null);
   const [sessionDate, setSessionDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [sessionNotes, setSessionNotes] = useState("");
@@ -94,7 +87,6 @@ export default function MentoriaEC() {
       const byClient = new Map<string, string | null>();
       (contracts || []).forEach((c) => {
         const prev = byClient.get(c.client_id);
-        // keep latest end_date
         if (!prev || (c.end_date && (!prev || c.end_date > prev))) {
           byClient.set(c.client_id, c.end_date);
         }
@@ -103,7 +95,11 @@ export default function MentoriaEC() {
       const clientIds = Array.from(byClient.keys());
       if (clientIds.length === 0) return [];
 
-      const [{ data: clients, error: clErr }, { data: attendance, error: aErr }] = await Promise.all([
+      const [
+        { data: clients, error: clErr },
+        { data: attendance, error: aErr },
+        { data: statuses, error: sErr },
+      ] = await Promise.all([
         supabase
           .from("clients")
           .select("id, full_name, logo_url, business_segment")
@@ -113,9 +109,15 @@ export default function MentoriaEC() {
           .select("client_id, session_date")
           .in("client_id", clientIds)
           .order("session_date", { ascending: false }),
+        supabase
+          .from("ec_mentoring_client_status")
+          .select("client_id, status")
+          .eq("account_id", accountId!)
+          .in("client_id", clientIds),
       ]);
       if (clErr) throw clErr;
       if (aErr) throw aErr;
+      if (sErr) throw sErr;
 
       const attMap = new Map<string, { last: string; count: number }>();
       (attendance || []).forEach((a) => {
@@ -126,6 +128,9 @@ export default function MentoriaEC() {
           if (a.session_date > cur.last) cur.last = a.session_date;
         }
       });
+
+      const statusMap = new Map<string, MentorshipStatus>();
+      (statuses || []).forEach((s: any) => statusMap.set(s.client_id, s.status as MentorshipStatus));
 
       return (clients || []).map((c) => {
         const contractEnd = byClient.get(c.id) ?? null;
@@ -138,9 +143,47 @@ export default function MentoriaEC() {
           contractEnd,
           lastAttendance: att?.last ?? null,
           attendanceCount: att?.count ?? 0,
-          priority: computePriority(contractEnd, att?.last ?? null),
+          mentorshipStatus: statusMap.get(c.id) ?? null,
         };
       });
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async ({ clientId, status }: { clientId: string; status: MentorshipStatus }) => {
+      const { error } = await supabase
+        .from("ec_mentoring_client_status")
+        .upsert(
+          {
+            account_id: accountId!,
+            client_id: clientId,
+            status,
+            updated_by: currentUser?.id ?? null,
+          },
+          { onConflict: "account_id,client_id" },
+        );
+      if (error) throw error;
+    },
+    onMutate: async ({ clientId, status }) => {
+      await qc.cancelQueries({ queryKey: ["ec-mentoring-members", accountId] });
+      const prev = qc.getQueryData<EcMember[]>(["ec-mentoring-members", accountId]);
+      if (prev) {
+        qc.setQueryData<EcMember[]>(
+          ["ec-mentoring-members", accountId],
+          prev.map((m) => (m.clientId === clientId ? { ...m, mentorshipStatus: status } : m)),
+        );
+      }
+      return { prev };
+    },
+    onError: (err: any, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["ec-mentoring-members", accountId], ctx.prev);
+      toast.error(err?.message || "Erro ao atualizar status");
+    },
+    onSuccess: () => {
+      toast.success("Status atualizado");
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["ec-mentoring-members", accountId] });
     },
   });
 
@@ -177,7 +220,7 @@ export default function MentoriaEC() {
       .filter((m) => {
         if (q && !m.fullName.toLowerCase().includes(q) && !(m.businessSegment ?? "").toLowerCase().includes(q))
           return false;
-        if (priorityFilter !== "all" && m.priority !== priorityFilter) return false;
+        if (mentorshipFilter !== "all" && m.mentorshipStatus !== mentorshipFilter) return false;
         if (statusFilter === "never" && m.lastAttendance) return false;
         if (statusFilter === "attended" && !m.lastAttendance) return false;
         if (statusFilter === "recent") {
@@ -187,12 +230,8 @@ export default function MentoriaEC() {
         }
         return true;
       })
-      .sort((a, b) => {
-        const order: Record<Priority, number> = { alta: 0, media: 1, baixa: 2 };
-        if (order[a.priority] !== order[b.priority]) return order[a.priority] - order[b.priority];
-        return a.fullName.localeCompare(b.fullName, "pt-BR");
-      });
-  }, [members, search, statusFilter, priorityFilter]);
+      .sort((a, b) => a.fullName.localeCompare(b.fullName, "pt-BR"));
+  }, [members, search, statusFilter, mentorshipFilter]);
 
   const totals = useMemo(() => {
     const total = members.length;
@@ -242,21 +281,21 @@ export default function MentoriaEC() {
             />
           </div>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-            <SelectTrigger className="w-[190px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="w-[190px]"><SelectValue placeholder="Participação" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="all">Todas as participações</SelectItem>
               <SelectItem value="never">Nunca participaram</SelectItem>
               <SelectItem value="attended">Já participaram</SelectItem>
               <SelectItem value="recent">Últimos 30 dias</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as PriorityFilter)}>
-            <SelectTrigger className="w-[170px]"><SelectValue placeholder="Prioridade" /></SelectTrigger>
+          <Select value={mentorshipFilter} onValueChange={(v) => setMentorshipFilter(v as MentorshipStatusFilter)}>
+            <SelectTrigger className="w-[240px]"><SelectValue placeholder="Status da mentoria" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas as prioridades</SelectItem>
-              <SelectItem value="alta">Alta</SelectItem>
-              <SelectItem value="media">Média</SelectItem>
-              <SelectItem value="baixa">Baixa</SelectItem>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {MENTORSHIP_STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -270,9 +309,9 @@ export default function MentoriaEC() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Atuação</TableHead>
                 <TableHead>Fim do contrato</TableHead>
-                <TableHead>Prioridade</TableHead>
+                <TableHead className="w-[280px]">Status da mentoria</TableHead>
                 <TableHead>Última participação</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Participação</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
               </TableRow>
             </TableHeader>
@@ -283,66 +322,84 @@ export default function MentoriaEC() {
               {!membersQuery.isLoading && filtered.length === 0 && (
                 <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Nenhum membro encontrado</TableCell></TableRow>
               )}
-              {filtered.map((m) => (
-                <TableRow key={m.clientId}>
-                  <TableCell>
-                    <Link to={`/clients/${m.clientId}`} className="flex items-center gap-2 hover:underline">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={m.logoUrl ?? undefined} />
-                        <AvatarFallback>{m.fullName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{m.fullName}</span>
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {m.businessSegment ? (
-                      <Badge variant="outline" className="text-xs">{m.businessSegment}</Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {m.contractEnd ? format(parseISO(m.contractEnd), "dd/MM/yyyy", { locale: ptBR }) : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={cn("text-xs", PRIORITY_STYLE[m.priority])}>
-                      {PRIORITY_LABEL[m.priority]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {m.lastAttendance ? (
-                      <div className="text-sm">
-                        {format(parseISO(m.lastAttendance), "dd/MM/yyyy", { locale: ptBR })}
-                        {m.attendanceCount > 1 && (
-                          <span className="text-muted-foreground text-xs ml-1">({m.attendanceCount}x)</span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">Nunca participou</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {m.lastAttendance ? (
-                      <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Já participou
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-300 gap-1">
-                        <Clock className="h-3 w-3" /> Pendente
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" variant="outline" onClick={() => {
-                      setRecordingFor(m);
-                      setSessionDate(format(new Date(), "yyyy-MM-dd"));
-                      setSessionNotes("");
-                    }}>
-                      Registrar participação
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filtered.map((m) => {
+                const currentStatus = m.mentorshipStatus ? STATUS_MAP.get(m.mentorshipStatus) : null;
+                return (
+                  <TableRow key={m.clientId}>
+                    <TableCell>
+                      <Link to={`/clients/${m.clientId}`} className="flex items-center gap-2 hover:underline">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={m.logoUrl ?? undefined} />
+                          <AvatarFallback>{m.fullName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{m.fullName}</span>
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {m.businessSegment ? (
+                        <Badge variant="outline" className="text-xs">{m.businessSegment}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {m.contractEnd ? format(parseISO(m.contractEnd), "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={m.mentorshipStatus ?? ""}
+                        onValueChange={(v) => statusMutation.mutate({ clientId: m.clientId, status: v as MentorshipStatus })}
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            "h-8 w-full text-xs",
+                            currentStatus && currentStatus.className,
+                          )}
+                        >
+                          <SelectValue placeholder="Selecionar status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MENTORSHIP_STATUS_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      {m.lastAttendance ? (
+                        <div className="text-sm">
+                          {format(parseISO(m.lastAttendance), "dd/MM/yyyy", { locale: ptBR })}
+                          {m.attendanceCount > 1 && (
+                            <span className="text-muted-foreground text-xs ml-1">({m.attendanceCount}x)</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">Nunca participou</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {m.lastAttendance ? (
+                        <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Já participou
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-300 gap-1">
+                          <Clock className="h-3 w-3" /> Pendente
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setRecordingFor(m);
+                        setSessionDate(format(new Date(), "yyyy-MM-dd"));
+                        setSessionNotes("");
+                      }}>
+                        Registrar participação
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
