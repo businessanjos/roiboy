@@ -581,6 +581,32 @@ export default function RHOfferWizard() {
                     </label>
                   ))}
                 </div>
+                {form.benefits.length > 0 && (
+                  <div className="mt-4 space-y-2 rounded-lg border bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">
+                      Informe o valor mensal (opcional) de cada benefício. Deixe em branco para não exibir valor na carta.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {form.benefits.map((b) => (
+                        <div key={b} className="flex items-center gap-2">
+                          <Label className="text-xs w-40 shrink-0 truncate" title={b}>{b}</Label>
+                          <div className="relative flex-1">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              className="pl-8 h-8"
+                              placeholder="0,00"
+                              value={form.benefit_values[b] ?? ""}
+                              onChange={(e) => setBenefitValue(b, e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
