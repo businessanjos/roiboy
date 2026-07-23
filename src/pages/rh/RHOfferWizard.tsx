@@ -49,6 +49,7 @@ type Form = {
   salary_note: string;
   variable_compensation: string;
   benefits: string[];
+  benefit_values: Record<string, string>;
   perks: { title: string; description: string }[];
   success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string;
