@@ -91,6 +91,7 @@ export default function MentoriaEC() {
   const [sessionDate, setSessionDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [sessionNotes, setSessionNotes] = useState("");
   const [attendanceSort, setAttendanceSort] = useState<"none" | "desc" | "asc">("none");
+  const [practiceFilter, setPracticeFilter] = useState<string>("all");
 
   const membersQuery = useQuery({
     queryKey: ["ec-mentoring-members", accountId],
