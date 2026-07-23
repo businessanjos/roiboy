@@ -136,10 +136,13 @@ export function extractHeadline(answer: string | null | undefined): {
 
 function stripMd(s: string): string {
   return s
+    // Remove headings markdown (##, ###) em qualquer linha
+    .replace(/^#{1,6}\s+.*$/gm, "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/[*_`]/g, "")
-    // Remove prefixo "TL;DR" (com variações TLDR, TL:DR, com/sem dois-pontos/traço)
+    // Remove prefixos comuns que a IA insiste em colocar
     .replace(/^\s*TL\s*[;:]?\s*DR\s*[:：\-—–]?\s*/i, "")
+    .replace(/^\s*(Resposta\s+direta|Resumo\s+executivo|Resumo|Em\s+resumo|Resposta)\s*[:：\-—–]?\s*/i, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
