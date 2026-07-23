@@ -550,6 +550,12 @@ export default function RHOfferWizard() {
                 <Label>Validade da proposta</Label>
                 <Input type="date" value={form.offer_expires_at} onChange={(e) => set("offer_expires_at", e.target.value)} />
               </div>
+              <div className="md:col-span-2">
+                <WorkScheduleField
+                  value={form.work_schedule}
+                  onChange={(v) => set("work_schedule", v)}
+                />
+              </div>
             </div>
           )}
 
