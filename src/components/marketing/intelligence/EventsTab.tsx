@@ -373,6 +373,21 @@ const EVENTS: EventItem[] = [
 
 const MONTHS_ORDER = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
+// Ordem de prioridade: primeiro eventos de estética (esteticistas/biomédicos/multi),
+// depois sociedades médicas (médicos, dermato, cirurgiões plásticos, HOF).
+function audiencePriority(ev: EventItem): number {
+  const a = ev.audience.toLowerCase();
+  const org = (ev.organizer || "").toLowerCase();
+  const isMedicalSociety =
+    /dermato|médico|medico|cirurgi|plástic|plastic|hof|orofacial|dentista/.test(a) ||
+    /sociedade|sbd|bsam|sbcp|asds|aad|imcas|asaps|cfo|dasil/.test(org);
+  const isAesthetic =
+    /estetic|estét|biomed|biomédic|beleza|multi|profission/.test(a);
+  if (isAesthetic && !isMedicalSociety) return 0;
+  if (isMedicalSociety) return 2;
+  return 1;
+}
+
 function EventCard({ ev }: { ev: EventItem }) {
   return (
     <Card className="hover:border-primary/40 transition-colors">
@@ -457,7 +472,13 @@ export default function EventsTab() {
           e.focus.some((f) => f.toLowerCase().includes(q))
         );
       })
-      .sort((a, b) => a.monthIndex - b.monthIndex);
+      .sort((a, b) => {
+        if (a.monthIndex !== b.monthIndex) return a.monthIndex - b.monthIndex;
+        const pa = audiencePriority(a);
+        const pb = audiencePriority(b);
+        if (pa !== pb) return pa - pb;
+        return a.name.localeCompare(b.name);
+      });
   }, [search, scope]);
 
   const byMonth = useMemo(() => {
