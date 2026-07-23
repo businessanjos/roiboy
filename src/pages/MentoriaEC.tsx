@@ -330,6 +330,7 @@ export default function MentoriaEC() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead>Nome</TableHead>
+                <TableHead>Programa</TableHead>
                 <TableHead>Atuação</TableHead>
                 <TableHead>Fim do contrato</TableHead>
                 <TableHead className="w-[280px]">Status</TableHead>
@@ -340,10 +341,10 @@ export default function MentoriaEC() {
             </TableHeader>
             <TableBody>
               {membersQuery.isLoading && (
-                <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
               )}
               {!membersQuery.isLoading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Nenhum membro encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Nenhum membro encontrado</TableCell></TableRow>
               )}
               {filtered.map((m) => {
                 const currentStatus = m.mentorshipStatus ? STATUS_MAP.get(m.mentorshipStatus) : null;
