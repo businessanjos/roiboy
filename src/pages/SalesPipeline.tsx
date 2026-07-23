@@ -1029,7 +1029,7 @@ export default function SalesPipeline() {
 
   const activeFilterNeedsActivityCounts = useMemo(() => {
     return (activeFilter?.conditions || []).some((condition) =>
-      condition.field === 'next_activity_date' || condition.field === 'total_tasks'
+      condition.field === 'next_activity_date' || condition.field === 'total_tasks' || condition.field === 'pending_tasks'
     );
   }, [activeFilter]);
 
