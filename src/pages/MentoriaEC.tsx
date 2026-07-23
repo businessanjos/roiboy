@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { GraduationCap, CheckCircle2, Clock, Search } from "lucide-react";
+import { GraduationCap, CheckCircle2, Clock, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -90,6 +90,7 @@ export default function MentoriaEC() {
   const [recordingFor, setRecordingFor] = useState<EcMember | null>(null);
   const [sessionDate, setSessionDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [sessionNotes, setSessionNotes] = useState("");
+  const [attendanceSort, setAttendanceSort] = useState<"none" | "desc" | "asc">("none");
 
   const membersQuery = useQuery({
     queryKey: ["ec-mentoring-members", accountId],
@@ -255,8 +256,18 @@ export default function MentoriaEC() {
         }
         return true;
       })
-      .sort((a, b) => a.fullName.localeCompare(b.fullName, "pt-BR"));
-  }, [members, search, statusFilter, mentorshipFilter, programFilter]);
+      .sort((a, b) => {
+        if (attendanceSort !== "none") {
+          const at = a.lastAttendance ? parseISO(a.lastAttendance).getTime() : null;
+          const bt = b.lastAttendance ? parseISO(b.lastAttendance).getTime() : null;
+          if (at === null && bt === null) return a.fullName.localeCompare(b.fullName, "pt-BR");
+          if (at === null) return 1;
+          if (bt === null) return -1;
+          return attendanceSort === "desc" ? bt - at : at - bt;
+        }
+        return a.fullName.localeCompare(b.fullName, "pt-BR");
+      });
+  }, [members, search, statusFilter, mentorshipFilter, programFilter, attendanceSort]);
 
   const totals = useMemo(() => {
     const total = members.length;
@@ -344,7 +355,25 @@ export default function MentoriaEC() {
                 <TableHead>Atuação</TableHead>
                 <TableHead>Fim do contrato</TableHead>
                 <TableHead className="w-[280px]">Status</TableHead>
-                <TableHead>Última participação</TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttendanceSort((s) => (s === "none" ? "desc" : s === "desc" ? "asc" : "none"))
+                    }
+                    className="inline-flex items-center gap-1 hover:text-foreground"
+                    title="Ordenar por última participação"
+                  >
+                    Última participação
+                    {attendanceSort === "desc" ? (
+                      <ArrowDown className="h-3 w-3" />
+                    ) : attendanceSort === "asc" ? (
+                      <ArrowUp className="h-3 w-3" />
+                    ) : (
+                      <ArrowUpDown className="h-3 w-3 opacity-50" />
+                    )}
+                  </button>
+                </TableHead>
                 <TableHead>Participação</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
               </TableRow>
