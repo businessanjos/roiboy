@@ -353,33 +353,34 @@ export default function MarketingIntelligence() {
         <>
           {/* KPIs executivos — sempre visíveis, no topo */}
           <div className="grid gap-4 md:grid-cols-4">
-            <StatCard
+          <div className="grid gap-3 md:grid-cols-4">
+            <MiKpiCard
               icon={Users}
               label="Clientes ativos"
               value={data.summary.active_clients.toString()}
               hint={`${data.summary.active_contracts ?? data.summary.active_clients} contratos active${data.summary.on_hold_clients ? ` · +${data.summary.on_hold_clients} em hold` : ""}`}
-              accent="text-emerald-600"
+              tone="success"
             />
-            <StatCard
+            <MiKpiCard
               icon={TrendingDown}
               label="Perdidos"
               value={data.summary.churned_clients.toString()}
               hint="clientes que já saíram"
-              accent="text-red-600"
+              tone="danger"
             />
-            <StatCard
+            <MiKpiCard
               icon={AlertTriangle}
               label="Churn histórico"
               value={`${data.summary.churn_rate}%`}
               hint="perdidos / (ativos + perdidos)"
-              accent="text-amber-600"
+              tone="warning"
             />
-            <StatCard
+            <MiKpiCard
               icon={Info}
               label="Cobertura geográfica"
               value={`${coveragePct}%`}
               hint={`${data.coverage.with_state}/${data.coverage.total_clients_sampled} com estado`}
-              accent="text-blue-600"
+              tone="info"
             />
           </div>
 
@@ -398,12 +399,13 @@ export default function MarketingIntelligence() {
             </TabsList>
 
             {/* ————— MERCADO: tamanho, snapshot, eventos, pesquisa ————— */}
-            <TabsContent value="market" className="space-y-6 mt-6">
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Tamanho do mercado</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  TAM · SAM · SOM do mercado de estética, com base em cenários salvos.
-                </p>
+            <TabsContent value="market" className="space-y-8 mt-6">
+              <section>
+                <MiSectionHeader
+                  icon={Ruler}
+                  title="Tamanho do mercado"
+                  description="TAM · SAM · SOM do mercado de estética, com base em cenários salvos."
+                />
                 <TamSamSomCards
                   onOpenDetail={() => setTab("market")}
                   currentMetrics={{
@@ -413,31 +415,34 @@ export default function MarketingIntelligence() {
                     churnRate: data.summary.churn_rate,
                   }}
                 />
-              </div>
+              </section>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Snapshot do setor</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Indicadores macro coletados nas últimas pesquisas de mercado.
-                </p>
+              <section>
+                <MiSectionHeader
+                  icon={BarChart3}
+                  title="Snapshot do setor"
+                  description="Indicadores macro coletados nas últimas pesquisas de mercado."
+                />
                 <MarketSnapshotCards onOpenDetail={() => setTab("market")} />
-              </div>
+              </section>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Eventos do setor</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Congressos, feiras e encontros relevantes para prospecção e presença.
-                </p>
+              <section>
+                <MiSectionHeader
+                  icon={CalendarIcon}
+                  title="Eventos do setor"
+                  description="Congressos, feiras e encontros relevantes para prospecção e presença."
+                />
                 <EventsTab />
-              </div>
+              </section>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Pesquisa de mercado</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Perguntas livres à IA e cenários salvos com fontes.
-                </p>
+              <section>
+                <MiSectionHeader
+                  icon={SearchIcon}
+                  title="Pesquisa de mercado"
+                  description="Perguntas livres à IA e cenários salvos com fontes."
+                />
                 <MarketResearchTab />
-              </div>
+              </section>
             </TabsContent>
 
             {/* ————— NOSSA BASE: ICP, Anti-ICP, sinais ————— */}
