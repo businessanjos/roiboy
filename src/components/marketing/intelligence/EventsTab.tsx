@@ -458,10 +458,10 @@ function EventCard({ ev, onDelete }: { ev: EventItem; onDelete?: () => void }) {
             variant="outline"
             className={
               ev.scale === "Grande"
-                ? "bg-purple-500/10 text-purple-700 border-purple-500/30 text-[10px]"
+                ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30 text-[10px]"
                 : ev.scale === "Médio"
-                ? "bg-blue-500/10 text-blue-700 border-blue-500/30 text-[10px]"
-                : "bg-slate-500/10 text-slate-700 border-slate-500/30 text-[10px]"
+                ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30 text-[10px]"
+                : "bg-muted text-muted-foreground border-border text-[10px]"
             }
           >
             {ev.scale}
