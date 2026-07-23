@@ -573,22 +573,24 @@ export default function MarketingIntelligence() {
             </TabsContent>
 
             {/* ————— OPORTUNIDADE: penetração + concorrentes ————— */}
-            <TabsContent value="opportunity" className="space-y-6 mt-6">
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Penetração por região</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Onde temos base forte, onde há espaço para crescer.
-                </p>
+            <TabsContent value="opportunity" className="space-y-8 mt-6">
+              <section>
+                <MiSectionHeader
+                  icon={Compass}
+                  title="Penetração por região"
+                  description="Onde temos base forte, onde há espaço para crescer."
+                />
                 <PenetrationTab />
-              </div>
+              </section>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Concorrentes</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Quem disputa o mesmo mentorado, com posicionamento e ticket.
-                </p>
+              <section>
+                <MiSectionHeader
+                  icon={Swords}
+                  title="Concorrentes"
+                  description="Quem disputa o mesmo mentorado, com posicionamento e ticket."
+                />
                 <CompetitorsTab />
-              </div>
+              </section>
             </TabsContent>
           </Tabs>
         </>
