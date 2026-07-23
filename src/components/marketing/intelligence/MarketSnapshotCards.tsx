@@ -59,6 +59,7 @@ export function MarketSnapshotCards({ onOpenDetail }: Props) {
   const { currentUser } = useCurrentUser();
   const qc = useQueryClient();
   const [running, setRunning] = useState<string | null>(null);
+  const [detail, setDetail] = useState<{ item: BenchmarkQuery; row: Row } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["mi-market-snapshot", currentUser?.account_id],
