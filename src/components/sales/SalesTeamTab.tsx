@@ -324,7 +324,7 @@ export function SalesTeamTab() {
             <Users className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
             <p className="font-medium text-sm sm:text-base">Nenhuma atividade no período</p>
             <p className="text-xs sm:text-sm mt-1">
-              Os vendedores aparecerão aqui quando tiverem ligações, negócios ou tarefas registradas.
+              Os vendedores aparecerão aqui quando tiverem ligações, negócios ou atividades registradas.
             </p>
           </CardContent>
         </Card>
