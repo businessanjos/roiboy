@@ -183,7 +183,20 @@ export default function RHOfferWizard() {
   }, [isEdit]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const toggleBenefit = (b: string) => set("benefits", form.benefits.includes(b) ? form.benefits.filter(x => x !== b) : [...form.benefits, b]);
+  const toggleBenefit = (b: string) => {
+    const isOn = form.benefits.includes(b);
+    set("benefits", isOn ? form.benefits.filter(x => x !== b) : [...form.benefits, b]);
+    if (isOn) {
+      const next = { ...form.benefit_values };
+      delete next[b];
+      set("benefit_values", next);
+    }
+  };
+  const setBenefitValue = (b: string, v: string) => {
+    const next = { ...form.benefit_values };
+    if (v.trim()) next[b] = v; else delete next[b];
+    set("benefit_values", next);
+  };
   const addPerk = () => set("perks", [...form.perks, { title: "", description: "" }]);
   const removePerk = (i: number) => set("perks", form.perks.filter((_, idx) => idx !== i));
   const updatePerk = (i: number, key: "title" | "description", v: string) =>
