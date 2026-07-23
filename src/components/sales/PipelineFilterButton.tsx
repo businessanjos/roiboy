@@ -56,7 +56,10 @@ interface PipelineFilterButtonProps {
   previewNextActivityMap?: Record<string, string | null>;
   previewTaskCountMap?: Record<string, number>;
   previewPendingCountMap?: Record<string, number>;
+  previewPendingTypesMap?: Record<string, string[]>;
+  previewPendingStatusesMap?: Record<string, string[]>;
 }
+
 
 export function PipelineFilterButton({
   salesUsers,
