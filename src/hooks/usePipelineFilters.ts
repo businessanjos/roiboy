@@ -83,15 +83,15 @@ export const RECOMMENDED_FILTERS = [
     match_type: 'all' as const
   },
   {
-    id: 'no_next_activity',
-    name: 'Sem próxima atividade agendada',
-    conditions: [{ field: 'next_activity_date', operator: 'is_empty', value: null }],
+    id: 'never_contacted',
+    name: '🔴 Nunca contatado (sem nenhum registro)',
+    conditions: [{ field: 'total_tasks', operator: 'equals', value: 0 }],
     match_type: 'all' as const
   },
   {
-    id: 'no_tasks',
-    name: 'Sem tarefa cadastrada',
-    conditions: [{ field: 'total_tasks', operator: 'equals', value: 0 }],
+    id: 'no_next_activity',
+    name: '🟡 Sem próximo passo agendado',
+    conditions: [{ field: 'next_activity_date', operator: 'is_empty', value: null }],
     match_type: 'all' as const
   },
 ];
