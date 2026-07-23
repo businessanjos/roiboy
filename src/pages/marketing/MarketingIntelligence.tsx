@@ -13,10 +13,16 @@ import {
   Sparkles,
   Loader2,
   Info,
+  Ruler,
+  BarChart3,
+  Calendar as CalendarIcon,
+  Search as SearchIcon,
+  Compass,
+  Swords,
+  Target,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,9 +32,10 @@ import CompetitorsTab from "@/components/marketing/intelligence/CompetitorsTab";
 import MarketResearchTab from "@/components/marketing/intelligence/MarketResearchTab";
 import { MarketSnapshotCards } from "@/components/marketing/intelligence/MarketSnapshotCards";
 import { TamSamSomCards } from "@/components/marketing/intelligence/TamSamSomCards";
-import { Swords, Search as SearchIcon, Target, Calendar as CalendarIcon } from "lucide-react";
 import PenetrationTab from "@/components/marketing/intelligence/PenetrationTab";
 import EventsTab from "@/components/marketing/intelligence/EventsTab";
+import { MiKpiCard } from "@/components/marketing/intelligence/MiKpiCard";
+import { MiSectionHeader } from "@/components/marketing/intelligence/MiSectionHeader";
 
 type DistItem = { label: string; count: number; pct: number };
 type Distribution = { total: number; items: DistItem[] };
@@ -88,11 +95,11 @@ const brl = (v: number) =>
 
 function DistBar({
   data,
-  color = "bg-primary",
+  tone = "primary",
   emptyLabel = "Sem dados suficientes",
 }: {
   data: Distribution;
-  color?: string;
+  tone?: "primary" | "success" | "danger";
   emptyLabel?: string;
 }) {
   if (!data.items.length) {
@@ -100,9 +107,15 @@ function DistBar({
       <p className="text-sm text-muted-foreground italic py-4 text-center">{emptyLabel}</p>
     );
   }
+  const barColor =
+    tone === "success"
+      ? "bg-emerald-500 dark:bg-emerald-400"
+      : tone === "danger"
+      ? "bg-red-500 dark:bg-red-400"
+      : "bg-primary";
   const max = Math.max(...data.items.map((i) => i.pct), 1);
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {data.items.map((i) => (
         <div key={i.label} className="space-y-1">
           <div className="flex items-center justify-between text-sm">
@@ -111,44 +124,15 @@ function DistBar({
               {i.count} <span className="text-xs">({i.pct}%)</span>
             </span>
           </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
             <div
-              className={`h-full ${color} rounded-full transition-all`}
+              className={`h-full ${barColor} rounded-full transition-all`}
               style={{ width: `${(i.pct / max) * 100}%` }}
             />
           </div>
         </div>
       ))}
     </div>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  accent = "text-primary",
-}: {
-  icon: typeof Users;
-  label: string;
-  value: string;
-  hint?: string;
-  accent?: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-            <p className="text-2xl font-bold mt-1">{value}</p>
-            {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
-          </div>
-          <Icon className={`h-5 w-5 ${accent}`} />
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -159,135 +143,129 @@ function ProfileGrid({
   profile: Profile;
   variant: "icp" | "anti";
 }) {
-  const color = variant === "icp" ? "bg-emerald-500" : "bg-red-500";
-  const iconColor = variant === "icp" ? "text-emerald-600" : "text-red-600";
+  const distTone = variant === "icp" ? "success" : "danger";
+  const kpiTone = variant === "icp" ? "success" : "danger";
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard
+      <div className="grid gap-3 md:grid-cols-4">
+        <MiKpiCard
           icon={Users}
           label="Contratos"
           value={profile.headcount.toString()}
           hint={variant === "icp" ? "status = active" : "encerrados/cancelados"}
-          accent={iconColor}
+          tone={kpiTone}
         />
-        <StatCard
+        <MiKpiCard
           icon={DollarSign}
           label="Ticket médio"
           value={brl(profile.avgTicket)}
           hint={`mediana ${brl(profile.medianTicket)}`}
-          accent={iconColor}
+          tone={kpiTone}
         />
-        <StatCard
+        <MiKpiCard
           icon={DollarSign}
           label="Volume total"
           value={brl(profile.totalValue)}
-          accent={iconColor}
+          tone={kpiTone}
         />
-        <StatCard
+        <MiKpiCard
           icon={Clock}
           label={variant === "icp" ? "Tempo de casa" : "Tempo até saída"}
           value={`${Math.round(profile.avgTenureDays)} dias`}
           hint={`mediana ${Math.round(profile.medianTenureDays)} dias`}
-          accent={iconColor}
+          tone={kpiTone}
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Package className={`h-4 w-4 ${iconColor}`} /> Produto contratado
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+              <Package className="h-3.5 w-3.5" /> Produto contratado
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <DistBar data={profile.byProduct} color={color} />
+            <DistBar data={profile.byProduct} tone={distTone} />
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className={`h-4 w-4 ${iconColor}`} /> Faixa de ticket
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+              <DollarSign className="h-3.5 w-3.5" /> Faixa de ticket
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <DistBar data={profile.byTicketBand} color={color} />
+            <DistBar data={profile.byTicketBand} tone={distTone} />
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className={`h-4 w-4 ${iconColor}`} /> Região
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" /> Região
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <DistBar data={profile.byRegion} color={color} />
+            <DistBar data={profile.byRegion} tone={distTone} />
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className={`h-4 w-4 ${iconColor}`} /> Estado (top 15)
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" /> Estado (top 15)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <DistBar data={profile.byState} color={color} />
+            <DistBar data={profile.byState} tone={distTone} />
           </CardContent>
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className={`h-4 w-4 ${iconColor}`} /> Cidades (top 15)
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" /> Cidades (top 15)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <DistBar data={profile.byCity} color={color} />
+            <DistBar data={profile.byCity} tone={distTone} />
           </CardContent>
         </Card>
 
         {variant === "anti" && profile.byCancellationReason.items.length > 0 && (
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-600" /> Motivos de saída
+          <Card className="lg:col-span-2 border-red-500/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-red-600 dark:text-red-400">
+                <AlertTriangle className="h-3.5 w-3.5" /> Motivos de saída
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <DistBar data={profile.byCancellationReason} color="bg-red-500" />
+              <DistBar data={profile.byCancellationReason} tone="danger" />
             </CardContent>
           </Card>
         )}
 
-        {(profile.byGender.items.length > 0 ||
-          profile.bySpecialty.items.length > 0 ||
-          profile.byEducation.items.length > 0) && (
-          <>
-            {profile.byGender.items.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Gênero</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <DistBar data={profile.byGender} color={color} />
-                </CardContent>
-              </Card>
-            )}
-            {profile.bySpecialty.items.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Especialidade</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <DistBar data={profile.bySpecialty} color={color} />
-                </CardContent>
-              </Card>
-            )}
-          </>
+        {profile.byGender.items.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground">Gênero</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DistBar data={profile.byGender} tone={distTone} />
+            </CardContent>
+          </Card>
+        )}
+        {profile.bySpecialty.items.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground">Especialidade</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DistBar data={profile.bySpecialty} tone={distTone} />
+            </CardContent>
+          </Card>
         )}
       </div>
     </>
@@ -375,33 +353,34 @@ export default function MarketingIntelligence() {
         <>
           {/* KPIs executivos — sempre visíveis, no topo */}
           <div className="grid gap-4 md:grid-cols-4">
-            <StatCard
+          <div className="grid gap-3 md:grid-cols-4">
+            <MiKpiCard
               icon={Users}
               label="Clientes ativos"
               value={data.summary.active_clients.toString()}
               hint={`${data.summary.active_contracts ?? data.summary.active_clients} contratos active${data.summary.on_hold_clients ? ` · +${data.summary.on_hold_clients} em hold` : ""}`}
-              accent="text-emerald-600"
+              tone="success"
             />
-            <StatCard
+            <MiKpiCard
               icon={TrendingDown}
               label="Perdidos"
               value={data.summary.churned_clients.toString()}
               hint="clientes que já saíram"
-              accent="text-red-600"
+              tone="danger"
             />
-            <StatCard
+            <MiKpiCard
               icon={AlertTriangle}
               label="Churn histórico"
               value={`${data.summary.churn_rate}%`}
               hint="perdidos / (ativos + perdidos)"
-              accent="text-amber-600"
+              tone="warning"
             />
-            <StatCard
+            <MiKpiCard
               icon={Info}
               label="Cobertura geográfica"
               value={`${coveragePct}%`}
               hint={`${data.coverage.with_state}/${data.coverage.total_clients_sampled} com estado`}
-              accent="text-blue-600"
+              tone="info"
             />
           </div>
 
@@ -420,12 +399,13 @@ export default function MarketingIntelligence() {
             </TabsList>
 
             {/* ————— MERCADO: tamanho, snapshot, eventos, pesquisa ————— */}
-            <TabsContent value="market" className="space-y-6 mt-6">
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Tamanho do mercado</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  TAM · SAM · SOM do mercado de estética, com base em cenários salvos.
-                </p>
+            <TabsContent value="market" className="space-y-8 mt-6">
+              <section>
+                <MiSectionHeader
+                  icon={Ruler}
+                  title="Tamanho do mercado"
+                  description="TAM · SAM · SOM do mercado de estética, com base em cenários salvos."
+                />
                 <TamSamSomCards
                   onOpenDetail={() => setTab("market")}
                   currentMetrics={{
@@ -435,31 +415,34 @@ export default function MarketingIntelligence() {
                     churnRate: data.summary.churn_rate,
                   }}
                 />
-              </div>
+              </section>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Snapshot do setor</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Indicadores macro coletados nas últimas pesquisas de mercado.
-                </p>
+              <section>
+                <MiSectionHeader
+                  icon={BarChart3}
+                  title="Snapshot do setor"
+                  description="Indicadores macro coletados nas últimas pesquisas de mercado."
+                />
                 <MarketSnapshotCards onOpenDetail={() => setTab("market")} />
-              </div>
+              </section>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Eventos do setor</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Congressos, feiras e encontros relevantes para prospecção e presença.
-                </p>
+              <section>
+                <MiSectionHeader
+                  icon={CalendarIcon}
+                  title="Eventos do setor"
+                  description="Congressos, feiras e encontros relevantes para prospecção e presença."
+                />
                 <EventsTab />
-              </div>
+              </section>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Pesquisa de mercado</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Perguntas livres à IA e cenários salvos com fontes.
-                </p>
+              <section>
+                <MiSectionHeader
+                  icon={SearchIcon}
+                  title="Pesquisa de mercado"
+                  description="Perguntas livres à IA e cenários salvos com fontes."
+                />
                 <MarketResearchTab />
-              </div>
+              </section>
             </TabsContent>
 
             {/* ————— NOSSA BASE: ICP, Anti-ICP, sinais ————— */}
@@ -590,22 +573,24 @@ export default function MarketingIntelligence() {
             </TabsContent>
 
             {/* ————— OPORTUNIDADE: penetração + concorrentes ————— */}
-            <TabsContent value="opportunity" className="space-y-6 mt-6">
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Penetração por região</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Onde temos base forte, onde há espaço para crescer.
-                </p>
+            <TabsContent value="opportunity" className="space-y-8 mt-6">
+              <section>
+                <MiSectionHeader
+                  icon={Compass}
+                  title="Penetração por região"
+                  description="Onde temos base forte, onde há espaço para crescer."
+                />
                 <PenetrationTab />
-              </div>
+              </section>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-1">Concorrentes</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Quem disputa o mesmo mentorado, com posicionamento e ticket.
-                </p>
+              <section>
+                <MiSectionHeader
+                  icon={Swords}
+                  title="Concorrentes"
+                  description="Quem disputa o mesmo mentorado, com posicionamento e ticket."
+                />
                 <CompetitorsTab />
-              </div>
+              </section>
             </TabsContent>
           </Tabs>
         </>
