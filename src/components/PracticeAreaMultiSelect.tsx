@@ -125,11 +125,10 @@ export function PracticeAreaMultiSelect({
                     value={`${a.label} ${a.slug}`}
                     onSelect={() => toggle(a.label)}
                   >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        isSelected ? "opacity-100" : "opacity-0",
-                      )}
+                    <Checkbox
+                      checked={isSelected}
+                      className="mr-2 pointer-events-none"
+                      tabIndex={-1}
                     />
                     {a.label}
                   </CommandItem>
