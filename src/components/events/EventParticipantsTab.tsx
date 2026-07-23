@@ -488,38 +488,45 @@ export default function EventParticipantsTab({
     !participants.some(p => p.client_id === c.id)
   );
 
+  const filterCards: { key: EventRsvpStatus | "all"; label: string; value: number; color: string }[] = [
+    { key: "all", label: "Total", value: stats.total, color: "text-foreground" },
+    { key: "confirmed", label: "Confirmados", value: stats.confirmed, color: "text-green-600" },
+    { key: "attended", label: "Presentes", value: stats.attended, color: "text-emerald-600" },
+    { key: "pending", label: "Pendentes", value: stats.pending, color: "text-yellow-600" },
+    { key: "waitlist", label: "Lista de Espera", value: stats.waitlist, color: "text-blue-600" },
+    { key: "declined", label: "Recusados", value: stats.declined, color: "text-red-600" },
+    { key: "no_show", label: "Faltaram", value: stats.noShow, color: "text-gray-500" },
+  ];
+
+  const filteredParticipants = participants.filter((p) => {
+    if (statusFilter !== "all" && p.rsvp_status !== statusFilter) return false;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const name = getParticipantName(p).toLowerCase();
+    const email = (getParticipantEmail(p) || "").toLowerCase();
+    const phone = (getParticipantPhone(p) || "").toLowerCase();
+    return name.includes(q) || email.includes(q) || phone.includes(q);
+  });
+
   return (
     <div className="space-y-6">
-      {/* Stats */}
+      {/* Stats — clique para filtrar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        <Card className="p-3">
-          <p className="text-2xl font-bold">{stats.total}</p>
-          <p className="text-xs text-muted-foreground">Total</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
-          <p className="text-xs text-muted-foreground">Confirmados</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-emerald-600">{stats.attended}</p>
-          <p className="text-xs text-muted-foreground">Presentes</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-          <p className="text-xs text-muted-foreground">Pendentes</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-blue-600">{stats.waitlist}</p>
-          <p className="text-xs text-muted-foreground">Lista de Espera</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-red-600">{stats.declined}</p>
-          <p className="text-xs text-muted-foreground">Recusados</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-gray-500">{stats.noShow}</p>
-          <p className="text-xs text-muted-foreground">Faltaram</p>
-        </Card>
+        {filterCards.map((c) => {
+          const active = statusFilter === c.key;
+          return (
+            <Card
+              key={c.key}
+              onClick={() => setStatusFilter(c.key)}
+              className={`p-3 cursor-pointer transition-all hover:shadow-md ${
+                active ? "ring-2 ring-primary border-primary" : ""
+              }`}
+            >
+              <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
+              <p className="text-xs text-muted-foreground">{c.label}</p>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Actions */}
