@@ -760,7 +760,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                   {trigger.trigger_type === "min_calls" && "Quantidade mínima de ligações no período"}
                   {trigger.trigger_type === "min_conversion_rate" && "Percentual mínimo de conversão de negócios"}
                   {trigger.trigger_type === "no_delinquency" && "Nenhum cliente com inadimplência"}
-                  {trigger.trigger_type === "tasks_completed" && "Percentual de tarefas concluídas"}
+                  {trigger.trigger_type === "tasks_completed" && "Percentual de atividades concluídas"}
                 </p>
               </div>
               {trigger.trigger_type !== "no_delinquency" && (
