@@ -138,7 +138,7 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
           <div className="bg-muted/50 rounded-lg p-3 overflow-hidden">
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle2 className="h-4 w-4 text-amber-500 flex-shrink-0" />
-              <span className="text-xs font-medium text-muted-foreground">Tarefas</span>
+              <span className="text-xs font-medium text-muted-foreground">Atividades</span>
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-lg font-bold">{rep.completed_tasks}</span>
