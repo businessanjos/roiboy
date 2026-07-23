@@ -513,6 +513,14 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
       return evaluateNumberCondition(count, operator, value, { treatZeroAsEmpty: true });
     }
 
+    case 'pending_activity_type':
+      return evaluateStringSetCondition(dealPendingTypesMap?.[deal.id] || [], operator, value);
+
+    case 'pending_activity_status':
+      return evaluateStringSetCondition(dealPendingStatusesMap?.[deal.id] || [], operator, value);
+
+
+
 
 
     default:
