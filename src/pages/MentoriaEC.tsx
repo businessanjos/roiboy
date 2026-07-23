@@ -87,17 +87,17 @@ export default function MentoriaEC() {
       // Active EC contracts
       const { data: contracts, error: cErr } = await supabase
         .from("client_contracts")
-        .select("client_id, end_date, status")
+        .select("client_id, end_date, status, product_id")
         .eq("account_id", accountId!)
-        .in("product_id", EC_PRODUCT_IDS)
+        .in("product_id", MENTORING_PRODUCT_IDS)
         .eq("status", "active");
       if (cErr) throw cErr;
 
-      const byClient = new Map<string, string | null>();
-      (contracts || []).forEach((c) => {
+      const byClient = new Map<string, { endDate: string | null; productId: string }>();
+      (contracts || []).forEach((c: any) => {
         const prev = byClient.get(c.client_id);
-        if (!prev || (c.end_date && (!prev || c.end_date > prev))) {
-          byClient.set(c.client_id, c.end_date);
+        if (!prev || (c.end_date && (!prev.endDate || c.end_date > prev.endDate))) {
+          byClient.set(c.client_id, { endDate: c.end_date, productId: c.product_id });
         }
       });
 
