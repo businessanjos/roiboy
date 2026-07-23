@@ -245,6 +245,7 @@ export default function Leads() {
     email: "",
     source: "",
     notes: "",
+    business_segment: "",
     additional_phones: [] as { label?: string; number: string }[],
     emails: [] as string[],
   });
