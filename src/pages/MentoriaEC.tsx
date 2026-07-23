@@ -76,7 +76,17 @@ export default function MentoriaEC() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [mentorshipFilter, setMentorshipFilter] = useState<MentorshipStatusFilter>("all");
-  const [programFilter, setProgramFilter] = useState<ProgramFilter>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const programFilter = ((): ProgramFilter => {
+    const v = searchParams.get("program");
+    return v === "EC" || v === "RM" ? v : "all";
+  })();
+  const setProgramFilter = (v: ProgramFilter) => {
+    const next = new URLSearchParams(searchParams);
+    if (v === "all") next.delete("program");
+    else next.set("program", v);
+    setSearchParams(next, { replace: true });
+  };
   const [recordingFor, setRecordingFor] = useState<EcMember | null>(null);
   const [sessionDate, setSessionDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [sessionNotes, setSessionNotes] = useState("");
