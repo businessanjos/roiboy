@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { ClientClinicsManager } from "./ClientClinicsManager";
 import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
+import { PracticeAreaMultiSelect } from "@/components/PracticeAreaMultiSelect";
 import { CountryStateCity, type LocationFields } from "@/components/operations/CountryStateCity";
 import { COUNTRIES, BRAZIL_STATES } from "@/lib/countries";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -480,12 +481,12 @@ export function ClientBusinessProfile({
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1 mb-1">
                 <Target className="h-3.5 w-3.5" /> Área de Atuação
               </span>
-              <PracticeAreaSelect
+              <PracticeAreaMultiSelect
                 value={client.business_niche}
                 onChange={(v) => {
                   saveField({ business_niche: v || null } as any);
                 }}
-                placeholder="Selecione a área de atuação"
+                placeholder="Selecione uma ou mais áreas"
               />
             </div>
             <InlineTextField
