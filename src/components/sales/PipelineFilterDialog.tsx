@@ -471,6 +471,23 @@ export function PipelineFilterDialog({
             Adicionar condição
           </Button>
 
+          {/* Live preview of matching deals */}
+          {computePreview && (
+            <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+              {preview ? (
+                <span className="text-foreground">
+                  <span className="font-semibold text-primary">{preview.matched}</span>
+                  <span className="text-muted-foreground"> de {preview.total} negócios em aberto atendem a estas condições</span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">
+                  Preencha as condições para ver a prévia da quantidade de negócios encontrados.
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="border-t pt-4 space-y-4">
             {/* Filter Name */}
             <div className="space-y-2">
