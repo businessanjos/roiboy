@@ -17,6 +17,7 @@ interface DealKanbanColumnProps {
   itemVendaMap?: Record<string, { name: string; color: string | null }>;
   isDragActive?: boolean;
   activityStatusGetter?: (dealId: string) => ActivityStatus;
+  showActivityCounts?: boolean;
 }
 
 const getStageIcon = (stageName: string, color: string) => {
