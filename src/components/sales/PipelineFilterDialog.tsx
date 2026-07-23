@@ -335,6 +335,28 @@ export function PipelineFilterDialog({
       );
     }
 
+    // Date range input (between)
+    if (condition.operator === 'between') {
+      const [start = '', end = ''] = String(condition.value || '').split('|');
+      return (
+        <div className="flex items-center gap-1">
+          <Input
+            type="date"
+            value={start}
+            onChange={(e) => updateCondition(index, { value: `${e.target.value}|${end}` })}
+            className="w-[140px]"
+          />
+          <span className="text-xs text-muted-foreground">até</span>
+          <Input
+            type="date"
+            value={end}
+            onChange={(e) => updateCondition(index, { value: `${start}|${e.target.value}` })}
+            className="w-[140px]"
+          />
+        </div>
+      );
+    }
+
     // Date input
     if (['before', 'after'].includes(condition.operator)) {
       return (
