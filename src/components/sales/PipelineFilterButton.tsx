@@ -25,9 +25,9 @@ import {
   Trash2,
   Package,
 } from "lucide-react";
-import { usePipelineFilters, RECOMMENDED_FILTERS, ActiveFilter, PipelineFilter } from "@/hooks/usePipelineFilters";
+import { usePipelineFilters, RECOMMENDED_FILTERS, ActiveFilter, PipelineFilter, applyFilterToDeals, FilterCondition } from "@/hooks/usePipelineFilters";
 import { PipelineFilterDialog, CustomFieldOption } from "./PipelineFilterDialog";
-import { DealStage } from "@/hooks/useDeals";
+import { Deal, DealStage } from "@/hooks/useDeals";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 
