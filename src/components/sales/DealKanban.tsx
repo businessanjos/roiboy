@@ -281,6 +281,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
                 itemVendaMap={itemVendaMap}
                 isDragActive={isDragActive}
                 activityStatusGetter={getActivityStatus}
+                showActivityCounts={showActivityCounts}
               />
             ))}
           </div>
