@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { CheckCircle2, XCircle, MapPin, Briefcase, Calendar, Gift, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { CheckCircle2, XCircle, MapPin, Briefcase, Calendar, Gift, ArrowRight, Loader2, Sparkles, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
