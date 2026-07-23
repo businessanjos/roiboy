@@ -12,6 +12,7 @@ export interface ActivityStatus {
 }
 
 const EMPTY_STATUS: ActivityStatus = { pendingCount: 0, hasOverdue: false, totalActivities: 0, nextDueDate: null };
+const MANUAL_DEAL_ACTIVITY_TYPES = new Set(["call", "whatsapp", "email", "meeting", "image", "file"]);
 
 export interface DealActivityRef {
   id: string;
@@ -25,14 +26,26 @@ function normalizeDealRefs(deals: DealActivityInput[]): DealActivityRef[] {
   return deals.map((deal) => (typeof deal === "string" ? { id: deal } : deal));
 }
 
+function isManualDealActivity(activity: { type?: string | null; title?: string | null }) {
+  const type = (activity.type || "").toLowerCase();
+  const title = (activity.title || "").trim().toLowerCase();
+
+  if (MANUAL_DEAL_ACTIVITY_TYPES.has(type)) return true;
+  if (type === "note") return title === "" || title === "nota";
+
+  return false;
+}
+
 
 /**
  * Fetches activity statuses for ALL visible deals in batches, replacing the N+1
  * per-card approach of useDealActivityStatus.
  *
- * IMPORTANT: "Sem atividades" means zero tasks registered for the negotiation/lead.
- * Count tasks linked either directly to the deal_id OR to the lead_id behind that deal,
- * including completed tasks. It is not a pending/open-activity filter.
+ * IMPORTANT: "Sem atividades" means zero human-registered tasks/activities for
+ * the negotiation/lead/client. Count structured tasks plus manual deal activities
+ * (note/call/whatsapp/email/meeting/file/image), including completed tasks.
+ * System logs like stage/status changes and Typeform/API creation notes do not
+ * count as seller action.
  */
 async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<Record<string, ActivityStatus>> {
   if (dealRefs.length === 0) return {};
@@ -48,10 +61,12 @@ async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<
   const clientToDealIds = new Map<string, string[]>();
   const map: Record<string, ActivityStatus> = {};
   const seenTaskIdsByDeal = new Map<string, Set<string>>();
+  const seenActivityIdsByDeal = new Map<string, Set<string>>();
 
   for (const deal of dealRefs) {
     map[deal.id] = { ...EMPTY_STATUS };
     seenTaskIdsByDeal.set(deal.id, new Set());
+    seenActivityIdsByDeal.set(deal.id, new Set());
     if (deal.lead_id) {
       const existing = leadToDealIds.get(deal.lead_id) || [];
       existing.push(deal.id);
@@ -89,6 +104,16 @@ async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<
     }
   };
 
+  const registerDealActivityForDeal = (dealId: string, activity: any) => {
+    if (!isManualDealActivity(activity)) return;
+
+    const seenActivityIds = seenActivityIdsByDeal.get(dealId);
+    if (!seenActivityIds || seenActivityIds.has(activity.id)) return;
+    seenActivityIds.add(activity.id);
+
+    map[dealId].totalActivities++;
+  };
+
   const today = startOfDay(new Date());
 
   const taskSelect = `
@@ -121,12 +146,39 @@ async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<
     }
   };
 
+  const fetchDealActivityPages = async (ids: string[]) => {
+    const rows: any[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("deal_activities")
+        .select("id, deal_id, type, title")
+        .in("deal_id", ids)
+        .range(from, from + PAGE_SIZE - 1);
+
+      if (error) {
+        console.error("[useBatchDealActivityStatus] deal activity error:", error);
+        return rows;
+      }
+
+      const page = (data || []) as any[];
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) return rows;
+    }
+  };
+
   for (let i = 0; i < dealIds.length; i += CHUNK) {
     const chunk = dealIds.slice(i, i + CHUNK);
     const tasks = await fetchTaskPages("deal_id", chunk);
     for (const task of tasks) {
       if (task.deal_id && dealIdSet.has(task.deal_id)) {
         registerTaskForDeal(task.deal_id, task, today);
+      }
+    }
+
+    const activities = await fetchDealActivityPages(chunk);
+    for (const activity of activities) {
+      if (activity.deal_id && dealIdSet.has(activity.deal_id)) {
+        registerDealActivityForDeal(activity.deal_id, activity);
       }
     }
   }

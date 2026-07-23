@@ -298,6 +298,7 @@ export function ZappDealDetailSheet({
     onSuccess: () => {
       setNewActivityDescription("");
       refetchActivities();
+      queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
       toast.success("Atividade registrada!");
     },
   });

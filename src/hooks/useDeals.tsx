@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
@@ -134,6 +135,7 @@ const DEFAULT_STAGES: Omit<DealStage, 'id' | 'account_id' | 'created_at' | 'upda
 export function useDeals(pipelineId?: string | null) {
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [stages, setStages] = useState<DealStage[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -483,6 +485,7 @@ export function useDeals(pipelineId?: string | null) {
         content: `Negociação "${data.title}" foi criada`,
         user_id: currentUser.id,
       });
+      queryClient.invalidateQueries({ queryKey: ['batch-deal-activity-status'] });
 
       toast({
         title: "Negociação criada",
@@ -567,6 +570,7 @@ export function useDeals(pipelineId?: string | null) {
           content: newStatus === 'lost' ? (data.lost_reason || null) : null,
           user_id: currentUser.id,
         });
+        queryClient.invalidateQueries({ queryKey: ['batch-deal-activity-status'] });
       }
 
       // Save product_id (Item da Venda) to deal_field_values if provided
@@ -691,6 +695,7 @@ export function useDeals(pipelineId?: string | null) {
                 new_value: `Reunião Agendada (Closer)`,
                 user_id: currentUser.id,
               });
+              queryClient.invalidateQueries({ queryKey: ['batch-deal-activity-status'] });
 
               // Remove from local state (it's now in another pipeline)
               setDeals(prev => prev.filter(d => d.id !== dealId));
@@ -747,6 +752,7 @@ export function useDeals(pipelineId?: string | null) {
         new_value: resolvedNewStage?.name || 'Sem etapa',
         user_id: currentUser.id,
       });
+      queryClient.invalidateQueries({ queryKey: ['batch-deal-activity-status'] });
 
       if (isOtherPipeline) {
         // Remove from local state since it moved to another pipeline
@@ -914,6 +920,7 @@ export function useDeals(pipelineId?: string | null) {
         new_value: 'Em aberto',
         user_id: currentUser.id,
       });
+      queryClient.invalidateQueries({ queryKey: ['batch-deal-activity-status'] });
 
       await fetchDeals();
 
