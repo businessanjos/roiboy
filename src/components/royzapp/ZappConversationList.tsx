@@ -133,23 +133,18 @@ export const ZappConversationList = memo(function ZappConversationList({
       return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesConversationType && matchesProduct && matchesTag && matchesAgent;
     });
     
-    // Sort: pinned first, then by unread count (desc), then by last message date (desc)
+    // Sort: pinned first, then strictly by last message date (desc) — como no WhatsApp
     return filtered.sort((a, b) => {
       const contactA = getContactInfo(a);
       const contactB = getContactInfo(b);
-      
+
       // Pinned conversations first
       if (contactA.isPinned && !contactB.isPinned) return -1;
       if (!contactA.isPinned && contactB.isPinned) return 1;
-      
-      // Then by unread count (conversations with unread first)
-      const unreadA = contactA.unreadCount > 0 ? 1 : 0;
-      const unreadB = contactB.unreadCount > 0 ? 1 : 0;
-      if (unreadA !== unreadB) return unreadB - unreadA;
-      
-      // Then by last message date
-      const dateA = new Date(contactA.lastMessageAt).getTime();
-      const dateB = new Date(contactB.lastMessageAt).getTime();
+
+      // Then by last message date (mais recente no topo)
+      const dateA = contactA.lastMessageAt ? new Date(contactA.lastMessageAt).getTime() : 0;
+      const dateB = contactB.lastMessageAt ? new Date(contactB.lastMessageAt).getTime() : 0;
       return dateB - dateA;
     });
   }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, showClosed]);
