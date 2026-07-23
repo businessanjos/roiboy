@@ -2248,6 +2248,9 @@ export default function SalesPipeline() {
                             previewNextActivityMap={dealNextActivityMap}
                             previewTaskCountMap={dealTaskCountMap}
                             previewPendingCountMap={dealPendingCountMap}
+                            previewPendingTypesMap={dealPendingTypesMap}
+                            previewPendingStatusesMap={dealPendingStatusesMap}
+
                           />
                           {canSeeDeleted && (
                             <PipelineDebugDialog
