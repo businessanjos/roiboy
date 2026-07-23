@@ -29,14 +29,31 @@ export function computeWeeklyHours(s: WorkSchedule): number {
   const endMin = eh * 60 + em;
   const workedMin = endMin - startMin - (Number(s.lunch_minutes) || 0);
   if (workedMin <= 0) return 0;
-  return +(workedMin * s.days.length / 60).toFixed(2);
+  return +(workedMin * s.days.length / 60).toFixed(4);
 }
 
 export function formatWeeklyHours(h: number): string {
   if (!h) return "0h";
-  const hours = Math.floor(h);
-  const mins = Math.round((h - hours) * 60);
-  return mins ? `${hours}h${String(mins).padStart(2, "0")}` : `${hours}h`;
+  const totalMin = Math.round(h * 60);
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  return mins ? `${hours}h${String(mins).padStart(2, "0")}min` : `${hours}h`;
+}
+
+export function validateSchedule(s: WorkSchedule): string | null {
+  if (!s?.days?.length) return "Selecione ao menos um dia da semana.";
+  if (!s.start_time || !s.end_time) return "Informe os horários de entrada e saída.";
+  const [sh, sm] = s.start_time.split(":").map(Number);
+  const [eh, em] = s.end_time.split(":").map(Number);
+  if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return "Horários inválidos.";
+  const startMin = sh * 60 + sm;
+  const endMin = eh * 60 + em;
+  if (endMin <= startMin) return "O horário de saída deve ser posterior ao de entrada.";
+  const lunch = Number(s.lunch_minutes) || 0;
+  if (lunch < 0 || lunch > 240) return "O intervalo de almoço deve estar entre 0 e 240 minutos.";
+  const shift = endMin - startMin;
+  if (lunch >= shift) return "O intervalo de almoço não pode ser maior ou igual à jornada diária.";
+  return null;
 }
 
 export function summarizeSchedule(s: WorkSchedule | null | undefined): string {
