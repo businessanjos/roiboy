@@ -338,7 +338,7 @@ export function SalesTeamTab() {
                   <TableHead className="font-medium text-center min-w-[100px]">Ligações</TableHead>
                   <TableHead className="font-medium text-center min-w-[100px]">Pipeline</TableHead>
                   <TableHead className="font-medium text-center min-w-[120px]">Ganhos</TableHead>
-                  <TableHead className="font-medium text-center min-w-[90px]">Tarefas</TableHead>
+                  <TableHead className="font-medium text-center min-w-[90px]">Atividades</TableHead>
                   <TableHead className="font-medium text-center min-w-[90px]">Agend.</TableHead>
                   <TableHead className="font-medium text-center min-w-[80px]">Leads</TableHead>
                   <TableHead className="w-8" />
