@@ -2165,6 +2165,12 @@ export default function SalesPipeline() {
                             onFilterChange={setActiveFilter}
                             availableTags={availableTags}
                             products={pipelineProducts}
+                            previewDeals={openDeals}
+                            previewProductMap={openDealProductMap}
+                            previewCustomFieldValues={dealCustomFieldValues}
+                            previewNextActivityMap={dealNextActivityMap}
+                            previewTaskCountMap={dealTaskCountMap}
+                            previewPendingCountMap={dealPendingCountMap}
                           />
                           {canSeeDeleted && (
                             <PipelineDebugDialog

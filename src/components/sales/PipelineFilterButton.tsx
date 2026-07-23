@@ -25,9 +25,9 @@ import {
   Trash2,
   Package,
 } from "lucide-react";
-import { usePipelineFilters, RECOMMENDED_FILTERS, ActiveFilter, PipelineFilter } from "@/hooks/usePipelineFilters";
+import { usePipelineFilters, RECOMMENDED_FILTERS, ActiveFilter, PipelineFilter, applyFilterToDeals, FilterCondition } from "@/hooks/usePipelineFilters";
 import { PipelineFilterDialog, CustomFieldOption } from "./PipelineFilterDialog";
-import { DealStage } from "@/hooks/useDeals";
+import { Deal, DealStage } from "@/hooks/useDeals";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -50,6 +50,12 @@ interface PipelineFilterButtonProps {
   onFilterChange: (filter: ActiveFilter | null) => void;
   availableTags: string[];
   products?: ProductOption[];
+  previewDeals?: Deal[];
+  previewProductMap?: Record<string, string>;
+  previewCustomFieldValues?: Record<string, Record<string, string>>;
+  previewNextActivityMap?: Record<string, string | null>;
+  previewTaskCountMap?: Record<string, number>;
+  previewPendingCountMap?: Record<string, number>;
 }
 
 export function PipelineFilterButton({
@@ -59,6 +65,12 @@ export function PipelineFilterButton({
   onFilterChange,
   availableTags,
   products = [],
+  previewDeals,
+  previewProductMap,
+  previewCustomFieldValues,
+  previewNextActivityMap,
+  previewTaskCountMap,
+  previewPendingCountMap,
 }: PipelineFilterButtonProps) {
   const { currentUser } = useCurrentUser();
   const { filters, fetchFilters, createFilter, updateFilter, deleteFilter } = usePipelineFilters();
@@ -512,6 +524,30 @@ export function PipelineFilterButton({
         salesUsers={salesUsers}
         availableTags={availableTags}
         customFields={customFields}
+        computePreview={
+          previewDeals
+            ? (conditions: FilterCondition[], matchType: 'all' | 'any') => {
+                const matched = applyFilterToDeals(
+                  previewDeals,
+                  {
+                    type: 'custom',
+                    id: 'preview',
+                    name: 'preview',
+                    conditions,
+                    match_type: matchType,
+                  },
+                  undefined,
+                  previewProductMap,
+                  previewCustomFieldValues,
+                  previewNextActivityMap,
+                  undefined,
+                  previewTaskCountMap,
+                  previewPendingCountMap,
+                );
+                return { matched: matched.length, total: previewDeals.length };
+              }
+            : undefined
+        }
       />
     </>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +56,7 @@ interface PipelineFilterDialogProps {
   salesUsers: SalesUser[];
   availableTags: string[];
   customFields?: CustomFieldOption[];
+  computePreview?: (conditions: FilterCondition[], matchType: 'all' | 'any') => { matched: number; total: number } | null;
 }
 
 // Field definitions with their available operators
@@ -145,11 +146,31 @@ export function PipelineFilterDialog({
   salesUsers,
   availableTags,
   customFields = [],
+  computePreview,
 }: PipelineFilterDialogProps) {
   const [name, setName] = useState("");
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [matchType, setMatchType] = useState<'all' | 'any'>('all');
   const [isPublic, setIsPublic] = useState(false);
+
+  const preview = useMemo(() => {
+    if (!computePreview || !isOpen) return null;
+    // Skip conditions still empty (need value unless operator is value-less)
+    const isReady = conditions.every(c => {
+      if (!c.field || !c.operator) return false;
+      if (VALUE_NOT_NEEDED.includes(c.operator)) return true;
+      if (c.value === null || c.value === undefined) return false;
+      if (typeof c.value === 'string' && !c.value.trim()) return false;
+      if (Array.isArray(c.value) && c.value.length === 0) return false;
+      return true;
+    });
+    if (!isReady) return null;
+    try {
+      return computePreview(conditions, matchType);
+    } catch {
+      return null;
+    }
+  }, [computePreview, conditions, matchType, isOpen]);
 
   useEffect(() => {
     if (editingFilter) {
@@ -449,6 +470,23 @@ export function PipelineFilterDialog({
             <Plus className="h-4 w-4" />
             Adicionar condição
           </Button>
+
+          {/* Live preview of matching deals */}
+          {computePreview && (
+            <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+              {preview ? (
+                <span className="text-foreground">
+                  <span className="font-semibold text-primary">{preview.matched}</span>
+                  <span className="text-muted-foreground"> de {preview.total} negócios em aberto atendem a estas condições</span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">
+                  Preencha as condições para ver a prévia da quantidade de negócios encontrados.
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="border-t pt-4 space-y-4">
             {/* Filter Name */}
