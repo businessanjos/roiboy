@@ -524,6 +524,30 @@ export function PipelineFilterButton({
         salesUsers={salesUsers}
         availableTags={availableTags}
         customFields={customFields}
+        computePreview={
+          previewDeals
+            ? (conditions: FilterCondition[], matchType: 'all' | 'any') => {
+                const matched = applyFilterToDeals(
+                  previewDeals,
+                  {
+                    type: 'custom',
+                    id: 'preview',
+                    name: 'preview',
+                    conditions,
+                    match_type: matchType,
+                  },
+                  undefined,
+                  previewProductMap,
+                  previewCustomFieldValues,
+                  previewNextActivityMap,
+                  undefined,
+                  previewTaskCountMap,
+                  previewPendingCountMap,
+                );
+                return { matched: matched.length, total: previewDeals.length };
+              }
+            : undefined
+        }
       />
     </>
   );
