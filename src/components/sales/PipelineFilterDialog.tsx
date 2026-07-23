@@ -56,6 +56,7 @@ interface PipelineFilterDialogProps {
   salesUsers: SalesUser[];
   availableTags: string[];
   customFields?: CustomFieldOption[];
+  computePreview?: (conditions: FilterCondition[], matchType: 'all' | 'any') => { matched: number; total: number } | null;
 }
 
 // Field definitions with their available operators
