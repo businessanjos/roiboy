@@ -17,7 +17,7 @@ import { suggestKpis, type KpiSuggestion } from "@/constants/kpiSuggestions";
 import { getPublicOrigin } from "@/lib/publicLink";
 import { cn } from "@/lib/utils";
 import { OfferRichTextarea } from "@/components/rh/offers/OfferRichTextarea";
-import WorkScheduleField, { validateSchedule } from "@/components/rh/offers/WorkScheduleField";
+import WorkScheduleField, { validateSchedule, normalizeSchedule, type WorkSchedule } from "@/components/rh/offers/WorkScheduleField";
 
 const STEPS = [
   { id: 1, title: "Candidato" },
@@ -55,12 +55,7 @@ type Form = {
   success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string;
   offer_expires_at: string;
-  work_schedule: {
-    days: string[];
-    start_time: string;
-    end_time: string;
-    lunch_minutes: number;
-  };
+  work_schedule: WorkSchedule;
   hero_headline: string;
   company_intro: string;
   role_pitch: string;
@@ -81,7 +76,7 @@ const EMPTY: Form = {
   salary_amount: "", salary_currency: "BRL", salary_note: "", variable_compensation: "",
   benefits: [], benefit_values: {}, perks: [], success_metrics: [],
   start_date: "", offer_expires_at: "",
-  work_schedule: { days: ["mon","tue","wed","thu","fri"], start_time: "09:00", end_time: "18:00", lunch_minutes: 60 },
+  work_schedule: { rules: [{ days: ["mon","tue","wed","thu","fri"], start_time: "09:00", end_time: "18:00", lunch_minutes: 60 }] },
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
   signer_name: "", signer_role: "",
   accent_color: "#6366F1", cover_image_url: "", candidate_photo_url: "",
@@ -162,7 +157,7 @@ export default function RHOfferWizard() {
         success_metrics: ((data as any).success_metrics as any) || [],
         start_date: cloning ? "" : (data.start_date || ""),
         offer_expires_at: cloning ? "" : (data.offer_expires_at || ""),
-        work_schedule: ((data as any).work_schedule as Form["work_schedule"]) || { days: ["mon","tue","wed","thu","fri"], start_time: "09:00", end_time: "18:00", lunch_minutes: 60 },
+        work_schedule: normalizeSchedule((data as any).work_schedule),
         hero_headline: cloning ? "" : (data.hero_headline || ""),
         company_intro: data.company_intro || "",
         role_pitch: data.role_pitch || "",
@@ -286,7 +281,7 @@ export default function RHOfferWizard() {
       success_metrics: form.success_metrics.filter(m => m.label.trim()),
       start_date: form.start_date || null,
       offer_expires_at: form.offer_expires_at || null,
-      work_schedule: form.work_schedule && form.work_schedule.days?.length ? form.work_schedule : null,
+      work_schedule: form.work_schedule?.rules?.some((r) => r.days?.length) ? form.work_schedule : null,
       hero_headline: form.hero_headline || null,
       company_intro: form.company_intro || DEFAULT_COMPANY_INTRO,
       role_pitch: form.role_pitch || null,
