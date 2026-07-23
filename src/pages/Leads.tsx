@@ -340,6 +340,7 @@ export default function Leads() {
       email: "",
       source: "",
       notes: "",
+      business_segment: "",
       additional_phones: [],
       emails: [],
     });
