@@ -472,7 +472,13 @@ export default function EventsTab() {
           e.focus.some((f) => f.toLowerCase().includes(q))
         );
       })
-      .sort((a, b) => a.monthIndex - b.monthIndex);
+      .sort((a, b) => {
+        if (a.monthIndex !== b.monthIndex) return a.monthIndex - b.monthIndex;
+        const pa = audiencePriority(a);
+        const pb = audiencePriority(b);
+        if (pa !== pb) return pa - pb;
+        return a.name.localeCompare(b.name);
+      });
   }, [search, scope]);
 
   const byMonth = useMemo(() => {
