@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,8 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Plus, RefreshCw, Trash2, ExternalLink, Loader2, ChevronDown,
-  ShieldAlert, Lightbulb, Target, TrendingUp, TrendingDown, Sparkles,
+  ShieldAlert, Lightbulb, Target, TrendingUp, TrendingDown, Sparkles, Swords,
 } from "lucide-react";
+import { MiSectionHeader } from "./MiSectionHeader";
+import { MiEmptyState } from "./MiEmptyState";
 
 type Competitor = {
   id: string;
