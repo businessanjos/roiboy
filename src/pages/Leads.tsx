@@ -1762,6 +1762,15 @@ export default function Leads() {
               </div>
 
               <div className="space-y-2">
+              <div className="space-y-2">
+                <Label>Área de Atuação</Label>
+                <PracticeAreaSelect
+                  value={formData.business_segment}
+                  onChange={(v) => setFormData({ ...formData, business_segment: v })}
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="source">Origem</Label>
                 <Select
                   value={formData.source}
