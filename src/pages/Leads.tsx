@@ -1762,7 +1762,6 @@ export default function Leads() {
               </div>
 
               <div className="space-y-2">
-              <div className="space-y-2">
                 <Label>Área de Atuação</Label>
                 <PracticeAreaSelect
                   value={formData.business_segment}
