@@ -273,7 +273,21 @@ export default function MentoriaEC() {
         }
         return a.fullName.localeCompare(b.fullName, "pt-BR");
       });
-  }, [members, search, statusFilter, mentorshipFilter, programFilter, attendanceSort]);
+  }, [members, search, statusFilter, mentorshipFilter, programFilter, practiceFilter, attendanceSort]);
+
+  const practiceOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    let noneCount = 0;
+    members.forEach((m) => {
+      const seg = (m.businessSegment ?? "").trim();
+      if (!seg) noneCount += 1;
+      else counts.set(seg, (counts.get(seg) ?? 0) + 1);
+    });
+    const list = Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0], "pt-BR"))
+      .map(([label, count]) => ({ value: label, label, count }));
+    return { list, noneCount };
+  }, [members]);
 
   const totals = useMemo(() => {
     const total = members.length;
