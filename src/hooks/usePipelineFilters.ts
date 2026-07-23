@@ -504,6 +504,11 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
       return evaluateNumberCondition(count, operator, value);
     }
 
+    case 'pending_tasks': {
+      const count = dealPendingCountMap?.[deal.id] ?? 0;
+      return evaluateNumberCondition(count, operator, value);
+    }
+
 
 
     default:

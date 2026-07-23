@@ -70,6 +70,8 @@ const FILTER_FIELDS = [
   { value: 'updated_at', label: 'Última atualização', type: 'date' },
   { value: 'expected_close_date', label: 'Data prevista fechamento', type: 'date' },
   { value: 'next_activity_date', label: 'Próxima atividade em', type: 'date' },
+  { value: 'pending_tasks', label: 'Atividades pendentes', type: 'number' },
+  { value: 'total_tasks', label: 'Total de atividades', type: 'number' },
 ];
 
 
