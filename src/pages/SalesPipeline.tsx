@@ -999,9 +999,10 @@ export default function SalesPipeline() {
     return Array.from(tagSet).sort();
   }, [deals]);
 
-  // Batch activity statuses to support "Próxima atividade em" filter
-  const dealIdsArray = useMemo(() => deals.map(d => d.id), [deals]);
-  const { statusMap: activityStatusMap } = useBatchDealActivityStatus(dealIdsArray);
+  // Batch activity statuses to support "Próxima atividade em" and "Sem atividades" filters.
+  // Pass lead_id too, because tasks can be linked to the lead instead of directly to the deal.
+  const dealActivityRefs = useMemo(() => deals.map(d => ({ id: d.id, lead_id: d.lead_id })), [deals]);
+  const { statusMap: activityStatusMap, isLoading: activityStatusLoading } = useBatchDealActivityStatus(dealActivityRefs);
 
   const dealNextActivityMap = useMemo(() => {
     const m: Record<string, string | null> = {};
@@ -1026,6 +1027,12 @@ export default function SalesPipeline() {
     });
     return m;
   }, [activityStatusMap]);
+
+  const activeFilterNeedsActivityCounts = useMemo(() => {
+    return (activeFilter?.conditions || []).some((condition) =>
+      condition.field === 'next_activity_date' || condition.field === 'total_tasks'
+    );
+  }, [activeFilter]);
 
   // Range de datas para filtro do pipeline aberto (criação do negócio)
   const openDateRange = useMemo<{ start: Date; end: Date } | null>(() => {
@@ -1062,6 +1069,7 @@ export default function SalesPipeline() {
   // Deals após aplicar filtro do vendedor/busca/data (mas antes do filtro de origem).
   // Usado como base para as opções do filtro de origem e como base do filtro final.
   const dealsBeforeTagFilter = useMemo(() => {
+    if (activityStatusLoading && activeFilterNeedsActivityCounts) return [];
     const base = applyFilterToDeals(openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap, dealPendingCountMap);
     if (!openDateRange) return base;
     return base.filter(d => {
@@ -1069,7 +1077,7 @@ export default function SalesPipeline() {
       const created = new Date(d.created_at);
       return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
     });
-  }, [openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, openDateRange, searchOptions]);
+  }, [activityStatusLoading, activeFilterNeedsActivityCounts, openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, openDateRange, searchOptions]);
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);

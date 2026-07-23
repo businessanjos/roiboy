@@ -366,6 +366,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         onSuccess={fetchTasks}
         onTaskCompleted={async () => {
           await fetchTasks();
+          queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
           queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
           queryClient.invalidateQueries({ queryKey: ["deal-activity-status", dealId] });
           setEditingTask(null);

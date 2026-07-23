@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
@@ -102,6 +103,7 @@ const PRIORITY_LABELS = {
 };
 
 export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialActivityTypeId, suggestedTitle, forceSectorId, onSuccess, onTaskCompleted }: TaskDialogProps) {
+  const queryClient = useQueryClient();
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
   const { logAudit } = useAuditLog();
@@ -473,6 +475,11 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       }
 
       const wasCompletedBefore = !!task?.completed_at;
+      queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
+      if (formData.deal_id || dealId) {
+        queryClient.invalidateQueries({ queryKey: ["deal-activity-status", formData.deal_id || dealId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
       onOpenChange(false);
       onSuccess();
       if (task && isCompleted && !wasCompletedBefore) {
@@ -519,6 +526,11 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       });
       
       toast.success("Tarefa excluída!");
+      queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
+      if (task.deal_id || dealId) {
+        queryClient.invalidateQueries({ queryKey: ["deal-activity-status", task.deal_id || dealId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
       setDeleteDialogOpen(false);
       onOpenChange(false);
       onSuccess();
