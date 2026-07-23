@@ -33,6 +33,7 @@ import {
   detectCountryFromPhone
 } from "@/lib/validators";
 import { MLS_LEVELS } from "@/lib/mls-utils";
+import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
 
 export interface PixKeyData {
   type: string;
