@@ -171,8 +171,11 @@ export function PipelineFilterDialog({
   salesUsers,
   availableTags,
   customFields = [],
+  activityTypes = [],
+  taskStatuses = [],
   computePreview,
 }: PipelineFilterDialogProps) {
+
   const [name, setName] = useState("");
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [matchType, setMatchType] = useState<'all' | 'any'>('all');
