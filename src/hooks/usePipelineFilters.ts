@@ -432,11 +432,13 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
 
     case 'next_activity_date': {
       const nextDue = dealNextActivityMap?.[deal.id] ?? null;
-      const totalTasks = dealTaskCountMap?.[deal.id] ?? 0;
-      // is_empty / is_not_empty = deal sem NENHUMA atividade cadastrada
-      // (nem pendente nem concluída). Vendedor não fez nada com o lead.
-      if (operator === 'is_empty') return totalTasks === 0;
-      if (operator === 'is_not_empty') return totalTasks > 0;
+      const pendingCount = dealPendingCountMap?.[deal.id] ?? 0;
+      // is_empty / is_not_empty = deal SEM tarefa/atividade em aberto (pendente).
+      // Espelha o "X pendentes" mostrado no card: 0 pendentes ⇒ aparece no filtro.
+      // Atividades já concluídas (Follow Up marcado, ligações registradas, etc.)
+      // NÃO impedem o card de entrar, pois não há próximo passo agendado.
+      if (operator === 'is_empty') return pendingCount === 0;
+      if (operator === 'is_not_empty') return pendingCount > 0;
       if (!nextDue) return false;
       return evaluateDateCondition(nextDue, operator, value, today);
     }
