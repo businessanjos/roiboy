@@ -161,6 +161,7 @@ export default function RHOfferWizard() {
         success_metrics: ((data as any).success_metrics as any) || [],
         start_date: cloning ? "" : (data.start_date || ""),
         offer_expires_at: cloning ? "" : (data.offer_expires_at || ""),
+        work_schedule: ((data as any).work_schedule as Form["work_schedule"]) || { days: ["mon","tue","wed","thu","fri"], start_time: "09:00", end_time: "18:00", lunch_minutes: 60 },
         hero_headline: cloning ? "" : (data.hero_headline || ""),
         company_intro: data.company_intro || "",
         role_pitch: data.role_pitch || "",
