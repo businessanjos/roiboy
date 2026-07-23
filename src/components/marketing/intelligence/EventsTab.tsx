@@ -44,12 +44,13 @@ type EventItem = {
   region?: string;
   month: string; // ex: "Ago"
   monthIndex: number; // 0-11 for sorting
-  audience: string; // Público-alvo
+  audience: string;
   scale: "Grande" | "Médio" | "Regional";
-  focus: string[]; // ex: ["Injetáveis", "Laser"]
+  focus: string[];
   organizer?: string;
   url?: string;
   notes?: string;
+  source?: "curated" | "ai";
 };
 
 // Curated base — mercado de estética avançada/médica (Brasil + mundo).
