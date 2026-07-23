@@ -20,11 +20,17 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-// Both Eternum Club product ids (novo + renovação)
-const EC_PRODUCT_IDS = [
-  "b8c50eca-6fd9-41ac-a1d3-f78086daaea7",
-  "6f74bb43-a1be-410f-a708-6abab066bb38",
+// Produtos elegíveis para a mentoria ao vivo (Eternum Club + Rykas Mentoring)
+const MENTORING_PRODUCTS: { id: string; label: string; program: "EC" | "RM"; className: string }[] = [
+  { id: "b8c50eca-6fd9-41ac-a1d3-f78086daaea7", label: "Eternum Club", program: "EC", className: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300" },
+  { id: "6f74bb43-a1be-410f-a708-6abab066bb38", label: "Eternum Club", program: "EC", className: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300" },
+  { id: "8d3e9bb6-054b-44b3-952f-5920e0ed8775", label: "Rykas Mentoring", program: "RM", className: "bg-pink-500/15 text-pink-700 border-pink-500/30 dark:text-pink-300" },
+  { id: "eae406e9-6076-41eb-96ed-df0ab187a11c", label: "Rykas Mentoring", program: "RM", className: "bg-pink-500/15 text-pink-700 border-pink-500/30 dark:text-pink-300" },
 ];
+const MENTORING_PRODUCT_IDS = MENTORING_PRODUCTS.map((p) => p.id);
+const PRODUCT_META = new Map(MENTORING_PRODUCTS.map((p) => [p.id, p]));
+
+type ProgramFilter = "all" | "EC" | "RM";
 
 type MentorshipStatus =
   | "novata"
