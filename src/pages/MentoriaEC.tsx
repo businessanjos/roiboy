@@ -6,6 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { GraduationCap, CheckCircle2, Clock, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { usePracticeAreas } from "@/hooks/usePracticeAreas";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -275,6 +276,8 @@ export default function MentoriaEC() {
       });
   }, [members, search, statusFilter, mentorshipFilter, programFilter, practiceFilter, attendanceSort]);
 
+  const { data: practiceAreas = [] } = usePracticeAreas();
+
   const practiceOptions = useMemo(() => {
     const counts = new Map<string, number>();
     let noneCount = 0;
@@ -283,11 +286,19 @@ export default function MentoriaEC() {
       if (!seg) noneCount += 1;
       else counts.set(seg, (counts.get(seg) ?? 0) + 1);
     });
-    const list = Array.from(counts.entries())
+    // Base: áreas cadastradas em practice_areas (mesmo com 0 membros)
+    const seen = new Set<string>();
+    const list = practiceAreas.map((pa) => {
+      seen.add(pa.label);
+      return { value: pa.label, label: pa.label, count: counts.get(pa.label) ?? 0 };
+    });
+    // Extras: valores presentes em membros mas ainda não cadastrados
+    Array.from(counts.entries())
+      .filter(([label]) => !seen.has(label))
       .sort((a, b) => a[0].localeCompare(b[0], "pt-BR"))
-      .map(([label, count]) => ({ value: label, label, count }));
+      .forEach(([label, count]) => list.push({ value: label, label: `${label} (não cadastrada)`, count }));
     return { list, noneCount };
-  }, [members]);
+  }, [members, practiceAreas]);
 
   const totals = useMemo(() => {
     const total = members.length;
