@@ -328,11 +328,11 @@ export default function MentoriaEC() {
             </SelectContent>
           </Select>
           <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as ProgramFilter)}>
-            <SelectTrigger className="w-[190px]"><SelectValue placeholder="Programa" /></SelectTrigger>
+            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Programa" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os programas</SelectItem>
-              <SelectItem value="EC">Eternum Club</SelectItem>
-              <SelectItem value="RM">Rykas Mentoring</SelectItem>
+              <SelectItem value="all">Todos os programas ({totals.total})</SelectItem>
+              <SelectItem value="EC">Eternum Club ({totals.ec})</SelectItem>
+              <SelectItem value="RM">Rykas Mentoring ({totals.rm})</SelectItem>
             </SelectContent>
           </Select>
           <Select value={mentorshipFilter} onValueChange={(v) => setMentorshipFilter(v as MentorshipStatusFilter)}>
