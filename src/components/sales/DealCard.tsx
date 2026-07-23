@@ -23,11 +23,12 @@ interface DealCardProps {
   itemVendaLabel?: string;
   itemVendaColor?: string | null;
   activityStatus?: ActivityStatus;
+  showActivityCounts?: boolean;
 }
 
 const DEFAULT_ACTIVITY_STATUS: ActivityStatus = { pendingCount: 0, hasOverdue: false, totalActivities: 0, nextDueDate: null };
 
-export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, itemVendaColor, activityStatus = DEFAULT_ACTIVITY_STATUS }: DealCardProps) {
+export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, itemVendaColor, activityStatus = DEFAULT_ACTIVITY_STATUS, showActivityCounts = false }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
   
   const { openZappConversation, loading: zappLoading } = useZappNavigationContext();
@@ -300,6 +301,33 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               )}
             </Button>
           </div>
+
+          {/* Activity counts (shown when an activity-based filter is active) */}
+          {showActivityCounts && (
+            <div className="flex items-center gap-1 flex-wrap">
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[9px] px-1 py-0 h-4",
+                  activityStatus.pendingCount > 0
+                    ? activityStatus.hasOverdue
+                      ? "bg-destructive/10 text-destructive border-destructive/30"
+                      : "bg-primary/10 text-primary border-primary/30"
+                    : "bg-muted text-muted-foreground border-border"
+                )}
+                title="Atividades pendentes"
+              >
+                {activityStatus.pendingCount} pendente{activityStatus.pendingCount === 1 ? "" : "s"}
+              </Badge>
+              <Badge
+                variant="outline"
+                className="text-[9px] px-1 py-0 h-4 bg-muted/60 text-muted-foreground border-border"
+                title="Total de atividades (histórico + em aberto)"
+              >
+                {activityStatus.totalActivities} total
+              </Badge>
+            </div>
+          )}
 
           {/* Tags compact */}
           <div className="flex items-center gap-1 overflow-hidden">

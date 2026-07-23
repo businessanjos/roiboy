@@ -26,6 +26,7 @@ interface DealKanbanProps {
   deals: Deal[];
   onDealClick: (deal: Deal) => void;
   onDealMove: (dealId: string, newStageId: string) => Promise<boolean>;
+  showActivityCounts?: boolean;
 }
 
 interface RequiredFieldsModalState {
@@ -38,7 +39,7 @@ interface RequiredFieldsModalState {
   accountId: string;
 }
 
-export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanbanProps) {
+export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivityCounts = false }: DealKanbanProps) {
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
   const { validateDealMove } = useRequiredFieldsValidation();
   const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
@@ -280,6 +281,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
                 itemVendaMap={itemVendaMap}
                 isDragActive={isDragActive}
                 activityStatusGetter={getActivityStatus}
+                showActivityCounts={showActivityCounts}
               />
             ))}
           </div>
