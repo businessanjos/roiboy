@@ -787,162 +787,72 @@ function DetailSheet({
   bands: Band[];
   onOpenExternal?: (query: string) => void;
 }) {
-  if (!detail) {
-    return (
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent />
-      </Sheet>
-    );
-  }
+  if (!detail) return null;
 
   const { tier, query, row } = detail;
-  const Icon = tier.icon;
   const citations = Array.isArray(row.citations) ? row.citations : [];
+  const headline = extractHeadline(row.answer).value;
 
-  // Extrai o bloco "Traga:" do prompt como critérios pedidos ao modelo
-  const criteriosMatch = query.match(/Traga:\s*([\s\S]+?)(?=\n\nCite|$)/);
-  const criterios = criteriosMatch ? criteriosMatch[1].trim() : "";
+  const toneByTier: Record<Tier["key"], "purple" | "blue" | "emerald"> = {
+    tam: "purple",
+    sam: "blue",
+    som: "emerald",
+  };
 
-  // Fontes oficiais mencionadas no prompt
-  const fontesMatch = query.match(/Cite fontes[^.]*\(([^)]+)\)/i) || query.match(/Fontes[^(]*\(([^)]+)\)/i);
-  const fontesOficiaisSugeridas = fontesMatch ? fontesMatch[1].split(/,\s*/) : [];
+  const meta = (
+    <>
+      <div className="rounded-xl border bg-muted/30 p-3.5">
+        <div className="flex items-center gap-2 mb-2.5">
+          <ListChecks className="h-3.5 w-3.5 text-blue-600" />
+          <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Faixas de ticket usadas
+          </h4>
+        </div>
+        <div className="grid gap-1.5">
+          {bands.map((b, i) => (
+            <div key={i} className="flex items-center justify-between text-xs">
+              <span className="font-medium text-foreground">{b.label}</span>
+              <span className="tabular-nums text-muted-foreground">
+                {fmtBRL(b.min)} – {fmtBRL(b.max)}/ano
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3.5">
+        <div className="flex items-center gap-2 mb-2">
+          <Ban className="h-3.5 w-3.5 text-red-600" />
+          <h4 className="text-xs font-bold uppercase tracking-widest text-red-700 dark:text-red-400">
+            Critério de recorte
+          </h4>
+        </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Apenas <strong className="text-foreground">estética avançada/médica</strong> — injetáveis,
+          laser, tecnologias, harmonização, dermato, HOF. Exclui salões, barbearias, manicure,
+          depilação simples, estética capilar e SPAs de relaxamento.
+        </p>
+      </div>
+    </>
+  );
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader className="space-y-2">
-          <div className="flex items-center gap-2">
-            <div className={`p-2 rounded-lg ${tier.bg}`}>
-              <Icon className={`h-5 w-5 ${tier.text}`} />
-            </div>
-            <div>
-              <p className={`text-[11px] font-bold tracking-widest uppercase ${tier.text}`}>{tier.short}</p>
-              <SheetTitle className="text-base leading-tight">{tier.label}</SheetTitle>
-            </div>
-          </div>
-          <SheetDescription className="text-xs">
-            Calculado em {format(new Date(row.created_at), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })} ·
-            {" "}última execução via Perplexity (sonar-pro)
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="mt-6 space-y-6">
-          {/* Faixas usadas */}
-          <section>
-            <div className="flex items-center gap-2 mb-2">
-              <ListChecks className="h-4 w-4 text-blue-600" />
-              <h3 className="text-sm font-semibold">Faixas de ticket usadas neste cálculo</h3>
-            </div>
-            <div className="rounded-md border bg-muted/30 p-3 space-y-1">
-              {bands.map((b, i) => (
-                <div key={i} className="flex items-center justify-between text-xs">
-                  <span className="font-medium">{b.label}</span>
-                  <span className="tabular-nums text-muted-foreground">
-                    {fmtBRL(b.min)} – {fmtBRL(b.max)}/ano
-                  </span>
-                </div>
-              ))}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Ajuste em "Configurar faixas" e clique em Recalcular para atualizar.
-            </p>
-          </section>
-
-          {/* Critérios de recorte */}
-          <section>
-            <div className="flex items-center gap-2 mb-2">
-              <Ban className="h-4 w-4 text-red-600" />
-              <h3 className="text-sm font-semibold">Critério de recorte (exclusões obrigatórias)</h3>
-            </div>
-            <div className="rounded-md border bg-red-500/5 border-red-500/20 p-3 text-xs leading-relaxed text-muted-foreground">
-              Considera <strong>apenas</strong> profissionais e clínicas de estética avançada/médica —
-              procedimentos estéticos, injetáveis, laser, tecnologias, harmonização facial/corporal, dermato, HOF.
-              <br />
-              <br />
-              <strong className="text-red-600">Exclui:</strong> salões de beleza, barbearias, cabeleireiros,
-              manicure/pedicure, depilação simples, estética capilar, SPAs de relaxamento e centros de bem-estar
-              sem procedimentos estéticos.
-            </div>
-          </section>
-
-          {/* Suposições / pedido ao modelo */}
-          {criterios && (
-            <section>
-              <div className="flex items-center gap-2 mb-2">
-                <BookOpen className="h-4 w-4 text-purple-600" />
-                <h3 className="text-sm font-semibold">O que foi pedido ao modelo</h3>
-              </div>
-              <div className="rounded-md border bg-muted/30 p-3 text-xs leading-relaxed whitespace-pre-wrap">
-                {criterios}
-              </div>
-            </section>
-          )}
-
-          {/* Fontes oficiais sugeridas no prompt */}
-          {fontesOficiaisSugeridas.length > 0 && (
-            <section>
-              <h3 className="text-sm font-semibold mb-2">Fontes oficiais orientadas ao modelo</h3>
-              <div className="flex flex-wrap gap-1.5">
-                {fontesOficiaisSugeridas.map((f, i) => (
-                  <Badge key={i} variant="secondary" className="text-[10px] font-normal">
-                    {f.trim()}
-                  </Badge>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <Separator />
-
-          {/* Resposta */}
-          <section>
-            <h3 className="text-sm font-semibold mb-2">Análise completa</h3>
-            <MarketResearchAnswer answer={row.answer} />
-          </section>
-
-          {/* Citações reais retornadas */}
-          <section>
-            <h3 className="text-sm font-semibold mb-2">
-              Fontes citadas pelo modelo{" "}
-              <span className="text-xs font-normal text-muted-foreground">({citations.length})</span>
-            </h3>
-            {citations.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic">Nenhuma citação foi retornada nesta execução.</p>
-            ) : (
-              <ol className="space-y-1.5">
-                {citations.map((c, i) => (
-                  <li key={i} className="text-xs">
-                    <a
-                      href={c.url}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="text-primary hover:underline inline-flex items-start gap-1"
-                    >
-                      <span className="tabular-nums text-muted-foreground min-w-[1.5rem]">
-                        [{c.index ?? i + 1}]
-                      </span>
-                      <span className="flex-1">
-                        {c.title || c.url}
-                        <ExternalLink className="inline h-3 w-3 ml-1 opacity-60" />
-                      </span>
-                    </a>
-                    {c.title && <div className="text-[10px] text-muted-foreground pl-7 truncate">{c.url}</div>}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
-
-          {onOpenExternal && (
-            <div className="pt-2 border-t">
-              <Button size="sm" variant="ghost" onClick={() => onOpenExternal(query)}>
-                Abrir na aba Pesquisa de Mercado <ChevronRight className="h-3 w-3 ml-1" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+    <MiAnalysisSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={tier.icon}
+      tone={toneByTier[tier.key]}
+      eyebrow={tier.short}
+      title={tier.label}
+      createdAt={row.created_at}
+      headline={headline}
+      query={query}
+      answer={row.answer}
+      citations={citations}
+      meta={meta}
+      onSecondary={onOpenExternal ? () => onOpenExternal(query) : undefined}
+      secondaryLabel={onOpenExternal ? "Abrir em Pesquisa de Mercado" : undefined}
+    />
   );
 }
 
