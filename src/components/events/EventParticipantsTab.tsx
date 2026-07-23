@@ -182,7 +182,12 @@ export default function EventParticipantsTab({
     if (error) {
       console.error("Error fetching participants:", error);
     } else {
-      setParticipants(data || []);
+      const sorted = (data || []).slice().sort((a: any, b: any) => {
+        const nameA = (a.clients?.full_name || a.guest_name || "").toString();
+        const nameB = (b.clients?.full_name || b.guest_name || "").toString();
+        return nameA.localeCompare(nameB, "pt-BR", { sensitivity: "base" });
+      });
+      setParticipants(sorted);
     }
     setLoading(false);
   };
