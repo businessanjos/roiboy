@@ -6,6 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { GraduationCap, CheckCircle2, Clock, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { usePracticeAreas } from "@/hooks/usePracticeAreas";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
