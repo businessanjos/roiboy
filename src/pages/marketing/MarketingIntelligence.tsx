@@ -36,6 +36,7 @@ import PenetrationTab from "@/components/marketing/intelligence/PenetrationTab";
 import EventsTab from "@/components/marketing/intelligence/EventsTab";
 import { MiKpiCard } from "@/components/marketing/intelligence/MiKpiCard";
 import { MiSectionHeader } from "@/components/marketing/intelligence/MiSectionHeader";
+import { MiCallout } from "@/components/marketing/intelligence/MiCallout";
 
 type DistItem = { label: string; count: number; pct: number };
 type Distribution = { total: number; items: DistItem[] };
