@@ -222,7 +222,7 @@ export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailShee
             </TabsTrigger>
             <TabsTrigger value="tasks" className="gap-1.5">
               <CheckCircle2 className="h-4 w-4" />
-              Tarefas
+              Atividades
             </TabsTrigger>
           </TabsList>
 
