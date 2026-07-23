@@ -50,6 +50,12 @@ interface PipelineFilterButtonProps {
   onFilterChange: (filter: ActiveFilter | null) => void;
   availableTags: string[];
   products?: ProductOption[];
+  previewDeals?: Deal[];
+  previewProductMap?: Record<string, string>;
+  previewCustomFieldValues?: Record<string, Record<string, string>>;
+  previewNextActivityMap?: Record<string, string | null>;
+  previewTaskCountMap?: Record<string, number>;
+  previewPendingCountMap?: Record<string, number>;
 }
 
 export function PipelineFilterButton({
@@ -59,6 +65,12 @@ export function PipelineFilterButton({
   onFilterChange,
   availableTags,
   products = [],
+  previewDeals,
+  previewProductMap,
+  previewCustomFieldValues,
+  previewNextActivityMap,
+  previewTaskCountMap,
+  previewPendingCountMap,
 }: PipelineFilterButtonProps) {
   const { currentUser } = useCurrentUser();
   const { filters, fetchFilters, createFilter, updateFilter, deleteFilter } = usePipelineFilters();
