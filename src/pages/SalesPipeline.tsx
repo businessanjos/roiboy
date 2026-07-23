@@ -28,6 +28,7 @@ import { DealStagesManager } from "@/components/sales/DealStagesManager";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { PipelineFilterButton } from "@/components/sales/PipelineFilterButton";
+import { PipelineDebugDialog } from "@/components/sales/PipelineDebugDialog";
 import { ActiveFilterChips } from "@/components/sales/ActiveFilterChips";
 import type { CustomFieldOption } from "@/components/sales/PipelineFilterDialog";
 import { PipelineSelector } from "@/components/sales/PipelineSelector";
