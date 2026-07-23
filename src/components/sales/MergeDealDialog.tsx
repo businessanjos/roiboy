@@ -445,7 +445,7 @@ export function MergeDealDialog({
                         <div className="flex items-center gap-2 text-xs">
                           <ListTodo className="h-3.5 w-3.5 text-muted-foreground" />
                           <Badge variant="secondary">{tasksCount}</Badge>
-                          <span className="text-muted-foreground">Tarefa{tasksCount !== 1 ? "s" : ""}</span>
+                          <span className="text-muted-foreground">Atividade{tasksCount !== 1 ? "s" : ""} agendada{tasksCount !== 1 ? "s" : ""}</span>
                         </div>
                       </div>
                     )}
