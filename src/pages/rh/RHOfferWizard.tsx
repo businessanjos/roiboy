@@ -76,7 +76,7 @@ const EMPTY: Form = {
   salary_amount: "", salary_currency: "BRL", salary_note: "", variable_compensation: "",
   benefits: [], benefit_values: {}, perks: [], success_metrics: [],
   start_date: "", offer_expires_at: "",
-  work_schedule: { days: ["mon","tue","wed","thu","fri"], start_time: "09:00", end_time: "18:00", lunch_minutes: 60 },
+  work_schedule: { rules: [{ days: ["mon","tue","wed","thu","fri"], start_time: "09:00", end_time: "18:00", lunch_minutes: 60 }] },
   hero_headline: "", company_intro: "", role_pitch: "", next_steps: "",
   signer_name: "", signer_role: "",
   accent_color: "#6366F1", cover_image_url: "", candidate_photo_url: "",
