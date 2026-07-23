@@ -26,6 +26,7 @@ interface DealKanbanProps {
   deals: Deal[];
   onDealClick: (deal: Deal) => void;
   onDealMove: (dealId: string, newStageId: string) => Promise<boolean>;
+  showActivityCounts?: boolean;
 }
 
 interface RequiredFieldsModalState {
