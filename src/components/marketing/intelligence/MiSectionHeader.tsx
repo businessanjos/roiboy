@@ -9,11 +9,6 @@ interface Props {
   className?: string;
 }
 
-/**
- * Cabeçalho consistente de seção dentro de Market Intelligence.
- * Cria hierarquia visual clara com ícone leve à esquerda, título/desc
- * empilhados e slot de ação à direita (ex.: botão "Recalcular").
- */
 export function MiSectionHeader({ icon: Icon, title, description, action, className }: Props) {
   return (
     <div className={cn("flex items-start justify-between gap-4 mb-4", className)}>
