@@ -117,6 +117,32 @@ export function PipelineFilterButton({
     return () => { cancelled = true; };
   }, [currentUser?.account_id]);
 
+  // Fetch activity types + task statuses to feed the "Tipo/Status de atividade pendente" filter fields.
+  useEffect(() => {
+    if (!currentUser?.account_id) return;
+    let cancelled = false;
+    (async () => {
+      const [typesRes, statusesRes] = await Promise.all([
+        supabase
+          .from("activity_types")
+          .select("id, name")
+          .eq("account_id", currentUser.account_id)
+          .eq("is_active", true)
+          .order("display_order"),
+        supabase
+          .from("task_statuses")
+          .select("id, name")
+          .eq("account_id", currentUser.account_id)
+          .order("display_order"),
+      ]);
+      if (cancelled) return;
+      setActivityTypes(((typesRes.data as any[]) || []).map(t => ({ id: t.id, name: t.name })));
+      setTaskStatuses(((statusesRes.data as any[]) || []).map(s => ({ id: s.id, name: s.name })));
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.account_id]);
+
+
   const filteredSalesUsers = useMemo(() => {
     if (!searchQuery.trim()) return salesUsers;
     return salesUsers.filter(user =>
