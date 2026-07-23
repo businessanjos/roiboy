@@ -24,6 +24,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { ClientClinicsManager } from "./ClientClinicsManager";
+import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
 import { CountryStateCity, type LocationFields } from "@/components/operations/CountryStateCity";
 import { COUNTRIES, BRAZIL_STATES } from "@/lib/countries";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -475,15 +476,18 @@ export function ClientBusinessProfile({
               onCommit={() => commitText("education_specialty")}
               placeholder="Ex: Cardiologia"
             />
-            <InlineTextField
-              label="Área de Atuação"
-              icon={<Target className="h-3.5 w-3.5" />}
-              value={client.business_niche}
-              draft={drafts.business_niche}
-              onDraft={(v) => setDrafts((d) => ({ ...d, business_niche: v }))}
-              onCommit={() => commitText("business_niche")}
-              placeholder="Ex: Longevidade, Estética"
-            />
+            <div className="rounded-lg border bg-card p-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1 mb-1">
+                <Target className="h-3.5 w-3.5" /> Área de Atuação
+              </span>
+              <PracticeAreaSelect
+                value={client.business_niche}
+                onChange={(v) => {
+                  saveField({ business_niche: v || null } as any);
+                }}
+                placeholder="Selecione a área de atuação"
+              />
+            </div>
             <InlineTextField
               label="Diferencial"
               icon={<Sparkles className="h-3.5 w-3.5" />}
