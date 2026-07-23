@@ -501,12 +501,12 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
 
     case 'total_tasks': {
       const count = dealTaskCountMap?.[deal.id] ?? 0;
-      return evaluateNumberCondition(count, operator, value);
+      return evaluateNumberCondition(count, operator, value, { treatZeroAsEmpty: true });
     }
 
     case 'pending_tasks': {
       const count = dealPendingCountMap?.[deal.id] ?? 0;
-      return evaluateNumberCondition(count, operator, value);
+      return evaluateNumberCondition(count, operator, value, { treatZeroAsEmpty: true });
     }
 
 
