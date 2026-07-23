@@ -145,7 +145,20 @@ const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
     { value: 'is_empty', label: 'está vazio' },
     { value: 'is_not_empty', label: 'não está vazio' },
   ],
+  activity_types: [
+    { value: 'contains', label: 'é um destes' },
+    { value: 'not_contains', label: 'não é nenhum destes' },
+    { value: 'is_empty', label: 'sem atividade pendente' },
+    { value: 'is_not_empty', label: 'com atividade pendente' },
+  ],
+  activity_statuses: [
+    { value: 'contains', label: 'é um destes' },
+    { value: 'not_contains', label: 'não é nenhum destes' },
+    { value: 'is_empty', label: 'sem atividade pendente' },
+    { value: 'is_not_empty', label: 'com atividade pendente' },
+  ],
 };
+
 
 const VALUE_NOT_NEEDED = ['is_empty', 'is_not_empty', 'today', 'this_week', 'this_month', 'next_7_days', 'next_14_days', 'next_30_days', 'overdue'];
 
