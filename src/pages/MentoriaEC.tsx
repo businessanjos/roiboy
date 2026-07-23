@@ -91,6 +91,7 @@ export default function MentoriaEC() {
   const [sessionDate, setSessionDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [sessionNotes, setSessionNotes] = useState("");
   const [attendanceSort, setAttendanceSort] = useState<"none" | "desc" | "asc">("none");
+  const [practiceFilter, setPracticeFilter] = useState<string>("all");
 
   const membersQuery = useQuery({
     queryKey: ["ec-mentoring-members", accountId],
@@ -247,6 +248,11 @@ export default function MentoriaEC() {
           return false;
         if (mentorshipFilter !== "all" && m.mentorshipStatus !== mentorshipFilter) return false;
         if (programFilter !== "all" && m.program !== programFilter) return false;
+        if (practiceFilter !== "all") {
+          if (practiceFilter === "__none__") {
+            if (m.businessSegment) return false;
+          } else if ((m.businessSegment ?? "") !== practiceFilter) return false;
+        }
         if (statusFilter === "never" && m.lastAttendance) return false;
         if (statusFilter === "attended" && !m.lastAttendance) return false;
         if (statusFilter === "recent") {
@@ -267,7 +273,21 @@ export default function MentoriaEC() {
         }
         return a.fullName.localeCompare(b.fullName, "pt-BR");
       });
-  }, [members, search, statusFilter, mentorshipFilter, programFilter, attendanceSort]);
+  }, [members, search, statusFilter, mentorshipFilter, programFilter, practiceFilter, attendanceSort]);
+
+  const practiceOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    let noneCount = 0;
+    members.forEach((m) => {
+      const seg = (m.businessSegment ?? "").trim();
+      if (!seg) noneCount += 1;
+      else counts.set(seg, (counts.get(seg) ?? 0) + 1);
+    });
+    const list = Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0], "pt-BR"))
+      .map(([label, count]) => ({ value: label, label, count }));
+    return { list, noneCount };
+  }, [members]);
 
   const totals = useMemo(() => {
     const total = members.length;
@@ -333,6 +353,18 @@ export default function MentoriaEC() {
               <SelectItem value="all">Todos os programas ({totals.total})</SelectItem>
               <SelectItem value="EC">Eternum Club ({totals.ec})</SelectItem>
               <SelectItem value="RM">Rykas Mentoring ({totals.rm})</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={practiceFilter} onValueChange={setPracticeFilter}>
+            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Atuação" /></SelectTrigger>
+            <SelectContent className="max-h-[320px]">
+              <SelectItem value="all">Todas as atuações ({totals.total})</SelectItem>
+              {practiceOptions.noneCount > 0 && (
+                <SelectItem value="__none__">Sem atuação ({practiceOptions.noneCount})</SelectItem>
+              )}
+              {practiceOptions.list.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label} ({o.count})</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={mentorshipFilter} onValueChange={(v) => setMentorshipFilter(v as MentorshipStatusFilter)}>
