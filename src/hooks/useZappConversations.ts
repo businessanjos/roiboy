@@ -375,10 +375,20 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     const sectorDepartment = departments.find(d => d.sector_id === sectorId);
     if (!sectorDepartment) return [];
 
-    let filtered = assignments.filter(a => a.department_id === sectorDepartment.id);
+    let filtered = assignments.filter(a => {
+      if (a.department_id !== sectorDepartment.id) return false;
+      // SECTOR ISOLATION: quando a conversa já tem sector_id definido, ele DEVE
+      // bater com o setor selecionado. Isso evita vazamento de conversas de CS
+      // aparecendo na triagem do Comercial quando o mesmo contato falou com dois
+      // números (integrações) de setores diferentes e o assignment antigo ficou vivo.
+      const zappConv = a.zapp_conversation as { sector_id?: string | null } | null;
+      const convSectorId = zappConv?.sector_id ?? null;
+      if (convSectorId && convSectorId !== sectorId) return false;
+      return true;
+    });
 
     if (filtered.length !== assignments.length) {
-      console.warn(`[ZappConversations] SECURITY: Filtered out ${assignments.length - filtered.length} assignments that didn't match department`);
+      console.warn(`[ZappConversations] SECTOR ISOLATION: Filtered out ${assignments.length - filtered.length} assignments (department/sector mismatch)`);
     }
 
     // Always isolate by selected instance when one is chosen — even for admins.
