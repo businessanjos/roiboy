@@ -123,8 +123,6 @@ export default function SalesPipeline() {
     openDeals,
     wonDeals,
     lostDeals,
-    totalPipelineValue,
-    weightedPipelineValue,
     totalWonValue,
     fetchDeals,
     createDeal,
@@ -1001,7 +999,7 @@ export default function SalesPipeline() {
 
   // Batch activity statuses to support "Próxima atividade em" and "Sem atividades" filters.
   // Pass lead_id too, because tasks can be linked to the lead instead of directly to the deal.
-  const dealActivityRefs = useMemo(() => deals.map(d => ({ id: d.id, lead_id: d.lead_id, client_id: d.client_id })), [deals]);
+  const dealActivityRefs = useMemo(() => openDeals.map(d => ({ id: d.id, lead_id: d.lead_id, client_id: d.client_id })), [openDeals]);
   const { statusMap: activityStatusMap, isLoading: activityStatusLoading } = useBatchDealActivityStatus(dealActivityRefs);
 
   const dealNextActivityMap = useMemo(() => {
@@ -1091,6 +1089,20 @@ export default function SalesPipeline() {
       return info ? selected.has(info.key) : false;
     });
   }, [dealsBeforeTagFilter, titleTagFilter]);
+
+  const filteredOpenTotalValue = useMemo(
+    () => filteredOpenDeals.reduce((sum, deal) => sum + (deal.value || 0), 0),
+    [filteredOpenDeals],
+  );
+
+  const filteredOpenWeightedValue = useMemo(
+    () => filteredOpenDeals.reduce((sum, deal) => {
+      const stageProbability = (deal as any).stage?.probability ?? 0;
+      const probability = (deal.probability && deal.probability > 0) ? deal.probability : stageProbability;
+      return sum + ((deal.value || 0) * probability / 100);
+    }, 0),
+    [filteredOpenDeals],
+  );
 
   const filteredWonDeals = useMemo(() =>
     applyFilterToDeals(wonDeals, null, debouncedSearchTerm, openDealProductMap, undefined, undefined, searchOptions),
@@ -2468,12 +2480,12 @@ export default function SalesPipeline() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="font-semibold">{formatCurrency(totalPipelineValue)}</span>
+                    <span className="font-semibold">{formatCurrency(filteredOpenTotalValue)}</span>
                   </div>
                   <div className="hidden sm:flex items-center gap-1.5">
                     <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-muted-foreground">Ponderado:</span>
-                    <span className="font-medium">{formatCurrency(weightedPipelineValue)}</span>
+                    <span className="font-medium">{formatCurrency(filteredOpenWeightedValue)}</span>
                   </div>
                 </div>
               )}
