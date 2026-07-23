@@ -256,8 +256,18 @@ export default function MentoriaEC() {
         }
         return true;
       })
-      .sort((a, b) => a.fullName.localeCompare(b.fullName, "pt-BR"));
-  }, [members, search, statusFilter, mentorshipFilter, programFilter]);
+      .sort((a, b) => {
+        if (attendanceSort !== "none") {
+          const at = a.lastAttendance ? parseISO(a.lastAttendance).getTime() : null;
+          const bt = b.lastAttendance ? parseISO(b.lastAttendance).getTime() : null;
+          if (at === null && bt === null) return a.fullName.localeCompare(b.fullName, "pt-BR");
+          if (at === null) return 1;
+          if (bt === null) return -1;
+          return attendanceSort === "desc" ? bt - at : at - bt;
+        }
+        return a.fullName.localeCompare(b.fullName, "pt-BR");
+      });
+  }, [members, search, statusFilter, mentorshipFilter, programFilter, attendanceSort]);
 
   const totals = useMemo(() => {
     const total = members.length;
