@@ -100,7 +100,7 @@ async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<
       console.error("[useBatchDealActivityStatus] Error:", error);
       continue;
     }
-    for (const task of data || []) {
+    for (const task of (data || []) as any[]) {
       if (task.deal_id && dealIdSet.has(task.deal_id)) {
         registerTaskForDeal(task.deal_id, task, today);
       }
@@ -128,7 +128,7 @@ async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<
       continue;
     }
 
-    for (const task of data || []) {
+    for (const task of (data || []) as any[]) {
       if (!task.lead_id) continue;
       const relatedDealIds = leadToDealIds.get(task.lead_id) || [];
       for (const dealId of relatedDealIds) {
