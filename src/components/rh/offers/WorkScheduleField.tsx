@@ -323,12 +323,68 @@ export default function WorkScheduleField({ value, onChange }: Props) {
           {error}
         </div>
       )}
-      <div className="flex items-center justify-between rounded-md bg-background border px-3 py-2">
-        <span className="text-xs text-muted-foreground">Carga horária semanal total</span>
-        <span className={`text-sm font-semibold ${error ? "text-muted-foreground" : ""}`}>
-          {formatWeeklyHours(weekly)}
-        </span>
+
+      {/* Resumo visual da semana */}
+      <div className="rounded-md border bg-background p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Resumo da semana
+          </span>
+          <span className={`text-sm font-semibold ${error ? "text-muted-foreground" : ""}`}>
+            {formatWeeklyHours(weekly)} / semana
+          </span>
+        </div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {DAYS.map((d) => {
+            const rule = schedule.rules.find((r) => r.days.includes(d.value));
+            const active = !!rule;
+            const mins = rule
+              ? (() => {
+                  const [sh, sm] = rule.start_time.split(":").map(Number);
+                  const [eh, em] = rule.end_time.split(":").map(Number);
+                  const w = eh * 60 + em - (sh * 60 + sm) - (Number(rule.lunch_minutes) || 0);
+                  return w > 0 ? w : 0;
+                })()
+              : 0;
+            return (
+              <div
+                key={d.value}
+                className={`rounded-md border p-2 text-center ${
+                  active
+                    ? "border-primary/40 bg-primary/5"
+                    : "border-dashed bg-muted/30 text-muted-foreground"
+                }`}
+              >
+                <div className={`text-[10px] font-semibold uppercase tracking-wide ${active ? "text-primary" : ""}`}>
+                  {d.short}
+                </div>
+                {active ? (
+                  <>
+                    <div className="text-[11px] font-medium mt-1 leading-tight">
+                      {rule!.start_time}
+                      <br />
+                      {rule!.end_time}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      {formatWeeklyHours(mins / 60)}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-[11px] italic mt-2">Folga</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {schedule.rules.some((r) => r.days.length) && (
+          <div className="text-[11px] text-muted-foreground pt-1 border-t">
+            {scheduleRuleSummaries(schedule).map((s, i) => (
+              <div key={i}>• {s}</div>
+            ))}
+          </div>
+        )}
       </div>
+
     </div>
   );
 }
