@@ -180,7 +180,7 @@ export function MarketSnapshotCards({ onOpenDetail }: Props) {
                       {value}
                     </p>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">Sem dado ainda</p>
+                    <p className="text-sm text-muted-foreground/70">—</p>
                   )}
                 </div>
 
@@ -202,7 +202,9 @@ export function MarketSnapshotCards({ onOpenDetail }: Props) {
                       Atualizado {formatDistanceToNow(new Date(latest.created_at), { addSuffix: true, locale: ptBR })}
                     </Badge>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">Nunca coletado</span>
+                    <Badge variant="outline" className="text-[10px] font-normal border-dashed text-muted-foreground">
+                      Aguardando coleta
+                    </Badge>
                   )}
                   {latest && onOpenDetail && (
                     <button
