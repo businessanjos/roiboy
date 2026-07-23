@@ -54,6 +54,12 @@ type Form = {
   success_metrics: { label: string; target: string; horizon: string }[];
   start_date: string;
   offer_expires_at: string;
+  work_schedule: {
+    days: string[];
+    start_time: string;
+    end_time: string;
+    lunch_minutes: number;
+  };
   hero_headline: string;
   company_intro: string;
   role_pitch: string;
