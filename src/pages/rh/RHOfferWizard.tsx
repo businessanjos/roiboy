@@ -268,6 +268,7 @@ export default function RHOfferWizard() {
       salary_note: form.salary_note || null,
       variable_compensation: form.variable_compensation || null,
       benefits: form.benefits,
+      benefit_values: Object.fromEntries(Object.entries(form.benefit_values).filter(([k]) => form.benefits.includes(k))),
       perks: form.perks.filter(p => p.title.trim()),
       success_metrics: form.success_metrics.filter(m => m.label.trim()),
       start_date: form.start_date || null,
