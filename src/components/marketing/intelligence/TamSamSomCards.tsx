@@ -30,6 +30,7 @@ import {
 import { extractHeadline } from "./marketBenchmarks";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { MarketResearchAnswer } from "./MarketResearchAnswer";
+import { MiAnalysisSheet } from "./MiAnalysisSheet";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
