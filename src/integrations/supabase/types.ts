@@ -7237,6 +7237,61 @@ export type Database = {
           },
         ]
       }
+      ec_mentoring_attendance: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          session_date: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          session_date: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          session_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ec_mentoring_attendance_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ec_mentoring_attendance_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ec_mentoring_attendance_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_queue: {
         Row: {
           account_id: string
