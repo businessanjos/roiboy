@@ -515,16 +515,18 @@ export default function EventParticipantsTab({
         {filterCards.map((c) => {
           const active = statusFilter === c.key;
           return (
-            <Card
+            <button
               key={c.key}
-              onClick={() => setStatusFilter(c.key)}
-              className={`p-3 cursor-pointer transition-all hover:shadow-md ${
+              type="button"
+              onClick={() => setStatusFilter((prev) => (prev === c.key ? "all" : (c.key as EventRsvpStatus | "all")))}
+              aria-pressed={active}
+              className={`text-left rounded-lg border bg-card text-card-foreground shadow-sm p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 active ? "ring-2 ring-primary border-primary" : ""
               }`}
             >
               <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
               <p className="text-xs text-muted-foreground">{c.label}</p>
-            </Card>
+            </button>
           );
         })}
       </div>
