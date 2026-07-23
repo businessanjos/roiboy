@@ -74,9 +74,12 @@ const FILTER_FIELDS = [
   { value: 'updated_at', label: 'Última atualização', type: 'date' },
   { value: 'expected_close_date', label: 'Data prevista fechamento', type: 'date' },
   { value: 'next_activity_date', label: 'Próxima atividade em', type: 'date' },
-  { value: 'pending_tasks', label: 'Atividades pendentes', type: 'number' },
+  { value: 'pending_tasks', label: 'Atividades pendentes (quantidade)', type: 'number' },
   { value: 'total_tasks', label: 'Total de atividades', type: 'number' },
+  { value: 'pending_activity_type', label: 'Tipo de atividade pendente', type: 'activity_types' },
+  { value: 'pending_activity_status', label: 'Status da atividade pendente', type: 'activity_statuses' },
 ];
+
 
 
 const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
