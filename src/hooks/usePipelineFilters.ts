@@ -572,30 +572,53 @@ function evaluateDateCondition(fieldValue: string | null | undefined, operator: 
     }
     case 'this_week':
       return date >= startOfWeek && date <= endOfWeek;
-    
+
     case 'this_month':
       return date >= startOfMonth && date <= endOfMonth;
-    
+
     case 'older_than_days':
       const daysAgo = new Date(today);
       daysAgo.setDate(today.getDate() - Number(value));
       return date < daysAgo;
-    
-    case 'next_days':
+
+    case 'next_days': {
       const futureDate = new Date(today);
       futureDate.setDate(today.getDate() + Number(value));
+      futureDate.setHours(23, 59, 59, 999);
       return date >= today && date <= futureDate;
-    
-    
+    }
+
+    case 'next_7_days':
+    case 'next_14_days':
+    case 'next_30_days': {
+      const days = operator === 'next_7_days' ? 7 : operator === 'next_14_days' ? 14 : 30;
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + days);
+      futureDate.setHours(23, 59, 59, 999);
+      return date >= today && date <= futureDate;
+    }
+
+    case 'overdue':
+      return date < today;
+
+    case 'between': {
+      const [startStr, endStr] = String(value || '').split('|');
+      if (!startStr || !endStr) return false;
+      const start = new Date(startStr);
+      const end = new Date(endStr);
+      end.setHours(23, 59, 59, 999);
+      return date >= start && date <= end;
+    }
+
     case 'before':
       return date < new Date(value);
-    
+
     case 'after':
       return date > new Date(value);
-    
+
     case 'equals':
       return date.toDateString() === new Date(value).toDateString();
-    
+
     default:
       return true;
   }
