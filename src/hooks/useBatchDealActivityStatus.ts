@@ -93,7 +93,8 @@ async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<
         completed_at,
         custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)
       `)
-      .in("deal_id", chunk);
+      .in("deal_id", chunk)
+      .limit(50000);
 
     if (error) {
       console.error("[useBatchDealActivityStatus] Error:", error);
@@ -119,7 +120,8 @@ async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<
         completed_at,
         custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)
       `)
-      .in("lead_id", chunk);
+      .in("lead_id", chunk)
+      .limit(50000);
 
     if (error) {
       console.error("[useBatchDealActivityStatus] Lead task error:", error);
