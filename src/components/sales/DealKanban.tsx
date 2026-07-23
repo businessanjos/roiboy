@@ -39,7 +39,7 @@ interface RequiredFieldsModalState {
   accountId: string;
 }
 
-export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanbanProps) {
+export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivityCounts = false }: DealKanbanProps) {
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
   const { validateDealMove } = useRequiredFieldsValidation();
   const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
