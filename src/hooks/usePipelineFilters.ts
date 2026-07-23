@@ -257,8 +257,8 @@ export function explainDealActivityFilters(ctx: DealDebugContext): DealFilterExp
       filterName: '🔴 Nunca contatado (sem nenhum registro)',
       matches: neverContactedMatches,
       reason: neverContactedMatches
-        ? `APARECE — totalActivities = 0 (nenhuma tarefa em internal_tasks e nenhum registro humano em deal_activities).`
-        : `NÃO aparece — totalActivities = ${totalActivities} (há tarefas ou registros manuais como nota/ligação/WhatsApp/e-mail/reunião/arquivo). Precisa ser 0 para o lead aparecer neste filtro.`,
+        ? `APARECE — totalActivities = 0 (nenhuma atividade em internal_tasks e nenhum registro humano em deal_activities).`
+        : `NÃO aparece — totalActivities = ${totalActivities} (há atividades ou registros manuais como nota/ligação/WhatsApp/e-mail/reunião/arquivo). Precisa ser 0 para o lead aparecer neste filtro.`,
     },
     {
       filterId: 'no_next_activity',
@@ -266,9 +266,9 @@ export function explainDealActivityFilters(ctx: DealDebugContext): DealFilterExp
       matches: noNextStepMatches,
       reason: noNextStepMatches
         ? `APARECE — pendingCount = 0${
-            totalActivities > 0 ? ` (o lead tem ${totalActivities} atividade(s) histórica(s), mas nenhuma tarefa em aberto).` : ' (nenhuma tarefa em aberto).'
+            totalActivities > 0 ? ` (o lead tem ${totalActivities} atividade(s) histórica(s), mas nenhuma atividade em aberto).` : ' (nenhuma atividade em aberto).'
           }`
-        : `NÃO aparece — pendingCount = ${pendingCount} (há tarefa(s) em aberto${
+        : `NÃO aparece — pendingCount = ${pendingCount} (há atividade(s) em aberto${
             nextDueDate ? `, próxima em ${nextDueDate}` : ''
           }${hasOverdue ? ', com pelo menos uma vencida' : ''}). Precisa ser 0 para o lead aparecer neste filtro.`,
     },
