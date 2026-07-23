@@ -13,7 +13,7 @@ import letreiro from "@/assets/eternum/letreiro.png.asset.json";
 import everBru from "@/assets/eternum/ever-bru.png.asset.json";
 import clientesFoto from "@/assets/eternum/clientes.jpg.asset.json";
 import { renderOfferRichInline } from "@/components/rh/offers/OfferRichTextarea";
-import { computeWeeklyHours, formatWeeklyHours, summarizeSchedule } from "@/components/rh/offers/WorkScheduleField";
+import { computeWeeklyHours, formatWeeklyHours, scheduleRuleSummaries, normalizeSchedule } from "@/components/rh/offers/WorkScheduleField";
 
 type Offer = {
   id: string;
