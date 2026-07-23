@@ -400,7 +400,8 @@ export default function PublicJobOffer() {
               {offer.benefits.map((b) => {
                 const rawVal = offer.benefit_values?.[b];
                 const num = rawVal != null && rawVal !== "" ? Number(rawVal) : NaN;
-                const hasValue = Number.isFinite(num) && num > 0;
+                const hasMoney = Number.isFinite(num) && num > 0;
+                const hasText = !hasMoney && typeof rawVal === "string" && rawVal.trim() !== "";
                 return (
                   <div
                     key={b}
@@ -415,10 +416,15 @@ export default function PublicJobOffer() {
                     </div>
                     <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
                       <span className="text-sm font-medium truncate">{b}</span>
-                      {hasValue && (
+                      {hasMoney && (
                         <span className="text-sm font-semibold whitespace-nowrap" style={{ color: TEXT_DARK }}>
                           {num.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}
                           <span className="text-[11px] font-normal opacity-70">/mês</span>
+                        </span>
+                      )}
+                      {hasText && (
+                        <span className="text-sm font-semibold whitespace-nowrap truncate max-w-[60%]" style={{ color: TEXT_DARK }} title={String(rawVal)}>
+                          {String(rawVal)}
                         </span>
                       )}
                     </div>
