@@ -165,6 +165,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
                   itemVendaLabel={itemVendaMap?.[deal.id]?.name}
                   itemVendaColor={itemVendaMap?.[deal.id]?.color}
                   activityStatus={activityStatusGetter?.(deal.id)}
+                  showActivityCounts={showActivityCounts}
                 />
               ))}
               {hasMore && (
