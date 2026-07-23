@@ -146,11 +146,31 @@ export function PipelineFilterDialog({
   salesUsers,
   availableTags,
   customFields = [],
+  computePreview,
 }: PipelineFilterDialogProps) {
   const [name, setName] = useState("");
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [matchType, setMatchType] = useState<'all' | 'any'>('all');
   const [isPublic, setIsPublic] = useState(false);
+
+  const preview = useMemo(() => {
+    if (!computePreview || !isOpen) return null;
+    // Skip conditions still empty (need value unless operator is value-less)
+    const isReady = conditions.every(c => {
+      if (!c.field || !c.operator) return false;
+      if (VALUE_NOT_NEEDED.includes(c.operator)) return true;
+      if (c.value === null || c.value === undefined) return false;
+      if (typeof c.value === 'string' && !c.value.trim()) return false;
+      if (Array.isArray(c.value) && c.value.length === 0) return false;
+      return true;
+    });
+    if (!isReady) return null;
+    try {
+      return computePreview(conditions, matchType);
+    } catch {
+      return null;
+    }
+  }, [computePreview, conditions, matchType, isOpen]);
 
   useEffect(() => {
     if (editingFilter) {
