@@ -295,7 +295,10 @@ export function applyFilterToDeals(
   dealNextActivityMap?: Record<string, string | null>,
   searchOptions?: { mode?: DealSearchMode; blobs?: Record<string, string> },
   dealTaskCountMap?: Record<string, number>,
-  dealPendingCountMap?: Record<string, number>
+  dealPendingCountMap?: Record<string, number>,
+  dealPendingTypesMap?: Record<string, string[]>,
+  dealPendingStatusesMap?: Record<string, string[]>,
+
 ): Deal[] {
   if (!activeFilter && !searchTerm?.trim()) return deals;
 
@@ -374,11 +377,12 @@ export function applyFilterToDeals(
   if (conditions.length === 0) return filtered;
 
   return filtered.filter(deal => {
-    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap));
+    const results = conditions.map(condition => evaluateCondition(deal, condition, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap));
     if (matchType === 'all') return results.every(Boolean);
     return results.some(Boolean);
   });
 }
+
 
 
 function toArray(value: any): any[] {
@@ -387,7 +391,7 @@ function toArray(value: any): any[] {
   return [value];
 }
 
-function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>, dealNextActivityMap?: Record<string, string | null>, dealTaskCountMap?: Record<string, number>, dealPendingCountMap?: Record<string, number>): boolean {
+function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFieldValues?: Record<string, Record<string, string>>, dealNextActivityMap?: Record<string, string | null>, dealTaskCountMap?: Record<string, number>, dealPendingCountMap?: Record<string, number>, dealPendingTypesMap?: Record<string, string[]>, dealPendingStatusesMap?: Record<string, string[]>): boolean {
   const { field, operator, value, include_empty } = condition;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -509,12 +513,38 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
       return evaluateNumberCondition(count, operator, value, { treatZeroAsEmpty: true });
     }
 
+    case 'pending_activity_type':
+      return evaluateStringSetCondition(dealPendingTypesMap?.[deal.id] || [], operator, value);
+
+    case 'pending_activity_status':
+      return evaluateStringSetCondition(dealPendingStatusesMap?.[deal.id] || [], operator, value);
+
+
+
 
 
     default:
       return true;
   }
 }
+
+/**
+ * Multi-select match against a set of string labels (e.g. activity types /
+ * task statuses associated with a deal's pending tasks). Case-insensitive.
+ */
+function evaluateStringSetCondition(setValues: string[], operator: string, value: any): boolean {
+  const normalized = new Set(setValues.map((v) => String(v || '').toLowerCase()));
+  if (operator === 'is_empty') return normalized.size === 0;
+  if (operator === 'is_not_empty') return normalized.size > 0;
+  const selected = toArray(value).map((v) => String(v).toLowerCase());
+  if (selected.length === 0) return operator === 'not_contains';
+  const anyHit = selected.some((v) => normalized.has(v));
+  if (operator === 'contains' || operator === 'equals') return anyHit;
+  if (operator === 'not_contains' || operator === 'not_equals') return !anyHit;
+  return false;
+}
+
+
 
 function evaluateTextCondition(fieldValue: string | null | undefined, operator: string, value: any): boolean {
   const text = (fieldValue || '').toLowerCase();

@@ -1028,12 +1028,68 @@ export default function SalesPipeline() {
     return m;
   }, [activityStatusMap]);
 
+  // Pending-activity metadata per deal (type name + status name) for the
+  // "Tipo/Status de atividade pendente" custom filter fields.
+  const [dealPendingTypesMap, setDealPendingTypesMap] = useState<Record<string, string[]>>({});
+  const [dealPendingStatusesMap, setDealPendingStatusesMap] = useState<Record<string, string[]>>({});
+  const openDealIdsKey = useMemo(() => openDeals.map(d => d.id).sort().join(','), [openDeals]);
+  useEffect(() => {
+    const ids = openDealIdsKey ? openDealIdsKey.split(',') : [];
+    if (ids.length === 0) {
+      setDealPendingTypesMap({});
+      setDealPendingStatusesMap({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const CHUNK = 500;
+      const typesMap: Record<string, Set<string>> = {};
+      const statusMap: Record<string, Set<string>> = {};
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const batch = ids.slice(i, i + CHUNK);
+        const { data, error } = await supabase
+          .from('internal_tasks')
+          .select(`deal_id, completed_at,
+            activity_type:activity_types!internal_tasks_activity_type_id_fkey(name),
+            custom_status:task_statuses!internal_tasks_custom_status_id_fkey(name, is_completed_status)`)
+          .in('deal_id', batch)
+          .is('completed_at', null)
+          .limit(50000);
+        if (error) { console.error('[SalesPipeline] pending activity meta fetch error:', error); continue; }
+        (data || []).forEach((row: any) => {
+          if (!row.deal_id) return;
+          if (row.custom_status?.is_completed_status) return; // truly pending only
+          const typeName = row.activity_type?.name?.trim();
+          const statusName = row.custom_status?.name?.trim();
+          if (typeName) {
+            (typesMap[row.deal_id] ||= new Set()).add(typeName.toLowerCase());
+          }
+          if (statusName) {
+            (statusMap[row.deal_id] ||= new Set()).add(statusName.toLowerCase());
+          }
+        });
+      }
+      if (cancelled) return;
+      const asArr = (m: Record<string, Set<string>>) => Object.fromEntries(
+        Object.entries(m).map(([k, v]) => [k, Array.from(v)])
+      );
+      setDealPendingTypesMap(asArr(typesMap));
+      setDealPendingStatusesMap(asArr(statusMap));
+    })();
+    return () => { cancelled = true; };
+  }, [openDealIdsKey]);
+
   const activeFilterNeedsActivityCounts = useMemo(() => {
     if (activitySort !== 'none') return true;
     return (activeFilter?.conditions || []).some((condition) =>
-      condition.field === 'next_activity_date' || condition.field === 'total_tasks' || condition.field === 'pending_tasks'
+      condition.field === 'next_activity_date' ||
+      condition.field === 'total_tasks' ||
+      condition.field === 'pending_tasks' ||
+      condition.field === 'pending_activity_type' ||
+      condition.field === 'pending_activity_status'
     );
   }, [activeFilter, activitySort]);
+
 
   // Range de datas para filtro do pipeline aberto (criação do negócio)
   const openDateRange = useMemo<{ start: Date; end: Date } | null>(() => {
@@ -1071,14 +1127,15 @@ export default function SalesPipeline() {
   // Usado como base para as opções do filtro de origem e como base do filtro final.
   const dealsBeforeTagFilter = useMemo(() => {
     if (activityStatusLoading && activeFilterNeedsActivityCounts) return [];
-    const base = applyFilterToDeals(openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap, dealPendingCountMap);
+    const base = applyFilterToDeals(openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, searchOptions, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap);
     if (!openDateRange) return base;
     return base.filter(d => {
       if (!d.created_at) return false;
       const created = new Date(d.created_at);
       return isWithinInterval(created, { start: openDateRange.start, end: openDateRange.end });
     });
-  }, [activityStatusLoading, activeFilterNeedsActivityCounts, openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, openDateRange, searchOptions]);
+  }, [activityStatusLoading, activeFilterNeedsActivityCounts, openDeals, activeFilter, debouncedSearchTerm, openDealProductMap, dealCustomFieldValues, dealNextActivityMap, dealTaskCountMap, dealPendingCountMap, dealPendingTypesMap, dealPendingStatusesMap, openDateRange, searchOptions]);
+
 
   // Opções do filtro de origem — respeitam os demais filtros ativos.
   const titleTagOptions = useMemo(() => buildTitleTagOptions(dealsBeforeTagFilter), [dealsBeforeTagFilter]);
@@ -2191,6 +2248,9 @@ export default function SalesPipeline() {
                             previewNextActivityMap={dealNextActivityMap}
                             previewTaskCountMap={dealTaskCountMap}
                             previewPendingCountMap={dealPendingCountMap}
+                            previewPendingTypesMap={dealPendingTypesMap}
+                            previewPendingStatusesMap={dealPendingStatusesMap}
+
                           />
                           {canSeeDeleted && (
                             <PipelineDebugDialog

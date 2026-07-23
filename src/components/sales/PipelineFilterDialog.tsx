@@ -56,8 +56,11 @@ interface PipelineFilterDialogProps {
   salesUsers: SalesUser[];
   availableTags: string[];
   customFields?: CustomFieldOption[];
+  activityTypes?: Array<{ id: string; name: string }>;
+  taskStatuses?: Array<{ id: string; name: string }>;
   computePreview?: (conditions: FilterCondition[], matchType: 'all' | 'any') => { matched: number; total: number } | null;
 }
+
 
 // Field definitions with their available operators
 const FILTER_FIELDS = [
@@ -71,9 +74,12 @@ const FILTER_FIELDS = [
   { value: 'updated_at', label: 'Última atualização', type: 'date' },
   { value: 'expected_close_date', label: 'Data prevista fechamento', type: 'date' },
   { value: 'next_activity_date', label: 'Próxima atividade em', type: 'date' },
-  { value: 'pending_tasks', label: 'Atividades pendentes', type: 'number' },
+  { value: 'pending_tasks', label: 'Atividades pendentes (quantidade)', type: 'number' },
   { value: 'total_tasks', label: 'Total de atividades', type: 'number' },
+  { value: 'pending_activity_type', label: 'Tipo de atividade pendente', type: 'activity_types' },
+  { value: 'pending_activity_status', label: 'Status da atividade pendente', type: 'activity_statuses' },
 ];
+
 
 
 const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
@@ -139,7 +145,20 @@ const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
     { value: 'is_empty', label: 'está vazio' },
     { value: 'is_not_empty', label: 'não está vazio' },
   ],
+  activity_types: [
+    { value: 'contains', label: 'é um destes' },
+    { value: 'not_contains', label: 'não é nenhum destes' },
+    { value: 'is_empty', label: 'sem atividade pendente' },
+    { value: 'is_not_empty', label: 'com atividade pendente' },
+  ],
+  activity_statuses: [
+    { value: 'contains', label: 'é um destes' },
+    { value: 'not_contains', label: 'não é nenhum destes' },
+    { value: 'is_empty', label: 'sem atividade pendente' },
+    { value: 'is_not_empty', label: 'com atividade pendente' },
+  ],
 };
+
 
 const VALUE_NOT_NEEDED = ['is_empty', 'is_not_empty', 'today', 'this_week', 'this_month', 'next_7_days', 'next_14_days', 'next_30_days', 'overdue'];
 
@@ -152,8 +171,11 @@ export function PipelineFilterDialog({
   salesUsers,
   availableTags,
   customFields = [],
+  activityTypes = [],
+  taskStatuses = [],
   computePreview,
 }: PipelineFilterDialogProps) {
+
   const [name, setName] = useState("");
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [matchType, setMatchType] = useState<'all' | 'any'>('all');
@@ -319,6 +341,33 @@ export function PipelineFilterDialog({
         />
       );
     }
+
+    // Activity types / task statuses multi-select (case-insensitive labels are the values)
+    if (fieldType === 'activity_types' || fieldType === 'activity_statuses') {
+      const src = fieldType === 'activity_types' ? activityTypes : taskStatuses;
+      const seen = new Set<string>();
+      const opts = src
+        .map(o => o.name?.trim())
+        .filter((n): n is string => !!n)
+        .filter(n => {
+          const k = n.toLowerCase();
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        })
+        .map(n => ({ value: n.toLowerCase(), label: n }));
+      return (
+        <MultiCheckCombobox
+          options={opts}
+          value={condition.value}
+          onChange={(vals) => updateCondition(index, { value: vals })}
+          placeholder={fieldType === 'activity_types' ? 'Selecione tipos...' : 'Selecione status...'}
+          className="w-[220px]"
+        />
+      );
+    }
+
+
 
 
 
