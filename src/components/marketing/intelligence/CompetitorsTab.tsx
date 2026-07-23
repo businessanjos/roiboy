@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,8 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Plus, RefreshCw, Trash2, ExternalLink, Loader2, ChevronDown,
-  ShieldAlert, Lightbulb, Target, TrendingUp, TrendingDown, Sparkles,
+  ShieldAlert, Lightbulb, Target, TrendingUp, TrendingDown, Sparkles, Swords,
 } from "lucide-react";
+import { MiSectionHeader } from "./MiSectionHeader";
+import { MiEmptyState } from "./MiEmptyState";
 
 type Competitor = {
   id: string;
@@ -132,16 +134,11 @@ export default function CompetitorsTab() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div>
-            <CardTitle className="text-lg">Concorrentes monitorados</CardTitle>
-            <CardDescription>
-              Cadastre sites de concorrentes. A cada scan, o Firecrawl extrai o conteúdo e a IA gera
-              uma análise estruturada (posicionamento, ofertas, preços, ameaças e oportunidades) do
-              ponto de vista da Eternum.
-            </CardDescription>
-          </div>
+      <MiSectionHeader
+        icon={Swords}
+        title="Concorrentes monitorados"
+        description="Cadastre sites de concorrentes. A cada scan, o Firecrawl extrai o conteúdo e a IA gera uma análise estruturada (posicionamento, ofertas, preços, ameaças e oportunidades) do ponto de vista da Eternum."
+        action={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Adicionar</Button>
@@ -185,17 +182,19 @@ export default function CompetitorsTab() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </CardHeader>
-      </Card>
+        }
+      />
 
-      {isLoading && <Card><CardContent className="pt-6 text-sm text-muted-foreground">Carregando…</CardContent></Card>}
+      {isLoading && (
+        <Card><CardContent className="pt-6 text-sm text-muted-foreground">Carregando…</CardContent></Card>
+      )}
 
       {!isLoading && competitors.length === 0 && (
-        <Card>
-          <CardContent className="pt-6 text-center text-sm text-muted-foreground">
-            Nenhum concorrente cadastrado. Clique em "Adicionar" para começar.
-          </CardContent>
-        </Card>
+        <MiEmptyState
+          icon={Swords}
+          title="Nenhum concorrente cadastrado"
+          description='Clique em "Adicionar" para monitorar posicionamento, ofertas e preços dos players que disputam seu ICP.'
+        />
       )}
 
       <div className="space-y-3">
