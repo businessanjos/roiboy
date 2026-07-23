@@ -416,21 +416,41 @@ function audiencePriority(ev: EventItem): number {
   return 1;
 }
 
-function EventCard({ ev }: { ev: EventItem }) {
+function EventCard({ ev, onDelete }: { ev: EventItem; onDelete?: () => void }) {
   return (
     <Card className="hover:border-primary/40 transition-colors">
       <CardContent className="pt-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h4 className="font-semibold text-sm leading-tight">{ev.name}</h4>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h4 className="font-semibold text-sm leading-tight">{ev.name}</h4>
+              {ev.source === "ai" && (
+                <Badge variant="outline" className="bg-purple-500/10 text-purple-700 border-purple-500/30 text-[9px] px-1.5 py-0">
+                  <Sparkles className="h-2.5 w-2.5 mr-0.5" /> IA
+                </Badge>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
               <MapPin className="h-3 w-3" /> {ev.city}
               {ev.region && <span className="text-muted-foreground/70">· {ev.region}</span>}
             </p>
           </div>
-          <Badge variant="outline" className="shrink-0 text-xs">
-            <Calendar className="h-3 w-3 mr-1" /> {ev.month}
-          </Badge>
+          <div className="flex items-center gap-1 shrink-0">
+            <Badge variant="outline" className="text-xs">
+              <Calendar className="h-3 w-3 mr-1" /> {ev.month}
+            </Badge>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-red-600"
+                onClick={onDelete}
+                title="Remover evento"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-1">
@@ -479,6 +499,8 @@ function EventCard({ ev }: { ev: EventItem }) {
   );
 }
 
+type DiscoveredEvent = Omit<EventItem, "monthIndex" | "source"> & { monthIndex?: number };
+
 export default function EventsTab() {
   const [search, setSearch] = useState("");
   const [scope, setScope] = useState<"all" | "BR" | "INT">("all");
@@ -486,9 +508,34 @@ export default function EventsTab() {
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [aiCitations, setAiCitations] = useState<any[]>([]);
 
+  // User-added (AI-discovered) events, persisted locally
+  const [userEvents, setUserEvents] = useState<EventItem[]>([]);
+  useEffect(() => setUserEvents(loadUserEvents()), []);
+
+  // Add-events dialog state
+  const [addOpen, setAddOpen] = useState(false);
+  const [addQuery, setAddQuery] = useState("");
+  const [discovered, setDiscovered] = useState<DiscoveredEvent[]>([]);
+  const [selectedIdx, setSelectedIdx] = useState<Set<number>>(new Set());
+
+  const allEvents = useMemo<EventItem[]>(() => {
+    // Merge, dedupe by name+city
+    const seen = new Set<string>();
+    const out: EventItem[] = [];
+    for (const list of [EVENTS, userEvents]) {
+      for (const e of list) {
+        const key = `${e.name.toLowerCase().trim()}|${e.city.toLowerCase().trim()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(e);
+      }
+    }
+    return out;
+  }, [userEvents]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return EVENTS
+    return allEvents
       .filter((e) => (scope === "all" ? true : e.country === scope))
       .filter((e) => {
         if (!q) return true;
@@ -507,7 +554,7 @@ export default function EventsTab() {
         if (pa !== pb) return pa - pb;
         return a.name.localeCompare(b.name);
       });
-  }, [search, scope]);
+  }, [allEvents, search, scope]);
 
   const byMonth = useMemo(() => {
     const map = new Map<string, EventItem[]>();
@@ -525,15 +572,11 @@ export default function EventsTab() {
   const totalBR = filtered.filter((e) => e.country === "BR").length;
   const totalINT = filtered.filter((e) => e.country === "INT").length;
 
+  // AI: free-form discovery (markdown) — mantido
   const aiMutation = useMutation({
     mutationFn: async (query: string) => {
       const { data, error } = await supabase.functions.invoke("mi-market-research", {
-        body: {
-          query,
-          focus: "tendencias",
-          recency: "year",
-          model: "sonar-pro",
-        },
+        body: { query, focus: "tendencias", recency: "year", model: "sonar-pro" },
       });
       if (error) throw error;
       return data as { answer: string; citations: any[] };
@@ -551,17 +594,116 @@ export default function EventsTab() {
     aiMutation.mutate(q);
   };
 
+  // AI: structured events → add to list
+  const addMutation = useMutation({
+    mutationFn: async (query: string) => {
+      const { data, error } = await supabase.functions.invoke("mi-events-discover", {
+        body: {
+          query,
+          exclude: allEvents.map((e) => `${e.name} — ${e.city}`),
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as { events: DiscoveredEvent[] };
+    },
+    onSuccess: (data) => {
+      const evs = Array.isArray(data.events) ? data.events : [];
+      // dedupe against current list
+      const existing = new Set(allEvents.map((e) => `${e.name.toLowerCase().trim()}|${e.city.toLowerCase().trim()}`));
+      const clean = evs.filter((e) => {
+        if (!e?.name || !e?.month) return false;
+        const key = `${e.name.toLowerCase().trim()}|${(e.city || "").toLowerCase().trim()}`;
+        return !existing.has(key);
+      });
+      setDiscovered(clean);
+      setSelectedIdx(new Set(clean.map((_, i) => i))); // pré-seleciona todos
+      if (clean.length === 0) toast.info("A IA não encontrou eventos adicionais desta vez.");
+    },
+    onError: (e: any) => toast.error(e.message || "Falha ao buscar eventos"),
+  });
+
+  const openAddDialog = () => {
+    setAddOpen(true);
+    setDiscovered([]);
+    setSelectedIdx(new Set());
+    setAddQuery("");
+  };
+
+  const runAddSearch = () => {
+    addMutation.mutate(addQuery.trim());
+  };
+
+  const toggleSelect = (i: number) => {
+    setSelectedIdx((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  };
+
+  const confirmAdd = () => {
+    const picked = discovered.filter((_, i) => selectedIdx.has(i));
+    if (picked.length === 0) {
+      toast.error("Selecione pelo menos um evento.");
+      return;
+    }
+    const normalized: EventItem[] = picked.map((e) => ({
+      name: e.name.trim(),
+      city: (e.city || "—").trim(),
+      country: (e.country as "BR" | "INT") || "INT",
+      region: e.region?.trim(),
+      month: e.month,
+      monthIndex: MONTH_TO_INDEX[e.month] ?? 0,
+      audience: (e.audience || "").trim(),
+      scale: (e.scale as any) || "Médio",
+      focus: Array.isArray(e.focus) ? e.focus.filter(Boolean) : [],
+      organizer: e.organizer?.trim(),
+      url: e.url?.trim(),
+      notes: e.notes?.trim(),
+      source: "ai",
+    }));
+    const next = [...userEvents, ...normalized];
+    setUserEvents(next);
+    saveUserEvents(next);
+    toast.success(`${normalized.length} evento(s) adicionado(s).`);
+    setAddOpen(false);
+  };
+
+  const removeUserEvent = (ev: EventItem) => {
+    const next = userEvents.filter(
+      (e) => !(e.name === ev.name && e.city === ev.city && e.month === ev.month),
+    );
+    setUserEvents(next);
+    saveUserEvents(next);
+    toast.success("Evento removido.");
+  };
+
+  const isUserAdded = (ev: EventItem) =>
+    ev.source === "ai" &&
+    userEvents.some((u) => u.name === ev.name && u.city === ev.city && u.month === ev.month);
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-purple-600" /> Eventos do mercado de estética
-          </CardTitle>
-          <CardDescription>
-            Mapa curado dos principais congressos, feiras e encontros do setor de estética avançada/médica —
-            Brasil e mundo. Use para planejar presença comercial, prospecção de clínicas e captação em bancada.
-          </CardDescription>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-purple-600" /> Eventos do mercado de estética
+              </CardTitle>
+              <CardDescription>
+                Mapa curado dos principais congressos, feiras e encontros do setor de estética avançada/médica —
+                Brasil e mundo. Use para planejar presença comercial, prospecção de clínicas e captação em bancada.
+              </CardDescription>
+            </div>
+            <Button onClick={openAddDialog} size="sm" className="gap-1.5 shrink-0">
+              <Plus className="h-3.5 w-3.5" />
+              <Sparkles className="h-3.5 w-3.5" />
+              Adicionar eventos com IA
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2 items-center">
@@ -577,19 +719,20 @@ export default function EventsTab() {
             <Tabs value={scope} onValueChange={(v) => setScope(v as any)}>
               <TabsList className="h-9">
                 <TabsTrigger value="all" className="text-xs gap-1">
-                  <Globe className="h-3 w-3" /> Todos ({EVENTS.length})
+                  <Globe className="h-3 w-3" /> Todos ({allEvents.length})
                 </TabsTrigger>
                 <TabsTrigger value="BR" className="text-xs gap-1">
-                  <Flag className="h-3 w-3" /> Brasil ({EVENTS.filter((e) => e.country === "BR").length})
+                  <Flag className="h-3 w-3" /> Brasil ({allEvents.filter((e) => e.country === "BR").length})
                 </TabsTrigger>
                 <TabsTrigger value="INT" className="text-xs gap-1">
-                  <Globe className="h-3 w-3" /> Internacional ({EVENTS.filter((e) => e.country === "INT").length})
+                  <Globe className="h-3 w-3" /> Internacional ({allEvents.filter((e) => e.country === "INT").length})
                 </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
           <p className="text-xs text-muted-foreground">
-            {total} evento(s) — {totalBR} no Brasil · {totalINT} internacionais. Ordenados por mês.
+            {total} evento(s) — {totalBR} no Brasil · {totalINT} internacionais
+            {userEvents.length > 0 && ` · ${userEvents.length} adicionado(s) via IA`}. Ordenados por mês.
           </p>
         </CardContent>
       </Card>
@@ -611,7 +754,11 @@ export default function EventsTab() {
             </div>
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {list.map((ev, i) => (
-                <EventCard key={`${ev.name}-${i}`} ev={ev} />
+                <EventCard
+                  key={`${ev.name}-${i}`}
+                  ev={ev}
+                  onDelete={isUserAdded(ev) ? () => removeUserEvent(ev) : undefined}
+                />
               ))}
             </div>
           </div>
@@ -621,11 +768,11 @@ export default function EventsTab() {
       <Card className="border-purple-500/30 bg-purple-500/5">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-purple-600" /> Descobrir mais eventos com IA
+            <Sparkles className="h-4 w-4 text-purple-600" /> Pesquisa livre com IA
           </CardTitle>
           <CardDescription>
-            Consulta em tempo real (Perplexity) para trazer eventos adicionais, edições atualizadas ou nichos
-            específicos que não estão no mapa curado acima.
+            Consulta em tempo real (Perplexity) — retorna texto explicativo. Para adicionar eventos direto ao mapa acima,
+            use o botão <strong>“Adicionar eventos com IA”</strong> no topo.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -639,19 +786,17 @@ export default function EventsTab() {
                 if (e.key === "Enter") runDiscover();
               }}
             />
-            <Button onClick={runDiscover} disabled={aiMutation.isPending} size="sm">
+            <Button onClick={runDiscover} disabled={aiMutation.isPending} size="sm" variant="outline">
               {aiMutation.isPending ? (
                 <Loader2 className="h-3 w-3 mr-2 animate-spin" />
               ) : (
                 <Sparkles className="h-3 w-3 mr-2" />
               )}
-              Descobrir
+              Consultar
             </Button>
           </div>
           {aiMutation.error && (
-            <p className="text-xs text-red-600">
-              Erro: {(aiMutation.error as Error).message}
-            </p>
+            <p className="text-xs text-red-600">Erro: {(aiMutation.error as Error).message}</p>
           )}
           {aiAnswer && (
             <div className="rounded-lg border bg-card p-4 space-y-3">
@@ -681,6 +826,149 @@ export default function EventsTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog: Add events via AI */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-purple-600" /> Adicionar eventos com IA
+            </DialogTitle>
+            <DialogDescription>
+              A IA busca eventos reais do mercado de estética avançada/médica e evita repetir os já mapeados.
+              Selecione quais deseja adicionar ao mapa.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex gap-2">
+            <Input
+              value={addQuery}
+              onChange={(e) => setAddQuery(e.target.value)}
+              placeholder="Nicho ou região (opcional). Ex.: eventos de laser no Sul, congressos de dermato 2026..."
+              className="h-9"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") runAddSearch();
+              }}
+            />
+            <Button onClick={runAddSearch} disabled={addMutation.isPending} size="sm">
+              {addMutation.isPending ? (
+                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+              ) : (
+                <Search className="h-3 w-3 mr-2" />
+              )}
+              Buscar
+            </Button>
+          </div>
+
+          {addMutation.isPending && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-6 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" /> Buscando eventos reais…
+            </div>
+          )}
+
+          {!addMutation.isPending && discovered.length === 0 && !addMutation.error && (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Clique em <strong>Buscar</strong> para a IA trazer eventos adicionais.
+            </p>
+          )}
+
+          {addMutation.error && (
+            <p className="text-sm text-red-600">Erro: {(addMutation.error as Error).message}</p>
+          )}
+
+          {discovered.length > 0 && (
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  {discovered.length} evento(s) encontrado(s) · {selectedIdx.size} selecionado(s)
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    className="hover:text-foreground underline"
+                    onClick={() => setSelectedIdx(new Set(discovered.map((_, i) => i)))}
+                  >
+                    Selecionar todos
+                  </button>
+                  <button
+                    className="hover:text-foreground underline"
+                    onClick={() => setSelectedIdx(new Set())}
+                  >
+                    Limpar
+                  </button>
+                </div>
+              </div>
+              {discovered.map((e, i) => {
+                const checked = selectedIdx.has(i);
+                return (
+                  <div
+                    key={`${e.name}-${i}`}
+                    className={`border rounded-lg p-3 flex gap-3 cursor-pointer transition-colors ${
+                      checked ? "border-purple-500/60 bg-purple-500/5" : "hover:bg-muted/40"
+                    }`}
+                    onClick={() => toggleSelect(i)}
+                  >
+                    <Checkbox checked={checked} onCheckedChange={() => toggleSelect(i)} className="mt-1" />
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <h4 className="font-semibold text-sm">{e.name}</h4>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="text-[10px]">
+                            <Calendar className="h-2.5 w-2.5 mr-0.5" /> {e.month}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px]">
+                            {e.country === "BR" ? "Brasil" : "Internacional"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-3 w-3" /> {e.city}
+                        {e.region && <span>· {e.region}</span>}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="secondary" className="text-[10px]">{e.scale}</Badge>
+                        {(e.focus || []).slice(0, 4).map((f) => (
+                          <Badge key={f} variant="secondary" className="text-[10px]">{f}</Badge>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">Público:</span> {e.audience}
+                      </p>
+                      {e.organizer && (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">Organizador:</span> {e.organizer}
+                        </p>
+                      )}
+                      {e.url && (
+                        <a
+                          href={e.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(evt) => evt.stopPropagation()}
+                          className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          Site oficial <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                      {e.notes && <p className="text-xs text-muted-foreground italic">{e.notes}</p>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmAdd} disabled={selectedIdx.size === 0 || discovered.length === 0} className="gap-1.5">
+              <Check className="h-3.5 w-3.5" />
+              Adicionar {selectedIdx.size > 0 ? `(${selectedIdx.size})` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
