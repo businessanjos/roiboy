@@ -141,6 +141,10 @@ export default function EventParticipantsTab({
   const [guestPhone, setGuestPhone] = useState("");
   const [notes, setNotes] = useState("");
 
+  // List filters
+  const [statusFilter, setStatusFilter] = useState<EventRsvpStatus | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Import state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -484,38 +488,45 @@ export default function EventParticipantsTab({
     !participants.some(p => p.client_id === c.id)
   );
 
+  const filterCards: { key: EventRsvpStatus | "all"; label: string; value: number; color: string }[] = [
+    { key: "all", label: "Total", value: stats.total, color: "text-foreground" },
+    { key: "confirmed", label: "Confirmados", value: stats.confirmed, color: "text-green-600" },
+    { key: "attended", label: "Presentes", value: stats.attended, color: "text-emerald-600" },
+    { key: "pending", label: "Pendentes", value: stats.pending, color: "text-yellow-600" },
+    { key: "waitlist", label: "Lista de Espera", value: stats.waitlist, color: "text-blue-600" },
+    { key: "declined", label: "Recusados", value: stats.declined, color: "text-red-600" },
+    { key: "no_show", label: "Faltaram", value: stats.noShow, color: "text-gray-500" },
+  ];
+
+  const filteredParticipants = participants.filter((p) => {
+    if (statusFilter !== "all" && p.rsvp_status !== statusFilter) return false;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const name = getParticipantName(p).toLowerCase();
+    const email = (getParticipantEmail(p) || "").toLowerCase();
+    const phone = (getParticipantPhone(p) || "").toLowerCase();
+    return name.includes(q) || email.includes(q) || phone.includes(q);
+  });
+
   return (
     <div className="space-y-6">
-      {/* Stats */}
+      {/* Stats — clique para filtrar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        <Card className="p-3">
-          <p className="text-2xl font-bold">{stats.total}</p>
-          <p className="text-xs text-muted-foreground">Total</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
-          <p className="text-xs text-muted-foreground">Confirmados</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-emerald-600">{stats.attended}</p>
-          <p className="text-xs text-muted-foreground">Presentes</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-          <p className="text-xs text-muted-foreground">Pendentes</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-blue-600">{stats.waitlist}</p>
-          <p className="text-xs text-muted-foreground">Lista de Espera</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-red-600">{stats.declined}</p>
-          <p className="text-xs text-muted-foreground">Recusados</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-2xl font-bold text-gray-500">{stats.noShow}</p>
-          <p className="text-xs text-muted-foreground">Faltaram</p>
-        </Card>
+        {filterCards.map((c) => {
+          const active = statusFilter === c.key;
+          return (
+            <Card
+              key={c.key}
+              onClick={() => setStatusFilter(c.key)}
+              className={`p-3 cursor-pointer transition-all hover:shadow-md ${
+                active ? "ring-2 ring-primary border-primary" : ""
+              }`}
+            >
+              <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
+              <p className="text-xs text-muted-foreground">{c.label}</p>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Actions */}
@@ -552,11 +563,52 @@ export default function EventParticipantsTab({
 
       {/* Participants List */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Participantes
-          </CardTitle>
+        <CardHeader className="gap-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Participantes
+              {(statusFilter !== "all" || searchQuery) && (
+                <Badge variant="secondary" className="ml-1">
+                  {filteredParticipants.length} de {participants.length}
+                </Badge>
+              )}
+            </CardTitle>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Input
+                placeholder="Buscar por nome, e-mail ou telefone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-64"
+              />
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as EventRsvpStatus | "all")}>
+                <SelectTrigger className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="confirmed">Confirmados</SelectItem>
+                  <SelectItem value="attended">Presentes</SelectItem>
+                  <SelectItem value="pending">Pendentes</SelectItem>
+                  <SelectItem value="waitlist">Lista de Espera</SelectItem>
+                  <SelectItem value="declined">Recusados</SelectItem>
+                  <SelectItem value="no_show">Faltaram</SelectItem>
+                </SelectContent>
+              </Select>
+              {(statusFilter !== "all" || searchQuery) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setStatusFilter("all");
+                    setSearchQuery("");
+                  }}
+                >
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -573,6 +625,10 @@ export default function EventParticipantsTab({
                 onClick: () => setDialogOpen(true)
               }}
             />
+          ) : filteredParticipants.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              Nenhum participante corresponde aos filtros selecionados.
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -585,7 +641,7 @@ export default function EventParticipantsTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {participants.map((p) => {
+                {filteredParticipants.map((p) => {
                   const StatusIcon = rsvpStatusConfig[p.rsvp_status].icon;
                   return (
                     <TableRow key={p.id}>
