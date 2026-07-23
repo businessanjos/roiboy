@@ -1029,10 +1029,11 @@ export default function SalesPipeline() {
   }, [activityStatusMap]);
 
   const activeFilterNeedsActivityCounts = useMemo(() => {
+    if (activitySort !== 'none') return true;
     return (activeFilter?.conditions || []).some((condition) =>
       condition.field === 'next_activity_date' || condition.field === 'total_tasks' || condition.field === 'pending_tasks'
     );
-  }, [activeFilter]);
+  }, [activeFilter, activitySort]);
 
   // Range de datas para filtro do pipeline aberto (criação do negócio)
   const openDateRange = useMemo<{ start: Date; end: Date } | null>(() => {
