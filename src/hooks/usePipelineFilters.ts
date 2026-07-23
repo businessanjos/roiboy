@@ -221,6 +221,60 @@ export function usePipelineFilters() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Debug / inspection helpers
+// ---------------------------------------------------------------------------
+
+export interface DealFilterExplanation {
+  filterId: string;
+  filterName: string;
+  matches: boolean;
+  reason: string;
+}
+
+export interface DealDebugContext {
+  totalActivities: number;
+  pendingCount: number;
+  hasOverdue: boolean;
+  nextDueDate: string | null;
+}
+
+/**
+ * Explains, for each recommended activity-based filter, whether a given deal
+ * matches and why — powered by the same data the filters themselves read.
+ * Used by the pipeline "Inspecionar" mode so we can debug filter mismatches
+ * without opening the DB.
+ */
+export function explainDealActivityFilters(ctx: DealDebugContext): DealFilterExplanation[] {
+  const { totalActivities, pendingCount, hasOverdue, nextDueDate } = ctx;
+
+  const neverContactedMatches = totalActivities === 0;
+  const noNextStepMatches = pendingCount === 0;
+
+  return [
+    {
+      filterId: 'never_contacted',
+      filterName: '🔴 Nunca contatado (sem nenhum registro)',
+      matches: neverContactedMatches,
+      reason: neverContactedMatches
+        ? `APARECE — totalActivities = 0 (nenhuma tarefa em internal_tasks e nenhum registro humano em deal_activities).`
+        : `NÃO aparece — totalActivities = ${totalActivities} (há tarefas ou registros manuais como nota/ligação/WhatsApp/e-mail/reunião/arquivo). Precisa ser 0 para o lead aparecer neste filtro.`,
+    },
+    {
+      filterId: 'no_next_activity',
+      filterName: '🟡 Sem próximo passo agendado',
+      matches: noNextStepMatches,
+      reason: noNextStepMatches
+        ? `APARECE — pendingCount = 0${
+            totalActivities > 0 ? ` (o lead tem ${totalActivities} atividade(s) histórica(s), mas nenhuma tarefa em aberto).` : ' (nenhuma tarefa em aberto).'
+          }`
+        : `NÃO aparece — pendingCount = ${pendingCount} (há tarefa(s) em aberto${
+            nextDueDate ? `, próxima em ${nextDueDate}` : ''
+          }${hasOverdue ? ', com pelo menos uma vencida' : ''}). Precisa ser 0 para o lead aparecer neste filtro.`,
+    },
+  ];
+}
+
 // Utility function to apply filters to deals
 export type DealSearchMode = 'contains' | 'exact';
 
