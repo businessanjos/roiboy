@@ -17,7 +17,7 @@ import { suggestKpis, type KpiSuggestion } from "@/constants/kpiSuggestions";
 import { getPublicOrigin } from "@/lib/publicLink";
 import { cn } from "@/lib/utils";
 import { OfferRichTextarea } from "@/components/rh/offers/OfferRichTextarea";
-import WorkScheduleField, { validateSchedule } from "@/components/rh/offers/WorkScheduleField";
+import WorkScheduleField, { validateSchedule, normalizeSchedule, type WorkSchedule } from "@/components/rh/offers/WorkScheduleField";
 
 const STEPS = [
   { id: 1, title: "Candidato" },
