@@ -149,6 +149,7 @@ export default function RHOfferWizard() {
         salary_note: data.salary_note || "",
         variable_compensation: data.variable_compensation || "",
         benefits: data.benefits || [],
+        benefit_values: ((data as any).benefit_values as Record<string, string>) || {},
         perks: (data.perks as any) || [],
         success_metrics: ((data as any).success_metrics as any) || [],
         start_date: cloning ? "" : (data.start_date || ""),
