@@ -693,15 +693,15 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
               key={tier.key}
               className={`relative overflow-hidden ring-1 ${tier.ring} bg-gradient-to-br ${tier.gradient} hover:shadow-lg transition-shadow`}
             >
-              <CardContent className="p-5">
+              <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`p-2 rounded-lg ${tier.bg}`}>
-                      <Icon className={`h-5 w-5 ${tier.text}`} />
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`p-2 rounded-lg ${tier.bg} flex-shrink-0`}>
+                      <Icon className={`h-4 w-4 ${tier.text}`} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className={`text-[11px] font-bold tracking-widest uppercase ${tier.text}`}>{tier.short}</p>
-                      <p className="text-[11px] text-muted-foreground leading-tight">
+                      <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1">
                         {tier.label.replace(`${tier.short} — `, "")}
                       </p>
                     </div>
@@ -709,7 +709,7 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
                     onClick={() => runOne(tier, query)}
                     disabled={isRunning || !!running}
                     title={latest ? "Atualizar" : "Calcular"}
@@ -718,20 +718,20 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
                   </Button>
                 </div>
 
-                <div className="min-h-[3rem]">
+                <div className="min-h-[2.75rem]">
                   {isLoading ? (
                     <div className="h-8 w-32 rounded bg-muted animate-pulse" />
                   ) : value ? (
-                    <p className={`text-3xl font-bold tabular-nums leading-tight ${tier.text}`}>{value}</p>
+                    <p className={`text-2xl font-bold tabular-nums leading-tight ${tier.text}`}>{value}</p>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">Sem cálculo para as faixas atuais</p>
+                    <p className="text-sm text-muted-foreground/70">—</p>
                   )}
                 </div>
 
                 {snippet ? (
-                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{snippet}</p>
+                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-3">{snippet}</p>
                 ) : (
-                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{tier.helper}</p>
+                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-3">{tier.helper}</p>
                 )}
 
                 <div className="mt-3 flex items-center justify-between gap-2">
@@ -740,7 +740,9 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
                       {formatDistanceToNow(new Date(latest.created_at), { addSuffix: true, locale: ptBR })}
                     </Badge>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">Recalcule para estas faixas</span>
+                    <Badge variant="outline" className="text-[10px] font-normal border-dashed text-muted-foreground">
+                      Aguardando cálculo
+                    </Badge>
                   )}
                   {latest && (
                     <button
