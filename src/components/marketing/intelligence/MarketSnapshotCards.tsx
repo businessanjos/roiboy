@@ -48,6 +48,17 @@ const accentMap = {
   hof: { bg: "bg-rose-500/10", text: "text-rose-600", border: "border-rose-500/20" },
 } as const;
 
+const toneMap: Record<BenchmarkQuery["icon"], MiAnalysisTone> = {
+  universe: "slate",
+  clinics: "purple",
+  core: "fuchsia",
+  franchise: "blue",
+  units: "cyan",
+  solo: "emerald",
+  derm: "amber",
+  hof: "rose",
+};
+
 type Row = { id: string; query: string; answer: string; created_at: string };
 
 interface Props {
