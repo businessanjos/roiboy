@@ -35,9 +35,9 @@ type Snapshot = {
 };
 
 const urgencyColors: Record<string, string> = {
-  low: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
-  medium: "bg-amber-500/10 text-amber-700 border-amber-500/30",
-  high: "bg-red-500/10 text-red-700 border-red-500/30",
+  low: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  medium: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  high: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
 };
 
 export default function CompetitorsTab() {

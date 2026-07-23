@@ -36,6 +36,7 @@ import PenetrationTab from "@/components/marketing/intelligence/PenetrationTab";
 import EventsTab from "@/components/marketing/intelligence/EventsTab";
 import { MiKpiCard } from "@/components/marketing/intelligence/MiKpiCard";
 import { MiSectionHeader } from "@/components/marketing/intelligence/MiSectionHeader";
+import { MiCallout } from "@/components/marketing/intelligence/MiCallout";
 
 type DistItem = { label: string; count: number; pct: number };
 type Distribution = { total: number; items: DistItem[] };
@@ -399,6 +400,13 @@ export default function MarketingIntelligence() {
 
             {/* ————— MERCADO: tamanho, snapshot, eventos, pesquisa ————— */}
             <TabsContent value="market" className="space-y-8 mt-6">
+              <MiCallout
+                icon={Ruler}
+                eyebrow="Mercado"
+                tone="accent"
+                look="Ordem de grandeza (TAM/SAM/SOM), indicadores macro e eventos com público-alvo relevante."
+                act="Ajuste cenários (geo, nicho, canal) e priorize os eventos onde há mais concentração de ICP."
+              />
               <section>
                 <MiSectionHeader
                   icon={Ruler}
@@ -446,6 +454,13 @@ export default function MarketingIntelligence() {
 
             {/* ————— NOSSA BASE: ICP, Anti-ICP, sinais ————— */}
             <TabsContent value="base" className="space-y-4 mt-6">
+              <MiCallout
+                icon={Sparkles}
+                eyebrow="Nossa base"
+                tone="info"
+                look="Quem hoje performa, quem cancela e onde os dois perfis divergem."
+                act="Use o ICP para calibrar qualificação e o Anti-ICP como filtro de risco antes de fechar deals parecidos."
+              />
               <Card className="border-blue-500/30 bg-blue-500/5">
                 <CardContent className="pt-3 pb-3 text-xs text-muted-foreground">
                   <strong className="text-foreground">Régua de contagem:</strong> "Clientes ativos" usa a mesma definição da área de Customer Success — apenas contratos com status <code>active</code>. Contratos <code>paused</code>, <code>suspended</code> e <code>suspended_bonus</code> aparecem como "em hold" e não entram no ICP. Encerrados/cancelados entram no Anti-ICP.
@@ -547,8 +562,8 @@ export default function MarketingIntelligence() {
                                     variant="outline"
                                     className={
                                       risky
-                                        ? "bg-red-500/10 text-red-600 border-red-500/30"
-                                        : "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                                        ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30"
+                                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                                     }
                                   >
                                     {risky ? (
@@ -573,6 +588,13 @@ export default function MarketingIntelligence() {
 
             {/* ————— OPORTUNIDADE: penetração + concorrentes ————— */}
             <TabsContent value="opportunity" className="space-y-8 mt-6">
+              <MiCallout
+                icon={Compass}
+                eyebrow="Oportunidade"
+                tone="success"
+                look="Regiões subexploradas (whitespace) e movimento dos concorrentes diretos."
+                act="Aponte times de aquisição para os top 5 whitespace e monitore concorrentes de urgência alta."
+              />
               <section>
                 <MiSectionHeader
                   icon={Compass}
