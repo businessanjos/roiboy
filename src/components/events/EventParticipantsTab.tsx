@@ -141,6 +141,10 @@ export default function EventParticipantsTab({
   const [guestPhone, setGuestPhone] = useState("");
   const [notes, setNotes] = useState("");
 
+  // List filters
+  const [statusFilter, setStatusFilter] = useState<EventRsvpStatus | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Import state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
