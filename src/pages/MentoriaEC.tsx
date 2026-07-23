@@ -142,17 +142,21 @@ export default function MentoriaEC() {
       (statuses || []).forEach((s: any) => statusMap.set(s.client_id, s.status as MentorshipStatus));
 
       return (clients || []).map((c) => {
-        const contractEnd = byClient.get(c.id) ?? null;
+        const info = byClient.get(c.id);
         const att = attMap.get(c.id);
+        const meta = info?.productId ? PRODUCT_META.get(info.productId) : null;
         return {
           clientId: c.id,
           fullName: c.full_name || "Sem nome",
           logoUrl: c.logo_url,
           businessSegment: c.business_segment,
-          contractEnd,
+          contractEnd: info?.endDate ?? null,
           lastAttendance: att?.last ?? null,
           attendanceCount: att?.count ?? 0,
           mentorshipStatus: statusMap.get(c.id) ?? null,
+          productId: info?.productId ?? null,
+          program: meta?.program ?? null,
+          productLabel: meta?.label ?? null,
         };
       });
     },
