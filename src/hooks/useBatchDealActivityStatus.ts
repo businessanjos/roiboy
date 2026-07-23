@@ -16,6 +16,7 @@ const EMPTY_STATUS: ActivityStatus = { pendingCount: 0, hasOverdue: false, total
 export interface DealActivityRef {
   id: string;
   lead_id?: string | null;
+  client_id?: string | null;
 }
 
 type DealActivityInput = string | DealActivityRef;
@@ -36,11 +37,15 @@ function normalizeDealRefs(deals: DealActivityInput[]): DealActivityRef[] {
 async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<Record<string, ActivityStatus>> {
   if (dealRefs.length === 0) return {};
 
-  // Fetch in chunks of 500 to stay within URL limits
-  const CHUNK = 500;
+  // Fetch in chunks to stay within URL limits and paginate every chunk.
+  // PostgREST can silently cap large result sets, so relying on `.limit(50000)`
+  // leaves false positives in the "Sem tarefa/atividade cadastrada" filter.
+  const CHUNK = 200;
+  const PAGE_SIZE = 1000;
   const dealIds = dealRefs.map((deal) => deal.id);
   const dealIdSet = new Set(dealIds);
   const leadToDealIds = new Map<string, string[]>();
+  const clientToDealIds = new Map<string, string[]>();
   const map: Record<string, ActivityStatus> = {};
   const seenTaskIdsByDeal = new Map<string, Set<string>>();
 
@@ -51,6 +56,11 @@ async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<
       const existing = leadToDealIds.get(deal.lead_id) || [];
       existing.push(deal.id);
       leadToDealIds.set(deal.lead_id, existing);
+    }
+    if (deal.client_id) {
+      const existing = clientToDealIds.get(deal.client_id) || [];
+      existing.push(deal.id);
+      clientToDealIds.set(deal.client_id, existing);
     }
   }
 
@@ -81,26 +91,40 @@ async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<
 
   const today = startOfDay(new Date());
 
+  const taskSelect = `
+    id,
+    deal_id,
+    lead_id,
+    client_id,
+    due_date,
+    completed_at,
+    custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)
+  `;
+
+  const fetchTaskPages = async (field: "deal_id" | "lead_id" | "client_id", ids: string[]) => {
+    const rows: any[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("internal_tasks")
+        .select(taskSelect)
+        .in(field, ids)
+        .range(from, from + PAGE_SIZE - 1);
+
+      if (error) {
+        console.error(`[useBatchDealActivityStatus] ${field} task error:`, error);
+        return rows;
+      }
+
+      const page = (data || []) as any[];
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) return rows;
+    }
+  };
+
   for (let i = 0; i < dealIds.length; i += CHUNK) {
     const chunk = dealIds.slice(i, i + CHUNK);
-    const { data, error } = await supabase
-      .from("internal_tasks")
-      .select(`
-        id,
-        deal_id,
-        lead_id,
-        due_date,
-        completed_at,
-        custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)
-      `)
-      .in("deal_id", chunk)
-      .limit(50000);
-
-    if (error) {
-      console.error("[useBatchDealActivityStatus] Error:", error);
-      continue;
-    }
-    for (const task of (data || []) as any[]) {
+    const tasks = await fetchTaskPages("deal_id", chunk);
+    for (const task of tasks) {
       if (task.deal_id && dealIdSet.has(task.deal_id)) {
         registerTaskForDeal(task.deal_id, task, today);
       }
@@ -110,27 +134,23 @@ async function fetchBatchActivityStatuses(dealRefs: DealActivityRef[]): Promise<
   const leadIds = Array.from(leadToDealIds.keys());
   for (let i = 0; i < leadIds.length; i += CHUNK) {
     const chunk = leadIds.slice(i, i + CHUNK);
-    const { data, error } = await supabase
-      .from("internal_tasks")
-      .select(`
-        id,
-        deal_id,
-        lead_id,
-        due_date,
-        completed_at,
-        custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)
-      `)
-      .in("lead_id", chunk)
-      .limit(50000);
-
-    if (error) {
-      console.error("[useBatchDealActivityStatus] Lead task error:", error);
-      continue;
-    }
-
-    for (const task of (data || []) as any[]) {
+    const tasks = await fetchTaskPages("lead_id", chunk);
+    for (const task of tasks) {
       if (!task.lead_id) continue;
       const relatedDealIds = leadToDealIds.get(task.lead_id) || [];
+      for (const dealId of relatedDealIds) {
+        registerTaskForDeal(dealId, task, today);
+      }
+    }
+  }
+
+  const clientIds = Array.from(clientToDealIds.keys());
+  for (let i = 0; i < clientIds.length; i += CHUNK) {
+    const chunk = clientIds.slice(i, i + CHUNK);
+    const tasks = await fetchTaskPages("client_id", chunk);
+    for (const task of tasks) {
+      if (!task.client_id) continue;
+      const relatedDealIds = clientToDealIds.get(task.client_id) || [];
       for (const dealId of relatedDealIds) {
         registerTaskForDeal(dealId, task, today);
       }
@@ -144,7 +164,7 @@ export function useBatchDealActivityStatus(deals: DealActivityInput[]) {
   const dealRefs = normalizeDealRefs(deals);
   // Stabilize key to avoid re-fetches on same set of IDs
   const sortedKey = dealRefs
-    .map((deal) => `${deal.id}:${deal.lead_id || ""}`)
+    .map((deal) => `${deal.id}:${deal.lead_id || ""}:${deal.client_id || ""}`)
     .sort()
     .join(",");
 
