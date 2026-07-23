@@ -360,6 +360,15 @@ export default function MentoriaEC() {
                       </Link>
                     </TableCell>
                     <TableCell>
+                      {m.productLabel ? (
+                        <Badge variant="outline" className={cn("text-xs", PRODUCT_META.get(m.productId ?? "")?.className)}>
+                          {m.productLabel}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       {m.businessSegment ? (
                         <Badge variant="outline" className="text-xs">{m.businessSegment}</Badge>
                       ) : (
