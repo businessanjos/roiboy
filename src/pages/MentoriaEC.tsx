@@ -235,6 +235,7 @@ export default function MentoriaEC() {
         if (q && !m.fullName.toLowerCase().includes(q) && !(m.businessSegment ?? "").toLowerCase().includes(q))
           return false;
         if (mentorshipFilter !== "all" && m.mentorshipStatus !== mentorshipFilter) return false;
+        if (programFilter !== "all" && m.program !== programFilter) return false;
         if (statusFilter === "never" && m.lastAttendance) return false;
         if (statusFilter === "attended" && !m.lastAttendance) return false;
         if (statusFilter === "recent") {
@@ -245,7 +246,7 @@ export default function MentoriaEC() {
         return true;
       })
       .sort((a, b) => a.fullName.localeCompare(b.fullName, "pt-BR"));
-  }, [members, search, statusFilter, mentorshipFilter]);
+  }, [members, search, statusFilter, mentorshipFilter, programFilter]);
 
   const totals = useMemo(() => {
     const total = members.length;
