@@ -505,6 +505,45 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           if (newMsg?.account_id && newMsg.account_id !== accountId) return;
           if (!sectorId) return;
 
+          // Optimistically bump last_message_at/preview on the matching assignment so
+          // the conversation list re-sorts to the top immediately, even before the
+          // debounced/throttled refetch runs. This matches WhatsApp's behavior.
+          const bumpConvId = newMsg?.zapp_conversation_id;
+          const bumpAt = newMsg?.sent_at || newMsg?.created_at || new Date().toISOString();
+          if (bumpConvId) {
+            setAssignments(prev => prev.map(a => {
+              const convId = a.zapp_conversation?.id || (a as any).zapp_conversation_id;
+              if (convId !== bumpConvId) return a;
+              const currentAt = a.zapp_conversation?.last_message_at || null;
+              if (currentAt && new Date(currentAt).getTime() >= new Date(bumpAt).getTime()) return a;
+              const preview = newMsg?.content
+                || (newMsg?.message_type === 'audio' ? '🎤 Áudio' : '')
+                || (newMsg?.message_type === 'image' ? '📷 Imagem' : '')
+                || (newMsg?.message_type === 'video' ? '🎥 Vídeo' : '')
+                || (newMsg?.message_type === 'document' ? '📄 Documento' : '')
+                || (newMsg?.message_type === 'sticker' ? '🎭 Sticker' : '')
+                || a.zapp_conversation?.last_message_preview
+                || '';
+              const isInbound = newMsg?.direction === 'inbound';
+              const isSelected = currentConversationIdRef.current === bumpConvId;
+              const nextUnread = isInbound && !isSelected
+                ? (a.zapp_conversation?.unread_count || 0) + 1
+                : a.zapp_conversation?.unread_count || 0;
+              return {
+                ...a,
+                zapp_conversation: a.zapp_conversation
+                  ? {
+                      ...a.zapp_conversation,
+                      last_message_at: bumpAt,
+                      last_message_preview: preview,
+                      unread_count: nextUnread,
+                    }
+                  : a.zapp_conversation,
+              } as ConversationAssignment;
+            }));
+          }
+
+
           // Notification for inbound messages
           if (newMsg?.direction === 'inbound' && onNewInboundMessageRef.current) {
             const conversationId = newMsg.zapp_conversation_id;
