@@ -2202,6 +2202,23 @@ export default function SalesPipeline() {
                         </div>
                       </div>
                     )}
+                    {activeTab === 'open' && (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Ordenar por atividade</label>
+                        <Select value={activitySort} onValueChange={(v) => setActivitySort(v as typeof activitySort)}>
+                          <SelectTrigger className={cn("h-10 w-full sm:w-[240px]", activitySort !== 'none' && "border-primary/60 text-primary")}>
+                            <SelectValue placeholder="Padrão" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Padrão (sem ordenação)</SelectItem>
+                            <SelectItem value="pending_desc">Atividades pendentes (maior → menor)</SelectItem>
+                            <SelectItem value="pending_asc">Atividades pendentes (menor → maior)</SelectItem>
+                            <SelectItem value="total_desc">Total de atividades (maior → menor)</SelectItem>
+                            <SelectItem value="total_asc">Total de atividades (menor → maior)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     {activeTab === 'open' && titleTagOptions.length > 0 && (
                       <MultiSelectFilter
                         label="Origem"
