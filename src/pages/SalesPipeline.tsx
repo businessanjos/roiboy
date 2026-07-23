@@ -1092,6 +1092,24 @@ export default function SalesPipeline() {
     });
   }, [dealsBeforeTagFilter, titleTagFilter]);
 
+  // Sort by activity metrics when the user chose a non-default option.
+  // Kanban preserves stage grouping — sorting only reorders cards inside each column.
+  const sortedOpenDeals = useMemo(() => {
+    if (activitySort === 'none') return filteredOpenDeals;
+    const pendingOf = (id: string) => dealPendingCountMap[id] ?? 0;
+    const totalOf = (id: string) => dealTaskCountMap[id] ?? 0;
+    const cmp = (a: Deal, b: Deal) => {
+      switch (activitySort) {
+        case 'pending_desc': return pendingOf(b.id) - pendingOf(a.id);
+        case 'pending_asc':  return pendingOf(a.id) - pendingOf(b.id);
+        case 'total_desc':   return totalOf(b.id) - totalOf(a.id);
+        case 'total_asc':    return totalOf(a.id) - totalOf(b.id);
+        default: return 0;
+      }
+    };
+    return [...filteredOpenDeals].sort(cmp);
+  }, [filteredOpenDeals, activitySort, dealPendingCountMap, dealTaskCountMap]);
+
   const filteredOpenTotalValue = useMemo(
     () => filteredOpenDeals.reduce((sum, deal) => sum + (deal.value || 0), 0),
     [filteredOpenDeals],
