@@ -248,6 +248,11 @@ export default function MentoriaEC() {
           return false;
         if (mentorshipFilter !== "all" && m.mentorshipStatus !== mentorshipFilter) return false;
         if (programFilter !== "all" && m.program !== programFilter) return false;
+        if (practiceFilter !== "all") {
+          if (practiceFilter === "__none__") {
+            if (m.businessSegment) return false;
+          } else if ((m.businessSegment ?? "") !== practiceFilter) return false;
+        }
         if (statusFilter === "never" && m.lastAttendance) return false;
         if (statusFilter === "attended" && !m.lastAttendance) return false;
         if (statusFilter === "recent") {
