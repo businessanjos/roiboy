@@ -84,6 +84,7 @@ const DoubleChairList = lazyRetry(() => import("./pages/DoubleChairList"));
 const VipClients = lazyRetry(() => import("./pages/VipClients"));
 const Renewals = lazyRetry(() => import("./pages/Renewals"));
 const MentoriaEC = lazyRetry(() => import("./pages/MentoriaEC"));
+const PracticeAreasAdmin = lazyRetry(() => import("./pages/PracticeAreasAdmin"));
 const ConsultantBonus = lazyRetry(() => import("./pages/ConsultantBonus"));
 const OperationsScripts = lazyRetry(() => import("./pages/OperationsScripts"));
 const InstagramRanking = lazyRetry(() => import("./pages/InstagramRanking"));
