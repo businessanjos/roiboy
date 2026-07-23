@@ -21,6 +21,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { LeadDetailSheet } from "@/components/leads/LeadDetailSheet";
+import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -244,6 +245,7 @@ export default function Leads() {
     email: "",
     source: "",
     notes: "",
+    business_segment: "",
     additional_phones: [] as { label?: string; number: string }[],
     emails: [] as string[],
   });
@@ -338,6 +340,7 @@ export default function Leads() {
       email: "",
       source: "",
       notes: "",
+      business_segment: "",
       additional_phones: [],
       emails: [],
     });
@@ -374,6 +377,7 @@ export default function Leads() {
       email: lead.email || "",
       source: lead.source || "",
       notes: lead.notes || "",
+      business_segment: (lead as any).business_segment || "",
       additional_phones: formattedPhones,
       emails: (lead.emails as string[]) || [],
     });
@@ -1755,6 +1759,14 @@ export default function Leads() {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Área de Atuação</Label>
+                <PracticeAreaSelect
+                  value={formData.business_segment}
+                  onChange={(v) => setFormData({ ...formData, business_segment: v })}
+                />
               </div>
 
               <div className="space-y-2">
