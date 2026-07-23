@@ -528,6 +528,24 @@ function evaluateCondition(deal: Deal, condition: FilterCondition, dealCustomFie
   }
 }
 
+/**
+ * Multi-select match against a set of string labels (e.g. activity types /
+ * task statuses associated with a deal's pending tasks). Case-insensitive.
+ */
+function evaluateStringSetCondition(setValues: string[], operator: string, value: any): boolean {
+  const normalized = new Set(setValues.map((v) => String(v || '').toLowerCase()));
+  if (operator === 'is_empty') return normalized.size === 0;
+  if (operator === 'is_not_empty') return normalized.size > 0;
+  const selected = toArray(value).map((v) => String(v).toLowerCase());
+  if (selected.length === 0) return operator === 'not_contains';
+  const anyHit = selected.some((v) => normalized.has(v));
+  if (operator === 'contains' || operator === 'equals') return anyHit;
+  if (operator === 'not_contains' || operator === 'not_equals') return !anyHit;
+  return false;
+}
+
+
+
 function evaluateTextCondition(fieldValue: string | null | undefined, operator: string, value: any): boolean {
   const text = (fieldValue || '').toLowerCase();
   const searchValue = String(value || '').toLowerCase();
