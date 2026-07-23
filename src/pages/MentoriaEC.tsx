@@ -355,7 +355,25 @@ export default function MentoriaEC() {
                 <TableHead>Atuação</TableHead>
                 <TableHead>Fim do contrato</TableHead>
                 <TableHead className="w-[280px]">Status</TableHead>
-                <TableHead>Última participação</TableHead>
+                <TableHead>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttendanceSort((s) => (s === "none" ? "desc" : s === "desc" ? "asc" : "none"))
+                    }
+                    className="inline-flex items-center gap-1 hover:text-foreground"
+                    title="Ordenar por última participação"
+                  >
+                    Última participação
+                    {attendanceSort === "desc" ? (
+                      <ArrowDown className="h-3 w-3" />
+                    ) : attendanceSort === "asc" ? (
+                      <ArrowUp className="h-3 w-3" />
+                    ) : (
+                      <ArrowUpDown className="h-3 w-3 opacity-50" />
+                    )}
+                  </button>
+                </TableHead>
                 <TableHead>Participação</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
               </TableRow>
