@@ -112,12 +112,18 @@ const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
     { value: 'is_not_empty', label: 'não está vazio' },
   ],
   date: [
+    { value: 'today', label: 'hoje' },
     { value: 'this_week', label: 'esta semana' },
     { value: 'this_month', label: 'este mês' },
-    { value: 'older_than_days', label: 'há mais de X dias' },
+    { value: 'next_7_days', label: 'nos próximos 7 dias' },
+    { value: 'next_14_days', label: 'nos próximos 14 dias (2 semanas)' },
+    { value: 'next_30_days', label: 'nos próximos 30 dias' },
     { value: 'next_days', label: 'nos próximos X dias' },
+    { value: 'overdue', label: 'atrasada (antes de hoje)' },
+    { value: 'older_than_days', label: 'há mais de X dias' },
     { value: 'before', label: 'antes de' },
     { value: 'after', label: 'depois de' },
+    { value: 'between', label: 'entre (intervalo)' },
     { value: 'is_empty', label: 'está vazio' },
     { value: 'is_not_empty', label: 'não está vazio' },
   ],
@@ -135,7 +141,7 @@ const OPERATORS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
   ],
 };
 
-const VALUE_NOT_NEEDED = ['is_empty', 'is_not_empty', 'this_week', 'this_month'];
+const VALUE_NOT_NEEDED = ['is_empty', 'is_not_empty', 'today', 'this_week', 'this_month', 'next_7_days', 'next_14_days', 'next_30_days', 'overdue'];
 
 export function PipelineFilterDialog({
   isOpen,
