@@ -226,7 +226,7 @@ function getInstanceOwner(instance: UazapiInstanceLike): string | undefined {
 }
 
 function getInstanceToken(instance: UazapiInstanceLike): string | undefined {
-  return instance.token || instance.instance?.token || getString(instance.data?.token);
+  return instance.token || instance.instance?.token || getString(instance.checked_instance?.token) || getString(instance.data?.token);
 }
 
 function getInstanceUpdatedAt(instance: UazapiInstanceLike): number {
@@ -773,6 +773,24 @@ Deno.serve(async (req) => {
     }
     // ========== END HEALTH CHECK ==========
 
+    const invalidTokenResponse = async (err: unknown) => {
+      const msg = String((err as Error)?.message || "");
+      if (!/invalid token|401/i.test(msg)) return null;
+
+      if (intData?.id) {
+        await supabase
+          .from("integrations")
+          .update({ status: "disconnected" })
+          .eq("id", intData.id);
+      }
+
+      return new Response(JSON.stringify({
+        error: "WHATSAPP_DISCONNECTED: token inválido. A instância foi marcada como desconectada; gere um novo QR Code e reconecte o WhatsApp.",
+        code: "WHATSAPP_DISCONNECTED",
+        instance_name: instanceName,
+      }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    };
+
     let result: unknown = { success: true };
 
 
@@ -785,27 +803,57 @@ Deno.serve(async (req) => {
         connected: storedConnected,
       };
 
-      if (tokenMissingForUazapi) {
-        console.warn(`[uazapi-manager] ⛔ Stored integration "${instanceName}" is marked connected but has no UAZAPI token. Forcing disconnected.`);
-        statusSnapshot = { state: "disconnected", connected: false };
-      } else {
       try {
         const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, sectorServer);
         const all = extractInstancesList(allRaw);
         const inst = selectBestInstanceMatch(all, instanceName, token);
 
         if (inst) {
-          statusSnapshot = resolveStatusSnapshot(inst);
+          const liveSnapshot = resolveStatusSnapshot(inst);
+          const liveToken = getInstanceToken(inst);
+
+          // If the admin list says the instance is connected but our stored token is stale,
+          // sync the live token immediately. Otherwise the UI shows "connected" while sends fail
+          // with "invalid token".
+          if (liveToken && liveToken !== token && intData?.id && isUazapiProvider(intData.config?.provider)) {
+            console.warn(`[uazapi-manager] 🔁 Syncing live token for instance "${instanceName}" from admin list`);
+            const mergedConfig = {
+              ...(intData.config || {}),
+              provider: "uazapi",
+              instance_name: instanceName,
+              instance_token: liveToken,
+            };
+            await supabase
+              .from("integrations")
+              .update({ config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" })
+              .eq("id", intData.id);
+            intData = { ...intData, config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" };
+          } else if (liveSnapshot.connected && token && !liveToken && isUazapiProvider(intData?.config?.provider)) {
+            // Some admin responses omit the token. In that case, never trust name-only status;
+            // verify the stored token so stale credentials don't appear connected.
+            const tokenSnapshot = await resolveStatusFromToken(token, sectorServer);
+            statusSnapshot = tokenSnapshot.connected
+              ? liveSnapshot
+              : tokenSnapshot.state !== "unknown"
+                ? tokenSnapshot
+                : { state: "disconnected", connected: false };
+          } else {
+            statusSnapshot = liveSnapshot;
+          }
         } else if (token) {
           console.warn(`[uazapi-manager] Instance ${instanceName} not found in admin list, trying instance-level status check`);
           statusSnapshot = await resolveStatusFromToken(token, sectorServer);
+        } else if (tokenMissingForUazapi) {
+          console.warn(`[uazapi-manager] ⛔ Stored integration "${instanceName}" has no UAZAPI token and no live instance match. Forcing disconnected.`);
+          statusSnapshot = { state: "disconnected", connected: false };
         }
       } catch (adminErr) {
         console.warn(`[uazapi-manager] Admin fetchInstances failed, trying instance-level status check for: ${instanceName}`);
         if (token) {
           statusSnapshot = await resolveStatusFromToken(token, sectorServer);
+        } else if (tokenMissingForUazapi) {
+          statusSnapshot = { state: "disconnected", connected: false };
         }
-      }
       }
 
       const effectiveConnected = statusSnapshot.connected;
