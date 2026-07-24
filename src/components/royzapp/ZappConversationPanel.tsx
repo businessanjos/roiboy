@@ -591,7 +591,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           )}
         </button>
         <button
-          onClick={() => setInboxTab("queue")}
+          onClick={() => { setInboxTab("queue"); if (activeView !== "inbox") setActiveView("inbox"); }}
           className={cn(
             "flex-1 py-3 text-sm font-medium transition-colors relative",
             inboxTab === "queue" 
