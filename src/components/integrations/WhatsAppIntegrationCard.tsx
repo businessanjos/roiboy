@@ -120,37 +120,63 @@ export function WhatsAppIntegrationCard({
   const [syncingHistoryId, setSyncingHistoryId] = useState<string | null>(null);
 
   const handleSyncHistoryById = useCallback(async (integrationId: string) => {
-    const daysStr = window.prompt(
-      "Sincronizar histórico de mensagens desta instância.\n\nQuantos dias para trás você quer importar?\n(Ex.: 7, 30, 90, 180)",
-      "30",
-    );
-    if (!daysStr) return;
-    const days = Math.max(1, Math.min(365, Number(daysStr)));
-    if (!Number.isFinite(days)) {
-      toast.error("Número de dias inválido");
-      return;
+    const integration = integrations.find((i) => i.id === integrationId);
+    const lastSyncIso = (integration?.config as any)?.last_history_sync_at as string | undefined;
+    const lastSyncLabel = lastSyncIso
+      ? new Date(lastSyncIso).toLocaleString("pt-BR")
+      : null;
+
+    const incrementalMsg = lastSyncLabel
+      ? `Importar apenas mensagens novas desde a última sincronização (${lastSyncLabel})?\n\nOK = incremental (rápido)\nCancelar = escolher período em dias`
+      : `Nenhuma sincronização anterior encontrada.\n\nOK = importar novidades dos últimos 7 dias\nCancelar = escolher período em dias`;
+
+    const doIncremental = window.confirm(incrementalMsg);
+
+    let payload: Record<string, unknown> = {
+      integration_id: integrationId,
+      max_chats: 2000,
+      max_messages_per_chat: 5000,
+    };
+    let loadingLabel: string;
+
+    if (doIncremental) {
+      payload.since_last_sync = true;
+      loadingLabel = lastSyncLabel
+        ? `Importando novidades desde ${lastSyncLabel}…`
+        : `Importando novidades dos últimos 7 dias…`;
+    } else {
+      const daysStr = window.prompt(
+        "Quantos dias para trás você quer importar?\n(Ex.: 7, 30, 90, 180)",
+        "30",
+      );
+      if (!daysStr) return;
+      const days = Math.max(1, Math.min(365, Number(daysStr)));
+      if (!Number.isFinite(days)) {
+        toast.error("Número de dias inválido");
+        return;
+      }
+      const start = new Date();
+      start.setDate(start.getDate() - days);
+      payload.start = start.toISOString();
+      loadingLabel = `Importando histórico dos últimos ${days} dias… isso pode levar alguns minutos.`;
     }
 
     setSyncingHistoryId(integrationId);
-    const toastId = toast.loading(`Importando histórico dos últimos ${days} dias… isso pode levar alguns minutos.`);
+    const toastId = toast.loading(loadingLabel);
     try {
-      const start = new Date();
-      start.setDate(start.getDate() - days);
       const { data, error } = await supabase.functions.invoke("sync-uazapi-history-to-zapp", {
-        body: {
-          integration_id: integrationId,
-          start: start.toISOString(),
-          max_chats: 2000,
-          max_messages_per_chat: 5000,
-        },
+        body: payload,
       });
       if (error) throw error;
       const stats = (data as any)?.stats ?? {};
       const inserted = stats.messagesInserted ?? 0;
       const chats = stats.chatsSynced ?? 0;
       const duplicates = stats.duplicates ?? 0;
+      const suffix = duplicates ? ` • ${duplicates} já existiam` : "";
       toast.success(
-        `${inserted} mensagem(ns) importada(s) em ${chats} conversa(s)${duplicates ? ` • ${duplicates} já existiam` : ""}`,
+        inserted > 0
+          ? `${inserted} nova(s) mensagem(ns) em ${chats} conversa(s)${suffix}`
+          : `Nenhuma mensagem nova encontrada${suffix}`,
         { id: toastId },
       );
       onRefresh();
@@ -160,7 +186,7 @@ export function WhatsAppIntegrationCard({
     } finally {
       setSyncingHistoryId(null);
     }
-  }, [onRefresh]);
+  }, [integrations, onRefresh]);
 
 
   const handleDisconnectById = useCallback(async (integrationId: string) => {
