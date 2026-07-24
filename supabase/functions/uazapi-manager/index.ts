@@ -1029,6 +1029,62 @@ Deno.serve(async (req) => {
       try { await uazapiInstance("/logout", "POST", token!, undefined, sectorServer); } catch {}
       if (intData?.id) await supabase.from("integrations").update({ status: "disconnected" }).eq("id", intData.id);
       result = { disconnected: true };
+
+    } else if (action === "reset_instance") {
+      // Force reprovision: logout old token, init new instance on the correct sector server,
+      // persist the fresh token, then request a QR code. Use when the instance is stuck with
+      // an invalid token / 404 and normal reconnect isn't working.
+      const instName = payload.instance_name || instanceName;
+      console.log(`[uazapi-manager] RESET requested for instance "${instName}" on server: ${sectorServer?.host || 'global'}`);
+
+      // Best-effort logout with the (possibly stale) token — ignore all errors.
+      if (token) {
+        try { await uazapiInstance("/logout", "POST", token, undefined, sectorServer); } catch (e) {
+          console.warn(`[uazapi-manager] reset: logout failed (ignored): ${(e as Error)?.message}`);
+        }
+      }
+
+      // Force a fresh init on the sector server to get a brand new token.
+      let freshToken: string | null = null;
+      try {
+        const initRes = await uazapiAdmin("/instance/init", "POST", { name: instName }, sectorServer);
+        freshToken = initRes?.token || initRes?.instance?.token || null;
+        if (!freshToken) throw new Error("no token returned from /instance/init");
+      } catch (e) {
+        console.error("[uazapi-manager] reset: init failed:", e);
+        return new Response(
+          JSON.stringify({ error: `Falha ao reprovisionar instância no servidor: ${(e as Error).message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Persist new token and mark disconnected.
+      if (intData?.id) {
+        const mergedConfig = {
+          ...(intData.config || {}),
+          provider: "uazapi",
+          instance_name: instName,
+          instance_token: freshToken,
+        };
+        await supabase
+          .from("integrations")
+          .update({ config: mergedConfig, status: "disconnected" })
+          .eq("id", intData.id);
+      }
+
+      // Immediately request a QR code with the new token.
+      try {
+        const connectResult: any = await uazapiInstance("/instance/connect", "POST", freshToken, {}, sectorServer);
+        result = { ...connectResult, reset: true, new_token_issued: true };
+      } catch (e) {
+        console.error("[uazapi-manager] reset: /instance/connect failed:", e);
+        return new Response(
+          JSON.stringify({ error: `Instância reprovisionada, mas falha ao gerar QR: ${(e as Error).message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+    
     
     } else if (action === "send_text") {
       // ✅ CORRIGIDO: Usar /send/text em vez de /message/sendText
