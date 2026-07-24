@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getPublicOrigin } from "@/lib/publicLink";
+import { SalaryBenchmarkCard } from "@/components/rh/jobs/SalaryBenchmarkCard";
 
 interface JobOfferRow {
   id: string;
@@ -198,6 +199,20 @@ export default function RHJobDetail() {
         </div>
       </div>
       <JobManagementPanel jobId={job.id} job={job as any} />
+      <SalaryBenchmarkCard
+        job={{
+          title: job.title,
+          seniority: (job as any).seniority,
+          contract_type: (job as any).contract_type,
+          work_model: (job as any).work_model,
+          department: (job as any).department,
+          benefits: (job as any).benefits,
+          salary_min: (job as any).salary_min,
+          salary_max: (job as any).salary_max,
+        }}
+        city={(job as any).unit || null}
+        state={null}
+      />
       <JobStagesPanel jobId={job.id} />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
