@@ -309,6 +309,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       }, 3, 1500);
 
       const result = dedupeAssignments(data || []);
+      seedHWMFromAssignments(result);
       setAssignments(result);
       await fetchSupplementaryData(result);
       return result;
@@ -316,7 +317,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       console.error("Error fetching assignments for department:", error);
       return [];
     }
-  }, [accountId, ASSIGNMENTS_SELECT, fetchSupplementaryData]);
+  }, [accountId, ASSIGNMENTS_SELECT, fetchSupplementaryData, seedHWMFromAssignments]);
 
   // Debounced fetch for realtime
   const debouncedFetchAssignments = useCallback(() => {
