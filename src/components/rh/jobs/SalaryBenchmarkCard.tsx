@@ -304,6 +304,9 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
   const run = async () => {
     setLoading(true);
     try {
+      // Não enviamos a auto-declaração "Salário compatível com o mercado" para a IA:
+      // é justamente o que o benchmark valida, não um benefício objetivo.
+      const cleanedBenefits = stripMarketCompatibleClaim(job.benefits);
       const { data, error } = await supabase.functions.invoke("rh-salary-benchmark", {
         body: {
           title: job.title,
@@ -311,7 +314,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
           contract_type: job.contract_type,
           work_model: job.work_model,
           department: job.department,
-          benefits: job.benefits ?? [],
+          benefits: cleanedBenefits,
           salary_min: job.salary_min ?? null,
           salary_max: job.salary_max ?? null,
           city,
