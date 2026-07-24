@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, TrendingUp, AlertTriangle, CheckCircle2, ExternalLink, RefreshCw, Info, Target, BookOpen } from "lucide-react";
+import { Sparkles, TrendingUp, AlertTriangle, CheckCircle2, ExternalLink, RefreshCw, Info, Target, BookOpen, Lightbulb, ArrowUpRight, Plus, MapPin } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
@@ -122,6 +122,133 @@ function computeAttractiveness(params: {
   };
 }
 
+type Recommendation = {
+  id: string;
+  axis: "salary" | "benefits" | "location";
+  icon: typeof ArrowUpRight;
+  title: string;
+  detail: string;
+  impact: number; // pts que sobem no score total
+  tone: "emerald" | "amber" | "red" | "blue";
+};
+
+function computeRecommendations(params: Parameters<typeof computeAttractiveness>[0]): Recommendation[] {
+  const base = computeAttractiveness(params);
+  const recs: Recommendation[] = [];
+  const { offered, market, offeredBenefits, typicalBenefits, missingBenefits, workModel, city } = params;
+
+  // Salário — sugerir mover até P50 ou P75
+  const mid = offered.min && offered.max ? (offered.min + offered.max) / 2 : offered.min || offered.max || null;
+  if (market && (market.p25 || market.p50 || market.p75)) {
+    const targets: Array<{ label: string; value: number | null | undefined }> = [
+      { label: "P50 (mediana)", value: market.p50 },
+      { label: "P75 (topo do mercado)", value: market.p75 },
+    ];
+    for (const t of targets) {
+      if (!t.value) continue;
+      if (mid && mid >= t.value) continue;
+      const delta = mid ? t.value - mid : t.value;
+      const simulated = computeAttractiveness({
+        ...params,
+        offered: { min: t.value, max: t.value },
+      });
+      const impact = simulated.total - base.total;
+      if (impact <= 0) continue;
+      recs.push({
+        id: `salary-${t.label}`,
+        axis: "salary",
+        icon: ArrowUpRight,
+        title: mid
+          ? `Subir salário para ${fmtBRL(t.value)} (+${fmtBRL(delta)})`
+          : `Definir salário em ${fmtBRL(t.value)}`,
+        detail: mid
+          ? `Alinha ao ${t.label}. Vagas nesse patamar convertem melhor entre candidatos qualificados.`
+          : `Publicar sem faixa reduz candidaturas em ~30%. ${t.label} é um bom ponto de partida.`,
+        impact,
+        tone: impact >= 15 ? "emerald" : "blue",
+      });
+    }
+  } else if (!mid) {
+    recs.push({
+      id: "salary-define",
+      axis: "salary",
+      icon: ArrowUpRight,
+      title: "Definir uma faixa salarial",
+      detail: "Vagas sem salário publicado recebem menos candidatos qualificados. Rode o benchmark e adote a mediana como piso.",
+      impact: 10,
+      tone: "amber",
+    });
+  }
+
+  // Benefícios — sugerir cobrir os que faltam
+  const missing = missingBenefits.slice(0, 5);
+  if (missing.length > 0) {
+    // Impacto agregado se cobrir todos os faltantes
+    const simulatedAll = computeAttractiveness({
+      ...params,
+      offeredBenefits: [...offeredBenefits, ...missing],
+      missingBenefits: [],
+    });
+    const impactAll = Math.max(1, simulatedAll.total - base.total);
+    recs.push({
+      id: "benefits-all",
+      axis: "benefits",
+      icon: Plus,
+      title: `Adicionar ${missing.length} benefício${missing.length === 1 ? "" : "s"} padrão do mercado`,
+      detail: missing.join(" · "),
+      impact: impactAll,
+      tone: impactAll >= 8 ? "emerald" : "blue",
+    });
+  } else if (typicalBenefits.length > 0 && offeredBenefits.length < typicalBenefits.length) {
+    recs.push({
+      id: "benefits-review",
+      axis: "benefits",
+      icon: Plus,
+      title: "Revisar benefícios diferenciais",
+      detail: "Considere adicionar 1-2 diferenciais (PLR, day off no aniversário, subsídio educação) para se destacar.",
+      impact: 4,
+      tone: "blue",
+    });
+  }
+
+  // Modelo / Localização
+  if (workModel === "onsite") {
+    const simulatedHybrid = computeAttractiveness({ ...params, workModel: "hybrid" });
+    const impactHybrid = simulatedHybrid.total - base.total;
+    if (impactHybrid > 0) {
+      recs.push({
+        id: "loc-hybrid",
+        axis: "location",
+        icon: MapPin,
+        title: "Oferecer modelo híbrido",
+        detail: city
+          ? `Presencial em ${city} restringe o pool. Híbrido amplia candidatos qualificados sem perder cultura.`
+          : "Híbrido amplia o alcance da vaga em regiões vizinhas.",
+        impact: impactHybrid,
+        tone: "blue",
+      });
+    }
+    const simulatedRemote = computeAttractiveness({ ...params, workModel: "remote" });
+    const impactRemote = simulatedRemote.total - base.total;
+    if (impactRemote > impactHybrid + 2) {
+      recs.push({
+        id: "loc-remote",
+        axis: "location",
+        icon: MapPin,
+        title: "Considerar 100% remoto",
+        detail: "Se o cargo permite, remoto abre alcance nacional e costuma ser o maior ganho de atratividade.",
+        impact: impactRemote,
+        tone: "emerald",
+      });
+    }
+  }
+
+  // Ordena por impacto descendente
+  return recs.sort((a, b) => b.impact - a.impact).slice(0, 5);
+}
+
+
+
 
 export function SalaryBenchmarkCard({ job, city, state }: Props) {
   const [loading, setLoading] = useState(false);
@@ -171,6 +298,19 @@ export function SalaryBenchmarkCard({ job, city, state }: Props) {
         state,
       })
     : null;
+  const recommendations = result
+    ? computeRecommendations({
+        offered: { min: job.salary_min, max: job.salary_max },
+        market: result.market_range,
+        offeredBenefits: job.benefits ?? [],
+        typicalBenefits: result.typical_benefits ?? [],
+        missingBenefits: result.missing_benefits ?? [],
+        extraBenefits: result.extra_benefits ?? [],
+        workModel: job.work_model,
+        city,
+        state,
+      })
+    : [];
   const range = result?.market_range;
   const period = result?.period === "hora" ? "/hora" : result?.period === "anual" ? "/ano" : "/mês";
 
@@ -338,6 +478,57 @@ export function SalaryBenchmarkCard({ job, city, state }: Props) {
                 )}
               </div>
             )}
+
+            {recommendations.length > 0 && attractiveness && (
+              <div className="rounded-lg border border-primary/20 bg-primary/[0.03] p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-semibold">Como aumentar a atratividade</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">
+                    Potencial: até {Math.min(100, attractiveness.total + recommendations.reduce((s, r) => s + r.impact, 0))}/100
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Ações ordenadas por impacto estimado no score de atratividade.
+                </p>
+                <div className="space-y-2">
+                  {recommendations.map((rec) => {
+                    const Icon = rec.icon;
+                    const toneClasses =
+                      rec.tone === "emerald"
+                        ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+                        : rec.tone === "amber"
+                        ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                        : rec.tone === "red"
+                        ? "bg-red-500/10 text-red-700 border-red-500/30"
+                        : "bg-blue-500/10 text-blue-700 border-blue-500/30";
+                    return (
+                      <div key={rec.id} className="flex items-start gap-3 rounded-md border bg-background p-3">
+                        <div className={`rounded-md border p-1.5 ${toneClasses}`}>
+                          <Icon className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-[13px] font-medium leading-tight">{rec.title}</p>
+                            <Badge variant="outline" className={`shrink-0 text-[10px] tabular-nums ${toneClasses}`}>
+                              +{rec.impact} pts
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{rec.detail}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">
+                  Impacto simulado somando cada ação isoladamente ao score atual — combinações reais podem variar.
+                </p>
+              </div>
+            )}
+
+
 
 
 
