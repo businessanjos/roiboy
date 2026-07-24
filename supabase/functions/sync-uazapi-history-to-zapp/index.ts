@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const integrationId = String(body.integration_id || "");
-    const startMs = Date.parse(String(body.start || "2026-04-15T00:00:00Z"));
+    const sinceLastSync = body.since_last_sync === true || body.mode === "incremental";
     const endMs = body.end ? Date.parse(String(body.end)) : Date.now();
     const maxChats = Number(body.max_chats || 2000);
     const maxMessagesPerChat = Number(body.max_messages_per_chat || 10000);
@@ -154,8 +154,8 @@ Deno.serve(async (req) => {
       ? phoneWithoutBrazilNinth(targetPhone)
       : null;
 
-    if (!integrationId || Number.isNaN(startMs) || Number.isNaN(endMs)) {
-      return json(400, { error: "integration_id, start/end inválidos" });
+    if (!integrationId || Number.isNaN(endMs)) {
+      return json(400, { error: "integration_id ou end inválidos" });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
