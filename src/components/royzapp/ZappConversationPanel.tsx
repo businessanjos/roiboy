@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { ZappConversationItem } from "./ZappConversationItem";
 import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
 import { ZappChannelPills } from "./ZappChannelPills";
+import { UazapiServerHealthBanner } from "./UazapiServerHealthBanner";
 import { ZappTeamList } from "./ZappTeamList";
 import { ZappTagsList } from "./ZappTagsList";
 import { ZappSettingsPanel } from "./ZappSettingsPanel";
@@ -670,6 +671,17 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           }}
           totalCount={filteredAssignments.length}
         />
+      )}
+
+      {/* UAZAPI server offline alert — appears only when the sector's WhatsApp gateway is unreachable */}
+      {activeView === "inbox" && sectorId && (
+        <div className="px-3 pb-2">
+          <UazapiServerHealthBanner
+            sectorId={sectorId}
+            integrationId={selectedIntegrationId || null}
+            compact
+          />
+        </div>
       )}
 
       {/* Conversation list */}
