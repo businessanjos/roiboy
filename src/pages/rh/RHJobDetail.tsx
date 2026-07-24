@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail, Clock, User as UserIcon, Calendar as CalIcon, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail, Clock, User as UserIcon, Calendar as CalIcon, AlertTriangle, DollarSign } from "lucide-react";
 import { useHRJobById } from "@/hooks/useHRJobs";
 import { useHRJobStages, useAccountUsersForJobs } from "@/hooks/useHRJobStages";
 import { useRecruitmentPartners } from "@/hooks/useRecruitmentPartners";
@@ -73,7 +73,7 @@ function JobManagementPanel({ jobId, job }: { jobId: string; job: any }) {
     <Card>
       <CardHeader><CardTitle className="text-lg">Gestão da vaga</CardTitle></CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
           <div><p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><UserIcon className="h-3 w-3" />Gestor</p><p className="font-medium">{manager?.name || manager?.email || "—"}</p></div>
           <div><p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><UserIcon className="h-3 w-3" />Recrutador</p><p className="font-medium">{recruiterLabel}</p></div>
           <div><p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Clock className="h-3 w-3" />Em aberto</p><p className="font-medium">{daysOpen}d</p></div>
@@ -86,7 +86,21 @@ function JobManagementPanel({ jobId, job }: { jobId: string; job: any }) {
               </div>
             ) : <p className="text-muted-foreground">—</p>}
           </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><DollarSign className="h-3 w-3" />Salário previsto</p>
+            {(() => {
+              const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+              const min = job.salary_min as number | null;
+              const max = job.salary_max as number | null;
+              if (min == null && max == null) return <p className="text-muted-foreground">Não informado</p>;
+              const label = min != null && max != null && min !== max
+                ? `${fmt(min)} – ${fmt(max)}`
+                : fmt((min ?? max) as number);
+              return <p className="font-medium">{label}</p>;
+            })()}
+          </div>
         </div>
+
         {job.opening_reason && OPENING_REASON_LABELS[job.opening_reason] && (
           <p className="text-xs text-muted-foreground mt-3">Motivo da abertura: <span className="font-medium text-foreground">{OPENING_REASON_LABELS[job.opening_reason]}</span></p>
         )}
