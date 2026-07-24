@@ -203,6 +203,21 @@ export function PaymentBreakdownComposer({
               )}
             </div>
           </div>
+          <div className="flex items-center justify-between rounded-md border border-dashed border-border bg-muted/40 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-emerald-600" />
+              <div>
+                <p className="text-xs font-medium text-foreground">Cash collect</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Marcar como recebido hoje no financeiro
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={!!item.is_cash_collect}
+              onCheckedChange={(checked) => updateItem(item.method, { is_cash_collect: checked })}
+            />
+          </div>
         </div>
       ))}
     </div>
