@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const integrationId = String(body.integration_id || "");
-    const startMs = Date.parse(String(body.start || "2026-04-15T00:00:00Z"));
+    const sinceLastSync = body.since_last_sync === true || body.mode === "incremental";
     const endMs = body.end ? Date.parse(String(body.end)) : Date.now();
     const maxChats = Number(body.max_chats || 2000);
     const maxMessagesPerChat = Number(body.max_messages_per_chat || 10000);
@@ -154,8 +154,8 @@ Deno.serve(async (req) => {
       ? phoneWithoutBrazilNinth(targetPhone)
       : null;
 
-    if (!integrationId || Number.isNaN(startMs) || Number.isNaN(endMs)) {
-      return json(400, { error: "integration_id, start/end inválidos" });
+    if (!integrationId || Number.isNaN(endMs)) {
+      return json(400, { error: "integration_id ou end inválidos" });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -177,6 +177,31 @@ Deno.serve(async (req) => {
     const token = String(integration.config?.instance_token || "");
     if (!host || !token)
       return json(400, { error: "Integração sem host/token UAZAPI" });
+
+    const config = (integration.config || {}) as Record<string, unknown>;
+    const lastSyncIso = typeof config.last_history_sync_at === "string"
+      ? config.last_history_sync_at
+      : null;
+    const lastSyncMs = lastSyncIso ? Date.parse(lastSyncIso) : NaN;
+
+    // Overlap of 5 min to catch late-arriving messages around the checkpoint
+    const OVERLAP_MS = 5 * 60 * 1000;
+
+    let startMs: number;
+    if (body.start) {
+      startMs = Date.parse(String(body.start));
+    } else if (sinceLastSync && Number.isFinite(lastSyncMs)) {
+      startMs = Math.max(0, lastSyncMs - OVERLAP_MS);
+    } else if (sinceLastSync) {
+      // No previous checkpoint — default to last 7 days
+      startMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    } else {
+      startMs = Date.parse("2026-04-15T00:00:00Z");
+    }
+    if (Number.isNaN(startMs)) {
+      return json(400, { error: "start inválido" });
+    }
+    const syncStartedAtMs = Date.now();
 
     const { data: dept } = await supabase
       .from("zapp_departments")
@@ -493,9 +518,38 @@ Deno.serve(async (req) => {
       chatOffset += chats.length;
     }
 
+    // Advance the incremental checkpoint. Use newest message synced when we
+    // inserted something; otherwise advance to the sync start time so future
+    // runs don't rescan the same idle window from scratch.
+    const newestSyncedMs = stats.newestSynced
+      ? Date.parse(stats.newestSynced)
+      : NaN;
+    const previousCheckpointMs = Number.isFinite(lastSyncMs) ? lastSyncMs : 0;
+    const candidateMs = Number.isFinite(newestSyncedMs)
+      ? newestSyncedMs
+      : syncStartedAtMs;
+    const nextCheckpointMs = Math.max(previousCheckpointMs, candidateMs);
+    const nextCheckpointIso = new Date(nextCheckpointMs).toISOString();
+
+    // Only persist checkpoint when not filtered to a single phone — a
+    // target_phone run isn't a full account sync.
+    if (!targetPhone) {
+      await supabase
+        .from("integrations")
+        .update({
+          config: { ...config, last_history_sync_at: nextCheckpointIso },
+        })
+        .eq("id", integration.id);
+    }
+
     return json(200, {
       success: true,
       integration: integration.display_name,
+      mode: sinceLastSync ? "incremental" : "range",
+      start: new Date(startMs).toISOString(),
+      end: new Date(endMs).toISOString(),
+      previous_checkpoint: lastSyncIso,
+      next_checkpoint: targetPhone ? lastSyncIso : nextCheckpointIso,
       stats,
     });
   } catch (error) {
