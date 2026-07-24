@@ -293,6 +293,49 @@ export function SalaryBenchmarkCard({ job, city, state }: Props) {
                     </div>
                   ))}
                 </div>
+                {result.sources && result.sources.length > 0 && (
+                  <div className="flex items-center justify-between pt-1 border-t">
+                    <p className="text-[11px] text-muted-foreground">
+                      Baseado em {result.sources.length} fonte{result.sources.length === 1 ? "" : "s"} do mercado
+                    </p>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1.5">
+                          <BookOpen className="h-3 w-3" />
+                          Ver evidências
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-80 p-3">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+                          Fontes citadas
+                        </p>
+                        <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                          {result.sources.map((s, i) => {
+                            let host = s.url;
+                            try { host = new URL(s.url).hostname.replace("www.", ""); } catch {}
+                            return (
+                              <a
+                                key={i}
+                                href={s.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-start gap-2 rounded-md border p-2 hover:bg-muted transition-colors group"
+                              >
+                                <ExternalLink className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground group-hover:text-foreground" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[11px] font-medium line-clamp-2 leading-tight">
+                                    {s.title || host}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground truncate">{host}</p>
+                                </div>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
               </div>
             )}
 
