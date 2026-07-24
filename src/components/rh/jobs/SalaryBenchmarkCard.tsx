@@ -264,15 +264,40 @@ function computeRecommendations(params: Parameters<typeof computeAttractiveness>
 
 
 
+const BENCHMARK_OWNER_EMAIL = "m.quintana@me.com";
+
 export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 60 }: Props) {
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BenchmarkResult | null>(null);
   const [ranAt, setRanAt] = useState<Date | null>(null);
+  const [loadingCache, setLoadingCache] = useState(!!jobId);
   const [alertSending, setAlertSending] = useState(false);
   const [alertSentAt, setAlertSentAt] = useState<Date | null>(null);
   const autoNotifiedRef = useRef<string | null>(null);
+  const autoRanRef = useRef(false);
 
+  const canRegenerate = (currentUser?.email || "").toLowerCase() === BENCHMARK_OWNER_EMAIL;
+
+  // Load cached benchmark from DB
+  useEffect(() => {
+    if (!jobId) { setLoadingCache(false); return; }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("hr_job_benchmarks")
+        .select("benchmark, generated_at")
+        .eq("job_id", jobId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (!error && data?.benchmark) {
+        setResult(data.benchmark as BenchmarkResult);
+        if (data.generated_at) setRanAt(new Date(data.generated_at as string));
+      }
+      setLoadingCache(false);
+    })();
+    return () => { cancelled = true; };
+  }, [jobId]);
 
   const run = async () => {
     setLoading(true);
@@ -293,8 +318,22 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      setResult((data as any).benchmark as BenchmarkResult);
+      const benchmark = (data as any).benchmark as BenchmarkResult;
+      setResult(benchmark);
       setRanAt(new Date());
+      // Persist for everyone in the account
+      if (jobId && currentUser?.account_id) {
+        const { error: upsertErr } = await supabase
+          .from("hr_job_benchmarks")
+          .upsert({
+            job_id: jobId,
+            account_id: currentUser.account_id,
+            benchmark: benchmark as any,
+            generated_by: currentUser.id,
+            generated_at: new Date().toISOString(),
+          }, { onConflict: "job_id" });
+        if (upsertErr) console.error("Failed to cache benchmark:", upsertErr);
+      }
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Falha ao consultar mercado");
@@ -302,6 +341,17 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
       setLoading(false);
     }
   };
+
+  // Auto-run once if no cached result exists yet (any user can trigger the first generation)
+  useEffect(() => {
+    if (loadingCache || result || loading || autoRanRef.current) return;
+    if (!jobId || !currentUser?.account_id) return;
+    autoRanRef.current = true;
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingCache, result, jobId, currentUser?.account_id]);
+
+
 
   const positioning = result ? comparePositioning({ min: job.salary_min, max: job.salary_max }, result.market_range) : null;
   const attractiveness = result
