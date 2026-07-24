@@ -166,6 +166,67 @@ export function ConnectQRCodeDialog({
     }
   }, [instanceName, integrationId, sectorId, fetchQRCode]);
 
+  const adoptInstance = useCallback(async () => {
+    const trimmed = pastedToken.trim();
+    if (!trimmed) {
+      toast.error("Cole o instance token da UAZAPI.");
+      return;
+    }
+    setAdopting(true);
+    setQrError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: {
+          action: "adopt_instance",
+          instance_name: instanceName,
+          sector_id: sectorId,
+          integration_id: integrationId,
+          instance_token: trimmed,
+        },
+      });
+      if (error) throw error;
+
+      const result = data?.data || data;
+      if (result?.connected) {
+        setConnected(true);
+        toast.success("Instância adotada e já conectada!");
+        onConnected();
+        return;
+      }
+
+      const instance = result?.instance || {};
+      const qr =
+        instance?.qrcode?.base64 ||
+        (typeof instance?.qrcode === "string" ? instance.qrcode : null) ||
+        result?.qrcode?.base64 ||
+        (typeof result?.qrcode === "string" ? result.qrcode : null) ||
+        result?.base64 ||
+        result?.qr_code ||
+        null;
+
+      setPastedToken("");
+      setShowAdopt(false);
+
+      if (qr) {
+        setQrCode(qr);
+        setPollingActive(true);
+        toast.success("Token adotado. Escaneie o QR Code.");
+      } else {
+        toast.success("Token adotado. Gerando QR Code...");
+        await fetchQRCode();
+      }
+    } catch (err) {
+      const msg = await extractEdgeFunctionError(err, "Falha ao adotar instância.");
+      console.error("Adopt instance failed:", err);
+      toast.error(msg);
+      setQrError(msg);
+    } finally {
+      setAdopting(false);
+    }
+  }, [pastedToken, instanceName, integrationId, sectorId, onConnected, fetchQRCode]);
+
+
+
 
   // Fetch QR code when dialog opens
   useEffect(() => {
