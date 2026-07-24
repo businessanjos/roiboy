@@ -37,6 +37,10 @@ export function ConnectQRCodeDialog({
   const [connected, setConnected] = useState(false);
   const [pollingActive, setPollingActive] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [adopting, setAdopting] = useState(false);
+  const [showAdopt, setShowAdopt] = useState(false);
+  const [pastedToken, setPastedToken] = useState("");
+
 
 
   const MAX_ATTEMPTS = 4;
