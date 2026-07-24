@@ -59,6 +59,45 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   const onNewInboundMessageRef = useRef(onNewInboundMessage);
   onNewInboundMessageRef.current = onNewInboundMessage;
 
+  // Per-conversation high-water mark for the last message. Used to reconcile
+  // out-of-order realtime events (INSERT bumps vs UPDATE syncs vs debounced
+  // refetches) so the list never regresses to an older message as "last".
+  // key: zapp_conversation_id -> { at: epoch ms, msgId?: id/external id }
+  const lastMessageHWMRef = useRef<Map<string, { at: number; msgId?: string }>>(new Map());
+
+  const reconcileBump = useCallback(
+    (convId: string, at: string | null | undefined, msgId?: string | null): boolean => {
+      if (!convId || !at) return false;
+      const atMs = new Date(at).getTime();
+      if (!Number.isFinite(atMs)) return false;
+      const prev = lastMessageHWMRef.current.get(convId);
+      if (prev) {
+        if (atMs < prev.at) return false;
+        // Tie on timestamp: only accept if incoming has a strictly greater id.
+        if (atMs === prev.at) {
+          if (!msgId || !prev.msgId || String(msgId) <= String(prev.msgId)) return false;
+        }
+      }
+      lastMessageHWMRef.current.set(convId, { at: atMs, msgId: msgId || prev?.msgId });
+      return true;
+    },
+    []
+  );
+
+  const seedHWMFromAssignments = useCallback((rows: ConversationAssignment[]) => {
+    for (const a of rows) {
+      const convId = a.zapp_conversation?.id || (a as any).zapp_conversation_id;
+      const at = a.zapp_conversation?.last_message_at;
+      if (!convId || !at) continue;
+      const atMs = new Date(at).getTime();
+      if (!Number.isFinite(atMs)) continue;
+      const prev = lastMessageHWMRef.current.get(convId);
+      if (!prev || atMs > prev.at) {
+        lastMessageHWMRef.current.set(convId, { at: atMs, msgId: prev?.msgId });
+      }
+    }
+  }, []);
+
   const fetchMessagesRef = useRef<(id: string) => Promise<void>>();
 
   // Build the assignments select query (shared between fetchAssignmentsOnly and fetchData)
@@ -239,13 +278,15 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
       currentDepartmentIdRef.current = result.deptId;
       console.log(`[ZappConversations] Fetched ${result.assignments.length} assignments for department ${result.deptId}`);
-      setAssignments(dedupeAssignments(result.assignments));
+      const deduped = dedupeAssignments(result.assignments);
+      seedHWMFromAssignments(deduped);
+      setAssignments(deduped);
 
       await fetchSupplementaryData(result.assignments);
     } catch (error) {
       console.error("Error fetching assignments:", error);
     }
-  }, [accountId, sectorId, fetchSupplementaryData, ASSIGNMENTS_SELECT]);
+  }, [accountId, sectorId, fetchSupplementaryData, ASSIGNMENTS_SELECT, seedHWMFromAssignments]);
 
   // Fetch assignments as part of initial data load (with department id already known)
   const fetchAssignmentsForDepartment = useCallback(async (departmentId: string): Promise<ConversationAssignment[]> => {
@@ -268,6 +309,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       }, 3, 1500);
 
       const result = dedupeAssignments(data || []);
+      seedHWMFromAssignments(result);
       setAssignments(result);
       await fetchSupplementaryData(result);
       return result;
@@ -275,7 +317,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       console.error("Error fetching assignments for department:", error);
       return [];
     }
-  }, [accountId, ASSIGNMENTS_SELECT, fetchSupplementaryData]);
+  }, [accountId, ASSIGNMENTS_SELECT, fetchSupplementaryData, seedHWMFromAssignments]);
 
   // Debounced fetch for realtime
   const debouncedFetchAssignments = useCallback(() => {
@@ -510,12 +552,12 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           // debounced/throttled refetch runs. This matches WhatsApp's behavior.
           const bumpConvId = newMsg?.zapp_conversation_id;
           const bumpAt = newMsg?.sent_at || newMsg?.created_at || new Date().toISOString();
-          if (bumpConvId) {
+          const bumpMsgId = newMsg?.id || newMsg?.external_message_id || null;
+          const accepted = bumpConvId ? reconcileBump(bumpConvId, bumpAt, bumpMsgId) : false;
+          if (bumpConvId && accepted) {
             setAssignments(prev => prev.map(a => {
               const convId = a.zapp_conversation?.id || (a as any).zapp_conversation_id;
               if (convId !== bumpConvId) return a;
-              const currentAt = a.zapp_conversation?.last_message_at || null;
-              if (currentAt && new Date(currentAt).getTime() >= new Date(bumpAt).getTime()) return a;
               const preview = newMsg?.content
                 || (newMsg?.message_type === 'audio' ? '🎤 Áudio' : '')
                 || (newMsg?.message_type === 'image' ? '📷 Imagem' : '')
@@ -691,49 +733,40 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           if (!next?.id) return;
           if (next.account_id && next.account_id !== accountId) return;
 
+          // Reconcile against high-water mark: only accept last_message_at/preview
+          // if timestamp is >= the highest one already observed for this conversation.
+          // No msgId is available on the conversation payload, so ties keep current.
+          const nextAt: string | null = next.last_message_at ?? null;
+          const acceptLastMessage = nextAt ? reconcileBump(next.id, nextAt, null) : false;
+
           setAssignments(prev => prev.map(a => {
             const convId = a.zapp_conversation?.id || (a as any).zapp_conversation_id;
             if (convId !== next.id) return a;
             if (!a.zapp_conversation) return a;
 
-            const currentAt = a.zapp_conversation.last_message_at || null;
-            const nextAt = next.last_message_at || currentAt;
-            // Only accept the update if it's newer or the preview genuinely changed,
-            // so we don't clobber an optimistic bump made from a fresher INSERT.
-            const isNewer = !currentAt || (nextAt && new Date(nextAt).getTime() >= new Date(currentAt).getTime());
-            const previewChanged = (next.last_message_preview ?? null) !== (a.zapp_conversation.last_message_preview ?? null);
-            if (!isNewer && !previewChanged) {
-              // still allow flag updates (pin/mute/favorite/archive/unread reset) through
-              return {
-                ...a,
-                zapp_conversation: {
-                  ...a.zapp_conversation,
-                  is_pinned: next.is_pinned ?? a.zapp_conversation.is_pinned,
-                  is_muted: next.is_muted ?? a.zapp_conversation.is_muted,
-                  is_favorite: next.is_favorite ?? a.zapp_conversation.is_favorite,
-                  is_archived: next.is_archived ?? a.zapp_conversation.is_archived,
-                  is_blocked: next.is_blocked ?? a.zapp_conversation.is_blocked,
-                  unread_count: next.unread_count ?? a.zapp_conversation.unread_count,
-                  contact_name: next.contact_name ?? a.zapp_conversation.contact_name,
-                  avatar_url: next.avatar_url ?? a.zapp_conversation.avatar_url,
-                },
-              };
+            const base = {
+              ...a.zapp_conversation,
+              is_pinned: next.is_pinned ?? a.zapp_conversation.is_pinned,
+              is_muted: next.is_muted ?? a.zapp_conversation.is_muted,
+              is_favorite: next.is_favorite ?? a.zapp_conversation.is_favorite,
+              is_archived: next.is_archived ?? a.zapp_conversation.is_archived,
+              is_blocked: next.is_blocked ?? a.zapp_conversation.is_blocked,
+              unread_count: next.unread_count ?? a.zapp_conversation.unread_count,
+              contact_name: next.contact_name ?? a.zapp_conversation.contact_name,
+              avatar_url: next.avatar_url ?? a.zapp_conversation.avatar_url,
+            };
+
+            if (!acceptLastMessage) {
+              // Flag/metadata-only update: never regress the last message shown.
+              return { ...a, zapp_conversation: base };
             }
 
             return {
               ...a,
               zapp_conversation: {
-                ...a.zapp_conversation,
-                last_message_at: nextAt,
+                ...base,
+                last_message_at: nextAt ?? a.zapp_conversation.last_message_at,
                 last_message_preview: next.last_message_preview ?? a.zapp_conversation.last_message_preview,
-                unread_count: next.unread_count ?? a.zapp_conversation.unread_count,
-                is_pinned: next.is_pinned ?? a.zapp_conversation.is_pinned,
-                is_muted: next.is_muted ?? a.zapp_conversation.is_muted,
-                is_favorite: next.is_favorite ?? a.zapp_conversation.is_favorite,
-                is_archived: next.is_archived ?? a.zapp_conversation.is_archived,
-                is_blocked: next.is_blocked ?? a.zapp_conversation.is_blocked,
-                contact_name: next.contact_name ?? a.zapp_conversation.contact_name,
-                avatar_url: next.avatar_url ?? a.zapp_conversation.avatar_url,
               },
             };
           }));
@@ -747,7 +780,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       if (realtimeResetTimer) clearTimeout(realtimeResetTimer);
       supabase.removeChannel(channel);
     };
-  }, [accountId, debouncedFetchAssignments, fetchAssignmentsOnly, sectorId]);
+  }, [accountId, debouncedFetchAssignments, fetchAssignmentsOnly, sectorId, reconcileBump]);
 
   // Fallback polling
   useEffect(() => {
