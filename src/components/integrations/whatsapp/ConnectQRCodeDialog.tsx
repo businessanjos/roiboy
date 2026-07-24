@@ -214,6 +214,10 @@ export function ConnectQRCodeDialog({
       toast.error("Cole o instance token da UAZAPI.");
       return;
     }
+    if (tokenConflict?.conflict) {
+      toast.error(tokenConflict.message || "Este token já está em uso em outro setor.");
+      return;
+    }
     setAdopting(true);
     setQrError(null);
     try {
