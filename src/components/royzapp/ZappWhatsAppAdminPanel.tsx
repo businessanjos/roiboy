@@ -6,6 +6,7 @@ import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorM
 import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
 import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
 import { IntegrationAccessAlert } from "@/components/integrations/IntegrationAccessAlert";
+import { UazapiServerHealthBanner } from "@/components/royzapp/UazapiServerHealthBanner";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Integration = Tables<"integrations">;
