@@ -298,6 +298,19 @@ export function SalaryBenchmarkCard({ job, city, state }: Props) {
         state,
       })
     : null;
+  const recommendations = result
+    ? computeRecommendations({
+        offered: { min: job.salary_min, max: job.salary_max },
+        market: result.market_range,
+        offeredBenefits: job.benefits ?? [],
+        typicalBenefits: result.typical_benefits ?? [],
+        missingBenefits: result.missing_benefits ?? [],
+        extraBenefits: result.extra_benefits ?? [],
+        workModel: job.work_model,
+        city,
+        state,
+      })
+    : [];
   const range = result?.market_range;
   const period = result?.period === "hora" ? "/hora" : result?.period === "anual" ? "/ano" : "/mês";
 
