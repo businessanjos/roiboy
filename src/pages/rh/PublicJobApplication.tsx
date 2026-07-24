@@ -835,11 +835,11 @@ export default function PublicJobApplication() {
         )}
 
         {/* BENEFÍCIOS */}
-        {job.benefits?.length > 0 && (
+        {visibleBenefits.length > 0 && (
           <motion.section initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 }}>
             <SectionLabel>O que oferecemos</SectionLabel>
             <div className="flex flex-wrap justify-center gap-2">
-              {job.benefits.map(b => (
+              {visibleBenefits.map(b => (
                 <span
                   key={b}
                   className="text-sm px-4 py-2 rounded-sm"
