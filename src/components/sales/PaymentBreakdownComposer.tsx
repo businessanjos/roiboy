@@ -92,6 +92,7 @@ export function PaymentBreakdownComposer({
           amount: null,
           installments: null,
           first_due_date: null,
+          is_cash_collect: false,
         }
       );
     });
