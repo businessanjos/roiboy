@@ -325,15 +325,37 @@ export function WhatsAppIntegrationCard({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Badge 
-                      variant={isIntegrationConnected ? "default" : "outline"}
-                      className={cn(
-                        isIntegrationConnected && "bg-green-600",
-                        integrationWebhookBroken && "border-amber-500 text-amber-600"
-                      )}
-                    >
-                      {integrationStatusLabel}
-                    </Badge>
+                    {integrationWebhookBroken && isAdmin ? (
+                      <button
+                        type="button"
+                        onClick={() => handleFixWebhookById(integration.id)}
+                        disabled={isCheckingThis}
+                        title="Clique para reativar o recebimento de mensagens"
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer",
+                          "border-amber-500 text-amber-700 bg-amber-50 hover:bg-amber-500 hover:text-white",
+                          "dark:text-amber-400 dark:bg-amber-950/30 dark:hover:bg-amber-500 dark:hover:text-white",
+                          "disabled:opacity-70 disabled:cursor-not-allowed"
+                        )}
+                      >
+                        {isCheckingThis ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3" />
+                        )}
+                        {isCheckingThis ? "Corrigindo…" : `${integrationStatusLabel} · Corrigir`}
+                      </button>
+                    ) : (
+                      <Badge
+                        variant={isIntegrationConnected ? "default" : "outline"}
+                        className={cn(
+                          isIntegrationConnected && "bg-green-600",
+                          integrationWebhookBroken && "border-amber-500 text-amber-600"
+                        )}
+                      >
+                        {integrationStatusLabel}
+                      </Badge>
+                    )}
                     <Button 
                       size="sm" 
                       variant="ghost"
