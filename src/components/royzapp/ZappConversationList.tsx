@@ -145,7 +145,9 @@ export const ZappConversationList = memo(function ZappConversationList({
       // Then by last message date (mais recente no topo)
       const dateA = contactA.lastMessageAt ? new Date(contactA.lastMessageAt).getTime() : 0;
       const dateB = contactB.lastMessageAt ? new Date(contactB.lastMessageAt).getTime() : 0;
-      return dateB - dateA;
+      if (dateB !== dateA) return dateB - dateA;
+      // Deterministic tiebreak so ties don't shuffle between renders/realtime events
+      return String(b.id).localeCompare(String(a.id));
     });
   }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, showClosed]);
 
