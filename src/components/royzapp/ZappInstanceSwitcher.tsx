@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Smartphone, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getInstanceStatus } from "@/lib/royZappStatus";
 
 interface Integration {
   id: string;
@@ -17,7 +18,15 @@ interface Integration {
   status: string | null;
   instance_name?: string | null;
   phone_number?: string | null;
-  config: { phone_number?: string; instance_name?: string; name?: string } | null;
+  provider?: string | null;
+  webhook_configured?: boolean | null;
+  config: {
+    phone_number?: string;
+    instance_name?: string;
+    name?: string;
+    provider?: string;
+    webhook_configured?: boolean;
+  } | null;
 }
 
 interface ZappInstanceSwitcherProps {
