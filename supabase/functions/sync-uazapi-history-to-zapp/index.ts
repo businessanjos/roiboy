@@ -518,9 +518,38 @@ Deno.serve(async (req) => {
       chatOffset += chats.length;
     }
 
+    // Advance the incremental checkpoint. Use newest message synced when we
+    // inserted something; otherwise advance to the sync start time so future
+    // runs don't rescan the same idle window from scratch.
+    const newestSyncedMs = stats.newestSynced
+      ? Date.parse(stats.newestSynced)
+      : NaN;
+    const previousCheckpointMs = Number.isFinite(lastSyncMs) ? lastSyncMs : 0;
+    const candidateMs = Number.isFinite(newestSyncedMs)
+      ? newestSyncedMs
+      : syncStartedAtMs;
+    const nextCheckpointMs = Math.max(previousCheckpointMs, candidateMs);
+    const nextCheckpointIso = new Date(nextCheckpointMs).toISOString();
+
+    // Only persist checkpoint when not filtered to a single phone — a
+    // target_phone run isn't a full account sync.
+    if (!targetPhone) {
+      await supabase
+        .from("integrations")
+        .update({
+          config: { ...config, last_history_sync_at: nextCheckpointIso },
+        })
+        .eq("id", integration.id);
+    }
+
     return json(200, {
       success: true,
       integration: integration.display_name,
+      mode: sinceLastSync ? "incremental" : "range",
+      start: new Date(startMs).toISOString(),
+      end: new Date(endMs).toISOString(),
+      previous_checkpoint: lastSyncIso,
+      next_checkpoint: targetPhone ? lastSyncIso : nextCheckpointIso,
       stats,
     });
   } catch (error) {
