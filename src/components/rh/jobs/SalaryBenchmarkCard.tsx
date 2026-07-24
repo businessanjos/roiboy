@@ -333,6 +333,76 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
   const range = result?.market_range;
   const period = result?.period === "hora" ? "/hora" : result?.period === "anual" ? "/ano" : "/mês";
 
+  const isLowAttractiveness = !!attractiveness && attractiveness.total < alertThreshold;
+  const dedupeKey = jobId && attractiveness ? `rh-attractiveness-alert:${jobId}:${Math.floor(attractiveness.total / 10) * 10}` : null;
+
+  const sendLowAttractivenessAlert = async (silent = false) => {
+    if (!attractiveness || !currentUser?.account_id) return;
+    setAlertSending(true);
+    try {
+      const { data: recipients, error: usersError } = await supabase
+        .from("users")
+        .select("id, email")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
+        .in("email", RH_ALERT_RECIPIENTS);
+      if (usersError) throw usersError;
+      if (!recipients || recipients.length === 0) {
+        if (!silent) toast.error("Nenhum usuário do RH encontrado para notificar.");
+        return;
+      }
+
+      const topActions = recommendations.slice(0, 3).map((r) => `• ${r.title} (+${r.impact} pts)`).join("\n");
+      const summary = topActions
+        ? `Score ${attractiveness.total}/100 (${attractiveness.tier.label}). Ações prioritárias:\n${topActions}`
+        : `Score ${attractiveness.total}/100 (${attractiveness.tier.label}). Revise salário e benefícios.`;
+
+      const link = jobId ? `/rh/vacancies/${jobId}` : "/rh/vacancies";
+      const rows = recipients.map((u) => ({
+        account_id: currentUser.account_id,
+        user_id: u.id,
+        type: "rh_low_attractiveness",
+        title: `Vaga com baixa atratividade: ${job.title}`,
+        content: summary,
+        link,
+        triggered_by_user_id: currentUser.id,
+        source_type: "hr_job",
+        source_id: jobId ?? null,
+      }));
+
+      const { error: insertError } = await supabase.from("notifications").insert(rows);
+      if (insertError) throw insertError;
+
+      setAlertSentAt(new Date());
+      if (dedupeKey) {
+        try { localStorage.setItem(dedupeKey, new Date().toISOString()); } catch {}
+      }
+      if (!silent) toast.success(`Alerta enviado para ${recipients.length} pessoa${recipients.length === 1 ? "" : "s"} do RH.`);
+    } catch (e: any) {
+      console.error("Failed to send low-attractiveness alert:", e);
+      if (!silent) toast.error(e?.message || "Falha ao enviar alerta.");
+    } finally {
+      setAlertSending(false);
+    }
+  };
+
+  // Auto-dispara uma notificação (dedupe por job + faixa de score) quando abaixo do limiar
+  useEffect(() => {
+    if (!isLowAttractiveness || !dedupeKey || !currentUser?.account_id) return;
+    if (autoNotifiedRef.current === dedupeKey) return;
+    let alreadySent = false;
+    try { alreadySent = !!localStorage.getItem(dedupeKey); } catch {}
+    if (alreadySent) {
+      autoNotifiedRef.current = dedupeKey;
+      return;
+    }
+    autoNotifiedRef.current = dedupeKey;
+    sendLowAttractivenessAlert(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dedupeKey, isLowAttractiveness, currentUser?.account_id]);
+
+
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
