@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, RefreshCw, Wifi, CheckCircle2, Smartphone } from "lucide-react";
+import { Loader2, RefreshCw, Wifi, CheckCircle2, Smartphone, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
@@ -35,6 +35,8 @@ export function ConnectQRCodeDialog({
   const [qrError, setQrError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [pollingActive, setPollingActive] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
 
   const MAX_ATTEMPTS = 4;
   const [attempt, setAttempt] = useState(0);
@@ -112,6 +114,53 @@ export function ConnectQRCodeDialog({
     );
     setLoading(false);
   }, [instanceName, integrationId, sectorId, onConnected]);
+
+  const resetConnection = useCallback(async () => {
+    setResetting(true);
+    setQrError(null);
+    setQrCode(null);
+    setPollingActive(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: {
+          action: "reset_instance",
+          instance_name: instanceName,
+          sector_id: sectorId,
+          integration_id: integrationId,
+        },
+      });
+      if (error) throw error;
+
+      const result = data?.data || data;
+      const instance = result?.instance || {};
+      const qr =
+        instance?.qrcode?.base64 ||
+        (typeof instance?.qrcode === "string" ? instance.qrcode : null) ||
+        result?.qrcode?.base64 ||
+        (typeof result?.qrcode === "string" ? result.qrcode : null) ||
+        result?.base64 ||
+        result?.qr_code ||
+        null;
+
+      if (qr) {
+        setQrCode(qr);
+        setPollingActive(true);
+        toast.success("Instância reprovisionada. Escaneie o novo QR Code.");
+      } else {
+        // Fallback: run the normal QR flow (already re-tries with backoff)
+        toast.info("Instância reprovisionada. Gerando QR Code...");
+        await fetchQRCode();
+      }
+    } catch (err) {
+      const msg = await extractEdgeFunctionError(err, "Falha ao resetar a conexão.");
+      console.error("Reset connection failed:", err);
+      setQrError(msg);
+      toast.error(msg);
+    } finally {
+      setResetting(false);
+    }
+  }, [instanceName, integrationId, sectorId, fetchQRCode]);
+
 
   // Fetch QR code when dialog opens
   useEffect(() => {
@@ -193,11 +242,13 @@ export function ConnectQRCodeDialog({
                 Fechar
               </Button>
             </div>
-          ) : loading ? (
+          ) : loading || resetting ? (
             <div className="flex flex-col items-center gap-3 py-8">
               <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Gerando QR Code{attempt > 1 ? ` (tentativa ${attempt}/${MAX_ATTEMPTS})...` : "..."}
+                {resetting
+                  ? "Resetando conexão e gerando novo QR..."
+                  : `Gerando QR Code${attempt > 1 ? ` (tentativa ${attempt}/${MAX_ATTEMPTS})...` : "..."}`}
               </p>
             </div>
           ) : qrError ? (
@@ -205,10 +256,25 @@ export function ConnectQRCodeDialog({
               <Alert variant="destructive">
                 <AlertDescription>{qrError}</AlertDescription>
               </Alert>
-              <Button variant="outline" onClick={fetchQRCode}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Tentar novamente
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full">
+                <Button variant="outline" onClick={fetchQRCode} className="flex-1">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Tentar novamente
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={resetConnection}
+                  disabled={resetting}
+                  className="flex-1"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Resetar conexão
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground text-center px-2">
+                O reset força o reprovisionamento da instância no servidor e gera um token novo.
+                Use quando aparecer <strong>invalid token</strong> ou <strong>404</strong>.
+              </p>
             </div>
           ) : qrCode ? (
             <>
@@ -243,12 +309,26 @@ export function ConnectQRCodeDialog({
                 Aguardando conexão...
               </div>
 
-              <Button variant="ghost" size="sm" onClick={fetchQRCode}>
-                <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                Atualizar QR Code
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={fetchQRCode}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                  Atualizar QR Code
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetConnection}
+                  disabled={resetting}
+                  className="text-destructive hover:text-destructive"
+                  title="Reprovisiona a instância no servidor e gera um novo token"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Resetar conexão
+                </Button>
+              </div>
             </>
           ) : null}
+
         </div>
       </DialogContent>
     </Dialog>
