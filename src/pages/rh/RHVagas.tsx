@@ -162,6 +162,7 @@ export default function RHVagas() {
               </CardHeader>
               <CardContent className="space-y-1.5">
                 {job.department && <p className="text-sm text-muted-foreground">Departamento: {job.department}</p>}
+                <JobScoreBadge job={job} benchmark={benchmarks[job.id]} />
                 <JobMetaRow job={job} />
               </CardContent>
             </Card>
