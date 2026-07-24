@@ -45,6 +45,62 @@ async function resolveServerForSector(
   return GLOBAL_SERVER;
 }
 
+// Prevents saving the same UAZAPI instance_token on two integrations in different sectors.
+// Returns a Response (409) when a conflict is found, or null when it's safe to proceed.
+// The DB has a trigger enforcing this too — this helper just produces a nicer message.
+async function checkTokenSectorConflict(
+  supabase: any,
+  accountId: string,
+  instanceToken: string | null | undefined,
+  sectorId: string | null | undefined,
+  currentIntegrationId?: string | null,
+): Promise<Response | null> {
+  const token = (instanceToken || "").trim();
+  if (!token) return null;
+  try {
+    let query = supabase
+      .from("integrations")
+      .select("id, sector_id, display_name, config")
+      .eq("account_id", accountId)
+      .eq("type", "whatsapp")
+      .filter("config->>instance_token", "eq", token);
+    if (currentIntegrationId) query = query.neq("id", currentIntegrationId);
+    const { data } = await query;
+    const conflict = (data || []).find((row: any) => {
+      const provider = row?.config?.provider;
+      if (provider && provider !== "uazapi") return false;
+      const rowSector = row?.sector_id || null;
+      const targetSector = sectorId || null;
+      return rowSector !== targetSector;
+    });
+    if (conflict) {
+      const name =
+        conflict.display_name ||
+        conflict.config?.instance_name ||
+        conflict.id;
+      const sector = conflict.sector_id || "(sem setor)";
+      const message =
+        `Este instance_token já está vinculado à integração "${name}" (setor ${sector}). ` +
+        `Cada número/instância WhatsApp precisa ter um token exclusivo por setor. ` +
+        `Reconecte via QR Code para gerar um token novo antes de vincular a este setor.`;
+      console.error(`[uazapi-manager] 🚫 token/sector conflict:`, {
+        token_suffix: token.slice(-6),
+        target_sector: sectorId,
+        conflict_id: conflict.id,
+        conflict_sector: conflict.sector_id,
+      });
+      return new Response(
+        JSON.stringify({ error: message, code: "token_sector_conflict", conflict_integration_id: conflict.id }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+  } catch (err) {
+    console.warn("[uazapi-manager] checkTokenSectorConflict failed (allowing write, DB trigger will still guard):", err);
+  }
+  return null;
+}
+
+
 async function resolveServerForIntegrationId(
   supabase: any,
   accountId: string,
