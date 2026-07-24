@@ -479,6 +479,57 @@ export function SalaryBenchmarkCard({ job, city, state }: Props) {
               </div>
             )}
 
+            {recommendations.length > 0 && attractiveness && (
+              <div className="rounded-lg border border-primary/20 bg-primary/[0.03] p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-semibold">Como aumentar a atratividade</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">
+                    Potencial: até {Math.min(100, attractiveness.total + recommendations.reduce((s, r) => s + r.impact, 0))}/100
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Ações ordenadas por impacto estimado no score de atratividade.
+                </p>
+                <div className="space-y-2">
+                  {recommendations.map((rec) => {
+                    const Icon = rec.icon;
+                    const toneClasses =
+                      rec.tone === "emerald"
+                        ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+                        : rec.tone === "amber"
+                        ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                        : rec.tone === "red"
+                        ? "bg-red-500/10 text-red-700 border-red-500/30"
+                        : "bg-blue-500/10 text-blue-700 border-blue-500/30";
+                    return (
+                      <div key={rec.id} className="flex items-start gap-3 rounded-md border bg-background p-3">
+                        <div className={`rounded-md border p-1.5 ${toneClasses}`}>
+                          <Icon className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-[13px] font-medium leading-tight">{rec.title}</p>
+                            <Badge variant="outline" className={`shrink-0 text-[10px] tabular-nums ${toneClasses}`}>
+                              +{rec.impact} pts
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{rec.detail}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">
+                  Impacto simulado somando cada ação isoladamente ao score atual — combinações reais podem variar.
+                </p>
+              </div>
+            )}
+
+
+
 
 
             {result.sample_note && (
