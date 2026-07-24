@@ -192,11 +192,16 @@ export function SectorInstanceCard({
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                <Badge variant={isConnected ? "default" : "secondary"} className="text-xs">
-                  {isConnected ? (
-                    <><Wifi className="h-3 w-3 mr-1" /> Conectado</>
+                <Badge
+                  variant={status.operational ? "default" : status.webhookBroken ? "outline" : "secondary"}
+                  className="text-xs"
+                >
+                  {status.operational ? (
+                    <><Wifi className="h-3 w-3 mr-1" /> {status.label}</>
+                  ) : status.webhookBroken ? (
+                    <><AlertTriangle className="h-3 w-3 mr-1" /> {status.label}</>
                   ) : (
-                    <><WifiOff className="h-3 w-3 mr-1" /> Desconectado</>
+                    <><WifiOff className="h-3 w-3 mr-1" /> {status.label}</>
                   )}
                 </Badge>
               </div>
