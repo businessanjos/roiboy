@@ -551,6 +551,49 @@ async function enqueueSend<T>(token: string, label: string, fn: () => Promise<T>
   return run as Promise<T>;
 }
 
+/**
+ * Register the uazapi-webhook URL against a specific instance on a specific server.
+ * Tries the known endpoints and returns { success, webhookUrl } so callers can persist
+ * the state on the integration. Non-fatal — logs but never throws.
+ */
+async function registerWebhookForInstance(
+  token: string,
+  instanceName: string,
+  server: ServerConfig,
+): Promise<{ success: boolean; webhookUrl: string; events: string[] }> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
+  const events = ["messages", "messages.update", "messages.delete", "connection", "groups", "qrcode"];
+  const webhookConfig = { url: webhookUrl, enabled: true, events };
+
+  const endpoints: Array<{ path: string; method: string }> = [
+    { path: "/webhook/set", method: "POST" },
+    { path: "/instance/webhook", method: "PUT" },
+    { path: "/webhook", method: "POST" },
+  ];
+
+  for (const ep of endpoints) {
+    try {
+      await uazapiInstance(ep.path, ep.method, token, webhookConfig, server);
+      console.log(`[uazapi-manager] Auto-configured webhook for "${instanceName}" via ${ep.path} on ${server.host}`);
+      return { success: true, webhookUrl, events };
+    } catch (err) {
+      console.log(`[uazapi-manager] webhook ${ep.path} failed on ${server.host}: ${(err as Error).message}`);
+    }
+  }
+
+  try {
+    await uazapiAdmin(`/instance/webhook/${instanceName}`, "PUT", webhookConfig, server);
+    console.log(`[uazapi-manager] Auto-configured webhook via admin endpoint for "${instanceName}"`);
+    return { success: true, webhookUrl, events };
+  } catch (err) {
+    console.warn(`[uazapi-manager] Auto-configure webhook FAILED for "${instanceName}": ${(err as Error).message}`);
+  }
+
+  return { success: false, webhookUrl, events };
+}
+
+
 async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown, server?: ServerConfig) {
   const s = server || GLOBAL_SERVER;
   console.log(`[uazapi] Calling: ${method} ${s.host}${endpoint} (server: ${s.source})`);
