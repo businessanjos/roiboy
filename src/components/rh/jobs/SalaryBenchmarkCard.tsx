@@ -709,7 +709,16 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
                     const city = result.local_competitors?.[key];
                     const label = key === "barueri" ? "Barueri/SP" : "São Paulo/SP";
                     if (!city) return null;
-                    const companies = city.companies ?? [];
+                    const companies = (city.companies ?? []).filter((c) => {
+                      const name = (c.name || "").toLowerCase().trim();
+                      const role = (c.role_title || "").toLowerCase();
+                      if (!name) return false;
+                      // Empresa anônima / não identificada
+                      if (/n[ãa]o\s+identificad|desconhecid|an[ôo]nim|confidencial|empresa\s+confidencial/i.test(name)) return false;
+                      // Segmentos claramente incompatíveis / conteúdo adulto
+                      if (/\bsex\s*shop\b|\badult[oa]s?\b|erotic|\bxxx\b/i.test(`${name} ${role}`)) return false;
+                      return true;
+                    });
                     return (
                       <div key={key} className="rounded-md border bg-background/60 p-3 space-y-2">
                         <div className="flex items-center justify-between gap-2">
