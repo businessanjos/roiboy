@@ -117,9 +117,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
   useEffect(() => {
     if (currentUser?.account_id) {
       fetchData();
-      filters.checkWhatsAppStatus(sectorId);
+      filters.checkWhatsAppStatus(sectorId, integrationId);
     }
-  }, [currentUser?.account_id, sectorId, fetchData]);
+  }, [currentUser?.account_id, sectorId, integrationId, fetchData]);
 
   return {
     // Dialog data
@@ -147,8 +147,8 @@ export function useZappData(options: UseZappDataOptions = {}) {
     whatsappConnected: filters.whatsappConnected,
     whatsappConnecting: filters.whatsappConnecting,
     whatsappInstanceName: filters.whatsappInstanceName,
-    toggleWhatsAppConnection: () => filters.toggleWhatsAppConnection(sectorId),
-    checkWhatsAppStatus: () => filters.checkWhatsAppStatus(sectorId),
+    toggleWhatsAppConnection: () => filters.toggleWhatsAppConnection(sectorId, integrationId),
+    checkWhatsAppStatus: () => filters.checkWhatsAppStatus(sectorId, integrationId),
 
     // Actions
     fetchData,

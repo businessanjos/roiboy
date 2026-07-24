@@ -6,6 +6,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface Integration {
   id: string;
+  sector_id?: string | null;
   display_name: string | null;
   status: string | null;
   config: {
@@ -58,19 +59,17 @@ export function ZappChannelPills({
     setLoading(true);
 
     (async () => {
-      const { data, error } = await supabase
-        .from("integrations")
-        .select("id, display_name, status, config")
-        .eq("account_id", accountId)
-        .eq("sector_id", sectorId)
-        .order("created_at", { ascending: true });
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: { action: "list_sector_instances" },
+      });
 
       if (cancelled) return;
       if (error) {
         console.error("[ChannelPills] error loading integrations", error);
         setIntegrations([]);
       } else {
-        setIntegrations((data as unknown as Integration[]) || []);
+        const all = (data?.data?.instances || data?.instances || []) as Integration[];
+        setIntegrations(all.filter((item) => item.sector_id === sectorId));
       }
       setLoading(false);
     })();

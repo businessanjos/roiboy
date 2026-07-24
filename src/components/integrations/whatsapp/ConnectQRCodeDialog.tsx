@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, RefreshCw, Wifi, CheckCircle2, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 
 interface ConnectQRCodeDialogProps {
   open: boolean;
@@ -63,9 +64,15 @@ export function ConnectQRCodeDialog({
         const instance = result?.instance || {};
 
         const qr =
-          instance?.qrcode ||
-          result?.qrcode ||
+          instance?.qrcode?.base64 ||
+          (typeof instance?.qrcode === "string" ? instance.qrcode : null) ||
+          result?.qrcode?.base64 ||
+          (typeof result?.qrcode === "string" ? result.qrcode : null) ||
           result?.base64 ||
+          result?.qr_code ||
+          result?.data?.qrcode?.base64 ||
+          (typeof result?.data?.qrcode === "string" ? result.data.qrcode : null) ||
+          result?.data?.base64 ||
           instance?.paircode ||
           result?.pairingCode ||
           null;
@@ -88,7 +95,7 @@ export function ConnectQRCodeDialog({
 
         lastError = "QR Code não retornado pela API.";
       } catch (err) {
-        const msg = (err as Error)?.message || "";
+        const msg = await extractEdgeFunctionError(err, "Erro ao buscar QR Code.");
         console.error(`Failed to fetch QR code (attempt ${i}/${MAX_ATTEMPTS}):`, err);
         lastError = msg || "Erro ao buscar QR Code.";
       }

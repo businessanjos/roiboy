@@ -38,10 +38,10 @@ export function useZappFilters(options: UseZappFiltersOptions) {
     setAllClients(clientsData || []);
   }, [accountId]);
 
-  const checkWhatsAppStatus = useCallback(async (sectorId?: string) => {
+  const checkWhatsAppStatus = useCallback(async (sectorId?: string, integrationId?: string) => {
     try {
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "status", sector_id: sectorId },
+        body: { action: "status", sector_id: sectorId, integration_id: integrationId },
       });
 
       if (response.data) {
@@ -68,7 +68,7 @@ export function useZappFilters(options: UseZappFiltersOptions) {
     }
   }, []);
 
-  const toggleWhatsAppConnection = useCallback(async (sectorId?: string) => {
+  const toggleWhatsAppConnection = useCallback(async (sectorId?: string, integrationId?: string) => {
     setWhatsappConnecting(true);
     try {
       const { toast } = await import("sonner");
@@ -79,7 +79,7 @@ export function useZappFilters(options: UseZappFiltersOptions) {
         toast.success("Recebimento em tempo real pausado para você");
       } else {
         const statusResponse = await supabase.functions.invoke("uazapi-manager", {
-          body: { action: "status", sector_id: sectorId },
+          body: { action: "status", sector_id: sectorId, integration_id: integrationId },
         });
         const state = statusResponse.data?.state || statusResponse.data?.data?.state;
         const connected = state === "open" || statusResponse.data?.connected || statusResponse.data?.data?.connected;

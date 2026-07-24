@@ -272,6 +272,7 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
           onOpenChange={(o) => !o && setQrInstance(null)}
           integrationId={qrInstance.id}
           instanceName={qrInstance.instance_name}
+          sectorId={sectorId || undefined}
           onConnected={() => {
             setQrInstance(null);
             fetchConnections();
