@@ -196,6 +196,7 @@ export interface DealPaymentBreakdownItem {
   amount: number | null;
   installments: number | null;
   first_due_date: string | null;
+  is_cash_collect?: boolean;
 }
 
 export interface DealFieldValues {
