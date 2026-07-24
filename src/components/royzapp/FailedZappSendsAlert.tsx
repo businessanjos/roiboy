@@ -45,7 +45,7 @@ export function FailedZappSendsAlert() {
   }
 
   const goToConversation = (item: FailedSend) => {
-    navigate(`/roy-zapp?conversation=${item.zapp_conversation_id}`);
+    navigate(buildRoyZappUrl({ conversation: item.zapp_conversation_id }));
   };
 
   return (

@@ -70,6 +70,7 @@ import {
   Telescope,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
+import { buildRoyZappUrl } from "@/lib/royZappRoutes";
 
 export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "gestao-tech" | "rh" | "eventos" | "reuniao-lideres" | "configuracoes";
 
