@@ -224,25 +224,42 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px] px-1.5 py-0 h-4",
-                          operational
-                            ? "border-emerald-500/40 text-emerald-500"
-                            : webhookBroken
-                              ? "border-amber-500/50 text-amber-500"
-                            : "border-red-500/40 text-red-500"
-                        )}
-                      >
-                        {operational ? (
-                          <><Wifi className="h-2.5 w-2.5 mr-0.5" />{statusLabel}</>
-                        ) : webhookBroken ? (
-                          <><AlertTriangle className="h-2.5 w-2.5 mr-0.5" />{statusLabel}</>
-                        ) : (
-                          <><WifiOff className="h-2.5 w-2.5 mr-0.5" />{statusLabel}</>
-                        )}
-                      </Badge>
+                      {webhookBroken && isAdmin ? (
+                        <button
+                          type="button"
+                          onClick={() => handleFixWebhook(c)}
+                          disabled={fixingWebhookId === c.id}
+                          title="Clique para reativar o recebimento de mensagens"
+                          className={cn(
+                            "inline-flex items-center gap-1 text-[10px] px-1.5 h-4 rounded-full border transition-colors",
+                            "border-amber-500/60 text-amber-600 bg-amber-500/10 hover:bg-amber-500 hover:text-white hover:border-amber-500",
+                            "disabled:opacity-70 disabled:cursor-not-allowed"
+                          )}
+                        >
+                          {fixingWebhookId === c.id ? (
+                            <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                          ) : (
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                          )}
+                          {fixingWebhookId === c.id ? "Corrigindo…" : `${statusLabel} · Corrigir`}
+                        </button>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] px-1.5 py-0 h-4",
+                            operational
+                              ? "border-emerald-500/40 text-emerald-500"
+                              : "border-red-500/40 text-red-500"
+                          )}
+                        >
+                          {operational ? (
+                            <><Wifi className="h-2.5 w-2.5 mr-0.5" />{statusLabel}</>
+                          ) : (
+                            <><WifiOff className="h-2.5 w-2.5 mr-0.5" />{statusLabel}</>
+                          )}
+                        </Badge>
+                      )}
                       <span className="text-[10px] text-zapp-text-muted">
                         {isMeta ? "Meta API" : "UAZAPI"}
                       </span>
