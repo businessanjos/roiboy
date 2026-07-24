@@ -260,14 +260,14 @@ export function WhatsAppIntegrationCard({
               const cfg = integration.config as Record<string, unknown> | null;
               const intInstanceName = cfg?.instance_name as string || cfg?.profileName as string || "Instância sem nome";
               const intOwner = cfg?.owner as string;
-              const integrationOnline = integration.status === "connected" || cfg?.connection_state === "open";
-              const integrationWebhookBroken = integrationOnline && cfg?.webhook_configured === false;
-              const isIntegrationConnected = integrationOnline && !integrationWebhookBroken;
-              const integrationStatusLabel = isIntegrationConnected
-                ? "Operacional"
-                : integrationWebhookBroken
-                  ? "Sem recebimento"
-                  : "Desconectado";
+              const intStatus = getInstanceStatusFromIntegration({
+                status: integration.status,
+                provider: (integration as any).provider ?? null,
+                config: cfg,
+              });
+              const integrationWebhookBroken = intStatus.webhookBroken;
+              const isIntegrationConnected = intStatus.operational;
+              const integrationStatusLabel = intStatus.label;
               const createdAt = integration.created_at ? new Date(integration.created_at) : null;
               const isCheckingThis = checkingStatusId === integration.id;
               const sectorLabel = integration.sector_id || "Padrão";
