@@ -416,6 +416,21 @@ export function WhatsAppIntegrationCard({
                       )}
                     </Button>
                     {isAdmin && isIntegrationConnected && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleSyncHistoryById(integration.id)}
+                        disabled={isCheckingThis || syncingHistoryId === integration.id}
+                        title="Importar histórico de mensagens desta instância"
+                      >
+                        {syncingHistoryId === integration.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <History className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                    {isAdmin && isIntegrationConnected && (
                       <Button 
                         size="sm" 
                         variant="ghost"
