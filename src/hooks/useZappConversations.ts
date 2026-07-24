@@ -552,12 +552,12 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           // debounced/throttled refetch runs. This matches WhatsApp's behavior.
           const bumpConvId = newMsg?.zapp_conversation_id;
           const bumpAt = newMsg?.sent_at || newMsg?.created_at || new Date().toISOString();
-          if (bumpConvId) {
+          const bumpMsgId = newMsg?.id || newMsg?.external_message_id || null;
+          const accepted = bumpConvId ? reconcileBump(bumpConvId, bumpAt, bumpMsgId) : false;
+          if (bumpConvId && accepted) {
             setAssignments(prev => prev.map(a => {
               const convId = a.zapp_conversation?.id || (a as any).zapp_conversation_id;
               if (convId !== bumpConvId) return a;
-              const currentAt = a.zapp_conversation?.last_message_at || null;
-              if (currentAt && new Date(currentAt).getTime() >= new Date(bumpAt).getTime()) return a;
               const preview = newMsg?.content
                 || (newMsg?.message_type === 'audio' ? '🎤 Áudio' : '')
                 || (newMsg?.message_type === 'image' ? '📷 Imagem' : '')
