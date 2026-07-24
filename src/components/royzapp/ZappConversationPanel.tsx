@@ -569,7 +569,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       {/* Tabs: Minhas | Fila */}
       <div className="flex border-b border-zapp-border bg-zapp-bg">
         <button
-          onClick={() => setInboxTab("mine")}
+          onClick={() => { setInboxTab("mine"); if (activeView !== "inbox") setActiveView("inbox"); }}
           className={cn(
             "flex-1 py-3 text-sm font-medium transition-colors relative",
             inboxTab === "mine" 
