@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
         : null,
     ].filter(Boolean);
 
-    const userPrompt = `Faça um benchmark de mercado para a vaga abaixo e devolva o JSON conforme instruído.\n\n${parts.join("\n")}`;
+    const userPrompt = `Faça um benchmark de mercado para a vaga abaixo e devolva o JSON conforme instruído.\n\n${parts.join("\n")}\n\nAlém do benchmark geral, preencha OBRIGATORIAMENTE local_competitors com dados de empresas em Barueri/SP e São Paulo/SP contratando para o mesmo cargo/senioridade (ou o mais próximo). Cada empresa deve ter URL real de anúncio (Gupy, LinkedIn, Vagas.com, Catho, Glassdoor, InfoJobs, site da empresa). Sem inventar dados.`;
 
     const res = await fetch("https://api.perplexity.ai/chat/completions", {
       method: "POST",
