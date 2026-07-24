@@ -212,8 +212,26 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
         (integrations || []).forEach((integration: any) => {
           const sectorId = integration.sector_id as SectorId;
           const config = integration.config as any;
-          const connected = integration.status === "connected";
-          
+
+          const rawProvider = (integration.provider || config?.provider || "").toString().toLowerCase();
+          const provider: SectorInstance["provider"] =
+            rawProvider === "meta_official" || rawProvider === "meta" ? "meta_official"
+            : rawProvider === "uazapi" ? "uazapi"
+            : (config?.phone_number_id || config?.waba_id) ? "meta_official"
+            : (integration.instance_name || config?.instance_name || config?.token) ? "uazapi"
+            : "unknown";
+
+          // Unified status derivation: connected + webhook = operational.
+          // Webhook-broken instances count as NOT connected here so sector
+          // rollups ("2/3 online") reflect what's actually receiving.
+          const s = getInstanceStatus({
+            status: integration.status,
+            webhook_configured:
+              integration.webhook_configured ?? config?.webhook_configured ?? null,
+            provider: rawProvider || null,
+          });
+          const connected = s.operational;
+
           // Instance has its own PIN
           const instanceHasPin = !!integration.has_pin || !!integration.pin_hash || !!config?.pin_hash;
           // Sector has a PIN that protects all its instances
@@ -222,14 +240,6 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           const effectiveHasPin = instanceHasPin || sectorHasPin;
           // If instance doesn't have its own PIN but sector does, use sector PIN
           const useSectorPin = !instanceHasPin && sectorHasPin;
-          
-          const rawProvider = (integration.provider || config?.provider || "").toString().toLowerCase();
-          const provider: SectorInstance["provider"] =
-            rawProvider === "meta_official" || rawProvider === "meta" ? "meta_official"
-            : rawProvider === "uazapi" ? "uazapi"
-            : (config?.phone_number_id || config?.waba_id) ? "meta_official"
-            : (integration.instance_name || config?.instance_name || config?.token) ? "uazapi"
-            : "unknown";
 
           instancesBySector[sectorId].push({
             id: integration.id,
