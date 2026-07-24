@@ -68,14 +68,19 @@ export function SectorInstanceCard({
   const [isReconfiguringWebhook, setIsReconfiguringWebhook] = useState(false);
   const [showQRDialog, setShowQRDialog] = useState(false);
 
-  const isConnected = instance.status === "connected";
+  const status = getInstanceStatus({
+    status: instance.status,
+    webhook_configured: instance.webhook_configured ?? null,
+    provider: (instance as any).provider ?? null,
+  });
+  const isConnected = status.connected;
   const displayName = instance.display_name || instance.profile_name || instance.instance_name;
   const phoneDisplay = instance.phone_number
     ? instance.phone_number.replace(/^(\d{2})(\d{2})(\d{5})(\d{4})$/, "+$1 ($2) $3-$4")
     : "";
-  
+
   // Show webhook warning only for connected instances without webhook
-  const showWebhookWarning = isConnected && instance.webhook_configured === false;
+  const showWebhookWarning = status.webhookBroken;
 
   const handleRemove = async () => {
     setIsRemoving(true);
