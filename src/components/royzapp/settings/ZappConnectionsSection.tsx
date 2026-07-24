@@ -350,15 +350,6 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
         </div>
       )}
 
-      {isAdmin && (
-        <button
-          type="button"
-          onClick={() => navigate(buildRoyZappUrl({ view: "whatsapp-admin", sector: sectorId }))}
-          className="w-full flex items-center justify-center gap-1 text-[11px] text-zapp-text-muted hover:text-zapp-accent transition-colors py-1"
-        >
-          Abrir painel técnico de conexões <RefreshCw className="h-3 w-3" />
-        </button>
-      )}
 
       <ZappConnectionWizard
         open={showWizard}
