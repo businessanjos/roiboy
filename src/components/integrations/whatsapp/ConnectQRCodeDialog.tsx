@@ -35,53 +35,75 @@ export function ConnectQRCodeDialog({
   const [connected, setConnected] = useState(false);
   const [pollingActive, setPollingActive] = useState(false);
 
+  const MAX_ATTEMPTS = 4;
+  const [attempt, setAttempt] = useState(0);
+
   const fetchQRCode = useCallback(async () => {
     setLoading(true);
     setQrError(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-        body: {
-          action: "qrcode",
-          instance_name: instanceName,
-          sector_id: sectorId,
-          integration_id: integrationId,
-        },
-      });
+    setAttempt(0);
 
-      if (error) throw error;
+    let lastError: string | null = null;
 
-      const result = data?.data || data;
-      const instance = result?.instance || {};
+    for (let i = 1; i <= MAX_ATTEMPTS; i++) {
+      setAttempt(i);
+      try {
+        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+          body: {
+            action: "qrcode",
+            instance_name: instanceName,
+            sector_id: sectorId,
+            integration_id: integrationId,
+          },
+        });
 
-      // UAZAPI returns: { connected, instance: { qrcode, paircode, status } }
-      const qr =
-        instance?.qrcode ||
-        result?.qrcode ||
-        result?.base64 ||
-        instance?.paircode ||
-        result?.pairingCode ||
-        null;
+        if (error) throw error;
 
-      const status = instance?.status || result?.status;
-      if (status === "connected" || result?.connected === true) {
-        setConnected(true);
-        toast.success("WhatsApp conectado com sucesso!");
-        onConnected();
-        return;
+        const result = data?.data || data;
+        const instance = result?.instance || {};
+
+        const qr =
+          instance?.qrcode ||
+          result?.qrcode ||
+          result?.base64 ||
+          instance?.paircode ||
+          result?.pairingCode ||
+          null;
+
+        const status = instance?.status || result?.status;
+        if (status === "connected" || result?.connected === true) {
+          setConnected(true);
+          toast.success("WhatsApp conectado com sucesso!");
+          onConnected();
+          setLoading(false);
+          return;
+        }
+
+        if (qr) {
+          setQrCode(qr);
+          setPollingActive(true);
+          setLoading(false);
+          return;
+        }
+
+        lastError = "QR Code não retornado pela API.";
+      } catch (err) {
+        const msg = (err as Error)?.message || "";
+        console.error(`Failed to fetch QR code (attempt ${i}/${MAX_ATTEMPTS}):`, err);
+        lastError = msg || "Erro ao buscar QR Code.";
       }
 
-      if (qr) {
-        setQrCode(qr);
-        setPollingActive(true);
-      } else {
-        setQrError("QR Code não disponível. A instância pode já estar conectada ou ainda não foi criada.");
+      if (i < MAX_ATTEMPTS) {
+        // Exponential backoff: 1s, 2s, 4s (+ small jitter)
+        const delay = 1000 * Math.pow(2, i - 1) + Math.floor(Math.random() * 400);
+        await new Promise((r) => setTimeout(r, delay));
       }
-    } catch (err) {
-      console.error("Failed to fetch QR code:", err);
-      setQrError("Erro ao buscar QR Code. Tente novamente.");
-    } finally {
-      setLoading(false);
     }
+
+    setQrError(
+      `Não conseguimos gerar o QR Code após ${MAX_ATTEMPTS} tentativas. ${lastError ?? ""} Verifique o servidor WhatsApp e tente novamente.`.trim(),
+    );
+    setLoading(false);
   }, [instanceName, integrationId, sectorId, onConnected]);
 
   // Fetch QR code when dialog opens
