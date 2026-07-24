@@ -997,19 +997,26 @@ Deno.serve(async (req) => {
           // sync the live token immediately. Otherwise the UI shows "connected" while sends fail
           // with "invalid token".
           if (liveToken && liveToken !== token && intData?.id && isUazapiProvider(intData.config?.provider)) {
-            console.warn(`[uazapi-manager] 🔁 Syncing live token for instance "${instanceName}" from admin list`);
-            const mergedConfig = {
-              ...(intData.config || {}),
-              provider: "uazapi",
-              instance_name: instanceName,
-              instance_token: liveToken,
-            };
-            await supabase
-              .from("integrations")
-              .update({ config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" })
-              .eq("id", intData.id);
-            intData = { ...intData, config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" };
+            const conflictResp = await checkTokenSectorConflict(supabase, accountId, liveToken, intData.sector_id, intData.id);
+            if (conflictResp) {
+              console.warn(`[uazapi-manager] Skipping live-token auto-sync for "${instanceName}" — token already bound to another sector.`);
+              statusSnapshot = liveSnapshot;
+            } else {
+              console.warn(`[uazapi-manager] 🔁 Syncing live token for instance "${instanceName}" from admin list`);
+              const mergedConfig = {
+                ...(intData.config || {}),
+                provider: "uazapi",
+                instance_name: instanceName,
+                instance_token: liveToken,
+              };
+              await supabase
+                .from("integrations")
+                .update({ config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" })
+                .eq("id", intData.id);
+              intData = { ...intData, config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" };
+            }
           } else if (liveSnapshot.connected && token && !liveToken && isUazapiProvider(intData?.config?.provider)) {
+
             // Some admin responses omit the token. In that case, never trust name-only status;
             // verify the stored token so stale credentials don't appear connected.
             const tokenSnapshot = await resolveStatusFromToken(token, sectorServer);
