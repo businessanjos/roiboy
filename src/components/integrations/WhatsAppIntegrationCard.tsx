@@ -255,7 +255,14 @@ export function WhatsAppIntegrationCard({
               const cfg = integration.config as Record<string, unknown> | null;
               const intInstanceName = cfg?.instance_name as string || cfg?.profileName as string || "Instância sem nome";
               const intOwner = cfg?.owner as string;
-              const isIntegrationConnected = integration.status === "connected" || cfg?.connection_state === "open";
+              const integrationOnline = integration.status === "connected" || cfg?.connection_state === "open";
+              const integrationWebhookBroken = integrationOnline && cfg?.webhook_configured === false;
+              const isIntegrationConnected = integrationOnline && !integrationWebhookBroken;
+              const integrationStatusLabel = isIntegrationConnected
+                ? "Operacional"
+                : integrationWebhookBroken
+                  ? "Sem recebimento"
+                  : "Desconectado";
               const createdAt = integration.created_at ? new Date(integration.created_at) : null;
               const isCheckingThis = checkingStatusId === integration.id;
               const sectorLabel = integration.sector_id || "Padrão";
@@ -263,9 +270,18 @@ export function WhatsAppIntegrationCard({
               return (
                 <div key={integration.id} className="p-4 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={`p-2 rounded-full ${isIntegrationConnected ? "bg-green-100 dark:bg-green-900/30" : "bg-muted"}`}>
+                    <div className={cn(
+                      "p-2 rounded-full",
+                      isIntegrationConnected
+                        ? "bg-green-100 dark:bg-green-900/30"
+                        : integrationWebhookBroken
+                          ? "bg-amber-100 dark:bg-amber-900/30"
+                          : "bg-muted"
+                    )}>
                       {isIntegrationConnected ? (
                         <Wifi className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      ) : integrationWebhookBroken ? (
+                        <WifiOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                       ) : (
                         <WifiOff className="h-4 w-4 text-muted-foreground" />
                       )}
@@ -284,9 +300,12 @@ export function WhatsAppIntegrationCard({
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge 
                       variant={isIntegrationConnected ? "default" : "outline"}
-                      className={isIntegrationConnected ? "bg-green-600" : ""}
+                      className={cn(
+                        isIntegrationConnected && "bg-green-600",
+                        integrationWebhookBroken && "border-amber-500 text-amber-600"
+                      )}
                     >
-                      {isIntegrationConnected ? "Conectado" : "Desconectado"}
+                      {integrationStatusLabel}
                     </Badge>
                     <Button 
                       size="sm" 

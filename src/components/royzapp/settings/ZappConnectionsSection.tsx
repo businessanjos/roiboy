@@ -110,7 +110,7 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
       });
       if (error) throw error;
 
-      if (data?.success || data?.webhook_configured) {
+      if (data?.success || data?.webhook_configured || data?.data?.success || data?.data?.webhook_configured) {
         toast.success("Recebimento reativado para esta instância");
         fetchConnections();
         return;
