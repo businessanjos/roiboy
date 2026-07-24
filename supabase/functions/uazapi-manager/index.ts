@@ -1139,6 +1139,78 @@ Deno.serve(async (req) => {
         );
       }
 
+    } else if (action === "adopt_instance") {
+      // Adopt an existing UAZAPI instance by pasting its instance_token (created manually
+      // on the UAZAPI panel). Validates the token against the sector server, then persists
+      // it into integrations.config so we skip creating a duplicate instance.
+      const pastedToken = getString(payload.instance_token)?.trim();
+      const providedName = getString(payload.instance_name)?.trim() || instanceName;
+
+      if (!pastedToken) {
+        return new Response(
+          JSON.stringify({ error: "Informe o instance token da UAZAPI." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Validate token against the resolved sector server.
+      const snapshot = await resolveStatusFromToken(pastedToken, sectorServer);
+      if (snapshot.loggedOut) {
+        return new Response(
+          JSON.stringify({ error: "Token inválido ou não reconhecido pelo servidor deste setor. Verifique se copiou o instance token correto (não o admin token)." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Persist the adopted token on the current integration (or create/update).
+      const newStatus = snapshot.connected ? "connected" : "disconnected";
+      if (intData?.id) {
+        const mergedConfig = {
+          ...(intData.config || {}),
+          provider: "uazapi",
+          instance_name: providedName,
+          instance_token: pastedToken,
+          ...(snapshot.owner ? { owner: snapshot.owner } : {}),
+        };
+        await supabase
+          .from("integrations")
+          .update({ config: mergedConfig, status: newStatus })
+          .eq("id", intData.id);
+      } else {
+        await supabase.from("integrations").insert({
+          account_id: accountId,
+          type: "whatsapp",
+          sector_id: sector_id || null,
+          status: newStatus,
+          config: {
+            provider: "uazapi",
+            instance_name: providedName,
+            instance_token: pastedToken,
+            ...(snapshot.owner ? { owner: snapshot.owner } : {}),
+          },
+        });
+      }
+
+      // If not connected yet, request a QR code with the adopted token.
+      let qrPayload: any = null;
+      if (!snapshot.connected) {
+        try {
+          qrPayload = await uazapiInstance("/instance/connect", "POST", pastedToken, {}, sectorServer);
+        } catch (e) {
+          console.warn(`[uazapi-manager] adopt: /instance/connect failed (non-fatal):`, e);
+        }
+      }
+
+      result = {
+        adopted: true,
+        connected: snapshot.connected,
+        owner: snapshot.owner || null,
+        instance_name: providedName,
+        ...(qrPayload || {}),
+      };
+
+    } else if (action === "send_text") {
+
     
     
     } else if (action === "send_text") {
