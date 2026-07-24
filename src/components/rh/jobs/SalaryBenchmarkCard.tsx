@@ -55,6 +55,71 @@ function comparePositioning(offered: { min?: number | null; max?: number | null 
   return { tone: "red", label: "Abaixo do mercado (<P25)", icon: AlertTriangle };
 }
 
+function computeAttractiveness(params: {
+  offered: { min?: number | null; max?: number | null };
+  market?: BenchmarkResult["market_range"];
+  offeredBenefits: string[];
+  typicalBenefits: string[];
+  missingBenefits: string[];
+  extraBenefits: string[];
+  workModel?: string | null;
+  city?: string | null;
+  state?: string | null;
+}) {
+  const { offered, market, offeredBenefits, typicalBenefits, missingBenefits, extraBenefits, workModel, city } = params;
+
+  // 1) Salário (0-55 pts)
+  let salaryScore = 25;
+  let salaryReason = "Faixa não informada — candidatos costumam ignorar vagas sem salário.";
+  const mid = offered.min && offered.max ? (offered.min + offered.max) / 2 : offered.min || offered.max || null;
+  if (mid && market) {
+    const { p25, p50, p75 } = market;
+    if (p75 && mid > p75) { salaryScore = 55; salaryReason = `Acima do P75 (${fmtBRL(p75)}) — muito atrativo.`; }
+    else if (p50 && mid >= p50) { salaryScore = 45; salaryReason = `Entre P50 e P75 — competitivo no topo do mercado.`; }
+    else if (p25 && mid >= p25) { salaryScore = 30; salaryReason = `Entre P25 e P50 — mediano; talentos top podem pular.`; }
+    else if (p25 && mid < p25) { salaryScore = 12; salaryReason = `Abaixo do P25 (${fmtBRL(p25)}) — baixa conversão esperada.`; }
+  } else if (!mid) {
+    salaryScore = 20;
+  }
+
+  // 2) Benefícios (0-30 pts)
+  const typicalCount = typicalBenefits.length || 1;
+  const covered = typicalBenefits.filter(t => offeredBenefits.some(o => o.toLowerCase().includes(t.toLowerCase()) || t.toLowerCase().includes(o.toLowerCase()))).length;
+  const coverageRatio = Math.min(1, covered / typicalCount);
+  let benefitsScore = Math.round(coverageRatio * 22);
+  benefitsScore += Math.min(8, (extraBenefits?.length || 0) * 2);
+  benefitsScore = Math.min(30, benefitsScore);
+  const benefitsReason = `${covered}/${typicalCount} benefícios padrão cobertos${extraBenefits?.length ? ` · +${extraBenefits.length} diferenciais` : ""}${missingBenefits?.length ? ` · faltam ${missingBenefits.length}` : ""}.`;
+
+  // 3) Modelo/Localização (0-15 pts)
+  let locScore = 8;
+  let locReason = city ? `Presencial em ${city}` : "Local não definido";
+  if (workModel === "remote") { locScore = 15; locReason = "Remoto — alcance nacional."; }
+  else if (workModel === "hybrid") { locScore = 11; locReason = `Híbrido${city ? ` em ${city}` : ""} — bom equilíbrio.`; }
+  else if (workModel === "onsite") {
+    const bigCities = ["são paulo", "sao paulo", "rio de janeiro", "belo horizonte", "curitiba", "porto alegre", "brasília", "brasilia", "florianópolis", "florianopolis"];
+    if (city && bigCities.some(c => city.toLowerCase().includes(c))) { locScore = 10; locReason = `Presencial em ${city} — bom pool local.`; }
+    else if (city) { locScore = 6; locReason = `Presencial em ${city} — pool local restrito.`; }
+    else { locScore = 5; locReason = "Presencial sem cidade definida."; }
+  }
+
+  const total = Math.min(100, salaryScore + benefitsScore + locScore);
+  let tier: { label: string; tone: "emerald" | "amber" | "red" | "blue"; hire: string };
+  if (total >= 80) tier = { label: "Excelente", tone: "emerald", hire: "Muito alta — deve atrair top talents rapidamente." };
+  else if (total >= 60) tier = { label: "Boa", tone: "blue", hire: "Boa — expectativa de bons candidatos qualificados." };
+  else if (total >= 40) tier = { label: "Média", tone: "amber", hire: "Moderada — pode exigir mais esforço de busca ativa." };
+  else tier = { label: "Baixa", tone: "red", hire: "Baixa — considere revisar salário/benefícios antes de publicar." };
+
+  return {
+    total,
+    tier,
+    breakdown: [
+      { label: "Salário", score: salaryScore, max: 55, reason: salaryReason },
+      { label: "Benefícios", score: benefitsScore, max: 30, reason: benefitsReason },
+      { label: "Modelo & Local", score: locScore, max: 15, reason: locReason },
+    ],
+  };
+
 export function SalaryBenchmarkCard({ job, city, state }: Props) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BenchmarkResult | null>(null);
