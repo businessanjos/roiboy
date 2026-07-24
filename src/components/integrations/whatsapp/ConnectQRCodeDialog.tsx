@@ -115,6 +115,53 @@ export function ConnectQRCodeDialog({
     setLoading(false);
   }, [instanceName, integrationId, sectorId, onConnected]);
 
+  const resetConnection = useCallback(async () => {
+    setResetting(true);
+    setQrError(null);
+    setQrCode(null);
+    setPollingActive(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: {
+          action: "reset_instance",
+          instance_name: instanceName,
+          sector_id: sectorId,
+          integration_id: integrationId,
+        },
+      });
+      if (error) throw error;
+
+      const result = data?.data || data;
+      const instance = result?.instance || {};
+      const qr =
+        instance?.qrcode?.base64 ||
+        (typeof instance?.qrcode === "string" ? instance.qrcode : null) ||
+        result?.qrcode?.base64 ||
+        (typeof result?.qrcode === "string" ? result.qrcode : null) ||
+        result?.base64 ||
+        result?.qr_code ||
+        null;
+
+      if (qr) {
+        setQrCode(qr);
+        setPollingActive(true);
+        toast.success("Instância reprovisionada. Escaneie o novo QR Code.");
+      } else {
+        // Fallback: run the normal QR flow (already re-tries with backoff)
+        toast.info("Instância reprovisionada. Gerando QR Code...");
+        await fetchQRCode();
+      }
+    } catch (err) {
+      const msg = await extractEdgeFunctionError(err, "Falha ao resetar a conexão.");
+      console.error("Reset connection failed:", err);
+      setQrError(msg);
+      toast.error(msg);
+    } finally {
+      setResetting(false);
+    }
+  }, [instanceName, integrationId, sectorId, fetchQRCode]);
+
+
   // Fetch QR code when dialog opens
   useEffect(() => {
     if (open && !connected) {
