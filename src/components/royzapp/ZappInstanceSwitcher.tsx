@@ -104,7 +104,7 @@ export function ZappInstanceSwitcher({
       >
         <SelectTrigger
           className={cn(
-            "h-8 min-w-[180px] max-w-[260px] text-xs bg-zapp-panel border-zapp-border text-zapp-text",
+            "h-8 min-w-[140px] max-w-[200px] text-xs bg-zapp-panel border-zapp-border text-zapp-text",
             "focus:ring-zapp-accent focus:ring-offset-0"
           )}
         >
