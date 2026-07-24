@@ -59,6 +59,45 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   const onNewInboundMessageRef = useRef(onNewInboundMessage);
   onNewInboundMessageRef.current = onNewInboundMessage;
 
+  // Per-conversation high-water mark for the last message. Used to reconcile
+  // out-of-order realtime events (INSERT bumps vs UPDATE syncs vs debounced
+  // refetches) so the list never regresses to an older message as "last".
+  // key: zapp_conversation_id -> { at: epoch ms, msgId?: id/external id }
+  const lastMessageHWMRef = useRef<Map<string, { at: number; msgId?: string }>>(new Map());
+
+  const reconcileBump = useCallback(
+    (convId: string, at: string | null | undefined, msgId?: string | null): boolean => {
+      if (!convId || !at) return false;
+      const atMs = new Date(at).getTime();
+      if (!Number.isFinite(atMs)) return false;
+      const prev = lastMessageHWMRef.current.get(convId);
+      if (prev) {
+        if (atMs < prev.at) return false;
+        // Tie on timestamp: only accept if incoming has a strictly greater id.
+        if (atMs === prev.at) {
+          if (!msgId || !prev.msgId || String(msgId) <= String(prev.msgId)) return false;
+        }
+      }
+      lastMessageHWMRef.current.set(convId, { at: atMs, msgId: msgId || prev?.msgId });
+      return true;
+    },
+    []
+  );
+
+  const seedHWMFromAssignments = useCallback((rows: ConversationAssignment[]) => {
+    for (const a of rows) {
+      const convId = a.zapp_conversation?.id || (a as any).zapp_conversation_id;
+      const at = a.zapp_conversation?.last_message_at;
+      if (!convId || !at) continue;
+      const atMs = new Date(at).getTime();
+      if (!Number.isFinite(atMs)) continue;
+      const prev = lastMessageHWMRef.current.get(convId);
+      if (!prev || atMs > prev.at) {
+        lastMessageHWMRef.current.set(convId, { at: atMs, msgId: prev?.msgId });
+      }
+    }
+  }, []);
+
   const fetchMessagesRef = useRef<(id: string) => Promise<void>>();
 
   // Build the assignments select query (shared between fetchAssignmentsOnly and fetchData)
