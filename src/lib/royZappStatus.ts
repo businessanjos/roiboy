@@ -51,7 +51,11 @@ export function getInstanceStatus(input: InstanceStatusInput): InstanceStatusRes
   const state = (input.connection_state || "").toLowerCase();
   const status = (input.status || "").toLowerCase();
 
-  const connected = status === "connected" || state === "open" || state === "connected";
+  // `integrations.status` is the server-synced source of truth. Some older
+  // records still carry a stale `config.connection_state=connected`; never let
+  // that override an explicit DB/server status of disconnected/logged out.
+  const explicitlyDisconnected = ["disconnected", "logged_out", "close", "closed"].includes(status);
+  const connected = !explicitlyDisconnected && (status === "connected" || state === "open" || state === "connected");
   // Meta bypasses webhook check (webhook is server-managed, not per-instance).
   // For UAZAPI, only `false` breaks it — `undefined` = unknown → assume ok.
   const webhookBroken = connected && !isMeta && input.webhook_configured === false;
