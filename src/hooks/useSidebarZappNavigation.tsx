@@ -1,3 +1,4 @@
+import { buildRoyZappUrl } from "@/lib/royZappRoutes";
 import { useCallback, useState, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,9 +36,7 @@ export function useSidebarZappNavigation() {
   const [pendingSectorId, setPendingSectorId] = useState<string | null>(null);
 
   const completeNavigation = useCallback((sectorId: string, integrationId?: string) => {
-    const url = integrationId 
-      ? `/roy-zapp?sector=${sectorId}&integrationId=${integrationId}`
-      : `/roy-zapp?sector=${sectorId}`;
+    const url = buildRoyZappUrl({ sector: sectorId, integrationId: integrationId ?? null });
     navigate(url);
     toast.info("Abrindo RoyZapp...");
   }, [navigate]);

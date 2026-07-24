@@ -79,9 +79,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   closed: { label: "Finalizado", color: "text-muted-foreground", bgColor: "bg-muted-foreground" },
 };
 
-type ZappView = "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin";
-
-const ZAPP_VIEWS = new Set<ZappView>(["inbox", "team", "departments", "tags", "settings", "playbook", "marketing", "sector", "meetings", "whatsapp-admin"]);
+import { ZAPP_VIEW_SET as ZAPP_VIEWS, type ZappView } from "@/lib/royZappRoutes";
 
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
@@ -271,14 +269,20 @@ export default function RoyZapp() {
 
   // UI state
   const [activeView, setActiveView] = useState<ZappView>(
-    viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView) ? (viewFromUrl as ZappView) : "inbox"
+    ZAPP_VIEWS.has(viewFromUrl as ZappView) ? (viewFromUrl as ZappView) : "inbox"
   );
 
   useEffect(() => {
     if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
       setActiveView(viewFromUrl as ZappView);
+    } else if (viewFromUrl) {
+      // Unknown view in URL — sanitize by removing the param so bookmarks
+      // and stale links never leave the user on a blank screen.
+      const next = new URLSearchParams(searchParams);
+      next.delete("view");
+      setSearchParams(next, { replace: true });
     }
-  }, [viewFromUrl]);
+  }, [viewFromUrl, searchParams, setSearchParams]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUnread, setFilterUnread] = useState(false);

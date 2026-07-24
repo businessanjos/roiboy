@@ -1,3 +1,4 @@
+import { buildRoyZappUrl } from "@/lib/royZappRoutes";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, X, Mic, Image as ImageIcon, Video, FileText, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ export function FailedZappSendsAlert() {
   }
 
   const goToConversation = (item: FailedSend) => {
-    navigate(`/roy-zapp?conversation=${item.zapp_conversation_id}`);
+    navigate(buildRoyZappUrl({ conversation: item.zapp_conversation_id }));
   };
 
   return (

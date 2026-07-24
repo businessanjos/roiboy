@@ -1,3 +1,4 @@
+import { buildRoyZappUrl } from "@/lib/royZappRoutes";
 import { useCallback, useState, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,8 +51,16 @@ export function useZappNavigation() {
   const buildNavigationUrl = useCallback((integrationId: string, options: ZappNavigationOptions) => {
     const { phone, leadId, clientId, name } = options;
     const normalizedPhone = phone?.replace(/\D/g, "") || "";
-    const encodedName = encodeURIComponent(name || "");
-    return `/roy-zapp?sector=vendas&integrationId=${integrationId}&newPhone=${normalizedPhone}&newName=${encodedName}${leadId ? `&leadId=${leadId}` : ""}${clientId ? `&clientId=${clientId}` : ""}`;
+    return buildRoyZappUrl({
+      sector: "vendas",
+      integrationId,
+      extra: {
+        newPhone: normalizedPhone,
+        newName: name || "",
+        leadId: leadId ?? null,
+        clientId: clientId ?? null,
+      },
+    });
   }, []);
 
   const navigateToInstance = useCallback(async (integrationId: string, options: ZappNavigationOptions, sectorHasPin: boolean = false) => {
@@ -133,8 +142,15 @@ export function useZappNavigation() {
       if (!allIntegrations || allIntegrations.length === 0) {
         // No integrations, navigate without integrationId (fallback)
         const normalizedPhone = phone.replace(/\D/g, "");
-        const encodedName = encodeURIComponent(name || "");
-        const navigationUrl = `/roy-zapp?sector=vendas&newPhone=${normalizedPhone}&newName=${encodedName}${leadId ? `&leadId=${leadId}` : ""}${clientId ? `&clientId=${clientId}` : ""}`;
+        const navigationUrl = buildRoyZappUrl({
+          sector: "vendas",
+          extra: {
+            newPhone: normalizedPhone,
+            newName: name || "",
+            leadId: leadId ?? null,
+            clientId: clientId ?? null,
+          },
+        });
         completeNavigation(navigationUrl, options.openInNewTab);
         setLoading(false);
         return;

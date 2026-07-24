@@ -70,6 +70,7 @@ import {
   Telescope,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
+import { buildRoyZappUrl } from "@/lib/royZappRoutes";
 
 export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "gestao-tech" | "rh" | "eventos" | "reuniao-lideres" | "configuracoes";
 
@@ -188,16 +189,16 @@ export const sectors: Sector[] = [
     icon: MessageSquare,
     color: "text-amber-600",
     bgColor: "bg-amber-500/10",
-    defaultRoute: "/roy-zapp",
+    defaultRoute: buildRoyZappUrl(),
     navItems: [
-      { to: "/roy-zapp", icon: MessageSquare, label: "Conversas" },
-      { to: "/roy-zapp?view=team", icon: Users, label: "Equipe" },
-      { to: "/roy-zapp?view=departments", icon: Building2, label: "Departamentos" },
-      { to: "/roy-zapp?view=tags", icon: Tags, label: "Tags" },
-      { to: "/roy-zapp?view=settings", icon: Settings, label: "Configurações" },
-      { to: "/roy-zapp?view=whatsapp-admin", icon: Plug, label: "Conexões WhatsApp" },
-      { to: "/roy-zapp?view=playbook", icon: BookOpen, label: "Playbook" },
-      { to: "/roy-zapp?view=marketing", icon: Megaphone, label: "Eventos" },
+      { to: buildRoyZappUrl(), icon: MessageSquare, label: "Conversas" },
+      { to: buildRoyZappUrl({ view: "team" }), icon: Users, label: "Equipe" },
+      { to: buildRoyZappUrl({ view: "departments" }), icon: Building2, label: "Departamentos" },
+      { to: buildRoyZappUrl({ view: "tags" }), icon: Tags, label: "Tags" },
+      { to: buildRoyZappUrl({ view: "settings" }), icon: Settings, label: "Configurações" },
+      { to: buildRoyZappUrl({ view: "whatsapp-admin" }), icon: Plug, label: "Conexões WhatsApp" },
+      { to: buildRoyZappUrl({ view: "playbook" }), icon: BookOpen, label: "Playbook" },
+      { to: buildRoyZappUrl({ view: "marketing" }), icon: Megaphone, label: "Eventos" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
