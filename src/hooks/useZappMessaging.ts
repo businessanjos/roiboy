@@ -535,11 +535,12 @@ export function useZappMessaging({
             ));
           }
           
-          supabase.from("zapp_conversations").update({
+          await supabase.from("zapp_conversations").update({
             last_message_at: now,
             last_message_preview: messageContent.substring(0, 100),
             unread_count: 0,
           }).eq("id", conversationId);
+
           
           onConversationUpdated?.(conversationId, now, messageContent.substring(0, 100));
         }
@@ -657,11 +658,12 @@ export function useZappMessaging({
                 ));
               }
               
-              supabase.from("zapp_conversations").update({
+              await supabase.from("zapp_conversations").update({
                 last_message_at: now,
                 last_message_preview: messageContent.substring(0, 100),
                 unread_count: 0,
               }).eq("id", conversationId);
+
               
               onConversationUpdated?.(conversationId, now, messageContent.substring(0, 100));
             }
