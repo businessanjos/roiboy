@@ -286,7 +286,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     } catch (error) {
       console.error("Error fetching assignments:", error);
     }
-  }, [accountId, sectorId, fetchSupplementaryData, ASSIGNMENTS_SELECT]);
+  }, [accountId, sectorId, fetchSupplementaryData, ASSIGNMENTS_SELECT, seedHWMFromAssignments]);
 
   // Fetch assignments as part of initial data load (with department id already known)
   const fetchAssignmentsForDepartment = useCallback(async (departmentId: string): Promise<ConversationAssignment[]> => {
