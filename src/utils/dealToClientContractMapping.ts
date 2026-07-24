@@ -279,9 +279,9 @@ export async function fetchDealCustomFieldValues(dealId: string): Promise<DealFi
  */
 export function expandBreakdownToInstallments(
   breakdown: DealPaymentBreakdownItem[] | undefined | null
-): Array<{ amount: number; due_date: string; method: string; method_label?: string }> {
+): Array<{ amount: number; due_date: string; method: string; method_label?: string; is_cash_collect?: boolean }> {
   if (!breakdown || breakdown.length === 0) return [];
-  const out: Array<{ amount: number; due_date: string; method: string; method_label?: string }> = [];
+  const out: Array<{ amount: number; due_date: string; method: string; method_label?: string; is_cash_collect?: boolean }> = [];
   for (const item of breakdown) {
     const total = Number(item.amount) || 0;
     const count = Math.max(1, Math.floor(Number(item.installments) || 0));
@@ -298,6 +298,7 @@ export function expandBreakdownToInstallments(
         due_date: d.toISOString().slice(0, 10),
         method: item.method,
         method_label: item.method_label,
+        is_cash_collect: !!item.is_cash_collect,
       });
     }
   }
