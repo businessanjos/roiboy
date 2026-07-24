@@ -1569,8 +1569,12 @@ Deno.serve(async (req) => {
       const inst = all.find((i) => getInstanceName(i) === payload.instance_name);
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const statusSnapshot = resolveStatusSnapshot(inst);
-      await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: statusSnapshot.connected ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: getInstanceToken(inst), owner: getInstanceOwner(inst) } });
+      const addToken = getInstanceToken(inst);
+      const addConflict = await checkTokenSectorConflict(supabase, accountId, addToken, sector_id, null);
+      if (addConflict) return addConflict;
+      await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: statusSnapshot.connected ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: addToken, owner: getInstanceOwner(inst) } });
       result = { success: true };
+
     
     } else if (action === "verify_instance_pin") {
       const { data: int } = await supabase.from("integrations").select("pin_hash").eq("id", payload.integration_id).single();
