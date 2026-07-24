@@ -435,7 +435,7 @@ async function resolveLiveStatusesForIntegrations(
     const remaining = new Map(items.map((i) => [i.name, i.token]));
 
     try {
-      const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, server);
+      const allRaw = await uazapiAdmin("/instance/all", "GET", undefined, server);
       const all = extractInstancesList(allRaw);
 
       for (const [instanceName, token] of Array.from(remaining.entries())) {
@@ -858,7 +858,7 @@ Deno.serve(async (req) => {
       };
 
       try {
-        const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, sectorServer);
+        const allRaw = await uazapiAdmin("/instance/all", "GET", undefined, sectorServer);
         const all = extractInstancesList(allRaw);
         const inst = selectBestInstanceMatch(all, instanceName, token);
 
@@ -1289,7 +1289,7 @@ Deno.serve(async (req) => {
       result = { groups: (Array.isArray(r) ? r : r.groups || []).map((g:any) => ({ group_jid: g.JID||g.jid||g.id, name: g.Name||g.name||g.Subject })) };
     
     } else if (action === "list_instances") {
-      const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, sectorServer);
+      const allRaw = await uazapiAdmin("/instance/all", "GET", undefined, sectorServer);
       const all = extractInstancesList(allRaw);
       
       // Get all integrations for this account to know which are linked
@@ -1399,7 +1399,7 @@ Deno.serve(async (req) => {
       };
     
     } else if (action === "add_instance_to_sector") {
-      const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, sectorServer);
+      const allRaw = await uazapiAdmin("/instance/all", "GET", undefined, sectorServer);
       const all = extractInstancesList(allRaw);
       const inst = all.find((i) => getInstanceName(i) === payload.instance_name);
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
