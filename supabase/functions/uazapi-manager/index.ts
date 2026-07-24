@@ -45,6 +45,62 @@ async function resolveServerForSector(
   return GLOBAL_SERVER;
 }
 
+// Prevents saving the same UAZAPI instance_token on two integrations in different sectors.
+// Returns a Response (409) when a conflict is found, or null when it's safe to proceed.
+// The DB has a trigger enforcing this too — this helper just produces a nicer message.
+async function checkTokenSectorConflict(
+  supabase: any,
+  accountId: string,
+  instanceToken: string | null | undefined,
+  sectorId: string | null | undefined,
+  currentIntegrationId?: string | null,
+): Promise<Response | null> {
+  const token = (instanceToken || "").trim();
+  if (!token) return null;
+  try {
+    let query = supabase
+      .from("integrations")
+      .select("id, sector_id, display_name, config")
+      .eq("account_id", accountId)
+      .eq("type", "whatsapp")
+      .filter("config->>instance_token", "eq", token);
+    if (currentIntegrationId) query = query.neq("id", currentIntegrationId);
+    const { data } = await query;
+    const conflict = (data || []).find((row: any) => {
+      const provider = row?.config?.provider;
+      if (provider && provider !== "uazapi") return false;
+      const rowSector = row?.sector_id || null;
+      const targetSector = sectorId || null;
+      return rowSector !== targetSector;
+    });
+    if (conflict) {
+      const name =
+        conflict.display_name ||
+        conflict.config?.instance_name ||
+        conflict.id;
+      const sector = conflict.sector_id || "(sem setor)";
+      const message =
+        `Este instance_token já está vinculado à integração "${name}" (setor ${sector}). ` +
+        `Cada número/instância WhatsApp precisa ter um token exclusivo por setor. ` +
+        `Reconecte via QR Code para gerar um token novo antes de vincular a este setor.`;
+      console.error(`[uazapi-manager] 🚫 token/sector conflict:`, {
+        token_suffix: token.slice(-6),
+        target_sector: sectorId,
+        conflict_id: conflict.id,
+        conflict_sector: conflict.sector_id,
+      });
+      return new Response(
+        JSON.stringify({ error: message, code: "token_sector_conflict", conflict_integration_id: conflict.id }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+  } catch (err) {
+    console.warn("[uazapi-manager] checkTokenSectorConflict failed (allowing write, DB trigger will still guard):", err);
+  }
+  return null;
+}
+
+
 async function resolveServerForIntegrationId(
   supabase: any,
   accountId: string,
@@ -941,19 +997,26 @@ Deno.serve(async (req) => {
           // sync the live token immediately. Otherwise the UI shows "connected" while sends fail
           // with "invalid token".
           if (liveToken && liveToken !== token && intData?.id && isUazapiProvider(intData.config?.provider)) {
-            console.warn(`[uazapi-manager] 🔁 Syncing live token for instance "${instanceName}" from admin list`);
-            const mergedConfig = {
-              ...(intData.config || {}),
-              provider: "uazapi",
-              instance_name: instanceName,
-              instance_token: liveToken,
-            };
-            await supabase
-              .from("integrations")
-              .update({ config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" })
-              .eq("id", intData.id);
-            intData = { ...intData, config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" };
+            const conflictResp = await checkTokenSectorConflict(supabase, accountId, liveToken, intData.sector_id, intData.id);
+            if (conflictResp) {
+              console.warn(`[uazapi-manager] Skipping live-token auto-sync for "${instanceName}" — token already bound to another sector.`);
+              statusSnapshot = liveSnapshot;
+            } else {
+              console.warn(`[uazapi-manager] 🔁 Syncing live token for instance "${instanceName}" from admin list`);
+              const mergedConfig = {
+                ...(intData.config || {}),
+                provider: "uazapi",
+                instance_name: instanceName,
+                instance_token: liveToken,
+              };
+              await supabase
+                .from("integrations")
+                .update({ config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" })
+                .eq("id", intData.id);
+              intData = { ...intData, config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" };
+            }
           } else if (liveSnapshot.connected && token && !liveToken && isUazapiProvider(intData?.config?.provider)) {
+
             // Some admin responses omit the token. In that case, never trust name-only status;
             // verify the stored token so stale credentials don't appear connected.
             const tokenSnapshot = await resolveStatusFromToken(token, sectorServer);
@@ -1186,8 +1249,13 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Block adopting a token that is already tied to another sector.
+      const adoptConflict = await checkTokenSectorConflict(supabase, accountId, pastedToken, sector_id, intData?.id);
+      if (adoptConflict) return adoptConflict;
+
       // Register webhook on the server so inbound messages reach us. Non-fatal.
       const webhookState = await registerWebhookForInstance(pastedToken, providedName, sectorServer);
+
 
       // Persist the adopted token on the current integration (or create/update).
       const newStatus = snapshot.connected ? "connected" : "disconnected";
@@ -1501,8 +1569,12 @@ Deno.serve(async (req) => {
       const inst = all.find((i) => getInstanceName(i) === payload.instance_name);
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const statusSnapshot = resolveStatusSnapshot(inst);
-      await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: statusSnapshot.connected ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: getInstanceToken(inst), owner: getInstanceOwner(inst) } });
+      const addToken = getInstanceToken(inst);
+      const addConflict = await checkTokenSectorConflict(supabase, accountId, addToken, sector_id, null);
+      if (addConflict) return addConflict;
+      await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: statusSnapshot.connected ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: addToken, owner: getInstanceOwner(inst) } });
       result = { success: true };
+
     
     } else if (action === "verify_instance_pin") {
       const { data: int } = await supabase.from("integrations").select("pin_hash").eq("id", payload.integration_id).single();
