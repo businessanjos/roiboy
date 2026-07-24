@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePermissions } from "@/hooks/usePermissions";
+import { cn } from "@/lib/utils";
 
 import type { Tables } from "@/integrations/supabase/types";
 
