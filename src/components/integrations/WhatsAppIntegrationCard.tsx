@@ -117,6 +117,52 @@ export function WhatsAppIntegrationCard({
     }
   }, [onRefresh]);
 
+  const [syncingHistoryId, setSyncingHistoryId] = useState<string | null>(null);
+
+  const handleSyncHistoryById = useCallback(async (integrationId: string) => {
+    const daysStr = window.prompt(
+      "Sincronizar histórico de mensagens desta instância.\n\nQuantos dias para trás você quer importar?\n(Ex.: 7, 30, 90, 180)",
+      "30",
+    );
+    if (!daysStr) return;
+    const days = Math.max(1, Math.min(365, Number(daysStr)));
+    if (!Number.isFinite(days)) {
+      toast.error("Número de dias inválido");
+      return;
+    }
+
+    setSyncingHistoryId(integrationId);
+    const toastId = toast.loading(`Importando histórico dos últimos ${days} dias… isso pode levar alguns minutos.`);
+    try {
+      const start = new Date();
+      start.setDate(start.getDate() - days);
+      const { data, error } = await supabase.functions.invoke("sync-uazapi-history-to-zapp", {
+        body: {
+          integration_id: integrationId,
+          start: start.toISOString(),
+          max_chats: 2000,
+          max_messages_per_chat: 5000,
+        },
+      });
+      if (error) throw error;
+      const stats = (data as any)?.stats ?? {};
+      const inserted = stats.messagesInserted ?? 0;
+      const chats = stats.chatsSynced ?? 0;
+      const duplicates = stats.duplicates ?? 0;
+      toast.success(
+        `${inserted} mensagem(ns) importada(s) em ${chats} conversa(s)${duplicates ? ` • ${duplicates} já existiam` : ""}`,
+        { id: toastId },
+      );
+      onRefresh();
+    } catch (err) {
+      console.error("Sync history error:", err);
+      toast.error(err instanceof Error ? err.message : "Erro ao importar histórico", { id: toastId });
+    } finally {
+      setSyncingHistoryId(null);
+    }
+  }, [onRefresh]);
+
+
   const handleDisconnectById = useCallback(async (integrationId: string) => {
     if (!confirm("Tem certeza que deseja desconectar esta instância?")) {
       return;
