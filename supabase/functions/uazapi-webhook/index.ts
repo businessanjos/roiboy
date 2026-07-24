@@ -424,9 +424,32 @@ Deno.serve(async (req) => {
 
     // Find account - try different methods (with in-memory cache)
     let integration = null;
+
+    // Method 0: Find by instance_token from payload first (most reliable when
+    // multiple integrations share the same instance name across sectors/servers).
+    const payloadToken = (payload as Record<string, unknown>).token as string | undefined;
+    if (payloadToken) {
+      const cached = getCached(integrationCache, `token:${payloadToken}`);
+      if (cached) {
+        integration = cached;
+      } else {
+        const { data: results } = await supabase
+          .from("integrations")
+          .select("id, account_id, config, sector_id")
+          .eq("type", "whatsapp")
+          .filter("config->>instance_token", "eq", payloadToken)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (results && results.length > 0) {
+          integration = results[0];
+          setCache(integrationCache, `token:${payloadToken}`, integration);
+        }
+      }
+    }
     
     // Method 1: Find by instance name if provided
-    if (instanceName) {
+    if (!integration && instanceName) {
       const possibleNames = [
         instanceName,
         instanceName.replace(/_/g, "-"),
@@ -465,7 +488,6 @@ Deno.serve(async (req) => {
     }
     
     // Method 2: Find by instance_token from payload (more reliable)
-    const payloadToken = (payload as Record<string, unknown>).token as string | undefined;
     if (!integration && payloadToken) {
       const cached = getCached(integrationCache, `token:${payloadToken}`);
       if (cached) {
@@ -2322,8 +2344,7 @@ Deno.serve(async (req) => {
             last_connection_update: new Date().toISOString(),
           },
         })
-        .eq("account_id", accountId)
-        .eq("type", "whatsapp");
+        .eq("id", integration.id);
 
       return new Response(
         JSON.stringify({ success: true, event: eventType }),
@@ -2339,15 +2360,14 @@ Deno.serve(async (req) => {
       await supabase
         .from("integrations")
         .update({
-          status: "pending",
+          status: "disconnected",
           config: {
             ...((integration.config as Record<string, unknown>) || {}),
             qrcode_base64: qrcode,
             qrcode_updated_at: new Date().toISOString(),
           },
         })
-        .eq("account_id", accountId)
-        .eq("type", "whatsapp");
+        .eq("id", integration.id);
 
       return new Response(
         JSON.stringify({ success: true, event: eventType }),

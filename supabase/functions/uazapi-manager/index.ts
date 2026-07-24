@@ -885,7 +885,7 @@ Deno.serve(async (req) => {
             last_auto_reconnect_at: new Date().toISOString(),
           };
           await supabase.from("integrations")
-            .update({ config: mergedConfig, status: "pending" })
+            .update({ config: mergedConfig, status: "disconnected" })
             .eq("id", reconnectIntegration.id);
 
           // Throttled notification (once per 1h) to account admins + sector members
@@ -949,7 +949,7 @@ Deno.serve(async (req) => {
     } else if (action === "create") {
       const r = await uazapiAdmin("/instance/init", "POST", { name: instanceName }, sectorServer);
       const newToken = r.token || r.instance?.token;
-      await supabase.from("integrations").upsert({ account_id: accountId, type: "whatsapp", sector_id: sector_id || null, status: "pending", config: { provider: "uazapi", instance_name: instanceName, instance_token: newToken } }, { onConflict: "account_id,type,sector_id" });
+      await supabase.from("integrations").upsert({ account_id: accountId, type: "whatsapp", sector_id: sector_id || null, status: "disconnected", config: { provider: "uazapi", instance_name: instanceName, instance_token: newToken } }, { onConflict: "account_id,type,sector_id" });
       result = { ...r, token: newToken };
     
     } else if (action === "connect" || action === "qrcode") {
@@ -973,7 +973,7 @@ Deno.serve(async (req) => {
             instance_name: instName,
             instance_token: newToken,
           };
-          await supabase.from("integrations").update({ config: mergedConfig, status: "pending" }).eq("id", intData.id);
+          await supabase.from("integrations").update({ config: mergedConfig, status: "disconnected" }).eq("id", intData.id);
         }
         return newToken;
       };

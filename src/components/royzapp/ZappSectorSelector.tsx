@@ -152,12 +152,9 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
       try {
         const [integrations, sectorSettings, departments, conversations, lastEvents] = await withRetry(async () => {
           const [intRes, settingsRes, deptsRes, convsRes, lastRes] = await Promise.all([
-            supabase
-              .from("integrations")
-              .select("id, sector_id, status, config, pin_hash")
-              .eq("account_id", currentUser.account_id)
-              .eq("type", "whatsapp")
-              .in("sector_id", WHATSAPP_SECTOR_IDS),
+            supabase.functions.invoke("uazapi-manager", {
+              body: { action: "list_sector_instances" },
+            }),
             supabase
               .from("sector_settings")
               .select("sector_id, pin_hash")
@@ -185,7 +182,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
 
           if (intRes.error) throw intRes.error;
 
-          return [intRes.data, settingsRes.data, deptsRes.data, convsRes.data, lastRes.data] as const;
+          const liveInstances = (intRes.data?.data?.instances || intRes.data?.instances || []) as any[];
+          return [liveInstances, settingsRes.data, deptsRes.data, convsRes.data, lastRes.data] as const;
         }, 3, 1500);
         
         console.log("[ZappSectorSelector] Integrations loaded:", integrations);
@@ -213,10 +211,10 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
         (integrations || []).forEach((integration: any) => {
           const sectorId = integration.sector_id as SectorId;
           const config = integration.config as any;
-          const connected = integration.status === "connected" || !!config?.instance_name;
+          const connected = integration.status === "connected";
           
           // Instance has its own PIN
-          const instanceHasPin = !!integration.pin_hash || !!config?.pin_hash;
+          const instanceHasPin = !!integration.has_pin || !!integration.pin_hash || !!config?.pin_hash;
           // Sector has a PIN that protects all its instances
           const sectorHasPin = !!sectorPinMap[sectorId];
           // Effective PIN protection: instance OR sector
@@ -224,21 +222,21 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           // If instance doesn't have its own PIN but sector does, use sector PIN
           const useSectorPin = !instanceHasPin && sectorHasPin;
           
-          const rawProvider = (config?.provider || "").toString().toLowerCase();
+          const rawProvider = (integration.provider || config?.provider || "").toString().toLowerCase();
           const provider: SectorInstance["provider"] =
             rawProvider === "meta_official" || rawProvider === "meta" ? "meta_official"
             : rawProvider === "uazapi" ? "uazapi"
             : (config?.phone_number_id || config?.waba_id) ? "meta_official"
-            : (config?.instance_name || config?.token) ? "uazapi"
+            : (integration.instance_name || config?.instance_name || config?.token) ? "uazapi"
             : "unknown";
 
           instancesBySector[sectorId].push({
             id: integration.id,
             status: integration.status,
             sector_id: sectorId,
-            display_name: config?.display_name || config?.profile_name || config?.profileName || config?.instance_name || null,
-            phone_number: config?.phone_number || null,
-            instance_name: config?.instance_name || null,
+            display_name: integration.display_name || integration.profile_name || config?.display_name || config?.profile_name || config?.profileName || integration.instance_name || config?.instance_name || null,
+            phone_number: integration.phone_number || config?.phone_number || null,
+            instance_name: integration.instance_name || config?.instance_name || null,
             connected,
             has_pin: effectiveHasPin,
             pin_hash: integration.pin_hash || config?.pin_hash || null,
