@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Smartphone, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getInstanceStatus } from "@/lib/royZappStatus";
 
 interface Integration {
   id: string;
@@ -17,7 +18,15 @@ interface Integration {
   status: string | null;
   instance_name?: string | null;
   phone_number?: string | null;
-  config: { phone_number?: string; instance_name?: string; name?: string } | null;
+  provider?: string | null;
+  webhook_configured?: boolean | null;
+  config: {
+    phone_number?: string;
+    instance_name?: string;
+    name?: string;
+    provider?: string;
+    webhook_configured?: boolean;
+  } | null;
 }
 
 interface ZappInstanceSwitcherProps {
@@ -110,7 +119,12 @@ export function ZappInstanceSwitcher({
         </SelectTrigger>
         <SelectContent className="bg-zapp-panel border-zapp-border">
           {integrations.map((it) => {
-            const connected = it.status === "connected";
+            const s = getInstanceStatus({
+              status: it.status,
+              webhook_configured:
+                it.webhook_configured ?? it.config?.webhook_configured ?? null,
+              provider: it.provider || it.config?.provider || null,
+            });
             return (
               <SelectItem
                 key={it.id}
@@ -121,8 +135,13 @@ export function ZappInstanceSwitcher({
                   <span
                     className={cn(
                       "h-2 w-2 rounded-full shrink-0",
-                      connected ? "bg-success" : "bg-destructive"
+                      s.tone === "success"
+                        ? "bg-success"
+                        : s.tone === "warning"
+                          ? "bg-amber-500"
+                          : "bg-destructive"
                     )}
+                    title={s.label}
                   />
                   <span className="truncate">{formatLabel(it)}</span>
                 </div>

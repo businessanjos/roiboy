@@ -33,6 +33,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ConnectQRCodeDialog } from "./ConnectQRCodeDialog";
+import { getInstanceStatus } from "@/lib/royZappStatus";
 
 export interface SectorInstance {
   id: string;
@@ -68,14 +69,19 @@ export function SectorInstanceCard({
   const [isReconfiguringWebhook, setIsReconfiguringWebhook] = useState(false);
   const [showQRDialog, setShowQRDialog] = useState(false);
 
-  const isConnected = instance.status === "connected";
+  const status = getInstanceStatus({
+    status: instance.status,
+    webhook_configured: instance.webhook_configured ?? null,
+    provider: (instance as any).provider ?? null,
+  });
+  const isConnected = status.connected;
   const displayName = instance.display_name || instance.profile_name || instance.instance_name;
   const phoneDisplay = instance.phone_number
     ? instance.phone_number.replace(/^(\d{2})(\d{2})(\d{5})(\d{4})$/, "+$1 ($2) $3-$4")
     : "";
-  
+
   // Show webhook warning only for connected instances without webhook
-  const showWebhookWarning = isConnected && instance.webhook_configured === false;
+  const showWebhookWarning = status.webhookBroken;
 
   const handleRemove = async () => {
     setIsRemoving(true);
@@ -186,11 +192,16 @@ export function SectorInstanceCard({
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                <Badge variant={isConnected ? "default" : "secondary"} className="text-xs">
-                  {isConnected ? (
-                    <><Wifi className="h-3 w-3 mr-1" /> Conectado</>
+                <Badge
+                  variant={status.operational ? "default" : status.webhookBroken ? "outline" : "secondary"}
+                  className="text-xs"
+                >
+                  {status.operational ? (
+                    <><Wifi className="h-3 w-3 mr-1" /> {status.label}</>
+                  ) : status.webhookBroken ? (
+                    <><AlertTriangle className="h-3 w-3 mr-1" /> {status.label}</>
                   ) : (
-                    <><WifiOff className="h-3 w-3 mr-1" /> Desconectado</>
+                    <><WifiOff className="h-3 w-3 mr-1" /> {status.label}</>
                   )}
                 </Badge>
               </div>

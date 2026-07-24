@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { Check, BadgeCheck, Smartphone, Loader2 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
+import { getInstanceStatus } from "@/lib/royZappStatus";
+
 interface Integration {
   id: string;
   sector_id?: string | null;
@@ -12,11 +14,13 @@ interface Integration {
   instance_name?: string | null;
   phone_number?: string | null;
   provider?: string | null;
+  webhook_configured?: boolean | null;
   config: {
     phone_number?: string;
     instance_name?: string;
     name?: string;
     provider?: string;
+    webhook_configured?: boolean;
   } | null;
 }
 
@@ -118,9 +122,14 @@ export function ZappChannelPills({
           )}
 
           {integrations.map((it) => {
-    const isMeta = isMetaProvider(it.provider || it.config?.provider);
+            const isMeta = isMetaProvider(it.provider || it.config?.provider);
             const isActive = selectedIntegrationId === it.id;
-            const connected = it.status === "connected";
+            const s = getInstanceStatus({
+              status: it.status,
+              webhook_configured:
+                it.webhook_configured ?? it.config?.webhook_configured ?? null,
+              provider: it.provider || it.config?.provider || null,
+            });
             return (
               <button
                 key={it.id}
@@ -128,8 +137,8 @@ export function ZappChannelPills({
                 onClick={() => onChange(it.id)}
                 title={
                   it.phone_number || it.config?.phone_number
-                    ? `${formatLabel(it)} · ${it.phone_number || it.config?.phone_number}`
-                    : formatLabel(it)
+                    ? `${formatLabel(it)} · ${it.phone_number || it.config?.phone_number} · ${s.label}`
+                    : `${formatLabel(it)} · ${s.label}`
                 }
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap border",
@@ -143,7 +152,11 @@ export function ZappChannelPills({
                 <span
                   className={cn(
                     "h-1.5 w-1.5 rounded-full shrink-0",
-                    connected ? "bg-emerald-400" : "bg-red-400",
+                    s.tone === "success"
+                      ? "bg-emerald-400"
+                      : s.tone === "warning"
+                        ? "bg-amber-400"
+                        : "bg-red-400",
                     isActive && "bg-white/80"
                   )}
                 />

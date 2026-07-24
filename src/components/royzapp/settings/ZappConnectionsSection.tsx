@@ -31,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getInstanceStatus } from "@/lib/royZappStatus";
 
 interface SectorConnection {
   id: string;
@@ -181,11 +182,12 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
       ) : (
         <div className="space-y-2">
           {connections.map((c) => {
-            const connected = c.status === "connected";
-            const isMeta = c.provider === "meta_official";
-            const webhookBroken = connected && !isMeta && c.webhook_configured === false;
-            const operational = connected && !webhookBroken;
-            const statusLabel = operational ? "Operacional" : webhookBroken ? "Sem recebimento" : "Desconectado";
+            const s = getInstanceStatus({
+              status: c.status,
+              webhook_configured: c.webhook_configured ?? null,
+              provider: c.provider ?? null,
+            });
+            const { connected, operational, webhookBroken, isMeta, label: statusLabel } = s;
             return (
               <div
                 key={c.id}

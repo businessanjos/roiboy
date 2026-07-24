@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
+import { getInstanceStatusFromIntegration } from "@/lib/royZappStatus";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -42,10 +43,14 @@ export function WhatsAppIntegrationCard({
   const config = currentSectorIntegration?.config as Record<string, unknown> | null;
   const connectionState = config?.connection_state as string | undefined;
   const instanceName = config?.instance_name as string | undefined;
-  
-  const webhookConfigured = config?.webhook_configured !== false;
-  const isConnected = (currentSectorIntegration?.status === "connected" || connectionState === "open") && webhookConfigured;
-  const isInstanceOnlineWithoutWebhook = (currentSectorIntegration?.status === "connected" || connectionState === "open") && !webhookConfigured;
+
+  const sectorStatus = getInstanceStatusFromIntegration({
+    status: currentSectorIntegration?.status ?? null,
+    provider: (currentSectorIntegration as any)?.provider ?? null,
+    config: config ?? null,
+  });
+  const isConnected = sectorStatus.operational;
+  const isInstanceOnlineWithoutWebhook = sectorStatus.webhookBroken;
   
   const [checkingStatusId, setCheckingStatusId] = useState<string | null>(null);
   const [connectionSuccess, setConnectionSuccess] = useState(false);
@@ -255,14 +260,14 @@ export function WhatsAppIntegrationCard({
               const cfg = integration.config as Record<string, unknown> | null;
               const intInstanceName = cfg?.instance_name as string || cfg?.profileName as string || "Instância sem nome";
               const intOwner = cfg?.owner as string;
-              const integrationOnline = integration.status === "connected" || cfg?.connection_state === "open";
-              const integrationWebhookBroken = integrationOnline && cfg?.webhook_configured === false;
-              const isIntegrationConnected = integrationOnline && !integrationWebhookBroken;
-              const integrationStatusLabel = isIntegrationConnected
-                ? "Operacional"
-                : integrationWebhookBroken
-                  ? "Sem recebimento"
-                  : "Desconectado";
+              const intStatus = getInstanceStatusFromIntegration({
+                status: integration.status,
+                provider: (integration as any).provider ?? null,
+                config: cfg,
+              });
+              const integrationWebhookBroken = intStatus.webhookBroken;
+              const isIntegrationConnected = intStatus.operational;
+              const integrationStatusLabel = intStatus.label;
               const createdAt = integration.created_at ? new Date(integration.created_at) : null;
               const isCheckingThis = checkingStatusId === integration.id;
               const sectorLabel = integration.sector_id || "Padrão";
