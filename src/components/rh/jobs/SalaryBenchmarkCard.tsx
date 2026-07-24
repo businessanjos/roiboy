@@ -735,7 +735,22 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
               </p>
             )}
 
-            {(result.typical_benefits?.length || result.missing_benefits?.length || result.extra_benefits?.length) ? (
+            {claimEval.claimed && !claimEval.valid && (
+              <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 flex items-start gap-2.5">
+                <AlertTriangle className="h-4 w-4 text-red-700 mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-[12px] font-semibold text-red-900">
+                    Diferencial incompatível com o mercado: "{MARKET_COMPATIBLE_LABEL}"
+                  </p>
+                  <p className="text-[11px] text-red-900/80 leading-snug">
+                    {claimEval.reason} Este diferencial fica <strong>oculto</strong> na página pública da vaga até
+                    o salário ser ajustado ou o item ser removido no wizard.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {(result.typical_benefits?.length || result.missing_benefits?.length || cleanExtraBenefits.length) ? (
               <>
                 <Separator />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -759,11 +774,11 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
                       </div>
                     </div>
                   )}
-                  {result.extra_benefits && result.extra_benefits.length > 0 && (
+                  {cleanExtraBenefits.length > 0 && (
                     <div>
                       <p className="text-xs font-medium mb-1.5 text-emerald-700">Diferenciais seus</p>
                       <div className="flex flex-wrap gap-1">
-                        {result.extra_benefits.map((b, i) => (
+                        {cleanExtraBenefits.map((b, i) => (
                           <Badge key={i} variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 text-[10px]">{b}</Badge>
                         ))}
                       </div>
