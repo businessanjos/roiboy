@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Loader2, RefreshCw, Wifi, CheckCircle2, Smartphone, RotateCcw, KeyRound, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, RefreshCw, Wifi, CheckCircle2, Smartphone, RotateCcw, KeyRound, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
