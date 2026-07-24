@@ -672,6 +672,17 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         />
       )}
 
+      {/* UAZAPI server offline alert — appears only when the sector's WhatsApp gateway is unreachable */}
+      {activeView === "inbox" && sectorId && (
+        <div className="px-3 pb-2">
+          <UazapiServerHealthBanner
+            sectorId={sectorId}
+            integrationId={selectedIntegrationId || null}
+            compact
+          />
+        </div>
+      )}
+
       {/* Conversation list */}
       <ScrollArea className="flex-1">
         {activeView === "inbox" && (
