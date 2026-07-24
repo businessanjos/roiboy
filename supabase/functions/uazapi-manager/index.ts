@@ -1041,9 +1041,15 @@ Deno.serve(async (req) => {
       }
       if (payload.mentions) textBody.mentions = payload.mentions;
       
-      result = await enqueueSend(token!, `send_text user=${userData.name}`, () =>
-        uazapiInstance("/send/text", "POST", token!, textBody, sectorServer)
-      );
+      try {
+        result = await enqueueSend(token!, `send_text user=${userData.name}`, () =>
+          uazapiInstance("/send/text", "POST", token!, textBody, sectorServer)
+        );
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        throw err;
+      }
     
     } else if (action === "send_media") {
       // ✅ NOVO: Suporte a envio de mídia
@@ -1063,9 +1069,15 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await enqueueSend(token!, `send_media user=${userData.name} type=${outboundMediaType}`, () =>
-        uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
-      );
+      try {
+        result = await enqueueSend(token!, `send_media user=${userData.name} type=${outboundMediaType}`, () =>
+          uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
+        );
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        throw err;
+      }
       // 🚨 Diagnóstico: detectar respostas sem id (falha silenciosa)
       let r: any = result;
       let hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
@@ -1101,9 +1113,15 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { groupBody.replyid = normalizedQuotedMessageId; }
       if (payload.mentions) groupBody.mentions = payload.mentions;
       
-      result = await enqueueSend(token!, `send_to_group user=${userData.name}`, () =>
-        uazapiInstance("/send/text", "POST", token!, groupBody, sectorServer)
-      );
+      try {
+        result = await enqueueSend(token!, `send_to_group user=${userData.name}`, () =>
+          uazapiInstance("/send/text", "POST", token!, groupBody, sectorServer)
+        );
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        throw err;
+      }
     
     } else if (action === "send_media_to_group") {
       // ✅ NOVO: Mídia em grupos
@@ -1120,9 +1138,15 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await enqueueSend(token!, `send_media_to_group user=${userData.name} type=${outboundMediaType}`, () =>
-        uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
-      );
+      try {
+        result = await enqueueSend(token!, `send_media_to_group user=${userData.name} type=${outboundMediaType}`, () =>
+          uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
+        );
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        throw err;
+      }
       // 🔁 Retry PTT em grupos (mesma lógica de send_media): uazapi às vezes
       // devolve resposta sem messageid enquanto converte webm/opus.
       {
