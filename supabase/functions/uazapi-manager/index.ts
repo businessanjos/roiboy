@@ -1249,8 +1249,13 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Block adopting a token that is already tied to another sector.
+      const adoptConflict = await checkTokenSectorConflict(supabase, accountId, pastedToken, sector_id, intData?.id);
+      if (adoptConflict) return adoptConflict;
+
       // Register webhook on the server so inbound messages reach us. Non-fatal.
       const webhookState = await registerWebhookForInstance(pastedToken, providedName, sectorServer);
+
 
       // Persist the adopted token on the current integration (or create/update).
       const newStatus = snapshot.connected ? "connected" : "disconnected";
