@@ -11827,6 +11827,71 @@ export type Database = {
           },
         ]
       }
+      hr_job_benchmarks: {
+        Row: {
+          account_id: string
+          benchmark: Json
+          created_at: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          input_signature: string | null
+          job_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          benchmark: Json
+          created_at?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          input_signature?: string | null
+          job_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          benchmark?: Json
+          created_at?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          input_signature?: string | null
+          job_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_job_benchmarks_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_benchmarks_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_benchmarks_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_benchmarks_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_job_offers: {
         Row: {
           accent_color: string
