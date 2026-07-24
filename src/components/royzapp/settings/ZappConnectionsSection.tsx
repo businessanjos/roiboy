@@ -31,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getInstanceStatus } from "@/lib/royZappStatus";
 
 interface SectorConnection {
   id: string;
