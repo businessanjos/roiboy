@@ -30,6 +30,7 @@ interface Props {
     work_model?: string | null;
     department?: string | null;
     benefits?: string[] | null;
+    salary_type?: string | null;
     salary_min?: number | null;
     salary_max?: number | null;
   };
