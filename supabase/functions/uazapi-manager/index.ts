@@ -675,15 +675,40 @@ Deno.serve(async (req) => {
     console.log(`[uazapi-manager] Action: ${action}, integration_id: ${integration_id}, sector_id: ${sector_id}`);
 
     // Buscar integração - PRIORIZAR integration_id
-    let intData: { id: string; config: { provider?: string; instance_token?: string; instance_name?: string }; status: string } | null = null;
+    let intData: { id: string; config: { provider?: string; instance_token?: string; instance_name?: string }; status: string; sector_id?: string | null } | null = null;
     
     if (integration_id) {
-      const { data } = await supabase.from("integrations").select("id, config, status").eq("id", integration_id).eq("account_id", accountId).single();
+      const { data } = await supabase.from("integrations").select("id, config, status, sector_id").eq("id", integration_id).eq("account_id", accountId).single();
       intData = data;
+
+      // HARD GUARD: se o caller passou sector_id junto, ele DEVE bater com o
+      // sector_id da integração. Isso bloqueia envios cross-sector causados
+      // por estado stale no frontend (ex.: CS mandando pelo número Comercial).
+      // Ações somente-leitura de setor são liberadas; apenas envios reais
+      // (send_*) são bloqueados.
+      const sendActions = ["send_text", "send_media", "send_to_group", "send_media_to_group"];
+      if (
+        sendActions.includes(action) &&
+        sector_id &&
+        intData &&
+        intData.sector_id &&
+        intData.sector_id !== sector_id
+      ) {
+        console.error(
+          `[uazapi-manager] ABORT cross-sector send: integration ${integration_id} belongs to sector "${intData.sector_id}" but caller passed sector_id="${sector_id}".`
+        );
+        return new Response(
+          JSON.stringify({
+            error: "Setor incorreto para esta instância",
+            detail: `A instância selecionada pertence a outro setor. Recarregue a página, selecione o setor correto e tente novamente.`,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     } else if (sector_id) {
       // CRITICAL: For sectors with multiple instances, prefer the connected one
       // ORDER BY status ASC puts 'connected' before 'disconnected' alphabetically
-      const { data } = await supabase.from("integrations").select("id, config, status")
+      const { data } = await supabase.from("integrations").select("id, config, status, sector_id")
         .eq("account_id", accountId).eq("type", "whatsapp").eq("sector_id", sector_id)
         .order("status", { ascending: true })
         .limit(5);
@@ -697,7 +722,7 @@ Deno.serve(async (req) => {
         intData = data?.[0] || null;
       }
     } else {
-      const { data } = await supabase.from("integrations").select("id, config, status").eq("account_id", accountId).eq("type", "whatsapp").is("sector_id", null).limit(1);
+      const { data } = await supabase.from("integrations").select("id, config, status, sector_id").eq("account_id", accountId).eq("type", "whatsapp").is("sector_id", null).limit(1);
       intData = data?.[0] || null;
     }
 
