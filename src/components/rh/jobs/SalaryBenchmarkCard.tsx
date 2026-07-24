@@ -119,6 +119,8 @@ function computeAttractiveness(params: {
       { label: "Modelo & Local", score: locScore, max: 15, reason: locReason },
     ],
   };
+}
+
 
 export function SalaryBenchmarkCard({ job, city, state }: Props) {
   const [loading, setLoading] = useState(false);
