@@ -260,8 +260,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
       {/* Header */}
-      <div className="bg-zapp-panel-header px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="bg-zapp-panel-header px-4 py-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <Avatar className="h-10 w-10">
             <AvatarImage src={currentUser?.avatar_url || undefined} />
             <AvatarFallback className="bg-zapp-accent text-white text-sm">
