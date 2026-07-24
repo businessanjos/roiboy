@@ -312,8 +312,14 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             <Grid3X3 className="h-5 w-5 flex-shrink-0" />
             {!collapsed && (
               <div className="flex flex-col items-start">
-                <span className="text-xs text-muted-foreground">Setor atual</span>
-                <span className={cn("font-semibold", currentSector.color)}>{currentSector.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {currentSector.id === "royzapp" && activeWhatsAppSectorLabel ? "WhatsApp" : "Setor atual"}
+                </span>
+                <span className={cn("font-semibold", currentSector.color)}>
+                  {currentSector.id === "royzapp" && activeWhatsAppSectorLabel
+                    ? activeWhatsAppSectorLabel
+                    : currentSector.name}
+                </span>
               </div>
             )}
           </button>
