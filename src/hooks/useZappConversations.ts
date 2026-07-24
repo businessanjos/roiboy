@@ -780,7 +780,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       if (realtimeResetTimer) clearTimeout(realtimeResetTimer);
       supabase.removeChannel(channel);
     };
-  }, [accountId, debouncedFetchAssignments, fetchAssignmentsOnly, sectorId]);
+  }, [accountId, debouncedFetchAssignments, fetchAssignmentsOnly, sectorId, reconcileBump]);
 
   // Fallback polling
   useEffect(() => {
