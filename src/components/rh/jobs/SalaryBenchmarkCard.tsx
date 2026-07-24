@@ -157,6 +157,19 @@ export function SalaryBenchmarkCard({ job, city, state }: Props) {
   };
 
   const positioning = result ? comparePositioning({ min: job.salary_min, max: job.salary_max }, result.market_range) : null;
+  const attractiveness = result
+    ? computeAttractiveness({
+        offered: { min: job.salary_min, max: job.salary_max },
+        market: result.market_range,
+        offeredBenefits: job.benefits ?? [],
+        typicalBenefits: result.typical_benefits ?? [],
+        missingBenefits: result.missing_benefits ?? [],
+        extraBenefits: result.extra_benefits ?? [],
+        workModel: job.work_model,
+        city,
+        state,
+      })
+    : null;
   const range = result?.market_range;
   const period = result?.period === "hora" ? "/hora" : result?.period === "anual" ? "/ano" : "/mês";
 
