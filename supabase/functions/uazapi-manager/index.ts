@@ -915,7 +915,10 @@ Deno.serve(async (req) => {
 
       // ==== AUTO-RECONNECT: detect "logged out from another device" ====
       let autoReconnect: { attempted: boolean; qr_code?: string; token?: string; error?: string } | undefined;
-      if (statusSnapshot.loggedOut && intData?.id) {
+      const lastAutoReconnectAt = (intData?.config as any)?.last_auto_reconnect_at as string | undefined;
+      const autoReconnectThrottleMs = 10 * 60 * 1000; // 10 min — prevents runaway instance creation on failing servers
+      const withinThrottle = lastAutoReconnectAt && (Date.now() - new Date(lastAutoReconnectAt).getTime()) < autoReconnectThrottleMs;
+      if (statusSnapshot.loggedOut && intData?.id && !withinThrottle) {
         const reconnectIntegration = intData;
         console.warn(`[uazapi-manager] 🔄 Auto-reconnect triggered for instance "${instanceName}" (logged out from another device)`);
         try {
