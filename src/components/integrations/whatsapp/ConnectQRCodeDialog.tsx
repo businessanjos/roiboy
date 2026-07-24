@@ -40,6 +40,48 @@ export function ConnectQRCodeDialog({
   const [adopting, setAdopting] = useState(false);
   const [showAdopt, setShowAdopt] = useState(false);
   const [pastedToken, setPastedToken] = useState("");
+  const [tokenConflict, setTokenConflict] = useState<{ conflict: boolean; scope?: string; message?: string } | null>(null);
+  const [checkingConflict, setCheckingConflict] = useState(false);
+
+  // Debounced pre-check: warns the user before they try to adopt a token
+  // that's already bound to another sector (also enforced by DB trigger + edge guard).
+  useEffect(() => {
+    const trimmed = pastedToken.trim();
+    if (!trimmed || trimmed.length < 8) {
+      setTokenConflict(null);
+      setCheckingConflict(false);
+      return;
+    }
+    let cancelled = false;
+    setCheckingConflict(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+          body: {
+            action: "check_token_conflict",
+            instance_token: trimmed,
+            sector_id: sectorId,
+            integration_id: integrationId,
+          },
+        });
+        if (cancelled) return;
+        if (error) {
+          setTokenConflict(null);
+          return;
+        }
+        const result = data?.data || data;
+        setTokenConflict(result?.conflict ? { conflict: true, scope: result.scope, message: result.message } : { conflict: false });
+      } catch {
+        if (!cancelled) setTokenConflict(null);
+      } finally {
+        if (!cancelled) setCheckingConflict(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [pastedToken, sectorId, integrationId]);
 
 
 
