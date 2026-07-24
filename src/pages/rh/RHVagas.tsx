@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Briefcase, Plus, MoreVertical, Pencil, Trash2, Users, Send, XCircle, ArrowLeft, CheckSquare, Settings2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Briefcase, Plus, MoreVertical, Pencil, Trash2, Users, Send, XCircle, ArrowLeft, CheckSquare, Settings2, Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useHRJobs, useDeleteHRJob, useUpdateHRJob, useHRJobStats } from "@/hooks/useHRJobs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,9 +20,13 @@ import { useAccountUsersForJobs } from "@/hooks/useHRJobStages";
 import { OPENING_REASON_LABELS } from "@/types/job";
 import { Clock, User as UserIcon, AlertTriangle } from "lucide-react";
 import { JobsBulkEditDialog } from "@/components/rh/jobs/JobsBulkEditDialog";
+import { computeAttractiveness } from "@/components/rh/jobs/SalaryBenchmarkCard";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function RHVagas() {
   const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
   const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
   const { data: jobs, isLoading } = useHRJobs({ status: statusFilter });
   const { data: stats } = useHRJobStats();
@@ -31,6 +36,23 @@ export default function RHVagas() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [benchmarks, setBenchmarks] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (!jobs?.length || !currentUser?.account_id) return;
+    const ids = jobs.map(j => j.id);
+    supabase
+      .from("hr_job_benchmarks")
+      .select("job_id, benchmark")
+      .eq("account_id", currentUser.account_id)
+      .in("job_id", ids)
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, any> = {};
+        for (const row of data) map[(row as any).job_id] = (row as any).benchmark;
+        setBenchmarks(map);
+      });
+  }, [jobs, currentUser?.account_id]);
 
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -140,6 +162,7 @@ export default function RHVagas() {
               </CardHeader>
               <CardContent className="space-y-1.5">
                 {job.department && <p className="text-sm text-muted-foreground">Departamento: {job.department}</p>}
+                <JobScoreBadge job={job} benchmark={benchmarks[job.id]} />
                 <JobMetaRow job={job} />
               </CardContent>
             </Card>
@@ -198,5 +221,59 @@ function JobMetaRow({ job }: { job: HRJob }) {
       )}
       <span className="ml-auto">{format(new Date(job.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
     </div>
+  );
+}
+
+function JobScoreBadge({ job, benchmark }: { job: HRJob; benchmark: any }) {
+  if (!benchmark) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Sparkles className="h-3 w-3" />
+        <span>Score de mercado calculando…</span>
+      </div>
+    );
+  }
+  const a = computeAttractiveness({
+    offered: { min: job.salary_min, max: job.salary_max },
+    market: benchmark?.market_range,
+    offeredBenefits: job.benefits ?? [],
+    typicalBenefits: benchmark?.typical_benefits ?? [],
+    missingBenefits: benchmark?.missing_benefits ?? [],
+    extraBenefits: benchmark?.extra_benefits ?? [],
+    workModel: job.work_model,
+    city: (job as any).city ?? null,
+    state: (job as any).state ?? null,
+  });
+  const toneClass =
+    a.tier.tone === "emerald"
+      ? "bg-emerald-500/15 text-emerald-700 border-emerald-300"
+      : a.tier.tone === "blue"
+      ? "bg-blue-500/15 text-blue-700 border-blue-300"
+      : a.tier.tone === "amber"
+      ? "bg-amber-500/15 text-amber-700 border-amber-300"
+      : "bg-red-500/15 text-red-700 border-red-300";
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="inline-flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+            <Badge variant="outline" className={`text-[10px] py-0 ${toneClass}`}>
+              <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+              Atratividade {a.total}/100 · {a.tier.label}
+            </Badge>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <div className="space-y-1 text-xs">
+            <p className="font-semibold">{a.tier.hire}</p>
+            {a.breakdown.map(b => (
+              <p key={b.label}>
+                <span className="font-medium">{b.label}:</span> {b.score}/{b.max} — {b.reason}
+              </p>
+            ))}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

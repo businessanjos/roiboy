@@ -70,7 +70,7 @@ function comparePositioning(offered: { min?: number | null; max?: number | null 
   return { tone: "red", label: "Abaixo do mercado (<P25)", icon: AlertTriangle };
 }
 
-function computeAttractiveness(params: {
+export function computeAttractiveness(params: {
   offered: { min?: number | null; max?: number | null };
   market?: BenchmarkResult["market_range"];
   offeredBenefits: string[];
