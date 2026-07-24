@@ -174,34 +174,42 @@ export function useZappMessaging({
         return { ok: false };
       }
 
-      // GROUPS são multi-setor: se a instância da conversa pertence a outro
-      // setor (foi recebida por outra instância), use a instância do setor
-      // atual automaticamente em vez de bloquear o envio.
-      if (opts?.isGroup && selectedIntegrationId && integrationId !== selectedIntegrationId) {
+      // Resolve a candidate integration_id: preferimos o da conversa; para grupos,
+      // se o setor atual tem uma instância selecionada diferente, usamos ela.
+      // MAS: nunca confiamos cegamente — SEMPRE validamos no banco que a instância
+      // final pertence ao selectedSectorId antes de liberar o envio. Isso evita
+      // que um selectedIntegrationId "stale" (deixado por uma troca recente de
+      // setor) mande a mensagem pelo número errado (ex.: CS enviando pelo
+      // WhatsApp do Comercial).
+      let candidateId = integrationId || null;
+      if (opts?.isGroup && selectedIntegrationId && candidateId !== selectedIntegrationId) {
         console.log(
-          `[ZAPP-SEND] Group override: usando instância do setor atual (${selectedIntegrationId}) em vez de ${integrationId}.`
+          `[ZAPP-SEND] Group override candidate: ${selectedIntegrationId} (conversa vinha de ${candidateId}).`
         );
-        return { ok: true, integrationId: selectedIntegrationId };
+        candidateId = selectedIntegrationId;
       }
-
-      if (!integrationId) {
-        // Para grupos, ainda dá pra tentar com a do setor
-        if (opts?.isGroup && selectedIntegrationId) {
-          return { ok: true, integrationId: selectedIntegrationId };
-        }
+      if (!candidateId && opts?.isGroup && selectedIntegrationId) {
+        candidateId = selectedIntegrationId;
+      }
+      if (!candidateId) {
         toast.error("WhatsApp não configurado", {
           description: "Nenhuma instância selecionada para este setor.",
         });
         return { ok: false };
       }
 
-      try {
+      const validate = async (id: string) => {
         const { data, error } = await supabase
           .from("integrations")
           .select("sector_id, status")
-          .eq("id", integrationId)
+          .eq("id", id)
           .eq("account_id", currentUser.account_id)
           .maybeSingle();
+        return { data, error };
+      };
+
+      try {
+        let { data, error } = await validate(candidateId);
         if (error || !data) {
           console.error("[ZAPP-SEND] Integration lookup failed:", error);
           toast.error("Instância do WhatsApp não encontrada", {
@@ -209,13 +217,24 @@ export function useZappMessaging({
           });
           return { ok: false };
         }
-        if (data.sector_id !== selectedSectorId) {
-          // Fallback final: grupo sem selectedIntegrationId mas com instância de outro setor
-          if (opts?.isGroup && selectedIntegrationId) {
+
+        // Se não bate com o setor atual e é grupo, tenta cair para selectedIntegrationId
+        // (mas validado no banco também).
+        if (
+          data.sector_id !== selectedSectorId &&
+          opts?.isGroup &&
+          selectedIntegrationId &&
+          selectedIntegrationId !== candidateId
+        ) {
+          const retry = await validate(selectedIntegrationId);
+          if (retry.data && retry.data.sector_id === selectedSectorId) {
             return { ok: true, integrationId: selectedIntegrationId };
           }
+        }
+
+        if (data.sector_id !== selectedSectorId) {
           console.error(
-            `[ZAPP-SEND] ABORT: integration ${integrationId} belongs to sector "${data.sector_id}" but current sector is "${selectedSectorId}".`
+            `[ZAPP-SEND] ABORT: integration ${candidateId} belongs to sector "${data.sector_id}" but current sector is "${selectedSectorId}".`
           );
           toast.error("Setor incorreto para esta instância", {
             description:
@@ -223,7 +242,7 @@ export function useZappMessaging({
           });
           return { ok: false };
         }
-        return { ok: true, integrationId };
+        return { ok: true, integrationId: candidateId };
       } catch (err) {
         console.error("[ZAPP-SEND] assertIntegrationMatchesSector error:", err);
         toast.error("Erro ao validar instância do WhatsApp");
