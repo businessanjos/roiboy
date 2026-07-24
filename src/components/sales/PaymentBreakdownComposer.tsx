@@ -2,9 +2,10 @@ import { useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon, X, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,8 @@ export interface PaymentBreakdownItem {
   amount: number | null;
   installments: number | null;
   first_due_date: string | null;
+  /** Quando true, as parcelas geradas por esta linha entram como recebidas hoje (cash collect). */
+  is_cash_collect?: boolean;
 }
 
 interface PaymentBreakdownComposerProps {
