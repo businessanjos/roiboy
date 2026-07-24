@@ -938,7 +938,59 @@ Deno.serve(async (req) => {
 
     let result: unknown = { success: true };
 
-    if (action === "server_health") {
+    if (action === "check_token_conflict") {
+      // Lightweight pre-save probe used by the Connections UI to warn the user
+      // before they attempt to adopt a token that is already bound to another sector.
+      const probeToken = (getString(payload.instance_token) || "").trim();
+      if (!probeToken) {
+        result = { conflict: false, reason: "empty_token" };
+      } else {
+        const { data } = await supabase
+          .from("integrations")
+          .select("id, sector_id, display_name, config, status")
+          .eq("account_id", accountId)
+          .eq("type", "whatsapp")
+          .filter("config->>instance_token", "eq", probeToken);
+        const rows = (data || []).filter((row: any) => {
+          const provider = row?.config?.provider;
+          return !provider || provider === "uazapi";
+        });
+        const currentId = integration_id || null;
+        const targetSector = sector_id || null;
+        const crossSector = rows.find((row: any) => {
+          if (currentId && row.id === currentId) return false;
+          const rowSector = row?.sector_id || null;
+          return rowSector !== targetSector;
+        });
+        const sameSectorOther = rows.find((row: any) => {
+          if (currentId && row.id === currentId) return false;
+          const rowSector = row?.sector_id || null;
+          return rowSector === targetSector;
+        });
+        if (crossSector) {
+          result = {
+            conflict: true,
+            scope: "cross_sector",
+            integration_id: crossSector.id,
+            sector_id: crossSector.sector_id,
+            display_name: crossSector.display_name || crossSector.config?.instance_name || null,
+            message:
+              `Este instance_token já está vinculado à integração "${crossSector.display_name || crossSector.config?.instance_name || crossSector.id}" ` +
+              `em outro setor. Reconecte via QR Code para gerar um token novo antes de vincular a este setor.`,
+          };
+        } else if (sameSectorOther) {
+          result = {
+            conflict: true,
+            scope: "same_sector",
+            integration_id: sameSectorOther.id,
+            display_name: sameSectorOther.display_name || sameSectorOther.config?.instance_name || null,
+            message: `Este token já está vinculado a outra integração deste mesmo setor.`,
+          };
+        } else {
+          result = { conflict: false };
+        }
+      }
+    } else if (action === "server_health") {
       // Lightweight reachability probe: pings the sector's UAZAPI host directly.
       // Used by the UI to surface a clear "server offline / 404" banner instead
       // of falsely showing "connected" while sends silently fail.

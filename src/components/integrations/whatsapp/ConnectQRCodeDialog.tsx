@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Loader2, RefreshCw, Wifi, CheckCircle2, Smartphone, RotateCcw, KeyRound, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, RefreshCw, Wifi, CheckCircle2, Smartphone, RotateCcw, KeyRound, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
@@ -40,6 +40,48 @@ export function ConnectQRCodeDialog({
   const [adopting, setAdopting] = useState(false);
   const [showAdopt, setShowAdopt] = useState(false);
   const [pastedToken, setPastedToken] = useState("");
+  const [tokenConflict, setTokenConflict] = useState<{ conflict: boolean; scope?: string; message?: string } | null>(null);
+  const [checkingConflict, setCheckingConflict] = useState(false);
+
+  // Debounced pre-check: warns the user before they try to adopt a token
+  // that's already bound to another sector (also enforced by DB trigger + edge guard).
+  useEffect(() => {
+    const trimmed = pastedToken.trim();
+    if (!trimmed || trimmed.length < 8) {
+      setTokenConflict(null);
+      setCheckingConflict(false);
+      return;
+    }
+    let cancelled = false;
+    setCheckingConflict(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+          body: {
+            action: "check_token_conflict",
+            instance_token: trimmed,
+            sector_id: sectorId,
+            integration_id: integrationId,
+          },
+        });
+        if (cancelled) return;
+        if (error) {
+          setTokenConflict(null);
+          return;
+        }
+        const result = data?.data || data;
+        setTokenConflict(result?.conflict ? { conflict: true, scope: result.scope, message: result.message } : { conflict: false });
+      } catch {
+        if (!cancelled) setTokenConflict(null);
+      } finally {
+        if (!cancelled) setCheckingConflict(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [pastedToken, sectorId, integrationId]);
 
 
 
@@ -172,6 +214,10 @@ export function ConnectQRCodeDialog({
       toast.error("Cole o instance token da UAZAPI.");
       return;
     }
+    if (tokenConflict?.conflict) {
+      toast.error(tokenConflict.message || "Este token já está em uso em outro setor.");
+      return;
+    }
     setAdopting(true);
     setQrError(null);
     try {
@@ -223,7 +269,7 @@ export function ConnectQRCodeDialog({
     } finally {
       setAdopting(false);
     }
-  }, [pastedToken, instanceName, integrationId, sectorId, onConnected, fetchQRCode]);
+  }, [pastedToken, instanceName, integrationId, sectorId, onConnected, fetchQRCode, tokenConflict]);
 
 
 
@@ -423,9 +469,29 @@ export function ConnectQRCodeDialog({
                     className="font-mono text-xs"
                     disabled={adopting}
                   />
+                  {checkingConflict && (
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Verificando se este token já está em uso...
+                    </p>
+                  )}
+                  {tokenConflict?.conflict && (
+                    <Alert variant="destructive" className="py-2">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      <AlertDescription className="text-[11px] leading-relaxed">
+                        {tokenConflict.message ||
+                          "Este instance_token já está vinculado a outra integração em outro setor. Reconecte via QR Code para gerar um token novo antes de vincular aqui."}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {tokenConflict && !tokenConflict.conflict && !checkingConflict && (
+                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                      ✓ Token disponível para vincular a este setor.
+                    </p>
+                  )}
                   <Button
                     onClick={adoptInstance}
-                    disabled={adopting || !pastedToken.trim()}
+                    disabled={adopting || !pastedToken.trim() || checkingConflict || tokenConflict?.conflict === true}
                     className="w-full"
                     size="sm"
                   >
