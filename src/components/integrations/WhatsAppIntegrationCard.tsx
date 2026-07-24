@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, RefreshCw, Loader2, LogOut, Wifi, WifiOff, ShieldAlert } from "lucide-react";
+import { CheckCircle2, RefreshCw, Loader2, LogOut, Wifi, WifiOff, ShieldAlert, History } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
