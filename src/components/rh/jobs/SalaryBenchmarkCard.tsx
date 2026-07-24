@@ -264,10 +264,15 @@ function computeRecommendations(params: Parameters<typeof computeAttractiveness>
 
 
 
-export function SalaryBenchmarkCard({ job, city, state }: Props) {
+export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 60 }: Props) {
+  const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BenchmarkResult | null>(null);
   const [ranAt, setRanAt] = useState<Date | null>(null);
+  const [alertSending, setAlertSending] = useState(false);
+  const [alertSentAt, setAlertSentAt] = useState<Date | null>(null);
+  const autoNotifiedRef = useRef<string | null>(null);
+
 
   const run = async () => {
     setLoading(true);
