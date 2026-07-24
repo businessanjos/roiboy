@@ -196,7 +196,6 @@ export const sectors: Sector[] = [
       { to: buildRoyZappUrl({ view: "departments" }), icon: Building2, label: "Departamentos" },
       { to: buildRoyZappUrl({ view: "tags" }), icon: Tags, label: "Tags" },
       { to: buildRoyZappUrl({ view: "settings" }), icon: Settings, label: "Configurações" },
-      { to: buildRoyZappUrl({ view: "whatsapp-admin" }), icon: Plug, label: "Conexões WhatsApp" },
       { to: buildRoyZappUrl({ view: "playbook" }), icon: BookOpen, label: "Playbook" },
       { to: buildRoyZappUrl({ view: "marketing" }), icon: Megaphone, label: "Eventos" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
