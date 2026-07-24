@@ -469,9 +469,29 @@ export function ConnectQRCodeDialog({
                     className="font-mono text-xs"
                     disabled={adopting}
                   />
+                  {checkingConflict && (
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Verificando se este token já está em uso...
+                    </p>
+                  )}
+                  {tokenConflict?.conflict && (
+                    <Alert variant="destructive" className="py-2">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      <AlertDescription className="text-[11px] leading-relaxed">
+                        {tokenConflict.message ||
+                          "Este instance_token já está vinculado a outra integração em outro setor. Reconecte via QR Code para gerar um token novo antes de vincular aqui."}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {tokenConflict && !tokenConflict.conflict && !checkingConflict && (
+                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                      ✓ Token disponível para vincular a este setor.
+                    </p>
+                  )}
                   <Button
                     onClick={adoptInstance}
-                    disabled={adopting || !pastedToken.trim()}
+                    disabled={adopting || !pastedToken.trim() || checkingConflict || tokenConflict?.conflict === true}
                     className="w-full"
                     size="sm"
                   >
